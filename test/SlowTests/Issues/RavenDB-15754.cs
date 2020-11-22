@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
@@ -20,6 +21,8 @@ namespace SlowTests.Issues
         private const int _employeesCount = 20_000;
         private const string _managedAllocationsBatchLimit = "16";
         private const string _commonName = "Companies";
+        private const string _companyName1 = "Hibernating Rhinos";
+        private const string _companyName2 = "HR";
 
         public RavenDB_15754(ITestOutputHelper output) : base(output)
         {
@@ -33,11 +36,9 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
             }))
             {
-                const string companyName1 = "Hibernating Rhinos";
-                const string companyName2 = "HR";
                 var company = new Company
                 {
-                    Name = companyName1
+                    Name = _companyName1
                 };
 
                 using (var session = store.OpenAsyncSession())
@@ -61,7 +62,7 @@ namespace SlowTests.Issues
                 await new DocumentsIndex().ExecuteAsync(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
-                await AssertCount(store, companyName1, _employeesCount);
+                await AssertCount(store, _companyName1, _employeesCount);
 
                 var batchCount = 0;
                 var tcs = new TaskCompletionSource<object>();
@@ -77,14 +78,14 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    company.Name = companyName2;
+                    company.Name = _companyName2;
                     await session.StoreAsync(company, company.Id);
                     await session.SaveChangesAsync();
                 }
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
-                await AssertCount(store, companyName1, 0);
-                await AssertCount(store, companyName2, _employeesCount);
+                await AssertCount(store, _companyName1, 0);
+                await AssertCount(store, _companyName2, _employeesCount);
                 Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
                 Assert.True(batchCount > 1);
             }
@@ -98,11 +99,9 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
             }))
             {
-                const string companyName1 = "Hibernating Rhinos";
-                const string companyName2 = "HR";
                 var company = new Company
                 {
-                    Name = companyName1
+                    Name = _companyName1
                 };
 
                 using (var session = store.OpenAsyncSession())
@@ -126,7 +125,7 @@ namespace SlowTests.Issues
                 await new DocumentsIndex().ExecuteAsync(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
-                await AssertCount(store, companyName1, _employeesCount);
+                await AssertCount(store, _companyName1, _employeesCount);
 
                 var batchCount = 0;
                 var tcs = new TaskCompletionSource<object>();
@@ -141,7 +140,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    company.Name = companyName2;
+                    company.Name = _companyName2;
                     await session.StoreAsync(company, company.Id);
                     await session.SaveChangesAsync();
                 }
@@ -150,14 +149,14 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    company.Name = companyName1;
+                    company.Name = _companyName1;
                     await session.StoreAsync(company, company.Id);
                     await session.SaveChangesAsync();
                 }
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
-                await AssertCount(store, companyName1, _employeesCount);
-                await AssertCount(store, companyName2, 0);
+                await AssertCount(store, _companyName1, _employeesCount);
+                await AssertCount(store, _companyName2, 0);
 
                 Assert.True(batchCount > 1);
             }
@@ -171,10 +170,9 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
             }))
             {
-                const string companyName1 = "Hibernating Rhinos";
                 var company = new Company
                 {
-                    Name = companyName1
+                    Name = _companyName1
                 };
 
                 using (var session = store.OpenAsyncSession())
@@ -198,7 +196,7 @@ namespace SlowTests.Issues
                 await index.ExecuteAsync(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
-                await AssertCount(store, companyName1, _employeesCount);
+                await AssertCount(store, _companyName1, _employeesCount);
 
                 var batchCount = 0;
                 var tcs = new TaskCompletionSource<object>();
@@ -218,7 +216,7 @@ namespace SlowTests.Issues
                 }
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
-                await AssertCount(store, companyName1, 0);
+                await AssertCount(store, _companyName1, 0);
                 Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
 
                 Assert.True(batchCount > 1);
@@ -233,11 +231,9 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
             }))
             {
-                const string companyName1 = "Hibernating Rhinos";
-                const string companyName2 = "HR";
                 var company = new Company
                 {
-                    Name = companyName1
+                    Name = _companyName1
                 };
 
                 using (var session = store.OpenAsyncSession())
@@ -261,55 +257,22 @@ namespace SlowTests.Issues
                 await index.ExecuteAsync(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
-                await AssertCount(store, companyName1, _employeesCount);
-                await AssertCount(store, companyName2, 0);
 
-                var batchCount = 0;
-                var tcs = new TaskCompletionSource<object>();
+                await AssertCount(store, _companyName1, _employeesCount);
+                await AssertCount(store, _companyName2, 0);
 
-                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                var batchCount = await AssertBatchCountProgress(store, index.IndexName, GetItemsCount, async () =>
                 {
-                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    using (var session = store.OpenAsyncSession())
                     {
-                        if (Interlocked.Increment(ref batchCount) > 1)
-                            tcs.SetResult(null);
+                        company.Name = _companyName2;
+                        await session.StoreAsync(company, company.Id);
+                        await session.SaveChangesAsync();
                     }
                 });
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    var itemsCount1 = await GetItemsCount(session, companyName1);
-                    Assert.Equal(_employeesCount, itemsCount1);
-
-                    var itemsCount2 = await GetItemsCount(session, companyName2);
-                    Assert.Equal(0, itemsCount2);
-
-                    using (var internalSession = store.OpenAsyncSession())
-                    {
-                        company.Name = companyName2;
-                        await internalSession.StoreAsync(company, company.Id);
-                        await internalSession.SaveChangesAsync();
-                    }
-
-                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
-                    {
-                        // wait for the batch to complete
-                        Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
-                        tcs = new TaskCompletionSource<object>();
-
-                        var newItemsCount1 = await GetItemsCount(session, companyName1);
-                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
-
-                        var newItemsCount2 = await GetItemsCount(session, companyName2);
-                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
-
-                        itemsCount1 = newItemsCount1;
-                        itemsCount2 = newItemsCount2;
-                    }
-                }
-
-                await AssertCount(store, companyName1, 0);
-                await AssertCount(store, companyName2, _employeesCount);
+                await AssertCount(store, _companyName1, 0);
+                await AssertCount(store, _companyName2, _employeesCount);
                 
                 Assert.True(batchCount > 1);
 
@@ -329,12 +292,9 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
             }))
             {
-                const string companyName1 = "Hibernating Rhinos";
-                const string companyName2 = "HR";
-
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(_commonName, new Company { Name = companyName1 });
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(_commonName, new Company { Name = _companyName1 });
                     await session.SaveChangesAsync();
                 }
 
@@ -353,55 +313,22 @@ namespace SlowTests.Issues
                 await index.ExecuteAsync(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
-                await AssertDocumentsWithCompareExchangeCount(store, companyName1, _employeesCount);
-                await AssertDocumentsWithCompareExchangeCount(store, companyName2, 0);
 
-                var batchCount = 0;
-                var tcs = new TaskCompletionSource<object>();
+                await AssertDocumentsWithCompareExchangeCount(store, _companyName1, _employeesCount);
+                await AssertDocumentsWithCompareExchangeCount(store, _companyName2, 0);
 
-                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                var batchCount = await AssertBatchCountProgress(store, index.IndexName, GetItemsCount, async () =>
                 {
-                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
-                        if (Interlocked.Increment(ref batchCount) > 1)
-                            tcs.SetResult(null);
+                        var company = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(_commonName);
+                        company.Value.Name = _companyName2;
+                        await session.SaveChangesAsync();
                     }
                 });
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    var itemsCount1 = await GetItemsCount(session, companyName1);
-                    Assert.Equal(_employeesCount, itemsCount1);
-
-                    var itemsCount2 = await GetItemsCount(session, companyName2);
-                    Assert.Equal(0, itemsCount2);
-
-                    using (var internalSession = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
-                    {
-                        var company = await internalSession.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(_commonName);
-                        company.Value.Name = companyName2;
-                        await internalSession.SaveChangesAsync();
-                    }
-
-                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
-                    {
-                        // wait for the batch to complete
-                        Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
-                        tcs = new TaskCompletionSource<object>();
-
-                        var newItemsCount1 = await GetItemsCount(session, companyName1);
-                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
-
-                        var newItemsCount2 = await GetItemsCount(session, companyName2);
-                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
-
-                        itemsCount1 = newItemsCount1;
-                        itemsCount2 = newItemsCount2;
-                    }
-                }
-
-                await AssertDocumentsWithCompareExchangeCount(store, companyName1, 0);
-                await AssertDocumentsWithCompareExchangeCount(store, companyName2, _employeesCount);
+                await AssertDocumentsWithCompareExchangeCount(store, _companyName1, 0);
+                await AssertDocumentsWithCompareExchangeCount(store, _companyName2, _employeesCount);
 
                 Assert.True(batchCount > 1);
 
@@ -430,11 +357,9 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
             }))
             {
-                const string companyName1 = "Hibernating Rhinos";
-                const string companyName2 = "HR";
                 var company = new Company
                 {
-                    Name = companyName1
+                    Name = _companyName1
                 };
 
                 using (var session = store.OpenAsyncSession())
@@ -464,55 +389,21 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
 
-                await AssertTimeSeriesCount(store, companyName1, _employeesCount);
-                await AssertTimeSeriesCount(store, companyName2, 0);
+                await AssertTimeSeriesCount(store, _companyName1, _employeesCount);
+                await AssertTimeSeriesCount(store, _companyName2, 0);
 
-                var batchCount = 0;
-                var tcs = new TaskCompletionSource<object>();
-
-                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                var batchCount = await AssertBatchCountProgress(store, index.IndexName, GetItemsCount, async () =>
                 {
-                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    using (var session = store.OpenAsyncSession())
                     {
-                        if (Interlocked.Increment(ref batchCount) > 1)
-                            tcs.SetResult(null);
+                        company.Name = _companyName2;
+                        await session.StoreAsync(company, company.Id);
+                        await session.SaveChangesAsync();
                     }
                 });
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    var itemsCount1 = await GetItemsCount(session, companyName1);
-                    Assert.Equal(_employeesCount, itemsCount1);
-
-                    var itemsCount2 = await GetItemsCount(session, companyName2);
-                    Assert.Equal(0, itemsCount2);
-
-                    using (var internalSession = store.OpenAsyncSession())
-                    {
-                        company.Name = companyName2;
-                        await internalSession.StoreAsync(company, company.Id);
-                        await internalSession.SaveChangesAsync();
-                    }
-
-                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
-                    {
-                        // wait for the batch to complete
-                        Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
-                        tcs = new TaskCompletionSource<object>();
-
-                        var newItemsCount1 = await GetItemsCount(session, companyName1);
-                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
-
-                        var newItemsCount2 = await GetItemsCount(session, companyName2);
-                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
-
-                        itemsCount1 = newItemsCount1;
-                        itemsCount2 = newItemsCount2;
-                    }
-                }
-
-                await AssertTimeSeriesCount(store, companyName1, 0);
-                await AssertTimeSeriesCount(store, companyName2, _employeesCount);
+                await AssertTimeSeriesCount(store, _companyName1, 0);
+                await AssertTimeSeriesCount(store, _companyName2, _employeesCount);
 
                 Assert.True(batchCount > 1);
 
@@ -541,12 +432,9 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
             }))
             {
-                const string companyName1 = "Hibernating Rhinos";
-                const string companyName2 = "HR";
-
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(_commonName, new Company { Name = companyName1 });
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(_commonName, new Company { Name = _companyName1 });
                     await session.SaveChangesAsync();
                 }
 
@@ -571,56 +459,21 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
 
-                await AssertTimeSeriesCount(store, companyName1, _employeesCount);
-                await AssertTimeSeriesCount(store, companyName2, 0);
+                await AssertTimeSeriesCount(store, _companyName1, _employeesCount);
+                await AssertTimeSeriesCount(store, _companyName2, 0);
 
-                var batchCount = 0;
-                var tcs = new TaskCompletionSource<object>();
-
-                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                var batchCount = await AssertBatchCountProgress(store, index.IndexName, GetItemsCount, async () =>
                 {
-                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
-                        if (Interlocked.Increment(ref batchCount) > 1)
-                            tcs.SetResult(null);
+                        var company = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(_commonName);
+                        company.Value.Name = _companyName2;
+                        await session.SaveChangesAsync();
                     }
                 });
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.Advanced.MaxNumberOfRequestsPerSession = 50;
-
-                    var itemsCount1 = await GetItemsCount(session, companyName1);
-                    Assert.Equal(_employeesCount, itemsCount1);
-
-                    var itemsCount2 = await GetItemsCount(session, companyName2);
-                    Assert.Equal(0, itemsCount2);
-
-                    using (var internalSession = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
-                    {
-                        var company = await internalSession.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(_commonName);
-                        company.Value.Name = companyName2;
-                        await internalSession.SaveChangesAsync();
-                    }
-
-                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
-                    {
-                        // wait for the batch to complete
-                        Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
-                        tcs = new TaskCompletionSource<object>();
-
-                        var newItemsCount1 = await GetItemsCount(session, companyName1);
-                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
-                        var newItemsCount2 = await GetItemsCount(session, companyName2);
-                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
-
-                        itemsCount1 = newItemsCount1;
-                        itemsCount2 = newItemsCount2;
-                    }
-                }
-
-                await AssertTimeSeriesCount(store, companyName1, 0);
-                await AssertTimeSeriesCount(store, companyName2, _employeesCount);
+                await AssertTimeSeriesCount(store, _companyName1, 0);
+                await AssertTimeSeriesCount(store, _companyName2, _employeesCount);
 
                 Assert.True(batchCount > 1);
 
@@ -649,11 +502,9 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
             }))
             {
-                const string companyName1 = "Hibernating Rhinos";
-                const string companyName2 = "HR";
                 var company = new Company
                 {
-                    Name = companyName1
+                    Name = _companyName1
                 };
 
                 using (var session = store.OpenAsyncSession())
@@ -683,55 +534,21 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
 
-                await AssertTimeSeriesCount(store, companyName1, _employeesCount);
-                await AssertTimeSeriesCount(store, companyName2, 0);
+                await AssertTimeSeriesCount(store, _companyName1, _employeesCount);
+                await AssertTimeSeriesCount(store, _companyName2, 0);
 
-                var batchCount = 0;
-                var tcs = new TaskCompletionSource<object>();
-
-                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                var batchCount = await AssertBatchCountProgress(store, index.IndexName, GetItemsCount, async () =>
                 {
-                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    using (var session = store.OpenAsyncSession())
                     {
-                        if (Interlocked.Increment(ref batchCount) > 1)
-                            tcs.SetResult(null);
+                        company.Name = _companyName2;
+                        await session.StoreAsync(company, company.Id);
+                        await session.SaveChangesAsync();
                     }
                 });
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    var itemsCount1 = await GetItemsCount(session, companyName1);
-                    Assert.Equal(_employeesCount, itemsCount1);
-
-                    var itemsCount2 = await GetItemsCount(session, companyName2);
-                    Assert.Equal(0, itemsCount2);
-
-                    using (var internalSession = store.OpenAsyncSession())
-                    {
-                        company.Name = companyName2;
-                        await internalSession.StoreAsync(company, company.Id);
-                        await internalSession.SaveChangesAsync();
-                    }
-
-                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
-                    {
-                        // wait for the batch to complete
-                        Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
-                        tcs = new TaskCompletionSource<object>();
-
-                        var newItemsCount1 = await GetItemsCount(session, companyName1);
-                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
-
-                        var newItemsCount2 = await GetItemsCount(session, companyName2);
-                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
-
-                        itemsCount1 = newItemsCount1;
-                        itemsCount2 = newItemsCount2;
-                    }
-                }
-
-                await AssertTimeSeriesCount(store, companyName1, 0);
-                await AssertTimeSeriesCount(store, companyName2, _employeesCount);
+                await AssertTimeSeriesCount(store, _companyName1, 0);
+                await AssertTimeSeriesCount(store, _companyName2, _employeesCount);
 
                 Assert.True(batchCount > 1);
 
@@ -760,12 +577,10 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
             }))
             {
-                const string companyName1 = "Hibernating Rhinos";
-                const string companyName2 = "HR";
                 var company = new Company
                 {
                     Id = _commonName,
-                    Name = companyName1
+                    Name = _companyName1
                 };
 
                 using (var session = store.OpenAsyncSession())
@@ -789,54 +604,21 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
 
-                await AssertCountersCount(store, companyName1, _employeesCount);
-                await AssertCountersCount(store, companyName2, 0);
+                await AssertCountersCount(store, _companyName1, _employeesCount);
+                await AssertCountersCount(store, _companyName2, 0);
 
-                var batchCount = 0;
-                var tcs = new TaskCompletionSource<object>();
-
-                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                var batchCount = await AssertBatchCountProgress(store, index.IndexName, GetItemsCount, async () =>
                 {
-                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    using (var session = store.OpenAsyncSession())
                     {
-                        if (Interlocked.Increment(ref batchCount) > 1)
-                            tcs.SetResult(null);
+                        company.Name = _companyName2;
+                        await session.StoreAsync(company, company.Id);
+                        await session.SaveChangesAsync();
                     }
                 });
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    var itemsCount1 = await GetItemsCount(session, companyName1);
-                    Assert.Equal(_employeesCount, itemsCount1);
-
-                    var itemsCount2 = await GetItemsCount(session, companyName2);
-                    Assert.Equal(0, itemsCount2);
-
-                    using (var internalSession = store.OpenAsyncSession())
-                    {
-                        company.Name = companyName2;
-                        await internalSession.StoreAsync(company, company.Id);
-                        await internalSession.SaveChangesAsync();
-                    }
-
-                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
-                    {
-                        // wait for the batch to complete
-                        Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
-                        tcs = new TaskCompletionSource<object>();
-
-                        var newItemsCount1 = await GetItemsCount(session, companyName1);
-                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
-                        var newItemsCount2 = await GetItemsCount(session, companyName2);
-                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
-
-                        itemsCount1 = newItemsCount1;
-                        itemsCount2 = newItemsCount2;
-                    }
-                }
-
-                await AssertCountersCount(store, companyName1, 0);
-                await AssertCountersCount(store, companyName2, _employeesCount);
+                await AssertCountersCount(store, _companyName1, 0);
+                await AssertCountersCount(store, _companyName2, _employeesCount);
 
                 Assert.True(batchCount > 1);
 
@@ -865,12 +647,9 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
             }))
             {
-                const string companyName1 = "Hibernating Rhinos";
-                const string companyName2 = "HR";
-
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(_commonName, new Company { Name = companyName1 });
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(_commonName, new Company { Name = _companyName1 });
                     await session.SaveChangesAsync();
                 }
 
@@ -889,56 +668,21 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
 
-                await AssertCountersCount(store, companyName1, _employeesCount);
-                await AssertCountersCount(store, companyName2, 0);
+                await AssertCountersCount(store, _companyName1, _employeesCount);
+                await AssertCountersCount(store, _companyName2, 0);
 
-                var batchCount = 0;
-                var tcs = new TaskCompletionSource<object>();
-
-                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                var batchCount = await AssertBatchCountProgress(store, index.IndexName, GetItemsCount, async () =>
                 {
-                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
-                        if (Interlocked.Increment(ref batchCount) > 1)
-                            tcs.SetResult(null);
+                        var company = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(_commonName);
+                        company.Value.Name = _companyName2;
+                        await session.SaveChangesAsync();
                     }
                 });
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.Advanced.MaxNumberOfRequestsPerSession = 50;
-
-                    var itemsCount1 = await GetItemsCount(session, companyName1);
-                    Assert.Equal(_employeesCount, itemsCount1);
-
-                    var itemsCount2 = await GetItemsCount(session, companyName2);
-                    Assert.Equal(0, itemsCount2);
-
-                    using (var internalSession = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
-                    {
-                        var company = await internalSession.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(_commonName);
-                        company.Value.Name = companyName2;
-                        await internalSession.SaveChangesAsync();
-                    }
-
-                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
-                    {
-                        // wait for the batch to complete
-                        Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
-                        tcs = new TaskCompletionSource<object>();
-
-                        var newItemsCount1 = await GetItemsCount(session, companyName1);
-                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
-                        var newItemsCount2 = await GetItemsCount(session, companyName2);
-                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
-
-                        itemsCount1 = newItemsCount1;
-                        itemsCount2 = newItemsCount2;
-                    }
-                }
-
-                await AssertCountersCount(store, companyName1, 0);
-                await AssertCountersCount(store, companyName2, _employeesCount);
+                await AssertCountersCount(store, _companyName1, 0);
+                await AssertCountersCount(store, _companyName2, _employeesCount);
 
                 Assert.True(batchCount > 1);
 
@@ -967,12 +711,10 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
             }))
             {
-                const string companyName1 = "Hibernating Rhinos";
-                const string companyName2 = "HR";
                 var company = new Company
                 {
                     Id = _commonName,
-                    Name = companyName1
+                    Name = _companyName1
                 };
 
                 using (var session = store.OpenAsyncSession())
@@ -996,56 +738,21 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
 
-                await AssertCountersCount(store, companyName1, _employeesCount);
-                await AssertCountersCount(store, companyName2, 0);
+                await AssertCountersCount(store, _companyName1, _employeesCount);
+                await AssertCountersCount(store, _companyName2, 0);
 
-                var batchCount = 0;
-                var tcs = new TaskCompletionSource<object>();
-
-                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                var batchCount = await AssertBatchCountProgress(store, index.IndexName, GetItemsCount, async () =>
                 {
-                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    using (var session = store.OpenAsyncSession())
                     {
-                        if (Interlocked.Increment(ref batchCount) > 1)
-                            tcs.SetResult(null);
+                        company.Name = _companyName2;
+                        await session.StoreAsync(company, company.Id);
+                        await session.SaveChangesAsync();
                     }
                 });
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.Advanced.MaxNumberOfRequestsPerSession = 50;
-
-                    var itemsCount1 = await GetItemsCount(session, companyName1);
-                    Assert.Equal(_employeesCount, itemsCount1);
-
-                    var itemsCount2 = await GetItemsCount(session, companyName2);
-                    Assert.Equal(0, itemsCount2);
-
-                    using (var internalSession = store.OpenAsyncSession())
-                    {
-                        company.Name = companyName2;
-                        await internalSession.StoreAsync(company, company.Id);
-                        await internalSession.SaveChangesAsync();
-                    }
-
-                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
-                    {
-                        // wait for the batch to complete
-                        Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
-                        tcs = new TaskCompletionSource<object>();
-
-                        var newItemsCount1 = await GetItemsCount(session, companyName1);
-                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
-                        var newItemsCount2 = await GetItemsCount(session, companyName2);
-                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
-
-                        itemsCount1 = newItemsCount1;
-                        itemsCount2 = newItemsCount2;
-                    }
-                }
-
-                await AssertCountersCount(store, companyName1, 0);
-                await AssertCountersCount(store, companyName2, _employeesCount);
+                await AssertCountersCount(store, _companyName1, 0);
+                await AssertCountersCount(store, _companyName2, _employeesCount);
 
                 Assert.True(batchCount > 1);
 
@@ -1076,6 +783,69 @@ namespace SlowTests.Issues
                 Assert.Equal(expectedCount, itemsCount);
             }
         }
+
+        private static async Task<int> AssertBatchCountProgress(IDocumentStore store, string indexName, Func<IAsyncDocumentSession, string, Task<int>> getItemsCount, Func<Task> modifyItem)
+        {
+            var batchCount = 0;
+            var tcs = new TaskCompletionSource<object>();
+            var locker = new SemaphoreSlim(1, 1);
+
+            store.Changes().ForIndex(indexName).Subscribe(x =>
+            {
+                if (x.Type == IndexChangeTypes.BatchCompleted)
+                {
+                    using (Lock())
+                    {
+                        if (Interlocked.Increment(ref batchCount) > 1)
+                            tcs.SetResult(null);
+                    }
+                }
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.MaxNumberOfRequestsPerSession = 50;
+
+                var itemsCount1 = await getItemsCount(session, _companyName1);
+                Assert.Equal(_employeesCount, itemsCount1);
+
+                var itemsCount2 = await getItemsCount(session, _companyName2);
+                Assert.Equal(0, itemsCount2);
+
+                await modifyItem();
+
+                while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
+                {
+                    // wait for the batch to complete
+                    Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
+
+                    using (Lock())
+                    {
+                        tcs = new TaskCompletionSource<object>();
+
+                        var newItemsCount1 = await getItemsCount(session, _companyName1);
+                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1),
+                            $"new count1: {newItemsCount1}, old count1: {itemsCount1}");
+                        var newItemsCount2 = await getItemsCount(session, _companyName2);
+                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2),
+                            $"new count2: {newItemsCount2}, old count2: {itemsCount2}, employees count: {_employeesCount}");
+
+                        itemsCount1 = newItemsCount1;
+                        itemsCount2 = newItemsCount2;
+                    }
+                }
+            }
+
+            IDisposable Lock()
+            {
+                locker.Wait();
+
+                return new DisposableAction(() => locker.Release());
+            }
+
+            return batchCount;
+        }
+
 
         private class Company
         {
