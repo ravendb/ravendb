@@ -1585,7 +1585,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (newDocumentData == null)
                 return;
 
-            _documentDatabase.DocumentsStorage.Put(ctx, docId, null, newDocumentData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
+            _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, expectedChangeVector: null, newDocumentData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
         }
 
         internal static BlittableJsonReaderObject ModifyDocumentMetadata(JsonOperationContext ctx, string docId, SortedSet<string> namesToAdd, HashSet<string> namesToRemove, BlittableJsonReaderObject data, ref DocumentFlags flags)
