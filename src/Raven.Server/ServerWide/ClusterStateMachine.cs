@@ -1414,6 +1414,7 @@ namespace Raven.Server.ServerWide
                             addDatabaseCommand.Record.Client.Etag = index;
                             return EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context);
                         }
+
                         if (items.ReadByKey(valueNameLowered, out _) && addDatabaseCommand.IsRestore == false)
                         {
                             // the backup tasks cannot be changed by modifying the database record
@@ -1461,6 +1462,9 @@ namespace Raven.Server.ServerWide
 
         private static bool ShouldSetClientConfigEtag(BlittableJsonReaderObject newDatabaseRecord, BlittableJsonReaderObject oldDatabaseRecord)
         {
+            if (oldDatabaseRecord == null)
+                return true;
+
             const string clientPropName = nameof(DatabaseRecord.Client);
             if (newDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject newDbClientConfig) == false || newDbClientConfig == null) 
                 return false;

@@ -16,7 +16,28 @@ namespace SlowTests.Client
         {
         }
 
-       
+        [Fact]
+        public void CanSetClientConfigurationOnDatabaseCreation()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = r => r.Client = new ClientConfiguration
+                {
+                    MaxNumberOfRequestsPerSession = 50
+                }
+            }))
+            {
+                var requestExecutor = store.GetRequestExecutor();
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<dynamic>("users/1"); // forcing client configuration update
+                }
+
+                Assert.Equal(50, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
+            }
+        }
+
         [Fact]
         public void ChangeClientConfigurationForDatabase()
         {
