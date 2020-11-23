@@ -1329,9 +1329,10 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out Slice valueNameLowered))
                 using (var newDatabaseRecord = EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context))
                 {
+                    var databaseExists = items.ReadByKey(valueNameLowered, out TableValueReader reader);
                     if (addDatabaseCommand.RaftCommandIndex != null)
                     {
-                        if (items.ReadByKey(valueNameLowered, out TableValueReader reader) == false && addDatabaseCommand.RaftCommandIndex != 0)
+                        if (databaseExists == false && addDatabaseCommand.RaftCommandIndex != 0)
                             throw new RachisConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name +
                                                            " does not exists, but had a non zero etag");
 
@@ -1353,7 +1354,7 @@ namespace Raven.Server.ServerWide
                         shouldSetClientConfigEtag = ShouldSetClientConfigEtag(newDatabaseRecord, oldDatabaseRecord);
                     }
 
-                    using (var databaseRecordAsJson = UpdateDatabaseRecordIfNeeded())
+                    using (var databaseRecordAsJson = UpdateDatabaseRecordIfNeeded(databaseExists, shouldSetClientConfigEtag, index, addDatabaseCommand, newDatabaseRecord, context))
                     {
                         UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
                         SetDatabaseValues(addDatabaseCommand.DatabaseValues, addDatabaseCommand.Name, context, index, items);
@@ -1406,44 +1407,6 @@ namespace Raven.Server.ServerWide
                         }
 
                     }
-
-                    BlittableJsonReaderObject UpdateDatabaseRecordIfNeeded()
-                    {
-                        if (shouldSetClientConfigEtag)
-                        {
-                            addDatabaseCommand.Record.Client ??= new ClientConfiguration();
-                            addDatabaseCommand.Record.Client.Etag = index;
-                            return EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context);
-                        }
-
-                        if (items.ReadByKey(valueNameLowered, out _) && addDatabaseCommand.IsRestore == false)
-                        {
-                            // the backup tasks cannot be changed by modifying the database record
-                            // (only by using the dedicated UpdatePeriodicBackup command)
-                            return newDatabaseRecord;
-                        }
-
-                        var serverWideBackups = Read(context, ServerWideBackupConfigurationsKey);
-                        if (serverWideBackups == null)
-                            return newDatabaseRecord;
-
-                        var propertyNames = serverWideBackups.GetPropertyNames();
-                        if (propertyNames.Length == 0)
-                            return newDatabaseRecord;
-
-                        // add the server-wide backup configurations
-                        foreach (var propertyName in propertyNames)
-                        {
-                            if (serverWideBackups.TryGet(propertyName, out BlittableJsonReaderObject configurationBlittable) == false)
-                                continue;
-
-                            var backupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(configurationBlittable);
-                            PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(backupConfiguration, addDatabaseCommand.Name, addDatabaseCommand.Encrypted);
-                            addDatabaseCommand.Record.PeriodicBackups.Add(backupConfiguration);
-                        }
-
-                        return EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context);
-                    }
                 }
             }
             catch (Exception e)
@@ -1461,15 +1424,62 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private BlittableJsonReaderObject UpdateDatabaseRecordIfNeeded(bool databaseExists, bool shouldSetClientConfigEtag, long index, AddDatabaseCommand addDatabaseCommand, BlittableJsonReaderObject newDatabaseRecord, TransactionOperationContext context)
+        {
+            var hasChanges = false;
+
+            if (shouldSetClientConfigEtag)
+            {
+                addDatabaseCommand.Record.Client ??= new ClientConfiguration();
+                addDatabaseCommand.Record.Client.Etag = index;
+                hasChanges = true;
+            }
+
+            if (databaseExists == false || addDatabaseCommand.IsRestore)
+            {
+                // the backup tasks cannot be changed by modifying the database record
+                // (only by using the dedicated UpdatePeriodicBackup command)
+                UpdatePeriodicBackups();
+            }
+
+            return hasChanges
+                ? EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context)
+                : newDatabaseRecord;
+
+            void UpdatePeriodicBackups()
+            {
+                var serverWideBackups = Read(context, ServerWideBackupConfigurationsKey);
+                if (serverWideBackups == null)
+                    return;
+
+                var propertyNames = serverWideBackups.GetPropertyNames();
+                if (propertyNames.Length == 0)
+                    return;
+
+                // add the server-wide backup configurations
+                foreach (var propertyName in propertyNames)
+                {
+                    if (serverWideBackups.TryGet(propertyName, out BlittableJsonReaderObject configurationBlittable) == false)
+                        continue;
+
+                    var backupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(configurationBlittable);
+                    PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(backupConfiguration, addDatabaseCommand.Name, addDatabaseCommand.Encrypted);
+                    addDatabaseCommand.Record.PeriodicBackups.Add(backupConfiguration);
+                    hasChanges = true;
+                }
+            }
+        }
+
         private static bool ShouldSetClientConfigEtag(BlittableJsonReaderObject newDatabaseRecord, BlittableJsonReaderObject oldDatabaseRecord)
         {
+            const string clientPropName = nameof(DatabaseRecord.Client);
+            var hasNewConfiguration = newDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject newDbClientConfig) && newDbClientConfig != null;
             if (oldDatabaseRecord == null)
+                return hasNewConfiguration;
+
+            if (hasNewConfiguration == false)
                 return true;
 
-            const string clientPropName = nameof(DatabaseRecord.Client);
-            if (newDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject newDbClientConfig) == false || newDbClientConfig == null) 
-                return true;
-            
             return oldDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject oldDbClientConfig) == false
                    || oldDbClientConfig == null
                    || oldDbClientConfig.Equals(newDbClientConfig) == false;

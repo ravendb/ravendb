@@ -30,6 +30,25 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
+        public async Task CanAddServerWideBackupToNewDatabase()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
+                {
+                    FullBackupFrequency = "* * * * *",
+                    Disabled = true
+                }));
+
+                var newDatabaseName = store.Database + "_new";
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDatabaseName)));
+
+                var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDatabaseName));
+                Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
+            }
+        }
+
+        [Fact]
         public async Task CanStoreServerWideBackup()
         {
             using (var store = GetDocumentStore())
