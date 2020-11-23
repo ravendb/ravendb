@@ -72,6 +72,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         HighClientCreationRate,
         RollupExceedNumberOfValues,
 
-        LowSwapSize
+        LowSwapSize,
+
+        UnrecoverableClusterError
     }
 }

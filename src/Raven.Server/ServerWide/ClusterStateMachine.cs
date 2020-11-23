@@ -569,9 +569,11 @@ namespace Raven.Server.ServerWide
                 // IMPORTANT
                 // Other exceptions MUST be consistent across the cluster (meaning: if it occured on one node it must occur on the rest also).
                 // the exceptions here are machine specific and will cause a jam in the state machine until the exception will be resolved.
-                if (_parent.Log.IsInfoEnabled)
-                    _parent.Log.Info($"Unrecoverable exception on database '{DatabaseName}' at command type '{type}', execution will be retried later.", e);
+                var error = $"Unrecoverable exception on database '{DatabaseName}' at command type '{type}', execution will be retried later.";
+                if (_parent.Log.IsOperationsEnabled)
+                    _parent.Log.Operations(error, e);
 
+                AddUnrecoverableNotification(serverStore, error, e);
                 NotifyLeaderAboutError(index, leader, e);
                 throw;
             }
@@ -587,6 +589,24 @@ namespace Raven.Server.ServerWide
                     Term = leader?.Term,
                     LeaderShipDuration = leader?.LeaderShipDuration,
                 });
+            }
+
+            static void AddUnrecoverableNotification(ServerStore serverStore, string error, Exception exception)
+            {
+                try
+                {
+                    serverStore.NotificationCenter.Add(AlertRaised.Create(
+                        null,
+                        "Unrecoverable Cluster Error",
+                        error,
+                        AlertType.UnrecoverableClusterError,
+                        NotificationSeverity.Error,
+                        details: new ExceptionDetails(exception)));
+                }
+                catch
+                {
+                    // nothing we can do here
+                }
             }
         }
 
@@ -1514,22 +1534,22 @@ namespace Raven.Server.ServerWide
 
         private BlittableJsonReaderObject UpdateDatabaseRecordIfNeeded(bool databaseExists, bool shouldSetClientConfigEtag, long index, AddDatabaseCommand addDatabaseCommand, BlittableJsonReaderObject newDatabaseRecord, ClusterOperationContext context)
         {
+            var hasChanges = false;
+
             if (shouldSetClientConfigEtag)
             {
+                addDatabaseCommand.Record.Client ??= new ClientConfiguration();
                 addDatabaseCommand.Record.Client.Etag = index;
-                return DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(addDatabaseCommand.Record, context);
+                hasChanges = true;
             }
 
-            if (databaseExists && addDatabaseCommand.IsRestore == false)
+            if (databaseExists == false || addDatabaseCommand.IsRestore)
             {
                 // the backup tasks cannot be changed by modifying the database record
                 // (only by using the dedicated UpdatePeriodicBackup command)
-                return newDatabaseRecord;
+                UpdatePeriodicBackups();
+                UpdateExternalReplications();
             }
-
-            var hasChanges = false;
-            UpdatePeriodicBackups();
-            UpdateExternalReplications();
 
             return hasChanges
                 ? DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(addDatabaseCommand.Record, context)
@@ -1612,8 +1632,12 @@ namespace Raven.Server.ServerWide
         private static bool ShouldSetClientConfigEtag(BlittableJsonReaderObject newDatabaseRecord, BlittableJsonReaderObject oldDatabaseRecord)
         {
             const string clientPropName = nameof(DatabaseRecord.Client);
-            if (newDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject newDbClientConfig) == false || newDbClientConfig == null)
-                return false;
+            var hasNewConfiguration = newDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject newDbClientConfig) && newDbClientConfig != null;
+            if (oldDatabaseRecord == null)
+                return hasNewConfiguration;
+
+            if (hasNewConfiguration == false)
+                return true;
 
             return oldDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject oldDbClientConfig) == false
                    || oldDbClientConfig == null
