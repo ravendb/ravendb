@@ -1411,6 +1411,7 @@ namespace Raven.Server.ServerWide
                     {
                         if (shouldSetClientConfigEtag)
                         {
+                            addDatabaseCommand.Record.Client ??= new ClientConfiguration();
                             addDatabaseCommand.Record.Client.Etag = index;
                             return EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context);
                         }
@@ -1467,7 +1468,7 @@ namespace Raven.Server.ServerWide
 
             const string clientPropName = nameof(DatabaseRecord.Client);
             if (newDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject newDbClientConfig) == false || newDbClientConfig == null) 
-                return false;
+                return true;
             
             return oldDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject oldDbClientConfig) == false
                    || oldDbClientConfig == null

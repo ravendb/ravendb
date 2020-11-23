@@ -42,6 +42,39 @@ namespace SlowTests.Client
         }
 
         [Fact]
+        public void CanSetClientConfigurationAfterDatabaseCreation()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = r => r.Client = new ClientConfiguration
+                {
+                    MaxNumberOfRequestsPerSession = 50
+                }
+            }))
+            {
+                var requestExecutor = store.GetRequestExecutor();
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<dynamic>("users/1"); // forcing client configuration update
+                }
+
+                Assert.Equal(50, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
+
+                var databaseRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+                databaseRecord.Client = null;
+                store.Maintenance.Server.Send(new UpdateDatabaseOperation(databaseRecord, databaseRecord.Etag));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<dynamic>("users/1"); // forcing client configuration update
+                }
+
+                Assert.Equal(30, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
+            }
+        }
+
+        [Fact]
         public void ChangeClientConfigurationForDatabase()
         {
             using (var store = GetDocumentStore())
