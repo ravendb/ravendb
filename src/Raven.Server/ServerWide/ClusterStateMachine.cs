@@ -491,9 +491,11 @@ namespace Raven.Server.ServerWide
                 // IMPORTANT
                 // Other exceptions MUST be consistent across the cluster (meaning: if it occured on one node it must occur on the rest also).
                 // the exceptions here are machine specific and will cause a jam in the state machine until the exception will be resolved.
-                if (_parent.Log.IsInfoEnabled)
-                    _parent.Log.Info($"Unrecoverable exception on database '{DatabaseName}' at command type '{type}', execution will be retried later.", e);
+                var error = $"Unrecoverable exception on database '{DatabaseName}' at command type '{type}', execution will be retried later.";
+                if (_parent.Log.IsOperationsEnabled)
+                    _parent.Log.Operations(error, e);
 
+                AddUnrecoverableNotification(serverStore, error, e);
                 NotifyLeaderAboutError(index, leader, e);
                 throw;
             }
@@ -509,6 +511,24 @@ namespace Raven.Server.ServerWide
                     Term = leader?.Term,
                     LeaderShipDuration = leader?.LeaderShipDuration,
                 });
+            }
+
+            static void AddUnrecoverableNotification(ServerStore serverStore, string error, Exception exception)
+            {
+                try
+                {
+                    serverStore.NotificationCenter.Add(AlertRaised.Create(
+                        null,
+                        "Unrecoverable Cluster Error",
+                        error,
+                        AlertType.UnrecoverableClusterError,
+                        NotificationSeverity.Error,
+                        details: new ExceptionDetails(exception)));
+                }
+                catch
+                {
+                    // nothing we can do here
+                }
             }
         }
 
