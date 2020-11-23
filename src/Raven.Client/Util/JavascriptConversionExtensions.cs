@@ -1605,6 +1605,48 @@ namespace Raven.Client.Util
             }
         }
 
+        public class TimeSpanSupport : JavascriptConversionExtension
+        {
+            public static TimeSpanSupport Instance = new TimeSpanSupport();
+
+            private TimeSpanSupport()
+            {
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is NewExpression newExp) || newExp.Type != typeof(TimeSpan))
+                    return;
+
+                context.PreventDefault();
+                var writer = context.GetWriter();
+                using (writer.Operation(newExp))
+                {
+                    writer.Write("convertToTimeSpanString(");
+
+                    for (int i = 0; i < newExp.Arguments.Count; i++)
+                    {
+                        var expression = newExp.Arguments[i];
+                        if (expression is ConstantExpression value)
+                        {
+                            writer.Write(value);
+                        }
+                        else
+                        {
+                            context.Visitor.Visit(expression);
+                        }
+
+                        if (i < newExp.Arguments.Count - 1)
+                        {
+                            writer.Write(", ");
+                        }
+                    }
+
+                    writer.Write(")");
+                }
+            }
+        }
+
         public class SubscriptionsWrappedConstantSupport : JavascriptConversionExtension
         {            
             private readonly DocumentConventions _conventions;
