@@ -1356,9 +1356,8 @@ namespace Raven.Client.Http
 
                 case HttpStatusCode.Forbidden:
                     var msg = await TryGetResponseOfError(response).ConfigureAwait(false);
-                    var builder = new StringBuilder(msg)
-                        .Append(". ").AppendLine()
-                        .Append("Forbidden access to ").Append(chosenNode.Database).Append("@").Append(chosenNode.Url).Append(", ");
+                    var builder = new StringBuilder("Forbidden access to ").
+                        Append(chosenNode.Database).Append("@").Append(chosenNode.Url).Append(", ");
                     if (Certificate == null)
                     {
                         builder.Append("a certificate is required. ");
