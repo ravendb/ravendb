@@ -455,8 +455,8 @@ class databases extends viewModelBase {
         return appUrl.forIndexes(dbInfo);
     } 
 
-    ongoingTasksUrl(dbInfo: databaseInfo): string {
-        return appUrl.forOngoingTasks(dbInfo);
+    backupsViewUrl(dbInfo: databaseInfo): string {
+        return appUrl.forBackups(dbInfo);
     }
 
     periodicBackupUrl(dbInfo: databaseInfo): string {
