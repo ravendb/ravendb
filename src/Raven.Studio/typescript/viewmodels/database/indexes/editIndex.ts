@@ -71,7 +71,6 @@ class editIndex extends viewModelBase {
             "formatIndex", 
             "deleteAdditionalSource", 
             "previewAdditionalSource",
-            "createAnalyzerNameAutocompleter", 
             "shouldDropupMenu",
             "formatReduce",
             "removeReduce",
@@ -444,16 +443,6 @@ class editIndex extends viewModelBase {
                 return filteredFieldNames.filter(x => x.toLowerCase().includes(name.toLowerCase()));
             } else {
                 return filteredFieldNames;
-            }
-        });
-    }
-
-    createAnalyzerNameAutocompleter(analyzerName: string): KnockoutComputed<string[]> {
-        return ko.pureComputed(() => {
-            if (analyzerName) {
-                return indexFieldOptions.analyzersNames.filter(x => x.toLowerCase().includes(analyzerName.toLowerCase()));
-            } else {
-                return indexFieldOptions.analyzersNames;
             }
         });
     }

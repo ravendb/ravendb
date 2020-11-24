@@ -664,7 +664,7 @@
                             <span class="properties-label">Indexing</span>
                             <div class="btn-group properties-value">
                                 <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
-                                        data-bind="attr: { title: effectiveIndexing() === 'Search (implied)' ? 'Indexing is not defined. Search is implied since an analyzer is defined' : effectiveIndexing() }">
+                                        data-bind="attr: { title: effectiveIndexing() === 'Search (implied)' ? 'Indexing was not defined. Search is implied since an analyzer is defined' : effectiveIndexing() }">
                                     <span data-bind="text: effectiveIndexing"></span> <span class="caret"></span>
                                 </button>
                                 <ul class="dropdown-menu" data-bind=" css: { 'list-dropup' : $root.shouldDropupMenu($data, isDefaultFieldOptions() ? 0 : $index())() }">
@@ -685,7 +685,7 @@
                                            data-bind="textInput: analyzer, disable: !!disabledAnalyzerText(),
                                                       attr: { id: 'analyzerName' + (isDefaultFieldOptions() ? '' : $index()), placeholder: analyzerPlaceHolder }" />
                                     <ul class="dropdown-menu" role="menu"
-                                        data-bind="autoComplete: '#analyzerName' + (isDefaultFieldOptions() ? '' : $index()), foreach: $root.createAnalyzerNameAutocompleter($data.analyzer()),
+                                        data-bind="autoComplete: '#analyzerName' + (isDefaultFieldOptions() ? '' : $index()), foreach: createAnalyzerNameAutocompleter($data.analyzer()),
                                                        css: { 'list-dropup' : $root.shouldDropupMenu($data, isDefaultFieldOptions() ? 0 : $index())() }">
                                         <li role="presentation" data-bind="click: $parent.analyzer.bind($parent, $data)" >
                                             <a role="menuitem" tabindex="-1" href="#">
