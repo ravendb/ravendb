@@ -209,9 +209,10 @@ namespace Raven.Server.Smuggler.Documents
                 if (reader.TryGet(nameof(databaseRecord.UnusedDatabaseIds), out BlittableJsonReaderArray unusedDatabaseIds) &&
                     unusedDatabaseIds != null)
                 {
-                    foreach (LazyStringValue id in unusedDatabaseIds)
+                    foreach (var id in unusedDatabaseIds)
                     {
-                        databaseRecord.UnusedDatabaseIds.Add(id);
+                        Debug.Assert(id is LazyStringValue || id is LazyCompressedStringValue);
+                        databaseRecord.UnusedDatabaseIds.Add(id.ToString());
                     }
                 }
                 
