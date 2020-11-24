@@ -5,7 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.ServerWide.Context;
+using Raven.Server.Documents.Indexes;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                 var indexResult = result[0];
                 await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
                 foreach (var server in Servers)
-                { 
+                {
                     documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                     var index = documentDatabase.IndexStore.GetIndex("MyIndex");
                     index.SetState(IndexState.Disabled);
@@ -132,18 +132,17 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(){Name = "Toli"}, "user/1");
+                    session.Store(new User() { Name = "Toli" }, "user/1");
                     session.SaveChanges();
-
                 }
 
                 index.SetState(IndexState.Disabled);
 
-                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (var context = QueryOperationContext.Allocate(documentDatabase, index))
                 using (context.OpenReadTransaction())
                 {
-                    var (isStale, lastEtag) = index.GetIndexStats(context);
-                    Assert.Equal(0, lastEtag);
+                    var state = index.GetIndexingState(context);
+                    Assert.Equal(0, state.LastProcessedEtag);
                 }
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
