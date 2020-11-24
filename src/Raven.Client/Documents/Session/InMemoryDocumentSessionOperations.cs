@@ -2085,7 +2085,7 @@ more responsive application.
 
         private bool _prepareEntitiesDeletes;
 
-        public int Count => _deletedEntities.Count + _onBeforeDeletedEntities?.Count ?? 0;
+        public int Count => _deletedEntities.Count + (_onBeforeDeletedEntities?.Count ?? 0);
 
         public void Add(object entity)
         {
