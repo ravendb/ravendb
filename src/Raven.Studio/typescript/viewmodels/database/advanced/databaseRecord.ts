@@ -170,7 +170,7 @@ class databaseRecord extends viewModelBase {
     }
     
     private setVisibleDocumentText() {
-        const docText = this.stringify(this.document().toDto(), this.hideEmptyValues());
+        const docText = genUtils.stringify(this.document().toDto(), this.hideEmptyValues());
         this.documentText(docText);
 
         // must keep the collapse state because although user didn't actively changed it, 
@@ -179,23 +179,6 @@ class databaseRecord extends viewModelBase {
             this.collapseDocument()
         } else {
             this.unfoldDocument();
-        }
-    }
-
-    private stringify(obj: any, stripNullAndEmptyValues: boolean = false) {
-        const prettifySpacing = 4;
-        
-        if (stripNullAndEmptyValues) {
-            return JSON.stringify(obj, (key, val) => {
-                const isNull = _.isNull(val);
-                const isEmptyObj = _.isEqual(val, {});
-                const isEmptyArray = _.isEqual(val, []);
-                
-                return isNull || isEmptyObj || isEmptyArray ? undefined : val;
-                
-            }, prettifySpacing);
-        } else {
-            return JSON.stringify(obj, null, prettifySpacing);
         }
     }
 }
