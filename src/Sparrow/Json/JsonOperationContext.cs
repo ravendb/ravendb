@@ -151,7 +151,6 @@ namespace Sparrow.Json
             _arenaAllocator = new ArenaMemoryAllocator(lowMemoryFlag, initialSize);
             _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(lowMemoryFlag, longLivedSize);
             CachedProperties = new CachedProperties(this);
-            CachedProperties.Renew();
             _jsonParserState = new JsonParserState();
             _objectJsonParser = new ObjectJsonParser(_jsonParserState, this);
             _documentBuilder = new BlittableJsonDocumentBuilder(this, _jsonParserState, _objectJsonParser);
@@ -935,7 +934,10 @@ namespace Sparrow.Json
                 _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(LowMemoryFlag, _longLivedSize);
                 CachedProperties = new CachedProperties(this);
             }
-            CachedProperties.Renew();
+            else
+            {
+                CachedProperties.Renew();
+            }
         }
 
         protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false)
