@@ -268,7 +268,11 @@ namespace FastTests
                     {
                         Urls = UseFiddler(serverToUse.WebUrl),
                         Database = name,
-                        Certificate = options.ClientCertificate
+                        Certificate = options.ClientCertificate,
+                        Conventions =
+                        {
+                            DisableTopologyCache = true
+                        }
                     };
 
                     options.ModifyDocumentStore?.Invoke(store);
@@ -843,11 +847,11 @@ namespace FastTests
         }
 
         protected X509Certificate2 RegisterClientCertificate(
-            X509Certificate2 serverCertificate, 
-            X509Certificate2 clientCertificate, 
-            Dictionary<string, DatabaseAccess> permissions, 
-            SecurityClearance clearance = SecurityClearance.ValidUser, 
-            RavenServer server = null, 
+            X509Certificate2 serverCertificate,
+            X509Certificate2 clientCertificate,
+            Dictionary<string, DatabaseAccess> permissions,
+            SecurityClearance clearance = SecurityClearance.ValidUser,
+            RavenServer server = null,
             string certificateName = "client certificate")
         {
             using var store = GetDocumentStore(new Options
@@ -856,7 +860,7 @@ namespace FastTests
                 Server = server,
                 ClientCertificate = serverCertificate,
                 AdminCertificate = serverCertificate,
-                ModifyDocumentStore = s => s.Conventions = new DocumentConventions {DisableTopologyUpdates = true}
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions { DisableTopologyUpdates = true }
             });
             store.Maintenance.Server.Send(new PutClientCertificateOperation(certificateName, clientCertificate, permissions, clearance));
             return clientCertificate;
