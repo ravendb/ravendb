@@ -928,7 +928,9 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             var rollup = (bool)value[nameof(TimeSeriesEntry.IsRollup)];
             if (rollup == false)
                 return 1L;
-            return (long)((double[])value[nameof(TimeSeriesEntry.Values)])[(int)AggregationType.Count];
+
+            object count = ((DynamicJsonArray)value[nameof(TimeSeriesEntry.Values)]).Items[(int)AggregationType.Count];
+            return (long)(double)count;
         }
 
         private long GetAggregatedSum(DynamicJsonValue value)
