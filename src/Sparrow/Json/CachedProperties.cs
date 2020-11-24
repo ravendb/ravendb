@@ -32,7 +32,7 @@ namespace Sparrow.Json
 
         public void Renew()
         {
-            if(_perCorePropertiesCache.TryPull(out _cachedSorts) == false)
+            if (_perCorePropertiesCache.TryPull(out _cachedSorts) == false)
                 _cachedSorts = new CachedSort[CachedSortsSize]; // size is fixed and used in GetPropertiesHashedIndex
         }
 
@@ -154,6 +154,8 @@ namespace Sparrow.Json
         {
             _context = context;
             _sorter = new Sorter<BlittableJsonDocumentBuilder.PropertyTag, PropertySorter>(new PropertySorter(this));
+
+            Renew();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
