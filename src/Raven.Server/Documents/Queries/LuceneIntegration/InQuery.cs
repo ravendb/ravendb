@@ -11,13 +11,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Raven.Server.Documents.Queries.LuceneIntegration
 {
-    public sealed class TermsMatchQuery : Query, IRavenLuceneMethodQuery
+    public sealed class InQuery : Query
     {
-        public List<string> Matches { get; private set; }
+        public List<string> Matches;
 
-        public string Field { get; }
+        public string Field;
 
-        public TermsMatchQuery(string field, List<string> matches)
+        public InQuery(string field, List<string> matches)
         {
             Field = field;
             Matches = matches;
@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
 
         public override Weight CreateWeight(Searcher searcher, IState state)
         {
-            return new TermMatchQueryWeight(this, searcher);
+            return new InQueryWeight(this, searcher);
         }
 
         private class SharedArrayDisjunctionMaxScorer : DisjunctionMaxScorer
@@ -62,13 +62,13 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             }
         }
         
-        private class TermMatchQueryWeight : Weight
+        private class InQueryWeight : Weight
         {
-            private readonly TermsMatchQuery _parent;
+            private readonly InQuery _parent;
             private readonly Searcher _searcher;
             private float _queryWeight = 1.0f;
 
-            public TermMatchQueryWeight(TermsMatchQuery parent, Searcher searcher)
+            public InQueryWeight(InQuery parent, Searcher searcher)
             {
                 _parent = parent;
                 _searcher = searcher;
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             {
                 Similarity similarity = _parent.GetSimilarity(_searcher);
                 if(_parent.Matches.Count > 128)
-                    return new LazyInitTermMatchScorer(_parent, reader, state, similarity);
+                    return new LazyInitInScorer(_parent, reader, state, similarity);
 
                 var scorers = ArrayPool<Scorer>.Shared.Rent(_parent.Matches.Count);
                 int index = 0;
@@ -111,19 +111,19 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 return _queryWeight * _queryWeight;
             }
 
-            public override Query Query { get; }
-            public override float Value { get; }
+            public override Query Query => _parent;
+            public override float Value => _queryWeight;
         }
         
-        private class LazyInitTermMatchScorer : Scorer
+        private class LazyInitInScorer : Scorer
         {
-            private readonly TermsMatchQuery _parent;
+            private readonly InQuery _parent;
             private readonly IndexReader _reader;
             private readonly IState _state;
             private readonly Similarity _similarity;
-            private EagerTermMatchScorer _inner;
+            private EagerInScorer _inner;
 
-            internal LazyInitTermMatchScorer(TermsMatchQuery parent, IndexReader reader, IState state, Similarity similarity) : base(similarity)
+            internal LazyInitInScorer(InQuery parent, IndexReader reader, IState state, Similarity similarity) : base(similarity)
             {
                 _parent = parent;
                 _reader = reader;
@@ -131,9 +131,9 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 _similarity = similarity;
             }
 
-            private EagerTermMatchScorer InitIfNeeded()
+            private EagerInScorer InitIfNeeded()
             {
-                return _inner ??= new EagerTermMatchScorer(_parent, _reader, _state, _similarity);
+                return _inner ??= new EagerInScorer(_parent, _reader, _state, _similarity);
             }
 
             public override int DocID()
@@ -157,11 +157,11 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             }
         }
 
-        private class EagerTermMatchScorer : Scorer
+        private class EagerInScorer : Scorer
         {
             private FastBitArray _docs;
             private IEnumerator<int> _enum;
-            internal EagerTermMatchScorer(TermsMatchQuery parent, IndexReader reader, IState state, Similarity similarity) : base(similarity)
+            internal EagerInScorer(InQuery parent, IndexReader reader, IState state, Similarity similarity) : base(similarity)
             {
                 _docs = new FastBitArray(reader.MaxDoc);
 
@@ -208,7 +208,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             }
         }
 
-        private bool Equals(TermsMatchQuery other)
+        private bool Equals(InQuery other)
         {
             if (Matches.Count != other.Matches.Count)
                 return false;
@@ -222,7 +222,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
 
         public override bool Equals(object obj)
         {
-            return ReferenceEquals(this, obj) || obj is TermsMatchQuery other && Equals(other);
+            return ReferenceEquals(this, obj) || obj is InQuery other && Equals(other);
         }
 
         public override int GetHashCode()
@@ -241,18 +241,6 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
         public override string ToString(string fld)
         {
             return "@in<" + Field + ">(" + string.Join(", ", Matches) + ")";
-        }
-
-        public IRavenLuceneMethodQuery Merge(IRavenLuceneMethodQuery other)
-        {
-            var termsMatchQuery = (TermsMatchQuery)other;
-            Matches.AddRange(termsMatchQuery.Matches);
-
-            Matches = Matches.Distinct()
-                             .Where(x => string.IsNullOrWhiteSpace(x) == false)
-                             .OrderBy(s => s, StringComparer.Ordinal)
-                             .ToList();
-            return this;
         }
     }
 }

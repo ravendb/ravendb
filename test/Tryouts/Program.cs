@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Blittable;
+using FastTests.Client;
 using SlowTests.Issues;
 using SlowTests.MailingList;
 using SlowTests.Server.Documents.ETL.Raven;
@@ -25,9 +26,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new FilteredReplicationTests(testOutputHelper))
+                    using (var test = new FirstClassPatch(testOutputHelper))
                     {
-                       await test.WhenDeletingHubReplicationWillRemoveAllAccess();
+                         test.PatchNullField_ExpectFieldSetToNull();
                     }
                 }
                 catch (Exception e)

@@ -139,6 +139,10 @@ namespace Voron.Data.Compression
                 {
                     // we could dispose the pager during the cleanup
                 }
+                catch (Exception)
+                {
+                    // if we couldn't ensure valid pointer then we cannot proceed with that buffer
+                }
             }
 
             if (tmp == null)

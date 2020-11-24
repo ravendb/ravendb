@@ -416,7 +416,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private void WriteBlittableInstance(BlittableObjectInstance obj, bool isRoot, bool filterProperties)
+        private unsafe void WriteBlittableInstance(BlittableObjectInstance obj, bool isRoot, bool filterProperties)
         {
             HashSet<string> modifiedProperties = null;
             if (obj.DocumentId != null &&
@@ -428,7 +428,7 @@ namespace Raven.Server.Documents.Patch
             if (obj.Blittable != null)
             {
                 var propertiesByInsertionOrder = obj.Blittable.GetPropertiesByInsertionOrder();
-                for (int i = 0; i < propertiesByInsertionOrder.Properties.Count; i++)
+                for (int i = 0; i < propertiesByInsertionOrder.Size; i++)
                 {
                     var prop = new BlittableJsonReaderObject.PropertyDetails();
                     var propIndex = propertiesByInsertionOrder.Properties[i];

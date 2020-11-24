@@ -14,8 +14,6 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
     {
         public static readonly JsonLinqEnumerableConverter Instance = new JsonLinqEnumerableConverter();
 
-        private static readonly ConcurrentDictionary<Type, bool> _cache = new ConcurrentDictionary<Type, bool>();
-
         private JsonLinqEnumerableConverter()
         {
         }
@@ -71,11 +69,6 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
         /// 	<c>true</c> if this instance can convert the specified object type; otherwise, <c>false</c>.
         /// </returns>
         public override bool CanConvert(Type objectType)
-        {
-            return _cache.GetOrAdd(objectType, CanConvertInternal);
-        }
-
-        private bool CanConvertInternal(Type objectType)
         {
             if (objectType.Namespace == null || objectType == typeof(string) || objectType.IsClass == false)
                 return false;

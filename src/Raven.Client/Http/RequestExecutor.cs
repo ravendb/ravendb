@@ -1364,10 +1364,23 @@ namespace Raven.Client.Http
 
                 case HttpStatusCode.Forbidden:
                     var msg = await TryGetResponseOfError(response).ConfigureAwait(false);
-                    throw new AuthorizationException("Forbidden access to " + chosenNode.Database + "@" + chosenNode.Url + ", " +
-                        (Certificate == null ? "a certificate is required. " : Certificate.FriendlyName + " does not have permission to access it or is unknown. ") +
-                        $"Method: {request.Method}, Request: {request.RequestUri}" + Environment.NewLine + msg
-                        );
+                    var builder = new StringBuilder("Forbidden access to ").
+                        Append(chosenNode.Database).Append("@").Append(chosenNode.Url).Append(", ");
+                    if (Certificate == null)
+                    {
+                        builder.Append("a certificate is required. ");
+                    }
+                    else if(Certificate.PrivateKey != null)
+                    {
+                        builder.Append(Certificate.FriendlyName).Append(" does not have permission to access it or is unknown. ");
+                    }
+                    else
+                    {
+                        builder.Append("The certificate ").Append(Certificate.FriendlyName)
+                            .Append(" contains no private key. Constructing the certificate with the 'X509KeyStorageFlags.MachineKeySet' flag may solve this problem. ");
+                    }
+                    builder.Append("Method: ").Append(request.Method).Append(", Request: ").AppendLine(request.RequestUri.ToString()).Append(msg);
+                    throw new AuthorizationException(builder.ToString());
                 case HttpStatusCode.Gone: // request not relevant for the chosen node - the database has been moved to a different one
                     if (shouldRetry == false)
                         return false;

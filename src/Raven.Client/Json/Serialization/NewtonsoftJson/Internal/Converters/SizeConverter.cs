@@ -4,7 +4,7 @@ using Sparrow;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
-    internal sealed class SizeConverter : RavenJsonConverter
+    internal sealed class SizeConverter : JsonConverter
     {
         public static readonly SizeConverter Instance = new SizeConverter();
 

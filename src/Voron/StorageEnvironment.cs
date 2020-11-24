@@ -120,6 +120,8 @@ namespace Voron
 
         private readonly long[] _validPages;
 
+        public bool IsNew { get; }
+
         public StorageEnvironment(StorageEnvironmentOptions options)
         {
             try
@@ -144,7 +146,7 @@ namespace Voron
 
                 options.InvokeOnDirectoryInitialize();
 
-                var isNew = _headerAccessor.Initialize();
+                IsNew = _headerAccessor.Initialize();
 
                 _scratchBufferPool = new ScratchBufferPool(this);
 
@@ -155,7 +157,7 @@ namespace Voron
                 if (options.Encryption.HasExternalJournalCompressionBufferHandlerRegistration) 
                     options.Encryption.SetExternalCompressionBufferHandler(_journal);
 
-                if (isNew)
+                if (IsNew)
                     CreateNewDatabase();
                 else // existing db, let us load it
                     LoadExistingDatabase();
@@ -163,7 +165,7 @@ namespace Voron
                 if (_options.ManualFlushing == false)
                     Task.Run(IdleFlushTimer);
 
-                if (isNew == false && _options.ManualSyncing == false)
+                if (IsNew == false && _options.ManualSyncing == false)
                     SuggestSyncDataFile(); // let's suggest syncing data file after the recovery
 
                 // Ensure we are always have the prefetcher available.

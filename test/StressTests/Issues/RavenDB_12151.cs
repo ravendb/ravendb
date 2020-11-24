@@ -233,9 +233,10 @@ namespace StressTests.Issues
 
         private void RunTest32(DocumentStore store, string endOfPatchReason)
         {
+            const int docsCount = 2500;
             using (var bulk = store.BulkInsert())
             {
-                for (int i = 0; i < 2000; i++)
+                for (int i = 0; i < docsCount; i++)
                 {
                     bulk.Store(new Order()
                     {
@@ -270,7 +271,7 @@ namespace StressTests.Issues
             {
                 var count = session.Query<Order, SimpleIndex32>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(2))).Count();
 
-                Assert.Equal(2000, count);
+                Assert.Equal(docsCount, count);
             }
 
             var stats = indexInstance.GetIndexingPerformance();

@@ -1157,24 +1157,24 @@ namespace Raven.Server.Json
 
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(nameof(kvp.Value.LastProcessedDocumentEtag));
-                    writer.WriteInteger(kvp.Value.LastProcessedDocumentEtag);
+                    writer.WritePropertyName(nameof(kvp.Value.LastProcessedItemEtag));
+                    writer.WriteInteger(kvp.Value.LastProcessedItemEtag);
                     writer.WriteComma();
 
                     writer.WritePropertyName(nameof(kvp.Value.LastProcessedTombstoneEtag));
                     writer.WriteInteger(kvp.Value.LastProcessedTombstoneEtag);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(nameof(kvp.Value.NumberOfDocumentsToProcess));
-                    writer.WriteInteger(kvp.Value.NumberOfDocumentsToProcess);
+                    writer.WritePropertyName(nameof(kvp.Value.NumberOfItemsToProcess));
+                    writer.WriteInteger(kvp.Value.NumberOfItemsToProcess);
                     writer.WriteComma();
 
                     writer.WritePropertyName(nameof(kvp.Value.NumberOfTombstonesToProcess));
                     writer.WriteInteger(kvp.Value.NumberOfTombstonesToProcess);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfDocuments));
-                    writer.WriteInteger(kvp.Value.TotalNumberOfDocuments);
+                    writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfItems));
+                    writer.WriteInteger(kvp.Value.TotalNumberOfItems);
                     writer.WriteComma();
 
                     writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfTombstones));
@@ -1791,7 +1791,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        private static void WriteDocumentProperties(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, Func<LazyStringValue, bool> filterMetadataProperty = null)
+        private unsafe static void WriteDocumentProperties(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
             var first = true;
             BlittableJsonReaderObject metadata = null;
@@ -1800,9 +1800,9 @@ namespace Raven.Server.Json
             var prop = new BlittableJsonReaderObject.PropertyDetails();
             using (var buffers = document.Data.GetPropertiesByInsertionOrder())
             {
-                for (var i = 0; i < buffers.Properties.Count; i++)
+                for (var i = 0; i < buffers.Size; i++)
                 {
-                    document.Data.GetPropertyByIndex(buffers.Properties.Array[i + buffers.Properties.Offset], ref prop);
+                    document.Data.GetPropertyByIndex(buffers.Properties[i], ref prop);
                     if (metadataField.Equals(prop.Name))
                     {
                         metadata = (BlittableJsonReaderObject)prop.Value;
@@ -1830,7 +1830,7 @@ namespace Raven.Server.Json
             }
         }
 
-        public static void WriteDocumentPropertiesWithoutMetadata(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
+        public unsafe static void WriteDocumentPropertiesWithoutMetadata(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
         {
             var first = true;
 
@@ -1838,9 +1838,9 @@ namespace Raven.Server.Json
 
             using (var buffers = document.Data.GetPropertiesByInsertionOrder())
             {
-                for (var i = 0; i < buffers.Properties.Count; i++)
+                for (var i = 0; i < buffers.Size; i++)
                 {
-                    document.Data.GetPropertyByIndex(buffers.Properties.Array[i + buffers.Properties.Offset], ref prop);
+                    document.Data.GetPropertyByIndex(buffers.Properties[i], ref prop);
                     if (first == false)
                     {
                         writer.WriteComma();

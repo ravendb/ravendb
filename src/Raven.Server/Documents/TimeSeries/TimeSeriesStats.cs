@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         }
 
-        public void UpdateStats(DocumentsOperationContext context, TimeSeriesSliceHolder slicer, CollectionName collection, TimeSeriesValuesSegment segment, DateTime baseline, int modifiedEntries)
+        public long UpdateStats(DocumentsOperationContext context, TimeSeriesSliceHolder slicer, CollectionName collection, TimeSeriesValuesSegment segment, DateTime baseline, int modifiedEntries)
         {
             long previousCount;
             DateTime start, end;
@@ -186,10 +186,11 @@ namespace Raven.Server.Documents.TimeSeries
                     if (TryHandleDeadSegment() == false)
                     {
                         // this ts was completely deleted
-                        TimeSeriesStorage.RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
                         start = end = default;
                     }
                 }
+
+                var count = previousCount + liveEntries;
 
                 using (table.Allocate(out var tvb))
                 {
@@ -197,11 +198,14 @@ namespace Raven.Server.Documents.TimeSeries
                     tvb.Add(GetPolicy(slicer));
                     tvb.Add(Bits.SwapBytes(start.Ticks));
                     tvb.Add(end);
-                    tvb.Add(previousCount + liveEntries);
+                    tvb.Add(count);
                     tvb.Add(name);
 
                     table.Set(tvb);
                 }
+
+                return count;
+
             }
 
             void HandleLiveSegment()

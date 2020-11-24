@@ -122,19 +122,19 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, value, true, double.MaxValue, true);
         }
 
-        public static Query Between(string fieldName, LuceneTermType termType, string fromValue, string toValue, bool exact)
+        public static Query Between(string fieldName, LuceneTermType termType, string fromValue, bool fromInclusive, string toValue, bool toInclusive, bool exact)
         {
-            return CreateRange(fieldName, fromValue, termType, true, toValue, termType, true, exact);
+            return CreateRange(fieldName, fromValue, termType, fromInclusive, toValue, termType, toInclusive, exact);
         }
 
-        public static Query Between(string fieldName, long fromValue, long toValue)
+        public static Query Between(string fieldName, long fromValue, bool fromInclusive, long toValue, bool toInclusive)
         {
-            return CreateRange(fieldName, fromValue, true, toValue, true);
+            return CreateRange(fieldName, fromValue, fromInclusive, toValue, toInclusive);
         }
 
-        public static Query Between(string fieldName, double fromValue, double toValue)
+        public static Query Between(string fieldName, double fromValue, bool fromInclusive, double toValue, bool toInclusive)
         {
-            return CreateRange(fieldName, fromValue, true, toValue, true);
+            return CreateRange(fieldName, fromValue, fromInclusive, toValue, toInclusive);
         }
 
         public static Query Term(string fieldName, string term, LuceneTermType type, float? boost = null, float? similarity = null, bool exact = false)
@@ -326,6 +326,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
             return new Term(fieldName, analyzedTermString);
         }
 
+
         private static Query CreateRange(string fieldName, string minValue, LuceneTermType minValueType, bool inclusiveMin, string maxValue, LuceneTermType maxValueType, bool inclusiveMax, bool exact)
         {
             var minTermIsNullOrStar = minValueType == LuceneTermType.Null || minValue.Equals(Asterisk);
@@ -343,22 +344,9 @@ This edge-case has a very slim chance of happening, but still we should not igno
 
         private static Query CreateRange(string fieldName, double minValue, bool inclusiveMin, double maxValue, bool inclusiveMax)
         {
-            return NumericRangeQuery.NewDoubleRange(fieldName, 4, minValue, maxValue, inclusiveMin, inclusiveMax);
-        }
-
-        private static Occur PrefixToOccurrence(LucenePrefixOperator prefix, Occur defaultOccurrence)
-        {
-            switch (prefix)
-            {
-                case LucenePrefixOperator.None:
-                    return defaultOccurrence;
-                case LucenePrefixOperator.Plus:
-                    return Occur.MUST;
-                case LucenePrefixOperator.Minus:
-                    return Occur.MUST_NOT;
-                default:
-                    throw new ArgumentOutOfRangeException("Unknown query prefix " + prefix);
-            }
+            var query = NumericRangeQuery.NewDoubleRange(fieldName, 4, minValue, maxValue, inclusiveMin, inclusiveMax);
+            
+            return query;
         }
     }
 }

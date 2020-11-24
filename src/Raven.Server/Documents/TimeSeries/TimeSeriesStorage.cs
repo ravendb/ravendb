@@ -293,7 +293,7 @@ namespace Raven.Server.Documents.TimeSeries
             return changeVector;
         }
 
-        public string DeleteTimestampRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, string remoteChangeVector = null)
+        public string DeleteTimestampRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, string remoteChangeVector = null, bool updateMetadata = true)
         {
             deletionRangeRequest.From = EnsureMillisecondsPrecision(deletionRangeRequest.From);
             deletionRangeRequest.To = EnsureMillisecondsPrecision(deletionRangeRequest.To);
@@ -441,7 +441,12 @@ namespace Raven.Server.Documents.TimeSeries
 
                         if (segmentChanged)
                         {
-                            holder.AppendExistingSegment(newSegment);
+                            var count = holder.AppendExistingSegment(newSegment);
+                            if (count == 0 && updateMetadata)
+                            {
+                                // this ts was completely deleted
+                                RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
+                            }
                             changeVector = holder.ChangeVector;
                         }
 
@@ -474,7 +479,6 @@ namespace Raven.Server.Documents.TimeSeries
             var baseline = new DateTime(ticks);
             return baseline;
         }
-
         public static void RemoveTimeSeriesNameFromMetadata(DocumentsOperationContext ctx, string docId, string tsName)
         {
             var storage = ctx.DocumentDatabase.DocumentsStorage;
@@ -911,7 +915,7 @@ namespace Raven.Server.Documents.TimeSeries
                 _tss.Stats.UpdateCountOfExistingStats(_context, SliceHolder, _collection, -ReadOnlySegment.NumberOfLiveEntries);
             }
 
-            public void AppendExistingSegment(TimeSeriesValuesSegment newValueSegment)
+            public long AppendExistingSegment(TimeSeriesValuesSegment newValueSegment)
             {
                 (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context);
 
@@ -923,7 +927,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 var modifiedEntries = Math.Abs(newValueSegment.NumberOfLiveEntries - ReadOnlySegment.NumberOfLiveEntries);
                 ReduceCountBeforeAppend();
-                _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newValueSegment, BaselineDate, modifiedEntries);
+                var count = _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newValueSegment, BaselineDate, modifiedEntries);
 
                 using (Table.Allocate(out var tvb))
                 using (Slice.From(_context.Allocator, _currentChangeVector, out var cv))
@@ -939,6 +943,8 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 EnsureStatsAndDataIntegrity(_context, _docId, _name, newValueSegment);
+
+                return count;
             }
 
             public void AppendDeadSegment(TimeSeriesValuesSegment newValueSegment)
@@ -1170,8 +1176,8 @@ namespace Raven.Server.Documents.TimeSeries
             string name,
             IEnumerable<SingleResult> toAppend,
             string changeVectorFromReplication = null,
-            bool verifyName = true
-            )
+            bool verifyName = true,
+            bool addNewNameToMetadata = true)
         {
             if (context.Transaction == null)
             {
@@ -1251,7 +1257,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            if (newSeries)
+            if (newSeries && addNewNameToMetadata)
             {
                 AddTimeSeriesNameToMetadata(context, documentId, name);
             }

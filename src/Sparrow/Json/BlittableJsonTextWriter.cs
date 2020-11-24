@@ -173,15 +173,14 @@ namespace Sparrow.Json
             var prop = new BlittableJsonReaderObject.PropertyDetails();
             using (var buffer = obj.GetPropertiesByInsertionOrder())
             {
-                var props = buffer.Properties;
-                for (int i = 0; i < props.Count; i++)
+                for (int i = 0; i < buffer.Size; i++)
                 {
                     if (i != 0)
                     {
                         WriteComma();
                     }
 
-                    obj.GetPropertyByIndex(props.Array[i + props.Offset], ref prop);
+                    obj.GetPropertyByIndex(buffer.Properties[i], ref prop);
                     WritePropertyName(prop.Name);
 
                     WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);

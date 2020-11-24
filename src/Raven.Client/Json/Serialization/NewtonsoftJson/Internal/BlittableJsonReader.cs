@@ -14,7 +14,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
         private class CurrentItem
         {
-            public BlittableJsonReaderObject.InsertionOrderProperties Buffers;
+            public BlittableJsonReaderObject.InsertionOrderProperties? Buffers;
             public BlittableJsonReaderObject Object;
             public BlittableJsonReaderArray Array;
             public int Position;
@@ -50,7 +50,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
         private bool _readAsLazyNumber = false;
 
-        public override bool Read()
+        public override unsafe bool Read()
         {
             if (_items.Count == 0)
                 return false;
@@ -61,7 +61,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             {
                 while (true)
                 {
-                    if (current.Buffers.Offsets == null)
+                    if (current.Buffers == null)
                     {
                         current.Buffers = current.Object.GetPropertiesByInsertionOrder();
                         SetToken(JsonToken.StartObject);
@@ -83,13 +83,13 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                     if (current.Position == current.Object.Count)
                     {
                         SetToken(JsonToken.EndObject);
-                        current.Buffers.Dispose();
+                        current.Buffers.Value.Dispose();
                         _items.Pop();
                         return true;
                     }
                     if (CurrentState != State.Property)
                     {
-                        int propIndex = current.Buffers.Properties.Array[current.Position + current.Buffers.Properties.Offset];
+                        int propIndex = current.Buffers.Value.Properties[current.Position];
                         current.Object.GetPropertyByIndex(propIndex,
                             ref current.PropertyDetails);
                         if (modifications?.Removals?.Contains(propIndex) == true)

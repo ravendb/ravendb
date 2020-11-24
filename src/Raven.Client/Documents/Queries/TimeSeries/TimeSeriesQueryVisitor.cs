@@ -1,11 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
@@ -22,13 +20,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private readonly IAbstractDocumentQuery<T> _documentQuery;
         private readonly LinqPathProvider _linqPathProvider;
 
-
         private TimeSeriesWhereClauseVisitor<T> _whereVisitor;
         private StringBuilder _selectFields;
         private string _src, _between, _where, _groupBy, _last, _first, _loadTag, _loadTagAlias, _offset, _scale;
         public List<string> Parameters { get; internal set; }
 
-        public TimeSeriesQueryVisitor(RavenQueryProviderProcessor<T> processor) : 
+        public TimeSeriesQueryVisitor(RavenQueryProviderProcessor<T> processor) :
             this(processor.DocumentQuery, processor.LinqPathProvider)
         {
             _providerProcessor = processor;
@@ -47,30 +44,37 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 case nameof(ITimeSeriesQueryable.Where):
                     Where(mce.Arguments[0]);
                     break;
+
                 case nameof(ITimeSeriesQueryable.GroupBy):
                     GroupBy(mce.Arguments[0]);
                     break;
+
                 case nameof(ITimeSeriesAggregationQueryable.Select):
                     Select(mce.Arguments[0]);
                     break;
+
                 case nameof(ITimeSeriesQueryable.Offset):
                     Offset(mce.Arguments[0]);
                     break;
+
                 case nameof(ITimeSeriesQueryable.Scale):
                     Scale(mce.Arguments[0]);
                     break;
+
                 case nameof(ITimeSeriesQueryable.FromLast):
                     Last(mce.Arguments[0]);
                     break;
+
                 case nameof(ITimeSeriesQueryable.FromFirst):
                     First(mce.Arguments[0]);
                     break;
+
                 case nameof(ITimeSeriesQueryable.LoadByTag):
                 case nameof(ITimeSeriesQueryable.ToList):
                     break;
+
                 default:
                     throw new NotSupportedException("Method not supported: " + mce.Method.Name);
-
             }
         }
 
@@ -87,12 +91,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             if (lambda.Parameters.Count == 2) // Where((ts, tag) => ...)
             {
-                if (_loadTagAlias != null) // alias is already taken by 'group by tag' and we need to use the same one 
+                if (_loadTagAlias != null) // alias is already taken by 'group by tag' and we need to use the same one
                     _whereVisitor.Rename(lambda.Parameters[1].Name, _loadTagAlias);
 
                 LoadByTag(lambda.Parameters[1].Name);
-            } 
-            
+            }
+
             if (lambda.Body is BinaryExpression be)
                 WhereBinary(be);
             else if (lambda.Body is MethodCallExpression call)
@@ -116,42 +120,33 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             string with = null;
             string groupByTag = null;
 
-            if (expression is ConstantExpression constantExpression)
+            switch (expression)
             {
-                if (constantExpression.Value is Action<ITimePeriodBuilder> action)
-                {
-                    // document query
-                    timePeriod = GetTimePeriodFromAction(action, out with, out groupByTag, out var alias);
-                    LoadByTag(alias);
-                }
-                else
-                {
+                case ConstantExpression constantExpression:
+                    if (constantExpression.Value is Action<ITimePeriodBuilder> action)
+                    {
+                        // document query
+                        timePeriod = GetTimePeriodFromAction(action, out with, out groupByTag, out var alias);
+                        LoadByTag(alias);
+                        break;
+                    }
                     timePeriod = constantExpression.Value.ToString();
-                }
-            }
-
-            else if (JavascriptConversionExtensions.IsWrappedConstantExpression(expression))
-            {
-                LinqPathProvider.GetValueFromExpressionWithoutConversion(expression, out var value);
-                timePeriod = value.ToString();
-            }
-
-            else if (expression is LambdaExpression lambda)
-            {
-                if (!(lambda.Body is MethodCallExpression methodCall))
+                    break;
+                case LambdaExpression lambda:
                 {
-                    ThrowInvalidMethodArgument(lambda, nameof(ITimeSeriesQueryable.GroupBy));
-                    return;
+                    if (!(lambda.Body is MethodCallExpression methodCall))
+                    {
+                        ThrowInvalidMethodArgument(lambda, nameof(ITimeSeriesQueryable.GroupBy));
+                        return;
+                    }
+                    with = GroupByWith(ref methodCall);
+                    groupByTag = GroupByTag(ref methodCall);
+                    timePeriod = GetTimePeriodFromMethodCall(methodCall, nameof(ITimeSeriesQueryable.GroupBy));
+                    break;
                 }
-
-                with = GroupByWith(ref methodCall);
-                groupByTag = GroupByTag(ref methodCall);
-                timePeriod = GetTimePeriodFromMethodCall(methodCall, nameof(ITimeSeriesQueryable.GroupBy));
-            }
-
-            else
-            {
-                timePeriod = expression.ToString();
+                default:
+                    timePeriod = TryGetValueFromArgument(expression, groupByArgument: true);
+                    break;
             }
 
             _groupBy = $" group by '{timePeriod}' {groupByTag} {with}";
@@ -178,7 +173,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private string GroupByTag(ref MethodCallExpression groupByCall)
         {
-            if (groupByCall.Method.DeclaringType != typeof(ITimeSeriesAggregationOperations)) 
+            if (groupByCall.Method.DeclaringType != typeof(ITimeSeriesAggregationOperations))
                 return null;
 
             if (!(groupByCall.Object is MethodCallExpression innerCall2))
@@ -200,16 +195,19 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                         case 0:
                             groupByTag = ", tag";
                             break;
+
                         case 1:
                             groupByTag = GroupByTagFromMethod(arguments[0], out var alias);
                             LoadByTag(alias);
 
                             break;
+
                         default:
                             throw new ArgumentOutOfRangeException(nameof(ITimeSeriesAggregationOperations.ByTag), "Invalid number of arguments");
                     }
 
                     break;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(method.Name), "Unknown method name");
             }
@@ -221,7 +219,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             string groupByTag;
             Expression lambda = argument;
-            if (argument.NodeType == ExpressionType.Quote && 
+            if (argument.NodeType == ExpressionType.Quote &&
                 argument is UnaryExpression quoteExpression)
             {
                 lambda = quoteExpression.Operand;
@@ -249,6 +247,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     groupByTag = $", {convert.Operand}";
 
                     break;
+
                 case ExpressionType.Parameter:
                 case ExpressionType.MemberAccess:
 
@@ -290,11 +289,10 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             callExpression = inner;
 
-            if (options.Interpolation == InterpolationType.None) 
+            if (options.Interpolation == InterpolationType.None)
                 return null;
 
             return $"with interpolation({options.Interpolation})";
-
         }
 
         private void WhereMethod(MethodCallExpression call)
@@ -311,7 +309,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 default:
                     throw new NotSupportedException("Unsupported method in Where clause: " + call.Method.Name);
             }
-
         }
 
         private void Select(Expression expression)
@@ -338,6 +335,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                         AddSelectMethod(selectCall);
                     }
                     break;
+
                 case ExpressionType.MemberInit:
                     var initExp = (MemberInitExpression)body;
                     foreach (var c in initExp.Bindings)
@@ -351,10 +349,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                         AddSelectField(c.Member.Name);
                     }
                     break;
+
                 case ExpressionType.Call:
                     var call = (MethodCallExpression)body;
                     AddSelectMethod(call);
                     break;
+
                 default:
                     throw new InvalidOperationException("Invalid Select expression " + expression);
             }
@@ -459,7 +459,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 }
             }
 
-            if (_whereVisitor?.Parameters == null) 
+            if (_whereVisitor?.Parameters == null)
                 return;
 
             Parameters ??= new List<string>();
@@ -484,7 +484,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 // document query
                 return GetTimePeriodFromAction(action, out _, out _, out _);
             }
-            
+
             if (!(expression is LambdaExpression lambda) ||
                 !(lambda.Body is MethodCallExpression methodCall))
             {
@@ -508,30 +508,30 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private string GetNameFromArgument(Expression argument)
         {
-            if (argument is ConstantExpression constantExpression)
-                 return constantExpression.Value.ToString();
-
-            if (JavascriptConversionExtensions.IsWrappedConstantExpression(argument))
+            string name;
+            switch (argument)
             {
-                LinqPathProvider.GetValueFromExpressionWithoutConversion(argument, out var value);
-                return value.ToString();
+                case ConstantExpression constantExpression:
+                    name = constantExpression.Value.ToString();
+                    break;
+                case ParameterExpression p:
+                    Parameters ??= new List<string>();
+                    Parameters.Add(p.Name);
+                    name = p.Name;
+                    break;
+                default:
+                    name = TryGetValueFromArgument(argument, groupByArgument: false);
+                    break;
             }
 
-            if (argument is ParameterExpression p)
-            {
-                Parameters ??= new List<string>();
-                Parameters.Add(p.Name);
-                return p.Name;
-            }
-
-            throw new InvalidOperationException("Invalid TimeSeries argument " + argument);
+            return QueryFieldUtil.EscapeIfNecessary(name);
         }
 
         private void Between(MethodCallExpression mce)
         {
             if (_first != null)
                 throw new InvalidQueryException($"Cannot use '{nameof(ITimeSeriesQueryable.FromFirst)}' when From/To dates are provided to the Time Series query function ");
-            
+
             if (_last != null)
                 throw new InvalidQueryException($"Cannot use '{nameof(ITimeSeriesQueryable.FromLast)}' when From/To dates are provided to the Time Series query function ");
 
@@ -558,7 +558,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private string ModifyExpression(Expression expression)
         {
-            if (expression is BinaryExpression be && 
+            if (expression is BinaryExpression be &&
                 (be.NodeType == ExpressionType.OrElse || be.NodeType == ExpressionType.AndAlso))
             {
                 var left = ModifyExpression(be.Left);
@@ -577,8 +577,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             var exp = _whereVisitor.VisitWhere(mce.Arguments[0]);
 
-            string path = exp is ParameterExpression p 
-                ? p.Name 
+            string path = exp is ParameterExpression p
+                ? p.Name
                 : exp.ToString();
 
             var objects = (IEnumerable)_linqPathProvider.GetValueFromExpression(mce.Arguments[1], typeof(IEnumerable));
@@ -668,6 +668,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                         _selectFields.Append(", ");
                     _selectFields.Append($"{name.ToLower()}({value})");
                     break;
+
                 default:
                     throw new NotSupportedException("Unsupported aggregation method " + name);
             }
@@ -713,9 +714,30 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             return $"{duration} {callExpression.Method.Name}";
         }
 
+
+        private static string TryGetValueFromArgument(Expression argument, bool groupByArgument)
+        {
+            try
+            {
+                if (LinqPathProvider.GetValueFromExpressionWithoutConversion(argument, out object value) == false)
+                    throw new NotSupportedException("Unsupported node type: " + argument.NodeType);
+                return value.ToString();
+            }
+            catch (Exception e)
+            {
+                ThrowFailedToEvaluateArgument(argument, groupByArgument, e);
+                return null;
+            }
+        }
+
         private static void ThrowInvalidMethodArgument(Expression argument, string method)
         {
             throw new InvalidOperationException($"Invalid '{method}' argument: '{argument}'");
+        }
+
+        private static void ThrowFailedToEvaluateArgument(Expression argument, bool groupBy, Exception e = null)
+        {
+            throw new InvalidOperationException($"Failed to evaluate time-series {(groupBy ? "group by clause" : "name")} from argument '{argument}' ", e);
         }
 
         internal class TimePeriodBuilder : ITimePeriodBuilder, ITimeSeriesAggregationOperations
@@ -807,5 +829,4 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
         }
     }
-
 }

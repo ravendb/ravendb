@@ -220,6 +220,11 @@ namespace Raven.Client.Documents
 
             RequestExecutor.ValidateUrls(Urls, Certificate);
 
+            if(Certificate != null && Certificate.PrivateKey == null)
+                throw new InvalidOperationException(
+                    $"The supplied {Certificate.FriendlyName} certificate contains no private key. " +
+                    "Constructing the certificate with the 'X509KeyStorageFlags.MachineKeySet' flag may solve this problem.");
+
             try
             {
                 if (Conventions.AsyncDocumentIdGenerator == null) // don't overwrite what the user is doing

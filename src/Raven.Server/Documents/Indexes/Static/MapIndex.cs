@@ -75,6 +75,12 @@ namespace Raven.Server.Documents.Indexes.Static
             return workers.ToArray();
         }
 
+        public override HandleReferencesBase.InMemoryReferencesInfo GetInMemoryReferencesState(string collection, bool isCompareExchange)
+        {
+            var references = isCompareExchange ? (HandleReferencesBase)_handleCompareExchangeReferences : _handleReferences;
+            return references == null ? HandleReferencesBase.InMemoryReferencesInfo.Default : references.GetReferencesInfo(collection);
+        }
+
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             StaticIndexHelper.HandleReferencesDelete(_handleReferences, _handleCompareExchangeReferences, tombstone, collection, writer, indexContext, stats);
@@ -109,29 +115,14 @@ namespace Raven.Server.Documents.Indexes.Static
             return (staticEntries, dynamicEntries);
         }
 
-        protected override unsafe long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext,
-            QueryMetadata query, bool isStale)
+        protected override long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext, QueryMetadata query, bool isStale)
         {
             if (_handleReferences == null && _handleCompareExchangeReferences == null)
                 return base.CalculateIndexEtag(queryContext, indexContext, query, isStale);
 
-            var minLength = MinimumSizeForCalculateIndexEtagLength(query);
-            var length = minLength;
-
-            if (_handleReferences != null)
-                length += sizeof(long) * 4 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
-
-            if (_handleCompareExchangeReferences != null)
-                length += sizeof(long) * 4 * _compiled.CollectionsWithCompareExchangeReferences.Count; // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
-
-            var indexEtagBytes = stackalloc byte[length];
-
-            CalculateIndexEtagInternal(indexEtagBytes, isStale, State, queryContext, indexContext);
-            UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(queryContext, query, length, indexEtagBytes);
-
-            var writePos = indexEtagBytes + minLength;
-
-            return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, queryContext, indexContext);
+            return CalculateIndexEtagWithReferences(
+                _handleReferences, _handleCompareExchangeReferences, queryContext,
+                indexContext, query, isStale, _referencedCollections, _compiled);
         }
 
         protected override IndexingState GetIndexingStateInternal(QueryOperationContext queryContext, TransactionOperationContext indexContext)

@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes
                 : CollectionOfBloomFilters.Mode.X64;
 
             if (_filters == null || _filters.Consumed == false)
-                _filters =  CollectionOfBloomFilters.Load(mode, indexContext);
+                _filters = CollectionOfBloomFilters.Load(mode, indexContext);
 
             return _filters;
         }
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Indexes
                 mustDelete = _filters.Add(indexItem.LowerId) == false;
             }
 
-            if (mustDelete)
+            if (indexItem.SkipLuceneDelete == false && mustDelete)
                 writer.Delete(indexItem.LowerId, stats);
 
             var numberOfOutputs = 0;

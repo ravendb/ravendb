@@ -7,20 +7,15 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
-    internal class JsonEnumerableConverter : RavenJsonConverter
+    internal class JsonEnumerableConverter : JsonConverter
     {
-        private readonly ConcurrentDictionary<Type, bool> _cache = new ConcurrentDictionary<Type, bool>();
-
         private readonly NewtonsoftJsonSerializationConventions _conventions;
 
         public override bool CanRead => false;
 
         public JsonEnumerableConverter(NewtonsoftJsonSerializationConventions conventions)
         {
-            if (conventions is null)
-                throw new ArgumentNullException(nameof(conventions));
-
-            _conventions = conventions;
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
         }
 
         public override bool CanConvert(Type objectType)
@@ -28,11 +23,6 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
             if (objectType == null)
                 return false;
 
-            return _cache.GetOrAdd(objectType, CanConvertInternal);
-        }
-
-        private bool CanConvertInternal(Type objectType)
-        {
             if (objectType == typeof(LazyStringValue))
                 return false;
 

@@ -73,12 +73,12 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                             // the issue was that modification of page 542 in the tree of store1 didn't remove it from FreedPages of store2
                             // in result the processing of store2 removed page 542 from the table
 
-                            long pageNumber = 542;
+                            long pageNumber = 543;
 
                             if (tx.InnerTransaction.LowLevelTransaction.Environment.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                             {
                                 // in 32 bits we might allocate different pages, 94 is going to be used during store1.Add() calls
-                                pageNumber = 94;
+                                pageNumber = 95;
                             }
 
                             mapReduceContext.FreedPages.Add(pageNumber);
