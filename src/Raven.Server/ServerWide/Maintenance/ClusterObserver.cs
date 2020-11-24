@@ -1441,6 +1441,14 @@ namespace Raven.Server.ServerWide.Maintenance
                     return false;
                 }
 
+                if (currentIndexStats.State == IndexState.Error)
+                {
+                    if (mentorIndexStats.State == IndexState.Error)
+                        continue;
+                    reason = $"Index '{mentorIndex.Key}' is in state '{currentIndexStats.State}'";
+                    return false;
+                }
+
                 if (currentIndexStats.IsStale == false)
                     continue;
 
@@ -1449,7 +1457,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     continue; // skip the check for faulty indexes
                 }
 
-                if (mentorIndexStats.State == IndexState.Error && currentIndexStats.State == IndexState.Error)
+                if (currentIndexStats.State == IndexState.Disabled)
                     continue;
 
                 var lastIndexEtag = currentIndexStats.LastIndexedEtag;
