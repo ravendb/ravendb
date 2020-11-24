@@ -27,6 +27,20 @@ namespace SlowTests.Issues
                 var seconds = timeSpan.Seconds;
                 var milliseconds = timeSpan.Milliseconds;
 
+                var summary = new long[30];
+                var timeSummary = new Time[30];
+                long ticksLeft = timeSpan.Ticks;
+                for (var i = 1; i < 30; i++)
+                {
+                    var number = i * 1234;
+                    summary[i] = number;
+                    ticksLeft -= number;
+                    timeSummary[i] = new Time {Ticks = number};
+                }
+
+                summary[0] = ticksLeft;
+                timeSummary[0] = new Time { Ticks = ticksLeft };
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Time
@@ -37,6 +51,8 @@ namespace SlowTests.Issues
                         Minutes = minutes,
                         Seconds = seconds,
                         Milliseconds = milliseconds,
+                        Summary = summary,
+                        TimeSummary = timeSummary
                     });
                     session.SaveChanges();
                 }
@@ -53,6 +69,8 @@ namespace SlowTests.Issues
                             TimeSpan5 = new TimeSpan(hours, x.Minutes, seconds),
                             TimeSpan6 = new TimeSpan(days, x.Hours, minutes, x.Seconds),
                             TimeSpan7 = new TimeSpan(days, hours, minutes, seconds, milliseconds),
+                            TimeSpan8 = new TimeSpan(x.Summary.Sum()),
+                            TimeSpan9 = new TimeSpan(x.TimeSummary.Sum(t => t.Ticks))
                         });
 
                     var results = query.ToList();
@@ -65,6 +83,8 @@ namespace SlowTests.Issues
                     Assert.Equal(new TimeSpan(hours, minutes, seconds), results[0].TimeSpan5);
                     Assert.Equal(new TimeSpan(days, hours, minutes, seconds), results[0].TimeSpan6);
                     Assert.Equal(timeSpan, results[0].TimeSpan7);
+                    Assert.Equal(timeSpan, results[0].TimeSpan8);
+                    Assert.Equal(timeSpan, results[0].TimeSpan9);
                 }
             }
         }
@@ -77,6 +97,8 @@ namespace SlowTests.Issues
             public int Minutes { get; set; }
             public int Seconds { get; set; }
             public int Milliseconds { get; set; }
+            public long[] Summary { get; set; }
+            public Time[] TimeSummary { get; set; }
         }
 
         private class Result
@@ -88,6 +110,8 @@ namespace SlowTests.Issues
             public TimeSpan TimeSpan5 { get; set; }
             public TimeSpan TimeSpan6 { get; set; }
             public TimeSpan TimeSpan7 { get; set; }
+            public TimeSpan TimeSpan8 { get; set; }
+            public TimeSpan TimeSpan9 { get; set; }
         }
     }
 }
