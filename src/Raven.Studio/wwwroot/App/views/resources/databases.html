@@ -1,7 +1,6 @@
 <div class="databases flex-vertical absolute-fill content-margin" data-bind="css: { 'databases_compact': compactView() }">
     <div class="flex-header">
         <div class="databasesToolbar">
-
             <div class="databasesToolbar-actions">
                 <div class="btn-group-label" data-bind="css: { active: selectedDatabases().length }, visible: accessManager.canSetState || accessManager.canDelete" data-label="Selection" role="group">
                     <button class="btn btn-danger" data-bind="visible: accessManager.canDelete, enable: selectedDatabases().length, click: deleteSelectedDatabases">
@@ -54,7 +53,6 @@
                     </ul>
                 </div>
             </div>
-
             <div class="databasesToolbar-filter">
                 <div class="checkbox checkbox-primary checkbox-inline align-checkboxes">
                     <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }">
@@ -85,7 +83,6 @@
                     </ul>
                 </div>
             </div>
-
             <!-- TODO
             <div class="flex-separator"></div>
             <div class="toggle toggle-primary databasesToolbar-toggleCompactView pull-right">
@@ -110,7 +107,6 @@
         </div>
     </div>
     <div class="flex-grow scroll" data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length">
-
         <div class="database-counter on-base-background">
             <span>
                 <strong data-bind="text: databases().sortedDatabases().length"></strong> Databases
@@ -128,10 +124,11 @@
                 <strong class="text-muted" data-bind="text: $root.databasesByState().offline"></strong> Offline
             </span>
         </div>
-
         <div data-bind="foreach: databases().sortedDatabases">
-            <div id="" class="database-item panel panel-hover panel-state database-item" data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(),
-                                                                          attr: { class: 'panel panel-hover panel-state database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') + ' ' + ($root.createIsLocalDatabaseObservable(name)() ? 'relevant' : '') }">
+            
+            <div class="database-item panel panel-hover panel-state database-item"
+                 data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(),
+                            attr: { class: 'panel panel-hover panel-state database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') + ' ' + ($root.createIsLocalDatabaseObservable(name)() ? 'relevant' : '') }">
                 <div data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', class: 'state ' + ($root.createIsLocalDatabaseObservable(name)() ? badgeClass() : 'state-remote') }"></div>
                 <div class="padding">
                     <div class="database-header">
@@ -142,10 +139,11 @@
                             </div>
                             <div class="name">
                                 <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase()">
-                                    <small><i data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }"></i></small><span data-bind="text: name"></span>
+                                    <small><i data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }"></i></small>
+                                    <span data-bind="text: name"></span>
                                 </span>
                                 <a data-bind="attr: { title: name, href: $root.createAllDocumentsUrlObservable($data), target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' },
-                                    css: { 'link-disabled': isBeingDeleted }, visible: canNavigateToDatabase()" href="#">
+                                              css: { 'link-disabled': isBeingDeleted }, visible: canNavigateToDatabase()" href="#">
                                     <small><i data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }"></i></small><span data-bind="text: name"></span>
                                 </a>
                             </div>
@@ -164,7 +162,7 @@
                                 </div>
                                 <!-- /ko -->
                                 <div data-bind="visible: nodes().length > 5">
-                                    <a href="#" data-bind="attr: { href:  $root.createManageDbGroupUrlObsevable($data) }" data-toggle="more-nodes-tooltip">
+                                    <a href="#" data-bind="attr: { href: $root.createManageDbGroupUrlObsevable($data) }" data-toggle="more-nodes-tooltip">
                                         <small><i class="icon-dbgroup"></i><span>+<span data-bind="text: nodes().length - 5"></span> more</span></small>
                                     </a>
                                 </div>
@@ -175,12 +173,12 @@
                                 <span class="global-spinner spinner-sm"></span>&nbsp;&nbsp;&nbsp;&nbsp;
                             </span>
                             <div class="actions">
-                                <a class="btn btn-default" href="#" data-bind="css: { 'disabled': !canNavigateToDatabase() || isBeingDeleted() }, attr: { href: $root.createManageDbGroupUrlObsevable($data),
-                                                                            target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' }">
+                                <a class="btn btn-default" href="#" title="Manage the Database Group"
+                                   data-bind="css: { 'disabled': !canNavigateToDatabase() || isBeingDeleted() }, 
+                                              attr: { href: $root.createManageDbGroupUrlObsevable($data), target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' }">
                                     <i class="icon-manage-dbgroup"></i>
                                     <span>Manage group</span>
                                 </a>
-
                                 <div class="btn-group">
                                     <button class="btn btn-default" data-bind="click: $root.toggleDatabase, visible: $root.accessManager.canDisableEnableDatabase,
                                                                     css: { 'btn-spinner': inProgressAction },
@@ -191,7 +189,8 @@
                                         <i class="icon-database-cutout icon-addon-cancel" data-bind="visible: !inProgressAction() && !disabled()"></i>
                                         <span data-bind="visible: !inProgressAction() && !disabled()">Disable</span>
                                     </button>
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bind="disable: isBeingDeleted() || inProgressAction(), visible: online() || $root.isAboveUserAccess()">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" 
+                                            data-bind="disable: isBeingDeleted() || inProgressAction(), visible: online() || $root.isAboveUserAccess()">
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
@@ -267,20 +266,23 @@
                 </div>
                 <div class="storage">
                     <small><i class="icon-drive"></i></small>
-                    <a class="set-size" data-toggle="size-tooltip" data-bind="attr: { href: $root.storageReportUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
+                    <a class="set-size" data-toggle="size-tooltip"
+                       data-bind="attr: { href: $root.storageReportUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
                         <small data-bind="text: $root.formatBytes(totalSize() + totalTempBuffersSize())"></small>
                     </a>
                 </div>
                 <div class="documents">
                     <small><i class="icon-document-group"></i></small>
-                    <a class="set-size" title="Number of documents. Click to view documents list" data-bind="attr: { href: $root.createAllDocumentsUrlObservable($data)}, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() },">
+                    <a class="set-size" title="Number of documents. Click to view the Document List."
+                       data-bind="attr: { href: $root.createAllDocumentsUrlObservable($data)}, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() },">
                         <small data-bind="text: (documentsCount() || 0).toLocaleString()"></small>
                     </a>
                 </div>
                 <div class="indexes">
                     <small><i class="icon-index"></i></small>
-                    <a class="set-size" title="Number of indexes. Click to view indexes list" data-bind="attr: { href: $root.indexesUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, if: indexesCount()">
-                        <small data-bind="text: indexesCount().toLocaleString()"></small>
+                    <a class="set-size" title="Number of indexes. Click to view the Index List."
+                       data-bind="attr: { href: $root.indexesUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
+                        <small data-bind="text: (indexesCount() || 0).toLocaleString()"></small>
                     </a>
                 </div>
                 <!--ko if: !uptime()-->
@@ -292,16 +294,23 @@
                 <!--ko if: uptime()-->
                 <div class="uptime">
                     <small><i class="icon-recent"></i></small>
-                    <small class="hidden-compact">Up for</small>
-                    <small data-bind="text: uptime()"></small>
+                    <span title="The database uptime">
+                        <small class="hidden-compact">Up for</small>
+                        <small data-bind="text: uptime()"></small>
+                    </span>
                 </div>
                 <!--/ko-->
                 <div class="backup">
                     <div data-bind="attr: { class: 'properties-value value-only ' + backupStatus() }">
-                        <div class="set-size" title="Last backup time"
-                             data-bind="css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
+                        <a class="set-size text-danger" title="Navigate to Backups view to create a backup"
+                           data-bind="css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, visible: backupStatus() === 'text-danger', attr: { href: $root.backupsViewUrl($data) }">
                             <small><i class="icon-backup"></i></small>
-                            <small data-bind="text: backupStatus() !== 'text-danger' ? 'Backed up ' + lastFullOrIncrementalBackup() : 'Never backed up'"></small>
+                            <small>Never backed up</small>
+                        </a>
+                        <div class="set-size text-success" title="Last backup time"
+                             data-bind="css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, visible: backupStatus() !== 'text-danger'">
+                            <small><i class="icon-backup"></i></small>
+                            <small data-bind="text: 'Backed up ' + lastFullOrIncrementalBackup()"></small>
                         </div>
                     </div>
                 </div>
@@ -309,35 +318,43 @@
             <div class="database-properties-right">
                 <div class="indexing-errors text-danger" data-bind="visible: indexingErrors()">
                     <small><i class="icon-exclamation"></i></small>
-                    <a class="set-size text-danger" title="Indexing errors. Click to view details" data-bind="attr: { href: $root.indexErrorsUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
+                    <a class="set-size text-danger" title="Indexing errors. Click to view the Indexing Errors."
+                       data-bind="attr: { href: $root.indexErrorsUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
                         <small data-bind="text: indexingErrors().toLocaleString()"></small>
                         <small class="hidden-compact" data-bind="text: $root.pluralize(indexingErrors().toLocaleString(), 'indexing error', 'indexing errors', true)"></small>
                     </a>
                 </div>
                 <div class="indexing-paused text-warning" data-bind="visible: indexingPaused() && !indexingDisabled()">
                     <small><i class="icon-pause"></i></small>
-                    <a class="set-size text-warning" title="Indexing is paused. Click to view indexes list" data-bind="attr: { href: $root.indexesUrl($data) }">
-                        <small>Paused</small>
+                    <a class="set-size text-warning" title="Indexing is paused. Click to view the Index List."
+                       data-bind="attr: { href: $root.indexesUrl($data) }">
+                        <small>Indexing paused</small>
                     </a>
                 </div>
                 <div class="indexing-disabled text-danger" data-bind="visible: indexingDisabled()">
-                    <span class="set-size" title="Indexing disabled">
+                    <span class="set-size" title="Indexing is disabled">
                         <small><i class="icon-lock"></i></small>
                         <small>Indexing disabled</small>
                     </span>
                 </div>
                 <div class="alerts text-warning" data-bind="visible: alerts()">
-                    <div class="set-size" title="Alerts" data-bind="css: { 'link-disabled': !canNavigateToDatabase() }">
+                    <div class="set-size">
                         <small><i class="icon-warning"></i></small>
-                        <small data-bind="text: alerts().toLocaleString()"></small>
-                        <small data-bind="text: $root.pluralize(alerts().toLocaleString(), 'alert', 'alerts', true)"></small>
+                        <a class="set-size text-warning" title="Click to view alerts in notification center" href="#"
+                           data-bind="click: _.partial($root.openNotificationCenter, $data), css: { 'link-disabled': !canNavigateToDatabase() }">
+                            <small data-bind="text: alerts().toLocaleString()"></small>
+                            <small data-bind="text: $root.pluralize(alerts().toLocaleString(), 'alert', 'alerts', true)"></small>
+                        </a>
                     </div>
                 </div>
                 <div class="performance-hints text-info" data-bind="visible: performanceHints()">
-                    <div class="set-size" title="Performance Hints" data-bind="css: { 'link-disabled': !canNavigateToDatabase() }">
+                    <div class="set-size">
                         <small><i class="icon-rocket"></i></small>
-                        <small data-bind="text: performanceHints().toLocaleString()"></small>
-                        <small class="hidden-compact" data-bind="text: $root.pluralize(performanceHints().toLocaleString(), 'performance hint', 'performance hints', true)"></small>
+                        <a class="set-size text-info" title="Click to view hints in notification center" href="#"
+                           data-bind="click: _.partial($root.openNotificationCenter, $data), css: { 'link-disabled': !canNavigateToDatabase() }">
+                            <small data-bind="text: performanceHints().toLocaleString()"></small>
+                            <small class="hidden-compact" data-bind="text: $root.pluralize(performanceHints().toLocaleString(), 'performance hint', 'performance hints', true)"></small>
+                        </a>
                     </div>
                 </div>
                 <div class="clients-rejection" data-bind="visible: rejectClients()">
