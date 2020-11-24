@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Jint;
 using Jint.Native;
@@ -316,6 +317,25 @@ namespace Raven.Server.Documents.Indexes.Static
             var actualBody = body[1];
             switch (actualBody)
             {
+                // x => {
+                //   return {
+                //     A: x.A,
+                //     B: x.B
+                //   }
+                // }
+                case BlockStatement bs:
+                    var blockBody = bs.Body;
+
+                    if (blockBody.Count == 1 && blockBody[0] is ReturnStatement returnStmt)
+                    {
+                        if (returnStmt.ChildNodes.Count == 1 && returnStmt.ChildNodes[0] is ObjectExpression returnObjectExpression)
+                        {
+                            return _groupByFields = CreateFieldsFromObjectExpression(returnObjectExpression);
+                        }
+                    }
+                    throw new InvalidOperationException($"Expected statement returning simple object expression inside group by block");
+                
+                // x => x.Name
                 case StaticMemberExpression sme:
                     if (sme.Property is Identifier id)
                     {
@@ -326,26 +346,32 @@ namespace Raven.Server.Documents.Indexes.Static
                     }
 
                     throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return object expression statement got a statement of type {actualBody.GetType().Name}.");
+                
+                // x => ({ A: x.A, B: x.B })
                 case ObjectExpression oe:
-                    var cur = new HashSet<CompiledIndexField>();
-                    foreach (var prop in oe.Properties)
-                    {
-                        if (prop is Property property)
-                        {
-                            string[] path = null;
-                            if (property.Value is MemberExpression me)
-                                path = GetPropertyPath(me).ToArray();
-
-                            var propertyName = property.GetKey(Engine);
-                            cur.Add(CreateField(propertyName.AsString(), path));
-                        }
-                    }
-
-                    _groupByFields = cur.ToArray();
-
+                    _groupByFields = CreateFieldsFromObjectExpression(oe);
                     return _groupByFields;
                 default:
                     throw new InvalidOperationException($"Unknown body type: {actualBody.GetType().Name}");
+            }
+
+            CompiledIndexField[] CreateFieldsFromObjectExpression(ObjectExpression oe)
+            {
+                var cur = new HashSet<CompiledIndexField>();
+                foreach (var prop in oe.Properties)
+                {
+                    if (prop is Property property)
+                    {
+                        string[] path = null;
+                        if (property.Value is MemberExpression me)
+                            path = GetPropertyPath(me).ToArray();
+
+                        var propertyName = property.GetKey(Engine);
+                        cur.Add(CreateField(propertyName.AsString(), path));
+                    }
+                }
+
+                return cur.ToArray();
             }
 
             CompiledIndexField CreateField(string propertyName, string[] path)

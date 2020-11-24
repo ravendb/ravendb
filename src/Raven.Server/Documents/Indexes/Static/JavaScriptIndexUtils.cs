@@ -12,6 +12,19 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public static class JavaScriptIndexUtils
     {
+        public static IEnumerable<ReturnStatement> GetReturnStatements(IFunction function)
+        {
+            if (function is ArrowFunctionExpression arrowFunction && arrowFunction.Body is ObjectExpression objectExpression)
+            {
+                // looks like we have following case:
+                // x => ({ Name: x.Name })
+                // wrap with return statement and we're done
+                return new[] { new ReturnStatement(objectExpression) };
+            }
+
+            return GetReturnStatements(function.Body);
+        }
+        
         public static IEnumerable<ReturnStatement> GetReturnStatements(Node stmt)
         {
             // here we only traverse the single statement, we don't try to traverse into

@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 theFuncAst = res.Value.FunctionAst;
             }
 
-            foreach (var returnStatement in JavaScriptIndexUtils.GetReturnStatements(theFuncAst.Body))
+            foreach (var returnStatement in JavaScriptIndexUtils.GetReturnStatements(theFuncAst))
             {
                 if (returnStatement.Argument == null) // return;
                     continue;
