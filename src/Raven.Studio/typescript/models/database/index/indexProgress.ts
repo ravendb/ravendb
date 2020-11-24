@@ -93,8 +93,8 @@ class collectionProgress {
     constructor(name: string, collectionStats: Raven.Client.Documents.Indexes.IndexProgress.CollectionStats, runningStatus: Raven.Client.Documents.Indexes.IndexRunningStatus) {
         this.name = name;
         this.documentsProgress = new progress(
-            collectionStats.TotalNumberOfDocuments - collectionStats.NumberOfDocumentsToProcess,
-            collectionStats.TotalNumberOfDocuments,
+            collectionStats.TotalNumberOfItems - collectionStats.NumberOfItemsToProcess,
+            collectionStats.TotalNumberOfItems,
             collectionProgress.docsFormatter, 
             0, false, runningStatus);
         this.tombstonesProgress = new progress(

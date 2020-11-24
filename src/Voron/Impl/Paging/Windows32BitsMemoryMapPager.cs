@@ -354,6 +354,11 @@ namespace Voron.Impl.Paging
                     }
                     else
                     {
+                        const int INVALID_HANDLE = 6;
+
+                        if (lastWin32Error == INVALID_HANDLE && Disposed)
+                            ThrowAlreadyDisposedException();
+
                         throw new Win32Exception(
                             $"Unable to map {size / Constants.Size.Kilobyte:#,#0} kb starting at {startPage} on {FileName} (lastWin32Error={lastWin32Error})",
                             new Win32Exception(lastWin32Error));

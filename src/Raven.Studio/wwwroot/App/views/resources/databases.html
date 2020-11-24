@@ -87,13 +87,13 @@
             </div>
 
             <!-- TODO
-    <div class="flex-separator"></div>
-    <div class="toggle toggle-primary databasesToolbar-toggleCompactView pull-right">
-        <input id="compactViewInput" name="compactView" class="styled" type="checkbox" data-bind="checked: $root.compactView" />
-        <label for="compactViewInput">
-            Compact View
-        </label>
-    </div>-->
+            <div class="flex-separator"></div>
+            <div class="toggle toggle-primary databasesToolbar-toggleCompactView pull-right">
+                <input id="compactViewInput" name="compactView" class="styled" type="checkbox" data-bind="checked: $root.compactView" />
+                <label for="compactViewInput">
+                    Compact View
+                </label>
+            </div>-->
         </div>
     </div>
     <div data-bind="if: databases().sortedDatabases().length === 0, visible: databases().sortedDatabases().length === 0" class="content-margin">
@@ -110,13 +110,13 @@
         </div>
     </div>
     <div class="flex-grow scroll" data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length">
-        
+
         <div class="database-counter on-base-background">
             <span>
                 <strong data-bind="text: databases().sortedDatabases().length"></strong> Databases
             </span>
             <span data-bind="visible: $root.databasesByState().online">
-                <strong class="text-success" data-bind="text: $root.databasesByState().online"></strong> Online 
+                <strong class="text-success" data-bind="text: $root.databasesByState().online"></strong> Online
             </span>
             <span data-bind="visible: $root.databasesByState().errored">
                 <strong class="text-danger" data-bind="text: $root.databasesByState().errored"></strong> Errored
@@ -127,9 +127,8 @@
             <span data-bind="visible: $root.databasesByState().offline">
                 <strong class="text-muted" data-bind="text: $root.databasesByState().offline"></strong> Offline
             </span>
-
         </div>
-        
+
         <div data-bind="foreach: databases().sortedDatabases">
             <div id="" class="database-item panel panel-hover panel-state database-item" data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(),
                                                                           attr: { class: 'panel panel-hover panel-state database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') + ' ' + ($root.createIsLocalDatabaseObservable(name)() ? 'relevant' : '') }">
@@ -286,7 +285,7 @@
                 </div>
                 <!--ko if: !uptime()-->
                 <div class="uptime text-muted">
-                    <small><i class="icon-recent"></i></small>                    
+                    <small><i class="icon-recent"></i></small>
                     <small>Offline</small>
                 </div>
                 <!--/ko-->

@@ -13,7 +13,6 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -413,11 +412,11 @@ namespace FastTests.Server.Documents.Indexing.Static
                             progress = index.GetProgress(queryContext);
                         }
 
-                        Assert.Equal(0, progress.Collections["Users"].LastProcessedDocumentEtag);
+                        Assert.Equal(0, progress.Collections["Users"].LastProcessedItemEtag);
                         Assert.Equal(0, progress.Collections["Users"].LastProcessedTombstoneEtag);
-                        Assert.Equal(2, progress.Collections["Users"].NumberOfDocumentsToProcess);
+                        Assert.Equal(2, progress.Collections["Users"].NumberOfItemsToProcess);
                         Assert.Equal(0, progress.Collections["Users"].NumberOfTombstonesToProcess);
-                        Assert.Equal(2, progress.Collections["Users"].TotalNumberOfDocuments);
+                        Assert.Equal(2, progress.Collections["Users"].TotalNumberOfItems);
                         Assert.Equal(0, progress.Collections["Users"].TotalNumberOfTombstones);
 
                         var batchStats = new IndexingRunStats();
@@ -429,11 +428,11 @@ namespace FastTests.Server.Documents.Indexing.Static
                             progress = index.GetProgress(queryContext);
                         }
 
-                        Assert.Equal(2, progress.Collections["Users"].LastProcessedDocumentEtag);
+                        Assert.Equal(2, progress.Collections["Users"].LastProcessedItemEtag);
                         Assert.Equal(0, progress.Collections["Users"].LastProcessedTombstoneEtag);
-                        Assert.Equal(0, progress.Collections["Users"].NumberOfDocumentsToProcess);
+                        Assert.Equal(0, progress.Collections["Users"].NumberOfItemsToProcess);
                         Assert.Equal(0, progress.Collections["Users"].NumberOfTombstonesToProcess);
-                        Assert.Equal(2, progress.Collections["Users"].TotalNumberOfDocuments);
+                        Assert.Equal(2, progress.Collections["Users"].TotalNumberOfItems);
                         Assert.Equal(0, progress.Collections["Users"].TotalNumberOfTombstones);
 
                         using (var tx = context.OpenWriteTransaction())
@@ -472,11 +471,11 @@ namespace FastTests.Server.Documents.Indexing.Static
                             progress = index.GetProgress(queryContext);
                         }
 
-                        Assert.Equal(2, progress.Collections["Users"].LastProcessedDocumentEtag);
+                        Assert.Equal(2, progress.Collections["Users"].LastProcessedItemEtag);
                         Assert.Equal(0, progress.Collections["Users"].LastProcessedTombstoneEtag);
-                        Assert.Equal(1, progress.Collections["Users"].NumberOfDocumentsToProcess);
+                        Assert.Equal(1, progress.Collections["Users"].NumberOfItemsToProcess);
                         Assert.Equal(1, progress.Collections["Users"].NumberOfTombstonesToProcess);
-                        Assert.Equal(2, progress.Collections["Users"].TotalNumberOfDocuments);
+                        Assert.Equal(2, progress.Collections["Users"].TotalNumberOfItems);
                         Assert.Equal(1, progress.Collections["Users"].TotalNumberOfTombstones);
 
                         batchStats = new IndexingRunStats();
@@ -488,11 +487,11 @@ namespace FastTests.Server.Documents.Indexing.Static
                             progress = index.GetProgress(queryContext);
                         }
 
-                        Assert.Equal(5, progress.Collections["Users"].LastProcessedDocumentEtag);
+                        Assert.Equal(5, progress.Collections["Users"].LastProcessedItemEtag);
                         Assert.Equal(4, progress.Collections["Users"].LastProcessedTombstoneEtag);
-                        Assert.Equal(0, progress.Collections["Users"].NumberOfDocumentsToProcess);
+                        Assert.Equal(0, progress.Collections["Users"].NumberOfItemsToProcess);
                         Assert.Equal(0, progress.Collections["Users"].NumberOfTombstonesToProcess);
-                        Assert.Equal(2, progress.Collections["Users"].TotalNumberOfDocuments);
+                        Assert.Equal(2, progress.Collections["Users"].TotalNumberOfItems);
                         Assert.Equal(1, progress.Collections["Users"].TotalNumberOfTombstones);
                     }
                 }

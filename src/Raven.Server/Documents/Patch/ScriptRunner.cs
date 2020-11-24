@@ -212,7 +212,8 @@ namespace Raven.Server.Documents.Patch
             public string OriginalDocumentId;
             public bool RefreshOriginalDocument;
             private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
-            public Dictionary<string, (SortedSet<string> CountersToAdd, HashSet<string> CountersToRemove)> DocumentCountersToUpdate;
+            public HashSet<string> DocumentCountersToUpdate;
+            public HashSet<string> DocumentTimeSeriesToUpdate;
             public JavaScriptUtils JavaScriptUtils;
 
             private const string _timeSeriesSignature = "timeseries(doc, name)";
@@ -470,11 +471,13 @@ namespace Raven.Server.Documents.Patch
                         throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(valuesArg)}");
                     }
 
-                    bool timeSeriesExists = false;
-                    if (DebugMode)
+                    var tss = _database.DocumentsStorage.TimeSeriesStorage;
+                    var newSeries = tss.Stats.GetStats(_docsCtx, id, timeSeries).Count == 0;
+
+                    if (newSeries)
                     {
-                        var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeSeries, DateTime.MinValue, DateTime.MaxValue);
-                        timeSeriesExists = reader.AllValues().Any();
+                        DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        DocumentTimeSeriesToUpdate.Add(id);
                     }
 
                     var toAppend = new SingleResult
@@ -485,12 +488,13 @@ namespace Raven.Server.Documents.Patch
                         Status = TimeSeriesValuesSegment.Live
                     };
 
-                    _database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(
+                    tss.AppendTimestamp(
                         _docsCtx,
                         id,
                         CollectionName.GetCollectionName(doc),
                         timeSeries,
-                        new[] { toAppend });
+                        new[] { toAppend }, 
+                        addNewNameToMetadata: false);
 
                     if (DebugMode)
                     {
@@ -500,7 +504,7 @@ namespace Raven.Server.Documents.Patch
                             ["Timestamp"] = timestamp,
                             ["Tag"] = lsTag,
                             ["Values"] = values.ToArray().Cast<object>(),
-                            ["Created"] = timeSeriesExists == false
+                            ["Created"] = newSeries
                         });
                     }
                 }
@@ -539,6 +543,10 @@ namespace Raven.Server.Documents.Patch
 
                 string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
 
+                var count = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries).Count;
+                if (count == 0)
+                    return JsValue.Undefined;
+
                 var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
                 {
                     DocumentId = id,
@@ -547,7 +555,14 @@ namespace Raven.Server.Documents.Patch
                     From = from,
                     To = to,
                 };
-                _database.DocumentsStorage.TimeSeriesStorage.DeleteTimestampRange(_docsCtx, deletionRangeRequest);
+                _database.DocumentsStorage.TimeSeriesStorage.DeleteTimestampRange(_docsCtx, deletionRangeRequest, updateMetadata: false);
+
+                count = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries).Count;
+                if (count == 0)
+                {
+                    DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    DocumentTimeSeriesToUpdate.Add(id);
+                }
 
                 if (DebugMode)
                 {
@@ -1217,15 +1232,8 @@ namespace Raven.Server.Documents.Patch
 
                 if (exists == false)
                 {
-                    if (DocumentCountersToUpdate == null)
-                        DocumentCountersToUpdate = new Dictionary<string, (SortedSet<string> CountersToAdd, HashSet<string> CountersToRemove)>();
-                    if (DocumentCountersToUpdate.TryGetValue(id, out var tuple) == false)
-                        tuple = (new SortedSet<string>(StringComparer.OrdinalIgnoreCase), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-
-                    tuple.CountersToAdd.Add(name);
-                    tuple.CountersToRemove?.Remove(name);
-
-                    DocumentCountersToUpdate[id] = tuple;
+                    DocumentCountersToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    DocumentCountersToUpdate.Add(id);
                 }
 
                 if (DebugMode)
@@ -1289,15 +1297,8 @@ namespace Raven.Server.Documents.Patch
                 var name = args[1].AsString();
                 _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name);
 
-                if (DocumentCountersToUpdate == null)
-                    DocumentCountersToUpdate = new Dictionary<string, (SortedSet<string> CountersToAdd, HashSet<string> CountersToRemove)>();
-                if (DocumentCountersToUpdate.TryGetValue(id, out var tuple) == false)
-                    tuple = (new SortedSet<string>(StringComparer.OrdinalIgnoreCase), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-
-                tuple.CountersToRemove.Add(name);
-                tuple.CountersToAdd?.Remove(name);
-
-                DocumentCountersToUpdate[id] = tuple;
+                DocumentCountersToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                DocumentCountersToUpdate.Add(id);
 
                 if (DebugMode)
                 {
@@ -1808,6 +1809,7 @@ namespace Raven.Server.Documents.Patch
                 Includes?.Clear();
                 CompareExchangeValueIncludes?.Clear();
                 DocumentCountersToUpdate?.Clear();
+                DocumentTimeSeriesToUpdate?.Clear();
                 PutOrDeleteCalled = false;
                 OriginalDocumentId = null;
                 RefreshOriginalDocument = false;
@@ -1881,6 +1883,7 @@ namespace Raven.Server.Documents.Patch
                 _run.RefreshOriginalDocument = false;
 
                 _run.DocumentCountersToUpdate?.Clear();
+                _run.DocumentTimeSeriesToUpdate?.Clear();
 
                 _holder.Parent._cache.Enqueue(_holder);
                 _run = null;

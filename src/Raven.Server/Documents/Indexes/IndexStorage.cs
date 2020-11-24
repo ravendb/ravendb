@@ -55,6 +55,8 @@ namespace Raven.Server.Documents.Indexes
 
         private StorageEnvironment _environment;
 
+        private long _lastDatabaseEtagOnIndexCreation;
+
         public const int MaxNumberOfKeptErrors = 500;
 
         internal bool SimulateCorruption = false;
@@ -128,10 +130,40 @@ namespace Raven.Server.Documents.Indexes
                 tx.InnerTransaction.CreateTree(IndexSchema.References);
                 tx.InnerTransaction.CreateTree(IndexSchema.ReferencesForCompareExchange);
 
+                _lastDatabaseEtagOnIndexCreation = InitializeLastDatabaseEtagOnIndexCreation(context);
+
                 _index.Definition.Persist(context, _environment.Options);
 
                 tx.Commit();
             }
+        }
+
+        private long InitializeLastDatabaseEtagOnIndexCreation(TransactionOperationContext indexContext)
+        {
+            const string key = "LastEtag";
+
+            if (_environment.IsNew == false)
+            {
+                var tree = indexContext.Transaction.InnerTransaction.ReadTree(IndexSchema.LastDocumentEtagOnIndexCreationTree);
+                var result = tree?.Read(key);
+                return result?.Reader.ReadLittleEndianInt64() ?? 0;
+            }
+
+            using (var queryContext = QueryOperationContext.Allocate(DocumentDatabase, _index))
+            using (queryContext.OpenReadTransaction())
+            using (Slice.From(indexContext.Allocator, key, out var slice))
+            {
+                var lastDatabaseEtag = DocumentsStorage.ReadLastEtag(queryContext.Documents.Transaction.InnerTransaction);
+                var tree = indexContext.Transaction.InnerTransaction.CreateTree(IndexSchema.LastDocumentEtagOnIndexCreationTree);
+                tree.Add(slice, lastDatabaseEtag);
+
+                return lastDatabaseEtag;
+            }
+        }
+
+        public bool LowerThanLastDatabaseEtagOnIndexCreation(long currentEtag)
+        {
+            return _lastDatabaseEtagOnIndexCreation >= currentEtag;
         }
 
         public void WriteDefinition(IndexDefinitionBase indexDefinition, TimeSpan? timeout = null)
@@ -458,7 +490,7 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            public IEnumerable<Slice> GetItemKeysFromCollectionThatReference(string collection, LazyStringValue referenceKey, RavenTransaction tx)
+            public IEnumerable<Slice> GetItemKeysFromCollectionThatReference(string collection, LazyStringValue referenceKey, RavenTransaction tx, string lastItemId = null)
             {
                 var collectionTree = tx.InnerTransaction.ReadTree(_referenceCollectionPrefix + collection);
                 if (collectionTree == null)
@@ -467,8 +499,19 @@ namespace Raven.Server.Documents.Indexes
                 using (DocumentIdWorker.GetLower(tx.InnerTransaction.Allocator, referenceKey, out var k))
                 using (var it = collectionTree.MultiRead(k))
                 {
-                    if (it.Seek(Slices.BeforeAllKeys) == false)
-                        yield break;
+                    if (lastItemId == null)
+                    {
+                        if (it.Seek(Slices.BeforeAllKeys) == false)
+                            yield break;
+                    }
+                    else
+                    {
+                        using (Slice.From(tx.InnerTransaction.Allocator, lastItemId, out var idSlice))
+                        {
+                            if (it.Seek(idSlice) == false)
+                                yield break;
+                        }
+                    }
 
                     do
                     {
@@ -879,6 +922,8 @@ namespace Raven.Server.Documents.Indexes
             public const string References = "References";
 
             public const string ReferencesForCompareExchange = "ReferencesForCompareExchange";
+            
+            public const string LastDocumentEtagOnIndexCreationTree = "LastDocumentEtagOnIndexCreation";
 
             public static readonly Slice TypeSlice;
 

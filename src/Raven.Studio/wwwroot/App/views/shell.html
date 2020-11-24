@@ -174,7 +174,7 @@
                 <li><a href="#" title="Send feedback" class="feedback-link" data-bind="click: $data.constructor.openFeedbackForm"><i class="icon-feedback"></i></a></li>
                 <li style="display:none"><a target="_blank" title="Help" data-bind="attr: { href: currentHelpLink }" class="icon-help"></a></li>
                 <li data-bind="with: notificationCenter">
-                    <a title="Notifications center" href="#" id="notification-toggle" class="btn-toggle" data-bind="{ click: showNotifications.toggle.bind(showNotifications), css: { 'active': showNotifications() } }">
+                <a title="Notification center" href="#" id="notification-toggle" class="btn-toggle" data-bind="click: showNotifications.toggle.bind(showNotifications), css: { 'active': showNotifications() }">
                         <span class="icon-notifications"></span>
                         <span class="notification-counter show" data-bind="text: totalItemsCount(), attr: { 'data-count': totalItemsCount() }, css: { 'show': alertCountAnimation() }"></span>
                     </a>

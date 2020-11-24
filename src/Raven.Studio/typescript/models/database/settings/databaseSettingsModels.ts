@@ -297,7 +297,7 @@ export abstract class numberEntry extends databaseEntry<number | null> {
 
         const numberValue = this.customizedDatabaseValue();
         
-        if (numberValue) {
+        if (numberValue >= 0) {
             return numberValue >= this.minValue() ? numberValue.toString() : null;
         } else {
             return null;
@@ -316,7 +316,7 @@ export abstract class numberEntry extends databaseEntry<number | null> {
                     validator: (value: number) => (value >= this.minValue() ||
                         (this.isNullable() && !value && value !== 0)),
                     message: "Please enter a value greater or equal to {0}",
-                    params:  this.minValue()
+                    params: this.minValue()
                 }
             ]
         });

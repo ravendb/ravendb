@@ -5,6 +5,7 @@ using System.Reflection;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries
@@ -233,11 +234,11 @@ namespace Raven.Client.Documents.Queries
                     break;
 
                 case DateTime dt:
-                    Write(dt.ToString("o"));
+                    Write(dt.GetDefaultRavenFormat());
                     break;
 
                 case DateTimeOffset dto:
-                    Write(dto.ToString("o"));
+                    Write(dto.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
                     break;
 
                 case TimeSpan ts:

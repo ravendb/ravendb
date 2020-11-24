@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
@@ -20,6 +21,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         private JsonEnumerableConverter _jsonEnumerableConverter;
         private bool _ignoreByRefMembers;
         private bool _ignoreUnsafeMembers;
+        private CachingJsonConverter _cachedConverterSerializer, _cachedConverterDeserializer;
 
         public DocumentConventions Conventions { get; private set; }
 
@@ -125,7 +127,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             var jsonSerializer = CreateInitialSerializer();
             CustomizeJsonSerializer(jsonSerializer);
             CustomizeJsonDeserializer(jsonSerializer);
-            PostJsonSerializerInitiation(jsonSerializer);
+            PostJsonSerializerInitiation(jsonSerializer, true, ref _cachedConverterDeserializer);
 
             jsonSerializer.ApplyOptions(options);
 
@@ -136,7 +138,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         {
             var jsonSerializer = CreateInitialSerializer();
             CustomizeJsonSerializer(jsonSerializer);
-            PostJsonSerializerInitiation(jsonSerializer);
+            PostJsonSerializerInitiation(jsonSerializer, false, ref _cachedConverterSerializer);
 
             jsonSerializer.ApplyOptions(options);
 
@@ -172,7 +174,17 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             };
         }
 
-        private void PostJsonSerializerInitiation(NewtonsoftJsonJsonSerializer jsonSerializer)
+        private void PostJsonSerializerInitiation(NewtonsoftJsonJsonSerializer jsonSerializer, bool canRead, ref CachingJsonConverter cache)
+        {
+            if (cache == null)
+            {
+                cache = InitializeConverters(jsonSerializer, canRead);
+            }
+            jsonSerializer.Converters.Clear();
+            jsonSerializer.Converters.Add(cache);
+        }
+
+        private CachingJsonConverter InitializeConverters(NewtonsoftJsonJsonSerializer jsonSerializer, bool canRead)
         {
             if (Conventions.SaveEnumsAsIntegers == false)
                 jsonSerializer.Converters.Add(new StringEnumConverter());
@@ -185,6 +197,12 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             jsonSerializer.Converters.Add(JsonIMetadataDictionaryConverter.Instance);
             jsonSerializer.Converters.Add(SizeConverter.Instance);
             jsonSerializer.Converters.Add(_jsonEnumerableConverter);
+
+            var converters = canRead ? 
+                jsonSerializer.Converters.Where(x => x.CanRead).ToArray() : 
+                jsonSerializer.Converters.ToArray();
+
+            return new CachingJsonConverter(converters, canRead, true);
         }
     }
 }

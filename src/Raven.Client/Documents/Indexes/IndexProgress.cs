@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Indexes
 {
-    public class IndexProgress
+    internal class IndexProgress
     {
         public string Name { get; set; }
 
@@ -20,18 +20,17 @@ namespace Raven.Client.Documents.Indexes
 
         public class CollectionStats
         {
-            public long LastProcessedDocumentEtag { get; set; }
+            public long LastProcessedItemEtag { get; set; }
 
-            public long NumberOfDocumentsToProcess { get; set; }
+            public long NumberOfItemsToProcess { get; set; }
 
-            public long TotalNumberOfDocuments { get; set; }
+            public long TotalNumberOfItems { get; set; }
 
             public long LastProcessedTombstoneEtag { get; set; }
 
             public long NumberOfTombstonesToProcess { get; set; }
 
             public long TotalNumberOfTombstones { get; set; }
-
             internal void UpdateLastEtag(long lastEtag, bool isTombstone)
             {
                 if (isTombstone)
@@ -40,13 +39,13 @@ namespace Raven.Client.Documents.Indexes
                 }
                 else
                 {
-                    LastProcessedDocumentEtag = lastEtag;
+                    LastProcessedItemEtag = lastEtag;
                 }
             }
         }
     }
 
-    public class IndexesProgress
+    internal class IndexesProgress
     {
         public List<IndexProgress> Results { get; set; }
     }

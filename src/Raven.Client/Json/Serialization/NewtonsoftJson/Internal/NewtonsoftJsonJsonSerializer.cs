@@ -25,20 +25,14 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
     {
         public static void ApplyOptions(this NewtonsoftJsonJsonSerializer jsonSerializer, CreateSerializerOptions options)
         {
-            if (options == null)
-                return;
-
-            if (options.TypeNameHandling.HasValue)
+            switch (options?.TypeNameHandling)
             {
-                switch (options.TypeNameHandling)
-                {
-                    case TypeNameHandling.None:
-                        jsonSerializer.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.None;
-                        break;
-                    case TypeNameHandling.Objects:
-                        jsonSerializer.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Objects;
-                        break;
-                }
+                case TypeNameHandling.None:
+                    jsonSerializer.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.None;
+                    break;
+                case TypeNameHandling.Objects:
+                    jsonSerializer.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Objects;
+                    break;
             }
         }
     }

@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using System;
 using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -24,6 +26,13 @@ namespace Raven.Server.Web.System
                 Server.CpuCreditsBalance.RemainingCpuCredits = updated.RemainingCredits;
                 return Task.CompletedTask;
             }
+        }
+
+        [RavenAction("/admin/cpu-credits/sync", "POST", AuthorizationStatus.ClusterAdmin)]
+        public Task SyncCpuCredits()
+        {
+            Server.ForceSyncCpuCredits();
+            return Task.CompletedTask;
         }
 
         [RavenAction("/debug/cpu-credits", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
