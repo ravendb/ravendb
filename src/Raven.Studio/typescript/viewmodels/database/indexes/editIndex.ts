@@ -19,6 +19,7 @@ import indexFieldOptions = require("models/database/index/indexFieldOptions");
 import getIndexFieldsFromMapCommand = require("commands/database/index/getIndexFieldsFromMapCommand");
 import configurationItem = require("models/database/index/configurationItem");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
+import getIndexHistoryCommand = require("commands/database/index/getIndexHistoryCommand");
 import eventsCollector = require("common/eventsCollector");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
@@ -33,6 +34,8 @@ import additionalSourceSyntax = require("viewmodels/database/indexes/additionalS
 import additionalAssemblySyntax = require("viewmodels/database/indexes/additionalAssemblySyntax");
 import fileImporter = require("common/fileImporter");
 import popoverUtils = require("common/popoverUtils");
+import generalUtils = require("common/generalUtils");
+import documentHelpers = require("common/helpers/database/documentHelpers");
 
 class editIndex extends viewModelBase {
 
@@ -61,23 +64,39 @@ class editIndex extends viewModelBase {
     
     selectedSourcePreview = ko.observable<additionalSource>();
     additionalSourcePreviewHtml: KnockoutComputed<string>;
+    
+    indexHistory = ko.observableArray<indexHistoryDefinition>([]);
+    showIndexHistory = ko.observable<boolean>(false);
+    loadedIndexHistory = ko.observable<boolean>(false);
+
+    static indexHistoryCreatedAtFormat = "YYYY-MM-DD HH:mm:ss.SSS";
+    static previewEditorSelector = "#previewEditor";
+    private previewEditor: AceAjax.Editor;
+    $previewEditor: JQuery;
+    
+    previewItem = ko.observable<indexHistoryDefinition>();
+    previewDefinition = ko.observable<string>();
 
     constructor() {
         super();
 
-        this.bindToCurrentInstance("removeMap", 
-            "removeField", 
-            "createFieldNameAutocompleter", 
-            "removeConfigurationOption", 
-            "formatIndex", 
-            "deleteAdditionalSource", 
+        this.bindToCurrentInstance("removeMap",
+            "removeField",
+            "createFieldNameAutocompleter",
+            "removeConfigurationOption",
+            "formatIndex",
+            "deleteAdditionalSource",
             "previewAdditionalSource",
             "shouldDropupMenu",
             "formatReduce",
             "removeReduce",
             "addReduce",
             "removeAssembly",
-            "addNamespaceToAssemblyWithBlink");
+            "addNamespaceToAssemblyWithBlink",
+            "loadIndexDefinitionFromHistory",
+            "loadMapReduceFromHistory",
+            "useIndexRevisionItem",
+            "previewIndex");
 
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
@@ -121,6 +140,18 @@ class editIndex extends viewModelBase {
                         <h2 class="margin-top margin-top-sm">${text}</h2>
                     </div>`;
         });
+
+        this.previewItem.extend({ rateLimit: 100});
+        
+        this.previewItem.subscribe((item) => {
+            let itemDefinition = item.Definition;
+            const indexDefinitionText = generalUtils.stringify(itemDefinition);
+            this.previewDefinition(documentHelpers.unescapeNewlinesAndTabsInTextFields(indexDefinitionText));
+
+            this.$previewEditor = $(editIndex.previewEditorSelector);
+            this.previewEditor = aceEditorBindingHandler.getEditorBySelection(this.$previewEditor);
+            this.previewEditor.gotoPageUp();
+        })
     }
 
     canActivate(indexToEdit: string): JQueryPromise<canActivateResultDto> {
@@ -161,7 +192,12 @@ class editIndex extends viewModelBase {
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
 
         this.initValidation();
+        
         this.fetchIndexes();
+        
+        if (!this.editedIndex().isAutoIndex() && !!indexToEditName) {
+            this.showIndexHistory(true);
+        }
     }
 
     attached() {
@@ -173,56 +209,37 @@ class editIndex extends viewModelBase {
         
         popoverUtils.longWithHover($("#reduce-output-info"),
             {
-                content: 
-                    "<small>" +
-                        "Reduce results will be saved into documents that will be created under the provided collection name." +
-                    "</small>"
+                content:
+                    `<small>Reduce results will be saved into documents that will be created under the provided collection name.</small>`
             });
 
         popoverUtils.longWithHover($("#reference-docs-info"),
-            {               
+            {
                 content:
-                    "<small>" +
-                       "<ul>" +
-                           "<li>" +
-                                "A <i>Reference Collection</i> with documents that reference the above <i>Reduce Results Collection</i> will be created.<br>" +
-                            "</li>" +
-                            "<li>" +
-                                "The collection name and the referencing document IDs pattern can be customized here below." +
-                            "</li>" +
-                        "</ul> " +
-                    "</small>"
+                    `<ul class="padding padding-xs margin-top margin-top-xs margin-left margin-bottom margin-bottom-xs">
+                         <li><small>A <i>Reference Collection</i> with documents that reference the above <i>Reduce Results Collection</i> will be created.</small></li>
+                         <li><small>The collection name and the referencing document IDs pattern can be customized here below.</small></li>
+                     </ul>`
             });
         
         popoverUtils.longWithHover($("#reference-docs-pattern-info"),
             {
                 content:
-                    "<small>" +
-                        "<ul>" +
-                            "<li>" +
-                                "<strong>The pattern</strong> entered is used to create the IDs for the Reference Collection documents.<br>" +
-                            "</li>" +
-                            "<li>" +
-                                "Use any combination of index-field(s) and fixed text in the pattern.<br>" +
-                                "i.e. <strong>fixed-text / {index-field-1} / {index-field-2}'</strong>" +
-                            "</li>" +
-                        "</ul> " +
-                    "</small>"
+                    `<ul class="padding padding-xs margin-top margin-top-xs margin-left margin-bottom margin-bottom-xs">
+                         <li><small><strong>The pattern</strong> entered is used to create the IDs for the Reference Collection documents.</small></li>
+                         <li><small>Use any combination of index-field(s) and fixed text in the pattern.<br>
+                                    i.e. <strong>fixed-text / {index-field-1} / {index-field-2}</strong></small>
+                         </li>
+                     </ul>`
             });
 
         popoverUtils.longWithHover($("#reference-docs-collection-name-info"),
             {
                 content:
-                    "<small>" +
-                        "<ul>" +
-                            "<li>" +
-                                "Enter a name for the Referencing Documents Collection." +
-                            "</li>" +
-                            "<li>" +
-                                "<strong>Default name</strong> is: <strong>'{reduce-results-collection-name} / References.'</strong>" +
-                            "</li>" +
-                        "</ul> " +
-                    "</small>"
+                    `<ul class="padding padding-xs margin-top margin-top-xs margin-left margin-bottom margin-bottom-xs">
+                         <li><small>Enter a name for the Referencing Documents Collection.</small></li>
+                         <li><small><strong>Default name</strong> is: <strong>{reduce-results-collection-name} / References.</strong></small></li>
+                     </ul>`
             });
     }
 
@@ -252,6 +269,88 @@ class editIndex extends viewModelBase {
             });
     }
 
+    private fetchIndexHistory() {
+        const db = this.activeDatabase();
+        
+        return new getIndexHistoryCommand(db, this.editedIndex().name() || this.originalIndexName)
+            .execute()
+            .done((indexHistory) => {
+                const indexHistoryInfo = indexHistory.History.map(x => {
+                    return { CreatedAt: x.CreatedAt, Definition: x.Definition, Source: x.Source, CreatedAtFormatted: generalUtils.formatUtcDateAsLocal(x.CreatedAt) };
+                });
+                
+                this.indexHistory(indexHistoryInfo);
+            });
+    }
+    
+    static formatTime(input: string) {
+        const dateToFormat = moment.utc(input);
+        return dateToFormat.format(editIndex.indexHistoryCreatedAtFormat) + "Z";
+    }
+
+    useIndexRevisionItem(item: indexHistoryDefinition) {
+        this.previewItem(item);
+        this.loadIndexDefinitionFromHistory();
+    }
+    
+    loadIndexDefinitionFromHistory() {
+        const newIndexDefinition = new indexDefinition(this.previewItem().Definition);
+
+        if (!this.isEditingExistingIndex()) {
+            // if editing a clone then load the index definition without the index name
+            newIndexDefinition.name(null);
+        }
+        
+        this.editedIndex(newIndexDefinition);
+        
+        this.loadedIndexHistory(true);
+    }
+
+    loadMapReduceFromHistory() {
+        const previewItem = this.previewItem();
+        const mapsFromPreview = previewItem.Definition.Maps;
+        const reduceFromPreview = previewItem.Definition.Reduce;
+        
+        const newIndexDefinition = new indexDefinition(this.editedIndex().toDto());
+        newIndexDefinition.setMapsAndReduce(mapsFromPreview, reduceFromPreview);
+        this.editedIndex(newIndexDefinition);
+
+        this.loadedIndexHistory(true);
+    }
+
+    indexHistoryButtonHandler() {
+        this.fetchIndexHistory().done(() => {
+            this.previewItem(this.indexHistory()[0]);
+
+            $('.history-list [data-toggle="tooltip"]').tooltip({
+                html: true
+            });
+        });
+    }
+
+    previewIndex(item: indexHistoryDefinition) {
+        this.previewItem(item);
+    }
+
+    creationTimeTooltip(item: indexHistoryDefinition) {
+        return ko.pureComputed(() => {
+            if (item) {
+                return `<div class="date-container">
+                            <div>
+                                <div class="date-label">UTC:</div>
+                                <div class="date-value">${moment.utc(item.CreatedAt).format(editIndex.indexHistoryCreatedAtFormat) + "Z"}</div>
+                            </div>
+                            <div>
+                                <div class="date-label">Relative:</div>
+                                <div class="date-value">${generalUtils.formatDurationByDate(moment.utc(item.CreatedAt), true)}</div>
+                            </div>
+                        </div>`;
+            }
+
+            return "";
+        })
+    }
+    
     private updateIndexFields() {
         const map = this.editedIndex().maps()[0].map();
 
@@ -331,8 +430,9 @@ class editIndex extends viewModelBase {
         this.isSaveEnabled = ko.pureComputed(() => {
             const editIndex = this.isEditingExistingIndex();
             const isDirty = this.dirtyFlag().isDirty();
+            const isIndexLoadedFromHistory = this.loadedIndexHistory();
 
-            return !editIndex || isDirty;
+            return !editIndex || isDirty || isIndexLoadedFromHistory;
         });
     }
 

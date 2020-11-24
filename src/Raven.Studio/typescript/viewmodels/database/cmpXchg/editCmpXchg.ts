@@ -14,6 +14,7 @@ import editorWarningsConfirm = require("viewmodels/database/documents/editorWarn
 import viewModelBase = require("viewmodels/viewModelBase");
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
+import genUtils = require("common/generalUtils");
 
 type contentType = "Value" | "Metadata";
 
@@ -42,7 +43,7 @@ class editorInfo {
     private initializeObservables() {
         this.content.subscribe(content => {
             if (!_.isUndefined(content)) {
-                const text = this.stringify(content);
+                const text = genUtils.stringify(content);
                 this.contentText(text);
             }
         });
@@ -62,11 +63,6 @@ class editorInfo {
         this.contentEditor = aceEditorBindingHandler.getEditorBySelection($(this.selector)); 
     }
 
-    private stringify(obj: any) {
-        const prettifySpacing = 4;
-        return JSON.stringify(obj, null, prettifySpacing);
-    }
-    
     private updateNewlineLayout(unescapeNewline: boolean) {
         if (unescapeNewline) {
             this.contentText(documentHelpers.unescapeNewlinesAndTabsInTextFields(this.contentText()));
@@ -83,7 +79,7 @@ class editorInfo {
         try {
             const editorText = this.contentEditor.getSession().getValue();
             const tempValue = JSON.parse(editorText);
-            const formatted = this.stringify(tempValue);
+            const formatted = genUtils.stringify(tempValue);
             this.contentText(formatted);
         } catch (e) {
             messagePublisher.reportError("Could not format json", undefined, undefined, false);

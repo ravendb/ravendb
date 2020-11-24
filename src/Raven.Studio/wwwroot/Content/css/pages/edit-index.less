@@ -26,6 +26,68 @@
             min-width: 135px;
         }
     }
+    
+    .history-dropdown-container {
+        background-color: @gray-darker;
+        max-height: 700px;
+        height: 700px;
+        width: 1000px;
+        
+        h3 {
+            font-weight: bold;
+        }
+    }
+
+    .history-dropdown {
+        width: 100%;
+        max-width: calc(100vw ~"-" @grid-gutter-width/3*4);
+    }
+
+    .history-list-container {
+        background-color: @well-bg;
+        padding: @grid-gutter-width/4;
+        position: relative;
+        height: 600px;
+        padding: 0;
+    }
+    
+    .history-list {
+        background-color: @well-bg;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+
+        li {
+            &:hover {
+                background-color: lighten(@well-bg,3%);
+            }
+
+            &.selected {
+                background-color: @brand-primary;
+                a {
+                    color: @gray-lighter !important;
+                }
+            }
+
+            .history-link {
+                padding: 2px 10px;
+                display: flex;
+
+                .created-at {
+                    font-weight: bold;
+                }
+            }
+        }
+
+        .tooltip-inner {
+            min-width: 260px;
+            text-align: left;
+        }
+    }
+
+    .history-preview-area {
+        height: 600px !important;
+    }
 }
 
 .auto-index {
