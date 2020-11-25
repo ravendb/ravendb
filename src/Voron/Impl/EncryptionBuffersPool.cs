@@ -68,7 +68,7 @@ namespace Voron.Impl
                 thread = NativeMemory.ThreadAllocations.Value;
                 thread.Allocations += size;
 
-                Debug.Assert(size == allocation.Size, "size == allocation.Size");
+                Debug.Assert(size == allocation.Size, $"size ({size}) == allocation.Size ({allocation.Size})");
 
                 return allocation.Ptr;
             }
@@ -141,6 +141,7 @@ namespace Voron.Impl
         public EncryptionBufferStats GetStats()
         {
             var stats = new EncryptionBufferStats();
+            stats.Disabled = Disabled;
 
             foreach (var nativeAllocations in _items)
             {
@@ -261,6 +262,8 @@ namespace Voron.Impl
             Details = new List<AllocationInfo>();
         }
 
+        public bool Disabled { get; set; }
+
         public List<AllocationInfo> Details { get; private set; }
 
         public long TotalSize { get; set; }
@@ -298,6 +301,7 @@ namespace Voron.Impl
         {
             return new DynamicJsonValue
             {
+                [nameof(Disabled)] = Disabled,
                 [nameof(TotalSize)] = TotalSize,
                 [nameof(TotalSizeHumane)] = TotalSizeHumane.ToString(),
                 [nameof(TotalNumberOfItems)] = TotalNumberOfItems,
