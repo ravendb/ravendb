@@ -112,7 +112,12 @@ namespace Sparrow.Json
                 TryDispose(_arenaAllocatorForLongLivedValues);
                 if (_allocateStringValues != null)
                 {
-                    _perCoreLazyStringValuesList.Push(_allocateStringValues);
+                    if (_perCoreLazyStringValuesList.TryPush(_allocateStringValues) == false)
+                    {
+                        foreach (var allocatedStringValue in _allocateStringValues)
+                            allocatedStringValue?.Dispose();
+                    }
+
                     _allocateStringValues = null;
                 }
 
@@ -973,7 +978,12 @@ namespace Sparrow.Json
             for (var i = 0; i < _numberOfAllocatedStringsValues; i++)
                 _allocateStringValues[i].Reset();
 
-            _perCoreLazyStringValuesList.Push(_allocateStringValues);
+            if (_perCoreLazyStringValuesList.TryPush(_allocateStringValues) == false)
+            {
+                foreach (var allocatedStringValue in _allocateStringValues)
+                    allocatedStringValue?.Dispose();
+            }
+
             _allocateStringValues = null;
             
             _numberOfAllocatedStringsValues = 0;
@@ -999,7 +1009,7 @@ namespace Sparrow.Json
             if (_activeAllocatePathCaches != null)
             {
                 _activeAllocatePathCaches.ClearUnreturnedPathCache();
-                _perCorePathCache.Push(_activeAllocatePathCaches);
+                _perCorePathCache.TryPush(_activeAllocatePathCaches);
                 _activeAllocatePathCaches = null;
             }
         }

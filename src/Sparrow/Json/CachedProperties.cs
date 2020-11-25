@@ -43,7 +43,7 @@ namespace Sparrow.Json
             {
                 sort?.Clear();
             }
-            _perCorePropertiesCache.Push(_cachedSorts);
+            _perCorePropertiesCache.TryPush(_cachedSorts);
             _cachedSorts = null;
         }
 

@@ -348,7 +348,7 @@ namespace Voron.Impl.Paging
             if (buffer.OriginalSize != null && buffer.OriginalSize != 0)
             {
                 // First page of a separated section, returned with its original size.
-                EncryptionBuffersPool.Instance.Return(buffer.Pointer, (int)buffer.OriginalSize, buffer.AllocatingThread, buffer.Generation);
+                EncryptionBuffersPool.Instance.Return(buffer.Pointer, (long)buffer.OriginalSize, buffer.AllocatingThread, buffer.Generation);
             }
             else
             {
