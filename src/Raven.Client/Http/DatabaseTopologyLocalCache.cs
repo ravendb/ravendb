@@ -36,6 +36,9 @@ namespace Raven.Client.Http
 
         public static Topology TryLoad(string databaseName, string topologyHash, DocumentConventions conventions, JsonOperationContext context)
         {
+            if (conventions.DisableTopologyCache)
+                return null;
+
             var path = GetPath(databaseName, topologyHash, conventions);
             return TryLoad(path, context);
         }
@@ -65,6 +68,9 @@ namespace Raven.Client.Http
         {
             try
             {
+                if (conventions.DisableTopologyCache)
+                    return;
+
                 var path = GetPath(databaseName, topologyHash, conventions);
                 if (topology == null)
                 {

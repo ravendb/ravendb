@@ -248,6 +248,7 @@ namespace Raven.Client.Documents.Conventions
         private Func<MemberInfo, string> _propertyNameConverter;
         private Func<Type, bool> _typeIsKnownServerSide = _ => false;
         private OperationStatusFetchMode _operationStatusFetchMode;
+        private bool _disableTopologyCache;
         private string _topologyCacheLocation;
         private Version _httpVersion;
         private bool _sendApplicationIdentifier;
@@ -714,6 +715,20 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _operationStatusFetchMode = value;
+            }
+        }
+
+        /// <summary>
+        /// Disables the usage of topology cache.
+        /// </summary>
+        public bool DisableTopologyCache
+        {
+            get => _disableTopologyCache;
+            set
+            {
+                AssertNotFrozen();
+
+                _disableTopologyCache = value;
             }
         }
 

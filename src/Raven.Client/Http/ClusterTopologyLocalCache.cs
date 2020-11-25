@@ -39,6 +39,9 @@ namespace Raven.Client.Http
         {
             try
             {
+                if (conventions.DisableTopologyCache)
+                    return null;
+
                 var path = GetPath(topologyHash, conventions);
                 if (File.Exists(path) == false)
                     return null;
@@ -61,6 +64,9 @@ namespace Raven.Client.Http
         {
             try
             {
+                if (conventions.DisableTopologyCache)
+                    return;
+
                 var path = GetPath(topologyHash, conventions);
                 if (clusterTopology == null)
                 {

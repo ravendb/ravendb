@@ -416,6 +416,54 @@ namespace FastTests.Client.Indexing
         }
 
         [Fact]
+        public void CanReduceWithReturnSyntax()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new UsersReducedByNameReturnSyntax());
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Tal" });
+                    session.Store(new User { Name = "Tal" });
+                    session.Store(new User { Name = "Maxim" });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var res = session.Query<User>("UsersReducedByNameReturnSyntax").OfType<ReduceResults>().Single(x => x.Count == 2);
+                    Assert.Equal("Tal", res.Name);
+                }
+            }
+        }
+        
+        [Fact]
+        public void CanUseJsIndexWithArrowObjectFunctionInMap()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new UsersByNameMapArrowSyntax());
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Tal" });
+                    session.Store(new User { Name = "Tal" });
+                    session.Store(new User { Name = "Maxim" });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var res = session
+                        .Query<User, UsersByNameMapArrowSyntax>()
+                        .Single(x => x.Name == "Maxim");
+                    Assert.Equal("Maxim", res.Name);
+                }
+            }
+        }
+
+        [Fact]
         public void IdenticalMapReduceIndexWillGenerateDiffrentIndexInstance()
         {
             using (var store = GetDocumentStore())
@@ -983,6 +1031,36 @@ map('Products', prod => {
                                     Count: g.values.reduce((total, val) => val.Count + total,0)
                                };})";
 
+            }
+        }
+        
+        private class UsersReducedByNameReturnSyntax : AbstractJavaScriptIndexCreationTask
+        {
+            public UsersReducedByNameReturnSyntax()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"map('Users', function (u){ return { Name: u.Name, Count: 1 };})",
+                };
+                
+                Reduce = @"groupBy(x => { return { Name: x.Name } })
+                                .aggregate(g => {return {
+                                    Name: g.key.Name,
+                                    Count: g.values.reduce((total, val) => val.Count + total,0)
+                               };})";
+
+            }
+        }
+        
+        private class UsersByNameMapArrowSyntax : AbstractJavaScriptIndexCreationTask
+        {
+            public UsersByNameMapArrowSyntax()
+            {
+                // using arrow function w/o explicit return statement
+                Maps = new HashSet<string>
+                {
+                    @"map('Users', u => ({ Name: u.Name }))",
+                };
             }
         }
 
