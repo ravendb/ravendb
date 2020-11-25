@@ -112,7 +112,12 @@ namespace Sparrow.Json
                 TryDispose(_arenaAllocatorForLongLivedValues);
                 if (_allocateStringValues != null)
                 {
-                    _perCoreLazyStringValuesList.Push(_allocateStringValues);
+                    if (_perCoreLazyStringValuesList.TryPush(_allocateStringValues) == false)
+                    {
+                        foreach (var allocatedStringValue in _allocateStringValues)
+                            allocatedStringValue?.Dispose();
+                    }
+
                     _allocateStringValues = null;
                 }
 
@@ -146,14 +151,13 @@ namespace Sparrow.Json
             _arenaAllocator = new ArenaMemoryAllocator(lowMemoryFlag, initialSize);
             _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(lowMemoryFlag, longLivedSize);
             CachedProperties = new CachedProperties(this);
-            CachedProperties.Renew();
             _jsonParserState = new JsonParserState();
             _objectJsonParser = new ObjectJsonParser(_jsonParserState, this);
             _documentBuilder = new BlittableJsonDocumentBuilder(this, _jsonParserState, _objectJsonParser);
             LowMemoryFlag = lowMemoryFlag;
             if (_perCorePathCache.TryPull(out _activeAllocatePathCaches) == false)
                 _activeAllocatePathCaches = new PathCache();
-            if(_perCoreLazyStringValuesList.TryPull(out _allocateStringValues) == false)
+            if (_perCoreLazyStringValuesList.TryPull(out _allocateStringValues) == false)
                 _allocateStringValues = new FastList<LazyStringValue>(256);
 
 #if MEM_GUARD_STACK
@@ -921,7 +925,7 @@ namespace Sparrow.Json
 
             if (_perCorePathCache.TryPull(out _activeAllocatePathCaches) == false)
                 _activeAllocatePathCaches = new PathCache();
-            if(_perCoreLazyStringValuesList.TryPull(out _allocateStringValues) == false)
+            if (_perCoreLazyStringValuesList.TryPull(out _allocateStringValues) == false)
                 _allocateStringValues = new FastList<LazyStringValue>(256);
 
             _arenaAllocator.RenewArena();
@@ -930,7 +934,10 @@ namespace Sparrow.Json
                 _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(LowMemoryFlag, _longLivedSize);
                 CachedProperties = new CachedProperties(this);
             }
-            CachedProperties.Renew();
+            else
+            {
+                CachedProperties.Renew();
+            }
         }
 
         protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false)
@@ -970,12 +977,20 @@ namespace Sparrow.Json
                 _fieldNames.Clear();
             }
 
-            for (var i = 0; i < _numberOfAllocatedStringsValues; i++)
-                _allocateStringValues[i].Reset();
+            if (_allocateStringValues != null)
+            {
+                for (var i = 0; i < _numberOfAllocatedStringsValues; i++)
+                    _allocateStringValues[i].Reset();
 
-            _perCoreLazyStringValuesList.Push(_allocateStringValues);
-            _allocateStringValues = null;
-            
+                if (_perCoreLazyStringValuesList.TryPush(_allocateStringValues) == false)
+                {
+                    foreach (var allocatedStringValue in _allocateStringValues)
+                        allocatedStringValue?.Dispose();
+                }
+
+                _allocateStringValues = null;
+            }
+
             _numberOfAllocatedStringsValues = 0;
 
             _objectJsonParser.Reset(null);
@@ -999,7 +1014,7 @@ namespace Sparrow.Json
             if (_activeAllocatePathCaches != null)
             {
                 _activeAllocatePathCaches.ClearUnreturnedPathCache();
-                _perCorePathCache.Push(_activeAllocatePathCaches);
+                _perCorePathCache.TryPush(_activeAllocatePathCaches);
                 _activeAllocatePathCaches = null;
             }
         }
@@ -1101,12 +1116,15 @@ namespace Sparrow.Json
                 case JsonParserToken.Null:
                     writer.WriteNull();
                     break;
+
                 case JsonParserToken.False:
                     writer.WriteBool(false);
                     break;
+
                 case JsonParserToken.True:
                     writer.WriteBool(true);
                     break;
+
                 case JsonParserToken.String:
                     if (state.CompressedSize.HasValue)
                     {
@@ -1119,18 +1137,23 @@ namespace Sparrow.Json
                         writer.WriteString(AllocateStringValue(null, state.StringBuffer, state.StringSize));
                     }
                     break;
+
                 case JsonParserToken.Float:
                     writer.WriteDouble(new LazyNumberValue(AllocateStringValue(null, state.StringBuffer, state.StringSize)));
                     break;
+
                 case JsonParserToken.Integer:
                     writer.WriteInteger(state.Long);
                     break;
+
                 case JsonParserToken.StartObject:
                     WriteObject(writer, state, parser);
                     break;
+
                 case JsonParserToken.StartArray:
                     WriteArray(writer, state, parser);
                     break;
+
                 default:
                     throw new ArgumentOutOfRangeException("Could not understand " + state.CurrentTokenType);
             }

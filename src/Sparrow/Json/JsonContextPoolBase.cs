@@ -257,7 +257,7 @@ namespace Sparrow.Json
 
         private void Push(T context)
         {
-            if (_perCoreCache.Push(context))
+            if (_perCoreCache.TryPush(context))
                 return;
 
             if (LowMemoryFlag.IsRaised())

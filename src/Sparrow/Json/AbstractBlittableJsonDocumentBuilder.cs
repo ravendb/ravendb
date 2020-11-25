@@ -25,7 +25,7 @@ namespace Sparrow.Json
 
         public virtual void Dispose()
         {
-            GlobalCache.Push(_cacheItem);
+            GlobalCache.TryPush(_cacheItem);
         }
 
         protected void ClearState()
