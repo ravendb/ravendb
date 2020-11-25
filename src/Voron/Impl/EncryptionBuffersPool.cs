@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Sparrow;
@@ -45,7 +46,7 @@ namespace Voron.Impl
             _cleanupTimer = new Timer(CleanupTimer, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
 
-        public byte* Get(int numberOfPages, out int size, out NativeMemory.ThreadStats thread)
+        public byte* Get(int numberOfPages, out long size, out NativeMemory.ThreadStats thread)
         {
             var numberOfPagesPowerOfTwo = Bits.PowerOf2(numberOfPages);
 
@@ -66,6 +67,9 @@ namespace Voron.Impl
 
                 thread = NativeMemory.ThreadAllocations.Value;
                 thread.Allocations += size;
+
+                Debug.Assert(size == allocation.Size, "size == allocation.Size");
+
                 return allocation.Ptr;
             }
 
@@ -92,12 +96,17 @@ namespace Voron.Impl
             NativeMemory.UpdateMemoryStatsForThread(allocatingThread, size);
 
             var index = Bits.MostSignificantBit(size);
-            _items[index].Push(new NativeAllocation
+            var success = _items[index].TryPush(new NativeAllocation
             {
                 Ptr = ptr,
                 Size = size,
                 InPoolSince = DateTime.UtcNow
             });
+
+            if (success)
+                return;
+
+            PlatformSpecific.NativeMemory.Free4KbAlignedMemory(ptr, size, allocatingThread);
         }
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
@@ -220,7 +229,10 @@ namespace Voron.Impl
                         }
 
                         while (localStack.TryPop(out var allocation))
-                            container.Push(allocation);
+                        {
+                            if (container.TryPush(allocation) == false)
+                                allocation.Dispose();
+                        }
                     }
                 }
             }

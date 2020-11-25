@@ -40,7 +40,7 @@ namespace Sparrow.Json
             return false;
         }
 
-        public bool Push(T cur)
+        public bool TryPush(T cur)
         {
             var core = _perCoreArrays[CurrentProcessorIdHelper.GetCurrentProcessorId() % _perCoreArrays.Length];
 
