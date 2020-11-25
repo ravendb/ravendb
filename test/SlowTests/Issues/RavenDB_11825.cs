@@ -35,7 +35,11 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = documentStore => documentStore.Conventions.TopologyCacheLocation = cacheLocation
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.DisableTopologyCache = false;
+                    s.Conventions.TopologyCacheLocation = cacheLocation;
+                }
             }))
             {
                 store.Maintenance.Send(new GetStatisticsOperation()); // do something
