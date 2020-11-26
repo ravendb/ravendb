@@ -90,7 +90,7 @@ namespace Raven.Client.Documents.Session.Operations
             return enumerator;
         }
 
-        internal class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
+        private class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
         {
             public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult response, bool isQueryStream, bool isAsync, StreamQueryStatistics streamQueryStatistics)
             {
@@ -364,6 +364,7 @@ namespace Raven.Client.Documents.Session.Operations
                     {
                         _session.Context.CachedProperties = new CachedProperties(_session.Context);
                         ++_docsCountOnCachedRenewSession;
+                        _cachedItemsRenew = false;
                     }
                 }
                 else
