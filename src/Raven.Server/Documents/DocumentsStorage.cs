@@ -697,9 +697,9 @@ namespace Raven.Server.Documents
         }
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
-            long start, long take, string collection)
+            long start, long take, string collection, DocumentFields fields = DocumentFields.All)
         {
-            foreach (var doc in GetDocumentsStartingWith(context, idPrefix, matches, exclude, startAfterId, start, take))
+            foreach (var doc in GetDocumentsStartingWith(context, idPrefix, matches, exclude, startAfterId, start, take, fields: fields))
             {
                 if (collection == Client.Constants.Documents.Collections.AllDocumentsCollection)
                 {
@@ -725,7 +725,7 @@ namespace Raven.Server.Documents
         }
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
-            long start, long take, Reference<long> skip = null)
+            long start, long take, Reference<long> skip = null, DocumentFields fields = DocumentFields.All)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -737,7 +737,7 @@ namespace Raven.Server.Documents
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(prefixSlice, startAfterSlice, skip?.Value ?? 0))
                 {
-                    var document = TableValueToDocument(context, ref result.Value.Reader);
+                    var document = TableValueToDocument(context, ref result.Value.Reader, fields);
                     string documentId = document.Id;
                     if (documentId.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
                         break;
