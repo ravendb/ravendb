@@ -34,9 +34,9 @@ function BuildServer ( $srcDir, $outDir, $target) {
 
     $commandArgs += '/p:SourceLinkCreate=true'
     
-    if ($target -and $global:isPublishBundlingEnabled) {
-        $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true'
-    }
+    #if ($target -and $global:isPublishBundlingEnabled) {
+    #    $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true'
+    #}
 
     write-host -ForegroundColor Cyan "Publish server: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"
@@ -140,9 +140,9 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $trim ) {
 
     $commandArgs += "/p:SourceLinkCreate=true"
     
-    if ($target -and $global:isPublishBundlingEnabled) {
-        $commandArgs += "/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=$trim"
-    }
+    #if ($target -and $global:isPublishBundlingEnabled) {
+    #    $commandArgs += "/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=$trim"
+    #}
 
     write-host -ForegroundColor Cyan "Publish ${toolName}: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"

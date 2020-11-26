@@ -75,11 +75,11 @@ function LayoutServerPackage ( $packageDir, $projectDir, $packOpts ) {
     $target = $packOpts.Target
     CopyStudioPackageToServerOutputDirectory $packOpts
 
-    if ($target.IsUnix -and $global:isPublishBundlingEnabled) {
-        # TODO get 'net5.0' from somewhere
-        $buildDir = [io.path]::Combine($projectDir, "src", "Raven.Server", "bin", "Release", "net5.0", $target.Runtime)
-        CopyNativeBinariesRequiredForDebugging $buildDir "$($packOpts.OutDirs.Server)" $target.NativeBinExtension
-    }
+    #if ($target.IsUnix -and $global:isPublishBundlingEnabled) {
+    #    # TODO get 'net5.0' from somewhere
+    #    $buildDir = [io.path]::Combine($projectDir, "src", "Raven.Server", "bin", "Release", "net5.0", $target.Runtime)
+    #    CopyNativeBinariesRequiredForDebugging $buildDir "$($packOpts.OutDirs.Server)" $target.NativeBinExtension
+    #}
 
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
