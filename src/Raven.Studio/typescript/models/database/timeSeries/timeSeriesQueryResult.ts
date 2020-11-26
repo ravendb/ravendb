@@ -1,7 +1,17 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
 class timeSeriesQueryResult {
+    
+    queryHasGroupByTag = ko.observable<boolean>();
+    
     constructor(private dto: timeSeriesQueryResultDto) {
+
+        if (timeSeriesQueryResult.detectResultType(dto) === "grouped") {
+            const groupedResults = dto.Results as Array<timeSeriesQueryGroupedItemResultDto>;
+            if (groupedResults.length) {
+                this.queryHasGroupByTag(!!groupedResults[0].Key);
+            }
+        }
     }
     
     getCount() {
@@ -43,7 +53,7 @@ class timeSeriesQueryResult {
     
     static detectGroupKeys(groupedValues: Array<timeSeriesQueryGroupedItemResultDto>): string[] {
         const allKeys = Object.keys(groupedValues[0]);
-        const keyWithOutRange = _.without(allKeys, "From", "To");
+        const keyWithOutRange = _.without(allKeys, "From", "To", "Key");
         // server added Count property every time, so we filter it out, unless only Count is available in result
         if (keyWithOutRange.length === 1 && keyWithOutRange[0] === "Count") {
             return ["Count"];

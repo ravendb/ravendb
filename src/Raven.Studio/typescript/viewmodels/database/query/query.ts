@@ -685,12 +685,13 @@ class query extends viewModelBase {
                 const groupKeys = timeSeriesQueryResult.detectGroupKeys(groupedItems);
                 
                 const aggregationColumns = groupKeys.map(key => {
-                    return new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, maybeArrayPresenter(key), key, (50 / groupKeys.length) + "%");
+                    return new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, maybeArrayPresenter(key), key, (45 / groupKeys.length) + "%");
                 });
                 
                 return [
-                    new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, x => formatTimeSeriesDate(x.From), "From", "20%"),
-                    new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, x => formatTimeSeriesDate(x.To), "To", "20%"),
+                    new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, x => formatTimeSeriesDate(x.From), "From", "15%"),
+                    new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, x => formatTimeSeriesDate(x.To), "To", "15%"),
+                    new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, x => x.Key, "Key", "15%"),
                     new textColumn<timeSeriesQueryGroupedItemResultDto>(grid, maybeArrayPresenter("Count"), "Count", "10%"),
                     ...aggregationColumns
                 ];
