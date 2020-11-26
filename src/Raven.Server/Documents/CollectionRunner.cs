@@ -85,36 +85,42 @@ namespace Raven.Server.Documents
                     {
                         foreach (var document in GetDocuments(context, collectionName, startEtag, internalQueryOperationStart, OperationBatchSize, isAllDocs, DocumentFields.Id))
                         {
-                            internalQueryOperationStart++;
-
-                            cancellationToken.ThrowIfCancellationRequested();
-
-                            token.Delay();
-
-                            if (isAllDocs && document.Id.StartsWith(HiLoHandler.RavenHiloIdPrefix, StringComparison.OrdinalIgnoreCase))
-                                continue;
-
-                            if (document.Etag > lastEtag) // we don't want to go over the documents that we have patched
+                            using (document)
                             {
-                                end = true;
-                                break;
+                                internalQueryOperationStart++;
+
+                                cancellationToken.ThrowIfCancellationRequested();
+
+                                token.Delay();
+
+                                if (isAllDocs && document.Id.StartsWith(HiLoHandler.RavenHiloIdPrefix, StringComparison.OrdinalIgnoreCase))
+                                    continue;
+
+                                if (document.Etag > lastEtag) // we don't want to go over the documents that we have patched
+                                {
+                                    end = true;
+                                    break;
+                                }
+
+                                startEtag = document.Etag + 1;
+
+                                if (start > 0)
+                                {
+                                    start--;
+                                    continue;
+                                }
+
+                                if (take-- <= 0)
+                                {
+                                    end = true;
+                                    break;
+                                }
+
+                                ids.Enqueue(document.Id);
+
+                                if (ids.Count >= OperationBatchSize)
+                                    break;
                             }
-
-                            startEtag = document.Etag + 1;
-
-                            if (start > 0)
-                            {
-                                start--;
-                                continue;
-                            }
-
-                            if (take-- <= 0)
-                            {
-                                end = true;
-                                break;
-                            }
-
-                            ids.Enqueue(document.Id);
                         }
                     }
 
