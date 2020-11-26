@@ -362,7 +362,9 @@ namespace Raven.Client.Documents.Session.Operations
                 {
                     if (_cachedItemsRenew)
                     {
-                        _session.Context.CachedProperties = new CachedProperties(_session.Context);
+                        _session.Context.CachedProperties.Reset();
+                        _session.Context.CachedProperties.Renew();
+
                         ++_docsCountOnCachedRenewSession;
                         _cachedItemsRenew = false;
                     }
