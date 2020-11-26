@@ -747,6 +747,7 @@ namespace Raven.Server.Documents
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             var isStartAfter = string.IsNullOrWhiteSpace(startAfterId) == false;
+            var needsWildcardMatch = string.IsNullOrEmpty(matches) == false || string.IsNullOrEmpty(exclude) == false;
 
             var startAfterSlice = Slices.Empty;
             using (DocumentIdWorker.GetSliceFromId(context, idPrefix, out Slice prefixSlice))
@@ -762,14 +763,17 @@ namespace Raven.Server.Documents
                         break;
                     }
 
-                    var idTest = documentId.Substring(idPrefix.Length);
-                    if (WildcardMatcher.Matches(matches, idTest) == false || WildcardMatcher.MatchesExclusion(exclude, idTest))
+                    if (needsWildcardMatch)
                     {
-                        if (skip != null)
-                            skip.Value++;
+                        var idTest = documentId.Substring(idPrefix.Length);
+                        if (WildcardMatcher.Matches(matches, idTest) == false || WildcardMatcher.MatchesExclusion(exclude, idTest))
+                        {
+                            if (skip != null)
+                                skip.Value++;
 
-                        document.Dispose();
-                        continue;
+                            document.Dispose();
+                            continue;
+                        }
                     }
 
                     if (start > 0)
