@@ -138,7 +138,6 @@ namespace Raven.Server.Documents
 
                         if (command.NeedWait)
                             rateGate?.WaitToProceed();
-
                     } while (ids.Count > 0);
 
                     if (end)
@@ -152,14 +151,12 @@ namespace Raven.Server.Documents
             };
         }
 
-        protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, long start, long batchSize, bool isAllDocs, DocumentFields fields)
+        protected IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, long start, int batchSize, bool isAllDocs, DocumentFields fields)
         {
             if (_collectionQuery != null && _collectionQuery.Metadata.WhereFields.Count > 0)
             {
                 if (_operationQuery == null)
-                    _operationQuery = ConvertToOperationQuery(_collectionQuery);
-                
-                _operationQuery.PageSize = (int)batchSize;
+                    _operationQuery = ConvertToOperationQuery(_collectionQuery, batchSize);
 
                 return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, new FieldsToFetch(_operationQuery, null),
                     collectionName, _operationQuery, null, context, null, null, new Reference<int>())
@@ -175,7 +172,7 @@ namespace Raven.Server.Documents
             return Database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize, fields);
         }
 
-        protected virtual long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName, bool isAllDocs)
+        protected long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName, bool isAllDocs)
         {
             if (isAllDocs)
             {
@@ -188,7 +185,7 @@ namespace Raven.Server.Documents
             return totalCount;
         }
 
-        protected virtual long GetLastEtagForCollection(DocumentsOperationContext context, string collection, bool isAllDocs)
+        protected long GetLastEtagForCollection(DocumentsOperationContext context, string collection, bool isAllDocs)
         {
             if (isAllDocs)
                 return DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
@@ -196,14 +193,14 @@ namespace Raven.Server.Documents
             return Database.DocumentsStorage.GetLastDocumentEtag(context.Transaction.InnerTransaction, collection);
         }
 
-        private static IndexQueryServerSide ConvertToOperationQuery(IndexQueryServerSide query)
+        private static IndexQueryServerSide ConvertToOperationQuery(IndexQueryServerSide query, int pageSize)
         {
             return new IndexQueryServerSide(query.Metadata)
             {
                 Query = query.Query,
                 Start = 0,
                 WaitForNonStaleResultsTimeout = query.WaitForNonStaleResultsTimeout,
-                PageSize = int.MaxValue,
+                PageSize = pageSize,
                 QueryParameters = query.QueryParameters
             };
         }
