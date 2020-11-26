@@ -503,7 +503,8 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private bool AddReplicationItemToBatch(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
+        private bool AddReplicationItemToBatch(ReplicationBatchItem item, OutgoingReplicationStatsScope stats,
+            SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Document ||
                 item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
@@ -529,7 +530,7 @@ namespace Raven.Server.Documents.Replication
 
             // destination already has it
             if ( (MissingAttachmentsInLastBatch == false || item.Type != ReplicationBatchItem.ReplicationItemType.Attachment) && 
-                ChangeVectorUtils.GetConflictStatus(item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
+                 _parent._database.DocumentsStorage.GetConflictStatus( item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
             {
                 stats.RecordChangeVectorSkip();
                 skippedReplicationItemsInfo.Update(item);
