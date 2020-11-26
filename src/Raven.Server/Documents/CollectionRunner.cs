@@ -117,9 +117,6 @@ namespace Raven.Server.Documents
                                 }
 
                                 ids.Enqueue(document.Id);
-
-                                if (ids.Count >= OperationBatchSize)
-                                    break;
                             }
                         }
                     }
@@ -161,6 +158,8 @@ namespace Raven.Server.Documents
             {
                 if (_operationQuery == null)
                     _operationQuery = ConvertToOperationQuery(_collectionQuery);
+                
+                _operationQuery.PageSize = (int)batchSize;
 
                 return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, new FieldsToFetch(_operationQuery, null),
                     collectionName, _operationQuery, null, context, null, null, new Reference<int>())
