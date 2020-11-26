@@ -872,42 +872,14 @@ namespace Raven.Server.Documents
             else
                 return ConflictStatus.Update; //document with 'id' doesn't exist locally, so just do PUT
 
-            status = GetConflictStatusForDocument(context, changeVector, local);
+            status = context.DocumentDatabase.DocumentsStorage.GetConflictStatus(changeVector, local, out var skipValidation);
+            context.SkipChangeVectorValidation |= skipValidation;
+
             if (status == ConflictStatus.Conflict)
             {
                 ConflictManager.AssertChangeVectorNotNull(local);
             }
             return status;
-        }
-
-        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string remote, string local)
-        {
-            var originalStatus = ChangeVectorUtils.GetConflictStatus(remote, local);
-            if (originalStatus == ConflictStatus.Conflict && 
-                context.DocumentDatabase.DocumentsStorage.HasUnusedDatabaseIds())
-            {
-                // We need to distinguish between few cases here
-                // let's assume that node C was removed
-
-                // our local change vector is     A:10, B:10, C:10
-                // case 1: incoming change vector A:10, B:10, C:11  -> update           (original: update, after: already merged)
-                // case 2: incoming change vector A:11, B:10, C:10  -> update           (original: update, after: update)
-                // case 3: incoming change vector A:11, B:10        -> update           (original: conflict, after: update)
-                // case 4: incoming change vector A:10, B:10        -> already merged   (original: already merged, after: already merged)
-
-                // our local change vector is     A:11, B:10
-                // case 1: incoming change vector A:10, B:10, C:10 -> already merged        (original: conflict, after: already merged)        
-                // case 2: incoming change vector A:10, B:11, C:10 -> conflict              (original: conflict, after: conflict)
-                // case 3: incoming change vector A:11, B:10, C:10 -> update                (original: update, after: already merged)
-                // case 4: incoming change vector A:11, B:12, C:10 -> update                (original: conflict, after: update)
-
-                context.DocumentDatabase.DocumentsStorage.TryRemoveUnusedIds(ref remote);
-                context.SkipChangeVectorValidation = context.DocumentDatabase.DocumentsStorage.TryRemoveUnusedIds(ref local);
-
-                return ChangeVectorUtils.GetConflictStatus(remote, local);
-            }
-
-            return originalStatus;
         }
 
         public long GetNumberOfDocumentsConflicts(DocumentsOperationContext context)

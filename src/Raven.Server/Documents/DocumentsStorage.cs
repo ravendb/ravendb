@@ -1375,7 +1375,7 @@ namespace Raven.Server.Documents
             return ParseDocument(context, ref tvr, DocumentFields.All);
         }
 
-        private static Tombstone TableValueToTombstone(JsonOperationContext context, ref TableValueReader tvr)
+        public static Tombstone TableValueToTombstone(JsonOperationContext context, ref TableValueReader tvr)
         {
             if (tvr.Pointer == null)
                 return null;
@@ -2068,6 +2068,42 @@ namespace Raven.Server.Documents
                 }
                 while (it.MoveNext());
             }
+        }
+
+
+        public ConflictStatus GetConflictStatus(string remote, string local)
+        {
+            return GetConflictStatus(remote, local, out _);
+        }
+
+        public ConflictStatus GetConflictStatus(string remote, string local, out bool skipValidation)
+        {
+            skipValidation = false;
+            var originalStatus = ChangeVectorUtils.GetConflictStatus(remote, local);
+            if (originalStatus == ConflictStatus.Conflict && HasUnusedDatabaseIds())
+            {
+                // We need to distinguish between few cases here
+                // let's assume that node C was removed
+
+                // our local change vector is     A:10, B:10, C:10
+                // case 1: incoming change vector A:10, B:10, C:11  -> update           (original: update, after: already merged)
+                // case 2: incoming change vector A:11, B:10, C:10  -> update           (original: update, after: update)
+                // case 3: incoming change vector A:11, B:10        -> update           (original: conflict, after: update)
+                // case 4: incoming change vector A:10, B:10        -> already merged   (original: already merged, after: already merged)
+
+                // our local change vector is     A:11, B:10
+                // case 1: incoming change vector A:10, B:10, C:10 -> already merged        (original: conflict, after: already merged)        
+                // case 2: incoming change vector A:10, B:11, C:10 -> conflict              (original: conflict, after: conflict)
+                // case 3: incoming change vector A:11, B:10, C:10 -> update                (original: update, after: already merged)
+                // case 4: incoming change vector A:11, B:12, C:10 -> update                (original: conflict, after: update)
+
+                TryRemoveUnusedIds(ref remote);
+                skipValidation = TryRemoveUnusedIds(ref local);
+
+                return ChangeVectorUtils.GetConflictStatus(remote, local);
+            }
+
+            return originalStatus;
         }
 
         public static IEnumerable<KeyValuePair<string, long>> GetAllReplicatedEtags(DocumentsOperationContext context)

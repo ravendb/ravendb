@@ -1286,36 +1286,32 @@ namespace Raven.Server.Documents.Replication
                             context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(item.ChangeVector, context.LastDatabaseChangeVector);
                             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                             {
-                                ReplicationAttachmentStream attachmentStream;
-                                if (AttachmentsStorage.GetAttachmentTypeByKey(item.Key) == AttachmentType.Revision
-                                    && database.DocumentsStorage.AttachmentsStorage.AttachmentMetadataExists(context, item.Key))
-                                {
-                                    // the revision attachment was already created by previously added document, skipping this item and marking the attachment stream as handled
-                                    if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(item.Base64Hash, out attachmentStream))
-                                    {
-                                        // the stream should have been written when the revision was added by the document
-                                        Debug.Assert(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, item.Base64Hash));
-                                        handledAttachmentStreams.Add(item.Base64Hash);
-                                    }
+                                var local = database.DocumentsStorage.AttachmentsStorage.GetAttachmentByKey(context, item.Key);
 
-                                    continue;
-                                }
-
-                                database.DocumentsStorage.AttachmentsStorage.PutDirect(context, item.Key, item.Name,
-                                    item.ContentType, item.Base64Hash, item.ChangeVector);
-
-                                if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(item.Base64Hash, out attachmentStream))
+                                if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(item.Base64Hash, out ReplicationAttachmentStream attachmentStream))
                                 {
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, item.Base64Hash) == false)
                                     {
+                                        Debug.Assert(local == null || AttachmentsStorage.GetAttachmentTypeByKey(item.Key) != AttachmentType.Revision,
+                                            "the stream should have been written when the revision was added by the document");
                                         database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
                                     }
 
                                     handledAttachmentStreams.Add(item.Base64Hash);
                                 }
+
+                                if (local == null || ChangeVectorUtils.GetConflictStatus(item.ChangeVector, local.ChangeVector) != ConflictStatus.AlreadyMerged)
+                                {
+                                    database.DocumentsStorage.AttachmentsStorage.PutDirect(context, item.Key, item.Name,
+                                        item.ContentType, item.Base64Hash, item.ChangeVector);
+                                }
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
                             {
+                                var tombstone = AttachmentsStorage.GetAttachmentTombstoneByKey(context, item.Key);
+                                if (tombstone != null && ChangeVectorUtils.GetConflictStatus(item.ChangeVector, tombstone.ChangeVector) == ConflictStatus.AlreadyMerged)
+                                    continue;
+
                                 database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null, rcvdChangeVector,
                                     item.LastModifiedTicks);
                             }

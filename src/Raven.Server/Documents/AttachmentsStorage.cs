@@ -630,6 +630,16 @@ namespace Raven.Server.Documents
             }
         }
 
+        public Attachment GetAttachmentByKey(DocumentsOperationContext context, Slice key)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+
+            if (table.SeekOnePrimaryKeyPrefix(key, out TableValueReader tvr) == false)
+                return null;
+
+            return TableValueToAttachment(context, ref tvr);
+        }
+
         public Stream GetAttachmentStream(DocumentsOperationContext context, Slice hashSlice)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
@@ -1006,6 +1016,24 @@ namespace Raven.Server.Documents
                 DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks);
             }
         }
+
+        public static Tombstone GetAttachmentTombstoneByKey(DocumentsOperationContext context, Slice key)
+        {
+            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, AttachmentsTombstonesSlice);
+            if (tombstoneTable.ReadByKey(key, out var tvr))
+            {
+                var tombstone = TableValueToTombstone(context, ref tvr);
+                if (tombstone.Type != Tombstone.TombstoneType.Attachment)
+                {
+                    Debug.Assert(false, "Tombstone must be of type attachment");
+                    return null;
+                }
+                return tombstone;
+            }
+
+            return null;
+        }
+
 
         public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name,
             string expectedChangeVector, string changeVector, long lastModifiedTicks)

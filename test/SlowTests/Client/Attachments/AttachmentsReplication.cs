@@ -11,13 +11,16 @@ using Orders;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -1278,6 +1281,97 @@ namespace SlowTests.Client.Attachments
                     var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
                     Assert.Equal(1, attachments.Length);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task RavenDB_15914()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1";
+
+            var databaseName = GetDatabaseName();
+            var cluster = await CreateRaftCluster(3, shouldRunInMemory: false, watcherCluster: true);
+
+            var mainServer = cluster.Nodes[0];
+            var toRemove = mainServer.ServerStore.NodeTag;
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = mainServer,
+                ModifyDatabaseName = s => databaseName,
+                ReplicationFactor = 3,
+                ModifyDocumentStore = s=>s.Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }))
+            using (var temp = GetDocumentStore(new Options
+            {
+                Server = cluster.Nodes[1],
+                ModifyDatabaseName = s => databaseName,
+                CreateDatabase = false
+            }))
+            {
+                await using (var ms = new MemoryStream(new byte[]{1,2,3,4}))
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    var user = new Core.Utils.Entities.User();
+                    await session.StoreAsync(user, "users/1");
+                    session.Advanced.Attachments.Store(user, "dummy", ms);
+                    await session.SaveChangesAsync();
+                }
+
+                await using (var ms = new MemoryStream(new byte[]{1,2,3,4,5}))
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    var user = new Core.Utils.Entities.User();
+                    await session.StoreAsync(user, "users/2");
+                    session.Advanced.Attachments.Store(user, "dummy2", ms);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    session.Advanced.Attachments.Delete("users/1", "dummy");
+                    await session.SaveChangesAsync();
+                }
+
+                var tasks = new List<Task>
+                {
+                    EnsureNoReplicationLoop(cluster.Nodes[0], databaseName),
+                    EnsureNoReplicationLoop(cluster.Nodes[1], databaseName),
+                    EnsureNoReplicationLoop(cluster.Nodes[2], databaseName)
+                };
+                await Task.WhenAll(tasks);
+                tasks.ForEach(t => t.Wait());
+
+                var result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: toRemove, timeToWaitForConfirmation: TimeSpan.FromSeconds(60)));
+                await mainServer.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex + 1);
+
+                using (var session = temp.OpenAsyncSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 1);
+                    var user = new Core.Utils.Entities.User();
+                    await session.StoreAsync(user, "users/3");
+                    await session.SaveChangesAsync();
+                }
+
+                await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(databaseName, toRemove));
+
+                Assert.True(await WaitForDocumentInClusterAsync<Core.Utils.Entities.User>(new DatabaseTopology {Members = new List<string> {"A", "B", "C"}}, databaseName, "users/1", null,
+                    timeout: TimeSpan.FromSeconds(60)));
+
+                tasks = new List<Task>
+                {
+                    EnsureNoReplicationLoop(cluster.Nodes[0], databaseName),
+                    EnsureNoReplicationLoop(cluster.Nodes[1], databaseName),
+                    EnsureNoReplicationLoop(cluster.Nodes[2], databaseName)
+                };
+                await Task.WhenAll(tasks);
+                tasks.ForEach(t => t.Wait());
             }
         }
     }
