@@ -42,6 +42,7 @@ namespace Raven.Client.Documents.Session
     public abstract partial class InMemoryDocumentSessionOperations : IDisposable
     {
         internal long _asyncTasksCounter;
+        internal int? _maxDocsCountOnCachedRenewSession = null;
         protected readonly RequestExecutor _requestExecutor;
         private OperationExecutor _operationExecutor;
         private readonly IDisposable _releaseOperationContext;
