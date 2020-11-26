@@ -164,6 +164,7 @@ namespace Raven.Server.Documents
                 return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, new FieldsToFetch(_operationQuery, null),
                     collectionName, _operationQuery, null, context, null, null, new Reference<int>())
                 {
+                    Fields = fields,
                     InternalQueryOperationStart = start
                 };
             }
