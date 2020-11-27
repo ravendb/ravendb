@@ -16,6 +16,7 @@ using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 
@@ -137,7 +138,6 @@ namespace Raven.Client.Documents
             });
         }
 
-
         public override IDocumentSession OpenSession(SessionOptions options)
         {
             AssertInitialized();
@@ -157,8 +157,7 @@ namespace Raven.Client.Documents
         {
             AssertInitialized();
 
-            if (database == null)
-                database = Database;
+            database = this.GetDatabase(database);
 
             if (_requestExecutors.TryGetValue(database, out var lazy))
                 return lazy.Value;
@@ -194,8 +193,7 @@ namespace Raven.Client.Documents
         {
             AssertInitialized();
 
-            database = (database ?? Database) ?? throw new InvalidOperationException("Cannot use SetRequestTimeout without a default database defined " +
-                                                                                     "unless 'database' parameter is provided. Did you forget to pass 'database' parameter?");
+            database = this.GetDatabase(database);
 
             var requestExecutor = GetRequestExecutor(database);
             var oldTimeout = requestExecutor.DefaultTimeout;
@@ -263,8 +261,9 @@ namespace Raven.Client.Documents
         public override IDisposable DisableAggressiveCaching(string database = null)
         {
             AssertInitialized();
-            database = (database ?? Database) ?? throw new InvalidOperationException("Cannot use DisableAggressiveCaching without a default database defined " +
-                                                                                   "unless 'database' parameter is provided. Did you forget to pass 'database' parameter?");
+
+            database = this.GetDatabase(database);
+
             var re = GetRequestExecutor(database);
             var old = re.AggressiveCaching.Value;
             re.AggressiveCaching.Value = null;
@@ -336,9 +335,10 @@ namespace Raven.Client.Documents
         public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null)
         {
             AssertInitialized();
-            database = (database ?? Database) ?? throw new InvalidOperationException("Cannot use AggressivelyCache and AggressivelyCacheFor without a default database defined " +
-                                                                                     "unless 'database' parameter is provided. Did you forget to pass 'database' parameter?");
-            if (mode != AggressiveCacheMode.DoNotTrackChanges) 
+
+            database = this.GetDatabase(database);
+
+            if (mode != AggressiveCacheMode.DoNotTrackChanges)
                 ListenToChangesAndUpdateTheCache(database);
 
             var re = GetRequestExecutor(database);
@@ -353,7 +353,7 @@ namespace Raven.Client.Documents
         private void ListenToChangesAndUpdateTheCache(string database)
         {
             Debug.Assert(database != null);
-            
+
             if (_aggressiveCacheChanges.TryGetValue(database, out var lazy) == false)
             {
                 lazy = _aggressiveCacheChanges.GetOrAdd(database, new Lazy<EvictItemsFromCacheBasedOnChanges>(
@@ -401,6 +401,7 @@ namespace Raven.Client.Documents
         /// Called after dispose is completed
         /// </summary>
         public override event EventHandler AfterDispose;
+
         /// <summary>
         /// Called before dispose is completed
         /// </summary>
@@ -422,14 +423,17 @@ namespace Raven.Client.Documents
             get
             {
                 AssertInitialized();
-                return _operationExecutor ?? (_operationExecutor = new OperationExecutor(this));
+                return _operationExecutor ??= new OperationExecutor(this);
             }
         }
 
         public override BulkInsertOperation BulkInsert(string database = null, CancellationToken token = default)
         {
             AssertInitialized();
-            return new BulkInsertOperation(database ?? Database, this, token);
+
+            database = this.GetDatabase(database);
+
+            return new BulkInsertOperation(database, this, token);
         }
     }
 }
