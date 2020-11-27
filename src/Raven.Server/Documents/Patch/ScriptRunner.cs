@@ -255,6 +255,7 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("Raven_Max", new ClrFunctionInstance(ScriptEngine, "Raven_Max", Raven_Max));
 
                 ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, "convertJsTimeToTimeSpanString", ConvertJsTimeToTimeSpanString));
+                ScriptEngine.SetValue("convertToTimeSpanString", new ClrFunctionInstance(ScriptEngine, "convertToTimeSpanString", ConvertToTimeSpanString));
                 ScriptEngine.SetValue("compareDates", new ClrFunctionInstance(ScriptEngine, "compareDates", CompareDates));
 
                 ScriptEngine.SetValue("toStringWithFormat", new ClrFunctionInstance(ScriptEngine, "toStringWithFormat", ToStringWithFormat));
@@ -1421,6 +1422,67 @@ namespace Raven.Server.Documents.Patch
                 var asTimeSpan = new TimeSpan(ticks);
 
                 return asTimeSpan.ToString();
+            }
+
+            private static JsValue ConvertToTimeSpanString(JsValue self, JsValue[] args)
+            {
+                if (args.Length == 1)
+                {
+                    if (args[0].IsNumber() == false)
+                        throw new InvalidOperationException("convertToTimeSpanString(ticks) must be called with a single long argument");
+
+                    var ticks = Convert.ToInt64(args[0].AsNumber());
+                    var asTimeSpan = new TimeSpan(ticks);
+                    return asTimeSpan.ToString();
+                }
+
+                if (args.Length == 3)
+                {
+                    if (args[0].IsNumber() == false || args[1].IsNumber() == false || args[2].IsNumber() == false)
+                        throw new InvalidOperationException("convertToTimeSpanString(hours, minutes, seconds) must be called with integer values");
+
+                    var hours = Convert.ToInt32(args[0].AsNumber());
+                    var minutes = Convert.ToInt32(args[1].AsNumber());
+                    var seconds = Convert.ToInt32(args[2].AsNumber());
+
+                    var asTimeSpan = new TimeSpan(hours, minutes, seconds);
+                    return asTimeSpan.ToString();
+                }
+
+                if (args.Length == 4)
+                {
+                    if (args[0].IsNumber() == false || args[1].IsNumber() == false || args[2].IsNumber() == false || args[3].IsNumber() == false)
+                        throw new InvalidOperationException("convertToTimeSpanString(days, hours, minutes, seconds) must be called with integer values");
+
+                    var days = Convert.ToInt32(args[0].AsNumber());
+                    var hours = Convert.ToInt32(args[1].AsNumber());
+                    var minutes = Convert.ToInt32(args[2].AsNumber());
+                    var seconds = Convert.ToInt32(args[3].AsNumber());
+
+                    var asTimeSpan = new TimeSpan(days, hours, minutes, seconds);
+                    return asTimeSpan.ToString();
+                }
+
+                if (args.Length == 5)
+                {
+                    if (args[0].IsNumber() == false || args[1].IsNumber() == false || args[2].IsNumber() == false || args[3].IsNumber() == false || args[4].IsNumber() == false)
+                        throw new InvalidOperationException("convertToTimeSpanString(days, hours, minutes, seconds, milliseconds) must be called with integer values");
+
+                    var days = Convert.ToInt32(args[0].AsNumber());
+                    var hours = Convert.ToInt32(args[1].AsNumber());
+                    var minutes = Convert.ToInt32(args[2].AsNumber());
+                    var seconds = Convert.ToInt32(args[3].AsNumber());
+                    var milliseconds = Convert.ToInt32(args[4].AsNumber());
+
+                    var asTimeSpan = new TimeSpan(days, hours, minutes, seconds, milliseconds);
+                    return asTimeSpan.ToString();
+                }
+
+                throw new InvalidOperationException("supported overloads are: " +
+                                                    "convertToTimeSpanString(ticks), " +
+                                                    "convertToTimeSpanString(hours, minutes, seconds), " +
+                                                    "convertToTimeSpanString(days, hours, minutes, seconds), " +
+                                                    "convertToTimeSpanString(days, hours, minutes, seconds, milliseconds)");
             }
 
             private static JsValue CompareDates(JsValue self, JsValue[] args)
