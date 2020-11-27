@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
@@ -80,7 +77,8 @@ namespace Sparrow.Json
 
             while (_perCoreCache.TryPull(out context))
             {
-                if (context.InUse.Raise() == false) continue;
+                if (context.InUse.Raise() == false)
+                    continue;
                 // This what ensures that we work correctly with races from other threads
                 // if there is a context switch at the wrong time
                 context.Renew();
@@ -239,7 +237,7 @@ namespace Sparrow.Json
 
                     var localStack = new CountingConcurrentStack<T>();
 
-                    while (_globalStack.TryPop(out var context))
+                    while (currentGlobalStack.TryPop(out var context))
                     {
                         if (context.InUse.Raise() == false)
                             continue;
@@ -249,7 +247,7 @@ namespace Sparrow.Json
                     }
 
                     while (localStack.TryPop(out var context))
-                        _globalStack.Push(context);
+                        currentGlobalStack.Push(context);
                 }
             }
             catch (Exception e)
@@ -359,40 +357,6 @@ namespace Sparrow.Json
         {
             LowMemoryFlag.Lower();
             _isExtremelyLowMemory.Lower();
-        }
-
-        private sealed class CountingConcurrentStack<TItem>
-        {
-            private readonly ConcurrentStack<TItem> _stack = new ConcurrentStack<TItem>();
-
-            private long _count;
-
-            public bool IsEmpty => _stack.IsEmpty;
-
-            public long Count => Interlocked.Read(ref _count);
-
-            public bool TryPop(out TItem item)
-            {
-                if (_stack.TryPop(out item) == false)
-                {
-                    item = default;
-                    return false;
-                }
-
-                Interlocked.Decrement(ref _count);
-                return true;
-            }
-
-            public void Push(TItem item)
-            {
-                _stack.Push(item);
-                Interlocked.Increment(ref _count);
-            }
-
-            public IEnumerator<TItem> GetEnumerator()
-            {
-                return _stack.GetEnumerator();
-            }
         }
     }
 }
