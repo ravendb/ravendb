@@ -66,14 +66,14 @@ namespace SlowTests.Issues
                 await AssertCount(store, _companyName1, _employeesCount, cts.Token);
 
                 var batchCount = 0;
-                var tcs = new TaskCompletionSource<object>();
+                var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 store.Changes().ForIndex(index.IndexName).Subscribe(x =>
                 {
                     if (x.Type == IndexChangeTypes.BatchCompleted)
                     {
                         if (Interlocked.Increment(ref batchCount) > 1)
-                            tcs.SetResult(null);
+                            tcs.TrySetResult(null);
                     }
                 });
 
@@ -130,7 +130,7 @@ namespace SlowTests.Issues
                 await AssertCount(store, _companyName1, _employeesCount, cts.Token);
 
                 var batchCount = 0;
-                var tcs = new TaskCompletionSource<object>();
+                var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 store.Changes().ForIndex(index.IndexName).Subscribe(x =>
                 {
                     if (x.Type == IndexChangeTypes.BatchCompleted)
@@ -202,7 +202,7 @@ namespace SlowTests.Issues
                 await AssertCount(store, _companyName1, _employeesCount, cts.Token);
 
                 var batchCount = 0;
-                var tcs = new TaskCompletionSource<object>();
+                var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 store.Changes().ForIndex(index.IndexName).Subscribe(x =>
                 {
                     if (x.Type == IndexChangeTypes.BatchCompleted)
@@ -816,7 +816,7 @@ namespace SlowTests.Issues
         private static async Task<int> AssertBatchCountProgress(IDocumentStore store, string indexName, Func<IAsyncDocumentSession, string, CancellationToken, Task<int>> getItemsCount, Func<CancellationToken, Task> modifyItem, CancellationToken token)
         {
             var batchCount = 0;
-            var tcs = new TaskCompletionSource<object>();
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             var locker = new SemaphoreSlim(1, 1);
 
             store.Changes().ForIndex(indexName).Subscribe(x =>
@@ -826,7 +826,7 @@ namespace SlowTests.Issues
                     using (Lock())
                     {
                         if (Interlocked.Increment(ref batchCount) > 1)
-                            tcs.SetResult(null);
+                            tcs.TrySetResult(null);
                     }
                 }
             });
@@ -852,7 +852,7 @@ namespace SlowTests.Issues
 
                     using (Lock())
                     {
-                        tcs = new TaskCompletionSource<object>();
+                        tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                         var newItemsCount1 = await getItemsCount(session, _companyName1, token);
                         Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1),
@@ -869,7 +869,7 @@ namespace SlowTests.Issues
 
             IDisposable Lock()
             {
-                locker.Wait();
+                Assert.True(locker.Wait(TimeSpan.FromMinutes(1)));
 
                 return new DisposableAction(() => locker.Release());
             }
