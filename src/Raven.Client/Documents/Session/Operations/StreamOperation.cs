@@ -282,12 +282,14 @@ namespace Raven.Client.Documents.Session.Operations
                 _isQueryStream = isQueryStream;
                 _isAsync = isAsync;
                 _streamQueryStatistics = streamQueryStatistics;
+                _maxDocsCountOnCachedRenewSession = session._maxDocsCountOnCachedRenewSession;
                 _token = token;
                 _isTimeSeriesStream = isTimeSeriesStream;
             }
 
             private readonly StreamResult _response;
             private readonly InMemoryDocumentSessionOperations _session;
+            private readonly int _maxDocsCountOnCachedRenewSession;
             private JsonParserState _state;
             private UnmanagedJsonParser _parser;
             private JsonOperationContext.MemoryBuffer _buffer;
@@ -569,12 +571,15 @@ namespace Raven.Client.Documents.Session.Operations
 
             private void CheckIfContextNeedsToBeRenewed()
             {
-                if (_docsCountOnCachedRenewSession <= 16 * 1024)
+                if (_docsCountOnCachedRenewSession <= _maxDocsCountOnCachedRenewSession)
                 {
                     if (_cachedItemsRenew)
                     {
-                        _session.Context.CachedProperties = new CachedProperties(_session.Context);
+                        _session.Context.CachedProperties.Reset();
+                        _session.Context.CachedProperties.Renew();
+
                         ++_docsCountOnCachedRenewSession;
+                        _cachedItemsRenew = false;
                     }
                 }
                 else
