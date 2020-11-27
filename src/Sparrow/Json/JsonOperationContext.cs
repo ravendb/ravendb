@@ -923,10 +923,19 @@ namespace Sparrow.Json
             if (Disposed)
                 ThrowObjectDisposed();
 
-            if (_perCorePathCache.TryPull(out _activeAllocatePathCaches) == false)
-                _activeAllocatePathCaches = new PathCache();
-            if (_perCoreLazyStringValuesList.TryPull(out _allocateStringValues) == false)
-                _allocateStringValues = new FastList<LazyStringValue>(256);
+            if (_activeAllocatePathCaches == null)
+            {
+                if (_perCorePathCache.TryPull(out _activeAllocatePathCaches) == false)
+                    _activeAllocatePathCaches = new PathCache();
+            }
+
+            if (_allocateStringValues == null)
+            {
+                if (_perCoreLazyStringValuesList.TryPull(out _allocateStringValues) == false)
+                    _allocateStringValues = new FastList<LazyStringValue>(256);
+
+                _numberOfAllocatedStringsValues = 0;
+            }
 
             _arenaAllocator.RenewArena();
             if (_arenaAllocatorForLongLivedValues == null)
