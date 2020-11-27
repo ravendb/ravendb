@@ -11,8 +11,8 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Config;
 using Raven.Server.Documents.Expiration;
-using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -161,9 +161,9 @@ namespace Raven.Server.Documents
 
             void DefineIndexesForDocsSchema(TableSchema docsSchema)
             {
-                docsSchema.DefineKey(new TableSchema.SchemaIndexDef {StartIndex = (int)DocumentsTable.LowerId, Count = 1, IsGlobal = true, Name = DocsSlice});
-                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef {StartIndex = (int)DocumentsTable.Etag, IsGlobal = false, Name = CollectionEtagsSlice});
-                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef {StartIndex = (int)DocumentsTable.Etag, IsGlobal = true, Name = AllDocsEtagsSlice});
+                docsSchema.DefineKey(new TableSchema.SchemaIndexDef { StartIndex = (int)DocumentsTable.LowerId, Count = 1, IsGlobal = true, Name = DocsSlice });
+                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef { StartIndex = (int)DocumentsTable.Etag, IsGlobal = false, Name = CollectionEtagsSlice });
+                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef { StartIndex = (int)DocumentsTable.Etag, IsGlobal = true, Name = AllDocsEtagsSlice });
             }
         }
 
@@ -515,7 +515,6 @@ namespace Raven.Server.Documents
             return context.LastDatabaseChangeVector;
         }
 
-
         public void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
             if (TryRemoveUnusedIds(ref changeVector) == false)
@@ -697,39 +696,58 @@ namespace Raven.Server.Documents
         }
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
-            long start, long take, string collection)
+            long start, long take, string collection, DocumentFields fields = DocumentFields.All)
         {
-            foreach (var doc in GetDocumentsStartingWith(context, idPrefix, matches, exclude, startAfterId, start, take))
+            var isAllDocs = collection == Constants.Documents.Collections.AllDocumentsCollection;
+            var requestedDataField = fields.HasFlag(DocumentFields.Data);
+            if (isAllDocs == false && requestedDataField == false)
+                fields |= DocumentFields.Data;
+
+            foreach (var doc in GetDocumentsStartingWith(context, idPrefix, matches, exclude, startAfterId, start, take, fields: fields))
             {
-                if (collection == Client.Constants.Documents.Collections.AllDocumentsCollection)
+                if (isAllDocs)
                 {
                     yield return doc;
                     continue;
                 }
 
-                if (doc.TryGetMetadata(out var metadata) == false)
+                if (IsMatch(doc, collection) == false)
                 {
+                    doc.Dispose();
                     continue;
                 }
-                if (metadata.TryGet(Client.Constants.Documents.Metadata.Collection, out string c) == false)
+
+                if (requestedDataField == false)
                 {
-                    continue;
-                }
-                if (string.Equals(c, collection, StringComparison.OrdinalIgnoreCase) == false)
-                {
-                    continue;
+                    doc.Data.Dispose();
+                    doc.Data = null;
                 }
 
                 yield return doc;
             }
+
+            static bool IsMatch(Document doc, string collection)
+            {
+                if (doc.TryGetMetadata(out var metadata) == false)
+                    return false;
+
+                if (metadata.TryGet(Constants.Documents.Metadata.Collection, out string c) == false)
+                    return false;
+
+                if (string.Equals(c, collection, StringComparison.OrdinalIgnoreCase) == false)
+                    return false;
+
+                return true;
+            }
         }
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
-            long start, long take, Reference<long> skip = null)
+            long start, long take, Reference<long> skip = null, DocumentFields fields = DocumentFields.All)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             var isStartAfter = string.IsNullOrWhiteSpace(startAfterId) == false;
+            var needsWildcardMatch = string.IsNullOrEmpty(matches) == false || string.IsNullOrEmpty(exclude) == false;
 
             var startAfterSlice = Slices.Empty;
             using (DocumentIdWorker.GetSliceFromId(context, idPrefix, out Slice prefixSlice))
@@ -737,18 +755,25 @@ namespace Raven.Server.Documents
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(prefixSlice, startAfterSlice, skip?.Value ?? 0))
                 {
-                    var document = TableValueToDocument(context, ref result.Value.Reader);
+                    var document = TableValueToDocument(context, ref result.Value.Reader, fields);
                     string documentId = document.Id;
                     if (documentId.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
-                        break;
-
-                    var idTest = documentId.Substring(idPrefix.Length);
-                    if (WildcardMatcher.Matches(matches, idTest) == false || WildcardMatcher.MatchesExclusion(exclude, idTest))
                     {
-                        if (skip != null)
-                            skip.Value++;
+                        document.Dispose();
+                        break;
+                    }
 
-                        continue;
+                    if (needsWildcardMatch)
+                    {
+                        var idTest = documentId.Substring(idPrefix.Length);
+                        if (WildcardMatcher.Matches(matches, idTest) == false || WildcardMatcher.MatchesExclusion(exclude, idTest))
+                        {
+                            if (skip != null)
+                                skip.Value++;
+
+                            document.Dispose();
+                            continue;
+                        }
                     }
 
                     if (start > 0)
@@ -757,11 +782,15 @@ namespace Raven.Server.Documents
                             skip.Value++;
 
                         start--;
+                        document.Dispose();
                         continue;
                     }
 
                     if (take-- <= 0)
+                    {
+                        document.Dispose();
                         yield break;
+                    }
 
                     yield return document;
                 }
