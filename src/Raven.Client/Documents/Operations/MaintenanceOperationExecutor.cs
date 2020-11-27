@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations
             _databaseName = databaseName ?? store.Database;
         }
 
-        public ServerOperationExecutor Server => _serverOperationExecutor ?? (_serverOperationExecutor = new ServerOperationExecutor(_store));
+        public ServerOperationExecutor Server => _serverOperationExecutor ??= new ServerOperationExecutor(_store);
 
         public MaintenanceOperationExecutor ForDatabase(string databaseName)
         {

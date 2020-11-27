@@ -7,6 +7,7 @@
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Identity
 {
@@ -27,8 +28,8 @@ namespace Raven.Client.Documents.Identity
 
         public Task<string> GenerateDocumentIdAsync(string dbName, object entity)
         {
-            var db = dbName ?? Store.Database;
-            var generator = _generators.GetOrAdd(db, GenerateAsyncMultiTypeHiLoFunc);
+            var database = Store.GetDatabase(dbName);
+            var generator = _generators.GetOrAdd(database, GenerateAsyncMultiTypeHiLoFunc);
             return generator.GenerateDocumentIdAsync(entity);
         }
 
