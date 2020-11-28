@@ -39,7 +39,9 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
         {
             AssertInitialized();
 
-            var fetcherLazy = _fetchers.GetOrAdd(packageSourceUrl ?? DefaultPackageSourceUrl, url => new Lazy<NuGetFetcher>(() => new NuGetFetcher(url, _rootPath.FullPath)));
+            packageSourceUrl ??= DefaultPackageSourceUrl;
+
+            var fetcherLazy = _fetchers.GetOrAdd(packageSourceUrl, url => new Lazy<NuGetFetcher>(() => new NuGetFetcher(url, _rootPath.FullPath)));
 
             NuGetFetcher fetcher;
             try
