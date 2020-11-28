@@ -11,7 +11,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.RegularExpressions;
 using Sparrow.Logging;
 using Sparrow.Platform.Posix;
 using Sparrow.Server.Platform.Win32;
@@ -51,6 +50,7 @@ namespace Sparrow.Server.LowMemory
                             continue;
                         case RavenDriveType.HDD:
                             break;
+
                         case RavenDriveType.Unknown:
                             if (Log.IsOperationsEnabled)
                                 Log.Operations($"Failed to determine if drive {currentDriveLetter} is SSD or HDD");
@@ -72,7 +72,7 @@ namespace Sparrow.Server.LowMemory
                     // the system has ssd drives and has no hdd drives with a page file on them
                     // or no hdd drive with page file at all
                     return null;
-                }                
+                }
 
                 Debug.Assert(hddDrivesWithPageFile.Count > 0); // RavenDB-
 
@@ -109,6 +109,7 @@ namespace Sparrow.Server.LowMemory
 
         //for CreateFile to get handle to drive
         private const uint GENERIC_READ = 0x80000000;
+
         private const uint GENERIC_WRITE = 0x40000000;
         private const uint FILE_SHARE_READ = 0x00000001;
         private const uint FILE_SHARE_WRITE = 0x00000002;
@@ -121,6 +122,7 @@ namespace Sparrow.Server.LowMemory
 
         //for control codes
         private const uint FILE_DEVICE_MASS_STORAGE = 0x0000002d;
+
         private const uint IOCTL_STORAGE_BASE = FILE_DEVICE_MASS_STORAGE;
         private const uint FILE_DEVICE_CONTROLLER = 0x00000004;
         private const uint IOCTL_SCSI_BASE = FILE_DEVICE_CONTROLLER;
@@ -137,6 +139,7 @@ namespace Sparrow.Server.LowMemory
 
         //for DeviceIoControl to check no seek penalty
         private const uint StorageDeviceSeekPenaltyProperty = 7;
+
         private const uint PropertyStandardQuery = 0;
 
         [StructLayout(LayoutKind.Sequential)]
@@ -197,7 +200,9 @@ namespace Sparrow.Server.LowMemory
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern uint FormatMessage(uint dwFlags, IntPtr lpSource, uint dwMessageId, uint dwLanguageId, StringBuilder lpBuffer, uint nSize, IntPtr Arguments);
-        static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
+
+        private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
+
         //method for no seek penalty
         private static RavenDriveType HasNoSeekPenalty(string sDrive)
         {
@@ -286,7 +291,7 @@ namespace Sparrow.Server.LowMemory
                 result = DeviceIoControl(hDrive, ioctlAtaPassThrough, ref id_query, (uint)Marshal.SizeOf(id_query), ref id_query, (uint)Marshal.SizeOf(id_query),
                     out retvalSize, IntPtr.Zero);
             }
-            finally 
+            finally
             {
                 Win32ThreadsMethods.CloseHandle(hDrive);
             }
@@ -381,8 +386,6 @@ namespace Sparrow.Server.LowMemory
             return query_disk_extents.Extents[0].DiskNumber;
         }
 
-        private static readonly Regex _regExRemoveNumbers = new System.Text.RegularExpressions.Regex(@"\d+$");
-        
         public static string PosixIsSwappingOnHddInsteadOfSsd()
         {
             try
@@ -391,17 +394,31 @@ namespace Sparrow.Server.LowMemory
                 if (swaps.Length == 0) // on error return as if no swap problem
                     return null;
 
+                const string sysBlockDirectoryPath = "/sys/block/";
+
+                var blocks = Directory
+                    .GetDirectories(sysBlockDirectoryPath)
+                    .Select(x => x.Substring(sysBlockDirectoryPath.Length))
+                    .Where(x => x.StartsWith("loop") == false)
+                    .ToList();
+
+                if (blocks.Count == 0)
+                    return null;
+
                 string foundRotationalDiskDrive = null;
                 for (int i = 0; i < swaps.Length; i++)
                 {
                     if (swaps[i].IsDeviceSwapFile)
                         continue; // we do not check swap file, only partitions
 
-                    // remove numbers at end of string (i.e.: /dev/sda5 ==> sda)
-                    var disk = _regExRemoveNumbers.Replace(swaps[i].DeviceName, "").Replace("/dev/", "");
-                    var filename = $"/sys/block/{disk}/queue/rotational";
-                    var isHdd = KernelVirtualFileSystemUtils.ReadNumberFromFile(filename);
+                    if (TryFindDisk(swaps[i].DeviceName, out var disk) == false)
+                        continue;
 
+                    var filename = $"/sys/block/{disk}/queue/rotational";
+                    if (File.Exists(filename) == false)
+                        continue;
+
+                    var isHdd = KernelVirtualFileSystemUtils.ReadNumberFromFile(filename);
                     if (isHdd == -1)
                         return null;
                     if (isHdd == 1)
@@ -418,12 +435,19 @@ namespace Sparrow.Server.LowMemory
                 if (foundRotationalDiskDrive != null)
                 {
                     // search if ssd drive is available
-                    HashSet<string> disks = KernelVirtualFileSystemUtils.GetAllDisksFromPartitionsFile();
-                    foreach (var disk in disks)
+                    foreach (var partitionDisk in KernelVirtualFileSystemUtils.GetAllDisksFromPartitionsFile())
                     {
                         //ignore ramdisks (ram0..ram15 etc)
-                        if (disk.Equals("ram", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (partitionDisk.StartsWith("ram", StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        if (TryFindDisk(partitionDisk, out var disk) == false)
+                            continue;
+
                         var filename = $"/sys/block/{disk}/queue/rotational";
+                        if (File.Exists(filename) == false)
+                            continue;
+
                         var isHdd = KernelVirtualFileSystemUtils.ReadNumberFromFile(filename);
                         if (isHdd == 0)
                         {
@@ -434,6 +458,27 @@ namespace Sparrow.Server.LowMemory
                 }
 
                 return hddSwapsInsteadOfSsd;
+
+                bool TryFindDisk(string deviceName, out string disk)
+                {
+                    disk = null;
+
+                    if (string.IsNullOrWhiteSpace(deviceName))
+                        return false;
+
+                    deviceName = deviceName.Replace("/dev/", string.Empty);
+
+                    foreach (var block in blocks)
+                    {
+                        if (deviceName.Contains(block))
+                        {
+                            disk = block;
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
             }
             catch (Exception ex)
             {
