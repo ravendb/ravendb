@@ -101,9 +101,16 @@ class timeSeriesColumn<T extends document> extends textColumn<T> {
                 + `<div class="ts-group-property date-range" data-label="Date Range">${dateRange}</div>`
             ;
             
-            const plotButtonExtra = model.getCount() > 0 && !model.queryHasGroupByTag() ? `` : ` disabled="disabled" `;
+            let plotButtonTitle = "Plot time series graph";
+            if (!model.getCount()) {
+                plotButtonTitle = "No data to plot";
+            } else if (model.queryHasGroupByTag) {
+                plotButtonTitle = "Graph is available only when time series data is not grouped by 'tag'";
+            }
+
+            const plotButtonExtra = model.getCount() > 0 && !model.queryHasGroupByTag ? `` : ` disabled="disabled" `;
             const plotButton = this.handler 
-                ? `<button title="Plot time series graph" ${plotButtonExtra} class="btn btn-default btn-sm" ${customPlotAction}><i class="icon-graph"></i></button>`
+                ? `<button title="${plotButtonTitle}" ${plotButtonExtra} class="btn btn-default btn-sm" ${customPlotAction}><i class="icon-graph"></i></button>`
                 : "";
 
             const previewButtonExtra = model.getCount() > 0 ? `` : ` disabled="disabled" `;

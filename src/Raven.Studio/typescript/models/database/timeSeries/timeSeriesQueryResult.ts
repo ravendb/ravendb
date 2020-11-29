@@ -2,14 +2,14 @@
 
 class timeSeriesQueryResult {
     
-    queryHasGroupByTag = ko.observable<boolean>();
+    queryHasGroupByTag: boolean;
     
     constructor(private dto: timeSeriesQueryResultDto) {
 
         if (timeSeriesQueryResult.detectResultType(dto) === "grouped") {
             const groupedResults = dto.Results as Array<timeSeriesQueryGroupedItemResultDto>;
             if (groupedResults.length) {
-                this.queryHasGroupByTag(!!groupedResults[0].Key);
+                this.queryHasGroupByTag = !!groupedResults[0].Key;
             }
         }
     }
