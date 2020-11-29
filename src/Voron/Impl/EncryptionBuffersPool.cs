@@ -223,6 +223,10 @@ namespace Voron.Impl
                     }
                 }
             }
+            catch (OutOfMemoryException)
+            {
+                // let's not crash on OOM, and simply retry later
+            }
             finally
             {
                 Monitor.Exit(this);
