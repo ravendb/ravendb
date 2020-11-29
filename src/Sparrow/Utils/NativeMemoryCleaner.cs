@@ -103,6 +103,10 @@ namespace Sparrow.Utils
                     }
                 }
             }
+            catch (OutOfMemoryException)
+            {
+                // let's not crash on OOM, and simply retry later
+            }
             finally
             {
                 if (lockTaken)
