@@ -4,6 +4,7 @@ using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -30,6 +31,79 @@ namespace SlowTests.Issues
     {
         public FilteredReplicationTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [Fact]
+        public async Task Seasame_st()
+        {
+            var certificates = SetupServerAuthentication();
+            using var hooper = GetDocumentStore(new Options
+            {
+                ClientCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificate.Value
+            });
+            using var bert = GetDocumentStore(new Options
+            {
+                ClientCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificate.Value
+            });
+            
+            using (var s = hooper.OpenAsyncSession())
+            {
+                await s.StoreAsync(new { Type = "Eggs" }, "menus/breakfast");
+                await s.StoreAsync(new { Name = "Bird Seed Milkshake" }, "recipes/bird-seed-milkshake");
+                await s.StoreAsync(new { Name = "3 USD" }, "prices/eastus/2");
+                await s.StoreAsync(new { Name = "3 EUR" }, "prices/eu/1");
+                await s.SaveChangesAsync();
+            }
+
+            using (var s = bert.OpenAsyncSession())
+            {
+                await s.StoreAsync(new { Name = "Candy" }, "orders/bert/3");
+                await s.SaveChangesAsync();
+            }
+
+            await hooper.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = "Franchises",
+                Mode = PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub,
+                WithFiltering = true,
+            }));
+
+            await hooper.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("Franchises",
+                new ReplicationHubAccess
+                {
+                    Name = "Franchises",
+                    CertificateBase64 = Convert.ToBase64String(certificates.ClientCertificate1.Value.Export(X509ContentType.Cert)),
+                    AllowedSinkToHubPaths = new[] {"orders/bert/*"},
+                    AllowedHubToSinkPaths = new[] {"menus/*", "prices/eastus/*", "recipes/*"}
+                }));
+            
+            
+            await bert.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = hooper.Database,
+                Name = "HopperConStr",
+                TopologyDiscoveryUrls = hooper.Urls
+            }));
+            await bert.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                ConnectionStringName = "HopperConStr",
+                CertificateWithPrivateKey = Convert.ToBase64String(certificates.ClientCertificate1.Value.Export(X509ContentType.Pfx)),
+                HubName = "Franchises",
+                Mode = PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub
+            }));
+
+            Assert.True(WaitForDocument(bert, "menus/breakfast"));
+            Assert.True(WaitForDocument(bert, "recipes/bird-seed-milkshake"));
+            Assert.True(WaitForDocument(bert, "prices/eastus/2"));
+            Assert.True(WaitForDocument(hooper, "orders/bert/3"));
+
+            using (var s = bert.OpenAsyncSession())
+            {
+                Assert.Null(await s.LoadAsync<object>("prices/eu/1"));
+            }
+
         }
 
         [Fact]
@@ -557,12 +631,12 @@ namespace SlowTests.Issues
             await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("both", new ReplicationHubAccess
             {
                 Name = "Arava",
-                AllowedSinkToHubPaths = new[]
+                AllowedHubToSinkPaths = new[]
                 {
                     "users/ayende",
                     "users/ayende/*"
                 },
-                AllowedHubToSinkPaths = new[]
+                AllowedSinkToHubPaths = new[]
                 {
                     "users/ayende/config"
                 },
