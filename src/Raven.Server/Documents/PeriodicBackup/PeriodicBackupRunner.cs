@@ -69,26 +69,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             Directory.CreateDirectory(_tempBackupPath.FullPath);
         }
 
-        private Timer GetTimer(
-            PeriodicBackupConfiguration configuration,
-            PeriodicBackupStatus backupStatus)
-        {
-            var nextBackup = GetNextBackupDetails(configuration, backupStatus, _serverStore.NodeTag);
-            if (nextBackup == null)
-                return null;
-
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Next {(nextBackup.IsFull ? "full" : "incremental")} " +
-                             $"backup is in {nextBackup.TimeSpan.TotalMinutes} minutes");
-
-            var isValidTimeSpanForTimer = nextBackup.TimeSpan < MaxTimerTimeout;
-            var timer = isValidTimeSpanForTimer
-                ? new Timer(TimerCallback, nextBackup, nextBackup.TimeSpan, Timeout.InfiniteTimeSpan)
-                : new Timer(LongPeriodTimerCallback, nextBackup, MaxTimerTimeout, Timeout.InfiniteTimeSpan);
-
-            return timer;
-        }
-
         public NextBackup GetNextBackupDetails(
             DatabaseRecord databaseRecord,
             PeriodicBackupConfiguration configuration,
@@ -343,7 +323,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private void TimerCallback(object backupTaskDetails)
+        internal void TimerCallback(object backupTaskDetails)
         {
             try
             {
@@ -371,7 +351,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private void LongPeriodTimerCallback(object backupTaskDetails)
+        internal void LongPeriodTimerCallback(object backupTaskDetails)
         {
             try
             {
@@ -397,7 +377,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     return;
                 }
 
-                periodicBackup.UpdateTimer(GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus), lockTaken: false);
+                periodicBackup.UpdateTimer(GetNextBackupDetails(periodicBackup.Configuration, periodicBackup.BackupStatus, _serverStore.NodeTag), lockTaken: false);
             }
             catch (Exception e)
             {
@@ -425,8 +405,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     TimeSpan = e.DelayPeriod
                 };
 
-                var timer = new Timer(TimerCallback, backupTaskDetails, backupTaskDetails.TimeSpan, Timeout.InfiniteTimeSpan);
-                periodicBackup.UpdateTimer(timer, lockTaken: false);
+                periodicBackup.UpdateTimer(backupTaskDetails, lockTaken: false);
             }
         }
 
@@ -690,10 +669,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 periodicBackup.RunningBackupStatus = null;
 
                 if (periodicBackup.HasScheduledBackup() && _cancellationToken.IsCancellationRequested == false)
-                {
-                    var newBackupTimer = GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus);
-                    periodicBackup.UpdateTimer(newBackupTimer, lockTaken, discardIfDisabled: true);
-                }
+                    periodicBackup.UpdateTimer(GetNextBackupDetails(periodicBackup.Configuration, periodicBackup.BackupStatus, _serverStore.NodeTag), lockTaken, discardIfDisabled: true);
             }
             catch (Exception e)
             {
@@ -771,7 +747,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 case TaskStatus.ClusterDown:
                     msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the backup will be rescheduled on current node.";
                     var status = GetBackupStatus(backupInfo.TaskId, periodicBackup.BackupStatus);
-                    periodicBackup.UpdateTimer(GetTimer(periodicBackup.Configuration, status), lockTaken: false);
+                    periodicBackup.UpdateTimer(GetNextBackupDetails(periodicBackup.Configuration, status, _serverStore.NodeTag), lockTaken: false);
                     break;
                 default:
                     msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the backup will be canceled on current node.";
@@ -909,10 +885,9 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             Debug.Assert(taskId == newConfiguration.TaskId);
 
-            var backupStatus = GetBackupStatus(taskId, inMemoryBackupStatus: null);
             if (_periodicBackups.TryGetValue(taskId, out var existingBackupState) == false)
             {
-                var newPeriodicBackup = new PeriodicBackup(_inactiveRunningPeriodicBackupsTasks)
+                var newPeriodicBackup = new PeriodicBackup(periodicBackupRunner: this, _inactiveRunningPeriodicBackupsTasks, _logger)
                 {
                     Configuration = newConfiguration
                 };
@@ -928,7 +903,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations($"New backup task '{taskId}' state is '{taskState}', will arrange a new backup timer.");
 
-                    periodicBackup.UpdateTimer(GetTimer(newConfiguration, backupStatus), lockTaken: false);
+                    var backupStatus = GetBackupStatus(taskId, inMemoryBackupStatus: null);
+                    periodicBackup.UpdateTimer(GetNextBackupDetails(newConfiguration, backupStatus, _serverStore.NodeTag), lockTaken: false);
                 }
 
                 return;
@@ -976,7 +952,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations($"Backup task '{taskId}' state is '{taskState}', the task has frequency changes or doesn't have scheduled backup, the timer will be rearranged and the task will be executed by current node '{_database.ServerStore.NodeTag}'.");
 
-                    existingBackupState.UpdateTimer(GetTimer(newConfiguration, backupStatus), lockTaken: false);
+                    var backupStatus = GetBackupStatus(taskId, inMemoryBackupStatus: null);
+                    existingBackupState.UpdateTimer(GetNextBackupDetails(newConfiguration, backupStatus, _serverStore.NodeTag), lockTaken: false);
                     return;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(taskState), taskState, null);

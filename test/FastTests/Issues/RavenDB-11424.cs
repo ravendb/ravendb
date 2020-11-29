@@ -32,7 +32,7 @@ namespace FastTests.Issues
                 var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
                 var backups = periodicBackupRunner.PeriodicBackups;
                 var periodicBackup = backups.First();
-                var oldTimer = periodicBackup.BackupTimer;
+                var oldTimer = periodicBackup.GetTimer();
                 Assert.Equal("0 3 */3 * *", periodicBackup.Configuration.FullBackupFrequency);
 
                 config = new PeriodicBackupConfiguration
@@ -45,7 +45,7 @@ namespace FastTests.Issues
                     FullBackupFrequency = "0 2 */3 * *",
                 };
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                Assert.NotEqual(oldTimer, periodicBackup.BackupTimer);
+                Assert.NotEqual(oldTimer, periodicBackup.GetTimer());
                 Assert.Equal("0 2 */3 * *", periodicBackup.Configuration.FullBackupFrequency);
             }
         }
