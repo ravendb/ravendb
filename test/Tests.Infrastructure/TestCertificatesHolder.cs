@@ -227,7 +227,7 @@ namespace FastTests
             {
                 try
                 {
-                    return new TrackingX509Certificate2(path(), (string)null, X509KeyStorageFlags.MachineKeySet);
+                    return new TrackingX509Certificate2(path(), (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
                 }
                 catch (CryptographicException e)
                 {
