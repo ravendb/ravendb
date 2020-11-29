@@ -65,16 +65,15 @@ class editIndex extends viewModelBase {
     selectedSourcePreview = ko.observable<additionalSource>();
     additionalSourcePreviewHtml: KnockoutComputed<string>;
     
-    indexHistory = ko.observableArray<indexHistoryDefinition>([]);
+    indexHistory = ko.observableArray<Raven.Client.ServerWide.IndexHistoryEntry>([]);
     showIndexHistory = ko.observable<boolean>(false);
     loadedIndexHistory = ko.observable<boolean>(false);
 
-    static indexHistoryCreatedAtFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     static previewEditorSelector = "#previewEditor";
     private previewEditor: AceAjax.Editor;
     $previewEditor: JQuery;
     
-    previewItem = ko.observable<indexHistoryDefinition>();
+    previewItem = ko.observable<Raven.Client.ServerWide.IndexHistoryEntry>();
     previewDefinition = ko.observable<string>();
 
     constructor() {
@@ -150,7 +149,7 @@ class editIndex extends viewModelBase {
 
             this.$previewEditor = $(editIndex.previewEditorSelector);
             this.previewEditor = aceEditorBindingHandler.getEditorBySelection(this.$previewEditor);
-            this.previewEditor.gotoPageUp();
+            this.previewEditor.setOption("wrap", true);
         })
     }
 
@@ -274,21 +273,14 @@ class editIndex extends viewModelBase {
         
         return new getIndexHistoryCommand(db, this.editedIndex().name() || this.originalIndexName)
             .execute()
-            .done((indexHistory) => {
-                const indexHistoryInfo = indexHistory.History.map(x => {
-                    return { CreatedAt: x.CreatedAt, Definition: x.Definition, Source: x.Source, CreatedAtFormatted: generalUtils.formatUtcDateAsLocal(x.CreatedAt) };
-                });
-                
-                this.indexHistory(indexHistoryInfo);
-            });
+            .done((indexHistory) => this.indexHistory(indexHistory.History));
     }
     
-    static formatTime(input: string) {
-        const dateToFormat = moment.utc(input);
-        return dateToFormat.format(editIndex.indexHistoryCreatedAtFormat) + "Z";
+    createdAtFormatted(indexHistoryEntry: Raven.Client.ServerWide.IndexHistoryEntry) {
+        return ko.pureComputed(() => generalUtils.formatUtcDateAsLocal(indexHistoryEntry.CreatedAt));
     }
 
-    useIndexRevisionItem(item: indexHistoryDefinition) {
+    useIndexRevisionItem(item: Raven.Client.ServerWide.IndexHistoryEntry) {
         this.previewItem(item);
         this.loadIndexDefinitionFromHistory();
     }
@@ -328,17 +320,17 @@ class editIndex extends viewModelBase {
         });
     }
 
-    previewIndex(item: indexHistoryDefinition) {
+    previewIndex(item: Raven.Client.ServerWide.IndexHistoryEntry) {
         this.previewItem(item);
     }
 
-    creationTimeTooltip(item: indexHistoryDefinition) {
+    creationTimeTooltip(item: Raven.Client.ServerWide.IndexHistoryEntry) {
         return ko.pureComputed(() => {
             if (item) {
                 return `<div class="date-container">
                             <div>
                                 <div class="date-label">UTC:</div>
-                                <div class="date-value">${moment.utc(item.CreatedAt).format(editIndex.indexHistoryCreatedAtFormat) + "Z"}</div>
+                                <div class="date-value">${item.CreatedAt}</div>
                             </div>
                             <div>
                                 <div class="date-label">Relative:</div>

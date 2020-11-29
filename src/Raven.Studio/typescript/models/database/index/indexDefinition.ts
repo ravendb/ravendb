@@ -353,8 +353,8 @@ class indexDefinition {
        this.additionalAssemblies.remove(assemblyItem);
     }
     
-    setMapsAndReduce(mapsFromHistory: string[], reduce: string) {
-        this.maps(mapsFromHistory.map(x => new mapItem(x)));
+    setMapsAndReduce(maps: string[], reduce: string) {
+        this.maps(maps.map(x => new mapItem(x)));
         this.reduce(reduce);
     }
     
