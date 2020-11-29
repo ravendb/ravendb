@@ -751,7 +751,3 @@ interface indexHistoryCommandResult {
     Index: string;
     History: Raven.Client.ServerWide.IndexHistoryEntry[];
 }
-
-interface indexHistoryDefinition extends Raven.Client.ServerWide.IndexHistoryEntry {
-    CreatedAtFormatted: string;
-}

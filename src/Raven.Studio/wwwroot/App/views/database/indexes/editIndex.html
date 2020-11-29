@@ -731,7 +731,7 @@
                             <li data-bind="css: { selected: $data === $parent.previewItem() }, event: { mouseenter: $parent.previewIndex }, attr: { 'data-original-title': $parent.creationTimeTooltip($data) }"
                                 data-placement="right" data-toggle="tooltip" data-animation="true">
                                 <a href="#" class="history-link close-panel" data-bind="click: $parent.useIndexRevisionItem.bind($parent, $data)">
-                                    <span class="created-at" data-bind="text: CreatedAtFormatted"></span>
+                                    <span class="created-at" data-bind="text: $parent.createdAtFormatted($data)"></span>
                                 </a>
                             </li>
                         </ul>
