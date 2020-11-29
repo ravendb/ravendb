@@ -11,15 +11,14 @@
 
   <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
-	<Compile Remove="GCDump\**\*" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.0.0" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="1.1.142101" />
     <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.152202" />
-    <!--<PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.61" />-->
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.61" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
@@ -28,5 +27,4 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0" />
     <PackageReference Include="System.Security.Cryptography.Cng" Version="5.0.0" />
   </ItemGroup>
-
 </Project>
