@@ -143,8 +143,7 @@ class editIndex extends viewModelBase {
         this.previewItem.extend({ rateLimit: 100});
         
         this.previewItem.subscribe((item) => {
-            let itemDefinition = item.Definition;
-            const indexDefinitionText = generalUtils.stringify(itemDefinition);
+            const indexDefinitionText = generalUtils.stringify(item.Definition);
             this.previewDefinition(documentHelpers.unescapeNewlinesAndTabsInTextFields(indexDefinitionText));
 
             this.$previewEditor = $(editIndex.previewEditorSelector);
