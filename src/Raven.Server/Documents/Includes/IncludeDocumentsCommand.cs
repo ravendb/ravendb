@@ -18,6 +18,8 @@ namespace Raven.Server.Documents.Includes
 
         private HashSet<string> _includedIds;
 
+        public HashSet<string> IncludedIds => _includedIds ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         private HashSet<string> _idsToIgnore;
 
         public DocumentsOperationContext Context => _context;
@@ -37,10 +39,7 @@ namespace Raven.Server.Documents.Includes
             if (ids == null)
                 return;
 
-            if (_includedIds == null)
-                _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            _includedIds.UnionWith(ids);
+            IncludedIds.UnionWith(ids);
         }
 
         public void Gather(Document document)
@@ -51,8 +50,6 @@ namespace Raven.Server.Documents.Includes
             if (_includes == null || _includes.Length == 0)
                 return;
 
-            if (_includedIds == null)
-                _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             AddToIgnore(document.Id);
 
@@ -60,10 +57,10 @@ namespace Raven.Server.Documents.Includes
             {
                 if (include == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 {
-                    _includedIds.Add(document.Id);
+                    IncludedIds.Add(document.Id);
                     continue;
                 }
-                IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), _includedIds, _storage.DocumentDatabase.IdentityPartsSeparator);
+                IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), IncludedIds, _storage.DocumentDatabase.IdentityPartsSeparator);
             }
         }
 
@@ -110,8 +107,7 @@ namespace Raven.Server.Documents.Includes
             if (documentId == null)
                 return;
 
-            if (_idsToIgnore == null)
-                _idsToIgnore = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _idsToIgnore ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             _idsToIgnore.Add(documentId);
         }
