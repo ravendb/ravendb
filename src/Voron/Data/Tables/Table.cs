@@ -78,7 +78,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        private void OnDataMoved(long previousId, long newId, byte* data, int size)
+        private void OnDataMoved(long previousId, long newId, byte* data, int size, bool compressed)
         {
 #if DEBUG
             if (IsOwned(previousId) == false || IsOwned(newId) == false)
@@ -91,6 +91,11 @@ namespace Voron.Data.Tables
             var tvr = new TableValueReader(data, size);
             DeleteValueFromIndex(previousId, ref tvr);
             InsertIndexValuesFor(newId, ref tvr);
+
+            if (compressed)
+            {
+                _tx.CachedDecompressedBuffersByStorageId.Remove(previousId);
+            }
         }
 
         /// <summary>
@@ -512,7 +517,7 @@ namespace Voron.Data.Tables
 
                 Memory.Copy(writePos, pos, itemSize);
 
-                OnDataMoved(idToMove, newId, dataPtr, dataSize);
+                OnDataMoved(idToMove, newId, dataPtr, dataSize, compressed);
 
                 // avoiding try / finally or using here for perf reasons
                 // if we get an error, it will get cleaned up by the context anyway

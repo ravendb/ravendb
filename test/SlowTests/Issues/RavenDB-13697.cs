@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
@@ -32,9 +33,9 @@ namespace SlowTests.Issues
                 var t = documentStore.Changes()
                     .ForDocumentsInCollection<Version>();
 
-                await Assert.ThrowsAnyAsync<Exception>(() => t.EnsureSubscribedNow());
+                await Assert.ThrowsAnyAsync<Exception>(() => t.EnsureSubscribedNow().WithCancellation(cts.Token));
 
-                t.Subscribe(x => { });
+                _ = t.Subscribe(x => { });
 
                 // Check if the database exists.
                 var getResult = await documentStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(documentStore.Database), cts.Token).ConfigureAwait(false);

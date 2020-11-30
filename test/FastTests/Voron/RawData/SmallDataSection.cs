@@ -101,7 +101,7 @@ namespace FastTests.Voron.RawData
             using (var tx = Env.WriteTransaction())
             {
                 var section = new ActiveRawDataSmallSection(tx, pageNumber);
-                section.DataMoved += (previousId, newId, data, size) => { };
+                section.DataMoved += (previousId, newId, data, size, compressed) => { };
                 int allocationSize = 1020;
 
                 long id;
