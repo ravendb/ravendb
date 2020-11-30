@@ -610,7 +610,7 @@ namespace Raven.Server.Documents.Indexes
 
             ValidateStaticIndex(definition);
 
-            var command = new PutIndexCommand(definition, _documentDatabase.Name, source, _documentDatabase.Time.GetUtcNow(), raftRequestId);
+            var command = new PutIndexCommand(definition, _documentDatabase.Name, source, _documentDatabase.Time.GetUtcNow(), raftRequestId, _documentDatabase.Configuration.Indexing.HistoryRevisionsNumber);
 
             long index = 0;
             try
@@ -1990,17 +1990,17 @@ namespace Raven.Server.Documents.Indexes
                 _numberOfUtilizedCores = numberOfUtilizedCores;
             }
 
-            public void AddIndex(IndexDefinitionBase definition, string source, DateTime createdAt, string raftRequestId)
+            public void AddIndex(IndexDefinitionBase definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
             {
                 if (_command == null)
-                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId);
+                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, revisionsToKeep);
 
                 if (definition == null)
                     throw new ArgumentNullException(nameof(definition));
 
                 if (definition is MapIndexDefinition indexDefinition)
                 {
-                    AddIndex(indexDefinition.IndexDefinition, source, createdAt, raftRequestId);
+                    AddIndex(indexDefinition.IndexDefinition, source, createdAt, raftRequestId, revisionsToKeep);
                     return;
                 }
 
@@ -2012,10 +2012,10 @@ namespace Raven.Server.Documents.Indexes
                 _command.Auto.Add(PutAutoIndexCommand.GetAutoIndexDefinition(autoDefinition, indexType));
             }
 
-            public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, string raftRequestId)
+            public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
             {
                 if (_command == null)
-                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId);
+                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, revisionsToKeep);
 
                 _store.ValidateStaticIndex(definition);
 
