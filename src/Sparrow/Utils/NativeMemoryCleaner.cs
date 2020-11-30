@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
+using Sparrow.Logging;
 using Sparrow.Threading;
 
 namespace Sparrow.Utils
 {
     public class NativeMemoryCleaner<TStack, TPooledItem> : IDisposable where TPooledItem : PooledItem where TStack : StackHeader<TPooledItem>
     {
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<NativeMemoryCleaner<TStack, TPooledItem>>("Memory");
+
         private readonly object _lock = new object();
         private readonly Func<object, ICollection<TStack>> _getContextsFromCleanupTarget;
         private readonly SharedMultipleUseFlag _lowMemoryFlag;
@@ -103,9 +107,11 @@ namespace Sparrow.Utils
                     }
                 }
             }
-            catch (OutOfMemoryException)
+            catch (Exception e)
             {
-                // let's not crash on OOM, and simply retry later
+                Debug.Assert(e is OutOfMemoryException, $"Expecting OutOfMemoryException but got: {e}");
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Error during cleanup.", e);
             }
             finally
             {
