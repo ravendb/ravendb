@@ -15,6 +15,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
@@ -2987,6 +2988,51 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 result.Results = reader.FacetedQuery(facetQuery, queryContext.Documents, GetOrAddSpatialField, token.Token);
                                 result.TotalResults = result.Results.Count;
+
+                                if (query.Metadata.Includes?.Length > 0)
+                                {
+                                    var cmd = new IncludeDocumentsCommand(this.DocumentDatabase.DocumentsStorage, queryContext.Documents, query.Metadata.Includes, true);
+                                    foreach (string include in query.Metadata.Includes)
+                                    {
+                                        string path = null; 
+                                        var match = result.Results.FirstOrDefault(x=>x.Name == include);
+                                        if (match == null)
+                                        {
+                                            int firstDot = include.IndexOf('.');
+                                            if(firstDot == -1)
+                                                continue;
+                                            string name = include.Substring(0, firstDot);
+                                            match = result.Results.FirstOrDefault(x=>x.Name == name);
+                                            if(match == null) continue;
+                                            path = include.Substring(firstDot + 1);
+                                        }
+                                        foreach (FacetValue value in match.Values)
+                                        {
+                                            if (path == null)
+                                            {
+                                                cmd.IncludedIds.Add(value.Range);
+                                            }
+                                            else
+                                            {
+                                                BlittableJsonReaderObject obj;
+                                                try
+                                                {
+                                                    obj = queryContext.Documents.ReadForMemory(value.Range, "Facet/Object");
+                                                }
+                                                catch (Exception e)
+                                                {
+                                                    // expected, we can ignore this
+                                                    continue;
+                                                }
+                                                IncludeUtil.GetDocIdFromInclude(obj, new StringSegment(path), cmd.IncludedIds, DocumentDatabase.IdentityPartsSeparator);
+                                            }
+                                        }
+                                    }
+
+                                    queryContext.Documents.OpenReadTransaction();
+                                    cmd.Fill(result.Includes);
+                                }
+                                
                                 return result;
                             }
                         }
