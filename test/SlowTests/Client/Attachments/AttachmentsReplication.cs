@@ -1377,6 +1377,7 @@ namespace SlowTests.Client.Attachments
                 tasks.ForEach(t => t.Wait());
             }
         }
+
         [Fact]
         public async Task AttachmentWithDifferentStreamAndSameNameShouldBeResolvedToLatestAfterConflict()
         {
@@ -2285,5 +2286,6 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(orderedDocsByEtag.Last().Item1.Length, attachments[2].Size);
                 }
             }
-        }    }
+        }
+    }
 }

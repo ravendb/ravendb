@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
@@ -433,7 +431,8 @@ namespace Raven.Server.Documents.Replication
                     if (resolvedToLatest)
                     {
                         // delete duplicates
-                        _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, lowerId, attachment.Name, attachment.Hash, attachment.ContentType, AttachmentType.Document);
+                        _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, resolved.LowerId, attachment.Name, expectedChangeVector: null, updateDocument: false, 
+                            attachment.Hash, attachment.ContentType, usePartialKey: false);
                     }
                     else
                     {
@@ -445,7 +444,8 @@ namespace Raven.Server.Documents.Replication
                         }
                         // rename duplicates
                         var newName = _database.DocumentsStorage.AttachmentsStorage.ResolveAttachmentName(context, lowerId, attachment.Name);
-                        _database.DocumentsStorage.AttachmentsStorage.RenameAttachment(context, lowerId, attachment.Name, attachment.Hash, attachment.ContentType, AttachmentType.Document, newName);
+                        _database.DocumentsStorage.AttachmentsStorage.MoveAttachment(context, resolved.LowerId, attachment.Name, resolved.LowerId, newName, changeVector: null,
+                            attachment.Hash, attachment.ContentType, usePartialKey: false, updateDocument: false);
                     }
                 }
             }

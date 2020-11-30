@@ -6,15 +6,10 @@ using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Server.Exceptions;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Voron;
-using Voron.Data.Tables;
-using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -22,6 +17,9 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Voron;
+using Voron.Data.Tables;
+using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
 
@@ -578,7 +576,8 @@ namespace Raven.Server.Documents
             return (count, streamsCount);
         }
 
-        public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
+        public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector, 
+            string hash = null, string contentType = null, bool usePartialKey = true)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentException("Argument is null or whitespace", nameof(documentId));
@@ -589,7 +588,7 @@ namespace Raven.Server.Documents
             if (type != AttachmentType.Document && string.IsNullOrWhiteSpace(changeVector))
                 throw new ArgumentException($"Change Vector cannot be empty for attachment type {type}", nameof(changeVector));
 
-            var attachment = GetAttachmentDirect(context, documentId, name, type, changeVector);
+            var attachment = GetAttachmentDirect(context, documentId, name, type, changeVector, hash, contentType, usePartialKey);
             if (attachment == null)
             {
                 if (type == AttachmentType.Revision)
@@ -636,18 +635,36 @@ namespace Raven.Server.Documents
             return table.SeekOnePrimaryKeyPrefix(keySlice, out _);
         }
 
-        private Attachment GetAttachmentDirect(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
+        private Attachment GetAttachmentDirect(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector,
+            string hash = null, string contentType = null, bool usePartialKey = true)
         {
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerId))
             using (DocumentIdWorker.GetSliceFromId(context, name, out Slice lowerName))
-            using (GetAttachmentPartialKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, type, changeVector, out Slice partialKeySlice))
             {
-                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+                Slice keySlice;
+                ByteStringContext<ByteStringMemoryCache>.InternalScope scope;
+                if (usePartialKey)
+                {
+                    scope = GetAttachmentPartialKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, type, changeVector, out keySlice);
+                }
+                else
+                {
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
+                    using (Slice.From(context.Allocator, hash, out Slice base64Hash))
+                    {
+                        scope = GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, lowerContentType.Content.Ptr,
+                            lowerContentType.Size, AttachmentType.Document, Slices.Empty, out keySlice);
+                    }
+                }
 
-                if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out TableValueReader tvr) == false)
-                    return null;
+                using (scope)
+                {
+                    var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+                    if (table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr) == false)
+                        return null;
 
-                return TableValueToAttachment(context, ref tvr);
+                    return TableValueToAttachment(context, ref tvr);
+                }
             }
         }
 
@@ -908,7 +925,8 @@ namespace Raven.Server.Documents
             return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, string.Empty, attachment.Stream);
         }
 
-        public AttachmentDetails MoveAttachment(DocumentsOperationContext context, string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, LazyStringValue changeVector)
+        public AttachmentDetails MoveAttachment(DocumentsOperationContext context, string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, LazyStringValue changeVector, 
+            string hash = null, string contentType = null, bool usePartialKey = true, bool updateDocument = true)
         {
             if (string.IsNullOrWhiteSpace(sourceDocumentId))
                 throw new ArgumentException("Argument cannot be null or whitespace.", nameof(sourceDocumentId));
@@ -921,68 +939,14 @@ namespace Raven.Server.Documents
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Rename", nameof(context));
 
-            var attachment = GetAttachment(context, sourceDocumentId, sourceName, AttachmentType.Document, changeVector);
+            var attachment = GetAttachment(context, sourceDocumentId, sourceName, AttachmentType.Document, changeVector, hash, contentType, usePartialKey);
             if (attachment == null)
                 AttachmentDoesNotExistException.ThrowFor(sourceDocumentId, sourceName);
 
-            var hash = attachment.Base64Hash.ToString();
-            var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, hash, string.Empty, attachment.Stream);
-            DeleteAttachment(context, sourceDocumentId, sourceName, changeVector);
+            var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), string.Empty, attachment.Stream);
+            DeleteAttachment(context, sourceDocumentId, sourceName, changeVector, updateDocument, hash, contentType, usePartialKey);
 
             return result;
-        }
-
-        public AttachmentDetails RenameAttachment(DocumentsOperationContext context, Slice lowerId, string name, string hash, string contentType, AttachmentType attachmentType, string newName)
-        {
-            var docId = lowerId.ToString();
-            if (string.IsNullOrWhiteSpace(docId))
-                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(lowerId));
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(name));
-            if (string.IsNullOrWhiteSpace(hash))
-                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(hash));
-            if (string.IsNullOrWhiteSpace(contentType))
-                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(contentType));
-            if (string.IsNullOrWhiteSpace(newName))
-                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(newName));
-            if (attachmentType != AttachmentType.Document)
-                throw new ArgumentException($"{nameof(RenameAttachment)} only supported for documents attachment.", nameof(attachmentType));
-            if (context.Transaction == null)
-                throw new ArgumentException($"Context must be set with a valid transaction before calling {nameof(RenameAttachment)}", nameof(context));
-
-            Attachment attachment;
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
-            using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
-            using (GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, lowerContentType.Content.Ptr,
-                lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
-            {
-                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr);
-                attachment = TableValueToAttachment(context, ref tvr);
-
-                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, newName, out Slice lowerNewName, out Slice newNamePtr))
-                using (GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size, lowerNewName.Content.Ptr, lowerNewName.Size, base64Hash, lowerContentType.Content.Ptr,
-                    lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice newKeySlice))
-                {
-                    PutDirect(context, newKeySlice, newNamePtr, contentTypePtr, base64Hash, attachment.ChangeVector);
-
-                    var tombstoneEtag = _documentsStorage.GenerateNextEtag();
-                    var changeVector = _documentsStorage.GetNewChangeVector(context, tombstoneEtag);
-                    context.LastDatabaseChangeVector = changeVector;
-                    DeleteAttachmentDirect(context, keySlice, isPartialKey: false, name, attachment.ChangeVector, changeVector, _documentDatabase.Time.GetUtcNow().Ticks);
-                }
-            }
-
-            return new AttachmentDetails
-            {
-                ChangeVector = attachment.ChangeVector,
-                ContentType = contentType,
-                Name = newName,
-                DocumentId = docId,
-                Hash = hash,
-                Size = attachment.Size
-            };
         }
 
         public string ResolveAttachmentName(DocumentsOperationContext context, Slice lowerId, string name)
@@ -1007,44 +971,8 @@ namespace Raven.Server.Documents
             return newName;
         }
 
-        public bool DeleteAttachment(DocumentsOperationContext context, Slice lowerId, string name, string hash, string contentType, AttachmentType attachmentType)
-        {
-            var docId = lowerId.ToString();
-            if (string.IsNullOrWhiteSpace(docId))
-                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(lowerId));
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(name));
-            if (string.IsNullOrWhiteSpace(hash))
-                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(hash));
-            if (string.IsNullOrWhiteSpace(contentType))
-                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(contentType));
-            if (attachmentType != AttachmentType.Document)
-                throw new ArgumentException($"{nameof(DeleteAttachmentDirect)} only supported for documents attachment.", nameof(attachmentType));
-            if (context.Transaction == null)
-                throw new ArgumentException($"Context must be set with a valid transaction before calling {nameof(DeleteAttachmentDirect)}", nameof(context));
-
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
-            using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
-            using (GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, lowerContentType.Content.Ptr,
-                lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
-            {
-                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                if (table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr) == false)
-                    return false;
-
-                var attachment = TableValueToAttachment(context, ref tvr);
-
-                var tombstoneEtag = _documentsStorage.GenerateNextEtag();
-                var changeVector = _documentsStorage.GetNewChangeVector(context, tombstoneEtag);
-                context.LastDatabaseChangeVector = changeVector;
-                DeleteAttachmentDirect(context, keySlice, isPartialKey: false, name, attachment.ChangeVector, changeVector, _documentDatabase.Time.GetUtcNow().Ticks);
-            }
-
-            return true;
-        }
-
-        public void DeleteAttachment(DocumentsOperationContext context, string documentId, string name, LazyStringValue expectedChangeVector, bool updateDocument = true)
+        public void DeleteAttachment(DocumentsOperationContext context, string documentId, string name, LazyStringValue expectedChangeVector, bool updateDocument = true, 
+            string hash = null, string contentType = null, bool usePartialKey = true)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentException("Argument is null or whitespace", nameof(documentId));
@@ -1072,11 +1000,28 @@ namespace Raven.Server.Documents
                 context.LastDatabaseChangeVector = changeVector;
 
                 using (DocumentIdWorker.GetSliceFromId(context, name, out Slice lowerName))
-                using (GetAttachmentPartialKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
-                    AttachmentType.Document, null, out Slice partialKeySlice))
                 {
-                    var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                    DeleteAttachmentDirect(context, partialKeySlice, true, name, expectedChangeVector, changeVector, lastModifiedTicks);
+                    Slice keySlice;
+                    ByteStringContext<ByteStringMemoryCache>.InternalScope scope;
+                    if (usePartialKey)
+                    {
+                        scope = GetAttachmentPartialKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document, null, out keySlice);
+                    }
+                    else
+                    {
+                        using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
+                        using (Slice.From(context.Allocator, hash, out Slice base64Hash))
+                        {
+                            scope = GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, lowerContentType.Content.Ptr,
+                                lowerContentType.Size, AttachmentType.Document, Slices.Empty, out keySlice);
+                        }
+                    }
+
+                    using (scope)
+                    {
+                        var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
+                        DeleteAttachmentDirect(context, keySlice, usePartialKey, name, expectedChangeVector, changeVector, lastModifiedTicks);
+                    }
                 }
 
                 if (updateDocument)
