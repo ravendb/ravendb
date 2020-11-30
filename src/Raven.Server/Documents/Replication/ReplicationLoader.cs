@@ -688,7 +688,7 @@ namespace Raven.Server.Documents.Replication
                             continue;
                         }
 
-                        if (failure.External && 
+                        if (failure.External &&
                             IsMyTask(ravenConnectionStrings, topology, failure.Node as ExternalReplicationBase) == false)
                             // no longer my task
                             continue;
@@ -698,11 +698,18 @@ namespace Raven.Server.Documents.Replication
                     }
                     catch (Exception e)
                     {
-                        if (_log.IsInfoEnabled)
+                        if (_log.IsOperationsEnabled)
                         {
-                            _log.Info($"Failed to start outgoing replication to {failure.Node}", e);
+                            _log.Operations($"Failed to start outgoing replication to {failure.Node}", e);
                         }
                     }
+                }
+            }
+            catch (Exception e)
+            {
+                if (_log.IsOperationsEnabled)
+                {
+                    _log.Operations("Unexpected exception during ForceTryReconnectAll", e);
                 }
             }
             finally

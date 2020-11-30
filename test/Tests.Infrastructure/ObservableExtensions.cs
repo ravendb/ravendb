@@ -34,12 +34,9 @@ namespace FastTests
                 _onNext(value);
             }
         }
-        
-        
 
         public class FilteredObserver<T> : IObserver<T>
         {
-            
             private readonly Func<T, bool> _predicate;
             private List<Action<T>> _subscribers = new List<Action<T>>();
 
@@ -50,7 +47,6 @@ namespace FastTests
 
             public void OnCompleted()
             {
-                
             }
 
             public void OnError(Exception error)
@@ -75,7 +71,7 @@ namespace FastTests
                 {
                     _subscribers.Remove((action));
                 });
-            } 
+            }
         }
 
         public static FilteredObserver<T> Where<T>(this IObservable<T> self, Func<T, bool> predicate)
@@ -83,8 +79,8 @@ namespace FastTests
             var filteredObserver = new FilteredObserver<T>(predicate);
             self.Subscribe(filteredObserver);
             return filteredObserver;
-            
-        } 
+        }
+
         public static IDisposable Subscribe<T>(this IObservable<T> self, Action<T> action)
         {
             return self.Subscribe(new ActionObserver<T>(action));
@@ -92,12 +88,12 @@ namespace FastTests
 
         public static IDisposable Subscribe<T>(this IObservable<T> self, Action<T> onNext, Action<Exception> onError)
         {
-            return self.Subscribe(new ActionObserver<T>(onNext,onError));
+            return self.Subscribe(new ActionObserver<T>(onNext, onError));
         }
 
-        public static IDisposable Subscribe<T>(this IObservable<T> self, Action<T> onNext, Action<Exception> onError,Action onCompleted)
+        public static IDisposable Subscribe<T>(this IObservable<T> self, Action<T> onNext, Action<Exception> onError, Action onCompleted)
         {
-            return self.Subscribe(new ActionObserver<T>(onNext, onError,onCompleted));
+            return self.Subscribe(new ActionObserver<T>(onNext, onError, onCompleted));
         }
     }
 }

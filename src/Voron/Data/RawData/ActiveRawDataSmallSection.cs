@@ -167,6 +167,7 @@ namespace Voron.Data.RawData
                         pos += (ushort)(oldSize->AllocatedSize + sizeof(RawDataEntrySizes));
                         continue; // this was freed
                     }
+
                     var prevId = (pageHeader->PageNumber) * Constants.Storage.PageSize + pos;
                     var newId = (pageHeader->PageNumber) * Constants.Storage.PageSize + pageHeader->NextAllocation;
                     byte* entryPos = tmp.TempPagePointer + pos + sizeof(RawDataEntrySizes);
@@ -176,11 +177,11 @@ namespace Voron.Data.RawData
                         if (oldSize->IsCompressed)
                         {
                             using var __ = Table.DecompressValue(_transaction, entryPos, size, out var buffer);
-                            OnDataMoved(prevId, newId, buffer.Ptr, buffer.Length);
+                            OnDataMoved(prevId, newId, buffer.Ptr, buffer.Length, compressed: true);
                         }
                         else
                         {
-                            OnDataMoved(prevId, newId, entryPos, oldSize->UsedSize);
+                            OnDataMoved(prevId, newId, entryPos, oldSize->UsedSize, compressed: false);
                         }
                     }
 
