@@ -2230,6 +2230,11 @@ namespace Raven.Server.ServerWide
                         Logger.Operations("Error during idle operations for the server", e);
                 }
             }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Unexpected error during idle operations for the server", e);
+            }
             finally
             {
                 try
