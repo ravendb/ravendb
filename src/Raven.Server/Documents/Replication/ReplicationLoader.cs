@@ -188,10 +188,18 @@ namespace Raven.Server.Documents.Replication
                     Interlocked.Exchange(ref _hubInfoForCleaner, new HubInfoForCleaner { LastCleanup = Database.Time.GetUtcNow(), LastEtag = minTombstone.Etag - 1 });
                     return minTombstone.Etag - 1;
                 }
+                var oldEtag = -1L;
+
                 while (true)
                 {
-                    var newEtag = ((max - min) / 2) + min;
+                    var newEtag = (max + min) / 2;
+                    if (newEtag == oldEtag)
+                    {
+                        Interlocked.Exchange(ref _hubInfoForCleaner, new HubInfoForCleaner { LastCleanup = Database.Time.GetUtcNow(), LastEtag = min });
+                        return min;
+                    }
 
+                    oldEtag = newEtag;
                     var newTombstone = Database.DocumentsStorage.GetTombstonesFrom(context, newEtag, 0, 1).First();
 
                     if (newTombstone.Etag == max)

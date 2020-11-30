@@ -168,14 +168,60 @@ namespace SlowTests.Issues
                     }
                     session.SaveChanges();
                 }
+
+                await database.TombstoneCleaner.ExecuteCleanup();
+
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     using (context.OpenReadTransaction())
                     {
-                        await database.TombstoneCleaner.ExecuteCleanup();
                         var count = database.DocumentsStorage.GetTombstonesFrom(context, "Users", 0, 0, 128).Count();
                         Assert.Equal(0, count);
                     }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task TombstonesCleanUpWithHubDefinition5()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation("hub"));
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-30);
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.Store(new User(), "user/" + i);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("user/1");
+                    session.Delete("user/2");
+                    session.SaveChanges();
+                }
+
+                database.Time.UtcDateTime = null;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("user/3");
+                    session.SaveChanges();
+                }
+
+                await database.TombstoneCleaner.ExecuteCleanup();
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var count = database.DocumentsStorage.GetTombstonesFrom(context, "Users", 0, 0, 128).Count();
+                    Assert.Equal(1, count);
                 }
             }
         }
