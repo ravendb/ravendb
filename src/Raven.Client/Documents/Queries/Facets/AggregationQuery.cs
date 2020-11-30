@@ -156,6 +156,7 @@ namespace Raven.Client.Documents.Queries.Facets
                 var facetResult = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<FacetResult>(result, "facet/result");
                 results[facetResult.Name] = facetResult;
             }
+            _session.RegisterIncludes(queryResult.Includes);
 
             QueryOperation.EnsureIsAcceptable(queryResult, _query.WaitForNonStaleResults, _duration, _session);
 
