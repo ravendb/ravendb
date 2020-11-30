@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server;
 using Sparrow.Server.Platform;
@@ -17,6 +19,7 @@ namespace Voron.Impl
     public unsafe class EncryptionBuffersPool : ILowMemoryHandler
     {
         public static EncryptionBuffersPool Instance = new EncryptionBuffersPool();
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<EncryptionBuffersPool>("Memory");
 
         private readonly long _maxBufferSizeToKeepInBytes = new Size(8, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
         private readonly MultipleUseFlag _isLowMemory = new MultipleUseFlag();
@@ -223,9 +226,11 @@ namespace Voron.Impl
                     }
                 }
             }
-            catch (OutOfMemoryException)
+            catch (Exception e)
             {
-                // let's not crash on OOM, and simply retry later
+                Debug.Assert(e is OutOfMemoryException, $"Expecting OutOfMemoryException but got: {e}");
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Error during cleanup.", e);
             }
             finally
             {
