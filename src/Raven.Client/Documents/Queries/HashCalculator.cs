@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Reflection;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -292,6 +293,9 @@ namespace Raven.Client.Documents.Queries
                         Write("empty-enumerator");
                     }
 
+                    break;
+                case CultureInfo ci:
+                    Write(ci.ToString());
                     break;
 
                 default:
