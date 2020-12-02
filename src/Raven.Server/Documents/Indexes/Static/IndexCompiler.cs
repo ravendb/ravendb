@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 try
                 {
                     var name = AssemblyLoadContext.GetAssemblyName(path);
-                    var assembly = Assembly.LoadFile(path);
+                    var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
                     var reference = CreateMetadataReferenceFromAssembly(assembly);
 
                     results.TryAdd(name.Name, new AdditionalAssemblyServerSide(name, assembly, reference, AdditionalAssemblyType.BaseDirectory));
