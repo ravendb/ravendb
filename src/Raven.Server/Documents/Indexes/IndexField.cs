@@ -49,6 +49,8 @@ namespace Raven.Server.Documents.Indexes
                 field.Indexing = options.Indexing.Value;
             else if (string.IsNullOrWhiteSpace(field.Analyzer) == false)
                 field.Indexing = FieldIndexing.Search;
+            else if (allFields?.Indexing != null)
+                field.Indexing = allFields.Indexing.Value;
 
             if (options.Storage.HasValue)
                 field.Storage = options.Storage.Value;
