@@ -254,9 +254,6 @@ namespace Raven.Client.Documents.Smuggler
                 if (ClientConfigurationUpdated)
                     json[nameof(ClientConfigurationUpdated)] = ClientConfigurationUpdated;
 
-                if (ConflictSolverConfigUpdated)
-                    json[nameof(ConflictSolverConfigUpdated)] = ClientConfigurationUpdated;
-
                 if (PeriodicBackupsUpdated)
                     json[nameof(PeriodicBackupsUpdated)] = PeriodicBackupsUpdated;
 
@@ -329,8 +326,8 @@ namespace Raven.Client.Documents.Smuggler
                 if (ClientConfigurationUpdated)
                     sb.AppendLine("- Client");
                 
-                if (ClientConfigurationUpdated)
-                    sb.AppendLine("- Unused Database Ids");
+                if (UnusedDatabaseIdsUpdated)
+                    sb.AppendLine("- Unused Database IDs");
 
                 if (sb.Length == 0)
                     return string.Empty;
