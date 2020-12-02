@@ -211,7 +211,8 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     foreach (var id in unusedDatabaseIds)
                     {
-                        Debug.Assert(id is LazyStringValue || id is LazyCompressedStringValue);
+                        if(id is LazyStringValue == false && id is LazyCompressedStringValue == false)
+                            throw new InvalidOperationException($"{nameof(databaseRecord.UnusedDatabaseIds)} should be a collection of strings but got {id.GetType()}");
                         databaseRecord.UnusedDatabaseIds.Add(id.ToString());
                     }
                 }

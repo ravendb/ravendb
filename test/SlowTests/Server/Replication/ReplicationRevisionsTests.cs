@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -11,11 +12,12 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Server.Documents.Revisions
+namespace SlowTests.Server.Replication
 {
     public class ReplicationRevisionsTests : ReplicationTestBase
     {
@@ -27,15 +29,17 @@ namespace FastTests.Server.Documents.Revisions
         public async Task ReplicateRevision_WhenSourceDataFromExportAndDocDeleted_ShouldNotResuscitateTheDoc()
         {
             var exportFile = GetTempFileName();
-            
-            var (nodes, leader) = await CreateRaftCluster(2);
+            var settings = new Dictionary<string,string>()
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "120",
+            };
+            var (nodes, leader) = await CreateRaftCluster(2, customSettings: settings);
             var nodeTags = nodes.Select(n => n.ServerStore.NodeTag).ToArray();
 
-            string firstNode;
             using (var store = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 1}))
             {
                 await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration{Default = new RevisionsCollectionConfiguration()}));
-                firstNode = await AssertWaitForNotNullAsync(async () =>
+                var firstNode = await AssertWaitForNotNullAsync(async () =>
                     (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.FirstOrDefault());
 
                 var entity = new User();
@@ -71,25 +75,35 @@ namespace FastTests.Server.Documents.Revisions
                 await operation.WaitForCompletionAsync();
             }
 
-            using (var store = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 2}))
+            using (var store = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 1}))
             {
+                var srcTag = await AssertWaitForNotNullAsync(async () =>
+                    (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members.FirstOrDefault());
+                
+                var src = nodes.First(n => n.ServerStore.NodeTag == srcTag);
+                var dest = nodes.First(n => n.ServerStore.NodeTag != srcTag);
+                
                 var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
                 await operation.WaitForCompletionAsync();
-
-                using var re1 = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(nodes[0].WebUrl, store.Database, null, store.Conventions);
-                using var re2 = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(nodes[1].WebUrl, store.Database, null, store.Conventions);
-                using (var firstSession = store.OpenAsyncSession(new SessionOptions{RequestExecutor = re1}))
-                using (var secondSession = store.OpenAsyncSession(new SessionOptions{RequestExecutor = re2}))
+                
+                using (var session = store.OpenAsyncSession())
                 {
-                    WaitForIndexing(store, store.Database, nodeTag:nodes[0].ServerStore.NodeTag);
-                    var firstNodeDocs = await firstSession.Query<User>().ToArrayAsync();
-                    
-                    WaitForIndexing(store, store.Database, nodeTag:nodes[1].ServerStore.NodeTag);
-                    var secondNodeDocs = await secondSession.Query<User>().ToArrayAsync();
+                    WaitForIndexing(store, store.Database, nodeTag:src.ServerStore.NodeTag);
+                    var firstNodeDocs = await session.Query<User>().ToArrayAsync();
+                    Assert.Equal(0, firstNodeDocs.Length);
+                }
+                
+                await AssertWaitForNotNullAsync(async () => await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database)), 30000);
+                await AssertWaitForValueAsync(async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2);
 
-                    RavenTestHelper.AssertAll(
-                        () => Assert.Equal(0, firstNodeDocs.Length),
-                        () => Assert.Equal(0, secondNodeDocs.Length));
+                await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = store.Urls.First(), Database = store.Database }));
+
+                using var re = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(dest.WebUrl, store.Database, null, store.Conventions);
+                using (var secondSession = store.OpenAsyncSession(new SessionOptions{RequestExecutor = re}))
+                {
+                    WaitForIndexing(store, store.Database, nodeTag:dest.ServerStore.NodeTag);
+                    var secondNodeDocs = await secondSession.Query<User>().ToArrayAsync();
+                    Assert.Equal(0, secondNodeDocs.Length);
                 }
             }
         }
@@ -97,20 +111,21 @@ namespace FastTests.Server.Documents.Revisions
         [Fact]
         public async Task ReplicateRevision_WhenSourceDataFromIncrementalBackupAndDocDeleted_ShouldNotResuscitateTheDoc()
         {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var backupPath = NewDataPath(suffix: "BackupFolder", forceCreateDir: true);
             
             var (nodes, leader) = await CreateRaftCluster(2);
-            var nodeTags = nodes.Select(n => n.ServerStore.NodeTag).ToArray();
 
-            string firstNode;
-            using (var store = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 1}))
+            using (var store = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 2}))
             {
                 await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration{Default = new RevisionsCollectionConfiguration()}));
-                firstNode = await AssertWaitForNotNullAsync(async () =>
+                var firstNodeTag = await AssertWaitForNotNullAsync(async () =>
                     (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.FirstOrDefault());
-
+                var firstNode = nodes.First(n => n.ServerStore.NodeTag == firstNodeTag);
+                var secondNode = nodes.First(n => n.ServerStore.NodeTag != firstNodeTag);
+                
                 var entity = new User();
-                using (var session = store.OpenAsyncSession())
+                using (var re = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(firstNode.WebUrl, store.Database, null, store.Conventions))
+                using (var session = store.OpenAsyncSession(new SessionOptions{RequestExecutor = re}))
                 {
                     //Add first revision with first node tag
                     await session.StoreAsync(entity);
@@ -119,16 +134,14 @@ namespace FastTests.Server.Documents.Revisions
                 
                 var config = new PeriodicBackupConfiguration
                 {
+                    MentorNode = secondNode.ServerStore.NodeTag,
                     LocalSettings = new LocalSettings { FolderPath = backupPath },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
+                    IncrementalBackupFrequency = "0 * * * *"
                 };
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                 await (await SendAsync(store, new StartBackupOperation(true, backupTaskId))).WaitForCompletionAsync();
                 
-                await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
-                await AssertWaitForValueAsync(async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2);
-                
-                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, nodeTags.First(n => n == firstNode)));
+                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, firstNodeTag));
                 await AssertWaitForValueAsync(async () =>
                 {
                     var dbRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -150,24 +163,33 @@ namespace FastTests.Server.Documents.Revisions
                 await (await SendAsync(store, new StartBackupOperation(false, backupTaskId))).WaitForCompletionAsync();
             }
 
-            using (var store = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 2}))
+            using (var store = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 1}))
             {
+                var srcTag = await AssertWaitForNotNullAsync(async () =>
+                    (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members.FirstOrDefault());
+                
+                var src = nodes.First(n => n.ServerStore.NodeTag == srcTag);
+                var dest = nodes.First(n => n.ServerStore.NodeTag != srcTag);
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
-
-                using var re1 = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(nodes[0].WebUrl, store.Database, null, store.Conventions);
-                using var re2 = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(nodes[1].WebUrl, store.Database, null, store.Conventions);
-                using (var firstSession = store.OpenAsyncSession(new SessionOptions{RequestExecutor = re1}))
-                using (var secondSession = store.OpenAsyncSession(new SessionOptions{RequestExecutor = re2}))
+                
+                using (var session = store.OpenAsyncSession())
                 {
-                    WaitForIndexing(store, store.Database, nodeTag:nodes[0].ServerStore.NodeTag);
-                    var firstNodeDocs = await firstSession.Query<User>().ToArrayAsync();
-                    
-                    WaitForIndexing(store, store.Database, nodeTag:nodes[1].ServerStore.NodeTag);
-                    var secondNodeDocs = await secondSession.Query<User>().ToArrayAsync();
+                    WaitForIndexing(store, store.Database, nodeTag:src.ServerStore.NodeTag);
+                    var firstNodeDocs = await session.Query<User>().ToArrayAsync();
+                    Assert.Equal(0, firstNodeDocs.Length);
+                }
+                
+                await AssertWaitForNotNullAsync(async () => await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database)), 30000);
+                await AssertWaitForValueAsync(async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2);
 
-                    RavenTestHelper.AssertAll(
-                        () => Assert.Equal(0, firstNodeDocs.Length),
-                        () => Assert.Equal(0, secondNodeDocs.Length));
+                await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = store.Urls.First(), Database = store.Database }));
+
+                using var re = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(dest.WebUrl, store.Database, null, store.Conventions);
+                using (var secondSession = store.OpenAsyncSession(new SessionOptions{RequestExecutor = re}))
+                {
+                    WaitForIndexing(store, store.Database, nodeTag:dest.ServerStore.NodeTag);
+                    var secondNodeDocs = await secondSession.Query<User>().ToArrayAsync();
+                    Assert.Equal(0, secondNodeDocs.Length);
                 }
             }
         }
@@ -180,7 +202,8 @@ namespace FastTests.Server.Documents.Revisions
                 var command = operation.GetCommand(re.Conventions, context);
 
                 await re.ExecuteAsync(command, context, null, token).ConfigureAwait(false);
-                return new Operation(re, () => store.Changes(store.Database), re.Conventions, command.Result.OperationId, command.SelectedNodeTag ?? command.Result.ResponsibleNode);
+                var selectedNodeTag = command.SelectedNodeTag ?? command.Result.ResponsibleNode;
+                return new Operation(re, () => store.Changes(store.Database, selectedNodeTag), re.Conventions, command.Result.OperationId, selectedNodeTag);
             }
         }
     }
