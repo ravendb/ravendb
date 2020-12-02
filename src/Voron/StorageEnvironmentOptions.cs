@@ -396,7 +396,7 @@ namespace Voron
                 });
 
                 // have to be before the journal check, so we'll fail on files in use
-                DeleteAllTempBuffers();
+                DeleteAllTempFiles();
 
                 GatherRecyclableJournalFiles(); // if there are any (e.g. after a rude db shut down) let us reuse them
 
@@ -695,13 +695,15 @@ namespace Voron
                     PalHelper.ThrowLastError(rc, errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FailCodes)rc).ToString()}");
             }
 
-            public void DeleteAllTempBuffers()
+            public void DeleteAllTempFiles()
             {
                 if (Directory.Exists(TempPath.FullPath) == false)
                     return;
 
-                foreach (var file in Directory.GetFiles(TempPath.FullPath, "*.buffers"))
+                foreach (var file in Directory.GetFiles(TempPath.FullPath))
+                {
                     File.Delete(file);
+                }
             }
 
             private AbstractPager GetTemporaryPager(string name, long initialSize, Func<StorageEnvironmentOptions, long?, VoronPathSetting, bool, bool, AbstractPager> getMemoryMapPagerFunc)
