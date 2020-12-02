@@ -338,8 +338,11 @@ namespace Raven.Server.Rachis
                     if (_previousPeersWereDisposed > 0) // Not Interlocked, because the race here is not interesting.
                         continue;
 
-                    var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster();
-                    if (lowestIndexInEntireCluster != LowestIndexInEntireCluster)
+                    var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster(out var lastTruncated);
+                    if (lowestIndexInEntireCluster == 0) // one of the nodes might be during the handshake
+                        continue;
+
+                    if (lowestIndexInEntireCluster > lastTruncated)
                     {
                         using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         using (context.OpenWriteTransaction())
@@ -534,13 +537,14 @@ namespace Raven.Server.Rachis
 
         public long LeaderShipDuration => _leadership.ElapsedMilliseconds;
 
-        protected long GetLowestIndexInEntireCluster()
+        protected long GetLowestIndexInEntireCluster(out long lastTruncated)
         {
             long lowestIndex;
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                lowestIndex = _engine.GetLastEntryIndex(context);
+                lowestIndex = _engine.GetLastCommitIndex(context);
+                RachisConsensus.GetLastTruncated(context, out lastTruncated, out _);
             }
 
             foreach (var voter in _voters.Values)
@@ -820,6 +824,7 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
+
             using (_disposerLock.StartDisposing())
             {
                 bool lockTaken = false;

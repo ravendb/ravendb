@@ -1288,12 +1288,17 @@ namespace Raven.Server.Rachis
         public unsafe void ClearLogEntriesAndSetLastTruncate(TransactionOperationContext context, long index, long term)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
+            var removed = 0;
             while (true)
             {
                 if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out TableValueReader reader) == false)
                     break;
 
                 table.Delete(reader.Id);
+
+                removed++;
+                if (removed % 1024 == 0)
+                    Timeout.Defer(LeaderTag);
             }
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             using (state.DirectAdd(LastTruncatedSlice, sizeof(long) * 2, out byte* ptr))
@@ -1303,6 +1308,7 @@ namespace Raven.Server.Rachis
                 data[1] = term;
             }
         }
+
         public unsafe void TruncateLogBefore(TransactionOperationContext context, long upto)
         {
             GetLastCommitIndex(context, out long lastIndex, out long lastTerm);
@@ -1324,12 +1330,16 @@ namespace Raven.Server.Rachis
                 entryIndex = upto;
                 entryTerm = maybeTerm.Value;
             }
+
             GetLastTruncated(context, out lastIndex, out lastTerm);
 
             if (lastIndex >= upto)
                 return;
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
+
+            var truncatedIndex = entryIndex;
+            var sp = Stopwatch.StartNew();
             while (true)
             {
                 if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out TableValueReader reader) == false)
@@ -1338,18 +1348,27 @@ namespace Raven.Server.Rachis
                 entryIndex = Bits.SwapBytes(*(long*)reader.Read(0, out int size));
                 if (entryIndex > upto)
                     break;
-                Debug.Assert(size == sizeof(long));
 
+                Debug.Assert(size == sizeof(long));
                 entryTerm = *(long*)reader.Read(1, out size);
                 Debug.Assert(size == sizeof(long));
 
                 table.Delete(reader.Id);
+                truncatedIndex = entryIndex;
+
+                if (truncatedIndex % 1024 == 0 && 
+                    sp.ElapsedMilliseconds > (int)ElectionTimeout.TotalMilliseconds / 3)
+                {
+                    Timeout.Defer(LeaderTag);
+                    break;
+                }
             }
+
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             using (state.DirectAdd(LastTruncatedSlice, sizeof(long) * 2, out byte* ptr))
             {
                 var data = (long*)ptr;
-                data[0] = entryIndex;
+                data[0] = truncatedIndex;
                 data[1] = entryTerm;
             }
         }
@@ -1547,6 +1566,8 @@ namespace Raven.Server.Rachis
         public unsafe void SetLastCommitIndex(TransactionOperationContext context, long index, long term)
         {
             Debug.Assert(context.Transaction != null);
+            Debug.Assert(index != 0);
+            Debug.Assert(term != 0);
 
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
             var read = state.Read(LastCommitSlice);
