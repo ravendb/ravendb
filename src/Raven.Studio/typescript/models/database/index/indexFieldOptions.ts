@@ -406,12 +406,16 @@ class indexFieldOptions {
             this.disabledAnalyzerText("LowerCaseKeywordAnalyzer is used when selecting Indexing.Default. " + helpMsg);
         }
 
+        if (thisIndexing === "Search (implied)") {
+            this.disabledAnalyzerText("Cannot edit analyzer when Search is implied");
+        }
+
         if (!thisIndexing && parentIndexing === "Search") {
             this.analyzer(null);
             placeHolder = this.parent().analyzer() || "Standard Analyzer";
         }
 
-        if (thisIndexing === "Search" && !this.analyzer()) {
+        if (thisIndexing === "Search") {
             placeHolder = "Standard Analyzer";
         }
         
