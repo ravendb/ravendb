@@ -345,12 +345,11 @@ This edge-case has a very slim chance of happening, but still we should not igno
             {
                 return new TermQuery(new Term(configuration.FieldName, terms.First())) {Boost = boost};
             }
-            var phrase = new PhraseQuery() { Boost = boost };
-            foreach (var term in terms)
+            
+            return new TermsMatchQuery(configuration.FieldName, terms)
             {
-                phrase.Add(new Term(configuration.FieldName,term));
-            }
-            return phrase;
+                Boost = boost
+            };
         }
 
         public string Boost { get; set; }
