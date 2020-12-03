@@ -10,6 +10,7 @@ using Xunit;
 using Voron;
 using Voron.Global;
 using Xunit.Abstractions;
+using System.Runtime.InteropServices;
 
 namespace FastTests.Voron.Journal
 {

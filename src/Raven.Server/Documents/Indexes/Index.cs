@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Indexes
         public static Index Open(string path, DocumentDatabase documentDatabase)
         {
             var logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
-
+            
             StorageEnvironment environment = null;
 
             var name = new DirectoryInfo(path).Name;
@@ -338,7 +338,7 @@ namespace Raven.Server.Documents.Indexes
 
                 DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, documentDatabase.Configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, logger);
 
-                environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index);
+                environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index, documentDatabase.IndexWritesSynchronization);
 
                 IndexType type;
                 IndexSourceType sourceType;
@@ -575,7 +575,7 @@ namespace Raven.Server.Documents.Indexes
                 StorageEnvironment storageEnvironment = null;
                 try
                 {
-                    storageEnvironment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index);
+                    storageEnvironment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index, documentDatabase.IndexWritesSynchronization);
                     Initialize(storageEnvironment, documentDatabase, configuration, performanceHints);
                 }
                 catch (Exception)
@@ -1853,8 +1853,7 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 using (var scope = stats.For(work.Name))
                                 {
-                                    mightBeMore |= work.Execute(context, indexContext, writeOperation, scope,
-                                        cancellationToken);
+                                    mightBeMore |= work.Execute(context, indexContext, writeOperation, scope, cancellationToken);
 
                                     if (mightBeMore)
                                         _mre.Set();
@@ -4177,7 +4176,7 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    _environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index);
+                    _environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index, DocumentDatabase.IndexWritesSynchronization);
                     InitializeComponentsUsingEnvironment(DocumentDatabase, _environment);
                 }
                 catch

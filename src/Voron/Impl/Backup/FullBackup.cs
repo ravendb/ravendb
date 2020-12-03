@@ -93,6 +93,8 @@ namespace Voron.Impl.Backup
             long lastWrittenLogFile = -1;
             LowLevelTransaction txr = null;
             var backupSuccess = false;
+            
+            var envWriteSync = new StorageEnvironmentSynchronization();
 
             try
             {
@@ -136,7 +138,7 @@ namespace Voron.Impl.Backup
                                 journalSize = Bits.PowerOf2(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
                             }
 
-                            journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
+                            journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize, envWriteSync), journalNum);
                         }
 
                         journalFile.AddRef();

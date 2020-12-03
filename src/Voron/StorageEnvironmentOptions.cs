@@ -203,7 +203,7 @@ namespace Voron
         /// </summary>
         internal bool CopyOnWriteMode { get; set; }
 
-        public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize);
+        public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize, StorageEnvironmentSynchronization writeSynchronization = null);
 
         public abstract VoronPathSetting GetJournalPath(long journalNumber);
 
@@ -482,7 +482,7 @@ namespace Voron
                 return GetMemoryMapPagerInternal(this, null, filename);
             }
 
-            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
+            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize, StorageEnvironmentSynchronization writeSynchronization)
             {
                 var name = JournalName(journalNumber);
                 var path = JournalPath.Combine(name);
@@ -490,11 +490,11 @@ namespace Voron
                     AttemptToReuseJournal(path, journalSize);
 
                 var result = _journals.GetOrAdd(name, _ =>
-                    new LazyWithExceptionRetry<IJournalWriter>(() => new JournalWriter(this, path, journalSize)));
+                    new LazyWithExceptionRetry<IJournalWriter>(() => new JournalWriter(this, path, journalSize, writeSynchronization)));
 
                 if (result.Value.Disposed)
                 {
-                    var newWriter = new LazyWithExceptionRetry<IJournalWriter>(() => new JournalWriter(this, path, journalSize));
+                    var newWriter = new LazyWithExceptionRetry<IJournalWriter>(() => new JournalWriter(this, path, journalSize, writeSynchronization));
                     if (_journals.TryUpdate(name, newWriter, result) == false)
                         throw new InvalidOperationException("Could not update journal pager");
                     result = newWriter;
@@ -913,7 +913,7 @@ namespace Voron
 
             public override VoronPathSetting BasePath { get; } = new MemoryVoronPathSetting();
 
-            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
+            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize, StorageEnvironmentSynchronization envWriteSync)
             {
                 var name = JournalName(journalNumber);
                 IJournalWriter value;
@@ -921,8 +921,8 @@ namespace Voron
                     return value;
 
                 var path = GetJournalPath(journalNumber);
-
-                value = new JournalWriter(this, path, journalSize, PalFlags.JournalMode.PureMemory);
+                
+                value = new JournalWriter(this, path, journalSize, envWriteSync, PalFlags.JournalMode.PureMemory);
 
                 _logs[name] = value;
                 return value;

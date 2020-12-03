@@ -37,11 +37,13 @@ namespace Voron.Impl.Journal
         public JournalFile(StorageEnvironment env, IJournalWriter journalWriter, long journalNumber)
         {
             Number = journalNumber;
-            _env = env;
+
+            _env = env;            
             _transactionHeaders = new List<TransactionHeader>();
             _journalWriter = journalWriter;
             _writePosIn4Kb = 0;
             _unusedPages = new FastList<PagePosition>();
+
             var logger = LoggingSource.Instance.GetLogger<JournalFile>(JournalWriter.FileName.FullPath);
             _locker2 = new ContentionLoggingLocker(logger, JournalWriter.FileName.FullPath);
         }
@@ -134,12 +136,12 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// Write a buffer of transactions (from lazy, usually) to the file
         /// </summary>
-        public TimeSpan Write(long posBy4Kb, byte* p, int numberOf4Kbs)
+        public TimeSpan Write(long posBy4Kb, byte* buffer, int numberOf4Kbs)
         {
             int posBy4Kbs = 0;
             while (posBy4Kbs < numberOf4Kbs)
             {
-                var readTxHeader = (TransactionHeader*)(p + (posBy4Kbs * 4 * Constants.Size.Kilobyte));
+                var readTxHeader = (TransactionHeader*)(buffer + (posBy4Kbs * 4 * Constants.Size.Kilobyte));
                 var totalSize = readTxHeader->CompressedSize != -1 ? readTxHeader->CompressedSize +
                     sizeof(TransactionHeader) : readTxHeader->UncompressedSize + sizeof(TransactionHeader);
                 var roundTo4Kb = (totalSize / (4 * Constants.Size.Kilobyte)) +
@@ -156,7 +158,7 @@ namespace Voron.Impl.Journal
                 _transactionHeaders.Add(*readTxHeader);
             }
 
-            return JournalWriter.Write(posBy4Kb, p, numberOf4Kbs);
+            return JournalWriter.Write(posBy4Kb, buffer, numberOf4Kbs);
         }
 
         private static void MathFailure(int numberOf4Kbs)

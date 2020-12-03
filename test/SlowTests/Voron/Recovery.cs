@@ -323,7 +323,48 @@ namespace SlowTests.Voron
                     }
                 }
             }
+        }
 
+        [Fact]
+        public void StorageRecoveryShouldWorkWhenJournalNeedsMultipleSteps()
+        {
+            var sync = new StorageEnvironmentSynchronization(1, 12 * Constants.Size.Kilobyte);
+
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir), sync))
+            {
+                using (var tx = env.WriteTransaction())
+                {
+                    var tree = tx.CreateTree("tree");
+
+                    for (var i = 0; i < 10000; i++)
+                    {
+                        tree.Add("key" + i, new MemoryStream());
+                    }
+
+                    tx.Commit();
+                }
+            }
+
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            {
+                using (var tx = env.WriteTransaction())
+                {
+                    tx.CreateTree("tree");
+
+                    tx.Commit();
+                }
+
+
+                using (var tx = env.ReadTransaction())
+                {
+                    var tree = tx.CreateTree("tree");
+
+                    for (var i = 0; i < 10000; i++)
+                    {
+                        Assert.NotNull(tree.Read("key" + i));
+                    }
+                }
+            }
         }
     }
 }

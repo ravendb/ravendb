@@ -38,8 +38,49 @@ namespace Voron
 {
     public delegate bool UpgraderDelegate(SchemaUpgradeTransactions transactions, int currentVersion, out int versionAfterUpgrade);
 
-    public class StorageEnvironment : IDisposable
+
+    public class StorageEnvironmentSynchronization
     {
+        public struct SynchronizationSection : IDisposable
+        {
+            private readonly Semaphore _context;
+
+            public SynchronizationSection(Semaphore context)
+            {
+                this._context = context;
+                if (this._context != null)
+                    this._context.WaitOne();
+            }
+
+            void IDisposable.Dispose()
+            {
+                if (this._context != null)
+                    _context.Release();
+            }
+        }
+
+        private readonly Semaphore _writeSemaphore;
+        public readonly long MaxWriteSize;
+
+        public StorageEnvironmentSynchronization()
+        {
+            this.MaxWriteSize = int.MaxValue;
+        }
+
+        public StorageEnvironmentSynchronization(int concurrentWrites, long maxWriteSize = long.MaxValue)
+        {
+            this._writeSemaphore = new Semaphore(concurrentWrites, concurrentWrites);
+            this.MaxWriteSize = maxWriteSize;
+        }        
+
+        public SynchronizationSection Enter()
+        {
+            return new SynchronizationSection(_writeSemaphore);
+        }
+    }
+
+    public class StorageEnvironment : IDisposable
+    {        
         internal class IndirectReference
         {
             public StorageEnvironment Owner;
@@ -113,7 +154,7 @@ namespace Voron
         public static int TimeToSyncAfterFlushInSec;
 
         public Guid DbId { get; set; }
-
+        
         public StorageEnvironmentState State { get; private set; }
 
         public event Action OnLogsApplied;
@@ -122,7 +163,7 @@ namespace Voron
 
         public bool IsNew { get; }
 
-        public StorageEnvironment(StorageEnvironmentOptions options)
+        public StorageEnvironment(StorageEnvironmentOptions options, StorageEnvironmentSynchronization writeSynchronization = null)
         {
             try
             {
@@ -151,8 +192,8 @@ namespace Voron
                 _scratchBufferPool = new ScratchBufferPool(this);
 
                 options.SetDurability();
-
-                _journal = new WriteAheadJournal(this);
+                
+                _journal = new WriteAheadJournal(this, writeSynchronization ?? new StorageEnvironmentSynchronization());
 
                 if (options.Encryption.HasExternalJournalCompressionBufferHandlerRegistration) 
                     options.Encryption.SetExternalCompressionBufferHandler(_journal);
@@ -1361,7 +1402,7 @@ namespace Voron
             throw new InvalidOperationException("Simulation of db creation failure");
         }
     }
-    
+
     public class StorageEnvironmentWithType
     {
         public string Name { get; set; }

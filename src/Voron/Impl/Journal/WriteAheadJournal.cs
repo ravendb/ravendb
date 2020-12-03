@@ -67,8 +67,9 @@ namespace Voron.Impl.Journal
         internal NativeMemory.ThreadStats CurrentFlushingInProgressHolder;
 
         private readonly DisposeOnce<SingleAttempt> _disposeRunner;
+        private readonly StorageEnvironmentSynchronization _writeSynchronization;
 
-        public WriteAheadJournal(StorageEnvironment env)
+        public WriteAheadJournal(StorageEnvironment env, StorageEnvironmentSynchronization writeSynchronization)
         {
             _env = env;
             _is32Bit = env.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
@@ -76,6 +77,7 @@ namespace Voron.Impl.Journal
             _dataPager = _env.Options.DataPager;
             _currentJournalFileSize = env.Options.InitialLogFileSize;
             _headerAccessor = env.HeaderAccessor;
+            _writeSynchronization = writeSynchronization;
 
             _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
             _journalApplicator = new JournalApplicator(this);
@@ -128,14 +130,14 @@ namespace Voron.Impl.Journal
                 actualLogSize = _currentJournalFileSize;
             }
 
-            var journalPager = _env.Options.CreateJournalWriter(_journalIndex + 1, actualLogSize);
+            var journalPager = _env.Options.CreateJournalWriter(_journalIndex + 1, actualLogSize, _writeSynchronization);
 
             // we modify the in memory state _after_ we created the file, because we have to make sure that 
             // we have created it successfully first. 
             _journalIndex++;
 
             _lastFile = now;
-
+            
             var journal = new JournalFile(_env, journalPager, _journalIndex);
             journal.AddRef(); // one reference added by a creator - write ahead log
 
@@ -225,7 +227,7 @@ namespace Voron.Impl.Journal
 
                             pager.Dispose(); // need to close it before we open the journal writer
 
-                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.TotalAllocationSize);
+                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.TotalAllocationSize, _writeSynchronization);
                             var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
                             jrnlFile.InitFrom(journalReader, transactionHeaders);
                             jrnlFile.AddRef(); // creator reference - write ahead log

@@ -130,6 +130,8 @@ namespace Raven.Server.ServerWide
 
         public Operations Operations { get; }
 
+        public StorageEnvironmentSynchronization IndexWritesSynchronization { get; private set; }
+
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
             // we want our servers to be robust get early errors about such issues
@@ -178,6 +180,11 @@ namespace Raven.Server.ServerWide
             HasFixedPort = Configuration.Core.ServerUrls == null ||
                            Uri.TryCreate(Configuration.Core.ServerUrls[0], UriKind.Absolute, out var uri) == false ||
                            uri.Port != 0;
+
+            this.IndexWritesSynchronization = new StorageEnvironmentSynchronization(
+                Configuration.Indexing.JournalMaxConcurrentWrites,
+                Configuration.Indexing.JournalMaxConcurrentWritesSizeInMegabytes * Sparrow.Global.Constants.Size.Megabyte);
+
         }
 
         private void OnServerCertificateChanged(object sender, EventArgs e)

@@ -4,6 +4,7 @@ using System.Reflection;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Configuration;
+using Raven.Server.Indexing;
 using Raven.Server.ServerWide;
 using Sparrow;
 
@@ -221,6 +222,25 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.NuGetPackageSourceUrl", ConfigurationEntryScope.ServerWideOnly)]
         public string NuGetPackageSourceUrl { get; set; }
+
+        [Description("Synchronization mode for the indexes")]
+        [DefaultValue(IndexWriteSynchronizationMode.Database)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.JournalSynchronizationMode", ConfigurationEntryScope.ServerWideOnly)]
+        public IndexWriteSynchronizationMode JournalSynchronizationMode { get; set; }
+
+        [Description("Maximum allowed concurrent writes for the indexes")]
+        [DefaultValue(4)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.JournalMaxConcurrentWrites", ConfigurationEntryScope.ServerWideOnly)]
+        public int JournalMaxConcurrentWrites { get; set; }
+
+        [Description("Maximum size in Megabytes of the concurrent writes for the indexes")]
+        [DefaultValue(128)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.JournalMaxConcurrentWritesSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public int JournalMaxConcurrentWritesSizeInMegabytes { get; set; }        
+
 
         protected override void ValidateProperty(PropertyInfo property)
         {

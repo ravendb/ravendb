@@ -2,7 +2,6 @@
 using System.IO;
 using System.Reflection;
 using Raven.Server.Config;
-using Raven.Server.Documents;
 using Sparrow.Platform;
 using Voron;
 using Voron.Exceptions;
@@ -12,14 +11,14 @@ namespace Raven.Server.Storage.Layout
 {
     public static class StorageLoader
     {
-        public static StorageEnvironment OpenEnvironment(StorageEnvironmentOptions options, StorageEnvironmentWithType.StorageEnvironmentType type)
+        public static StorageEnvironment OpenEnvironment(StorageEnvironmentOptions options, StorageEnvironmentWithType.StorageEnvironmentType type, StorageEnvironmentSynchronization envWriteSync = null)
         {
             try
             {
                 if (options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions directoryOptions)
-                    return OpenEnvironmentWithPossibleLayoutUpdate(directoryOptions, type);
+                    return OpenEnvironmentWithPossibleLayoutUpdate(directoryOptions, type, envWriteSync);        
 
-                return new StorageEnvironment(options);
+                return new StorageEnvironment(options, envWriteSync);
             }
             catch (Exception)
             {
@@ -29,7 +28,7 @@ namespace Raven.Server.Storage.Layout
             }
         }
 
-        private static StorageEnvironment OpenEnvironmentWithPossibleLayoutUpdate(StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions options, StorageEnvironmentWithType.StorageEnvironmentType type)
+        private static StorageEnvironment OpenEnvironmentWithPossibleLayoutUpdate(StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions options, StorageEnvironmentWithType.StorageEnvironmentType type, StorageEnvironmentSynchronization envWriteSync)
         {
             try
             {
@@ -37,7 +36,7 @@ namespace Raven.Server.Storage.Layout
                 options.OwnsPagers = false;
                 try
                 {
-                    return new StorageEnvironment(options);
+                    return new StorageEnvironment(options, envWriteSync);
                 }
                 finally
                 {
@@ -99,7 +98,7 @@ namespace Raven.Server.Storage.Layout
                     }
                 }
 
-                return new StorageEnvironment(options);
+                return new StorageEnvironment(options, envWriteSync);
             }
         }
 
