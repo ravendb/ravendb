@@ -152,10 +152,10 @@ class indexFieldOptions {
         if (analyzerInDictionary) {
             // analyzer is one of our pre-defined analyzers
             analyzerNameForStudio = analyzerInDictionary.studioName;
-        } else if (analyzerNameInDto) {
+        } else if (dto.Analyzer) {
             // analyzer is a custom analyzer, add it to the names dictionary
-            this.analyzersNamesDictionary.push({ studioName: analyzerNameInDto, serverName: dto.Analyzer });
-            analyzerNameForStudio = analyzerNameInDto;
+            this.analyzersNamesDictionary.push({ studioName: dto.Analyzer, serverName: dto.Analyzer });
+            analyzerNameForStudio = dto.Analyzer;
         }
         
         this.analyzer(analyzerNameForStudio);
