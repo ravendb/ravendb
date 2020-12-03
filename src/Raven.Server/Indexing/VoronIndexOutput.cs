@@ -33,12 +33,17 @@ namespace Raven.Server.Indexing
             _name = name;
             _tree = tree;
             _tx = tx;
-            _fileTempPath = options.TempPath.Combine(name + "_" + Guid.NewGuid()).FullPath;
+            _fileTempPath = GetTempFilePath(options, name);
             _indexOutputFilesSummary = indexOutputFilesSummary;
 
             _file = InitFileStream(options);
 
             _tx.ReadTree(_tree).AddStream(name, Stream.Null); // ensure it's visible by LuceneVoronDirectory.FileExists, the actual write is inside Dispose
+        }
+
+        internal static string GetTempFilePath(StorageEnvironmentOptions options, string name)
+        {
+            return options.TempPath.Combine(name + "_" + Guid.NewGuid() + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension).FullPath;
         }
 
         private Stream InitFileStream(StorageEnvironmentOptions options)

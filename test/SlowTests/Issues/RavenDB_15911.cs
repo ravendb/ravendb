@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using FastTests.Voron;
+using Raven.Server.Indexing;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,20 +20,36 @@ namespace SlowTests.Issues
 
             var tempPath = Env.Options.TempPath.FullPath;
 
-            StopDatabase(shouldDisposeOptions: true);
+            string tempFile = Path.Combine(tempPath, $"dummy{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension}");
 
-            string filePath = Path.Combine(tempPath, "dummy.file");
-
-            using (File.Create(filePath))
+            using (File.Create(tempFile))
             {
 
             }
+
+            string buffersFile = Path.Combine(tempPath, $"dummy{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.BuffersFileExtension}");
+
+            using (File.Create(buffersFile))
+            {
+
+            }
+
+            string temIndexFile = VoronIndexOutput.GetTempFilePath(Options, "dummy");
+
+            using (File.Create(temIndexFile))
+            {
+
+            }
+
+            StopDatabase(shouldDisposeOptions: true);
 
             Options = StorageEnvironmentOptions.ForPath(DataDir);
 
             StartDatabase();
 
-            Assert.False(File.Exists(filePath));
+            Assert.False(File.Exists(tempFile));
+            Assert.False(File.Exists(buffersFile));
+            Assert.False(File.Exists(temIndexFile));
         }
     }
 }
