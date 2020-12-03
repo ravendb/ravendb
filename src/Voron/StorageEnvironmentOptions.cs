@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
@@ -362,6 +363,9 @@ namespace Voron
 
         public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
+            public const string TempFileExtension = ".tmp";
+            public const string BuffersFileExtension = ".buffers";
+
             private readonly VoronPathSetting _basePath;
 
             private readonly LazyWithExceptionRetry<AbstractPager> _dataPager;
@@ -700,7 +704,7 @@ namespace Voron
                 if (Directory.Exists(TempPath.FullPath) == false)
                     return;
 
-                foreach (var file in Directory.GetFiles(TempPath.FullPath))
+                foreach (var file in Directory.GetFiles(TempPath.FullPath).Where(x => x.EndsWith(BuffersFileExtension) || x.EndsWith(TempFileExtension)))
                 {
                     File.Delete(file);
                 }
@@ -1102,7 +1106,7 @@ namespace Voron
 
         public static string ScratchBufferName(long number)
         {
-            return string.Format("scratch.{0:D10}.buffers", number);
+            return string.Format($"scratch.{0:D10}{DirectoryStorageEnvironmentOptions.BuffersFileExtension}", number);
         }
 
         public void Dispose()

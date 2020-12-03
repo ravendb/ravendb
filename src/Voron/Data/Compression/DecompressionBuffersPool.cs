@@ -69,7 +69,7 @@ namespace Voron.Data.Compression
 
         private AbstractPager CreateDecompressionPager(long initialSize)
         {
-            var pager = _options.CreateTemporaryBufferPager($"decompression.{_decompressionPagerCounter++:D10}.buffers", initialSize);
+            var pager = _options.CreateTemporaryBufferPager($"decompression.{_decompressionPagerCounter++:D10}{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.BuffersFileExtension}", initialSize);
 
             _scratchSpaceMonitor.Increase(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
 

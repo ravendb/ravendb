@@ -32,7 +32,7 @@ namespace Voron.Impl.Journal
 
         private AbstractPager CreateBufferPager()
         {
-            return _options.CreateTemporaryBufferPager($"lazy-transactions.{_lazyPagerCounter++:D10}.buffers", _options.InitialFileSize ?? _options.InitialLogFileSize);
+            return _options.CreateTemporaryBufferPager($"lazy-transactions.{_lazyPagerCounter++:D10}{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.BuffersFileExtension}", _options.InitialFileSize ?? _options.InitialLogFileSize);
         }
 
         public void EnsureSize(int sizeInPages)
