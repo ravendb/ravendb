@@ -1502,7 +1502,17 @@ namespace Raven.Server.Documents.Queries.Parser
         private ValueExpression GetTimePeriodValueExpression(string functionName, string clause)
         {
             if (Value(out var timePeriod) == false)
-                ThrowParseException($"Could not parse '{clause}' argument for '{functionName}'");
+            {
+                string additionalInfo = null;
+                if (Scanner.Identifier())
+                {
+                    additionalInfo = $@" Expected to get time period value but got '{Scanner.Token.Value}'. 
+Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
+
+                }
+
+                ThrowParseException($"Could not parse '{clause}' argument for '{functionName}. {additionalInfo}'");
+            }
 
             if (timePeriod.Value == ValueTokenType.Long)
             {
