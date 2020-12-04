@@ -704,7 +704,7 @@ namespace Voron
                 if (Directory.Exists(TempPath.FullPath) == false)
                     return;
 
-                foreach (var file in Directory.GetFiles(TempPath.FullPath).Where(x => x.EndsWith(BuffersFileExtension) || x.EndsWith(TempFileExtension)))
+                foreach (var file in Directory.GetFiles(TempPath.FullPath).Where(x => x.EndsWith(BuffersFileExtension, StringComparison.OrdinalIgnoreCase) || x.EndsWith(TempFileExtension, StringComparison.OrdinalIgnoreCase)))
                 {
                     File.Delete(file);
                 }
@@ -1106,7 +1106,7 @@ namespace Voron
 
         public static string ScratchBufferName(long number)
         {
-            return string.Format($"scratch.{0:D10}{DirectoryStorageEnvironmentOptions.BuffersFileExtension}", number);
+            return $"scratch.{number:D10}{DirectoryStorageEnvironmentOptions.BuffersFileExtension}";
         }
 
         public void Dispose()
