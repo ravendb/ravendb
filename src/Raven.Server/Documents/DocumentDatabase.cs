@@ -176,8 +176,6 @@ namespace Raven.Server.Documents
                 _hasClusterTransaction = new AsyncManualResetEvent(DatabaseShutdown);
                 IdentityPartsSeparator = '/';
 
-                this.IndexWritesSynchronization = new StorageEnvironmentSynchronization();
-
                 switch (serverStore.Configuration.Indexing.JournalSynchronizationMode)
                 {
                     case IndexWriteSynchronizationMode.Server:
@@ -187,6 +185,9 @@ namespace Raven.Server.Documents
                         this.IndexWritesSynchronization = new StorageEnvironmentSynchronization(
                                   serverStore.Configuration.Indexing.JournalMaxConcurrentWrites,
                                   serverStore.Configuration.Indexing.JournalMaxConcurrentWritesSizeInMegabytes * Sparrow.Global.Constants.Size.Megabyte);
+                        break;
+                    default:
+                        this.IndexWritesSynchronization = new StorageEnvironmentSynchronization();
                         break;
                 }
             }

@@ -8,7 +8,7 @@ namespace Raven.Server.Indexing
 {
     public enum IndexWriteSynchronizationMode
     {
-        Immediate,
+        None,
         Database,
         Server
     }

@@ -223,7 +223,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.NuGetPackageSourceUrl", ConfigurationEntryScope.ServerWideOnly)]
         public string NuGetPackageSourceUrl { get; set; }
 
-        [Description("Synchronization mode for the indexes")]
+        [Description("Determine how RavenDB should coordinate expensive journal writes for indexes. This is used to reduce I/O contention with many indexes.")]
         [DefaultValue(IndexWriteSynchronizationMode.Database)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.JournalSynchronizationMode", ConfigurationEntryScope.ServerWideOnly)]

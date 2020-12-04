@@ -10,12 +10,12 @@ namespace Sparrow.Server.Meters
         {
             Compression,
             JournalWrite,
+            JournalDiskAccess,
             DataFlush,
             DataSync,
         }
 
-        private readonly ConcurrentDictionary<string, FileIoMetrics> _fileMetrics =
-            new ConcurrentDictionary<string, FileIoMetrics>();
+        private readonly ConcurrentDictionary<string, FileIoMetrics> _fileMetrics = new ConcurrentDictionary<string, FileIoMetrics>();
 
         private readonly ConcurrentQueue<string> _closedFiles = new ConcurrentQueue<string>();
 
@@ -64,6 +64,10 @@ namespace Sparrow.Server.Meters
                 case MeterType.JournalWrite:
                     buffer = fileIoMetrics.JournalWrite;
                     break;
+                
+                case MeterType.JournalDiskAccess:
+                    buffer = fileIoMetrics.JournalDiskAccess;
+                    break;
 
                 case MeterType.DataFlush:
                     buffer = fileIoMetrics.DataFlush;
@@ -89,6 +93,7 @@ namespace Sparrow.Server.Meters
         {
             public string FileName;
             public IoMeterBuffer JournalWrite;
+            public IoMeterBuffer JournalDiskAccess;
             public IoMeterBuffer Compression;
             public IoMeterBuffer DataFlush;
             public IoMeterBuffer DataSync;
@@ -101,6 +106,7 @@ namespace Sparrow.Server.Meters
 
                 Compression = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
                 JournalWrite = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
+                JournalDiskAccess = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
                 DataFlush = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
                 DataSync = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
             }
@@ -111,7 +117,8 @@ namespace Sparrow.Server.Meters
                 list.AddRange(Compression.GetCurrentItems());
                 list.AddRange(DataSync.GetCurrentItems());
                 list.AddRange(JournalWrite.GetCurrentItems());
-                list.AddRange(DataFlush.GetCurrentItems());
+                list.AddRange(JournalDiskAccess.GetCurrentItems());
+                list.AddRange(DataFlush.GetCurrentItems());                
 
                 list.Sort((x, y) => x.Start.CompareTo(y.Start));
 
@@ -125,6 +132,7 @@ namespace Sparrow.Server.Meters
                 list.AddRange(DataSync.GetSummerizedItems());
                 list.AddRange(DataFlush.GetSummerizedItems());
                 list.AddRange(JournalWrite.GetSummerizedItems());
+                list.AddRange(JournalDiskAccess.GetSummerizedItems());
 
                 list.Sort((x, y) => x.TotalTimeStart.CompareTo(y.TotalTimeStart));
 
