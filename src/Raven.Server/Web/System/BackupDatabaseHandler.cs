@@ -66,12 +66,9 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/periodic-backup/timer/all", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/admin/debug/periodic-backup/timers", "GET", AuthorizationStatus.Operator)]
         public async Task GetAllPeriodicBackupsTimers()
         {
-            if (TryGetAllowedDbs(dbName: null, out var dbs, requireAdmin: false) == false)
-                return;
-
             var first = true;
             var count = 0;
 
@@ -84,9 +81,6 @@ namespace Raven.Server.Web.System
                 foreach ((var name, Task<DocumentDatabase> task) in ServerStore.DatabasesLandlord.DatabasesCache)
                 {
                     if (task.Status != TaskStatus.RanToCompletion)
-                        continue;
-
-                    if (dbs != null && dbs.ContainsKey(name.Value) == false)
                         continue;
 
                     var database = await task;

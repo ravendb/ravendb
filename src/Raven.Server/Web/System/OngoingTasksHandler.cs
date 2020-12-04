@@ -389,7 +389,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/admin/periodic-backup/timer", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/admin/debug/periodic-backup/timers", "GET", AuthorizationStatus.DatabaseAdmin)]
         public Task GetPeriodicBackupTimer()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
