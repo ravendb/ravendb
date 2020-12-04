@@ -184,7 +184,8 @@ namespace Raven.Server.Documents
                     case IndexWriteSynchronizationMode.Database:
                         this.IndexWritesSynchronization = new StorageEnvironmentSynchronization(
                                   serverStore.Configuration.Indexing.JournalMaxConcurrentWrites,
-                                  serverStore.Configuration.Indexing.JournalMaxConcurrentWritesSizeInMegabytes * Sparrow.Global.Constants.Size.Megabyte);
+                                  serverStore.Configuration.Indexing.JournalMaxConcurrentWritesSizeInMegabytes * Sparrow.Global.Constants.Size.Megabyte,
+                                  _databaseShutdown.Token);
                         break;
                     default:
                         this.IndexWritesSynchronization = new StorageEnvironmentSynchronization();

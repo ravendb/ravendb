@@ -43,13 +43,16 @@ namespace Voron
     {
         public struct SynchronizationSection : IDisposable
         {
-            private readonly Semaphore _context;
+            private readonly SemaphoreSlim _context;
 
-            public SynchronizationSection(Semaphore context)
+            public SynchronizationSection(SemaphoreSlim context, CancellationToken cancellationToken)
             {
                 this._context = context;
                 if (this._context != null)
-                    this._context.WaitOne();
+                {
+                    this._context.Wait(cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+                }                    
             }
 
             void IDisposable.Dispose()
@@ -59,23 +62,25 @@ namespace Voron
             }
         }
 
-        private readonly Semaphore _writeSemaphore;
+        private readonly SemaphoreSlim _writeSemaphore;
         public readonly long MaxWriteSize;
+        private readonly CancellationToken _cancellationToken;
 
         public StorageEnvironmentSynchronization()
         {
             this.MaxWriteSize = int.MaxValue;
         }
 
-        public StorageEnvironmentSynchronization(int concurrentWrites, long maxWriteSize = long.MaxValue)
+        public StorageEnvironmentSynchronization(int concurrentWrites, long maxWriteSize = long.MaxValue, CancellationToken cancellationToken = default(CancellationToken))
         {
-            this._writeSemaphore = new Semaphore(concurrentWrites, concurrentWrites);
+            this._writeSemaphore = new SemaphoreSlim(concurrentWrites, concurrentWrites);
+            this._cancellationToken = cancellationToken;
             this.MaxWriteSize = maxWriteSize;
         }        
 
         public SynchronizationSection Enter()
         {
-            return new SynchronizationSection(_writeSemaphore);
+            return new SynchronizationSection(_writeSemaphore, _cancellationToken);
         }
     }
 

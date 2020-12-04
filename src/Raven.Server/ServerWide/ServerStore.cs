@@ -179,11 +179,12 @@ namespace Raven.Server.ServerWide
 
             HasFixedPort = Configuration.Core.ServerUrls == null ||
                            Uri.TryCreate(Configuration.Core.ServerUrls[0], UriKind.Absolute, out var uri) == false ||
-                           uri.Port != 0;
+                           uri.Port != 0;                       
 
             this.IndexWritesSynchronization = new StorageEnvironmentSynchronization(
                 Configuration.Indexing.JournalMaxConcurrentWrites,
-                Configuration.Indexing.JournalMaxConcurrentWritesSizeInMegabytes * Sparrow.Global.Constants.Size.Megabyte);
+                Configuration.Indexing.JournalMaxConcurrentWritesSizeInMegabytes * Sparrow.Global.Constants.Size.Megabyte,
+                ServerShutdown);
 
         }
 
