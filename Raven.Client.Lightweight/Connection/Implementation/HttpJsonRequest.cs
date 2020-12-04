@@ -572,7 +572,7 @@ namespace Raven.Client.Connection.Implementation
             using (var responseStream = await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
             {
                 var countingStream = new CountingStream(responseStream);
-                var data = RavenJToken.TryLoad(countingStream);
+                var data = await RavenJToken.TryLoadAsync(countingStream).ConfigureAwait(false);
                 Size = countingStream.NumberOfReadBytes;
 
                 if (Method == HttpMethods.Get && ShouldCacheRequest)
@@ -863,7 +863,7 @@ namespace Raven.Client.Connection.Implementation
                 CopyHeadersToHttpRequestMessage(rawRequestMessage);
 
                 Response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
-                
+
                 ResponseStatusCode = Response.StatusCode;
                 if (Response.IsSuccessStatusCode == false &&
                     (ResponseStatusCode == HttpStatusCode.PreconditionFailed ||
