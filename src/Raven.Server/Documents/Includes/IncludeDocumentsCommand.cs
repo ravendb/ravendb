@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Includes
 {
@@ -17,8 +20,6 @@ namespace Raven.Server.Documents.Includes
         private readonly bool _isProjection;
 
         private HashSet<string> _includedIds;
-
-        public HashSet<string> IncludedIds => _includedIds ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private HashSet<string> _idsToIgnore;
 
@@ -39,7 +40,10 @@ namespace Raven.Server.Documents.Includes
             if (ids == null)
                 return;
 
-            IncludedIds.UnionWith(ids);
+            if (_includedIds == null)
+                _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            _includedIds.UnionWith(ids);
         }
 
         public void Gather(Document document)
@@ -50,6 +54,8 @@ namespace Raven.Server.Documents.Includes
             if (_includes == null || _includes.Length == 0)
                 return;
 
+            if (_includedIds == null)
+                _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             AddToIgnore(document.Id);
 
@@ -57,10 +63,64 @@ namespace Raven.Server.Documents.Includes
             {
                 if (include == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 {
-                    IncludedIds.Add(document.Id);
+                    _includedIds.Add(document.Id);
                     continue;
                 }
-                IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), IncludedIds, _storage.DocumentDatabase.IdentityPartsSeparator);
+                IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), _includedIds, _storage.DocumentDatabase.IdentityPartsSeparator);
+            }
+        }
+
+        public void Gather(List<FacetResult> results)
+        {
+            if (results == null || results.Count == 0)
+                return;
+
+            if (_includes == null || _includes.Length == 0)
+                return;
+
+            if (_includedIds == null)
+                _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var include in _includes)
+            {
+                string path = null;
+                var match = results.FirstOrDefault(x => x.Name == include);
+                if (match == null)
+                {
+                    int firstDot = include.IndexOf('.');
+                    if (firstDot == -1)
+                        continue;
+                    string name = include.Substring(0, firstDot);
+                    match = results.FirstOrDefault(x => x.Name == name);
+                    if (match == null)
+                        continue;
+                    path = include.Substring(firstDot + 1);
+                }
+                foreach (FacetValue value in match.Values)
+                {
+                    if (path == null)
+                    {
+                        _includedIds.Add(value.Range);
+                    }
+                    else
+                    {
+                        BlittableJsonReaderObject json;
+                        try
+                        {
+                            json = _context.ReadForMemory(value.Range, "Facet/Object");
+                        }
+                        catch (Exception e)
+                        {
+                            // expected, we can ignore this
+                            continue;
+                        }
+
+                        using (json)
+                        {
+                            IncludeUtil.GetDocIdFromInclude(json, new StringSegment(path), _includedIds, _context.DocumentDatabase.IdentityPartsSeparator);
+                        }
+                    }
+                }
             }
         }
 
