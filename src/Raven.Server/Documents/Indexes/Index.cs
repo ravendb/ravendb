@@ -15,7 +15,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
@@ -248,15 +247,19 @@ namespace Raven.Server.Documents.Indexes
                 case IndexSourceType.None:
                     _itemType = "item";
                     break;
+
                 case IndexSourceType.Documents:
                     _itemType = "document";
                     break;
+
                 case IndexSourceType.TimeSeries:
                     _itemType = "time series item";
                     break;
+
                 case IndexSourceType.Counters:
                     _itemType = "counter";
                     break;
+
                 default:
                     throw new ArgumentException($"Unknown index source type: {sourceType}");
             }
@@ -374,33 +377,39 @@ namespace Raven.Server.Documents.Indexes
                                         case IndexType.Map:
                                         case IndexType.JavaScriptMap:
                                             return MapIndex.CreateNew(staticDef, documentDatabase);
+
                                         case IndexType.MapReduce:
                                         case IndexType.JavaScriptMapReduce:
                                             return MapReduceIndex.CreateNew<MapReduceIndex>(staticDef, documentDatabase);
                                     }
                                     break;
+
                                 case IndexSourceType.Counters:
                                     switch (staticDef.Type)
                                     {
                                         case IndexType.Map:
                                         case IndexType.JavaScriptMap:
                                             return MapCountersIndex.CreateNew(staticDef, documentDatabase);
+
                                         case IndexType.MapReduce:
                                         case IndexType.JavaScriptMapReduce:
                                             return MapReduceIndex.CreateNew<MapReduceCountersIndex>(staticDef, documentDatabase);
                                     }
                                     break;
+
                                 case IndexSourceType.TimeSeries:
                                     switch (staticDef.Type)
                                     {
                                         case IndexType.Map:
                                         case IndexType.JavaScriptMap:
                                             return MapTimeSeriesIndex.CreateNew(staticDef, documentDatabase);
+
                                         case IndexType.MapReduce:
                                         case IndexType.JavaScriptMapReduce:
                                             return MapReduceIndex.CreateNew<MapReduceTimeSeriesIndex>(staticDef, documentDatabase);
                                     }
                                     break;
+
                                 default:
                                     throw new ArgumentException($"Unknown index source type {staticDef.SourceType} for index {name}");
                             }
@@ -428,14 +437,18 @@ namespace Raven.Server.Documents.Indexes
                         {
                             case IndexType.AutoMap:
                                 return AutoMapIndex.Open(environment, documentDatabase);
+
                             case IndexType.AutoMapReduce:
                                 return AutoMapReduceIndex.Open(environment, documentDatabase);
+
                             case IndexType.Map:
                             case IndexType.JavaScriptMap:
                                 return MapIndex.Open(environment, documentDatabase);
+
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
                                 return MapReduceIndex.Open<MapReduceIndex>(environment, documentDatabase);
+
                             default:
                                 throw new ArgumentException($"Unknown index type {type} for index {name}");
                         }
@@ -445,9 +458,11 @@ namespace Raven.Server.Documents.Indexes
                             case IndexType.Map:
                             case IndexType.JavaScriptMap:
                                 return MapCountersIndex.Open(environment, documentDatabase);
+
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
                                 return MapReduceIndex.Open<MapReduceCountersIndex>(environment, documentDatabase);
+
                             default:
                                 throw new ArgumentException($"Unknown index type {type} for index {name}");
                         }
@@ -457,9 +472,11 @@ namespace Raven.Server.Documents.Indexes
                             case IndexType.Map:
                             case IndexType.JavaScriptMap:
                                 return MapTimeSeriesIndex.Open(environment, documentDatabase);
+
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
                                 return MapReduceIndex.Open<MapReduceTimeSeriesIndex>(environment, documentDatabase);
+
                             default:
                                 throw new ArgumentException($"Unknown index type {type} for index {name}");
                         }
@@ -1190,8 +1207,6 @@ namespace Raven.Server.Documents.Indexes
                                             LowMemoryOver();
 
                                         batchCompleted = true;
-
-                                        
                                     }
                                     catch
                                     {
@@ -1513,12 +1528,15 @@ namespace Raven.Server.Documents.Indexes
                 case IndexPriority.Low:
                     newPriority = ThreadPriority.Lowest;
                     break;
+
                 case IndexPriority.Normal:
                     newPriority = ThreadPriority.BelowNormal;
                     break;
+
                 case IndexPriority.High:
                     newPriority = ThreadPriority.Normal;
                     break;
+
                 default:
                     throw new NotSupportedException($"Unknown priority: {priority}");
             }
@@ -2939,7 +2957,6 @@ namespace Raven.Server.Documents.Indexes
 
                 while (true)
                 {
-
                     token.ThrowIfCancellationRequested();
 
                     AssertIndexState();
@@ -2982,57 +2999,23 @@ namespace Raven.Server.Documents.Indexes
                                 facetQuery.FacetsEtag, facetQuery.Query.Metadata,
                                 queryContext, indexContext);
 
-                            queryContext.CloseTransaction();
+                            if (facetQuery.Query.Metadata.HasIncludeOrLoad == false)
+                                queryContext.CloseTransaction();
 
                             using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
                             {
                                 result.Results = reader.FacetedQuery(facetQuery, queryContext.Documents, GetOrAddSpatialField, token.Token);
-                                result.TotalResults = result.Results.Count;
 
-                                if (query.Metadata.Includes?.Length > 0)
+                                if (facetQuery.Query.Metadata.HasIncludeOrLoad)
                                 {
-                                    var cmd = new IncludeDocumentsCommand(this.DocumentDatabase.DocumentsStorage, queryContext.Documents, query.Metadata.Includes, true);
-                                    foreach (string include in query.Metadata.Includes)
-                                    {
-                                        string path = null; 
-                                        var match = result.Results.FirstOrDefault(x=>x.Name == include);
-                                        if (match == null)
-                                        {
-                                            int firstDot = include.IndexOf('.');
-                                            if(firstDot == -1)
-                                                continue;
-                                            string name = include.Substring(0, firstDot);
-                                            match = result.Results.FirstOrDefault(x=>x.Name == name);
-                                            if(match == null) continue;
-                                            path = include.Substring(firstDot + 1);
-                                        }
-                                        foreach (FacetValue value in match.Values)
-                                        {
-                                            if (path == null)
-                                            {
-                                                cmd.IncludedIds.Add(value.Range);
-                                            }
-                                            else
-                                            {
-                                                BlittableJsonReaderObject obj;
-                                                try
-                                                {
-                                                    obj = queryContext.Documents.ReadForMemory(value.Range, "Facet/Object");
-                                                }
-                                                catch (Exception e)
-                                                {
-                                                    // expected, we can ignore this
-                                                    continue;
-                                                }
-                                                IncludeUtil.GetDocIdFromInclude(obj, new StringSegment(path), cmd.IncludedIds, DocumentDatabase.IdentityPartsSeparator);
-                                            }
-                                        }
-                                    }
+                                    var cmd = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, queryContext.Documents, query.Metadata.Includes, isProjection: true);
+                                    cmd.Gather(result.Results);
 
-                                    queryContext.Documents.OpenReadTransaction();
                                     cmd.Fill(result.Includes);
                                 }
-                                
+
+                                result.TotalResults = result.Results.Count;
+
                                 return result;
                             }
                         }
@@ -3680,11 +3663,13 @@ namespace Raven.Server.Documents.Indexes
                     case IndexType.JavaScriptMap:
                         _minBatchSize = MinMapBatchSize;
                         break;
+
                     case IndexType.MapReduce:
                     case IndexType.AutoMapReduce:
                     case IndexType.JavaScriptMapReduce:
                         _minBatchSize = MinMapReduceBatchSize;
                         break;
+
                     default:
                         throw new ArgumentException($"Unknown index type {Type}");
                 }
