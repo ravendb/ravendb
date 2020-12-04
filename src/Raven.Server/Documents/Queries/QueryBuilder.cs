@@ -43,11 +43,11 @@ namespace Raven.Server.Documents.Queries
         };
 
         public static Lucene.Net.Search.Query BuildQuery(TransactionOperationContext serverContext, DocumentsOperationContext context, QueryMetadata metadata, QueryExpression whereExpression,
-            Index index, BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories)
+            Index index, BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, List<string> buildSteps = null)
         {
             using (CultureHelper.EnsureInvariantCulture())
             {
-                var luceneQuery = ToLuceneQuery(serverContext, context, metadata.Query, whereExpression, metadata, index, parameters, analyzer, factories);
+                var luceneQuery = ToLuceneQuery(serverContext, context, metadata.Query, whereExpression, metadata, index, parameters, analyzer, factories, buildSteps: buildSteps);
 
                 // The parser already throws parse exception if there is a syntax error.
                 // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Queries
 
         private static Lucene.Net.Search.Query ToLuceneQuery(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query,
             QueryExpression expression, QueryMetadata metadata, Index index,
-            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null, bool secondary = false)
+            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null, bool secondary = false, List<string> buildSteps = null)
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
 
@@ -161,6 +161,8 @@ namespace Raven.Server.Documents.Queries
 
             if (expression is BinaryExpression where)
             {
+                buildSteps?.Add($"Where: {expression.Type} - {expression} (operator: {where.Operator})");
+
                 switch (where.Operator)
                 {
                     case OperatorType.Equal:
@@ -292,9 +294,9 @@ namespace Raven.Server.Documents.Queries
                             }
 
                             var left = ToLuceneQuery(serverContext, documentsContext, query, @where.Left, metadata, index, parameters, analyzer,
-                                factories, exact, secondary: secondary);
+                                factories, exact, secondary: secondary, buildSteps: buildSteps);
                             var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, index, parameters, analyzer,
-                                factories, exact, secondary: true);
+                                factories, exact, secondary: true, buildSteps: buildSteps);
 
                             if (left is RavenBooleanQuery rbq)
                             {
@@ -312,19 +314,27 @@ namespace Raven.Server.Documents.Queries
                     case OperatorType.Or:
                         {
                             var left = ToLuceneQuery(serverContext, documentsContext, query, @where.Left, metadata, index, parameters, analyzer,
-                                factories, exact, secondary: secondary);
+                                factories, exact, secondary: secondary, buildSteps: buildSteps);
                             var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, index, parameters, analyzer,
-                                factories, exact, secondary: true);
+                                factories, exact, secondary: true, buildSteps: buildSteps);
+
+                            buildSteps?.Add($"OR operator: left - {left.GetType().Name}, right - {right.GetType().Name}");
 
                             if (left is RavenBooleanQuery rbq)
                             {
                                 if (rbq.TryOr(right) == false)
+                                {
                                     rbq = new RavenBooleanQuery(left, right, OperatorType.Or);
+
+                                    buildSteps?.Add($"Created RavenBooleanQuery because TryOr returned false - {rbq}");
+                                }
                             }
                             else
                             {
                                 rbq = new RavenBooleanQuery(OperatorType.Or);
                                 rbq.Or(left, right);
+
+                                buildSteps?.Add($"Created RavenBooleanQuery - {rbq}");
                             }
 
                             return rbq;
@@ -333,6 +343,8 @@ namespace Raven.Server.Documents.Queries
             }
             if (expression is NegatedExpression ne)
             {
+                buildSteps?.Add($"Negated: {expression.Type} - {ne}");
+
                 // 'not foo and bar' should be parsed as:
                 // (not foo) and bar, instead of not (foo and bar)
                 if (ne.Expression is BinaryExpression nbe &&
@@ -342,11 +354,11 @@ namespace Raven.Server.Documents.Queries
                 {
                     var newExpr = new BinaryExpression(new NegatedExpression(nbe.Left),
                         nbe.Right, nbe.Operator);
-                    return ToLuceneQuery(serverContext, documentsContext, query, newExpr, metadata, index, parameters, analyzer, factories, exact);
+                    return ToLuceneQuery(serverContext, documentsContext, query, newExpr, metadata, index, parameters, analyzer, factories, exact, buildSteps: buildSteps);
                 }
 
                 var inner = ToLuceneQuery(serverContext, documentsContext, query, ne.Expression,
-                    metadata, index, parameters, analyzer, factories, exact, secondary: secondary);
+                    metadata, index, parameters, analyzer, factories, exact, secondary: secondary, buildSteps: buildSteps);
                 return new BooleanQuery
                 {
                     {inner,  Occur.MUST_NOT},
@@ -355,10 +367,14 @@ namespace Raven.Server.Documents.Queries
             }
             if (expression is BetweenExpression be)
             {
+                buildSteps?.Add($"Between: {expression.Type} - {be}");
+
                 return TranslateBetweenQuery(query, metadata, index, parameters, exact, be, secondary);
             }
             if (expression is InExpression ie)
             {
+                buildSteps?.Add($"In: {expression.Type} - {ie}");
+
                 var fieldName = ExtractIndexFieldName(query, parameters, ie.Source, metadata);
                 exact = IsExact(index, exact, fieldName);
                 var termType = LuceneTermType.Null;
@@ -399,12 +415,17 @@ namespace Raven.Server.Documents.Queries
             }
             if (expression is TrueExpression)
             {
+                buildSteps?.Add($"True: {expression.Type} - {expression}");
+
                 return new MatchAllDocsQuery();
             }
             if (expression is MethodExpression me)
             {
+
                 var methodName = me.Name.Value;
                 var methodType = QueryMethod.GetMethodType(methodName);
+
+                buildSteps?.Add($"Method: {expression.Type} - {me} - method: {methodType}, {methodName}");
 
                 switch (methodType)
                 {
@@ -415,7 +436,7 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Proximity:
                         return HandleProximity(serverContext, documentsContext, query, me, metadata, parameters, analyzer, factories, exact);
                     case MethodType.Boost:
-                        return HandleBoost(serverContext, documentsContext, query, me, metadata, parameters, analyzer, factories, exact);
+                        return HandleBoost(serverContext, documentsContext, query, me, metadata, parameters, analyzer, factories, exact, buildSteps);
                     case MethodType.Regex:
                         return HandleRegex(query, me, metadata, parameters, factories);
                     case MethodType.StartsWith:
@@ -794,7 +815,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static Lucene.Net.Search.Query HandleBoost(TransactionOperationContext serverContext, DocumentsOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
-            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact)
+            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact, List<string> buildSteps = null)
         {
             if (expression.Arguments.Count != 2)
             {
@@ -831,7 +852,7 @@ namespace Raven.Server.Documents.Queries
                         metadata.QueryText, parameters);
             }
 
-            var q = ToLuceneQuery(serverContext, context, query, expression.Arguments[0], metadata, index: null, parameters, analyzer, factories, exact);
+            var q = ToLuceneQuery(serverContext, context, query, expression.Arguments[0], metadata, index: null, parameters, analyzer, factories, exact, buildSteps: buildSteps);
             q.Boost = boost;
 
             return q;
