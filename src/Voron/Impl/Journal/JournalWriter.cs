@@ -69,38 +69,18 @@ namespace Voron.Impl.Journal
                 long iterations = numberOf4KbBlocks / _maxNumberOf4KbBlocks;
                 long leftovers = numberOf4KbBlocks % _maxNumberOf4KbBlocks;
 
+                IoMeterBuffer.DurationMeasurement writeMetrics;
+
                 byte* currentBufferPtr = buffer;
                 for (long i = 0; i < iterations; i++ )
                 {
+                    writeMetrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWait, _maxNumberOf4KbBlocks * 4L * Constants.Size.Kilobyte);
                     using (_writeSynchronization.Enter())
                     {
-                        using (var writeMetrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWrite, _maxNumberOf4KbBlocks * 4L * Constants.Size.Kilobyte))
-                        {
-                            var result = Pal.rvn_write_journal(_writeHandle, currentBufferPtr, _maxNumberOf4KbBlocks * 4L * Constants.Size.Kilobyte, posBy4Kb * 4L * Constants.Size.Kilobyte, out var error);
-                            if (result != PalFlags.FailCodes.Success)
-                                PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {numberOf4KbBlocks * 4L * Constants.Size.Kilobyte}, numberOf4Kb={numberOf4KbBlocks}");
+                        writeMetrics.SetFileSize(_maxNumberOf4KbBlocks * (4L * Constants.Size.Kilobyte));
+                        writeMetrics.Dispose();
 
-                            if (error == ERROR_WORKING_SET_QUOTA && _log.IsOperationsEnabled && _workingSetQuotaLogged == false)
-                            {
-                                _log.Operations(
-                                    $"We managed to accomplish journal write although we got {nameof(ERROR_WORKING_SET_QUOTA)} under the covers and wrote data in 4KB chunks");
-
-                                _workingSetQuotaLogged = true;
-                            }
-
-                            writeMetrics.SetFileSize(_maxNumberOf4KbBlocks * (4L * Constants.Size.Kilobyte));
-                        }
-                    }
-
-                    posBy4Kb += _maxNumberOf4KbBlocks;
-                    currentBufferPtr += _maxNumberOf4KbBlocks * (4L * Constants.Size.Kilobyte);
-                }
-
-                using (_writeSynchronization.Enter())
-                {
-                    using (var writeMetrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWrite, _maxNumberOf4KbBlocks * 4L * Constants.Size.Kilobyte))
-                    {
-                        var result = Pal.rvn_write_journal(_writeHandle, currentBufferPtr, leftovers * 4L * Constants.Size.Kilobyte, posBy4Kb * 4L * Constants.Size.Kilobyte, out var error);
+                        var result = Pal.rvn_write_journal(_writeHandle, currentBufferPtr, _maxNumberOf4KbBlocks * 4L * Constants.Size.Kilobyte, posBy4Kb * 4L * Constants.Size.Kilobyte, out var error);
                         if (result != PalFlags.FailCodes.Success)
                             PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {numberOf4KbBlocks * 4L * Constants.Size.Kilobyte}, numberOf4Kb={numberOf4KbBlocks}");
 
@@ -111,8 +91,29 @@ namespace Voron.Impl.Journal
 
                             _workingSetQuotaLogged = true;
                         }
-                        writeMetrics.SetFileSize(leftovers * (4L * Constants.Size.Kilobyte));
                     }
+
+                    posBy4Kb += _maxNumberOf4KbBlocks;
+                    currentBufferPtr += _maxNumberOf4KbBlocks * (4L * Constants.Size.Kilobyte);
+                }
+
+                writeMetrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWait, _maxNumberOf4KbBlocks * 4L * Constants.Size.Kilobyte);
+                using (_writeSynchronization.Enter())
+                {
+                    writeMetrics.SetFileSize(leftovers * (4L * Constants.Size.Kilobyte));
+                    writeMetrics.Dispose();
+
+                    var result = Pal.rvn_write_journal(_writeHandle, currentBufferPtr, leftovers * 4L * Constants.Size.Kilobyte, posBy4Kb * 4L * Constants.Size.Kilobyte, out var error);
+                    if (result != PalFlags.FailCodes.Success)
+                        PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {numberOf4KbBlocks * 4L * Constants.Size.Kilobyte}, numberOf4Kb={numberOf4KbBlocks}");
+
+                    if (error == ERROR_WORKING_SET_QUOTA && _log.IsOperationsEnabled && _workingSetQuotaLogged == false)
+                    {
+                        _log.Operations(
+                            $"We managed to accomplish journal write although we got {nameof(ERROR_WORKING_SET_QUOTA)} under the covers and wrote data in 4KB chunks");
+
+                        _workingSetQuotaLogged = true;
+                    }                    
                 }
 
                 sp.Stop();
