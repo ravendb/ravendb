@@ -41,11 +41,7 @@ namespace Raven.Client.Document
             this.changes = changes;
             currentChunkSize = 0;
             RemoteBulkInsertOperationSwitches = 0;
-            using (NoSynchronizationContext.Scope())
-            {
-                var currentAsync = GetBulkInsertOperation().ConfigureAwait(false);
-                current= currentAsync.GetAwaiter().GetResult();
-            }
+            current = CreateBulkInsertOperation(cachedPreviousEmptyTask);
         }
 
         public Guid OperationId
