@@ -31,7 +31,6 @@ using System.Text;
 
 namespace Raven.Client.Document
 {
-
     public interface ILowLevelBulkInsertOperation : IDisposable
     {
         Guid OperationId { get; }
@@ -65,6 +64,7 @@ namespace Raven.Client.Document
         private static readonly RavenJObject SkipMarker = new RavenJObject();
         private HttpJsonRequest operationRequest;
         private readonly Task operationTask;
+        private readonly Task completedTask = Task.FromResult(0);
         private bool aborted;
         private bool waitedForPreviousTask;
         private readonly Stopwatch _timing = Stopwatch.StartNew();
@@ -134,11 +134,11 @@ namespace Raven.Client.Document
                 using (operationRequest = CreateOperationRequest(operationUrl, token))
                 {
                     var cancellationToken = CreateCancellationToken();
-                    response = await operationRequest.ExecuteRawRequestAsync((stream, source) => Task.Factory.StartNew(() =>
+                    response = await operationRequest.ExecuteRawRequestAsync((stream, source) => Task.Run(async () =>
                     {
                         try
                         {
-                            WriteQueueToServer(stream, options, cancellationToken);
+                            await WriteQueueToServer(stream, options, cancellationToken).ConfigureAwait(false);
                             source.TrySetResult(null);
                         }
                         catch (Exception e)
@@ -154,7 +154,7 @@ namespace Raven.Client.Document
                         {
                             queue.CompleteAdding();
                         }
-                    }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default)).ConfigureAwait(false);
+                    }, CancellationToken.None)).ConfigureAwait(false);
 
                     await response.AssertNotFailingResponse().ConfigureAwait(false);
 
@@ -244,7 +244,7 @@ namespace Raven.Client.Document
             return requestUrl.ToString();
         }
 
-        private void WriteQueueToServer(Stream stream, BulkInsertOptions options, CancellationToken cancellationToken)
+        private Task WriteQueueToServer(Stream stream, BulkInsertOptions options, CancellationToken cancellationToken)
         {
             while (true)
             {
@@ -259,8 +259,7 @@ namespace Raven.Client.Document
 
                     if (document == null) // marker
                     {
-                        FlushBatch(stream, batch);
-                        return;
+                        return FlushBatch(stream, batch);
                     }
                     if (ReferenceEquals(SkipMarker, document)) // ignore this, just filling the queue
                     {
@@ -268,7 +267,7 @@ namespace Raven.Client.Document
                     }
                     if (ReferenceEquals(AbortMarker, document)) // abort immediately
                     {
-                        return;
+                        return completedTask;
                     }
 
                     batch.Add(document);
@@ -281,7 +280,7 @@ namespace Raven.Client.Document
                         break;
                 }
 
-                FlushBatch(stream, batch);
+                return FlushBatch(stream, batch);
             }
         }
 
@@ -513,7 +512,7 @@ namespace Raven.Client.Document
             }
         }
 
-        private void FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)
+        private async Task FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)
         {
             if (localBatch.Count == 0)
                 return;
@@ -521,7 +520,7 @@ namespace Raven.Client.Document
 
             if (previousTask != null && waitedForPreviousTask == false)
             {
-                Total += previousTask.ConfigureAwait(false).GetAwaiter().GetResult();
+                Total += await previousTask.ConfigureAwait(false);
                 waitedForPreviousTask = true;
             }
 
@@ -533,7 +532,7 @@ namespace Raven.Client.Document
             var requestBinaryWriter = new BinaryWriter(requestStream);
             requestBinaryWriter.Write((int)bufferedStream.Position);
             bufferedStream.WriteTo(requestStream);
-            requestStream.Flush();
+            await requestStream.FlushAsync().ConfigureAwait(false);
 
             Total += localBatch.Count;
             localCount += localBatch.Count;
