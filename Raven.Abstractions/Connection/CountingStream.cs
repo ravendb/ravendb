@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Raven.Abstractions.Connection
 {
@@ -13,12 +15,12 @@ namespace Raven.Abstractions.Connection
         private readonly Stream inner;
         private readonly Action<long> updateNumberOfWrittenBytes;
         private long numberOfWrittenBytes, numberOfReadBytes;
-        
+
         private long position;
 
         public CountingStream(Stream inner) : this(inner, l => { })
         {
-            
+
         }
 
         public CountingStream(Stream inner, Action<long> updateNumberOfWrittenBytes)
@@ -72,6 +74,20 @@ namespace Raven.Abstractions.Connection
             return read;
         }
 
+        /// <summary>Asynchronously reads a sequence of bytes from the current stream, advances the position within the stream by the number of bytes read, and monitors cancellation requests.</summary>
+        /// <param name="buffer">The buffer to write the data into.</param>
+        /// <param name="offset">The byte offset in <paramref name="buffer" /> at which to begin writing data from the stream.</param>
+        /// <param name="count">The maximum number of bytes to read.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="P:System.Threading.CancellationToken.None" />.</param>
+        /// <returns>A task that represents the asynchronous read operation. The value of the <paramref name="TResult" /> parameter contains the total number of bytes read into the buffer. The result value can be less than the number of bytes requested if the number of bytes currently available is less than the requested number, or it can be 0 (zero) if the end of the stream has been reached.</returns>
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            var read = await inner.ReadAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
+            position += read;
+            numberOfReadBytes += read;
+            return read;
+        }
+
         /// <summary>
         /// When overridden in a derived class, writes a sequence of bytes to the current stream and advances the current position within this stream by the number of bytes written.
         /// </summary>
@@ -80,6 +96,19 @@ namespace Raven.Abstractions.Connection
         {
             numberOfWrittenBytes += count;
             inner.Write(buffer, offset, count);
+            updateNumberOfWrittenBytes(numberOfWrittenBytes);
+        }
+
+        /// <summary>Asynchronously writes a sequence of bytes to the current stream, advances the current position within this stream by the number of bytes written, and monitors cancellation requests.</summary>
+        /// <param name="buffer">The buffer to write data from.</param>
+        /// <param name="offset">The zero-based byte offset in <paramref name="buffer" /> from which to begin copying bytes to the stream.</param>
+        /// <param name="count">The maximum number of bytes to write.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="P:System.Threading.CancellationToken.None" />.</param>
+        /// <returns>A task that represents the asynchronous write operation.</returns>
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            numberOfWrittenBytes += count;
+            await inner.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
             updateNumberOfWrittenBytes(numberOfWrittenBytes);
         }
 
