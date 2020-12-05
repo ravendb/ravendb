@@ -116,7 +116,13 @@ namespace Raven.Server.Documents
                 if (configuration.Initialized == false)
                     throw new InvalidOperationException("Cannot create a new document database instance without initialized configuration");
 
-                TryAcquireWriteLock();
+                if (Configuration.Core.RunInMemory == false)
+                {
+                    _addToInitLog("Creating db.lock file");
+                    _fileLocker = new FileLocker(Configuration.Core.DataDirectory.Combine("db.lock").FullPath);
+                    _fileLocker.TryAcquireWriteLock(_logger);
+                }
+
 
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
@@ -187,7 +193,6 @@ namespace Raven.Server.Documents
         public readonly SystemTime Time = new SystemTime();
 
         public ScriptRunnerCache Scripts;
-        private FileStream _writeLockFile;
         private string _lockFile;
         public readonly TransactionOperationsMerger TxMerger;
 
@@ -381,35 +386,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void TryAcquireWriteLock()
-        {
-            if (Configuration.Core.RunInMemory)
-                return; // no lock required;
-
-            _addToInitLog("Creating db.lock file");
-
-            _lockFile = Configuration.Core.DataDirectory.Combine("db.lock").FullPath;
-
-            try
-            {
-                if (Directory.Exists(Configuration.Core.DataDirectory.FullPath) == false)
-                    Directory.CreateDirectory(Configuration.Core.DataDirectory.FullPath);
-
-                _writeLockFile = new FileStream(_lockFile, FileMode.Create,
-                    FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
-                _writeLockFile.SetLength(1);
-                _writeLockFile.Lock(0, 1);
-            }
-            catch (PlatformNotSupportedException)
-            {
-                // locking part of the file isn't supported on macOS
-                // new FileStream will lock the file on this platform
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Cannot open database because RavenDB was unable create file lock on: " + _lockFile, e);
-            }
-        }
+      
 
         public IDisposable PreventFromUnloading()
         {
@@ -453,6 +430,7 @@ namespace Raven.Server.Documents
         public bool IsEncrypted => MasterKey != null;
 
         private int _clusterTransactionDelayOnFailure = 1000;
+        private FileLocker _fileLocker;
 
         private async Task ExecuteClusterTransactionTask()
         {
@@ -787,31 +765,7 @@ namespace Raven.Server.Documents
                 }
             });
 
-            exceptionAggregator.Execute(() =>
-            {
-                if (_writeLockFile != null)
-                {
-                    try
-                    {
-                        _writeLockFile.Unlock(0, 1);
-                    }
-                    catch (PlatformNotSupportedException)
-                    {
-                        // Unlock isn't supported on macOS
-                    }
-
-                    _writeLockFile.Dispose();
-
-                    try
-                    {
-                        if (File.Exists(_lockFile))
-                            File.Delete(_lockFile);
-                    }
-                    catch (IOException)
-                    {
-                    }
-                }
-            });
+            exceptionAggregator.Execute(() => _fileLocker.Dispose());
 
             exceptionAggregator.Execute(RachisLogIndexNotifications);
 
