@@ -736,7 +736,7 @@ namespace Raven.Server.ServerWide
         {
             if (PlatformDetails.RunningOnLinux)
             {
-                if (PlatformDetails.RunningOnDocker) 
+                if (PlatformDetails.RunningOnDocker)
                     return;
 
                 var swapSize = MemoryInformation.GetMemoryInfo().TotalSwapSize;
@@ -749,10 +749,10 @@ namespace Raven.Server.ServerWide
                 return;
             }
 
-            if(PlatformDetails.RunningOnPosix == false)
+            if (PlatformDetails.RunningOnPosix == false)
             {
                 var memoryInfo = MemoryInformation.GetMemoryInfo();
-                if(memoryInfo.TotalCommittableMemory - memoryInfo.TotalPhysicalMemory <= Sparrow.Size.Zero)
+                if (memoryInfo.TotalCommittableMemory - memoryInfo.TotalPhysicalMemory <= Sparrow.Size.Zero)
                     NotificationCenter.Add(AlertRaised.Create(null,
                         "No PageFile available",
                         "Your system has no PageFile. It is recommended to have a PageFile in order for Server to work properly",
@@ -2194,51 +2194,21 @@ namespace Raven.Server.ServerWide
 
                     var maxTimeDatabaseCanBeIdle = Configuration.Databases.MaxIdleTime.AsTimeSpan;
 
-                    var databasesToCleanup = DatabasesLandlord.LastRecentlyUsed.ForceEnumerateInThreadSafeManner()
-                        .Where(x => SystemTime.UtcNow - x.Value > maxTimeDatabaseCanBeIdle)
-                        .Select(x => x.Key)
-                        .ToArray();
-
-                    foreach (var db in databasesToCleanup)
+                    foreach (var databaseKvp in DatabasesLandlord.LastRecentlyUsed.ForceEnumerateInThreadSafeManner())
                     {
-                        if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out Task<DocumentDatabase> resourceTask) == false ||
-                            resourceTask == null ||
-                            resourceTask.Status != TaskStatus.RanToCompletion)
-                        {
-                            continue;
-                        }
-
-                        var idleDbInstance = resourceTask.Result;
-
-                        // intentionally inside the loop, so we get better concurrency overall
-                        // since shutting down a database can take a while
-                        if (idleDbInstance.Configuration.Core.RunInMemory)
-                            continue;
-
-                        if (idleDbInstance.CanUnload == false)
-                            continue;
-
-                        if (SystemTime.UtcNow - DatabasesLandlord.LastWork(idleDbInstance) < maxTimeDatabaseCanBeIdle)
-                            continue;
-
-                        if (idleDbInstance.Changes.Connections.Values.Any(x => x.IsDisposed == false && x.IsChangesConnectionOriginatedFromStudio == false))
-                            continue;
-
-                        if (idleDbInstance.Operations.HasActive)
+                        if (CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, maxTimeDatabaseCanBeIdle, statistics: null, out DocumentDatabase database) == false)
                             continue;
 
                         var dbIdEtagDictionary = new Dictionary<string, long>();
-                        using (idleDbInstance.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+                        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                         using (documentsContext.OpenReadTransaction())
                         {
                             foreach (var kvp in DocumentsStorage.GetAllReplicatedEtags(documentsContext))
-                            {
                                 dbIdEtagDictionary[kvp.Key] = kvp.Value;
-                            }
                         }
 
-                        if (DatabasesLandlord.UnloadDirectly(db, idleDbInstance.PeriodicBackupRunner.GetWakeDatabaseTimeUtc(idleDbInstance.Name)))
-                            IdleDatabases[idleDbInstance.Name] = dbIdEtagDictionary;
+                        if (DatabasesLandlord.UnloadDirectly(databaseKvp.Key, database.PeriodicBackupRunner.GetWakeDatabaseTimeUtc(database.Name)))
+                            IdleDatabases[database.Name] = dbIdEtagDictionary;
                     }
                 }
                 catch (Exception e)
@@ -2262,6 +2232,122 @@ namespace Raven.Server.ServerWide
                 {
                 }
             }
+        }
+
+        public bool CanUnloadDatabase(StringSegment databaseName, DateTime lastRecentlyUsed, TimeSpan maxTimeDatabaseCanBeIdle, DatabasesDebugHandler.IdleDatabaseStatistics statistics, out DocumentDatabase database)
+        {
+            database = null;
+            var now = SystemTime.UtcNow;
+
+            if (statistics != null)
+                statistics.LastRecentlyUsed = lastRecentlyUsed;
+
+            var diff = now - lastRecentlyUsed;
+
+            if (diff <= maxTimeDatabaseCanBeIdle)
+            {
+                if (statistics == null)
+                    return false;
+                else
+                {
+                    statistics.Explanations.Add($"Cannot unload database because the difference ({diff}) between now ({now}) and last recently used ({lastRecentlyUsed}) is lower or equal to max idle time ({maxTimeDatabaseCanBeIdle}).");
+                }
+            }
+
+            if (DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> resourceTask) == false
+                || resourceTask == null
+                || resourceTask.Status != TaskStatus.RanToCompletion)
+            {
+                if (statistics != null)
+                {
+                    statistics.IsLoaded = false;
+                    statistics.Explanations.Add("Cannot unload database because it is not loaded yet.");
+                }
+
+                return false;
+            }
+
+            database = resourceTask.Result;
+
+            if (statistics != null)
+                statistics.IsLoaded = true;
+
+            // intentionally inside the loop, so we get better concurrency overall
+            // since shutting down a database can take a while
+            if (database.Configuration.Core.RunInMemory)
+            {
+                if (statistics != null)
+                {
+                    statistics.RunInMemory = true;
+                    statistics.Explanations.Add("Cannot unload database because it is running in memory.");
+                }
+
+                return false;
+            }
+
+            var canUnload = database.CanUnload;
+
+            if (statistics != null)
+                statistics.CanUnload = canUnload;
+
+            if (canUnload == false)
+            {
+                if (statistics == null)
+                    return false;
+                else
+                {
+                    statistics.Explanations.Add("Cannot unload database because it explicitly cannot be unloaded.");
+                }
+            }
+
+            var lastWork = DatabasesLandlord.LastWork(database);
+            if (statistics != null)
+                statistics.LastWork = lastWork;
+
+            diff = now - lastWork;
+
+            if (diff <= maxTimeDatabaseCanBeIdle)
+            {
+                if (statistics == null)
+                    return false;
+                else
+                {
+                    statistics.Explanations.Add($"Cannot unload database because the difference ({diff}) between now ({now}) and last work time ({lastWork}) is lower or equal to max idle time ({maxTimeDatabaseCanBeIdle}).");
+                }
+            }
+
+            var numberOfChangesApiConnections = database.Changes.Connections.Values.Count(x => x.IsDisposed == false && x.IsChangesConnectionOriginatedFromStudio == false);
+            if (statistics != null)
+                statistics.NumberOfChangesApiConnections = numberOfChangesApiConnections;
+
+            if (numberOfChangesApiConnections > 0)
+            {
+                if (statistics == null)
+                    return false;
+                else
+                {
+                    statistics.Explanations.Add($"Cannot unload database because number of Changes API connections ({numberOfChangesApiConnections}) is greater than 0");
+                }
+            }
+
+            var hasActiveOperations = database.Operations.HasActive;
+            if (statistics != null)
+                statistics.HasActiveOperations = hasActiveOperations;
+
+            if (hasActiveOperations)
+            {
+                if (statistics == null)
+                    return false;
+                else
+                {
+                    statistics.Explanations.Add("Cannot unload database because it has active operations");
+                }
+            }
+
+            if (statistics != null)
+                return statistics.Explanations.Count == 0;
+
+            return true;
         }
 
         private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database)
