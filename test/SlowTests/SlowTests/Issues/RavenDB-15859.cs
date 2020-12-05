@@ -53,13 +53,14 @@ namespace SlowTests.SlowTests.Issues
                     .WhereIn(x => x.StringProp, filter.Take(129).ToArray()) // this doesn't
                     .ToListAsync();
             }
-
         }
-
 
         private class TestItem
         {
-            public string Id, StringProp;
+#pragma warning disable 649
+            public string Id;
+#pragma warning restore 649
+            public string StringProp;
             public bool BoolProp;
         }
 
@@ -68,12 +69,12 @@ namespace SlowTests.SlowTests.Issues
             public TestIndex()
             {
                 Map = docs => from doc in docs
-                    select new
-                    {
-                        Id = doc.Id,
-                        doc.StringProp,
-                        doc.BoolProp
-                    };
+                              select new
+                              {
+                                  Id = doc.Id,
+                                  doc.StringProp,
+                                  doc.BoolProp
+                              };
             }
         }
     }

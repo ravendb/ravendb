@@ -500,7 +500,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
                 var backupLocation = Directory.GetDirectories(backupPath).First();
-                
+
                 using (ReadOnly(backupLocation))
                 using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
@@ -700,7 +700,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
                 Assert.Contains("The name 'abc*^&.' is not permitted. Only letters, digits and characters ('_', '-', '.') are allowed.", e.InnerException.Message);
-                
+
                 restoreConfiguration.DatabaseName = store.Database;
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
@@ -751,11 +751,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // perform restore with a valid db name
                 var emptyFolder = NewDataPath(suffix: "BackupFolderRestore123");
                 var validDbName = "日本語-שלום-cześć_Привет.123";
-                
+
                 using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(), 
-                    DataDirectory = emptyFolder, 
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DataDirectory = emptyFolder,
                     DatabaseName = validDbName
                 }))
                 {
@@ -1536,18 +1536,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
                 var backupTaskId = (await src.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                
+
                 using (var session = src.OpenAsyncSession())
                 {
                     await session.StoreAsync(userForFullBackup);
                     await session.StoreAsync(userForIncrementalBackup);
                     await session.SaveChangesAsync();
-                    
+
                     session.Advanced.Revisions.ForceRevisionCreationFor(userForFullBackup.Id);
                     await session.SaveChangesAsync();
                 }
                 await BackupAndAssertWait(src, backupTaskId, true);
-                
+
                 using (var session = src.OpenAsyncSession())
                 {
                     session.Advanced.Revisions.ForceRevisionCreationFor(userForIncrementalBackup.Id);
@@ -1575,16 +1575,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        async Task BackupAndAssertWait(IDocumentStore store, long backupTaskId, bool isFullBackup)
+        private async Task BackupAndAssertWait(IDocumentStore store, long backupTaskId, bool isFullBackup)
         {
             await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, backupTaskId));
             var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
             var databaseLastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDatabaseEtag;
-            var backupLastEtag = await WaitForValueAsync(async () => store.Maintenance.Send(operation).Status.LastEtag, databaseLastEtag);
+            var backupLastEtag = await WaitForValueAsync(async () => (await store.Maintenance.SendAsync(operation)).Status.LastEtag, databaseLastEtag);
             Assert.Equal(databaseLastEtag, backupLastEtag);
         }
-        
-        private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
+
+        private void RunBackup(long taskId, DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
         {
             var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
             var op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
