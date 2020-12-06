@@ -468,6 +468,76 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
+        public async Task ShouldNotInterruptReplicationBatchWhenThereAreMissingAttachments()
+        {
+            var co = new ServerCreationOptions
+            {
+                RunInMemory = false,
+                CustomSettings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Replication.MaxSizeToSend)] = 8.ToString()
+                },
+                RegisterForDisposal = false
+            };
+            using (var server = GetNewServer(co))
+            using (var source = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
+            using (var destination = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
+            {
+                const string documentId1 = "users/1-A";
+                const string attachmentName1 = "foo.png";
+                const string attachmentName2 = "foo.big";
+                const string contentType = "image/png";
+                using (var session = source.OpenAsyncSession())
+                using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    await session.StoreAsync(new User { Name = "Foo" }, documentId1);
+                    session.Advanced.Attachments.Store(documentId1, attachmentName1, stream, contentType);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = source.OpenAsyncSession())
+                using (var stream = new BigDummyStream(8 * 1024 * 1024)) // 8mb
+                {
+                    await session.StoreAsync(new User { Name = "Foo2" }, documentId1);
+                    session.Advanced.Attachments.Store(documentId1, attachmentName2, stream, contentType);
+                    await session.SaveChangesAsync();
+                }
+
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(source.Database);
+                var documentsStorage = database.DocumentsStorage;
+                using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var attachmentStorage = documentsStorage.AttachmentsStorage;
+                    var attachment = attachmentStorage.GetAttachment(context, documentId1, attachmentName1, AttachmentType.Document, null);
+                    using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        attachmentStorage.PutAttachment(context, documentId1, attachmentName1, contentType, attachment.Base64Hash.ToString(), null, stream, updateDocument: false);
+                    }
+                    tx.Commit();
+                }
+                await SetupReplicationAsync(source, destination);
+                Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, documentId1, attachmentName1, Debugger.IsAttached ? 60_000 : 15_000));
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(documentId1);
+                    Assert.Equal(user.Name, "Foo2");
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(2, attachments.Length);
+                    Assert.NotNull(attachments[0]);
+                    Assert.Equal("oQblnWsNxEG8d+ktN1Kz444Kuc2+Yd3O94mJSHtDD5o=", attachments[0].Hash);
+                    Assert.Equal(attachmentName2, attachments[0].Name);
+                    Assert.Equal(contentType, attachments[0].ContentType);
+                    Assert.NotNull(attachments[1]);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[1].Hash);
+                    Assert.Equal(attachmentName1, attachments[1].Name);
+                    Assert.Equal(contentType, attachments[1].ContentType);
+                }
+            }
+        }
+
+        [Fact]
         public async Task ShouldNotThrowNREWhenCheckingForMissingAttachments()
         {
             var documentId1 = "users/1";
