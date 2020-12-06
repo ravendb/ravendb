@@ -44,9 +44,6 @@ namespace Raven.Server.Documents.Queries
                 metadata.LastQueriedAt = DateTime.UtcNow;
             }
             return shouldUseCachedItem;
-
-
-            
         }
 
         public void MaybeAddToCache(QueryMetadata metadata, string indexName)

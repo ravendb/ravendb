@@ -15,6 +15,8 @@
     "knockout": "github:DefinitelyTyped/DefinitelyTyped/knockout/index.d.ts#4aae472c0f2e30161cf772f5e750d51932fa8e6c",
     "knockout-postbox": "github:DefinitelyTyped/DefinitelyTyped/knockout.postbox/knockout-postbox.d.ts#56295f5058cac7ae458540423c50ac2dcf9fc711",
     "knockout.validation": "github:DefinitelyTyped/DefinitelyTyped/knockout.validation/knockout.validation.d.ts#9bd707e9aac92e88a12872cb69e4118128de460e",
+    "leaflet": "registry:dt/leaflet#1.0.0+20170324151803",
+    "leaflet-markercluster": "registry:dt/leaflet-markercluster#1.0.0+20170324151803",
     "lodash": "github:DefinitelyTyped/DefinitelyTyped/lodash/lodash.d.ts#56a4356292163a8dd087810b820e511346882255",
     "mocha": "github:DefinitelyTyped/DefinitelyTyped/mocha/mocha.d.ts#a361a8ab3c327f208d3f82ad206971d4a63d8c25",
     "moment": "github:DefinitelyTyped/DefinitelyTyped/moment/moment.d.ts#56295f5058cac7ae458540423c50ac2dcf9fc711",

@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Indexes.Spatial
         public double MaxY { get; set; }
 
         /// <summary>
-        /// Circle radius units, only used for geography  indexes
+        /// Circle radius units, only used for geography indexes
         /// </summary>
         public SpatialUnits Units { get; set; }
 
@@ -197,5 +197,21 @@ namespace Raven.Client.Documents.Indexes.Spatial
     {
         Kilometers,
         Miles
+    }
+    
+    public class SpatialProperty
+    {
+        public string LatitudeProperty;
+        public string LongitudeProperty;
+
+        public SpatialProperty()
+        {
+        }
+
+        public SpatialProperty(string latitudePropertyPath, string longitudePropertyPath)
+        {
+            LatitudeProperty = latitudePropertyPath;
+            LongitudeProperty = longitudePropertyPath;
+        }
     }
 }

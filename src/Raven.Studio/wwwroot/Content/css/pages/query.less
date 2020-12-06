@@ -52,6 +52,59 @@
 }
 
 #queryContainer {
+
+    #spatialMap {
+        
+        #mapid {
+            height: 100%;
+            width: 100%;
+        }
+
+        .custom-popup .leaflet-popup-content-wrapper {
+            background: @spatial-popup-background;
+            color: @spatial-popup-title;
+            font-size: 14px;
+            line-height: 22px;
+            overflow-wrap: break-word;
+            width: 600px;
+
+            .leaflet-popup-scrolled {
+                overflow-y: hidden;
+            }
+            
+            hr {
+                background-color: fade(@spatial-popup-title, 20%);
+                height: 1px;
+            }
+            
+            pre {
+                max-height: 350px;
+                white-space: pre-wrap;
+                overflow-y: auto;
+            }
+
+            .leaflet-popup-scrolled {
+                border-bottom: none;
+                border-top: none;
+            }
+        }
+
+        .custom-popup .leaflet-popup-tip-container {
+            width: 30px;
+            height: 15px;
+
+            .leaflet-popup-tip {
+                background: @spatial-popup-background;
+            }
+        }
+
+        .leaflet-popup-close-button {
+            color: @brand-danger;
+            padding-top: 15px;
+            padding-right: 30px;
+        }
+    }
+
     .virtual-grid {
         .cell {
             &.action-cell {
