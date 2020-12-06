@@ -101,6 +101,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         public IDisposable SetDocument(LazyStringValue key, object document, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer, out bool shouldSkip)
         {
             Document.GetFields().Clear();
+            
+            CurrentIndexingScope.Current.CreatedFieldsCount = 0;
 
             int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, document, indexContext, writeBuffer);
             if (_fields.Count > 0)
@@ -306,11 +308,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     if (CanCreateFieldsForNestedArray(itemToIndex, field.Indexing) == false)
                         continue;
 
-                    _multipleItemsSameFieldCount.Add(count++);
-
+                    using var i = NestedField(count++);
+                    
                     newFields += GetRegularFields(instance, field, itemToIndex, indexContext, out _, nestedArray: true);
 
-                    _multipleItemsSameFieldCount.RemoveAt(_multipleItemsSameFieldCount.Count - 1);
                 }
 
                 return newFields;
@@ -418,6 +419,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
 
             return newFields;
+        }
+
+        public ReduceMultipleValuesScope NestedField(int v)
+        {
+            _multipleItemsSameFieldCount.Add(v);
+            return new ReduceMultipleValuesScope(this);
+        }
+
+        public struct ReduceMultipleValuesScope : IDisposable
+        {
+            LuceneDocumentConverterBase _parent;
+
+            public ReduceMultipleValuesScope(LuceneDocumentConverterBase parent)
+            {
+                _parent = parent;
+            }
+
+            public void Dispose()
+            {
+                _parent._multipleItemsSameFieldCount.RemoveAt(_parent._multipleItemsSameFieldCount.Count - 1);
+            }
         }
 
         private bool IsArrayOfTypeValueObject(BlittableJsonReaderObject val)
