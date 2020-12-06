@@ -3699,6 +3699,8 @@ namespace Raven.Server.Documents.Indexes
         }
 
         private DateTime _lastCheckedFlushLock;
+        
+        public int CreatedFieldsCount;
 
         private bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
         {

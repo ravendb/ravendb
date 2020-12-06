@@ -76,6 +76,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                             {
                                 while (true)
                                 {
+                                    _index.CreatedFieldsCount = 0;
                                     if (itemEnumerator.MoveNext(queryContext.Documents, out IEnumerable mapResults, out var etag) == false)
                                     {
                                         if (etag > lastEtag)
