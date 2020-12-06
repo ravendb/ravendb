@@ -177,6 +177,8 @@ namespace Raven.Server.Documents.Queries
 
         public DateTime LastQueriedAt;
 
+        public List<SpatialProperty> SpatialResults;
+
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
             IndexFieldNames.Add(GetIndexFieldName(fieldName, parameters));
@@ -2317,14 +2319,24 @@ namespace Raven.Server.Documents.Queries
                             if (spatialExpression.Arguments.Count != 2)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 arguments", QueryText, parameters);
 
-                            var latitude = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[0], withoutAlias, "point", parameters, QueryText).Value;
-                            var longitude = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[1], withoutAlias, "point", parameters, QueryText).Value;
+                            var latitudePropertyPath = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[0], withoutAlias, "point", parameters, QueryText).Value;
+                            var longitudePropertyPath = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[1], withoutAlias, "point", parameters, QueryText).Value;
 
                             fieldOptions = new AutoSpatialOptions(AutoSpatialOptions.AutoSpatialMethodType.Point, new List<string>
                             {
-                                latitude,
-                                longitude
+                                latitudePropertyPath,
+                                longitudePropertyPath
                             });
+
+                            if (_metadata.SelectFields != null)
+                            {
+                                latitudePropertyPath = GetPathWithAliasName(latitudePropertyPath);
+                                longitudePropertyPath = GetPathWithAliasName(longitudePropertyPath);
+                            }
+                            
+                            _metadata.SpatialResults ??= new List<SpatialProperty>();
+                            _metadata.SpatialResults.Add(new SpatialProperty(latitudePropertyPath, longitudePropertyPath));
+                            
                             break;
                         default:
                             throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() or wkt() method", QueryText, parameters);
@@ -2380,6 +2392,21 @@ namespace Raven.Server.Documents.Queries
                     throw new InvalidQueryException($"Method sum() expects first argument to be field token, got {arguments[0]}", QueryText, parameters);
 
                 _metadata.AddWhereField(new QueryFieldName(f.FieldValue, f.IsQuoted), parameters);
+            }
+
+            private string GetPathWithAliasName(string propertyPath)
+            {
+                var dotPosition = propertyPath.IndexOf(".");
+                var firstField = propertyPath.Substring(0, dotPosition);
+                var theRest = propertyPath.Substring(dotPosition);
+
+                var selectedField = Array.Find(_metadata.SelectFields, x => x.Name.ToString() == firstField);
+                if (selectedField?.Alias != null)
+                {
+                    return selectedField.Alias + theRest;
+                }
+
+                return propertyPath;
             }
         }
 
