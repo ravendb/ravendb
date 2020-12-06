@@ -3332,6 +3332,11 @@ namespace Raven.Server.Documents.Indexes
             result.LastQueryTime = _lastQueryingTime ?? DateTime.MinValue;
             result.ResultEtag = CalculateIndexEtag(queryContext, indexContext, q, result.IsStale);
             result.NodeTag = DocumentDatabase.ServerStore.NodeTag;
+            
+            if (q.SpatialResults != null)
+            {
+                result.SpatialProperties = q.SpatialResults.ToArray();
+            }
         }
 
         private IndexQueryDoneRunning MarkQueryAsRunning(IIndexQuery query)

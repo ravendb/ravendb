@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
@@ -230,6 +231,20 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
+        public static void WriteSpatialPropertyResult(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, SpatialProperty result)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(result.LatitudeProperty));
+            writer.WriteString(result.LatitudeProperty);
+            writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(result.LongitudeProperty));
+            writer.WriteString(result.LongitudeProperty);
+            
+            writer.WriteEndObject();
+        }
+        
         public static void WriteSuggestionResult(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, SuggestionResult result)
         {
             writer.WriteStartObject();
@@ -476,6 +491,13 @@ namespace Raven.Server.Json
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.CompareExchangeValueIncludes));
                 await writer.WriteCompareExchangeValues(compareExchangeValues);
+            }
+           
+            var spatialProperties = result.SpatialProperties;
+            if (spatialProperties != null)
+            {
+                writer.WriteComma();
+                writer.WriteArray(context, nameof(result.SpatialProperties), spatialProperties, (w, c, spatialProperty) => w.WriteSpatialPropertyResult(c, spatialProperty));
             }
 
             writeAdditionalData?.Invoke(writer);
