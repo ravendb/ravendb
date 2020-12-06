@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
+using Raven.Server.Config;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Client.Attachments;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -456,6 +461,94 @@ namespace SlowTests.Server.Replication
                                 Assert.Equal(2, buffer[1]);
                                 Assert.Equal(3, buffer[2]);
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ShouldNotThrowNREWhenCheckingForMissingAttachments()
+        {
+            var documentId1 = "users/1";
+            var documentId2 = "users/2";
+            using (var source = GetDocumentStore())
+            using (var destination = GetDocumentStore())
+            {
+                await SetupReplicationAsync(source, destination);
+
+                using (var session = source.OpenAsyncSession())
+                using (var ms = new MemoryStream(new byte[] { 1, 2, 3 }))
+                using (var ms2 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
+                {
+                    await session.StoreAsync(new User { Name = "EGR" }, documentId1);
+                    session.Advanced.Attachments.Store(documentId1, "pic.gif", ms, "image/gif");
+
+                    await session.StoreAsync(new User { Name = "RGE" }, documentId2);
+                    session.Advanced.Attachments.Store(documentId2, "pic2.gif", ms2, "image/gif");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, documentId1, "pic.gif", Debugger.IsAttached ? 60_000 : 15_000));
+                Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, documentId2, "pic2.gif", Debugger.IsAttached ? 60_000 : 15_000));
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    session.Delete(documentId1);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = source.OpenAsyncSession())
+                {
+                    var doc1 = await session.LoadAsync<User>(documentId1);
+                    doc1.LastName = "Bar";
+                    var doc2 = await session.LoadAsync<User>(documentId2);
+                    doc2.LastName = "Bar";
+                    await session.SaveChangesAsync();
+                }
+                EnsureReplicating(source, destination);
+                using (var session = destination.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(documentId1);
+                    Assert.Equal(user.Name, "EGR");
+                    Assert.Equal(user.LastName, "Bar");
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(1, attachments.Length);
+                    var buffer = new byte[3];
+                    foreach (var name in attachments)
+                    {
+                        using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
+                        {
+                            Assert.NotNull(attachments[0]);
+                            Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
+                            Assert.Equal("pic.gif", attachment.Details.Name);
+                            Assert.Equal("image/gif", attachment.Details.ContentType);
+                            Assert.Equal(3, await attachment.Stream.ReadAsync(buffer, 0, 3));
+                            Assert.Equal(1, buffer[0]);
+                            Assert.Equal(2, buffer[1]);
+                            Assert.Equal(3, buffer[2]);
+                        }
+                    }
+
+                    user = await session.LoadAsync<User>(documentId2);
+                    Assert.Equal(user.Name, "RGE");
+                    Assert.Equal(user.LastName, "Bar");
+                    attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(1, attachments.Length);
+                    buffer = new byte[4];
+                    foreach (var name in attachments)
+                    {
+                        using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
+                        {
+                            Assert.NotNull(attachment);
+                            Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachment.Details.Hash);
+                            Assert.Equal("pic2.gif", attachment.Details.Name);
+                            Assert.Equal("image/gif", attachment.Details.ContentType);
+                            Assert.Equal(4, await attachment.Stream.ReadAsync(buffer, 0, 4));
+                            Assert.Equal(1, buffer[0]);
+                            Assert.Equal(2, buffer[1]);
+                            Assert.Equal(3, buffer[2]);
+                            Assert.Equal(4, buffer[3]);
                         }
                     }
                 }
