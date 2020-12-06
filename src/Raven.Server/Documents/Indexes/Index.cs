@@ -3396,7 +3396,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         private DateTime _lastCheckedFlushLock;
-
+        
         public bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
         {
             if (GlobalFlushingBehavior.GlobalFlusher.Value.HasLowNumberOfFlushingResources == false)
