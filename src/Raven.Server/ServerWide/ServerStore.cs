@@ -181,11 +181,10 @@ namespace Raven.Server.ServerWide
                            Uri.TryCreate(Configuration.Core.ServerUrls[0], UriKind.Absolute, out var uri) == false ||
                            uri.Port != 0;                       
 
-            this.IndexWritesSynchronization = new StorageEnvironmentSynchronization(
+            IndexWritesSynchronization = new StorageEnvironmentSynchronization(
                 Configuration.Indexing.JournalMaxConcurrentWrites,
-                Configuration.Indexing.JournalMaxConcurrentWritesSizeInMegabytes * Sparrow.Global.Constants.Size.Megabyte,
+                Configuration.Indexing.JournalMaxConcurrentWritesSizeInMb,
                 ServerShutdown);
-
         }
 
         private void OnServerCertificateChanged(object sender, EventArgs e)

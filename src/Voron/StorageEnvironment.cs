@@ -43,39 +43,43 @@ namespace Voron
     {
         public struct SynchronizationSection : IDisposable
         {
+            // PERF: The reason why this synchronization section uses a semaphore, which is unfair is because of
+            // performance considerations on sector addressable media. We don't want that slow media to be
+            // jumping around too much, therefore it makes sense that when someone is able to get hold of
+            // the semaphore it can keep it around under contention to finish what it has started. 
             private readonly SemaphoreSlim _context;
 
             public SynchronizationSection(SemaphoreSlim context, CancellationToken cancellationToken)
             {
-                this._context = context;
-                if (this._context != null)
+                _context = context;
+                if (_context != null)
                 {
-                    this._context.Wait(cancellationToken);
+                    _context.Wait(cancellationToken);
                     cancellationToken.ThrowIfCancellationRequested();
                 }                    
             }
 
             void IDisposable.Dispose()
             {
-                if (this._context != null)
+                if (_context != null)
                     _context.Release();
             }
         }
 
         private readonly SemaphoreSlim _writeSemaphore;
-        public readonly long MaxWriteSize;
+        public readonly Size MaxWriteSize;
         private readonly CancellationToken _cancellationToken;
 
         public StorageEnvironmentSynchronization()
         {
-            this.MaxWriteSize = int.MaxValue;
+            MaxWriteSize = new Size(32, SizeUnit.Gigabytes);
         }
 
-        public StorageEnvironmentSynchronization(int concurrentWrites, long maxWriteSize = long.MaxValue, CancellationToken cancellationToken = default(CancellationToken))
+        public StorageEnvironmentSynchronization(int concurrentWrites, Size maxWriteSize, CancellationToken cancellationToken = default(CancellationToken))
         {
-            this._writeSemaphore = new SemaphoreSlim(concurrentWrites, concurrentWrites);
-            this._cancellationToken = cancellationToken;
-            this.MaxWriteSize = maxWriteSize;
+            _writeSemaphore = new SemaphoreSlim(concurrentWrites, concurrentWrites);
+            _cancellationToken = cancellationToken;
+            MaxWriteSize = maxWriteSize;
         }        
 
         public SynchronizationSection Enter()

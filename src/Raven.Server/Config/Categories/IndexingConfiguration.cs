@@ -232,14 +232,15 @@ namespace Raven.Server.Config.Categories
         [Description("Maximum allowed concurrent writes for the indexes")]
         [DefaultValue(4)]
         [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Indexing.JournalMaxConcurrentWrites", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Indexing.JournalMaxConcurrentWrites", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int JournalMaxConcurrentWrites { get; set; }
 
         [Description("Maximum size in Megabytes of the concurrent writes for the indexes")]
         [DefaultValue(128)]
+        [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Indexing.JournalMaxConcurrentWritesSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
-        public int JournalMaxConcurrentWritesSizeInMegabytes { get; set; }        
+        [ConfigurationEntry("Indexing.JournalMaxConcurrentWritesSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size JournalMaxConcurrentWritesSizeInMb { get; set; }        
 
 
         protected override void ValidateProperty(PropertyInfo property)

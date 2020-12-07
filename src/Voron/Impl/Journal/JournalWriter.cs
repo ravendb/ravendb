@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Meters;
@@ -47,7 +48,7 @@ namespace Voron.Impl.Journal
 
             // The write synchronization mechanism will require a max size and to be aligned to 4kb.  
             _writeSynchronization = writeSynchronization;
-            _maxNumberOf4KbBlocks = writeSynchronization.MaxWriteSize / (4L * Constants.Size.Kilobyte);
+            _maxNumberOf4KbBlocks = writeSynchronization.MaxWriteSize.GetValue(SizeUnit.Kilobytes) / 4L;
 
             var result = Pal.rvn_open_journal_for_writes(filename.FullPath, mode, size, options.SupportDurabilityFlags, out _writeHandle, out var actualSize, out var error);
             if (result != PalFlags.FailCodes.Success)

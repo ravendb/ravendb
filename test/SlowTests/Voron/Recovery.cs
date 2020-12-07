@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using FastTests.Voron;
+using Sparrow;
 using Voron;
 using Voron.Global;
 using Xunit;
@@ -328,7 +329,7 @@ namespace SlowTests.Voron
         [Fact]
         public void StorageRecoveryShouldWorkWhenJournalNeedsMultipleSteps()
         {
-            var sync = new StorageEnvironmentSynchronization(1, 12 * Constants.Size.Kilobyte);
+            var sync = new StorageEnvironmentSynchronization(1, new Size(12, SizeUnit.Kilobytes));
 
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir), sync))
             {

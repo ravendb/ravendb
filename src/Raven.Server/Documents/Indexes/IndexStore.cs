@@ -33,6 +33,7 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Indexing;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -42,6 +43,7 @@ using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -65,6 +67,8 @@ namespace Raven.Server.Documents.Indexes
 
         public SemaphoreSlim StoppedConcurrentIndexBatches { get; }
 
+        public StorageEnvironmentSynchronization IndexWritesSynchronization { get; }
+
         internal Action<(string IndexName, bool DidWork)> IndexBatchCompleted;
 
         private const int PathLengthLimit = 259; // Roslyn's MetadataWriter.PathLengthLimit = 259
@@ -84,6 +88,22 @@ namespace Raven.Server.Documents.Indexes
 
             var stoppedConcurrentIndexBatches = _documentDatabase.Configuration.Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory;
             StoppedConcurrentIndexBatches = new SemaphoreSlim(stoppedConcurrentIndexBatches);
+
+            switch (_serverStore.Configuration.Indexing.JournalSynchronizationMode)
+            {
+                case IndexWriteSynchronizationMode.Server:
+                    IndexWritesSynchronization = serverStore.IndexWritesSynchronization;
+                    break;
+                case IndexWriteSynchronizationMode.Database:
+                    IndexWritesSynchronization = new StorageEnvironmentSynchronization(
+                              serverStore.Configuration.Indexing.JournalMaxConcurrentWrites,
+                              serverStore.Configuration.Indexing.JournalMaxConcurrentWritesSizeInMb,
+                              _documentDatabase.DatabaseShutdown);
+                    break;
+                default:
+                    IndexWritesSynchronization = new StorageEnvironmentSynchronization();
+                    break;
+            }
         }
 
         public int HandleDatabaseRecordChange(DatabaseRecord record, long raftIndex)

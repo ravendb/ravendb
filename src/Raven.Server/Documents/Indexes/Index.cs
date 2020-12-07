@@ -338,7 +338,7 @@ namespace Raven.Server.Documents.Indexes
 
                 DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, documentDatabase.Configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, logger);
 
-                environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index, documentDatabase.IndexWritesSynchronization);
+                environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index, documentDatabase.IndexStore.IndexWritesSynchronization);
 
                 IndexType type;
                 IndexSourceType sourceType;
@@ -575,7 +575,7 @@ namespace Raven.Server.Documents.Indexes
                 StorageEnvironment storageEnvironment = null;
                 try
                 {
-                    storageEnvironment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index, documentDatabase.IndexWritesSynchronization);
+                    storageEnvironment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index, documentDatabase.IndexStore.IndexWritesSynchronization);
                     Initialize(storageEnvironment, documentDatabase, configuration, performanceHints);
                 }
                 catch (Exception)
@@ -4176,7 +4176,7 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    _environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index, DocumentDatabase.IndexWritesSynchronization);
+                    _environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Index, DocumentDatabase.IndexStore.IndexWritesSynchronization);
                     InitializeComponentsUsingEnvironment(DocumentDatabase, _environment);
                 }
                 catch

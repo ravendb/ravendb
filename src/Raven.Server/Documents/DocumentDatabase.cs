@@ -48,7 +48,6 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Meters;
-using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -95,8 +94,6 @@ namespace Raven.Server.Documents
         {
             _lastIdleTicks = DateTime.MinValue.Ticks;
         }
-
-        public StorageEnvironmentSynchronization IndexWritesSynchronization { get; private set; }
 
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         {
@@ -175,22 +172,6 @@ namespace Raven.Server.Documents
                 });
                 _hasClusterTransaction = new AsyncManualResetEvent(DatabaseShutdown);
                 IdentityPartsSeparator = '/';
-
-                switch (serverStore.Configuration.Indexing.JournalSynchronizationMode)
-                {
-                    case IndexWriteSynchronizationMode.Server:
-                        this.IndexWritesSynchronization = serverStore.IndexWritesSynchronization;
-                        break;
-                    case IndexWriteSynchronizationMode.Database:
-                        this.IndexWritesSynchronization = new StorageEnvironmentSynchronization(
-                                  serverStore.Configuration.Indexing.JournalMaxConcurrentWrites,
-                                  serverStore.Configuration.Indexing.JournalMaxConcurrentWritesSizeInMegabytes * Sparrow.Global.Constants.Size.Megabyte,
-                                  _databaseShutdown.Token);
-                        break;
-                    default:
-                        this.IndexWritesSynchronization = new StorageEnvironmentSynchronization();
-                        break;
-                }
             }
             catch (Exception)
             {
