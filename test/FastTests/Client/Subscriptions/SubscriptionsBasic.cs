@@ -495,7 +495,7 @@ namespace FastTests.Client.Subscriptions
 
                 var doc = new DatabaseRecord(store.Database);
                 var result = store.Maintenance.Server.Send(new CreateDatabaseOperationWithoutNameValidation(doc));
-                await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, _reasonableWaitTime);
+                await server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex, _reasonableWaitTime);
 
                 using (var session = store.OpenSession())
                 {
@@ -531,7 +531,7 @@ namespace FastTests.Client.Subscriptions
 
                 Assert.True(gotBatch.Wait(_reasonableWaitTime));
 
-                Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
+                server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
                 for (int i = 0; i < 150; i++)
                 {
@@ -558,7 +558,7 @@ namespace FastTests.Client.Subscriptions
             {
                 subscriptionWorker?.Dispose();
                 store?.Dispose();
-                server.Dispose();
+                server?.Dispose();
             }
         }
 
