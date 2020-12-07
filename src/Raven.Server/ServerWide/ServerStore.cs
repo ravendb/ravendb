@@ -1770,6 +1770,8 @@ namespace Raven.Server.ServerWide
         {
             var documentsCompression = JsonDeserializationCluster.DocumentsCompressionConfiguration(configurationJson);
 
+            LicenseManager.AssertCanUseDocumentsCompression(documentsCompression);
+
             var editDocumentsCompression = new EditDocumentsCompressionCommand(documentsCompression, databaseName, raftRequestId);
             return SendToLeaderAsync(editDocumentsCompression);
         }
