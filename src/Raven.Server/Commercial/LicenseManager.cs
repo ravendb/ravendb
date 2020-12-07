@@ -1017,12 +1017,6 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static bool HasDocumentsCompression(DocumentsCompressionConfiguration documentsCompression)
-        {
-            return documentsCompression?.CompressRevisions == true ||
-                   documentsCompression?.Collections?.Length > 0;
-        }
-
         private static string GenerateDetails(int count, string feature)
         {
             return $"Cannot activate license because there {(count == 1 ? "is" : "are")} " +
@@ -1050,6 +1044,12 @@ namespace Raven.Server.Commercial
             }
 
             return false;
+        }
+
+        private static bool HasDocumentsCompression(DocumentsCompressionConfiguration documentsCompression)
+        {
+            return documentsCompression?.CompressRevisions == true ||
+                   documentsCompression?.Collections?.Length > 0;
         }
 
         private static bool HasTimeSeriesRollupsAndRetention(TimeSeriesConfiguration configuration)
@@ -1157,7 +1157,8 @@ namespace Raven.Server.Commercial
 
         public void AssertCanUseDocumentsCompression(DocumentsCompressionConfiguration documentsCompression)
         {
-            if (_serverStore.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
+            var hasDocumentsCompression = HasDocumentsCompression(documentsCompression);
+            if (hasDocumentsCompression && _serverStore.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
                 FeaturesAvailabilityException.Throw("Documents Compression");
 
             if (IsValid(out var licenseLimit) == false)
@@ -1166,7 +1167,7 @@ namespace Raven.Server.Commercial
             if (LicenseStatus.HasDocumentsCompression)
                 return;
 
-            if (HasDocumentsCompression(documentsCompression) == false)
+            if (hasDocumentsCompression == false)
                 return;
 
             var details = $"Your current license ({LicenseStatus.Type}) does not allow documents compression";
