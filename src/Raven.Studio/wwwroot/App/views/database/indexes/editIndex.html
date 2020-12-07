@@ -719,7 +719,7 @@
     <button class="btn btn-default dropdown-toggle" type="button" id="dropdownIndexHistory" data-toggle="dropdown"
             data-bind="click: indexHistoryButtonHandler, attr: { title: isEditingExistingIndex() ? 'View this index history' : 'View the history of the index you cloned from' }">
         <!-- todo replace with new icon (icon-index-history) -->
-        <i class="icon-index"></i><span>Index History</span>
+        <i class="icon-index-history"></i><span>Index History</span>
         <span class="caret"></span>
     </button>
     <div class="dropdown-menu slidein-style history-dropdown-container" aria-labelledby="dropdownIndexHistory" data-bind="dropdownPanel: true">
@@ -742,7 +742,7 @@
                         <div class="margin-right margin-top pull-right">
                             <div class="btn-group margin-top margin-top-sm">
                                 <button class="btn btn-success close-panel" data-bind="click: loadIndexDefinitionFromHistory" title="Load the full definition of this index revision">
-                                    <i class="icon-index"></i>
+                                    <i class="icon-load-index"></i>
                                     <span>Load Index</span>
                                 </button>
                                 <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -752,7 +752,7 @@
                                 <ul class="dropdown-menu dropdown-menu-right">
                                     <li title="Load the Map & Reduce methods only" class="close-panel margin-top margin-top-xs margin-bottom margin-bottom-xs">
                                         <a href="#" data-bind="click: $root.loadMapReduceFromHistory">
-                                            <i class="icon-index"></i><span>Load Map & Reduce Only</span>
+                                            <i class="icon-load-map-reduce"></i><span>Load Map & Reduce Only</span>
                                         </a>
                                     </li>
                                 </ul>
