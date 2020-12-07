@@ -189,12 +189,20 @@ namespace Raven.Server.Documents.Replication
                     _lastEtag = _parent._lastSentDocumentEtag;
                     _parent.CancellationToken.ThrowIfCancellationRequested();
 
-                    long size = 0;
-                    var numberOfItemsSent = 0;
                     var skippedReplicationItemsInfo = new SkippedReplicationItemsInfo();
-                    short lastTransactionMarker = -1;
                     long prevLastEtag = _lastEtag;
-                    HashSet<short> missingTxMarkers = new HashSet<short>();
+                    var replicationState = new ReplicationState
+                    {
+                        BatchSize = _parent._database.Configuration.Replication.MaxItemsCount,
+                        MaxSizeToSend = _parent._database.Configuration.Replication.MaxSizeToSend,
+                        CurrentNext = currentNext,
+                        Delay = delay,
+                        Context = documentsContext,
+                        LastTransactionMarker = -1,
+                        NumberOfItemsSent = 0,
+                        Size = 0L,
+                        MissingTxMarkers = new HashSet<short>()
+                    };
 
                     using (_stats.Storage.Start())
                     {                        
@@ -202,15 +210,17 @@ namespace Raven.Server.Documents.Replication
                         {
                             _parent.CancellationToken.ThrowIfCancellationRequested();
                             
-                            if (lastTransactionMarker != item.TransactionMarker)
+                            if (replicationState.LastTransactionMarker != item.TransactionMarker)
                             {
-                                if (CanContinueBatch(missingTxMarkers, delay, item, currentNext, size, documentsContext, numberOfItemsSent, lastTransactionMarker, ref next) == false)
+                                replicationState.Item = item;
+
+                                if (CanContinueBatch(replicationState, ref next) == false)
                                 {
                                     wasInterrupted = true;
                                     break;
                                 }
 
-                                lastTransactionMarker = item.TransactionMarker;
+                                replicationState.LastTransactionMarker = item.TransactionMarker;
                             }
 
                             _stats.Storage.RecordInputAttempt();
@@ -227,7 +237,7 @@ namespace Raven.Server.Documents.Replication
                                     if (attachment.Etag >= prevLastEtag)
                                     {
                                         if (attachment.TransactionMarker != item.TransactionMarker)
-                                            missingTxMarkers.Add(attachment.TransactionMarker);
+                                            replicationState.MissingTxMarkers.Add(attachment.TransactionMarker);
 
                                         continue;
                                     }
@@ -235,7 +245,7 @@ namespace Raven.Server.Documents.Replication
                                     var stream = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(documentsContext, attachment.Base64Hash);
                                     attachment.Stream = stream;
                                     AddReplicationItemToBatch(ReplicationBatchItem.From(attachment), _stats.Storage, skippedReplicationItemsInfo);
-                                    size += attachment.Stream.Length;
+                                    replicationState.Size += attachment.Stream.Length;
                                 }
                             }
 
@@ -251,19 +261,19 @@ namespace Raven.Server.Documents.Replication
                             switch (item.Type)
                             {
                                 case ReplicationBatchItem.ReplicationItemType.Attachment:
-                                    size += item.Stream.Length;
+                                    replicationState.Size += item.Stream.Length;
                                     break;
 
                                 case ReplicationBatchItem.ReplicationItemType.CounterGroup:
-                                    size += item.Values.Size;
+                                    replicationState.Size += item.Values.Size;
                                     break;
 
                                 default:
-                                    size += item.Data?.Size ?? 0;
+                                    replicationState.Size += item.Data?.Size ?? 0;
                                     break;
                             }
 
-                            numberOfItemsSent++;
+                            replicationState.NumberOfItemsSent++;
                         }
                     }
                     
@@ -284,7 +294,7 @@ namespace Raven.Server.Documents.Replication
                         {
                             msg += $"encryption buffer overhead size is {new Size(encryptionSize, SizeUnit.Bytes)}, ";
                         }
-                        msg += $"total size: {new Size(size + encryptionSize, SizeUnit.Bytes)}";
+                        msg += $"total size: {new Size(replicationState.Size + encryptionSize, SizeUnit.Bytes)}";
 
                         _log.Info(msg);
                     }
@@ -311,7 +321,7 @@ namespace Raven.Server.Documents.Replication
                         {
                             SendDocumentsBatch(documentsContext, _stats.Network);
                             tcpConnectionOptions._lastEtagSent = _lastEtag;
-                            tcpConnectionOptions.RegisterBytesSent(size);
+                            tcpConnectionOptions.RegisterBytesSent(replicationState.Size);
                             if (MissingAttachmentsInLastBatch)
                                 return false;
                         }
@@ -346,28 +356,24 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private bool CanContinueBatch(HashSet<short> missingTx, TimeSpan delay, ReplicationBatchItem item, long currentNext, long size, DocumentsOperationContext documentsContext,
-            int numberOfItemsSent, short lastTransactionMarker, ref long next)
+        private bool CanContinueBatch(ReplicationState state, ref long next)
         {
             if (MissingAttachmentsInLastBatch)
             {
-                missingTx.Remove(lastTransactionMarker);
+                state.MissingTxMarkers.Remove(state.LastTransactionMarker);
 
-                if (missingTx.Count != 0)
+                if (state.MissingTxMarkers.Count != 0)
                 {
                     return true;
                 }
             }
 
-            var batchSize = _parent._database.Configuration.Replication.MaxItemsCount;
-            var maxSizeToSend = _parent._database.Configuration.Replication.MaxSizeToSend;
-
-            if (delay.Ticks > 0)
+            if (state.Delay.Ticks > 0)
             {
-                var nextReplication = item.LastModifiedTicks + delay.Ticks;
+                var nextReplication = state.Item.LastModifiedTicks + state.Delay.Ticks;
                 if (_parent._database.Time.GetUtcNow().Ticks < nextReplication)
                 {
-                    if (Interlocked.CompareExchange(ref next, nextReplication, currentNext) == currentNext)
+                    if (Interlocked.CompareExchange(ref next, nextReplication, state.CurrentNext) == state.CurrentNext)
                     {
                         return false;
                     }
@@ -376,20 +382,20 @@ namespace Raven.Server.Documents.Replication
 
             if (_parent.SupportedFeatures.Replication.CountersBatch == false)
             {
-                AssertNotCounterForLegacyReplication(item);
+                AssertNotCounterForLegacyReplication(state.Item);
             }
 
             if (_parent.SupportedFeatures.Replication.ClusterTransaction == false)
             {
-                AssertNotClusterTransactionDocumentForLegacyReplication(item);
+                AssertNotClusterTransactionDocumentForLegacyReplication(state.Item);
             }
 
             // We want to limit batch sizes to reasonable limits.
             var totalSize =
-                size + documentsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
+                state.Size + state.Context.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
 
-            if (maxSizeToSend.HasValue && totalSize > maxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
-                batchSize.HasValue && numberOfItemsSent > batchSize.Value)
+            if (state.MaxSizeToSend.HasValue && totalSize > state.MaxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
+                state.BatchSize.HasValue && state.NumberOfItemsSent > state.BatchSize.Value)
             {
                 return false;
             }
@@ -1031,6 +1037,20 @@ namespace Raven.Server.Documents.Replication
             public OutgoingReplicationStatsScope AttachmentRead;
             public OutgoingReplicationStatsScope CounterRead;
 
+        }
+
+        private class ReplicationState
+        {
+            public HashSet<short> MissingTxMarkers;
+            public TimeSpan Delay;
+            public ReplicationBatchItem Item;
+            public long CurrentNext;
+            public long Size;
+            public DocumentsOperationContext Context;
+            public int NumberOfItemsSent;
+            public short LastTransactionMarker;
+            public int? BatchSize;
+            public Size? MaxSizeToSend;
         }
     }
 }
