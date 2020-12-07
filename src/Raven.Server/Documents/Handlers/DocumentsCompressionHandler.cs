@@ -47,9 +47,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/documents-compression/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ConfigDocumentsCompression()
         {
-            if (Server.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
-                FeaturesAvailabilityException.Throw("Documents Compression");
-
             await DatabaseConfigurations(ServerStore.ModifyDocumentsCompression, "write-compression-config", GetRaftRequestIdFromQuery());
         }
     }

@@ -35,7 +35,6 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
-using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -138,11 +137,7 @@ namespace Raven.Server.Web.System
                     if (databaseRecord.Encrypted)
                         ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
 
-                    if (databaseRecord.DocumentsCompression?.CompressRevisions == true ||
-                        databaseRecord.DocumentsCompression?.Collections?.Length > 0)
-                    {
-                        Server.ServerStore.LicenseManager.AssertCanUseDocumentsCompression();
-                    }
+                    Server.ServerStore.LicenseManager.AssertCanUseDocumentsCompression(databaseRecord.DocumentsCompression);
 
                     // the case where an explicit node was requested
                     if (string.IsNullOrEmpty(node) == false)
@@ -279,13 +274,7 @@ namespace Raven.Server.Web.System
                 if (databaseRecord.Encrypted)
                     ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
 
-                if (databaseRecord.DocumentsCompression?.CompressRevisions == true ||
-                    databaseRecord.DocumentsCompression?.Collections?.Length > 0)
-                {
-                    ServerStore.LicenseManager.AssertCanUseDocumentsCompression();
-                    if (Server.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
-                        FeaturesAvailabilityException.Throw("Documents Compression");
-                }
+                ServerStore.LicenseManager.AssertCanUseDocumentsCompression(databaseRecord.DocumentsCompression);
 
                 // Validate Directory
                 var dataDirectoryThatWillBeUsed = databaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dir) == false ?
@@ -314,11 +303,7 @@ namespace Raven.Server.Web.System
                 if (ResourceNameValidator.IsValidResourceName(databaseRecord.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                     throw new BadRequestException(errorMessage);
 
-                if (databaseRecord.DocumentsCompression?.CompressRevisions == true ||
-                    databaseRecord.DocumentsCompression?.Collections?.Length > 0)
-                {
-                    Server.ServerStore.LicenseManager.AssertCanUseDocumentsCompression();
-                }
+                Server.ServerStore.LicenseManager.AssertCanUseDocumentsCompression(databaseRecord.DocumentsCompression);
 
                 if ((databaseRecord.Topology?.DynamicNodesDistribution ?? false) &&
                     Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(withNotification: false, out var licenseLimit) == false)
