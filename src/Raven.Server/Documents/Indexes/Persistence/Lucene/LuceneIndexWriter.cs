@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 MaxMergeMB = _index.Configuration.MaximumSizePerSegment.GetValue(SizeUnit.Megabytes),
                 MergeFactor = _index.Configuration.MergeFactor,
                 LargeSegmentSizeMB = _index.Configuration.LargeSegmentSizeToMerge.GetValue(SizeUnit.Megabytes),
-                NumberOfLargeSegmentsToMergeInASingleBatch = _index.Configuration.NumberOfLargeSegmentsToMergeInASingleBatch
+                NumberOfLargeSegmentsToMergeInSingleBatch = _index.Configuration.NumberOfLargeSegmentsToMergeInSingleBatch
             });
 
             if (_indexReaderWarmer != null)

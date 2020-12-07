@@ -161,7 +161,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.ManagedAllocationsBatchSizeLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? ManagedAllocationsBatchLimit { get; protected set; }
 
-        [Description("Expert: The maximum size that we'll consider for segments merging")]
+        [Description("Expert: The maximum size in MB that we'll consider for segments merging")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
@@ -174,18 +174,18 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MergeFactor", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MergeFactor { get; protected set; }
 
-        [Description("Expert: The definition of a large segment. We wont merge more than " + nameof(NumberOfLargeSegmentsToMergeInASingleBatch) + " in a single batch")]
+        [Description("Expert: The definition of a large segment in MB. We wont merge more than " + nameof(NumberOfLargeSegmentsToMergeInSingleBatch) + " in a single batch")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.LargeSegmentSizeToMergeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size LargeSegmentSizeToMerge { get; protected set; }
 
-        [Description("Expert: Number of large segments to merge in a single batch")]
+        [Description("Expert: Number of large segments (defined by " + nameof(LargeSegmentSizeToMerge) + ") to merge in a single batch")]
         [DefaultValue(2)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.NumberOfLargeSegmentsToMergeInASingleBatch", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public int NumberOfLargeSegmentsToMergeInASingleBatch { get; protected set; }
+        [ConfigurationEntry("Indexing.NumberOfLargeSegmentsToMergeInSingleBatch", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int NumberOfLargeSegmentsToMergeInSingleBatch { get; protected set; }
 
         [Description("Expert: How long will we let merges to run before we close the transaction")]
         [DefaultValue(15)]

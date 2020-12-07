@@ -115,7 +115,7 @@
     <PackageReference Include="Google.Api.Gax.Rest" Version="3.2.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="3.3.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
-    <PackageReference Include="Lucene.Net" Version="3.0.37" />
+    <PackageReference Include="Lucene.Net" Version="3.0.38" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.17" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv" Version="3.1.10" />
