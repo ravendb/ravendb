@@ -624,5 +624,67 @@ namespace SlowTests.Server.Replication
                 }
             }
         }
+
+        // RavenDB-15820
+        [Fact]
+        public async Task ShouldResolveAttachmentConflictToLatestAndNotThrowNRE()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenAsyncSession())
+                using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
+                {
+                    var user = new User();
+                    await session.StoreAsync(user, "foo");
+                    session.Advanced.Attachments.Store(user, "dummy", a1);
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                EnsureReplicating(store1, store2);
+
+                using (var session = store2.OpenAsyncSession())
+                using (var a1 = new MemoryStream(new byte[] { 6, 6, 6 }))
+                {
+                    session.Advanced.Attachments.Store("foo", "dummy", a1);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("foo");
+                    user.Name = "Karmel";
+                    await session.SaveChangesAsync();
+                }
+
+                EnsureReplicating(store1, store2);
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("foo");
+                    Assert.Equal(user.Name, "Karmel");
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(1, attachments.Length);
+                    var buffer = new byte[4];
+                    foreach (var name in attachments)
+                    {
+                        using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
+                        {
+                            // this is the 1st (old) attachment, resolved from the latest document
+                            Assert.NotNull(attachments[0]);
+                            Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachment.Details.Hash);
+                            Assert.Equal("dummy", attachment.Details.Name);
+                            Assert.Equal(string.Empty, attachment.Details.ContentType);
+                            Assert.Equal(4, await attachment.Stream.ReadAsync(buffer, 0, 4));
+                            Assert.Equal(1, buffer[0]);
+                            Assert.Equal(2, buffer[1]);
+                            Assert.Equal(3, buffer[2]);
+                            Assert.Equal(4, buffer[3]);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
