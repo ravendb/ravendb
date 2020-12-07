@@ -318,7 +318,7 @@ namespace Raven.Server.Documents.Queries
                             var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, index, parameters, analyzer,
                                 factories, exact, secondary: true, buildSteps: buildSteps);
 
-                            buildSteps?.Add($"OR operator: left - {left.GetType().Name}, right - {right.GetType().Name}");
+                            buildSteps?.Add($"OR operator: left - {left.GetType().FullName} ({left}) assembly: {left.GetType().Assembly.FullName} assemby location: {left.GetType().Assembly.Location} , right - {right.GetType().FullName} ({right}) assemlby: {right.GetType().Assembly.FullName} assemby location: {right.GetType().Assembly.Location}");
 
                             if (left is RavenBooleanQuery rbq)
                             {
