@@ -23,7 +23,7 @@ namespace SlowTests.Issues
             };
 
             var result = await store.Maintenance.SendAsync(new ConfigureRefreshOperation(config));
-            await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex ?? 1, TimeSpan.FromMinutes(1));
+            await Server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex ?? 1, TimeSpan.FromMinutes(1));
         }
 
         [Fact]

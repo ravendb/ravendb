@@ -233,7 +233,7 @@ namespace SlowTests.Issues
                             Assert.Null(op);
                     }
 
-                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
                     dynamic document = await commands.GetAsync("items/1");
                     Assert.Equal("NewValue", document.NewName.ToString());
                 }

@@ -155,33 +155,25 @@ namespace FastTests
             return count;
         }
 
-        protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan timeout)
+        protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan? timeout = null)
         {
-            if (Servers.Count == 0)
-                return;
-
-            var tasks = Servers.Where(s => s.ServerStore.Disposed == false &&
-                                           s.ServerStore.Engine.CurrentState != RachisState.Passive)
-                .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
-                .ToList();
-
-            if (await Task.WhenAll(tasks).WaitAsync(timeout))
-                return;
-
-            ThrowTimeoutException(Servers, tasks, index, timeout);
+            await WaitForRaftIndexToBeAppliedOnClusterNodes(index, Servers, timeout);
         }
 
         protected async Task WaitForRaftIndexToBeAppliedOnClusterNodes(long index, List<RavenServer> nodes, TimeSpan? timeout = null)
         {
             if (nodes.Count == 0)
-                throw new InvalidOperationException($"Cluster should have nodes.");
+                throw new InvalidOperationException("Cannot wait for raft index to be applied when the cluster is empty. Make sure you are using the right server.");
 
             if (timeout.HasValue == false)
                 timeout = Debugger.IsAttached ? TimeSpan.FromSeconds(300) : TimeSpan.FromSeconds(60);
 
-            var tasks = nodes.Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index)).ToList();
+            var tasks = nodes.Where(s => s.ServerStore.Disposed == false &&
+                                          s.ServerStore.Engine.CurrentState != RachisState.Passive)
+                .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
+                .ToList();
 
-            if (await Task.WhenAll(tasks).WaitAsync(timeout.Value)) 
+            if (await Task.WhenAll(tasks).WaitAsync(timeout.Value))
                 return;
 
             ThrowTimeoutException(nodes, tasks, index, timeout.Value);
