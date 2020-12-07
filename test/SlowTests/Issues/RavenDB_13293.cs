@@ -18,6 +18,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -77,7 +78,7 @@ namespace SlowTests.Issues
                     DocumentChange documentChange;
                     Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(15)));
                 }
-                databaseChanges = store.Changes(store.Database, "X");
+                databaseChanges = store.Changes(store.Database, "XYZ");
                 await Assert.ThrowsAsync<RequestedNodeUnavailableException>(async () => await databaseChanges.EnsureConnectedNow());
 
                 databaseChanges = store.Changes(store.Database, "");
@@ -95,10 +96,10 @@ namespace SlowTests.Issues
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: false);
+            (List<RavenServer> Nodes, RavenServer Leader) cluster = await CreateRaftCluster(clusterSize, false, useSsl: false);
             using (var store = new DocumentStore
             {
-                Urls = new[] { leader.WebUrl },
+                Urls = new[] { cluster.Leader.WebUrl },
                 Database = databaseName,
             }.Initialize())
             {
@@ -123,7 +124,7 @@ namespace SlowTests.Issues
                         MentorNode = node
                     };
                     var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
-                    await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                    await WaitForRaftIndexToBeAppliedOnClusterNodes(result.RaftCommandIndex, cluster.Nodes);
                     var res = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.Backup));
                     Assert.NotNull(res);
                     Assert.True(node == res.MentorNode, $"node({node}) == res.MentorNode({res.MentorNode})");
@@ -184,12 +185,12 @@ namespace SlowTests.Issues
         {
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: false);
+            (List<RavenServer> Nodes, RavenServer Leader) cluster = await CreateRaftCluster(clusterSize, shouldRunInMemory: false);
             var myNodesList = new List<string>();
 
             using (var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { cluster.Leader.WebUrl},
                 Database = databaseName,
             }.Initialize())
             {
@@ -204,7 +205,7 @@ namespace SlowTests.Issues
                 }}));
 
                 var indexResult = result[0];
-                await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                await WaitForRaftIndexToBeAppliedOnClusterNodes(indexResult.RaftCommandIndex, cluster.Nodes);
 
                 using (var commands = store.Commands())
                 {
@@ -213,20 +214,20 @@ namespace SlowTests.Issues
                         {Constants.Documents.Metadata.Collection, "Items"}
                     });
 
-                    WaitForIndexingInTheCluster(store);
+                    WaitForIndexingInTheCluster(store, timeout: TimeSpan.FromSeconds(60));
 
-                    var operation = await store.Operations.SendAsync(new PatchByQueryOperation(new IndexQuery
+                    Operation operation = await store.Operations.SendAsync(new PatchByQueryOperation(new IndexQuery
                     {
                         Query = "FROM INDEX 'MyIndex' UPDATE { this.NewName = 'NewValue'; } "
                     }));
 
-                    var opStatus = store.Maintenance.Send(new GetOperationStateOperation(operation.Id));
+                    var opStatus = await store.Maintenance.SendAsync(new GetOperationStateOperation(operation.Id));
                     Assert.NotNull(opStatus);
 
                     foreach (var node in myNodesList)
                     {
-                        var op = store.Maintenance.Send(new GetOperationStateOperation(operation.Id, node));
-                        if(node == operation.NodeTag)
+                        var op = await store.Maintenance.SendAsync(new GetOperationStateOperation(operation.Id, node));
+                        if (node == operation.NodeTag)
                             Assert.NotNull(op);
                         else
                             Assert.Null(op);

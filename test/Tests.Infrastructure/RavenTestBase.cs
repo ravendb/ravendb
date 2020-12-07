@@ -168,18 +168,39 @@ namespace FastTests
             if (await Task.WhenAll(tasks).WaitAsync(timeout))
                 return;
 
-            var message = $"Timed out after {timeout} waiting for index {index} because out of {Servers.Count} servers" +
+            ThrowTimeoutException(Servers, tasks, index, timeout);
+        }
+
+        protected async Task WaitForRaftIndexToBeAppliedOnClusterNodes(long index, List<RavenServer> nodes, TimeSpan? timeout = null)
+        {
+            if (nodes.Count == 0)
+                throw new InvalidOperationException($"Cluster should have nodes.");
+
+            if (timeout.HasValue == false)
+                timeout = Debugger.IsAttached ? TimeSpan.FromSeconds(300) : TimeSpan.FromSeconds(60);
+
+            var tasks = nodes.Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index)).ToList();
+
+            if (await Task.WhenAll(tasks).WaitAsync(timeout.Value)) 
+                return;
+
+            ThrowTimeoutException(nodes, tasks, index, timeout.Value);
+        }
+
+        private void ThrowTimeoutException(List<RavenServer> nodes, List<Task> tasks, long index, TimeSpan timeout)
+        {
+            var message = $"Timed out after {timeout} waiting for index {index} because out of {nodes.Count} servers" +
                           " we got confirmations that it was applied only on the following servers: ";
 
             for (var i = 0; i < tasks.Count; i++)
             {
-                message += $"{Environment.NewLine}Url: {Servers[i].WebUrl}. Applied: {tasks[i].IsCompleted}.";
+                message += $"{Environment.NewLine}Url: {nodes[i].WebUrl}. Applied: {tasks[i].IsCompleted}.";
                 if (tasks[i].IsCompleted == false)
                 {
-                    using (Servers[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (nodes[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         context.OpenReadTransaction();
-                        message += $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{context.ReadObject(Servers[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}";
+                        message += $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{context.ReadObject(nodes[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}";
                     }
                 }
             }
