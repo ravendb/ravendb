@@ -554,7 +554,8 @@ namespace Raven.Server.Documents.Replication
             {
                 // we let pass all the conflicted/resolved revisions, since we keep them with their original change vector which might be `AlreadyMerged` at the destination.
                 if (item.Flags.Contain(DocumentFlags.Conflicted) || 
-                    item.Flags.Contain(DocumentFlags.Resolved))
+                    item.Flags.Contain(DocumentFlags.Resolved) ||
+                    (item.Flags.Contain(DocumentFlags.FromClusterTransaction)))
                 {
                     _orderedReplicaItems.Add(item.Etag, item);
                     return true;
