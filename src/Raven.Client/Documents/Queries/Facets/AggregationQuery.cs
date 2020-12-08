@@ -133,13 +133,13 @@ namespace Raven.Client.Documents.Queries.Facets
         public Lazy<Dictionary<string, FacetResult>> ExecuteLazy(Action<Dictionary<string, FacetResult>> onEval = null)
         {
             _query = GetIndexQuery(isAsync: false);
-            return ((DocumentSession)_session).AddLazyOperation(new LazyAggregationQueryOperation(_session.Conventions, _query, InvokeAfterQueryExecuted, ProcessResults), onEval);
+            return ((DocumentSession)_session).AddLazyOperation(new LazyAggregationQueryOperation(_session, _query, InvokeAfterQueryExecuted, ProcessResults), onEval);
         }
 
         public Lazy<Task<Dictionary<string, FacetResult>>> ExecuteLazyAsync(Action<Dictionary<string, FacetResult>> onEval = null, CancellationToken token = default)
         {
             _query = GetIndexQuery(isAsync: true);
-            return ((AsyncDocumentSession)_session).AddLazyOperation(new LazyAggregationQueryOperation(_session.Conventions, _query, InvokeAfterQueryExecuted, ProcessResults), onEval, token);
+            return ((AsyncDocumentSession)_session).AddLazyOperation(new LazyAggregationQueryOperation(_session, _query, InvokeAfterQueryExecuted, ProcessResults), onEval, token);
         }
 
         protected abstract IndexQuery GetIndexQuery(bool isAsync, bool updateAfterQueryExecuted = true);

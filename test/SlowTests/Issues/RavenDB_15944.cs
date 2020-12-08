@@ -1,5 +1,4 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -34,7 +33,9 @@ namespace SlowTests.Issues
 
                     await session.SaveChangesAsync();
                 }
+
                 WaitForIndexing(store);
+
                 using (var session = store.OpenAsyncSession(databaseName))
                 {
                     var english = new CultureInfo("en-US");
@@ -50,14 +51,14 @@ namespace SlowTests.Issues
             }
         }
 
-        public class TestDocument
+        private class TestDocument
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public CultureInfo Language { get; set; }
         }
 
-        public class TestDocumentsIndex : AbstractIndexCreationTask<TestDocument>
+        private class TestDocumentsIndex : AbstractIndexCreationTask<TestDocument>
         {
             public TestDocumentsIndex()
             {

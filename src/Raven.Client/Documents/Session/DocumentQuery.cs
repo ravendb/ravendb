@@ -1039,7 +1039,7 @@ namespace Raven.Client.Documents.Session
                 QueryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
+            var lazyQueryOperation = new LazyQueryOperation<T>(TheSession, QueryOperation, AfterQueryExecutedCallback);
 
             return ((DocumentSession)TheSession).AddLazyCountOperation(lazyQueryOperation);
         }
