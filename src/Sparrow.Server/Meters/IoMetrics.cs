@@ -92,8 +92,8 @@ namespace Sparrow.Server.Meters
         public class FileIoMetrics
         {
             public string FileName;
-            public IoMeterBuffer JournalWrite;
             public IoMeterBuffer JournalWait;
+            public IoMeterBuffer JournalWrite;
             public IoMeterBuffer Compression;
             public IoMeterBuffer DataFlush;
             public IoMeterBuffer DataSync;
@@ -105,8 +105,8 @@ namespace Sparrow.Server.Meters
                 FileName = filename;
 
                 Compression = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
-                JournalWrite = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
                 JournalWait = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
+                JournalWrite = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
                 DataFlush = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
                 DataSync = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
             }
@@ -116,8 +116,8 @@ namespace Sparrow.Server.Meters
                 var list = new List<IoMeterBuffer.MeterItem>();
                 list.AddRange(Compression.GetCurrentItems());
                 list.AddRange(DataSync.GetCurrentItems());
-                list.AddRange(JournalWrite.GetCurrentItems());
                 list.AddRange(JournalWait.GetCurrentItems());
+                list.AddRange(JournalWrite.GetCurrentItems());
                 list.AddRange(DataFlush.GetCurrentItems());                
 
                 list.Sort((x, y) => x.Start.CompareTo(y.Start));
@@ -131,8 +131,8 @@ namespace Sparrow.Server.Meters
                 list.AddRange(Compression.GetSummerizedItems());
                 list.AddRange(DataSync.GetSummerizedItems());
                 list.AddRange(DataFlush.GetSummerizedItems());
-                list.AddRange(JournalWrite.GetSummerizedItems());
                 list.AddRange(JournalWait.GetSummerizedItems());
+                list.AddRange(JournalWrite.GetSummerizedItems());
 
                 list.Sort((x, y) => x.TotalTimeStart.CompareTo(y.TotalTimeStart));
 

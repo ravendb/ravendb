@@ -227,7 +227,7 @@ class ioStatsGraph {
 
     private static readonly indexesString = "Indexes";
 
-    private static readonly meterTypes: Array<Sparrow.Server.Meters.IoMetrics.MeterType> = [ "JournalWrite", "DataFlush", "DataSync", "Compression" ];
+    private static readonly meterTypes: Array<Sparrow.Server.Meters.IoMetrics.MeterType> = [ "JournalWait", "JournalWrite", "DataFlush", "DataSync", "Compression" ];
 
     /* private observables */
 
@@ -314,6 +314,9 @@ class ioStatsGraph {
             low: undefined as string, high: undefined as string
         },
         "JournalWrite": {
+            low: undefined as string, high: undefined as string
+        },
+        "JournalWait": {
             low: undefined as string, high: undefined as string
         }
     };
@@ -699,6 +702,7 @@ class ioStatsGraph {
 
                     switch (recentItem.Type) {
                         case "JournalWrite":
+                        case "JournalWait":
                         case "Compression":
                             yStartItem = ioStatsGraph.closedTrackHeight;
                             break;
@@ -1036,6 +1040,7 @@ class ioStatsGraph {
 
         const yStartPerTypeCache = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, number>();
         yStartPerTypeCache.set("JournalWrite", yStart + ioStatsGraph.closedTrackHeight + ioStatsGraph.itemMargin);
+        yStartPerTypeCache.set("JournalWait", yStart + ioStatsGraph.closedTrackHeight + ioStatsGraph.itemMargin);
         yStartPerTypeCache.set("Compression", yStart + ioStatsGraph.closedTrackHeight + ioStatsGraph.itemMargin);
         yStartPerTypeCache.set("DataFlush", yStart + ioStatsGraph.closedTrackHeight + ioStatsGraph.itemMargin * 2 + ioStatsGraph.itemHeight);
         yStartPerTypeCache.set("DataSync", yStart + ioStatsGraph.closedTrackHeight + ioStatsGraph.itemMargin * 3 + ioStatsGraph.itemHeight * 2);
@@ -1111,6 +1116,7 @@ class ioStatsGraph {
 
         const yStartPerTypeCache = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, number>();
         yStartPerTypeCache.set("JournalWrite", yStart + ioStatsGraph.closedTrackHeight + ioStatsGraph.itemMargin);
+        yStartPerTypeCache.set("JournalWait", yStart + ioStatsGraph.closedTrackHeight + ioStatsGraph.itemMargin);
         yStartPerTypeCache.set("Compression", yStart + ioStatsGraph.closedTrackHeight + ioStatsGraph.itemMargin);
         yStartPerTypeCache.set("DataFlush", yStart + ioStatsGraph.closedTrackHeight + ioStatsGraph.itemMargin * 2 + ioStatsGraph.itemHeight);
         yStartPerTypeCache.set("DataSync", yStart + ioStatsGraph.closedTrackHeight + ioStatsGraph.itemMargin * 3 + ioStatsGraph.itemHeight * 2);
@@ -1517,6 +1523,8 @@ class ioStatsGraph {
 
     private static getMeterTypeFriendlyName(type: Sparrow.Server.Meters.IoMetrics.MeterType) {
         switch (type) {
+            case "JournalWait":
+                return "Journal Wait";
             case "JournalWrite":
                 return "Journal Write";
             case "DataFlush":

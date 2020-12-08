@@ -30,6 +30,10 @@
                 <div class="low"></div>
                 <div class="high"></div>
             </div>
+            <div class="journalWait" data-property="JournalWait">
+                <div class="low"></div>
+                <div class="high"></div>
+            </div>
         </div>
     </div>
     
@@ -60,6 +64,8 @@
                     <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'Compression', text: 'Compression' }}">
                     </div>
                     <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'JournalWrite', text: 'Journal Write' }}">
+                    </div>
+                    <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'JournalWait', text: 'Journal Wait' }}">
                     </div>
                     <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'DataFlush', text: 'Data Flush' }}">
                     </div>
