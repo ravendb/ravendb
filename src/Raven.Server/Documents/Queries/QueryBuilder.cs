@@ -300,13 +300,13 @@ namespace Raven.Server.Documents.Queries
 
                             if (left is RavenBooleanQuery rbq)
                             {
-                                if (rbq.TryAnd(right) == false)
-                                    rbq = new RavenBooleanQuery(left, right, OperatorType.And);
+                                if (rbq.TryAnd(right, buildSteps) == false)
+                                    rbq = new RavenBooleanQuery(left, right, OperatorType.And, buildSteps);
                             }
                             else
                             {
                                 rbq = new RavenBooleanQuery(OperatorType.And);
-                                rbq.And(left, right);
+                                rbq.And(left, right, buildSteps);
                             }
 
                             return rbq;
@@ -322,9 +322,9 @@ namespace Raven.Server.Documents.Queries
 
                             if (left is RavenBooleanQuery rbq)
                             {
-                                if (rbq.TryOr(right) == false)
+                                if (rbq.TryOr(right, buildSteps) == false)
                                 {
-                                    rbq = new RavenBooleanQuery(left, right, OperatorType.Or);
+                                    rbq = new RavenBooleanQuery(left, right, OperatorType.Or, buildSteps);
 
                                     buildSteps?.Add($"Created RavenBooleanQuery because TryOr returned false - {rbq}");
                                 }
@@ -332,7 +332,7 @@ namespace Raven.Server.Documents.Queries
                             else
                             {
                                 rbq = new RavenBooleanQuery(OperatorType.Or);
-                                rbq.Or(left, right);
+                                rbq.Or(left, right, buildSteps);
 
                                 buildSteps?.Add($"Created RavenBooleanQuery - {rbq}");
                             }
