@@ -1294,7 +1294,7 @@ namespace Raven.Server.Documents.Replication
 
                     using (Slice.From(context.Allocator, hash, out var hashSlice))
                     {
-                        if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(hashSlice, out _))
+                        if (_replicationInfo.ReplicatedAttachmentStreams != null && _replicationInfo.ReplicatedAttachmentStreams.TryGetValue(hashSlice, out _))
                         {
                             // attachment exists but not in the correct order of items (RavenDB-13341)
                             continue;
