@@ -92,11 +92,11 @@ namespace Raven.Server.Documents.Queries
                 }
                 else
                 {
-                    buildSteps?.Add($"Cannot apply query optimization because operator is {@operator}, but we got {booleanQuery._operator} with boosting '{booleanQuery.AnyBoost}'");
+                    buildSteps?.Add($"Cannot apply query optimization because operator is {@operator}, but we got {booleanQuery._operator} with boosting '{booleanQuery.AnyBoost}' ({booleanQuery.Boost})");
                 }
             }
 
-            buildSteps?.Add($"Cannot apply query optimization because query ({query.ToString()}) is of type {query.GetType()} with assembly {query.GetType().AssemblyQualifiedName} ({typeof(RavenBooleanQuery).AssemblyQualifiedName})");
+            buildSteps?.Add($"Cannot apply query optimization because query ({query}) is of type {query.GetType()}.");
 
             Add(query, occur);
         }
