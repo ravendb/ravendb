@@ -57,7 +57,7 @@ namespace Voron.Impl.Journal
             NumberOfAllocated4Kb = (int)(actualSize / (4L * Constants.Size.Kilobyte));
         }
 
-        public TimeSpan Write(long posBy4Kb, byte* buffer, int numberOf4KbBlocks)
+        public TimeSpan Write(long posBy4Kb, byte* buffer, long numberOf4KbBlocks)
         {
             Debug.Assert(_options.IoMetrics != null);
 
@@ -66,22 +66,18 @@ namespace Voron.Impl.Journal
             {
                 sp = Stopwatch.StartNew();
 
-                // We will the number of 4Kb aligned blocks in chunks of N blocks. 
-                long iterations = numberOf4KbBlocks / _maxNumberOf4KbBlocks;
-                long leftovers = numberOf4KbBlocks % _maxNumberOf4KbBlocks;
-
-                IoMeterBuffer.DurationMeasurement writeMetrics;
-
                 byte* currentBufferPtr = buffer;
-                for (long i = 0; i < iterations; i++ )
+                while (numberOf4KbBlocks > 0)
                 {
-                    writeMetrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWait, _maxNumberOf4KbBlocks * 4L * Constants.Size.Kilobyte);
+                    long blocksToWrite = Math.Min(numberOf4KbBlocks, _maxNumberOf4KbBlocks);
+
+                    IoMeterBuffer.DurationMeasurement writeMetrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWait, blocksToWrite * 4L * Constants.Size.Kilobyte);
                     using (_writeSynchronization.Enter())
                     {
-                        writeMetrics.SetFileSize(_maxNumberOf4KbBlocks * (4L * Constants.Size.Kilobyte));
+                        writeMetrics.SetFileSize(blocksToWrite * (4L * Constants.Size.Kilobyte));
                         writeMetrics.Dispose();
 
-                        var result = Pal.rvn_write_journal(_writeHandle, currentBufferPtr, _maxNumberOf4KbBlocks * 4L * Constants.Size.Kilobyte, posBy4Kb * 4L * Constants.Size.Kilobyte, out var error);
+                        var result = Pal.rvn_write_journal(_writeHandle, currentBufferPtr, blocksToWrite * 4L * Constants.Size.Kilobyte, posBy4Kb * 4L * Constants.Size.Kilobyte, out var error);
                         if (result != PalFlags.FailCodes.Success)
                             PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {numberOf4KbBlocks * 4L * Constants.Size.Kilobyte}, numberOf4Kb={numberOf4KbBlocks}");
 
@@ -94,27 +90,10 @@ namespace Voron.Impl.Journal
                         }
                     }
 
-                    posBy4Kb += _maxNumberOf4KbBlocks;
-                    currentBufferPtr += _maxNumberOf4KbBlocks * (4L * Constants.Size.Kilobyte);
-                }
+                    posBy4Kb += blocksToWrite;
+                    currentBufferPtr += blocksToWrite * (4L * Constants.Size.Kilobyte);
 
-                writeMetrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWait, _maxNumberOf4KbBlocks * 4L * Constants.Size.Kilobyte);
-                using (_writeSynchronization.Enter())
-                {
-                    writeMetrics.SetFileSize(leftovers * (4L * Constants.Size.Kilobyte));
-                    writeMetrics.Dispose();
-
-                    var result = Pal.rvn_write_journal(_writeHandle, currentBufferPtr, leftovers * 4L * Constants.Size.Kilobyte, posBy4Kb * 4L * Constants.Size.Kilobyte, out var error);
-                    if (result != PalFlags.FailCodes.Success)
-                        PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {numberOf4KbBlocks * 4L * Constants.Size.Kilobyte}, numberOf4Kb={numberOf4KbBlocks}");
-
-                    if (error == ERROR_WORKING_SET_QUOTA && _log.IsOperationsEnabled && _workingSetQuotaLogged == false)
-                    {
-                        _log.Operations(
-                            $"We managed to accomplish journal write although we got {nameof(ERROR_WORKING_SET_QUOTA)} under the covers and wrote data in 4KB chunks");
-
-                        _workingSetQuotaLogged = true;
-                    }                    
+                    numberOf4KbBlocks -= blocksToWrite;
                 }
 
                 sp.Stop();
