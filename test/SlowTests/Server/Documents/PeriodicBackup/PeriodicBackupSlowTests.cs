@@ -534,7 +534,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (ctx.OpenReadTransaction())
                     {
                         var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                        Assert.Equal($"A:7-{originalDatabase.DbBase64Id}, A:8-{restoredDatabase.DbBase64Id}", databaseChangeVector);
+                        Assert.Contains($"A:7-{originalDatabase.DbBase64Id}", databaseChangeVector);
+                        Assert.Contains($"A:8-{restoredDatabase.DbBase64Id}", databaseChangeVector);
                     }
                 }
             }
@@ -681,7 +682,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (ctx.OpenReadTransaction())
                     {
                         var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                        Assert.Equal($"A:8-{originalDatabase.DbBase64Id}, A:10-{restoredDatabase.DbBase64Id}", databaseChangeVector);
+                        Assert.Contains($"A:8-{originalDatabase.DbBase64Id}", databaseChangeVector);
+                        Assert.Contains($"A:10-{restoredDatabase.DbBase64Id}", databaseChangeVector);
                     }
                 }
             }
@@ -2420,18 +2422,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
                 var backupTaskId = (await src.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                
+
                 using (var session = src.OpenAsyncSession())
                 {
                     await session.StoreAsync(userForFullBackup);
                     await session.StoreAsync(userForIncrementalBackup);
                     await session.SaveChangesAsync();
-                    
+
                     session.Advanced.Revisions.ForceRevisionCreationFor(userForFullBackup.Id);
                     await session.SaveChangesAsync();
                 }
                 await BackupAndAssertWait(src, backupTaskId, true);
-                
+
                 using (var session = src.OpenAsyncSession())
                 {
                     session.Advanced.Revisions.ForceRevisionCreationFor(userForIncrementalBackup.Id);
@@ -2459,16 +2461,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        async Task BackupAndAssertWait(IDocumentStore store, long backupTaskId, bool isFullBackup)
+        private async Task BackupAndAssertWait(IDocumentStore store, long backupTaskId, bool isFullBackup)
         {
             await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, backupTaskId));
             var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
             var databaseLastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDatabaseEtag;
-            var backupLastEtag = await WaitForValueAsync(async () => store.Maintenance.Send(operation).Status.LastEtag, databaseLastEtag);
+            var backupLastEtag = await WaitForValueAsync(async () => (await store.Maintenance.SendAsync(operation)).Status.LastEtag, databaseLastEtag);
             Assert.Equal(databaseLastEtag, backupLastEtag);
         }
-        
-        private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
+
+        private void RunBackup(long taskId, DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
         {
             var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
             var op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);

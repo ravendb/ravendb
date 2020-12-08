@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Patch;
 using Raven.Server.NotificationCenter.Notifications;
@@ -62,7 +64,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     using (context.OpenReadTransaction())
                     {
-                        var resolvedConflicts = new List<(DocumentConflict ResolvedConflict, long MaxConflictEtag)>();
+                        var resolvedConflicts = new List<(DocumentConflict ResolvedConflict, long MaxConflictEtag, bool ResolvedToLatest)>();
 
                         var hadConflicts = false;
 
@@ -88,7 +90,7 @@ namespace Raven.Server.Documents.Replication
                                     resolvedConflict: out resolved))
                                 {
                                     resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromReplication);
-                                    resolvedConflicts.Add((resolved, maxConflictEtag));
+                                    resolvedConflicts.Add((resolved, maxConflictEtag, ResolvedToLatest: false));
 
                                     //stats.AddResolvedBy(collection + " Script", conflictList.Count);
                                     continue;
@@ -99,7 +101,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 resolved = ResolveToLatest(conflicts);
                                 resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromReplication);
-                                resolvedConflicts.Add((resolved, maxConflictEtag));
+                                resolvedConflicts.Add((resolved, maxConflictEtag, ResolvedToLatest: true));
 
                                 //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
                             }
@@ -128,11 +130,11 @@ namespace Raven.Server.Documents.Replication
         internal class PutResolvedConflictsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly ConflictsStorage _conflictsStorage;
-            private readonly List<(DocumentConflict ResolvedConflict, long MaxConflictEtag)> _resolvedConflicts;
+            private readonly List<(DocumentConflict ResolvedConflict, long MaxConflictEtag, bool resovedToLatest)> _resolvedConflicts;
             private readonly ResolveConflictOnReplicationConfigurationChange _resolver;
             public bool RequiresRetry;
 
-            public PutResolvedConflictsCommand(ConflictsStorage conflictsStorage, List<(DocumentConflict, long)> resolvedConflicts, ResolveConflictOnReplicationConfigurationChange resolver)
+            public PutResolvedConflictsCommand(ConflictsStorage conflictsStorage, List<(DocumentConflict, long, bool)> resolvedConflicts, ResolveConflictOnReplicationConfigurationChange resolver)
             {
                 _conflictsStorage = conflictsStorage;
                 _resolvedConflicts = resolvedConflicts;
@@ -157,7 +159,7 @@ namespace Raven.Server.Documents.Replication
                         RequiresRetry = true;
                     }
 
-                    _resolver.PutResolvedDocument(context, item.ResolvedConflict);
+                    _resolver.PutResolvedDocument(context, item.ResolvedConflict, item.resovedToLatest);
                 }
 
                 return count;
@@ -242,11 +244,12 @@ namespace Raven.Server.Documents.Replication
         public void PutResolvedDocument(
            DocumentsOperationContext context,
            DocumentConflict resolved,
+           bool resolvedToLatest,
            DocumentConflict incoming = null)
         {
             SaveConflictedDocumentsAsRevisions(context, resolved.Id, incoming);
 
-            // Resolved document should generate a new change vector, since it was changed locally. 
+            // Resolved document should generate a new change vector, since it was changed locally.
             // In a cluster this may cause a ping-pong replication which will be settled down by the fact that a conflict with identical content doesn't increase the local etag
             var changeVector = _database.DocumentsStorage.CreateNextDatabaseChangeVector(context, resolved.ChangeVector);
 
@@ -254,11 +257,13 @@ namespace Raven.Server.Documents.Replication
             {
                 using (Slice.External(context.Allocator, resolved.LowerId, out var lowerId))
                 {
-                    _database.DocumentsStorage.Delete(context, lowerId, resolved.Id, null,null, changeVector, new CollectionName(resolved.Collection),
+                    _database.DocumentsStorage.Delete(context, lowerId, resolved.Id, null, null, changeVector, new CollectionName(resolved.Collection),
                         documentFlags: resolved.Flags | DocumentFlags.Resolved | DocumentFlags.HasRevisions, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved);
                     return;
                 }
             }
+
+            ResolveAttachmentsConflicts(context, resolved, resolvedToLatest);
 
             if (ReferenceEquals(incoming?.Doc, resolved.Doc))
             {
@@ -266,7 +271,6 @@ namespace Raven.Server.Documents.Replication
                 // because incoming == resolved we need to remove these modifications before calling resolved.Clone()
                 resolved.Doc.Modifications = null;
             }
-
 
             // because we are resolving to a conflict, and putting a document will
             // delete all the conflicts, we have to create a copy of the document
@@ -286,7 +290,7 @@ namespace Raven.Server.Documents.Replication
                 _database.DocumentsStorage.Put(context, resolved.Id, null, clone, null, changeVector, resolved.Flags | DocumentFlags.Resolved, nonPersistentFlags: nonPersistentFlags);
             }
         }
-        
+
         private void SaveConflictedDocumentsAsRevisions(DocumentsOperationContext context, string id, DocumentConflict incoming)
         {
             if (incoming == null)
@@ -380,7 +384,7 @@ namespace Raven.Server.Documents.Replication
 
         public DocumentConflict ResolveToLatest(List<DocumentConflict> conflicts)
         {
-            // we have to sort this here because we need to ensure that all the nodes are always 
+            // we have to sort this here because we need to ensure that all the nodes are always
             // arrive to the same conclusion, regardless of what time they go it
             conflicts.Sort((x, y) => string.Compare(x.ChangeVector, y.ChangeVector, StringComparison.Ordinal));
 
@@ -400,11 +404,56 @@ namespace Raven.Server.Documents.Replication
 
             return latestDoc;
         }
+
+        private void ResolveAttachmentsConflicts(DocumentsOperationContext context, DocumentConflict resolved, bool resolvedToLatest)
+        {
+            using var scope = Slice.External(context.Allocator, resolved.LowerId, out var lowerId);
+            var storageAttachmentsDetails = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context, lowerId);
+            List<AttachmentName> resolvedAttachmentsMetadata = null;
+
+            foreach (var group in storageAttachmentsDetails.GroupBy(x => x.Name))
+            {
+                if (group.Count() == 1)
+                    continue;
+
+                resolvedAttachmentsMetadata ??= AttachmentsStorage.GetAttachmentsFromDocumentMetadata(resolved.Doc).Select(attachment => JsonDeserializationClient.AttachmentName(attachment)).ToList();
+                var found = false;
+
+                foreach (var attachment in group)
+                {
+                    if (found == false && resolvedAttachmentsMetadata.Any(x => x.Name == attachment.Name && x.Hash == attachment.Hash && x.ContentType == attachment.ContentType))
+                    {
+                        found = true;
+                        continue;
+                    }
+
+                    if (resolvedToLatest)
+                    {
+                        // delete duplicates
+                        _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, resolved.LowerId, attachment.Name, expectedChangeVector: null, updateDocument: false,
+                            attachment.Hash, attachment.ContentType, usePartialKey: false);
+                    }
+                    else
+                    {
+                        if (found == false)
+                        {
+                            // keep one duplicate with original name
+                            found = true;
+                            continue;
+                        }
+                        // rename duplicates
+                        var newName = _database.DocumentsStorage.AttachmentsStorage.ResolveAttachmentName(context, lowerId, attachment.Name);
+                        _database.DocumentsStorage.AttachmentsStorage.MoveAttachment(context, resolved.LowerId, attachment.Name, resolved.LowerId, newName, changeVector: null,
+                            attachment.Hash, attachment.ContentType, usePartialKey: false, updateDocument: false);
+                    }
+                }
+            }
+        }
     }
 
     internal class PutResolvedConflictsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand>
     {
-        public List<(DocumentConflict ResolvedConflict, long MaxConflictEtag)> ResolvedConflicts;
+        public List<(DocumentConflict ResolvedConflict, long MaxConflictEtag, bool ResolvedToLatests)> ResolvedConflicts;
 
         public ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {

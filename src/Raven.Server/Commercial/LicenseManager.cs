@@ -13,7 +13,6 @@ using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
@@ -42,6 +41,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Voron;
+using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Commercial
 {
@@ -909,8 +909,7 @@ namespace Raven.Server.Commercial
                         databaseRecord.HubPullReplications.Count > 0)
                         pullReplicationAsHubCount++;
 
-                    if (databaseRecord.DocumentsCompression?.CompressRevisions == true ||
-                        databaseRecord.DocumentsCompression?.Collections?.Length > 0)
+                    if (HasDocumentsCompression(databaseRecord.DocumentsCompression))
                         documentsCompressionCount++;
 
                     if (databaseRecord.SinkPullReplications != null &&
@@ -1057,6 +1056,12 @@ namespace Raven.Server.Commercial
             return false;
         }
 
+        private static bool HasDocumentsCompression(DocumentsCompressionConfiguration documentsCompression)
+        {
+            return documentsCompression?.CompressRevisions == true ||
+                   documentsCompression?.Collections?.Length > 0;
+        }
+
         private static bool HasTimeSeriesRollupsAndRetention(TimeSeriesConfiguration configuration)
         {
             if (configuration?.Collections == null)
@@ -1161,7 +1166,7 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.AdditionalAssembliesFromNuGet, details);
         }
 
-        public void AssertCanAddPeriodicBackup(BackupConfiguration configuration)
+        public void AssertCanAddPeriodicBackup(Client.Documents.Operations.Backups.BackupConfiguration configuration)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
@@ -1186,7 +1191,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static bool HasEncryptedBackup(BackupConfiguration configuration)
+        public static bool HasEncryptedBackup(Client.Documents.Operations.Backups.BackupConfiguration configuration)
         {
             if (configuration.BackupEncryptionSettings == null)
                 return false;
@@ -1226,12 +1231,17 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.DelayedExternalReplication, message, addNotification: true);
         }
 
-        public void AssertCanUseDocumentsCompression()
+        public void AssertCanUseDocumentsCompression(DocumentsCompressionConfiguration documentsCompression)
         {
+            var hasDocumentsCompression = HasDocumentsCompression(documentsCompression);
+
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
             if (LicenseStatus.HasDocumentsCompression)
+                return;
+
+            if (hasDocumentsCompression == false)
                 return;
 
             var details = $"Your current license ({LicenseStatus.Type}) does not allow documents compression";

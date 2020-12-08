@@ -318,8 +318,8 @@ namespace SlowTests.Server.Replication
                 using (ctx1.OpenReadTransaction())
                 using (ctx2.OpenReadTransaction())
                 {
-                    var cv1 = DocumentsStorage.GetDatabaseChangeVector(ctx1).ToChangeVector().OrderByDescending(x => x);
-                    var cv2 = DocumentsStorage.GetDatabaseChangeVector(ctx2).ToChangeVector().OrderByDescending(x => x);
+                    var cv1 = DocumentsStorage.GetDatabaseChangeVector(ctx1);
+                    var cv2 = DocumentsStorage.GetDatabaseChangeVector(ctx2);
                     Assert.True(cv1.SequenceEqual(cv2));
                 }
             }

@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Queries;
@@ -40,7 +42,24 @@ namespace SlowTests.Issues
                             .WhereEquals(x => x.Name, "Jane").Boost(6)
                             .GetIndexQuery();
 
-                        Assert.Equal("Name:john^2.0 Name:bob^3.0 Name:george^4.0 Name:georgina^5.0 Name:jane^6.0", GetLuceneQuery(usersOr, context, serializer));
+                        var buildSteps = new List<string>();
+
+                        string luceneQuery = GetLuceneQuery(usersOr, context, serializer, buildSteps);
+
+                        try
+                        {
+                            Assert.Equal("Name:john^2.0 Name:bob^3.0 Name:george^4.0 Name:georgina^5.0 Name:jane^6.0", luceneQuery);
+                        }
+                        catch (Exception)
+                        {
+                            foreach (string buildStep in buildSteps)
+                            {
+                                Output?.WriteLine(buildStep);
+                                Console.WriteLine(buildStep);
+                            }
+
+                            throw;
+                        }
 
                         var usersAnd = session.Advanced.DocumentQuery<User>()
                             .WhereEquals(x => x.Name, "John").Boost(2)
@@ -54,8 +73,21 @@ namespace SlowTests.Issues
                             .WhereEquals(x => x.Name, "Jane").Boost(6)
                             .GetIndexQuery();
 
-                        Assert.Equal("+Name:john^2.0 +Name:bob^3.0 +Name:george^4.0 +Name:georgina^5.0 +Name:jane^6.0", GetLuceneQuery(usersAnd, context, serializer));
+                        buildSteps = new List<string>();
 
+                        try
+                        {
+                            Assert.Equal("+Name:john^2.0 +Name:bob^3.0 +Name:george^4.0 +Name:georgina^5.0 +Name:jane^6.0", GetLuceneQuery(usersAnd, context, serializer, buildSteps));
+                        }
+                        catch (Exception e)
+                        {
+                            foreach (string buildStep in buildSteps)
+                            {
+                                Output?.WriteLine(buildStep);
+                                Console.WriteLine(buildStep);
+                            }
+                            throw;
+                        }
                         var usersAndOrMixed = session.Advanced.DocumentQuery<User>()
                             .WhereEquals(x => x.Name, "John").Boost(2)
                             .AndAlso()
@@ -68,7 +100,20 @@ namespace SlowTests.Issues
                             .WhereEquals(x => x.Name, "Jane").Boost(6)
                             .GetIndexQuery();
 
-                        Assert.Equal("(+Name:john^2.0 +Name:bob^3.0 +Name:george^4.0) Name:georgina^5.0 Name:jane^6.0", GetLuceneQuery(usersAndOrMixed, context, serializer));
+                        buildSteps = new List<string>();
+                        try
+                        {
+                            Assert.Equal("(+Name:john^2.0 +Name:bob^3.0 +Name:george^4.0) Name:georgina^5.0 Name:jane^6.0", GetLuceneQuery(usersAndOrMixed, context, serializer, buildSteps));
+                        }
+                        catch (Exception e)
+                        {
+                            foreach (string buildStep in buildSteps)
+                            {
+                                Output?.WriteLine(buildStep);
+                                Console.WriteLine(buildStep);
+                            }
+                            throw;
+                        }
 
                         var usersAndOrMixed2 = session.Advanced.DocumentQuery<User>()
                             .WhereEquals(x => x.Name, "John").Boost(2)
@@ -82,7 +127,23 @@ namespace SlowTests.Issues
                             .WhereEquals(x => x.Name, "Jane").Boost(6)
                             .GetIndexQuery();
 
-                        Assert.Equal("Name:john^2.0 Name:bob^3.0 (+Name:george^4.0 +Name:georgina^5.0 +Name:jane^6.0)", GetLuceneQuery(usersAndOrMixed2, context, serializer));
+                        buildSteps = new List<string>();
+
+                        try
+                        {
+                            Assert.Equal("Name:john^2.0 Name:bob^3.0 (+Name:george^4.0 +Name:georgina^5.0 +Name:jane^6.0)", GetLuceneQuery(usersAndOrMixed2, context, serializer, buildSteps));
+                        }
+                        catch (Exception e)
+                        {
+                            foreach (string buildStep in buildSteps)
+                            {
+                                Output?.WriteLine(buildStep);
+                                Console.WriteLine(buildStep);
+                            }
+                            throw;
+                        }
+
+                        buildSteps = new List<string>();
 
                         var usersAndOrMixed3 = session.Advanced.DocumentQuery<User>()
                             .WhereEquals(x => x.Name, "John").Boost(2)
@@ -96,7 +157,19 @@ namespace SlowTests.Issues
                             .WhereEquals(x => x.Name, "Jane").Boost(6)
                             .GetIndexQuery();
 
-                        Assert.Equal("Name:john^2.0 (+Name:bob^3.0 +Name:george^4.0) (+Name:georgina^5.0 +Name:jane^6.0)", GetLuceneQuery(usersAndOrMixed3, context, serializer));
+                        try
+                        {
+                            Assert.Equal("Name:john^2.0 (+Name:bob^3.0 +Name:george^4.0) (+Name:georgina^5.0 +Name:jane^6.0)", GetLuceneQuery(usersAndOrMixed3, context, serializer, buildSteps));
+                        }
+                        catch (Exception e)
+                        {
+                            foreach (string buildStep in buildSteps)
+                            {
+                                Output?.WriteLine(buildStep);
+                                Console.WriteLine(buildStep);
+                            }
+                            throw;
+                        }
                     }
 
                     using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -141,7 +214,7 @@ namespace SlowTests.Issues
             return GetLuceneQuery(indexQuery, context, jsonSerializer);
         }
 
-        private static string GetLuceneQuery(IndexQuery indexQuery, JsonOperationContext context, JsonSerializer jsonSerializer)
+        private static string GetLuceneQuery(IndexQuery indexQuery, JsonOperationContext context, JsonSerializer jsonSerializer, List<string> buildSteps = null)
         {
             using (var writer = new BlittableJsonWriter(context))
             {
@@ -159,7 +232,7 @@ namespace SlowTests.Issues
                         indexQueryServerSide.Metadata.Query.Where,
                         null,
                         blittableParameters, null,
-                        null);
+                        null, buildSteps);
 
                     return luceneQuery.ToString();
                 }

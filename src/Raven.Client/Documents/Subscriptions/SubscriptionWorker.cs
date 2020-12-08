@@ -20,6 +20,7 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Commands;
@@ -63,7 +64,7 @@ namespace Raven.Client.Documents.Subscriptions
             if (string.IsNullOrEmpty(options.SubscriptionName))
                 throw new ArgumentException("SubscriptionConnectionOptions must specify the SubscriptionName", nameof(options));
             _store = documentStore;
-            _dbName = dbName ?? documentStore.Database;
+            _dbName = _store.GetDatabase(dbName);
             _logger = LoggingSource.Instance.GetLogger<SubscriptionWorker<T>>(_dbName);
         }
 
@@ -223,7 +224,7 @@ namespace Raven.Client.Documents.Subscriptions
 #endif
                     requestExecutor.DefaultTimeout).ConfigureAwait(false);
 
-                var databaseName = _dbName ?? _store.Database;
+                var databaseName = _store.GetDatabase(_dbName);
 
                 var parameters = new TcpNegotiateParameters
                 {

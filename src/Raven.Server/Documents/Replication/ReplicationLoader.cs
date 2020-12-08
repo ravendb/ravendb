@@ -1895,10 +1895,11 @@ namespace Raven.Server.Documents.Replication
                 if (internalUrls.Contains(destination.Destination.Url) == false)
                     continue;
 
-                var conflictStatus = ChangeVectorUtils.GetConflictStatus(changeVector, destination.LastAcceptedChangeVector);
+                var conflictStatus = Database.DocumentsStorage.GetConflictStatus(changeVector, destination.LastAcceptedChangeVector);
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                     count++;
             }
+
             return count;
         }
 
