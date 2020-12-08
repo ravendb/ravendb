@@ -985,7 +985,7 @@ namespace Raven.Server.Documents.Replication
                         {
                             case AttachmentReplicationItem attachment:
                                 AttachmentReplicationItem attachmentWithStream;
-                                if (AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) == AttachmentType.Revision 
+                                if (AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) == AttachmentType.Revision
                                     && database.DocumentsStorage.AttachmentsStorage.AttachmentMetadataExists(context, attachment.Key))
                                 {
                                     // the revision attachment was already created by previously added document, skipping this item and marking the attachment stream as handled
@@ -996,7 +996,7 @@ namespace Raven.Server.Documents.Replication
                                         handledAttachmentStreams.Add(attachment.Base64Hash);
                                     }
 
-                                    handledAttachmentStreams.Add(item.Base64Hash);
+                                    continue;
                                 }
 
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
@@ -1294,7 +1294,7 @@ namespace Raven.Server.Documents.Replication
 
                     using (Slice.From(context.Allocator, hash, out var hashSlice))
                     {
-                        if (_replicationInfo.ReplicatedAttachmentStreams != null && _replicationInfo.ReplicatedAttachmentStreams.TryGetValue(hashSlice, out _))
+                        if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(hashSlice, out _))
                         {
                             // attachment exists but not in the correct order of items (RavenDB-13341)
                             continue;

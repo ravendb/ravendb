@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -40,11 +39,10 @@ namespace Raven.Server.Documents
         internal static readonly TableSchema AttachmentsSchema = new TableSchema();
         public static readonly string AttachmentsTombstones = "Attachments.Tombstones";
 
-
         private enum AttachmentsTable
         {
-            /* AND is a record separator. 
-             * We are you using the record separator in order to avoid loading another files that has the same key prefix, 
+            /* AND is a record separator.
+             * We are you using the record separator in order to avoid loading another files that has the same key prefix,
                 e.g. fitz(record-separator)profile.png and fitz0(record-separator)profile.png, without the record separator we would have to load also fitz0 and filter it. */
             LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType = 0,
             Etag = 1,
@@ -93,8 +91,8 @@ namespace Raven.Server.Documents
             tx.CreateTree(AttachmentsSlice);
             AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, 44);
             TombstonesSchema.Create(tx, AttachmentsTombstonesSlice, 16);
-
         }
+
         public static long ReadLastEtag(Transaction tx)
         {
             var table = tx.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
@@ -597,7 +595,7 @@ namespace Raven.Server.Documents
             return (count, streamsCount);
         }
 
-        public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector, 
+        public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector,
             string hash = null, string contentType = null, bool usePartialKey = true)
         {
             if (string.IsNullOrWhiteSpace(documentId))
@@ -679,13 +677,13 @@ namespace Raven.Server.Documents
 
                 using (scope)
                 {
-                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+                    var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                     if (table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr) == false)
-                    return null;
+                        return null;
 
-                return TableValueToAttachment(context, ref tvr);
+                    return TableValueToAttachment(context, ref tvr);
+                }
             }
-        }
         }
 
         public Attachment GetAttachmentByKey(DocumentsOperationContext context, Slice key)
@@ -775,7 +773,7 @@ namespace Raven.Server.Documents
         /*
         // Document key: {lowerDocumentId|d|lowerName|hash|lowerContentType}
         // Revision key: {lowerDocumentId|r|changeVector|lowerName|hash|lowerContentType}
-        // 
+        //
         // Document partial key: {lowerDocumentId|d|lowerName|}
         // Revision partial key: {lowerDocumentId|r|changeVector|}
         //
@@ -813,9 +811,11 @@ namespace Raven.Server.Documents
                 case AttachmentType.Document:
                     keyMem.Ptr[pos++] = (byte)'d';
                     break;
+
                 case AttachmentType.Revision:
                     keyMem.Ptr[pos++] = (byte)'r';
                     break;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -945,7 +945,7 @@ namespace Raven.Server.Documents
             return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, string.Empty, attachment.Stream);
         }
 
-        public AttachmentDetails MoveAttachment(DocumentsOperationContext context, string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, LazyStringValue changeVector, 
+        public AttachmentDetails MoveAttachment(DocumentsOperationContext context, string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, LazyStringValue changeVector,
             string hash = null, string contentType = null, bool usePartialKey = true, bool updateDocument = true)
         {
             if (string.IsNullOrWhiteSpace(sourceDocumentId))
@@ -991,7 +991,7 @@ namespace Raven.Server.Documents
             return newName;
         }
 
-        public void DeleteAttachment(DocumentsOperationContext context, string documentId, string name, LazyStringValue expectedChangeVector, bool updateDocument = true, 
+        public void DeleteAttachment(DocumentsOperationContext context, string documentId, string name, LazyStringValue expectedChangeVector, bool updateDocument = true,
             string hash = null, string contentType = null, bool usePartialKey = true)
         {
             if (string.IsNullOrWhiteSpace(documentId))
@@ -1039,9 +1039,9 @@ namespace Raven.Server.Documents
 
                     using (scope)
                     {
-                    var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
+                        var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
                         DeleteAttachmentDirect(context, keySlice, usePartialKey, name, expectedChangeVector, changeVector, lastModifiedTicks);
-                }
+                    }
                 }
 
                 if (updateDocument)
@@ -1131,7 +1131,6 @@ namespace Raven.Server.Documents
 
             return null;
         }
-
 
         public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name,
             string expectedChangeVector, string changeVector, long lastModifiedTicks)
@@ -1297,8 +1296,6 @@ namespace Raven.Server.Documents
 
             return (doc, name);
         }
-    }
-}
 
         public static IEnumerable<BlittableJsonReaderObject> GetAttachmentsFromDocumentMetadata(BlittableJsonReaderObject document)
         {
