@@ -389,6 +389,22 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
+        [RavenAction("/databases/*/admin/debug/periodic-backup/timers", "GET", AuthorizationStatus.DatabaseAdmin)]
+        public Task GetPeriodicBackupTimer()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                BackupDatabaseHandler.WriteStartOfTimers(writer);
+                BackupDatabaseHandler.WritePeriodicBackups(Database, writer, context, out int count);
+                BackupDatabaseHandler.WriteEndOfTimers(writer, count);
+                writer.Flush();
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/admin/periodic-backup", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdatePeriodicBackup()
         {

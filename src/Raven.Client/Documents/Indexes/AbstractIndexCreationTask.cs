@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
@@ -172,11 +173,13 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public virtual Task ExecuteAsync(IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default)
         {
+            database = store.GetDatabase(database);
+
             var oldConventions = Conventions;
 
             try
             {
-                Conventions = conventions ?? Conventions ?? store.GetRequestExecutor(database ?? store.Database).Conventions;
+                Conventions = conventions ?? Conventions ?? store.GetRequestExecutor(database).Conventions;
 
                 var indexDefinition = CreateIndexDefinition();
                 indexDefinition.Name = IndexName;
@@ -187,7 +190,7 @@ namespace Raven.Client.Documents.Indexes
                 if (Priority.HasValue)
                     indexDefinition.Priority = Priority.Value;
 
-                return store.Maintenance.ForDatabase(database ?? store.Database).SendAsync(new PutIndexesOperation(indexDefinition), token);
+                return store.Maintenance.ForDatabase(database).SendAsync(new PutIndexesOperation(indexDefinition), token);
             }
             finally
             {

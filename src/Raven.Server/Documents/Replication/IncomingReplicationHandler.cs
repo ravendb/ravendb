@@ -984,40 +984,36 @@ namespace Raven.Server.Documents.Replication
                         switch (item)
                         {
                             case AttachmentReplicationItem attachment:
-                                AttachmentReplicationItem attachmentWithStream;
-                                if (AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) == AttachmentType.Revision 
-                                    && database.DocumentsStorage.AttachmentsStorage.AttachmentMetadataExists(context, attachment.Key))
+
+                                var localAttachment = database.DocumentsStorage.AttachmentsStorage.GetAttachmentByKey(context, attachment.Key);
+                                if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(attachment.Base64Hash, out var attachmentStream))
                                 {
-                                    // the revision attachment was already created by previously added document, skipping this item and marking the attachment stream as handled
-                                    if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(attachment.Base64Hash, out attachmentWithStream))
-                                    {
-                                        // the stream should have been written when the revision was added by the document
-                                        Debug.Assert(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash));
-                                        handledAttachmentStreams.Add(attachment.Base64Hash);
-                                    }
-
-                                    continue;
-                                }
-
-                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
-                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
-
-                                database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName, contentType, attachment.Base64Hash,
-                                    attachment.ChangeVector);
-
-                                if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(attachment.Base64Hash, out attachmentWithStream))
-                                {
-                                    Debug.Assert(SliceComparer.Compare(attachmentWithStream.Base64Hash, attachment.Base64Hash) == 0);
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
                                     {
-                                        database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentWithStream.Base64Hash, attachmentWithStream.Stream);
+                                            Debug.Assert(localAttachment == null || AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) != AttachmentType.Revision,
+                                                "the stream should have been written when the revision was added by the document");
+                                            database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
                                     }
 
                                     handledAttachmentStreams.Add(attachment.Base64Hash);
                                 }
 
+                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
+                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
+
+                                if (localAttachment == null || ChangeVectorUtils.GetConflictStatus(attachment.ChangeVector, localAttachment.ChangeVector) != ConflictStatus.AlreadyMerged)
+                                {
+                                    database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
+                                        contentType, attachment.Base64Hash, attachment.ChangeVector);
+                                }
                                 break;
+
                             case AttachmentTombstoneReplicationItem attachmentTombstone:
+
+                                var tombstone = AttachmentsStorage.GetAttachmentTombstoneByKey(context, attachmentTombstone.Key);
+                                if (tombstone != null && ChangeVectorUtils.GetConflictStatus(item.ChangeVector, tombstone.ChangeVector) == ConflictStatus.AlreadyMerged)
+                                    continue;
+
                                 database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
                                     rcvdChangeVector,
                                     attachmentTombstone.LastModifiedTicks);
@@ -1284,7 +1280,7 @@ namespace Raven.Server.Documents.Replication
 
             public void AssertAttachmentsFromReplication(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
             {
-                foreach (var attachment in GetAttachmentsFromDocumentMetadata(document))
+                foreach (var attachment in AttachmentsStorage.GetAttachmentsFromDocumentMetadata(document))
                 {
                     if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
                         continue;
@@ -1294,7 +1290,7 @@ namespace Raven.Server.Documents.Replication
 
                     using (Slice.From(context.Allocator, hash, out var hashSlice))
                     {
-                        if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(hashSlice, out _))
+                        if (_replicationInfo.ReplicatedAttachmentStreams != null && _replicationInfo.ReplicatedAttachmentStreams.TryGetValue(hashSlice, out _))
                         {
                             // attachment exists but not in the correct order of items (RavenDB-13341)
                             continue;
@@ -1313,24 +1309,12 @@ namespace Raven.Server.Documents.Replication
 
             private IEnumerable<(string Name, string Hash)> GetAttachmentsNameAndHash(BlittableJsonReaderObject document)
             {
-                foreach (var attachment in GetAttachmentsFromDocumentMetadata(document))
+                foreach (var attachment in AttachmentsStorage.GetAttachmentsFromDocumentMetadata(document))
                 {
                     attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name);
                     attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash);
 
                     yield return (Name: name, Hash: hash);
-                }
-            }
-
-            private static IEnumerable<BlittableJsonReaderObject> GetAttachmentsFromDocumentMetadata(BlittableJsonReaderObject document)
-            {
-                if (document.TryGet(Raven.Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                    metadata.TryGet(Raven.Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
-                {
-                    foreach (BlittableJsonReaderObject attachment in attachments)
-                    {
-                        yield return attachment;
-                    }
                 }
             }
 

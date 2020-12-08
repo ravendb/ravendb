@@ -2,6 +2,7 @@
 using System.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.Replication
@@ -28,6 +29,7 @@ namespace Raven.Server.Documents.Replication
             if (self == null)
                 return null;
 
+            Array.Sort(self, (x, y) => string.CompareOrdinal(x.DbId, y.DbId));
             var sb = new StringBuilder();
             for (int i = 0; i < self.Length; i++)
             {
@@ -43,6 +45,7 @@ namespace Raven.Server.Documents.Replication
             if (self == null)
                 return null;
 
+            self.Sort((x, y) => string.CompareOrdinal(x.DbId, y.DbId));
             var sb = new StringBuilder();
             for (int i = 0; i < self.Count; i++)
             {
