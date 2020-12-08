@@ -118,6 +118,7 @@ namespace Raven.Server.Utils.IoMetrics
                     fileMetric.DataFlush.RemoveUntil(untilTicks);
                     fileMetric.DataSync.RemoveUntil(untilTicks);
                     fileMetric.JournalWrite.RemoveUntil(untilTicks);
+                    fileMetric.JournalWait.RemoveUntil(untilTicks);
                 }
             }
         }

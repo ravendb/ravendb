@@ -148,7 +148,9 @@ namespace Raven.Server.Utils.IoMetrics
                 var meterItem = listOfMeterItems[0];
                 var file = new FileInfo(envFile.Key);
                 var envPath = file.Directory;
-                if (meterItem.Type == Sparrow.Server.Meters.IoMetrics.MeterType.Compression || meterItem.Type == Sparrow.Server.Meters.IoMetrics.MeterType.JournalWrite)
+                if (meterItem.Type == Sparrow.Server.Meters.IoMetrics.MeterType.Compression ||
+                    meterItem.Type == Sparrow.Server.Meters.IoMetrics.MeterType.JournalWrite ||
+                    meterItem.Type == Sparrow.Server.Meters.IoMetrics.MeterType.JournalWait)
                     envPath = envPath?.Parent;
 
                 // 3a. Should not happen, but being extra careful here
