@@ -13,7 +13,6 @@ using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
@@ -27,6 +26,8 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -42,6 +43,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Voron;
+using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Commercial
 {
@@ -909,8 +911,7 @@ namespace Raven.Server.Commercial
                         databaseRecord.HubPullReplications.Count > 0)
                         pullReplicationAsHubCount++;
 
-                    if (databaseRecord.DocumentsCompression?.CompressRevisions == true ||
-                        databaseRecord.DocumentsCompression?.Collections?.Length > 0)
+                    if (HasDocumentsCompression(databaseRecord.DocumentsCompression))
                         documentsCompressionCount++;
 
                     if (databaseRecord.SinkPullReplications != null &&
@@ -1055,6 +1056,12 @@ namespace Raven.Server.Commercial
             }
 
             return false;
+        }
+
+        private static bool HasDocumentsCompression(DocumentsCompressionConfiguration documentsCompression)
+        {
+            return documentsCompression?.CompressRevisions == true ||
+                   documentsCompression?.Collections?.Length > 0;
         }
 
         private static bool HasTimeSeriesRollupsAndRetention(TimeSeriesConfiguration configuration)
@@ -1213,6 +1220,10 @@ namespace Raven.Server.Commercial
 
         public void AssertCanDelayReplication(TimeSpan delayReplicationFor)
         {
+            var hasDocumentsCompression = HasDocumentsCompression(documentsCompression);
+            if (hasDocumentsCompression && _serverStore.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
+                FeaturesAvailabilityException.Throw("Documents Compression");
+
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 

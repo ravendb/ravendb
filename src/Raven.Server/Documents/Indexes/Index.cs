@@ -1328,16 +1328,17 @@ namespace Raven.Server.Documents.Indexes
 
                                         try
                                         {
-                                            // this can fail if the indexes lock is currently held, so we'll retry
-                                            // however, we might be requested to shutdown, so we want to skip replacing
-                                            // in this case, worst case scenario we'll handle this in the next batch
-                                            while (_indexingProcessCancellationTokenSource.IsCancellationRequested == false)
+                                            try
                                             {
-                                                if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name, _indexingProcessCancellationTokenSource.Token))
-                                                {
-                                                    StartIndexingThread();
-                                                    return;
-                                                }
+                                                DocumentDatabase.IndexStore.ReplaceIndexes(originalName, Definition.Name, _indexingProcessCancellationTokenSource.Token);
+                                                StartIndexingThread();
+                                                return;
+                                            }
+                                            catch (OperationCanceledException)
+                                            {
+                                                // this can fail if the indexes lock is currently held, so we'll retry
+                                                // however, we might be requested to shutdown, so we want to skip replacing
+                                                // in this case, worst case scenario we'll handle this in the next batch
                                             }
                                         }
                                         finally

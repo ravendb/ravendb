@@ -51,10 +51,9 @@ namespace Raven.Server.Documents.Handlers
             if (newIndex == null)
                 throw new IndexDoesNotExistException($"Could not find side-by-side index for '{name}'.");
 
-            while (Database.DatabaseShutdown.IsCancellationRequested == false)
+            using (var operationToken = new OperationCancelToken(TimeSpan.FromMinutes(15), Database.DatabaseShutdown))
             {
-                if (Database.IndexStore.TryReplaceIndexes(name, newIndex.Name, Database.DatabaseShutdown))
-                    break;
+                Database.IndexStore.ReplaceIndexes(name, newIndex.Name, operationToken.Token);
             }
 
             return NoContent();

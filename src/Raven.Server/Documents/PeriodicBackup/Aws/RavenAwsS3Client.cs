@@ -66,8 +66,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public void PutObject(string key, Stream stream, Dictionary<string, string> metadata)
         {
-            TestConnection();
-
             if (stream.Length > MaxUploadPutObjectSizeInBytes)
             {
                 // for objects over 256MB
@@ -97,7 +95,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (response.IsSuccessStatusCode)
                 return;
 
-            throw StorageException.FromResponseMessage(response);
+            ThrowError(response);
         }
 
         private void MultiPartUpload(string key, Stream stream, Dictionary<string, string> metadata)
@@ -164,7 +162,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return;
 
-            throw StorageException.FromResponseMessage(response);
+            ThrowError(response);
         }
 
         private void CompleteMultiUpload(string url, HttpClient client,
@@ -189,7 +187,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (response.IsSuccessStatusCode)
                 return;
 
-            throw StorageException.FromResponseMessage(response);
+            ThrowError(response);
+
         }
 
         private static XmlDocument CreateCompleteMultiUploadDocument(List<Tuple<int, string>> partNumbersWithEtag)
@@ -255,7 +254,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     }
 
                     if (retryCount == MaxRetriesForMultiPartUpload)
-                        throw StorageException.FromResponseMessage(response);
+                        ThrowError(response);
                 }
                 catch (Exception)
                 {
@@ -300,7 +299,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode == false)
-                throw StorageException.FromResponseMessage(response);
+                ThrowError(response);
 
             using (var stream = response.Content.ReadAsStreamAsync().Result)
             using (var reader = new StreamReader(stream))
@@ -314,6 +313,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         }
 
         public void TestConnection()
+        {
+            AssertBucketLocation();
+
+            AssertBucketPermissions();
+        }
+
+        private void AssertBucketLocation()
         {
             try
             {
@@ -330,7 +336,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             {
                 // we don't have the permissions to view the bucket location
             }
+            catch (HttpRequestException)
+            {
+                // the endpoint is region invariant and needs to connect to us-east-1
+                // it shouldn't fail if we don't have a connection outside our region for example
+            }
+        }
 
+        private void AssertBucketPermissions()
+        {
             try
             {
                 var bucketPermission = GetBucketPermission();
@@ -392,8 +406,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                         // when the bucket's region is US East (N. Virginia - us-east-1), 
                         // Amazon S3 returns an empty string for the bucket's region
                         // In custom s3 server empty string returned when region name didn't configure in s3 server. 
-                        return HasCustomServerUrl 
-                            ? DefaultCustomRegion 
+                        return HasCustomServerUrl
+                            ? DefaultCustomRegion
                             : DefaultRegion;
                     }
                     if (HasCustomServerUrl == false && value.Equals("EU", StringComparison.OrdinalIgnoreCase))
@@ -422,11 +436,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (response.StatusCode == HttpStatusCode.NotFound)
                 throw new BucketNotFoundException($"Bucket name '{_bucketName}' doesn't exist!");
 
-
             if (response.IsSuccessStatusCode == false)
             {
                 var storageException = StorageException.FromResponseMessage(response);
-                
+
                 if (response.StatusCode == HttpStatusCode.Forbidden)
                     throw new UnauthorizedAccessException(storageException.ResponseString);
 
@@ -480,7 +493,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 if (response.StatusCode == HttpStatusCode.NotFound)
                     return;
 
-                throw StorageException.FromResponseMessage(response);
+                ThrowError(response);
             }
         }
 
@@ -529,7 +542,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 if (response.StatusCode == HttpStatusCode.NotFound)
                     return;
 
-                throw StorageException.FromResponseMessage(response);
+                ThrowError(response);
             }
         }
 
@@ -566,7 +579,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 return new ListObjectsResult();
 
             if (response.IsSuccessStatusCode == false)
-                throw StorageException.FromResponseMessage(response);
+                ThrowError(response);
 
             using (var responseStream = response.Content.ReadAsStreamAsync().Result)
             {
@@ -673,7 +686,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 return new ListObjectsResult();
 
             if (response.IsSuccessStatusCode == false)
-                throw StorageException.FromResponseMessage(response);
+                ThrowError(response);
 
             using (var responseStream = await response.Content.ReadAsStreamAsync())
             {
@@ -803,7 +816,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 return null;
 
             if (response.IsSuccessStatusCode == false)
-                throw StorageException.FromResponseMessage(response);
+                ThrowError(response);
 
             var data = await response.Content.ReadAsStreamAsync();
             var metadataHeaders = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
@@ -832,14 +845,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return;
 
-            throw StorageException.FromResponseMessage(response);
+            ThrowError(response);
         }
 
         public void DeleteMultipleObjects(List<string> objects)
         {
             if (objects.Count == 0)
                 return;
-            
+
             var url = $"{GetUrl()}/?delete";
             var now = SystemTime.UtcNow;
 
@@ -877,7 +890,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             var response = client.SendAsync(requestMessage).Result;
             if (response.IsSuccessStatusCode == false)
-                throw StorageException.FromResponseMessage(response);
+                ThrowError(response);
 
             using (var stream = response.Content.ReadAsStreamAsync().Result)
             using (var reader = new StreamReader(stream))
@@ -927,6 +940,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
+        private void ThrowError(HttpResponseMessage response)
+        {
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.Moved:
+                    AssertBucketLocation();
+                    break;
+                case HttpStatusCode.Forbidden:
+                    AssertBucketPermissions();
+                    break;
+            }
+
+            throw StorageException.FromResponseMessage(response);
+        }
+
         public string CalculateMD5Hash(string input)
         {
             using (var md5 = MD5.Create())
@@ -942,8 +970,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public override string GetUrl()
         {
-            return HasCustomServerUrl 
-                ? $"{_customS3ServerUrl}{_bucketName}" 
+            return HasCustomServerUrl
+                ? $"{_customS3ServerUrl}{_bucketName}"
                 : $"{base.GetUrl()}/{_bucketName}";
         }
 
@@ -951,7 +979,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             if (HasCustomServerUrl)
                 return _customS3ServerUrl.GetComponents(UriComponents.Host | UriComponents.Port, UriFormat.UriEscaped);
-            
+
             if (AwsRegion == DefaultRegion || IsRegionInvariantRequest)
                 return "s3.amazonaws.com";
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Lucene.Net.Search;
 using Raven.Server.Documents.Queries.AST;
 using Query = Lucene.Net.Search.Query;
@@ -16,67 +17,69 @@ namespace Raven.Server.Documents.Queries
             _operator = @operator;
         }
 
-        public RavenBooleanQuery(Query left, Query right, OperatorType @operator)
+        public RavenBooleanQuery(Query left, Query right, OperatorType @operator, List<string> buildSteps)
         {
             _operator = @operator;
 
             switch (@operator)
             {
                 case OperatorType.And:
-                    AddInternal(left, Occur.MUST, OperatorType.And);
-                    TryAnd(right);
+                    AddInternal(left, Occur.MUST, OperatorType.And, buildSteps);
+                    TryAnd(right, buildSteps);
                     break;
+
                 case OperatorType.Or:
-                    AddInternal(left, Occur.SHOULD, OperatorType.Or);
-                    TryOr(right);
+                    AddInternal(left, Occur.SHOULD, OperatorType.Or, buildSteps);
+                    TryOr(right, buildSteps);
                     break;
+
                 default:
                     ThrowInvalidOperatorType(@operator);
                     break;
             }
         }
 
-        public bool TryAnd(Query right)
+        public bool TryAnd(Query right, List<string> buildSteps)
         {
             if (_operator == OperatorType.And)
             {
-                AddInternal(right, Occur.MUST, OperatorType.And);
+                AddInternal(right, Occur.MUST, OperatorType.And, buildSteps);
                 return true;
             }
 
             return false;
         }
 
-        public void And(Query left, Query right)
+        public void And(Query left, Query right, List<string> buildSteps)
         {
             if (_operator != OperatorType.And)
                 ThrowInvalidOperator(OperatorType.And);
 
-            AddInternal(left, Occur.MUST, OperatorType.And);
-            AddInternal(right, Occur.MUST, OperatorType.And);
+            AddInternal(left, Occur.MUST, OperatorType.And, buildSteps);
+            AddInternal(right, Occur.MUST, OperatorType.And, buildSteps);
         }
 
-        public bool TryOr(Query right)
+        public bool TryOr(Query right, List<string> buildSteps)
         {
             if (_operator == OperatorType.Or)
             {
-                AddInternal(right, Occur.SHOULD, OperatorType.Or);
+                AddInternal(right, Occur.SHOULD, OperatorType.Or, buildSteps);
                 return true;
             }
 
             return false;
         }
 
-        public void Or(Query left, Query right)
+        public void Or(Query left, Query right, List<string> buildSteps)
         {
             if (_operator != OperatorType.Or)
                 ThrowInvalidOperator(OperatorType.Or);
 
-            AddInternal(left, Occur.SHOULD, OperatorType.Or);
-            AddInternal(right, Occur.SHOULD, OperatorType.Or);
+            AddInternal(left, Occur.SHOULD, OperatorType.Or, buildSteps);
+            AddInternal(right, Occur.SHOULD, OperatorType.Or, buildSteps);
         }
 
-        private void AddInternal(Query query, Occur occur, OperatorType @operator)
+        private void AddInternal(Query query, Occur occur, OperatorType @operator, List<string> buildSteps)
         {
             if (query is RavenBooleanQuery booleanQuery)
             {
@@ -87,7 +90,13 @@ namespace Raven.Server.Documents.Queries
 
                     return;
                 }
+                else
+                {
+                    buildSteps?.Add($"Cannot apply query optimization because operator is {@operator}, but we got {booleanQuery._operator} with boosting '{booleanQuery.AnyBoost}'");
+                }
             }
+
+            buildSteps?.Add($"Cannot apply query optimization because query ({query.ToString()}) is of type {query.GetType()} with assembly {query.GetType().AssemblyQualifiedName} ({typeof(RavenBooleanQuery).AssemblyQualifiedName})");
 
             Add(query, occur);
         }

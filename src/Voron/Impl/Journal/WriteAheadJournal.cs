@@ -1843,7 +1843,7 @@ namespace Voron.Impl.Journal
 
         private AbstractPager CreateCompressionPager(long initialSize)
         {
-            return _env.Options.CreateTemporaryBufferPager($"compression.{_compressionPagerCounter++:D10}.buffers", initialSize);
+            return _env.Options.CreateTemporaryBufferPager($"compression.{_compressionPagerCounter++:D10}{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.BuffersFileExtension}", initialSize);
         }
 
         private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;

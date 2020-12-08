@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
@@ -363,6 +364,9 @@ namespace Voron
 
         public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
+            public const string TempFileExtension = ".tmp";
+            public const string BuffersFileExtension = ".buffers";
+
             private readonly VoronPathSetting _basePath;
 
             private readonly LazyWithExceptionRetry<AbstractPager> _dataPager;
@@ -397,7 +401,7 @@ namespace Voron
                 });
 
                 // have to be before the journal check, so we'll fail on files in use
-                DeleteAllTempBuffers();
+                DeleteAllTempFiles();
 
                 GatherRecyclableJournalFiles(); // if there are any (e.g. after a rude db shut down) let us reuse them
 
@@ -696,13 +700,15 @@ namespace Voron
                     PalHelper.ThrowLastError(rc, errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FailCodes)rc).ToString()}");
             }
 
-            public void DeleteAllTempBuffers()
+            public void DeleteAllTempFiles()
             {
                 if (Directory.Exists(TempPath.FullPath) == false)
                     return;
 
-                foreach (var file in Directory.GetFiles(TempPath.FullPath, "*.buffers"))
+                foreach (var file in Directory.GetFiles(TempPath.FullPath).Where(x => x.EndsWith(BuffersFileExtension, StringComparison.OrdinalIgnoreCase) || x.EndsWith(TempFileExtension, StringComparison.OrdinalIgnoreCase)))
+                {
                     File.Delete(file);
+                }
             }
 
             private AbstractPager GetTemporaryPager(string name, long initialSize, Func<StorageEnvironmentOptions, long?, VoronPathSetting, bool, bool, AbstractPager> getMemoryMapPagerFunc)
@@ -1101,7 +1107,7 @@ namespace Voron
 
         public static string ScratchBufferName(long number)
         {
-            return string.Format("scratch.{0:D10}.buffers", number);
+            return $"scratch.{number:D10}{DirectoryStorageEnvironmentOptions.BuffersFileExtension}";
         }
 
         public void Dispose()

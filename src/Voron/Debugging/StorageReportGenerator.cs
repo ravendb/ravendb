@@ -187,7 +187,7 @@ namespace Voron.Debugging
 
         public static List<TempBufferReport> GenerateTempBuffersReport(VoronPathSetting tempPath, VoronPathSetting journalPath)
         {
-            var tempFiles = GetFiles(tempPath.FullPath, "*.buffers").Select(filePath =>
+            var tempFiles = GetFiles(tempPath.FullPath, $"*{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.BuffersFileExtension}").Select(filePath =>
             {
                 try
                 {
