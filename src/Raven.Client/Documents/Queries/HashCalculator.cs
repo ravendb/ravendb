@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Reflection;
-using Raven.Client.Extensions;
-using Raven.Client.Util;
+using System.IO;
+using System.Text;
+using Newtonsoft.Json;
 using Sparrow;
 using Sparrow.Json;
 
@@ -12,11 +11,14 @@ namespace Raven.Client.Documents.Queries
 {
     public unsafe struct HashCalculator : IDisposable
     {
+        private readonly JsonOperationContext _context;
+
         private UnmanagedWriteBuffer _buffer;
 
         public HashCalculator(JsonOperationContext ctx)
         {
-            _buffer = ctx.GetStream(JsonOperationContext.InitialStreamSize);
+            _context = ctx ?? throw new ArgumentNullException(nameof(ctx));
+            _buffer = _context.GetStream(JsonOperationContext.InitialStreamSize);
         }
 
         public ulong GetHash()
@@ -152,7 +154,7 @@ namespace Raven.Client.Documents.Queries
             _buffer.Dispose();
         }
 
-        public void Write(Parameters qp)
+        public void Write(Parameters qp, JsonSerializer serializer)
         {
             if (qp == null)
             {
@@ -163,22 +165,12 @@ namespace Raven.Client.Documents.Queries
             foreach (var kvp in qp)
             {
                 Write(kvp.Key);
-                WriteParameterValue(kvp.Value, 100);
+                WriteParameterValue(kvp.Value, serializer);
             }
         }
 
-        private void WriteParameterValue(object value, int level)
+        private void WriteParameterValue(object value, JsonSerializer serializer)
         {
-            if (level <= 0)
-            {
-                if (value is null)
-                    _buffer.WriteByte(0);
-                else
-                    Write(value.ToString());
-
-                return;
-            }
-
             switch (value)
             {
                 case string s:
@@ -270,8 +262,8 @@ namespace Raven.Client.Documents.Queries
                     var dictionaryEnumerator = dict.GetEnumerator();
                     while (dictionaryEnumerator.MoveNext())
                     {
-                        WriteParameterValue(dictionaryEnumerator.Key, level - 1);
-                        WriteParameterValue(dictionaryEnumerator.Value, level - 1);
+                        WriteParameterValue(dictionaryEnumerator.Key, serializer);
+                        WriteParameterValue(dictionaryEnumerator.Value, serializer);
                         hadDictionaryValues = true;
                     }
                     if (hadDictionaryValues == false)
@@ -285,7 +277,7 @@ namespace Raven.Client.Documents.Queries
                     var enumerator = e.GetEnumerator();
                     while (enumerator.MoveNext())
                     {
-                        WriteParameterValue(enumerator.Current, level - 1);
+                        WriteParameterValue(enumerator.Current, serializer);
                         hadEnumerableValues = true;
                     }
                     if (hadEnumerableValues == false)
@@ -294,48 +286,45 @@ namespace Raven.Client.Documents.Queries
                     }
 
                     break;
-                case CultureInfo ci:
-                    Write(ci.ToString());
-                    break;
 
                 default:
 
                     var valueType = value.GetType();
                     if (valueType.IsPrimitive == false)
                     {
-                        bool hasObjectValues = false;
-                        foreach (var memberInfo in ReflectionUtil.GetPropertiesAndFieldsFor(valueType, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                        var stream = _context.CheckoutMemoryStream();
+                        stream.Position = 0;
+                        try
                         {
-                            if (TryGetMemberValue(memberInfo, value, out var memberValue) == false)
-                                continue;
+                            using (var writer = new StreamWriter(stream, Encoding.UTF8, bufferSize: 1024, leaveOpen: true))
+                            {
+                                serializer.Serialize(writer, value);
+                            }
 
-                            WriteParameterValue(memberValue, level - 1);
-                            hasObjectValues = true;
+                            stream.Position = 0;
+
+                            Write(stream);
                         }
-                        if (hasObjectValues == false)
+                        finally
                         {
-                            Write("empty-object");
+                            _context.ReturnMemoryStream(stream);
                         }
                     }
-
-                    Write(value.ToString());
+                    else
+                    {
+                        Write(value.ToString());
+                    }
 
                     break;
             }
+        }
 
-            static bool TryGetMemberValue(MemberInfo memberInfo, object value, out object memberValue)
-            {
-                try
-                {
-                    memberValue = memberInfo.GetValue(value);
-                    return true;
-                }
-                catch
-                {
-                    memberValue = null;
-                    return false;
-                }
-            }
+        private void Write(MemoryStream stream)
+        {
+            if (stream.TryGetBuffer(out var buffer) == false)
+                return;
+
+            _buffer.Write(buffer.Array, buffer.Offset, buffer.Count);
         }
     }
 }

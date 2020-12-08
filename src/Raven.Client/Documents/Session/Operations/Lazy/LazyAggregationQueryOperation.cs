@@ -12,14 +12,14 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 {
     internal class LazyAggregationQueryOperation : ILazyOperation
     {
-        private readonly DocumentConventions _conventions;
+        private readonly InMemoryDocumentSessionOperations _session;
         private readonly IndexQuery _indexQuery;
         private readonly Action<QueryResult> _invokeAfterQueryExecuted;
         private readonly Func<QueryResult, DocumentConventions, Dictionary<string, FacetResult>> _processResults;
 
-        public LazyAggregationQueryOperation(DocumentConventions conventions, IndexQuery indexQuery, Action<QueryResult> invokeAfterQueryExecuted, Func<QueryResult, DocumentConventions, Dictionary<string, FacetResult>> processResults)
+        public LazyAggregationQueryOperation(InMemoryDocumentSessionOperations session, IndexQuery indexQuery, Action<QueryResult> invokeAfterQueryExecuted, Func<QueryResult, DocumentConventions, Dictionary<string, FacetResult>> processResults)
         {
-            _conventions = conventions;
+            _session = session;
             _indexQuery = indexQuery;
             _invokeAfterQueryExecuted = invokeAfterQueryExecuted;
             _processResults = processResults;
@@ -31,8 +31,8 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             {
                 Url = "/queries",
                 Method = HttpMethod.Post,
-                Query = $"?queryHash={_indexQuery.GetQueryHash(ctx)}",
-                Content = new IndexQueryContent(_conventions, _indexQuery)
+                Query = $"?queryHash={_indexQuery.GetQueryHash(ctx, _session.JsonSerializer)}",
+                Content = new IndexQueryContent(_session.Conventions, _indexQuery)
             };
         }
 
@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         private void HandleResponse(QueryResult queryResult)
         {
-            Result = _processResults(queryResult, _conventions);
+            Result = _processResults(queryResult, _session.Conventions);
             QueryResult = queryResult;
         }
     }
