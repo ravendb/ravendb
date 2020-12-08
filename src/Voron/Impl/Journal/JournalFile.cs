@@ -22,7 +22,7 @@ namespace Voron.Impl.Journal
     public unsafe class JournalFile : IDisposable
     {
         private readonly StorageEnvironment _env;
-        private IJournalWriter _journalWriter;
+        private JournalWriter _journalWriter;
         private long _writePosIn4Kb;
 
         internal List<TransactionHeader> _transactionHeaders;
@@ -34,7 +34,7 @@ namespace Voron.Impl.Journal
         private readonly FastList<PagePosition> _unusedPages;
         private readonly ContentionLoggingLocker _locker2;
 
-        public JournalFile(StorageEnvironment env, IJournalWriter journalWriter, long journalNumber)
+        public JournalFile(StorageEnvironment env, JournalWriter journalWriter, long journalNumber)
         {
             Number = journalNumber;
 
@@ -60,7 +60,7 @@ namespace Voron.Impl.Journal
 
         public long Available4Kbs => _journalWriter?.NumberOfAllocated4Kb - _writePosIn4Kb ?? 0;
 
-        internal IJournalWriter JournalWriter => _journalWriter;
+        internal JournalWriter JournalWriter => _journalWriter;
 
         public PageTable PageTranslationTable => _pageTranslationTable;
 

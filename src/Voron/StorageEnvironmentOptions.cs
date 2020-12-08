@@ -203,7 +203,7 @@ namespace Voron
         /// </summary>
         internal bool CopyOnWriteMode { get; set; }
 
-        public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize, StorageEnvironmentSynchronization writeSynchronization = null);
+        public abstract JournalWriter CreateJournalWriter(long journalNumber, long journalSize, StorageEnvironmentSynchronization writeSynchronization = null);
 
         public abstract VoronPathSetting GetJournalPath(long journalNumber);
 
@@ -371,8 +371,8 @@ namespace Voron
 
             private readonly LazyWithExceptionRetry<AbstractPager> _dataPager;
 
-            private readonly ConcurrentDictionary<string, LazyWithExceptionRetry<IJournalWriter>> _journals =
-                new ConcurrentDictionary<string, LazyWithExceptionRetry<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
+            private readonly ConcurrentDictionary<string, LazyWithExceptionRetry<JournalWriter>> _journals =
+                new ConcurrentDictionary<string, LazyWithExceptionRetry<JournalWriter>>(StringComparer.OrdinalIgnoreCase);
 
             public DirectoryStorageEnvironmentOptions(VoronPathSetting basePath, VoronPathSetting tempPath, VoronPathSetting journalPath,
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
@@ -482,7 +482,7 @@ namespace Voron
                 return GetMemoryMapPagerInternal(this, null, filename);
             }
 
-            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize, StorageEnvironmentSynchronization writeSynchronization)
+            public override JournalWriter CreateJournalWriter(long journalNumber, long journalSize, StorageEnvironmentSynchronization writeSynchronization)
             {
                 var name = JournalName(journalNumber);
                 var path = JournalPath.Combine(name);
@@ -490,11 +490,11 @@ namespace Voron
                     AttemptToReuseJournal(path, journalSize);
 
                 var result = _journals.GetOrAdd(name, _ =>
-                    new LazyWithExceptionRetry<IJournalWriter>(() => new JournalWriter(this, path, journalSize, writeSynchronization)));
+                    new LazyWithExceptionRetry<JournalWriter>(() => new JournalWriter(this, path, journalSize, writeSynchronization)));
 
                 if (result.Value.Disposed)
                 {
-                    var newWriter = new LazyWithExceptionRetry<IJournalWriter>(() => new JournalWriter(this, path, journalSize, writeSynchronization));
+                    var newWriter = new LazyWithExceptionRetry<JournalWriter>(() => new JournalWriter(this, path, journalSize, writeSynchronization));
                     if (_journals.TryUpdate(name, newWriter, result) == false)
                         throw new InvalidOperationException("Could not update journal pager");
                     result = newWriter;
@@ -876,8 +876,8 @@ namespace Voron
 
             private readonly LazyWithExceptionRetry<AbstractPager> _dataPager;
 
-            private readonly Dictionary<string, IJournalWriter> _logs =
-                new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
+            private readonly Dictionary<string, JournalWriter> _logs =
+                new Dictionary<string, JournalWriter>(StringComparer.OrdinalIgnoreCase);
 
             private readonly Dictionary<string, IntPtr> _headers =
                 new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
@@ -913,10 +913,10 @@ namespace Voron
 
             public override VoronPathSetting BasePath { get; } = new MemoryVoronPathSetting();
 
-            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize, StorageEnvironmentSynchronization envWriteSync)
+            public override JournalWriter CreateJournalWriter(long journalNumber, long journalSize, StorageEnvironmentSynchronization envWriteSync)
             {
                 var name = JournalName(journalNumber);
-                IJournalWriter value;
+                JournalWriter value;
                 if (_logs.TryGetValue(name, out value))
                     return value;
 
@@ -972,7 +972,7 @@ namespace Voron
             public override bool TryDeleteJournal(long number)
             {
                 var name = JournalName(number);
-                IJournalWriter value;
+                JournalWriter value;
                 if (_logs.TryGetValue(name, out value) == false)
                     return false;
                 _logs.Remove(name);
@@ -1083,7 +1083,7 @@ namespace Voron
             public override AbstractPager OpenJournalPager(long journalNumber, JournalInfo journalInfo)
             {
                 var name = JournalName(journalNumber);
-                IJournalWriter value;
+                JournalWriter value;
                 if (_logs.TryGetValue(name, out value))
                     return value.CreatePager();
                 throw new InvalidJournalException(journalNumber, journalInfo);
