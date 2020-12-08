@@ -254,6 +254,9 @@ namespace Raven.Client.Documents.Smuggler
                 if (ClientConfigurationUpdated)
                     json[nameof(ClientConfigurationUpdated)] = ClientConfigurationUpdated;
 
+                if (ConflictSolverConfigUpdated)
+                    json[nameof(ConflictSolverConfigUpdated)] = ConflictSolverConfigUpdated;
+                
                 if (PeriodicBackupsUpdated)
                     json[nameof(PeriodicBackupsUpdated)] = PeriodicBackupsUpdated;
 
