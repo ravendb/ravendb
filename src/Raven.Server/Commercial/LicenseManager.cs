@@ -26,8 +26,6 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
-using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -1168,7 +1166,7 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.AdditionalAssembliesFromNuGet, details);
         }
 
-        public void AssertCanAddPeriodicBackup(BackupConfiguration configuration)
+        public void AssertCanAddPeriodicBackup(Client.Documents.Operations.Backups.BackupConfiguration configuration)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
@@ -1193,7 +1191,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static bool HasEncryptedBackup(BackupConfiguration configuration)
+        public static bool HasEncryptedBackup(Client.Documents.Operations.Backups.BackupConfiguration configuration)
         {
             if (configuration.BackupEncryptionSettings == null)
                 return false;
@@ -1220,10 +1218,6 @@ namespace Raven.Server.Commercial
 
         public void AssertCanDelayReplication(TimeSpan delayReplicationFor)
         {
-            var hasDocumentsCompression = HasDocumentsCompression(documentsCompression);
-            if (hasDocumentsCompression && _serverStore.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
-                FeaturesAvailabilityException.Throw("Documents Compression");
-
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
@@ -1237,12 +1231,17 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.DelayedExternalReplication, message, addNotification: true);
         }
 
-        public void AssertCanUseDocumentsCompression()
+        public void AssertCanUseDocumentsCompression(DocumentsCompressionConfiguration documentsCompression)
         {
+            var hasDocumentsCompression = HasDocumentsCompression(documentsCompression);
+
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
             if (LicenseStatus.HasDocumentsCompression)
+                return;
+
+            if (hasDocumentsCompression == false)
                 return;
 
             var details = $"Your current license ({LicenseStatus.Type}) does not allow documents compression";

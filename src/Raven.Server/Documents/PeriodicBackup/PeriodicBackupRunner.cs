@@ -512,7 +512,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         backupStatus.BackupType != periodicBackup.Configuration.BackupType || // backup type has changed
                         backupStatus.LastEtag == null || // last document etag wasn't updated
                         backupToLocalFolder && BackupTask.DirectoryContainsBackupFiles(backupStatus.LocalBackup.BackupDirectory, IsFullBackupOrSnapshot) == false)
-                        // the local folder already includes a full backup or snapshot
+                    // the local folder already includes a full backup or snapshot
                     {
                         isFullBackup = true;
                     }
@@ -693,7 +693,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (periodicBackup.HasScheduledBackup() && _cancellationToken.IsCancellationRequested == false)
                     periodicBackup.UpdateTimer(GetNextBackupDetails(periodicBackup.Configuration, periodicBackup.BackupStatus, _serverStore.NodeTag), lockTaken, discardIfDisabled: true);
-                }
+            }
             catch (Exception e)
             {
                 var message = $"Failed to schedule next backup for task: '{periodicBackup.Configuration.Name}'";
@@ -767,11 +767,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                 case TaskStatus.ActiveByCurrentNode:
                     msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the backup will be executed on current node.";
                     break;
+
                 case TaskStatus.ClusterDown:
                     msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the backup will be rescheduled on current node.";
                     var status = GetBackupStatus(backupInfo.TaskId, periodicBackup.BackupStatus);
                     periodicBackup.UpdateTimer(GetNextBackupDetails(periodicBackup.Configuration, status, _serverStore.NodeTag), lockTaken: false);
                     break;
+
                 default:
                     msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the backup will be canceled on current node.";
                     periodicBackup.DisableFutureBackups();
@@ -803,7 +805,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             if (backupStatus == null)
             {
-                backupStatus = inMemoryBackupStatus ?? new PeriodicBackupStatus {TaskId = taskId};
+                backupStatus = inMemoryBackupStatus ?? new PeriodicBackupStatus { TaskId = taskId };
             }
             else if (inMemoryBackupStatus?.Version > backupStatus.Version && inMemoryBackupStatus.NodeTag == backupStatus.NodeTag)
             {
@@ -849,7 +851,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (config.IncrementalBackupFrequency == null)
                     {
                         // if there is no status for this, we don't need to take into account tombstones
-                         continue; // if the backup is always full, we don't need to take into account the tombstones, since we never back them up.
+                        continue; // if the backup is always full, we don't need to take into account the tombstones, since we never back them up.
                     }
                     var status = GetBackupStatusFromCluster(_serverStore, context, _database.Name, taskId);
                     if (status == null)
@@ -948,12 +950,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                         _logger.Operations($"Backup task '{taskId}' state is '{taskState}', will cancel the timer for it.");
 
                     return;
+
                 case TaskStatus.ClusterDown:
                     // this node cannot connect to cluster, the task will continue on this node
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations($"Backup task '{taskId}' state is '{taskState}', will continue to execute by the current node '{_database.ServerStore.NodeTag}'.");
 
                     return;
+
                 case TaskStatus.ActiveByCurrentNode:
                     // a backup is already running, the next one will be re-scheduled by the backup task if needed
                     if (existingBackupState.RunningTask != null)
@@ -976,9 +980,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations($"Backup task '{taskId}' state is '{taskState}', the task has frequency changes or doesn't have scheduled backup, the timer will be rearranged and the task will be executed by current node '{_database.ServerStore.NodeTag}'.");
 
-
-                    existingBackupState.UpdateTimer(GetTimer(newConfiguration, backupStatus), lockTaken: false);
+                    var backupStatus = GetBackupStatus(taskId, inMemoryBackupStatus: null);
+                    existingBackupState.UpdateTimer(GetNextBackupDetails(newConfiguration, backupStatus, _serverStore.NodeTag), lockTaken: false);
                     return;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(taskState), taskState, null);
             }
