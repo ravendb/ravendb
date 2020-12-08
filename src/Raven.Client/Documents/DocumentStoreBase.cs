@@ -14,6 +14,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.TimeSeries;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 
@@ -95,7 +96,9 @@ namespace Raven.Client.Documents
             AssertInitialized();
             var indexesToAdd = IndexCreation.CreateIndexesToAdd(tasks, Conventions);
 
-            return Maintenance.ForDatabase(database ?? Database).SendAsync(new PutIndexesOperation(indexesToAdd), token);
+            database = this.GetDatabase(database);
+
+            return Maintenance.ForDatabase(database).SendAsync(new PutIndexesOperation(indexesToAdd), token);
         }
 
         private TimeSeriesOperations _timeSeriesOperation;

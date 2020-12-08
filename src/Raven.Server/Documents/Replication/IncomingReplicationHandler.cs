@@ -996,7 +996,7 @@ namespace Raven.Server.Documents.Replication
                                         handledAttachmentStreams.Add(attachment.Base64Hash);
                                     }
 
-                                    continue;
+                                    handledAttachmentStreams.Add(item.Base64Hash);
                                 }
 
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
@@ -1284,7 +1284,7 @@ namespace Raven.Server.Documents.Replication
 
             public void AssertAttachmentsFromReplication(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
             {
-                foreach (var attachment in GetAttachmentsFromDocumentMetadata(document))
+                foreach (var attachment in AttachmentsStorage.GetAttachmentsFromDocumentMetadata(document))
                 {
                     if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
                         continue;
@@ -1294,7 +1294,7 @@ namespace Raven.Server.Documents.Replication
 
                     using (Slice.From(context.Allocator, hash, out var hashSlice))
                     {
-                        if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(hashSlice, out _))
+                        if (_replicationInfo.ReplicatedAttachmentStreams != null && _replicationInfo.ReplicatedAttachmentStreams.TryGetValue(hashSlice, out _))
                         {
                             // attachment exists but not in the correct order of items (RavenDB-13341)
                             continue;
@@ -1313,24 +1313,12 @@ namespace Raven.Server.Documents.Replication
 
             private IEnumerable<(string Name, string Hash)> GetAttachmentsNameAndHash(BlittableJsonReaderObject document)
             {
-                foreach (var attachment in GetAttachmentsFromDocumentMetadata(document))
+                foreach (var attachment in AttachmentsStorage.GetAttachmentsFromDocumentMetadata(document))
                 {
                     attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name);
                     attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash);
 
                     yield return (Name: name, Hash: hash);
-                }
-            }
-
-            private static IEnumerable<BlittableJsonReaderObject> GetAttachmentsFromDocumentMetadata(BlittableJsonReaderObject document)
-            {
-                if (document.TryGet(Raven.Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                    metadata.TryGet(Raven.Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
-                {
-                    foreach (BlittableJsonReaderObject attachment in attachments)
-                    {
-                        yield return attachment;
-                    }
                 }
             }
 

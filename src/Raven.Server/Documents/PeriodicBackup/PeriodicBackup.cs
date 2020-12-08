@@ -2,9 +2,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.ServerWide;
 using Sparrow.Collections;
+using Sparrow.Logging;
 using Sparrow.Threading;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -12,10 +14,10 @@ namespace Raven.Server.Documents.PeriodicBackup
     public class PeriodicBackup : IDisposable
     {
         private readonly SemaphoreSlim _updateBackupTaskSemaphore = new SemaphoreSlim(1);
-
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
-
-        public Timer BackupTimer { get; private set; }
+        private readonly PeriodicBackupRunner _periodicBackupRunner;
+        private readonly Logger _logger;
+        private BackupTimer _backupTimer;
 
         public RunningBackupTask RunningTask { get; set; }
 
@@ -31,8 +33,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public bool Disposed => _disposeOnce.Disposed;
 
-        public PeriodicBackup(ConcurrentSet<Task> inactiveRunningPeriodicBackupsTasks)
+        public PeriodicBackup(PeriodicBackupRunner periodicBackupRunner, ConcurrentSet<Task> inactiveRunningPeriodicBackupsTasks, Logger logger)
         {
+            _periodicBackupRunner = periodicBackupRunner;
+            _logger = logger;
+
             _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
             {
                 using (UpdateBackupTask())
@@ -65,8 +70,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void CancelFutureTasks()
         {
-            BackupTimer?.Dispose();
-            BackupTimer = null;
+            _backupTimer?.Dispose();
+            _backupTimer = null;
 
             try
             {
@@ -77,42 +82,67 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public void UpdateTimer(Timer newBackupTimer, bool lockTaken, bool discardIfDisabled = false)
+        public void UpdateTimer(NextBackup nextBackup, bool lockTaken, bool discardIfDisabled = false)
         {
+            if (nextBackup == null)
+                return;
+
             if (lockTaken == false)
             {
                 using (UpdateBackupTask())
                 {
-                    UpdateTimerInternal(newBackupTimer, discardIfDisabled);
+                    UpdateTimerInternal(nextBackup, discardIfDisabled);
                 }
             }
             else
             {
-                UpdateTimerInternal(newBackupTimer, discardIfDisabled);
+                UpdateTimerInternal(nextBackup, discardIfDisabled);
             }
         }
 
-        private void UpdateTimerInternal(Timer newBackupTimer, bool discardIfDisabled)
+        private void UpdateTimerInternal(NextBackup nextBackup, bool discardIfDisabled)
         {
             if (Disposed)
-            {
-                newBackupTimer.Dispose();
                 return;
-            }
 
-            if (discardIfDisabled && BackupTimer == null)
-            {
-                newBackupTimer.Dispose();
+            if (discardIfDisabled && _backupTimer == null)
                 return;
-            }
 
-            BackupTimer?.Dispose();
-            BackupTimer = newBackupTimer;
+            _backupTimer?.Dispose();
+
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"Next {(nextBackup.IsFull ? "full" : "incremental")} backup is in {nextBackup.TimeSpan.TotalMinutes} minutes.");
+
+            var timer = nextBackup.TimeSpan < _periodicBackupRunner.MaxTimerTimeout
+                ? new Timer(_periodicBackupRunner.TimerCallback, nextBackup, nextBackup.TimeSpan, Timeout.InfiniteTimeSpan)
+                : new Timer(_periodicBackupRunner.LongPeriodTimerCallback, nextBackup, _periodicBackupRunner.MaxTimerTimeout, Timeout.InfiniteTimeSpan);
+            
+            _backupTimer = new BackupTimer
+            {
+                Timer = timer,
+                CreatedAt = DateTime.UtcNow,
+                NextBackup = nextBackup
+            };
         }
 
         public bool HasScheduledBackup()
         {
-            return BackupTimer != null;
+            return _backupTimer != null;
+        }
+
+        internal Timer GetTimer()
+        {
+            return _backupTimer?.Timer;
+        }
+
+        internal NextBackup GetNextBackup()
+        {
+            return _backupTimer?.NextBackup;
+        }
+
+        internal DateTime? GetCreatedAt()
+        {
+            return _backupTimer?.CreatedAt;
         }
 
         public void Dispose()
@@ -125,6 +155,20 @@ namespace Raven.Server.Documents.PeriodicBackup
             public Task Task { get; set; }
 
             public long Id { get; set; }
+        }
+
+        public class BackupTimer : IDisposable
+        {
+            public Timer Timer { get; set; }
+
+            public NextBackup NextBackup { get; set; }
+
+            public DateTime CreatedAt { get; set; }
+
+            public void Dispose()
+            {
+                Timer?.Dispose();
+            }
         }
     }
 }

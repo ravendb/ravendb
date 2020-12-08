@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Sparrow.Logging;
 
@@ -50,6 +51,8 @@ namespace Raven.Client.Documents.Indexes
 
         public static async Task CreateIndexesAsync(IEnumerable<IAbstractIndexCreationTask> indexes, IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default)
         {
+            database = store.GetDatabase(database);
+
             var indexesList = indexes?.ToList() ?? new List<IAbstractIndexCreationTask>();
 
             if (conventions == null)
@@ -59,7 +62,7 @@ namespace Raven.Client.Documents.Indexes
             try
             {
                 var indexesToAdd = CreateIndexesToAdd(indexesList, conventions);
-                await store.Maintenance.ForDatabase(database ?? store.Database).SendAsync(new PutIndexesOperation(indexesToAdd), token).ConfigureAwait(false);
+                await store.Maintenance.ForDatabase(database).SendAsync(new PutIndexesOperation(indexesToAdd), token).ConfigureAwait(false);
             }
             // For old servers that don't have the new endpoint for executing multiple indexes
             catch (Exception ex)

@@ -37,7 +37,7 @@ namespace SlowTests.Blittable
             using (var database = CreateDocumentDatabase())
             {
                 //Arrange
-                var resolvedConflicts = new List<(DocumentConflict, long)>
+                var resolvedConflicts = new List<(DocumentConflict, long, bool)>
                     {
                         (new DocumentConflict
                         {
@@ -45,7 +45,7 @@ namespace SlowTests.Blittable
                             LowerId = context.GetLazyString("Some lower id"),
                             Collection = context.GetLazyString("Some collection"),
                             Doc = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new { SomeName = "Some Value" }, context)
-                        }, 10)
+                        }, 10, false)
                     };
 
                 var expected = new ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand(

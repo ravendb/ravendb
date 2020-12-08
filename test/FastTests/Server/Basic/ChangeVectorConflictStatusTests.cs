@@ -690,23 +690,25 @@ namespace FastTests.Server.Basic
         [Fact]
         public void ToChangeVector_should_properly_parse_change_vector()
         {
+            var dbIds = new List<string> { DbId(), DbId(), DbId() };
+            dbIds = dbIds.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
             var changeVector = new[]
             {
                 new ChangeVectorEntry
                 {
-                    DbId = DbId(),
+                    DbId = dbIds[0],
                     Etag = 1,
                     NodeTag = 0
                 },
                 new ChangeVectorEntry
                 {
-                    DbId = DbId(),
+                    DbId = dbIds[1],
                     Etag = 1,
                     NodeTag = 1
                 },
                 new ChangeVectorEntry
                 {
-                    DbId = DbId(),
+                    DbId = dbIds[2],
                     Etag = 1,
                     NodeTag = 2
                 }

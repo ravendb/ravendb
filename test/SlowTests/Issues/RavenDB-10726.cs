@@ -71,9 +71,8 @@ namespace SlowTests.Issues
                 var t = Assert.Throws<InvalidOperationException>(() => store.Operations.Send(new DeleteAttachmentOperation("orders/1-A", "001.jpg")));
                 Assert.Equal("Cannot use Operations without a database defined, did you forget to call ForDatabase?", t.Message);
 
-                 t = Assert.Throws<InvalidOperationException>(() => store.Maintenance.Send(new CreateSampleDataOperation()));
+                t = Assert.Throws<InvalidOperationException>(() => store.Maintenance.Send(new CreateSampleDataOperation()));
                 Assert.Equal("Cannot use Maintenance without a database defined, did you forget to call ForDatabase?", t.Message);
-
             }
         }
 
@@ -91,25 +90,16 @@ namespace SlowTests.Issues
                 Assert.Null(store.Database);
 
                 var t = Assert.Throws<InvalidOperationException>(() => store.AggressivelyCache());
-                Assert.Equal("Cannot use AggressivelyCache and AggressivelyCacheFor without a default database defined " +
-                             "unless 'database' parameter is provided. Did you forget to pass 'database' parameter?"
-                            , t.Message);
+                Assert.Contains("Cannot determine database to operate on.", t.Message);
 
                 t = Assert.Throws<InvalidOperationException>(() => store.AggressivelyCacheFor(TimeSpan.FromMinutes(1)));
-                Assert.Equal("Cannot use AggressivelyCache and AggressivelyCacheFor without a default database defined " +
-                             "unless 'database' parameter is provided. Did you forget to pass 'database' parameter?"
-                            , t.Message);
+                Assert.Contains("Cannot determine database to operate on.", t.Message);
 
                 t = Assert.Throws<InvalidOperationException>(() => store.DisableAggressiveCaching());
-                Assert.Equal("Cannot use DisableAggressiveCaching without a default database defined " +
-                             "unless 'database' parameter is provided. Did you forget to pass 'database' parameter?"
-                            , t.Message);
-
+                Assert.Contains("Cannot determine database to operate on.", t.Message);
 
                 t = Assert.Throws<InvalidOperationException>(() => store.SetRequestTimeout(TimeSpan.FromSeconds(10)));
-                Assert.Equal("Cannot use SetRequestTimeout without a default database defined " +
-                             "unless 'database' parameter is provided. Did you forget to pass 'database' parameter?"
-                            , t.Message);
+                Assert.Contains("Cannot determine database to operate on.", t.Message);
             }
         }
     }

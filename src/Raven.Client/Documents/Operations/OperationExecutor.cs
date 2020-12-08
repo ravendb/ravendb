@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations
         {
             _store = store;
             _databaseName = databaseName ?? store.Database;
-            if (_databaseName != null)
+            if (string.IsNullOrWhiteSpace(_databaseName) == false)
                 _requestExecutor = store.GetRequestExecutor(_databaseName);
         }
 
