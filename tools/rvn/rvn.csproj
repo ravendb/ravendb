@@ -4,7 +4,7 @@
     <Authors>Hibernating Rhinos</Authors>
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
-    <RuntimeFrameworkVersion>5.0.0</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>5.0.1</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageTags>database;nosql;doc db</PackageTags>
     <PackageProjectUrl>https://ravendb.net</PackageProjectUrl>
