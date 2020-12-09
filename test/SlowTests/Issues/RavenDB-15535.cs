@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
@@ -15,7 +16,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
-using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -51,7 +51,7 @@ namespace SlowTests.Issues
                 long index;
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var configurationJson = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
+                    var configurationJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
@@ -76,21 +76,21 @@ namespace SlowTests.Issues
                     }
                 });
 
-                using (var session = store.OpenSession(new SessionOptions {}))
+                using (var session = store.OpenSession(new SessionOptions { }))
                 {
-                      session.Store(new User() { Name = "userT" }, "users/1");
-                      session.SaveChanges();
-                      await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "users/1", null, TimeSpan.FromSeconds(15));
+                    session.Store(new User() { Name = "userT" }, "users/1");
+                    session.SaveChanges();
+                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "users/1", null, TimeSpan.FromSeconds(15));
                 }
 
                 var documentDatabase = await testServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                 {
-                     var res =  WaitForValue(() =>
-                     {
-                         using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                         using (context.OpenReadTransaction())
-                             return documentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, "users/1");
-                     }, 13, 15000);
+                    var res = WaitForValue(() =>
+                   {
+                       using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                       using (context.OpenReadTransaction())
+                           return documentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, "users/1");
+                   }, 13, 15000);
 
                     Assert.Equal(13, res);
                 }
@@ -121,7 +121,7 @@ namespace SlowTests.Issues
                 long index;
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var configurationJson = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
+                    var configurationJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
 
@@ -137,9 +137,9 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                     session.Store(new User() { Name = "Toli" }, "users/2");
-                     session.SaveChanges();
-                     await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "users/2", null, TimeSpan.FromSeconds(15));
+                    session.Store(new User() { Name = "Toli" }, "users/2");
+                    session.SaveChanges();
+                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "users/2", null, TimeSpan.FromSeconds(15));
                 }
 
                 var revisionCountList = new List<long>();
@@ -182,7 +182,7 @@ namespace SlowTests.Issues
                 long index;
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var configurationJson = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
+                    var configurationJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
@@ -204,7 +204,6 @@ namespace SlowTests.Issues
                 var val = await WaitForValueAsync(async () => await GetMembersCount(store, database), 2, 20000);
                 Assert.Equal(2, val);
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(database, testServer.ServerStore.NodeTag));
-
 
                 var documentDatabase = await testServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                 {
@@ -244,14 +243,14 @@ namespace SlowTests.Issues
                 long index;
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var configurationJson = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
+                    var configurationJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    session.Store(new User() { Name = "userT1"}, "users/1");
+                    session.Store(new User() { Name = "userT1" }, "users/1");
                     session.Delete("users/2");
                     session.SaveChanges();
                     await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "users/1", null, TimeSpan.FromSeconds(15));
@@ -297,7 +296,7 @@ namespace SlowTests.Issues
                 long index;
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var configurationJson = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
+                    var configurationJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
 
@@ -372,7 +371,7 @@ namespace SlowTests.Issues
                 long index;
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var configurationJson = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
+                    var configurationJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
 
@@ -452,12 +451,12 @@ namespace SlowTests.Issues
             {
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    session.Delete( "users/1");
+                    session.Delete("users/1");
                     await session.SaveChangesAsync();
                 }
             }
-
         }
+
         private async Task DeleteAndStoreInTransactionMode(IDocumentStore store, int n)
         {
             for (int i = 0; i < n; i++)
@@ -469,8 +468,8 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
             }
-
         }
+
         private async Task StoreInRegularMode(IDocumentStore store, int n)
         {
             for (int i = 0; i < n; i++)
@@ -481,7 +480,6 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
             }
-
         }
 
         private async Task DeleteInRegularMode(IDocumentStore store, int n)
@@ -490,11 +488,10 @@ namespace SlowTests.Issues
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    session.Delete( "users/1");
+                    session.Delete("users/1");
                     await session.SaveChangesAsync();
                 }
             }
-
         }
     }
 }
