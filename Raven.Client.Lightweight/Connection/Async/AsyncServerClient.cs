@@ -2954,7 +2954,7 @@ namespace Raven.Client.Connection.Async
             {
                 t.AssertNotFailed();
                 return null;
-            }, token), token);
+            }, token, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default), token);
         }
 
         private volatile bool currentlyExecuting;
