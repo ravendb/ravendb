@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <RuntimeFrameworkVersion>5.0.0</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>5.0.1</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Regression.Benchmark</AssemblyName>
     <PackageId>Regression.Benchmark</PackageId>
