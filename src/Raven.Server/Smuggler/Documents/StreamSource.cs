@@ -233,6 +233,17 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
+                if (reader.TryGet(nameof(databaseRecord.UnusedDatabaseIds), out BlittableJsonReaderArray unusedDatabaseIds) &&
+                    unusedDatabaseIds != null)
+                {
+                    foreach (var id in unusedDatabaseIds)
+                    {
+                        if(id is LazyStringValue == false && id is LazyCompressedStringValue == false)
+                            throw new InvalidOperationException($"{nameof(databaseRecord.UnusedDatabaseIds)} should be a collection of strings but got {id.GetType()}");
+                        databaseRecord.UnusedDatabaseIds.Add(id.ToString());
+                    }
+                }
+                
                 if (reader.TryGet(nameof(databaseRecord.ExternalReplications), out BlittableJsonReaderArray externalReplications) &&
                     externalReplications != null)
                 {
