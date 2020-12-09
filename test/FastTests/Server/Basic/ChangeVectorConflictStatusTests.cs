@@ -37,6 +37,36 @@ namespace FastTests.Server.Basic
                 "A:2319854662-eCGjjCNbP0CeTGSJMeqLZA";
 
             ChangeVectorUtils.MergeVectors(cv1, cv2).ToChangeVector();
+            var x = ChangeVectorUtils.Distance(cv1, cv2);
+            var y = ChangeVectorUtils.Distance(cv2, cv1);
+        }
+
+        [Fact]
+        public void CalculateChangeVectorDistance()
+        {
+            var cv1 =
+                "A:86865297-V8jm+M9QKkuvfEUTQBfOtA, " +
+                "C:87142328-5j4moMb8A0KxxcL9GhY/nw, " +
+                "B:2146533895-SKM7aNMmSkW92wrQke+D4g, " +
+                "E:1856361198-/mqfiL1AxkGlsqx1zwh2rw, " +
+                "D:1882901489-TqJlheobc0KTcLDerIQ9oQ, " +
+                "D:17267243-/3+4WZUBGkWL6/J4GMv2GA, " +
+                "D:46103608-P1lQdjeAckGkdmY9RWr/Bg, " +
+                "A:27850500-iUMDTgYwOkG25uod1g6gSg";
+            
+            var cv2 =
+                "C:87142328-5j4moMb8A0KxxcL9GhY/nw, " +
+                "B:2146533895-SKM7aNMmSkW92wrQke+D4g, " +
+                "E:1856361198-/mqfiL1AxkGlsqx1zwh2rw, " +
+                "D:1882901489-TqJlheobc0KTcLDerIQ9oQ, " +
+                "A:27850500-iUMDTgYwOkG25uod1g6gSg, " +
+                "A:86865297-V8jm+M9QKkuvfEUTQBfOtA, " +
+                "A:2319854662-eCGjjCNbP0CeTGSJMeqLZA";
+
+            var x = ChangeVectorUtils.Distance(cv1, cv2);
+            var y = ChangeVectorUtils.Distance(cv2, cv1);
+
+            Assert.Equal(x, -y);
         }
 
         [Fact]

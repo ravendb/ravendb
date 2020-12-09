@@ -72,6 +72,7 @@ namespace Raven.Server.ServerWide.Maintenance
             _stabilizationTime = config.StabilizationTime.AsTimeSpan;
             _stabilizationTimeMs = (long)config.StabilizationTime.AsTimeSpan.TotalMilliseconds;
             _moveToRehabTime = (long)config.MoveToRehabGraceTime.AsTimeSpan.TotalMilliseconds;
+            _maxChangeVectorDistance = config.MaxChangeVectorDistance;
             _rotateGraceTime = (long)config.RotatePreferredNodeGraceTime.AsTimeSpan.TotalMilliseconds;
             _breakdownTimeout = config.AddReplicaTimeout.AsTimeSpan;
             _hardDeleteOnReplacement = config.HardDeleteOnReplacement;
@@ -94,6 +95,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private long _iteration;
         private readonly long _term;
         private readonly long _moveToRehabTime;
+        private readonly long _maxChangeVectorDistance;
         private readonly long _rotateGraceTime;
         private long _lastIndexCleanupTimeInTicks;
         internal long _lastTombstonesCleanupTimeInTicks;
@@ -707,9 +709,14 @@ namespace Raven.Server.ServerWide.Maintenance
                 RaiseNoLivingNodesAlert($"None of '{dbName}' database nodes are responding to the supervisor, the database is unreachable.", dbName);
             }
 
-            if (someNodesRequireMoreTime == false &&
-                databaseTopology.TryUpdateByPriorityOrder())
-                return "Reordering the member nodes to ensure the priority order.";
+            if (someNodesRequireMoreTime == false)
+            {
+                if (CheckMembersDistance(state, out string reason) == false)
+                    return reason;
+
+                if (databaseTopology.TryUpdateByPriorityOrder())
+                    return "Reordering the member nodes to ensure the priority order.";
+            }
 
             var shouldUpdateTopologyStatus = false;
             var updateTopologyStatusReason = new StringBuilder();
@@ -767,7 +774,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (TryGetMentorNode(dbName, databaseTopology, clusterTopology, promotable, out var mentorNode) == false)
                     continue;
 
-                var tryPromote = TryPromote(dbName, databaseTopology, current, previous, mentorNode, promotable);
+                var tryPromote = TryPromote(state, mentorNode, promotable);
                 if (tryPromote.Promote)
                 {
                     databaseTopology.Promotables.Remove(promotable);
@@ -829,7 +836,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         if (TryGetMentorNode(dbName, databaseTopology, clusterTopology, rehab, out var mentorNode) == false)
                             continue;
 
-                        var tryPromote = TryPromote(dbName, databaseTopology, current, previous, mentorNode, rehab);
+                        var tryPromote = TryPromote(state, mentorNode, rehab);
                         if (tryPromote.Promote)
                         {
                             LogMessage($"The database {dbName} on {rehab} is reachable and up to date, so we promote it back to member.", database: dbName);
@@ -857,6 +864,53 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             return null;
+        }
+
+        private bool CheckMembersDistance(DatabaseObservationState state, out string reason)
+        {
+            // check every node pair, and if one of them is lagging behind, move him to rehab
+            reason = null;
+
+            var members = state.DatabaseTopology.Members;
+            for (int i = 0; i < members.Count - 1; i++)
+            {
+                var member1 = members[i];
+                var current1 = state.GetCurrentDatabaseReport(member1)?.DatabaseChangeVector;
+                var prev1 = state.GetPreviousDatabaseReport(member1)?.DatabaseChangeVector;
+                if (current1 == null || prev1 == null)
+                    continue;
+
+                for (int j = i + 1; j < members.Count; j++)
+                {
+                    var member2 = members[j];
+                    var current2 = state.GetCurrentDatabaseReport(member2)?.DatabaseChangeVector;
+                    var prev2 = state.GetPreviousDatabaseReport(member2)?.DatabaseChangeVector;
+                    if (current2 == null || prev2 == null)
+                        continue;
+
+                    var currentDistance = ChangeVectorUtils.Distance(current1, current2);
+                    var prevDistance = ChangeVectorUtils.Distance(prev1, prev2);
+                    if (Math.Abs(currentDistance) > _maxChangeVectorDistance && 
+                        Math.Abs(prevDistance) > _maxChangeVectorDistance)
+                    {
+                        var rehab = currentDistance > 0 ? member2 : member1;
+                        var rehabCheck = prevDistance > 0 ? member2 : member1;
+                        if (rehab != rehabCheck)
+                            continue; // inconsistent result, same node must be lagging
+
+                        state.DatabaseTopology.Members.Remove(rehab);
+                        state.DatabaseTopology.Rehabs.Add(rehab);
+                        reason =
+                            $"Node {rehab} for database '{state.Name}' moved to rehab, because he is lagging behind. (distance between {member1} and {member2} is {currentDistance})";
+
+                        state.DatabaseTopology.DemotionReasons[rehab] = $"distance between {member1} and {member2} is {currentDistance}";
+
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         private bool ShouldGiveMoreTimeBeforeMovingToRehab(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime)
@@ -1022,8 +1076,13 @@ namespace Raven.Server.ServerWide.Maintenance
             return true;
         }
 
-        private (bool Promote, string UpdateTopologyReason) TryPromote(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, Dictionary<string, ClusterNodeStatusReport> previous, string mentorNode, string promotable)
+        private (bool Promote, string UpdateTopologyReason) TryPromote(DatabaseObservationState state, string mentorNode, string promotable)
         {
+            var dbName = state.Name;
+            var topology = state.DatabaseTopology;
+            var current = state.Current;
+            var previous = state.Previous;
+
             if (previous.TryGetValue(mentorNode, out var mentorPrevClusterStats) == false ||
                 mentorPrevClusterStats.Report.TryGetValue(dbName, out var mentorPrevDbStats) == false)
             {
@@ -1476,6 +1535,28 @@ namespace Raven.Server.ServerWide.Maintenance
             public Dictionary<string, string> ReadSettings()
             {
                 return RawDatabase.Settings;
+            }
+
+            public DatabaseStatusReport GetCurrentDatabaseReport(string node)
+            {
+                if (Current.TryGetValue(node, out var report) == false)
+                    return null;
+
+                if (report.Report.TryGetValue(Name, out var databaseReport) == false)
+                    return null;
+
+                return databaseReport;
+            }
+
+            public DatabaseStatusReport GetPreviousDatabaseReport(string node)
+            {
+                if (Previous.TryGetValue(node, out var report) == false)
+                    return null;
+
+                if (report.Report.TryGetValue(Name, out var databaseReport) == false)
+                    return null;
+
+                return databaseReport;
             }
         }
     }
