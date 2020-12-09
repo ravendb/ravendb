@@ -202,11 +202,27 @@ namespace Voron.Impl.Paging
 
             buffer = GetBufferAndAddToTxState(pageNumber, state, numberOfPages);
 
-            Memory.Copy(buffer.Pointer, pagePointer, buffer.Size);
+            var toCopy = numberOfPages * Constants.Storage.PageSize;
+
+            AssertCopyWontExceedPagerFile(toCopy, pageNumber);
+
+            Memory.Copy(buffer.Pointer, pagePointer, toCopy);
 
             DecryptPage((PageHeader*)buffer.Pointer);
 
             return buffer.Pointer;
+        }
+
+        [Conditional("DEBUG")]
+        private void AssertCopyWontExceedPagerFile(int toCopy, long startPageNumberToCopy)
+        {
+            long toCopyInPages = checked(toCopy / Constants.Storage.PageSize + (toCopy % Constants.Storage.PageSize == 0 ? 0 : 1));
+
+            if (startPageNumberToCopy + toCopyInPages > NumberOfAllocatedPages)
+            {
+                throw new InvalidOperationException(
+                    $"Copying encrypted page exceeded the page file size. Number of allocated pages is {NumberOfAllocatedPages} while it attempted to access page {startPageNumberToCopy} and copy {toCopy} bytes");
+            }
         }
 
         public override void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, long pageNumber)
