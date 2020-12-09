@@ -6,6 +6,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.ServerWide;
 using Sparrow;
+using Sparrow.Platform;
 
 namespace Raven.Server.Config.Categories
 {
@@ -21,6 +22,9 @@ namespace Raven.Server.Config.Categories
         public IndexingConfiguration(RavenConfiguration root)
         {
             _root = root;
+
+            MaximumSizePerSegment = new Size(PlatformDetails.Is32Bits ? 128 : 1024, SizeUnit.Megabytes);
+            LargeSegmentSizeToMerge = new Size(PlatformDetails.Is32Bits ? 16 : 32, SizeUnit.Megabytes);
         }
 
         [DefaultValue(false)]
@@ -156,6 +160,39 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.ManagedAllocationsBatchSizeLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? ManagedAllocationsBatchLimit { get; protected set; }
+
+        [Description("Expert: The maximum size in MB that we'll consider for segments merging")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.MaximumSizePerSegmentInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size MaximumSizePerSegment { get; protected set; }
+
+        [Description("Expert: How often segment indices are merged. With smaller values, less RAM is used while indexing, and searches on unoptimized indices are faster, but indexing speed is slower")]
+        [DefaultValue(10)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.MergeFactor", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MergeFactor { get; protected set; }
+
+        [Description("Expert: The definition of a large segment in MB. We wont merge more than " + nameof(NumberOfLargeSegmentsToMergeInSingleBatch) + " in a single batch")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.LargeSegmentSizeToMergeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size LargeSegmentSizeToMerge { get; protected set; }
+
+        [Description("Expert: Number of large segments (defined by " + nameof(LargeSegmentSizeToMerge) + ") to merge in a single batch")]
+        [DefaultValue(2)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.NumberOfLargeSegmentsToMergeInSingleBatch", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int NumberOfLargeSegmentsToMergeInSingleBatch { get; protected set; }
+
+        [Description("Expert: How long will we let merges to run before we close the transaction")]
+        [DefaultValue(15)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.MaxTimeForMergesToKeepRunningInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting MaxTimeForMergesToKeepRunning { get; protected set; }
 
         [Description("Transaction size limit after which an index will stop and complete the current batch")]
         [DefaultValue(null)]

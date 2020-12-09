@@ -218,7 +218,10 @@ namespace Raven.Server.Smuggler.Documents
 
                 _writer.WritePropertyName(nameof(databaseRecord.Encrypted));
                 _writer.WriteBool(databaseRecord.Encrypted);
+                _writer.WriteComma();
 
+                _writer.WriteArray(nameof(databaseRecord.UnusedDatabaseIds), databaseRecord.UnusedDatabaseIds);
+                
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.ConflictSolverConfig))
                 {
                     _writer.WriteComma();

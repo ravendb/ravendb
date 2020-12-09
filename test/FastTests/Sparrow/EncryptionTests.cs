@@ -104,5 +104,46 @@ namespace FastTests.Sparrow
                 Assert.Equal(bytes, readBytes);
             }
         }
+
+        [Fact]
+        public unsafe void RavenDB_15975()
+        {
+            using (var options = StorageEnvironmentOptions.ForPath(DataDir))
+            {
+                options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+
+                using (var innerPager = LinuxTestUtils.GetNewPager(options, DataDir, "Raven.Voron"))
+                {
+                    AbstractPager cryptoPager;
+                    using (cryptoPager = new CryptoPager(innerPager))
+                    {
+                        using (var tx = new TempPagerTransaction(isWriteTransaction: true))
+                        {
+                            var overflowSize = 4 * Constants.Storage.PageSize + 100;
+
+                            cryptoPager.EnsureContinuous(26, 5); 
+                            var pagePointer = cryptoPager.AcquirePagePointerForNewPage(tx, 26, 5);
+
+                            var header = (PageHeader*)pagePointer;
+                            header->PageNumber = 26;
+                            header->Flags = PageFlags.Overflow;
+                            header->OverflowSize = overflowSize;
+
+                            Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', overflowSize);
+                        }
+
+                        using (var tx = new TempPagerTransaction())
+                        {
+                            var pagePointer = cryptoPager.AcquirePagePointer(tx, 26);
+
+                            // Making sure that the data was decrypted and still holds those 'X' chars
+                            Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
+                            Assert.True(pagePointer[666] == 'X');
+                            Assert.True(pagePointer[1039] == 'X');
+                        }
+                    }
+                }
+            }
+        }
     }
 }

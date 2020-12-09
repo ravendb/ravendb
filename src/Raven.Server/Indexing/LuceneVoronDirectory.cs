@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Lucene.Net.Store;
 using Raven.Client.Util;
+using Raven.Server.Documents.Indexes;
 using Voron;
 using Voron.Impl;
 
@@ -209,13 +210,13 @@ namespace Raven.Server.Indexing
             });
         }
 
-        protected override void Dispose(bool disposing)
-        {
-        }
-
         public void ResetAllocations()
         {
             _indexOutputFilesSummary.Reset();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
         }
     }
 }
