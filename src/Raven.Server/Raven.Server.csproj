@@ -107,11 +107,10 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="CsvHelper" Version="15.0.10" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
-    <PackageReference Include="JetBrains.Annotations" Version="2020.1.0">
+    <PackageReference Include="JetBrains.Annotations" Version="2020.3.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Jint" Version="3.0.28-ravendb" />
-    <PackageReference Include="Google.Api.Gax.Rest" Version="3.1.0" />
     <PackageReference Include="Google.Api.Gax.Rest" Version="3.2.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="3.3.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
@@ -139,16 +138,6 @@
     <PackageReference Include="System.Reflection.Metadata" Version="1.8.1" />
     <PackageReference Include="System.Security.Cryptography.Cng" Version="4.7.0" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="4.7.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Documents\Indexes\IndexMerging" />
-    <Folder Include="Exceptions\PeriodicBackup" />
-    <Folder Include="Exceptions\PeriodicBackup" />
-    <Folder Include="Monitoring\Snmp\Providers\" />
-    <Folder Include="ServerWide\Commands\ETL" />
-    <Folder Include="ServerWide\Commands\ETL" />
-    <Folder Include="ServerWide\Commands\PeriodicBackup" />
-    <Folder Include="ServerWide\Commands\PeriodicBackup" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Properties\Settings\settings_posix.json">
