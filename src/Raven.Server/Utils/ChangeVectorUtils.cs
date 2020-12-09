@@ -290,6 +290,68 @@ namespace Raven.Server.Utils
             return changeVector.Substring(start, endOfNodeTag - start);
         }
 
+        public static long Distance(string changeVectorA, string changeVectorB)
+        {
+            var a = changeVectorA?.ToChangeVectorList();
+            var b = changeVectorB?.ToChangeVectorList();
 
+            if (a == null && b == null)
+                return 0;
+
+            if (a == null)
+                return -ConsumeRest(b, 0);
+
+            if (b == null)
+                return ConsumeRest(a, 0);
+
+            a.Sort((x, y) => string.Compare(x.DbId, y.DbId, StringComparison.Ordinal));
+            b.Sort((x, y) => string.Compare(x.DbId, y.DbId, StringComparison.Ordinal));
+
+            var aIndex = 0;
+            var bIndex = 0;
+            var diff = 0L;
+
+            while (true)
+            {
+                if (aIndex == a.Count)
+                    return diff - ConsumeRest(b, bIndex);
+
+                if (bIndex == b.Count)
+                    return diff + ConsumeRest(a, aIndex);
+
+                var aElement = a[aIndex];
+                var bElement = b[bIndex];
+
+                var compare = string.Compare(aElement.DbId, bElement.DbId, StringComparison.Ordinal);
+                
+                if (compare == 0)
+                {
+                    diff += aElement.Etag - bElement.Etag;
+                    aIndex++;
+                    bIndex++;
+                }
+                else if (compare < 1)
+                {
+                    diff += aElement.Etag;
+                    aIndex++;
+                }
+                else if (compare > 1)
+                {
+                    diff -= bElement.Etag;
+                    bIndex++;
+                }
+            }
+        }
+
+        private static long ConsumeRest(List<ChangeVectorEntry> changeVectorEntries, in int index)
+        {
+            var rest = 0L;
+            for (int i = index; i < changeVectorEntries.Count; i++)
+            {
+                rest += changeVectorEntries[i].Etag;
+            }
+
+            return rest;
+        }
     }
 }
