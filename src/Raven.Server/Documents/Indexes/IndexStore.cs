@@ -1741,8 +1741,6 @@ namespace Raven.Server.Documents.Indexes
 
                 while (true)
                 {
-                    token.ThrowIfCancellationRequested();
-
                     try
                     {
                         _forTestingPurposes?.DuringIndexReplacement_AfterUpdatingCollectionOfIndexes?.Invoke();
@@ -1791,8 +1789,6 @@ namespace Raven.Server.Documents.Indexes
                 {
                     while (true)
                     {
-                        token.ThrowIfCancellationRequested();
-
                         try
                         {
                             _forTestingPurposes?.DuringIndexReplacement_OnOldIndexDeletion?.Invoke();
@@ -1836,8 +1832,6 @@ namespace Raven.Server.Documents.Indexes
                 {
                     while (true)
                     {
-                        token.ThrowIfCancellationRequested();
-
                         try
                         {
                             using (newIndex.DrainRunningQueries())

@@ -242,6 +242,8 @@ namespace Raven.Client.Documents.Smuggler
             public bool SqlConnectionStringsUpdated { get; set; }
 
             public bool ClientConfigurationUpdated { get; set; }
+            
+            public bool UnusedDatabaseIdsUpdated { get; set; }
 
             public override DynamicJsonValue ToJson()
             {
@@ -272,8 +274,8 @@ namespace Raven.Client.Documents.Smuggler
                     json[nameof(ClientConfigurationUpdated)] = ClientConfigurationUpdated;
 
                 if (ConflictSolverConfigUpdated)
-                    json[nameof(ConflictSolverConfigUpdated)] = ClientConfigurationUpdated;
-
+                    json[nameof(ConflictSolverConfigUpdated)] = ConflictSolverConfigUpdated;
+                
                 if (PeriodicBackupsUpdated)
                     json[nameof(PeriodicBackupsUpdated)] = PeriodicBackupsUpdated;
 
@@ -294,6 +296,9 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (HubPullReplicationsUpdated)
                     json[nameof(HubPullReplicationsUpdated)] = HubPullReplicationsUpdated;
+                
+                if (UnusedDatabaseIdsUpdated)
+                    json[nameof(UnusedDatabaseIdsUpdated)] = UnusedDatabaseIdsUpdated;
 
                 return json;
             }
@@ -342,6 +347,9 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (ClientConfigurationUpdated)
                     sb.AppendLine("- Client");
+                
+                if (UnusedDatabaseIdsUpdated)
+                    sb.AppendLine("- Unused Database IDs");
 
                 if (TimeSeriesConfigurationUpdated)
                     sb.AppendLine("- Time Series");
