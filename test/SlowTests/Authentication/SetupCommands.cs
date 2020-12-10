@@ -91,6 +91,7 @@ namespace SlowTests.Authentication
             {
                 _payload = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(setupInfo, context);
                 ResponseType = RavenCommandResponseType.Raw;
+                Timeout = TimeSpan.FromMinutes(30);
             }
 
             public override bool IsReadRequest => false;

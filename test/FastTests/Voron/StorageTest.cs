@@ -95,6 +95,8 @@ namespace FastTests.Voron
 
         public override void Dispose()
         {
+            base.Dispose();
+
             var aggregator = new ExceptionAggregator("Could not dispose Storage test.");
 
             aggregator.Execute(() =>

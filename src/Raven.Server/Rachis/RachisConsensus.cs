@@ -538,6 +538,15 @@ namespace Raven.Server.Rachis
             };
         }
 
+        public bool ContainsGuid(string guid)
+        {
+            using (ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                return LogHistory.ContainsGuid(ctx, guid);
+            }
+        }
+
         protected abstract void InitializeState(ClusterOperationContext context, ClusterChanges changes);
 
         public async Task WaitForState(RachisState rachisState, CancellationToken token)

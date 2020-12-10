@@ -86,7 +86,8 @@ namespace RachisTests.DatabaseCluster
             {
                 CreateDatabase = true,
                 ReplicationFactor = clusterSize,
-                Server = leader
+                Server = leader,
+                DeleteDatabaseOnDispose = false // we bring one node down, so we can't delete the entire database, but we run in mem, so we don't care
             }))
             {
                 var index = new UsersByName();
@@ -100,7 +101,7 @@ namespace RachisTests.DatabaseCluster
                     }, "users/1");
                     await session.SaveChangesAsync();
                 }
-                DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
                 using (var session = store.OpenAsyncSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges(TimeSpan.FromSeconds(30), replicas: 1);

@@ -49,7 +49,7 @@ namespace RachisTests
                     session.SaveChanges();
                 }
 
-                DisposeServerAndWaitForFinishOfDisposal(leader);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(leader);
 
                 using (var session = store.OpenSession(databaseName))
                 {
@@ -65,7 +65,8 @@ namespace RachisTests
             using (var store = GetDocumentStore(new Options
             {
                 Server = leader,
-                ReplicationFactor = 2
+                ReplicationFactor = 2,
+                DeleteDatabaseOnDispose = false // we bring one node down, so we can't delete the entire database, but we run in mem, so we don't care
             }))
             {
                 using (var session = (DocumentSession)store.OpenSession())
@@ -92,7 +93,7 @@ namespace RachisTests
                 Assert.NotNull(serverToDispose); //precaution
 
                 //dispose the first topology node, forcing the requestExecutor to failover to the next one                
-                DisposeServerAndWaitForFinishOfDisposal(serverToDispose);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(serverToDispose);
 
                 using (var session = store.OpenSession())
                 {

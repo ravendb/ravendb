@@ -1629,6 +1629,9 @@ namespace Raven.Client.Http
 
         private void SpawnHealthChecks(ServerNode chosenNode, int nodeIndex)
         {
+            if (_nodeSelector?.Topology.Nodes.Count < 2)
+                return;
+
             var nodeStatus = new Lazy<NodeStatus>(() =>
             {
                 var s = new NodeStatus(this, nodeIndex, chosenNode);
