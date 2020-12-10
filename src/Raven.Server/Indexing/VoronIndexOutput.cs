@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using Lucene.Net.Store;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Logging;
@@ -51,7 +53,7 @@ namespace Raven.Server.Indexing
             try
             {
                 if (options.Encryption.IsEnabled)
-                    return new TempCryptoStream(_fileTempPath);
+                    return new TempCryptoStream(_fileTempPath, ignoreSetLength: true);
 
                 return SafeFileStream.Create(_fileTempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.DeleteOnClose);
             }

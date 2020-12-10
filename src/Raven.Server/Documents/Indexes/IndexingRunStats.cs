@@ -37,6 +37,8 @@ namespace Raven.Server.Documents.Indexes
 
         public int NumberOfKeptReduceErrors;
 
+        public LuceneMergeDetails LuceneMergeDetails;
+
         public override string ToString()
         {
             return $"Map - attempts: {MapAttempts}, successes: {MapSuccesses}, errors: {MapErrors} / " +

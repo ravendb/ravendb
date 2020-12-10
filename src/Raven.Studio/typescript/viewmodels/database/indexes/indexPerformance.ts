@@ -277,6 +277,8 @@ class indexPerformance extends viewModelBase {
             "Storage/Read": undefined as string,
             "Aggregation/NestedValues": undefined as string,
             "Lucene/Commit": undefined as string,
+            "Lucene/ApplyDeletes": undefined as string,
+            "Lucene/Merge": undefined as string,
             "Storage/Commit": undefined as string,
             "Lucene/RecreateSearcher": undefined as string,
             "SaveOutputDocuments": undefined as string,
@@ -1216,6 +1218,19 @@ class indexPerformance extends viewModelBase {
                 commitDetails += `Pages written to disk: ${element.CommitDetails.NumberOf4KbsWrittenToDisk.toLocaleString()}`;
                 tooltipHtml += commitDetails;
             }
+
+            if (element.LuceneMergeDetails) {
+                let luceneMergeDetails: string;
+                luceneMergeDetails = `<br/>*** <span class="tooltip-title">Lucene Merge Details</span> ***<br/>`;
+                luceneMergeDetails += `Total merges: ${element.LuceneMergeDetails.TotalMergesCount.toLocaleString()}<br/>`;
+                luceneMergeDetails += `Executed merges: ${element.LuceneMergeDetails.ExecutedMergesCount.toLocaleString()}`;
+                if (element.LuceneMergeDetails.MergedFilesCount > 0)
+                    luceneMergeDetails += `<br/>Merged files: ${element.LuceneMergeDetails.MergedFilesCount.toLocaleString()}`;
+                if (element.LuceneMergeDetails.MergedDocumentsCount > 0)
+                    luceneMergeDetails += `<br/>Merged documents: ${element.LuceneMergeDetails.MergedDocumentsCount.toLocaleString()}`;
+                tooltipHtml += luceneMergeDetails;
+            }
+
             if (element.MapDetails) {
                 let mapDetails: string;
                 mapDetails = `<br/>*** <span class="tooltip-title">Map details</span> ***<br/>`;
@@ -1226,6 +1241,7 @@ class indexPerformance extends viewModelBase {
                 mapDetails += `Process working set: ${generalUtils.formatBytesToSize(element.MapDetails.ProcessWorkingSet)}`;
                 tooltipHtml += mapDetails;
             }
+
             if (element.ReduceDetails) {
                 let reduceDetails: string;
 
