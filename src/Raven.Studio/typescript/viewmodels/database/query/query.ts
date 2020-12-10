@@ -190,10 +190,9 @@ class query extends viewModelBase {
     showPlotButton: KnockoutComputed<boolean>;
     
     isSpatialQuery = ko.observable<boolean>();
-    spatialDataFound = ko.observable<boolean>();
     spatialMap = ko.observable<spatialQueryMap>();
     showMapView: KnockoutComputed<boolean>;
-    viewOnMapClicked = ko.observable<boolean>();
+    totalNumberOfMarkers = ko.observable<number>(0);
         
     timeSeriesGraphs = ko.observableArray<timeSeriesPlotDetails>([]);
     timeSeriesTables = ko.observableArray<timeSeriesTableDetails>([]);
@@ -1197,15 +1196,17 @@ class query extends viewModelBase {
     }
     
     private onSpatialLoaded(queryResults: pagedResultExtended<document>) {
+        this.isSpatialQuery(false);
+        this.totalNumberOfMarkers(0);
+        
         const spatialProperties = queryResults.additionalResultInfo.SpatialProperties;
         if (spatialProperties && queryResults.items.length) {
             this.isSpatialQuery(true);
-            this.spatialDataFound(true);
 
             // Each spatial map model will contain the layer of markers per spatial properties pair
-            let spatialMapModels: spatialMapLayerModel[] = [];
+            const spatialMapModels: spatialMapLayerModel[] = [];
 
-            for (let i = 0; i < spatialProperties.length && this.spatialDataFound(); i++) {
+            for (let i = 0; i < spatialProperties.length; i++) {
                 const latitudeProperty = spatialProperties[i].LatitudeProperty;
                 const longitudeProperty = spatialProperties[i].LongitudeProperty;
 
@@ -1215,10 +1216,12 @@ class query extends viewModelBase {
 
                     const latitudeValue = _.get(item, latitudeProperty) as number;
                     const longitudeValue = _.get(item, longitudeProperty) as number;
-                    this.spatialDataFound(!!latitudeValue && !!longitudeValue);
-
-                    const point: geoPoint = { latitude: latitudeValue, longitude: longitudeValue, popupContent: item };
-                    pointsArray.push(point);
+                    
+                    if (latitudeValue != null && longitudeValue != null) { 
+                        const point: geoPoint = { latitude: latitudeValue, longitude: longitudeValue, popupContent: item };
+                        pointsArray.push(point);
+                        this.totalNumberOfMarkers(this.totalNumberOfMarkers() + 1);
+                    }
                 }
 
                 const layerModel = new spatialMapLayerModel(latitudeProperty, longitudeProperty, pointsArray);
@@ -1228,11 +1231,6 @@ class query extends viewModelBase {
             const spatialMapView = new spatialQueryMap(spatialMapModels);
             this.spatialMap(spatialMapView);
         }
-    }
-
-    plotResultsOnMap() {
-        this.viewOnMapClicked(true);
-        this.goToSpatialMapTab();
     }
     
     plotTimeSeries() {
