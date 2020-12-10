@@ -1079,8 +1079,9 @@ namespace Raven.Server.Documents.Replication
 
                 if (node is InternalReplication internalNode)
                 {
-                    using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown))
                     {
+                        cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
                         return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(), "Replication",
                             certificate, cts.Token);
                     }
@@ -1156,7 +1157,6 @@ namespace Raven.Server.Documents.Replication
                 shutdownInfo.OnError(e);
                 _reconnectQueue.TryAdd(shutdownInfo);
             }
-
             return null;
         }
 
@@ -1180,7 +1180,7 @@ namespace Raven.Server.Documents.Replication
 
                     try
                     {
-                        requestExecutor.Execute(cmd, ctx);
+                        requestExecutor.ExecuteWithCancellationToken(cmd, ctx, Database.DatabaseShutdown);
                     }
                     catch (Exception e)
                     {
@@ -1208,7 +1208,7 @@ namespace Raven.Server.Documents.Replication
 
                     try
                     {
-                        requestExecutor.Execute(cmd, ctx);
+                        requestExecutor.ExecuteWithCancellationToken(cmd, ctx, Database.DatabaseShutdown);
                     }
                     finally
                     {
@@ -1226,12 +1226,12 @@ namespace Raven.Server.Documents.Replication
         {
             using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database, certificate,
                 DocumentConventions.DefaultForServer))
-            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
                 var cmd = new GetTcpInfoCommand(ExternalReplicationTag, database, Database.DbId.ToString(), Database.ReadLastEtag());
                 try
                 {
-                    requestExecutor.Execute(cmd, ctx);
+                    requestExecutor.ExecuteWithCancellationToken(cmd, ctx, Database.DatabaseShutdown);
                 }
                 finally
                 {
