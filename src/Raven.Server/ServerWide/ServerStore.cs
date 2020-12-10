@@ -2359,7 +2359,7 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(addDatabaseCommand);
         }
 
-        public async Task EnsureNotPassiveAsync(string publicServerUrl = null, string nodeTag = "A", bool skipLicenseActivation = false)
+        public async ValueTask EnsureNotPassiveAsync(string publicServerUrl = null, string nodeTag = "A", bool skipLicenseActivation = false)
         {
             if (_engine.CurrentState != RachisState.Passive)
                 return;
@@ -2367,7 +2367,7 @@ namespace Raven.Server.ServerWide
             _engine.Bootstrap(publicServerUrl ?? _server.ServerStore.GetNodeHttpServerUrl(), nodeTag);
 
             if (skipLicenseActivation == false)
-                LicenseManager.TryActivateLicense(Server.ThrowOnLicenseActivationFailure);
+                await LicenseManager.TryActivateLicenseAsync(Server.ThrowOnLicenseActivationFailure);
 
             // we put a certificate in the local state to tell the server who to trust, and this is done before
             // the cluster exists (otherwise the server won't be able to receive initial requests). Only when we
