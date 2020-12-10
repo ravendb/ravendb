@@ -366,7 +366,7 @@ namespace Raven.Server.Commercial
             return detailsPerNode.Sum(x => x.Value.UtilizedCores);
         }
 
-        public async Task Activate(License license, string raftRequestId, bool skipGettingUpdatedLicense = false)
+        public async Task ActivateAsync(License license, string raftRequestId, bool skipGettingUpdatedLicense = false)
         {
             var licenseStatus = GetLicenseStatus(license);
             if (licenseStatus.Expiration.HasValue == false)
@@ -384,7 +384,7 @@ namespace Raven.Server.Commercial
                     if (updatedLicense == null)
                         throw new LicenseExpiredException($"License already expired on: {licenseStatus.Expiration} and we failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}.");
 
-                    await Activate(updatedLicense, raftRequestId, skipGettingUpdatedLicense: true);
+                    await ActivateAsync(updatedLicense, raftRequestId, skipGettingUpdatedLicense: true);
                     return;
                 }
                 catch (Exception e)
@@ -468,7 +468,7 @@ namespace Raven.Server.Commercial
             return licenseStatus;
         }
 
-        public void TryActivateLicense(bool throwOnActivationFailure)
+        public async ValueTask TryActivateLicenseAsync(bool throwOnActivationFailure)
         {
             if (LicenseStatus.Type != LicenseType.None)
                 return;
@@ -480,7 +480,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                AsyncHelpers.RunSync(() => Activate(license, RaftIdGenerator.NewId()));
+                await ActivateAsync(license, RaftIdGenerator.NewId());
             }
             catch (Exception e)
             {

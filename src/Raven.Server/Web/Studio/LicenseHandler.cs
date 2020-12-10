@@ -88,7 +88,7 @@ namespace Raven.Server.Web.Studio
             }
 
             await ServerStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
-            await ServerStore.LicenseManager.Activate(license, GetRaftRequestIdFromQuery());
+            await ServerStore.LicenseManager.ActivateAsync(license, GetRaftRequestIdFromQuery());
 
             NoContentStatus();
         }

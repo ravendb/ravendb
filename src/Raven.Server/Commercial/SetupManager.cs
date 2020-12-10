@@ -1265,7 +1265,7 @@ namespace Raven.Server.Commercial
                 if (setupMode == SetupMode.LetsEncrypt && license != null)
                 {
                     await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
-                    await serverStore.LicenseManager.Activate(license, RaftIdGenerator.DontCareId);
+                    await serverStore.LicenseManager.ActivateAsync(license, RaftIdGenerator.DontCareId);
                 }
 
                 // We already verified that leader's port is not 0, no need for it here.
@@ -1446,7 +1446,7 @@ namespace Raven.Server.Commercial
                             if (setupMode == SetupMode.LetsEncrypt)
                             {
                                 await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
-                                await serverStore.LicenseManager.Activate(setupInfo.License, RaftIdGenerator.DontCareId);
+                                await serverStore.LicenseManager.ActivateAsync(setupInfo.License, RaftIdGenerator.DontCareId);
                             }
 
                             serverStore.Server.Certificate =

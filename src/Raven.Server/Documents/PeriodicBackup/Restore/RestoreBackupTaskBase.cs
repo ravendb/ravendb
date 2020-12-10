@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (ResourceNameValidator.IsValidResourceName(RestoreFromConfiguration.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                 throw new InvalidOperationException(errorMessage);
 
-            _serverStore.EnsureNotPassiveAsync().Wait(_operationCancelToken.Token);
+            _serverStore.EnsureNotPassiveAsync().AsTask().Wait(_operationCancelToken.Token);
 
             ClusterTopology clusterTopology;
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
