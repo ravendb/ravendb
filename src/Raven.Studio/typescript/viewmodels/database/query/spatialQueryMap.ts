@@ -2,7 +2,8 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import spatialMapLayerModel = require("models/database/query/spatialMapLayerModel");
 import document = require("models/database/documents/document");
 import documentMetadata = require("models/database/documents/documentMetadata");
-import {Layer, MarkerClusterGroup} from "leaflet";
+import {Control, Layer, MarkerClusterGroup} from "leaflet";
+import genUtils = require("common/generalUtils");
 
 class spatialQueryMap extends viewModelBase {
     
@@ -18,54 +19,37 @@ class spatialQueryMap extends viewModelBase {
         this.createMap();
     }
     
-    createMap() {
+    private createMap() {
 
-        ////////////////////////////
-        // Define base tile layers
-        ////////////////////////////
-
-        const osmLink = `<a href="http://openstreetmap.org">OpenStreetMap</a>`;
-        const osmUrl = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-        const osmAttrib = `&copy; ${osmLink} Contributors`;
-        const osmMap = L.tileLayer(osmUrl, {attribution: osmAttrib});
-
-        const otmLink = `<a href="http://opentopomap.org/">OpenTopoMap</a>`;
-        const otmUrl = `http://{s}.tile.opentopomap.org/{z}/{x}/{y}.png`;
-        const otmAttrib = `&copy; ${otmLink} Contributors`;
-        const otmMap = L.tileLayer(otmUrl, {attribution: otmAttrib});
-
-        const baseLayers = {
+        const osmMap = this.getStreetMapTileLayer();
+        const otmMap = this.getTopographyMapTileLayer();
+        const baseLayers =  {
             "Streets Map": osmMap,
             "Topography Map": otmMap
         };
 
-        //////////////////////////////////////////////////////////////
-        // Define group layers (layer per spatial point from query)
-        //////////////////////////////////////////////////////////////
+        const generatePopupContent = (doc: document) => {
+            const docDto = doc.toDto(true);
+            const metaDto = docDto["@metadata"];
+            documentMetadata.filterMetadata(metaDto);
 
-        let dataLayers = {};
+            let text = JSON.stringify(docDto, null, 4);
+            text = Prism.highlight(text, (Prism.languages as any)["javascript"]);
+
+            const textHtml = `<div>
+                                    <h4>Document: ${genUtils.escapeHtml(doc.getId())}</h4>
+                                    <hr>
+                                    <pre>${text}</pre>
+                              </div>`;
+            return textHtml;
+        }
+        
+        const dataLayers: Control.LayersObject = {};
         let markersGroups: MarkerClusterGroup[] = [];
 
         this.geoData().forEach((layerModel) => {
-            
             let markers: Layer[] = [];
             let markersGroup = L.markerClusterGroup();
-
-            const generatePopupContent = (doc: document) => {
-                const docDto = doc.toDto(true);
-                const metaDto = docDto["@metadata"];
-                documentMetadata.filterMetadata(metaDto);
-
-                let text = JSON.stringify(docDto, null, 4);
-                text = Prism.highlight(text, (Prism.languages as any)["javascript"]);
-
-                const textHtml = `<div>
-                                    <h4>Document: ${doc.getId()}</h4>
-                                    <hr>
-                                    <pre>${text}</pre>
-                                 </div>`;
-                return textHtml;
-            }
 
             layerModel.geoPoints().forEach((point) => {
                 const pointMarker = L.marker([point.latitude, point.longitude], { title: point.popupContent.getId() })
@@ -74,31 +58,43 @@ class spatialQueryMap extends viewModelBase {
             });
 
             markersGroup.addLayers(markers);
-            const controlLayerText = `<span>Point fields:</span>
+            const numberOfMarkersInLayer = markers.length;
+            
+            const controlLayerText = `<span>Point fields: <span class="number-of-markers pull-right padding padding-xs">${numberOfMarkersInLayer}</span></span>
                                       <div class='margin-left'>
-                                          <span>${layerModel.latitudeProperty}</span><br>
-                                          <span>${layerModel.longitudeProperty}</span>
+                                          <span>${genUtils.escapeHtml(layerModel.latitudeProperty)}</span><br>
+                                          <span>${genUtils.escapeHtml(layerModel.longitudeProperty)}</span>
                                       </div>`;
+
+            // A markersGroup layer is per spatial point from query
             (dataLayers as any)[controlLayerText] = markersGroup;
             markersGroups.push(markersGroup);
         })
 
-        //////////////////////
-        // Define the map 
-        //////////////////////
-
-        let map = L.map('mapid', {preferCanvas: true});      // init map
-        osmMap.addTo(map);                                   // init base layer to use
-        L.control.layers(baseLayers, dataLayers).addTo(map); // init legend control
-        markersGroups.forEach(group => map.addLayer(group)); // init markers groups
+        const map = L.map("mapid", {preferCanvas: true});
         
-        let bounds = markersGroups[0].getBounds();
-        for (let i = 1; i <= markersGroups.length-1; i++) {
-            bounds.extend(markersGroups[i].getBounds());
-        }
-
-        map.fitBounds(bounds, { padding: [50, 50] });
+        osmMap.addTo(map);
+        L.control.layers(baseLayers, dataLayers).addTo(map);
+        markersGroups.forEach(group => map.addLayer(group));
+  
+        const mapBounds = L.latLngBounds([]);
+        markersGroups.forEach(group => mapBounds.extend(group.getBounds()));
+        map.fitBounds(mapBounds, {padding: [50, 50]});
     }
+    
+    private getStreetMapTileLayer() {
+        const osmLink = `<a href="http://openstreetmap.org">OpenStreetMap</a>`;
+        const osmUrl = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        const osmAttrib = `&copy; ${osmLink} Contributors`;
+        return L.tileLayer(osmUrl, {attribution: osmAttrib});
+    }
+    
+    private getTopographyMapTileLayer() {
+        const otmLink = `<a href="http://opentopomap.org/">OpenTopoMap</a>`;
+        const otmUrl = `http://{s}.tile.opentopomap.org/{z}/{x}/{y}.png`;
+        const otmAttrib = `&copy; ${otmLink} Contributors`;
+        return L.tileLayer(otmUrl, {attribution: otmAttrib});
+    } 
 }
 
 export = spatialQueryMap;
