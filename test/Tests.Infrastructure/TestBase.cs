@@ -299,7 +299,12 @@ namespace FastTests
             get
             {
                 if (_localServer != null)
+                {
+                    if (_localServer.Disposed)
+                        throw new ObjectDisposedException("Someone disposed the local server!");
+
                     return _localServer;
+                }
 
                 if (_doNotReuseServer)
                 {
@@ -696,6 +701,7 @@ namespace FastTests
 
         public override void Dispose()
         {
+            base.Dispose();
             GC.SuppressFinalize(this);
 
             if (_concurrentTestsSemaphoreTaken.Lower())
@@ -736,17 +742,17 @@ namespace FastTests
             RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
 
             exceptionAggregator.ThrowIfNeeded();
+        }
 
-            static void DownloadAndSaveDebugPackage(bool shouldSaveDebugPackage, RavenServer server, ExceptionAggregator exceptionAggregator, Context context)
-            {
-                if (shouldSaveDebugPackage == false)
-                    return;
+        private static void DownloadAndSaveDebugPackage(bool shouldSaveDebugPackage, RavenServer server, ExceptionAggregator exceptionAggregator, Context context)
+        {
+            if (shouldSaveDebugPackage == false)
+                return;
 
-                if (server == null || server.Disposed)
-                    return;
+            if (server == null || server.Disposed)
+                return;
 
-                exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(server, context));
-            }
+            exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(server, context));
         }
 
         public Task InitializeAsync()
@@ -775,7 +781,7 @@ namespace FastTests
             using (var mre = new ManualResetEventSlim())
             {
                 server.AfterDisposal += () => mre.Set();
-                var task = Task.Run(() => server.Dispose());
+                var task = Task.Run(server.Dispose);
 
                 Assert.True(mre.Wait(timeout), $"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'.");
                 task.GetAwaiter().GetResult();
