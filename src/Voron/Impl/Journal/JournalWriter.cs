@@ -61,22 +61,21 @@ namespace Voron.Impl.Journal
         {
             Debug.Assert(_options.IoMetrics != null);
 
-            Stopwatch sp;
-            using (var metrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWrite, numberOf4KbBlocks * 4L * Constants.Size.Kilobyte))
+            Stopwatch sp = Stopwatch.StartNew();
+
+            byte* currentBufferPtr = buffer;
+            while (numberOf4KbBlocks > 0)
             {
-                sp = Stopwatch.StartNew();
+                long blocksToWrite = Math.Min(numberOf4KbBlocks, _maxNumberOf4KbBlocks);
 
-                byte* currentBufferPtr = buffer;
-                while (numberOf4KbBlocks > 0)
+                IoMeterBuffer.DurationMeasurement writeMetrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWait, blocksToWrite * 4L * Constants.Size.Kilobyte);
+                using (_writeSynchronization.Enter())
                 {
-                    long blocksToWrite = Math.Min(numberOf4KbBlocks, _maxNumberOf4KbBlocks);
+                    writeMetrics.SetFileSize(blocksToWrite * (4L * Constants.Size.Kilobyte));
+                    writeMetrics.Dispose();
 
-                    IoMeterBuffer.DurationMeasurement writeMetrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWait, blocksToWrite * 4L * Constants.Size.Kilobyte);
-                    using (_writeSynchronization.Enter())
+                    using (var metrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWrite, numberOf4KbBlocks * 4L * Constants.Size.Kilobyte))
                     {
-                        writeMetrics.SetFileSize(blocksToWrite * (4L * Constants.Size.Kilobyte));
-                        writeMetrics.Dispose();
-
                         var result = Pal.rvn_write_journal(_writeHandle, currentBufferPtr, blocksToWrite * 4L * Constants.Size.Kilobyte, posBy4Kb * 4L * Constants.Size.Kilobyte, out var error);
                         if (result != PalFlags.FailCodes.Success)
                             PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {numberOf4KbBlocks * 4L * Constants.Size.Kilobyte}, numberOf4Kb={numberOf4KbBlocks}");
@@ -88,17 +87,17 @@ namespace Voron.Impl.Journal
 
                             _workingSetQuotaLogged = true;
                         }
+
+                        metrics.SetFileSize(blocksToWrite * (4L * Constants.Size.Kilobyte));
                     }
-
-                    posBy4Kb += blocksToWrite;
-                    currentBufferPtr += blocksToWrite * (4L * Constants.Size.Kilobyte);
-
-                    numberOf4KbBlocks -= blocksToWrite;
                 }
 
-                sp.Stop();
+                posBy4Kb += blocksToWrite;
+                currentBufferPtr += blocksToWrite * (4L * Constants.Size.Kilobyte);
 
-                metrics.SetFileSize(NumberOfAllocated4Kb * (4L * Constants.Size.Kilobyte));
+                numberOf4KbBlocks -= blocksToWrite;                
+
+                sp.Stop();                
             }
 
             return sp.Elapsed;
