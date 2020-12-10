@@ -187,7 +187,7 @@ namespace Raven.Client.Connection.Request
                         return null;
 
                     return t.Result;
-                });
+                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
             });
         }
 
