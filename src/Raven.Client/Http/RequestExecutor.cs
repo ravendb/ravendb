@@ -576,14 +576,6 @@ namespace Raven.Client.Http
             AsyncHelpers.RunSync(() => ExecuteAsync(command, context, sessionInfo, CancellationToken.None));
         }
 
-        internal void ExecuteWithCancellationToken<TResult>(
-            RavenCommand<TResult> command,
-            JsonOperationContext context,
-            CancellationToken token)
-        {
-            AsyncHelpers.RunSync(() => ExecuteAsync(command, context, sessionInfo: null, token));
-        }
-
         public Task ExecuteAsync<TResult>(
             RavenCommand<TResult> command,
             JsonOperationContext context,

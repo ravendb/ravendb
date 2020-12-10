@@ -23,6 +23,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
@@ -41,10 +42,13 @@ namespace Raven.Server.Documents.Replication
     public class ReplicationLoader : IDisposable, ITombstoneAware
     {
         private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
+
         public event Action<IncomingReplicationHandler> IncomingReplicationAdded;
+
         public event Action<IncomingReplicationHandler> IncomingReplicationRemoved;
 
         public event Action<OutgoingReplicationHandler> OutgoingReplicationAdded;
+
         public event Action<OutgoingReplicationHandler> OutgoingReplicationRemoved;
 
         internal ManualResetEventSlim DebugWaitAndRunReplicationOnce;
@@ -85,6 +89,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private int _replicationStatsId;
+
         private readonly ConcurrentDictionary<ReplicationNode, LastEtagPerDestination> _lastSendEtagPerDestination =
             new ConcurrentDictionary<ReplicationNode, LastEtagPerDestination>();
 
@@ -131,8 +136,10 @@ namespace Raven.Server.Documents.Replication
         // PERF: _incoming locks if you do _incoming.Values. Using .Select
         // directly and fetching the Value avoids this problem.
         public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Select(x => x.Value.ConnectionInfo);
+
         public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Node);
         public IEnumerable<OutgoingReplicationHandler> OutgoingHandlers => _outgoing;
+
         // PERF: _incoming locks if you do _incoming.Values. Using .Select
         // directly and fetching the Value avoids this problem.
         public IEnumerable<IncomingReplicationHandler> IncomingHandlers => _incoming.Select(x => x.Value);
@@ -323,7 +330,6 @@ namespace Raven.Server.Documents.Replication
                 BlittableJsonDocumentBuilder.UsageMode.None,
                 buffer))
             {
-
                 var exceptionSchema = JsonDeserializationClient.ExceptionSchema(readerObject);
                 if (exceptionSchema.Type.Equals("Error"))
                     throw new Exception(exceptionSchema.Message);
@@ -386,10 +392,9 @@ namespace Raven.Server.Documents.Replication
                 {
                     tcpConnectionOptions.Dispose();
                 }
-
                 catch (Exception)
                 {
-                    // do nothing   
+                    // do nothing
                 }
 
                 throw;
@@ -448,7 +453,6 @@ namespace Raven.Server.Documents.Replication
                             IsMyTask(ravenConnectionStrings, topology, failure.Node as ExternalReplicationBase) == false)
                             // no longer my task
                             continue;
-
 
                         AddAndStartOutgoingReplication(failure.Node, failure.External);
                     }
@@ -546,7 +550,7 @@ namespace Raven.Server.Documents.Replication
         {
             if (newRecord == null)
             {
-                // we drop the connections in the handle topology change method 
+                // we drop the connections in the handle topology change method
                 return;
             }
             foreach (var connection in OutgoingFailureInfo)
@@ -691,9 +695,11 @@ namespace Raven.Server.Documents.Replication
                                 case OutgoingReplicationHandler outHandler:
                                     _log.Info($"Failed to dispose outgoing replication to {outHandler.DestinationFormatted}", e);
                                     break;
+
                                 case IncomingReplicationHandler inHandler:
                                     _log.Info($"Failed to dispose incoming replication to {inHandler.SourceFormatted}", e);
                                     break;
+
                                 default:
                                     _log.Info($"Failed to dispose an unknown type '{instance?.GetType()}", e);
                                     break;
@@ -746,7 +752,7 @@ namespace Raven.Server.Documents.Replication
                             ex.DelayReplicationFor = newDestinationEx.DelayReplicationFor;
                         }
                     }
-                    
+
                     continue;
                 }
 
@@ -1115,7 +1121,7 @@ namespace Raven.Server.Documents.Replication
                         AlertType.Replication,
                         NotificationSeverity.Error);
 
-                        _server.NotificationCenter.Add(alert);
+                    _server.NotificationCenter.Add(alert);
                 }
 
                 var replicationPulse = new LiveReplicationPulsesCollector.ReplicationPulse
@@ -1151,7 +1157,6 @@ namespace Raven.Server.Documents.Replication
                     var failureReporter = new OutgoingReplicationFailureToConnectReporter(node, stats);
                     OutgoingReplicationConnectionErrored?.Invoke(node, failureReporter);
                     OutgoingConnectionsLastFailureToConnect.AddOrUpdate(node, failureReporter, (_, __) => failureReporter);
-
                 }
 
                 shutdownInfo.OnError(e);
@@ -1222,6 +1227,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private static readonly string ExternalReplicationTag = "external-replication";
+
         private TcpConnectionInfo GetExternalReplicationTcpInfo(ExternalReplication exNode, X509Certificate2 certificate, string database)
         {
             using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database, certificate,
@@ -1252,6 +1258,7 @@ namespace Raven.Server.Documents.Replication
                 case ExternalReplication _:
                     authorizationInfo = null;
                     return _server.Server.Certificate.Certificate;
+
                 case PullReplicationAsSink sink:
                     authorizationInfo = new TcpConnectionHeaderMessage.AuthorizationInfo
                     {
@@ -1264,6 +1271,7 @@ namespace Raven.Server.Documents.Replication
 
                     var certBytes = Convert.FromBase64String(sink.CertificateWithPrivateKey);
                     return new X509Certificate2(certBytes, sink.CertificatePassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+
                 default:
                     throw new ArgumentException($"Unknown node type {node.GetType().FullName}");
             }
@@ -1370,6 +1378,7 @@ namespace Raven.Server.Documents.Replication
                     handler.OnReplicationFromAnotherSource();
             }
         }
+
         public void Dispose()
         {
             _locker.EnterWriteLock();
@@ -1414,8 +1423,11 @@ namespace Raven.Server.Documents.Replication
         }
 
         public string TombstoneCleanerIdentifier => "Replication";
+
         public event Action<LiveReplicationPulsesCollector.ReplicationPulse> OutgoingReplicationConnectionFailed;
+
         public event Action<ReplicationNode, OutgoingReplicationFailureToConnectReporter> OutgoingReplicationConnectionErrored;
+
         public event Action<ReplicationNode, IncomingReplicationFailureToConnectReporter> IncomingReplicationConnectionErrored;
 
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
@@ -1618,6 +1630,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         public string DestinationFormatted => $"{_node.Url}/databases/{_node.Database}";
+
         public OutgoingReplicationPerformanceStats[] GetReplicationPerformance()
         {
             return new[] { _stats.ToReplicationPerformanceStats() };
@@ -1636,6 +1649,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         public string DestinationFormatted => $"{_node.Url}/databases/{_node.Database}";
+
         public IncomingReplicationPerformanceStats[] GetReplicationPerformance()
         {
             return new[] { _stats.ToReplicationPerformanceStats() };
