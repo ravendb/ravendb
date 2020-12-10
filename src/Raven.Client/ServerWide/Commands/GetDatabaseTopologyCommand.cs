@@ -23,10 +23,9 @@ namespace Raven.Client.ServerWide.Commands
             _applicationIdentifier = applicationIdentifier;
         }
 
-        public GetDatabaseTopologyCommand(string debugTag)
+        public GetDatabaseTopologyCommand(string debugTag) : this()
         {
             _debugTag = debugTag;
-            CanCacheAggressively = false;
             Timeout = TimeSpan.FromSeconds(15);
         }
 

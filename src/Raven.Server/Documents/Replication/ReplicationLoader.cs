@@ -23,6 +23,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
@@ -453,7 +454,6 @@ namespace Raven.Server.Documents.Replication
                             // no longer my task
                             continue;
 
-
                         AddAndStartOutgoingReplication(failure.Node, failure.External);
                     }
                     catch (Exception e)
@@ -695,9 +695,11 @@ namespace Raven.Server.Documents.Replication
                                 case OutgoingReplicationHandler outHandler:
                                     _log.Info($"Failed to dispose outgoing replication to {outHandler.DestinationFormatted}", e);
                                     break;
+
                                 case IncomingReplicationHandler inHandler:
                                     _log.Info($"Failed to dispose incoming replication to {inHandler.SourceFormatted}", e);
                                     break;
+
                                 default:
                                     _log.Info($"Failed to dispose an unknown type '{instance?.GetType()}", e);
                                     break;
@@ -1083,8 +1085,9 @@ namespace Raven.Server.Documents.Replication
 
                 if (node is InternalReplication internalNode)
                 {
-                    using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown))
                     {
+                        cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
                         return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(), "Replication",
                             certificate, cts.Token);
                     }
@@ -1159,7 +1162,6 @@ namespace Raven.Server.Documents.Replication
                 shutdownInfo.OnError(e);
                 _reconnectQueue.TryAdd(shutdownInfo);
             }
-
             return null;
         }
 
@@ -1183,7 +1185,7 @@ namespace Raven.Server.Documents.Replication
 
                     try
                     {
-                        requestExecutor.Execute(cmd, ctx);
+                        requestExecutor.ExecuteWithCancellationToken(cmd, ctx, Database.DatabaseShutdown);
                     }
                     catch (Exception e)
                     {
@@ -1211,7 +1213,7 @@ namespace Raven.Server.Documents.Replication
 
                     try
                     {
-                        requestExecutor.Execute(cmd, ctx);
+                        requestExecutor.ExecuteWithCancellationToken(cmd, ctx, Database.DatabaseShutdown);
                     }
                     finally
                     {
@@ -1234,7 +1236,7 @@ namespace Raven.Server.Documents.Replication
                 var cmd = new GetTcpInfoCommand(ExternalReplicationTag, database, Database.DbId.ToString(), Database.ReadLastEtag());
                 try
                 {
-                    requestExecutor.Execute(cmd, ctx);
+                    requestExecutor.ExecuteWithCancellationToken(cmd, ctx, Database.DatabaseShutdown);
                 }
                 finally
                 {
@@ -1255,6 +1257,7 @@ namespace Raven.Server.Documents.Replication
                 case ExternalReplication _:
                     authorizationInfo = null;
                     return _server.Server.Certificate.Certificate;
+
                 case PullReplicationAsSink sink:
                     authorizationInfo = new TcpConnectionHeaderMessage.AuthorizationInfo
                     {
@@ -1267,6 +1270,7 @@ namespace Raven.Server.Documents.Replication
 
                     var certBytes = Convert.FromBase64String(sink.CertificateWithPrivateKey);
                     return new X509Certificate2(certBytes, sink.CertificatePassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+
                 default:
                     throw new ArgumentException($"Unknown node type {node.GetType().FullName}");
             }
