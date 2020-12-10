@@ -91,6 +91,7 @@ namespace SlowTests.Authentication
             {
                 _payload = EntityToBlittable.ConvertCommandToBlittable(setupInfo, context);
                 ResponseType = RavenCommandResponseType.Raw;
+                Timeout = TimeSpan.FromMinutes(30);
             }
 
             public override bool IsReadRequest => false;

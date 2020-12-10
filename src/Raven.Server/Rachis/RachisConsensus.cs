@@ -539,6 +539,15 @@ namespace Raven.Server.Rachis
 
         protected abstract void InitializeState(TransactionOperationContext context);
 
+        public bool ContainsGuid(string guid)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                return LogHistory.ContainsGuid(ctx, guid);
+            }
+        }
+
         public async Task WaitForState(RachisState rachisState, CancellationToken token)
         {
             while (token.IsCancellationRequested == false)

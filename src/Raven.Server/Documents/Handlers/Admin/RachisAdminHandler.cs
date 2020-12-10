@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/debug/cluster/history-logs", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/debug/cluster/history-logs", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task GetHistoryLogs()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

@@ -379,6 +379,18 @@ namespace Raven.Server.Rachis
             return guid;
         }
 
+        public bool ContainsGuid(TransactionOperationContext context, string guid)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
+            if (table == null)
+                return false;
+
+            using (Slice.From(context.Allocator, guid, out var guidSlice))
+            {
+                return table.VerifyKeyExists(guidSlice);
+            }
+        }
+
         public unsafe bool HasHistoryLog(TransactionOperationContext context, BlittableJsonReaderObject cmd, out long index, out object result, out Exception exception)
         {
             result = null;
