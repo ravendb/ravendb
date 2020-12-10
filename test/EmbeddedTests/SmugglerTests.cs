@@ -46,7 +46,7 @@ namespace EmbeddedTests
                 using (var store = embedded.GetDocumentStore(new DatabaseOptions(databaseName)))
                 {
                     var testingStuff = store.Smuggler.ForTestingPurposesOnly();
-                    using (store.SetRequestTimeout(TimeSpan.FromMilliseconds(1000), databaseName))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
                     using (testingStuff.CallBeforeSerializeToStreamAsync(() =>
                     {
                         Thread.Sleep(2000);
@@ -58,7 +58,7 @@ namespace EmbeddedTests
                             var operation = await store.Smuggler.ForDatabase(databaseName).ImportAsync(new DatabaseSmugglerImportOptions
                             {
                                 OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Identities | DatabaseItemType.CompareExchange
-                            }, fileName);
+                            }, fileName, cts.Token);
 
                             await operation.WaitForCompletionAsync();
                         }
@@ -102,7 +102,7 @@ namespace EmbeddedTests
                     using (var store = embedded.GetDocumentStore(new DatabaseOptions(databaseName)))
                     {
                         var testingStuff = store.Smuggler.ForTestingPurposesOnly();
-                        using (store.SetRequestTimeout(TimeSpan.FromMilliseconds(1000), databaseName))
+                        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
                         using (testingStuff.CallBeforeSerializeToStreamAsync(() =>
                         {
                             Thread.Sleep(2000);
@@ -111,10 +111,13 @@ namespace EmbeddedTests
                             Exception e = null;
                             try
                             {
-                                var operation = await store.Smuggler.ForDatabase(databaseName).ImportAsync(new DatabaseSmugglerImportOptions
-                                {
-                                    OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Identities | DatabaseItemType.CompareExchange
-                                }, ms);
+                                var operation = await store.Smuggler.ForDatabase(databaseName)
+                                    .ImportAsync(
+                                        new DatabaseSmugglerImportOptions
+                                        {
+                                            OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Identities | DatabaseItemType.CompareExchange
+                                        }, ms, cts.Token);
+                                
 
                                 await operation.WaitForCompletionAsync();
                             }
@@ -136,9 +139,7 @@ namespace EmbeddedTests
             if (e is AggregateException ae)
                 e = Raven.Client.Extensions.ExceptionExtensions.ExtractSingleInnerException(ae);
 
-            Assert.Equal(typeof(RavenException), e.GetType());
-            Assert.NotNull(e.InnerException);
-            Assert.Equal(typeof(TimeoutException), e.InnerException.GetType());
+            Assert.Equal(typeof(TaskCanceledException), e.GetType());
         }
 
         internal static DynamicJsonValue CreateDummyDump(int count)

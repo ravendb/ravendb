@@ -1,3 +1,4 @@
+using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -14,6 +15,11 @@ namespace Raven.Client.Documents.Operations
 
         private class DatabaseHealthCheckCommand : RavenCommand
         {
+            public DatabaseHealthCheckCommand()
+            {
+                Timeout = TimeSpan.FromSeconds(15); // maybe even less?
+            }
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/healthcheck";

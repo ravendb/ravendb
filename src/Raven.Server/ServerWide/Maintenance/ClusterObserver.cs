@@ -21,6 +21,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using static Raven.Server.ServerWide.Maintenance.DatabaseStatus;
@@ -247,7 +248,6 @@ namespace Raven.Server.ServerWide.Maintenance
                                 if (cleanUpState == null)
                                     cleanUpState = new Dictionary<string, long>();
 
-                                AddToDecisionLog(database, $"Should clean up values up to raft index {cleanUp}.");
                                 cleanUpState.Add(database, cleanUp.Value);
                             }
 
@@ -322,19 +322,43 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (cleanUpState != null)
                 {
-                    var cmd = new CleanUpClusterStateCommand(RaftIdGenerator.NewId())
+                    var guid = "cleanup/" + GetGuid(cleanUpState);
+                    if (_engine.ContainsGuid(guid) == false)
                     {
-                        ClusterTransactionsCleanup = cleanUpState
-                    };
+                        foreach (var kvp in cleanUpState)
+                        {
+                            AddToDecisionLog(kvp.Key, $"Should clean up values up to raft index {kvp.Value}.");
+                        }
 
-                    if (_engine.LeaderTag != _server.NodeTag)
-                    {
-                        throw new NotLeadingException("This node is no longer the leader, so abort the cleaning.");
+                        var cmd = new CleanUpClusterStateCommand(guid)
+                        {
+                            ClusterTransactionsCleanup = cleanUpState
+                        };
+
+                        if (_engine.LeaderTag != _server.NodeTag)
+                        {
+                            throw new NotLeadingException("This node is no longer the leader, so abort the cleaning.");
+                        }
+
+                        await _engine.PutAsync(cmd);
                     }
-
-                    await _engine.PutAsync(cmd);
                 }
             }
+        }
+
+
+        private static string GetGuid(Dictionary<string, long> dic)
+        {
+            if (dic == null)
+                return Guid.Empty.ToString();
+
+            var hash = 0UL;
+            foreach (var kvp in dic)
+            {
+                hash = Hashing.XXHash64.CalculateRaw(kvp.Key) ^ (ulong)kvp.Value ^ hash;
+            }
+
+            return hash.ToString("X");
         }
 
         internal async Task CleanUpUnusedAutoIndexes(DatabaseObservationState databaseState)
@@ -594,6 +618,9 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private static bool AllDatabaseNodesHasReport(DatabaseObservationState state)
         {
+            if (state.DatabaseTopology.Count == 0)
+                return false; // database is being deleted, so no need to cleanup values
+
             foreach (var node in state.DatabaseTopology.AllNodes)
             {
                 if (state.Current.ContainsKey(node) == false)
