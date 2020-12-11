@@ -249,7 +249,6 @@
     <Compile Include="Changes\IDatabaseChanges.cs" />
     <Compile Include="Changes\DatabaseConnectionState.cs" />
     <Compile Include="Changes\TaskedObservable.cs" />
-    <Compile Include="Changes\TaskErrorExtensions.cs" />
     <Compile Include="Document\RavenLoadConfiguration.cs" />
     <Compile Include="ILoadConfiguration.cs" />
     <Compile Include="Indexes\AbstractResultsTransformer.cs" />

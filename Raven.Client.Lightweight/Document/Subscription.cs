@@ -384,7 +384,7 @@ namespace Raven.Client.Document
         {
             SubscriptionConnectionException = null;
 
-            pullingTask = PullDocuments().ObserveException();
+            pullingTask = PullDocuments().IgnoreUnobservedExceptions();
 
             try
             {
@@ -447,7 +447,7 @@ namespace Raven.Client.Document
                 return;
             }
 
-            startPullingTask = StartPullingDocs().ObserveException();
+            startPullingTask = StartPullingDocs().IgnoreUnobservedExceptions();
         }
 
         private bool TryHandleRejectedConnection(Exception ex, bool reopenTried)

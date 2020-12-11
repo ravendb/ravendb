@@ -68,7 +68,7 @@ namespace Raven.Client.Changes
             this.onDispose = onDispose;            
             Conventions = conventions;
             Task = EstablishConnection()
-                        .ObserveException()
+                        .IgnoreUnobservedExceptions()
                         .ContinueWith(task =>
                         {
                             task.AssertNotFailed();
@@ -228,7 +228,7 @@ namespace Raven.Client.Changes
                         AvoidCachingRequest = true
                     };
                     var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-                    lastSendTask = request.ExecuteRequestAsync().ObserveException();
+                    lastSendTask = request.ExecuteRequestAsync().IgnoreUnobservedExceptions();
 
                     return lastSendTask.ContinueWith(task =>
                     {
@@ -238,7 +238,7 @@ namespace Raven.Client.Changes
                 }
                 catch (Exception e)
                 {
-                    return new CompletedTask(e).Task.ObserveException();
+                    return new CompletedTask(e).Task.IgnoreUnobservedExceptions();
                 }
             }
         }
@@ -322,7 +322,7 @@ namespace Raven.Client.Changes
             Time.Delay(TimeSpan.FromSeconds(15))
                 .ContinueWith(_ => EstablishConnection())
                 .Unwrap()
-                .ObserveException()
+                .IgnoreUnobservedExceptions()
                 .ContinueWith(task =>
                 {
                     Interlocked.Exchange(ref isReconnecting, Idle);
