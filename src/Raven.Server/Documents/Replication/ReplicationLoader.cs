@@ -24,6 +24,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
@@ -175,7 +176,7 @@ namespace Raven.Server.Documents.Replication
                 if (maxTombstone.LastModified <= lastDateToSave)
                 {
                     //All tombstones can be deleted
-                    Interlocked.Exchange(ref _hubInfoForCleaner, new HubInfoForCleaner {LastCleanup = Database.Time.GetUtcNow(), LastEtag = max});
+                    Interlocked.Exchange(ref _hubInfoForCleaner, new HubInfoForCleaner { LastCleanup = Database.Time.GetUtcNow(), LastEtag = max });
                     return max;
                 }
 
@@ -221,7 +222,6 @@ namespace Raven.Server.Documents.Replication
                 }
             }
         }
-
 
         private readonly Logger _log;
 
@@ -278,12 +278,15 @@ namespace Raven.Server.Documents.Replication
                         DisposeRelatedPullReplication(cmd.HubName, cmd.CertificateThumbprint);
                     }
                     break;
+
                 case UpdatePullReplicationAsHubCommand put:
                     DisposeRelatedPullReplication(put.Definition.Name, null /*all*/);
                     break;
+
                 case UnregisterReplicationHubAccessCommand del:
                     DisposeRelatedPullReplication(del.HubName, del.CertificateThumbprint);
                     break;
+
                 case RegisterReplicationHubAccessCommand reg:
                     DisposeRelatedPullReplication(reg.HubName, reg.CertificateThumbprint);
                     break;
@@ -404,6 +407,7 @@ namespace Raven.Server.Documents.Replication
                                 throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Pull Replication");
                             CreatePullReplicationAsHub(tcpConnectionOptions, initialRequest, supportedVersions, pullReplicationDefinition, header);
                             return;
+
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
                             if (pullReplicationDefinition.Mode.HasFlag(PullReplicationMode.SinkToHub) == false)
                                 throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Push Replication");
@@ -420,12 +424,15 @@ namespace Raven.Server.Documents.Replication
 
                             // same as normal incoming replication, just using the filtering
                             break;
+
                         default:
                             throw new InvalidOperationException("Unknown AuthroizeAs value: " + header.AuthorizeInfo.AuthorizeAs);
                     }
                     break;
+
                 case null:
                     break;
+
                 default:
                     throw new InvalidOperationException("Unknown AuthroizeAs value" + header.AuthorizeInfo?.AuthorizeAs);
             }
@@ -516,7 +523,7 @@ namespace Raven.Server.Documents.Replication
                     Mode = PullReplicationMode.SinkToHub
                 };
             }
-            
+
             var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, pullParams);
             newIncoming.Failed += OnIncomingReceiveFailed;
 
@@ -700,7 +707,6 @@ namespace Raven.Server.Documents.Replication
                             IsMyTask(ravenConnectionStrings, topology, failure.Node as ExternalReplicationBase) == false)
                             // no longer my task
                             continue;
-
 
                         AddAndStartOutgoingReplication(failure.Node, failure.External);
                     }
@@ -943,9 +949,11 @@ namespace Raven.Server.Documents.Replication
                                 case OutgoingReplicationHandler outHandler:
                                     _log.Info($"Failed to dispose outgoing replication to {outHandler.DestinationFormatted}", e);
                                     break;
+
                                 case IncomingReplicationHandler inHandler:
                                     _log.Info($"Failed to dispose incoming replication to {inHandler.SourceFormatted}", e);
                                     break;
+
                                 default:
                                     _log.Info($"Failed to dispose an unknown type '{instance?.GetType()}", e);
                                     break;
@@ -988,17 +996,17 @@ namespace Raven.Server.Documents.Replication
                     {
                         erb.MentorNode = newDestination.MentorNode;
 
-                    if (handler.Destination is ExternalReplication ex &&
-                        actual is ExternalReplication actualEx &&
-                        newDestination is ExternalReplication newDestinationEx)
-                    {
-                        if (ex.DelayReplicationFor != actualEx.DelayReplicationFor)
-                            handler.NextReplicateTicks = 0;
+                        if (handler.Destination is ExternalReplication ex &&
+                            actual is ExternalReplication actualEx &&
+                            newDestination is ExternalReplication newDestinationEx)
+                        {
+                            if (ex.DelayReplicationFor != actualEx.DelayReplicationFor)
+                                handler.NextReplicateTicks = 0;
 
-                        ex.DelayReplicationFor = newDestinationEx.DelayReplicationFor;
+                            ex.DelayReplicationFor = newDestinationEx.DelayReplicationFor;
+                        }
                     }
-                    }
-                    
+
                     continue;
                 }
 
@@ -1093,13 +1101,13 @@ namespace Raven.Server.Documents.Replication
         }
 
         private bool IsMyTask(Dictionary<string, RavenConnectionString> connectionStrings, DatabaseTopology topology, ExternalReplicationBase task)
-            {
+        {
             if (ValidateConnectionString(connectionStrings, task, out _) == false)
-                    return false;
+                return false;
 
             var taskStatus = GetExternalReplicationState(_server, Database.Name, task.TaskId);
             var whoseTaskIsIt = Database.WhoseTaskIsIt(topology, task, taskStatus);
-                return whoseTaskIsIt == _server.NodeTag;
+            return whoseTaskIsIt == _server.NodeTag;
         }
 
         public static ExternalReplicationState GetExternalReplicationState(ServerStore server, string database, long taskId)
@@ -1406,7 +1414,7 @@ namespace Raven.Server.Documents.Replication
                         AlertType.Replication,
                         NotificationSeverity.Error);
 
-                        _server.NotificationCenter.Add(alert);
+                    _server.NotificationCenter.Add(alert);
                 }
 
                 var replicationPulse = new LiveReplicationPulsesCollector.ReplicationPulse
@@ -1447,7 +1455,6 @@ namespace Raven.Server.Documents.Replication
                 shutdownInfo.OnError(e);
                 _reconnectQueue.TryAdd(shutdownInfo);
             }
-
             return null;
         }
 
@@ -1471,7 +1478,7 @@ namespace Raven.Server.Documents.Replication
 
                     try
                     {
-                        requestExecutor.Execute(cmd, ctx, token: Database.DatabaseShutdown);
+                        requestExecutor.ExecuteWithCancellationToken(cmd, ctx, Database.DatabaseShutdown);
                     }
                     catch (Exception e)
                     {
@@ -1499,7 +1506,7 @@ namespace Raven.Server.Documents.Replication
 
                     try
                     {
-                        requestExecutor.Execute(cmd, ctx, token: Database.DatabaseShutdown);
+                        requestExecutor.ExecuteWithCancellationToken(cmd, ctx, Database.DatabaseShutdown);
                     }
                     finally
                     {
@@ -1522,7 +1529,7 @@ namespace Raven.Server.Documents.Replication
                 var cmd = new GetTcpInfoCommand(ExternalReplicationTag, database, Database.DbId.ToString(), Database.ReadLastEtag());
                 try
                 {
-                    requestExecutor.Execute(cmd, ctx, token: Database.DatabaseShutdown);
+                    requestExecutor.ExecuteWithCancellationToken(cmd, ctx, Database.DatabaseShutdown);
                 }
                 finally
                 {
@@ -1543,6 +1550,7 @@ namespace Raven.Server.Documents.Replication
                 case ExternalReplication _:
                     authorizationInfo = null;
                     return _server.Server.Certificate.Certificate;
+
                 case PullReplicationAsSink sink:
                     authorizationInfo = new TcpConnectionHeaderMessage.AuthorizationInfo
                     {
@@ -1561,6 +1569,7 @@ namespace Raven.Server.Documents.Replication
 
                     var certBytes = Convert.FromBase64String(sink.CertificateWithPrivateKey);
                     return new X509Certificate2(certBytes, sink.CertificatePassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+
                 default:
                     throw new ArgumentException($"Unknown node type {node.GetType().FullName}");
             }

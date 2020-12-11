@@ -230,7 +230,7 @@ namespace Raven.Client.Documents.Session
         {
             QueryOperation ??= InitializeQueryOperation();
 
-            return new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
+            return new LazyQueryOperation<T>(TheSession, QueryOperation, AfterQueryExecutedCallback);
         }
 
         protected internal QueryOperation InitializeQueryOperation()

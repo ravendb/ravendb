@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries
@@ -19,7 +21,7 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public bool DisableCaching { get; set; }
 
-        public ulong GetQueryHash(JsonOperationContext ctx)
+        public ulong GetQueryHash(JsonOperationContext ctx, DocumentConventions conventions, IJsonSerializer serializer)
         {
             using (var hasher = new HashCalculator(ctx))
             {
@@ -31,7 +33,7 @@ namespace Raven.Client.Documents.Queries
                 hasher.Write(Start);
                 hasher.Write(PageSize);
 #pragma warning restore 618
-                hasher.Write(QueryParameters);
+                hasher.Write(QueryParameters, conventions, serializer);
 
                 return hasher.GetHash();
             }

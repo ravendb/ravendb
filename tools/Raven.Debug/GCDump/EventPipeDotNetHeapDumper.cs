@@ -190,7 +190,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     {
                         if (!(e is TaskCanceledException))
                         {
-                            throw ae;
+                            throw;
                         }
                     }
                 }
