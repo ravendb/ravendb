@@ -234,7 +234,7 @@ namespace Raven.Client.Changes
                     {
                         lastSendTask = null;
                         request.Dispose();
-                    });
+                    }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                 }
                 catch (Exception e)
                 {
