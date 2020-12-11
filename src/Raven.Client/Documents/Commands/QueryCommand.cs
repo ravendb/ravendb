@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Commands
                 // we need to add a query hash because we are using POST queries
                 // so we need to unique parameter per query so the query cache will
                 // work properly
-                .Append(_indexQuery.GetQueryHash(ctx));
+                .Append(_indexQuery.GetQueryHash(ctx, _conventions, _session.JsonSerializer));
 
             if (_metadataOnly)
                 path.Append("&metadataOnly=true");
