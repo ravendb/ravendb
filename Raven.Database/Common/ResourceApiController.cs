@@ -16,6 +16,7 @@ using System.Web.Http.Routing;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.FileSystem.Extensions;
@@ -268,11 +269,15 @@ namespace Raven.Database.Common
 
                         try
                         {
-                            if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(timeToWaitForResourceToLoad))).ConfigureAwait(false) != resourceStoreTask)
+                            using (var cancellationTokenSource = new CancellationTokenSource())
                             {
-                                msg = string.Format("The resource {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, resource loading continues.", resourceName, timeToWaitForResourceToLoad);
-                                Log.Warn(msg);
-                                throw new TimeoutException(msg);
+                                if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(timeToWaitForResourceToLoad), cancellationTokenSource.Token).IgnoreUnobservedExceptions()).ConfigureAwait(false) != resourceStoreTask)
+                                {
+                                    cancellationTokenSource.Cancel();
+                                    msg = string.Format("The resource {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, resource loading continues.", resourceName, timeToWaitForResourceToLoad);
+                                    Log.Warn(msg);
+                                    throw new TimeoutException(msg);
+                                }
                             }
                         }
                         finally
