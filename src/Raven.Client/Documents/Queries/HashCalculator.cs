@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Reflection;
-using Raven.Client.Extensions;
-using Raven.Client.Util;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Json.Serialization;
 using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
@@ -13,11 +11,17 @@ namespace Raven.Client.Documents.Queries
 {
     public unsafe struct HashCalculator : IDisposable
     {
+        private readonly JsonOperationContext _context;
+
+        private IJsonSerializer _serializer;
+
         private UnmanagedWriteBuffer _buffer;
 
         public HashCalculator(JsonOperationContext ctx)
         {
-            _buffer = ctx.GetStream(JsonOperationContext.InitialStreamSize);
+            _serializer = null;
+            _context = ctx ?? throw new ArgumentNullException(nameof(ctx));
+            _buffer = _context.GetStream(JsonOperationContext.InitialStreamSize);
         }
 
         public ulong GetHash()
@@ -153,7 +157,7 @@ namespace Raven.Client.Documents.Queries
             _buffer.Dispose();
         }
 
-        public void Write(Parameters qp)
+        public void Write(Parameters qp, DocumentConventions conventions, IJsonSerializer serializer)
         {
             if (qp == null)
             {
@@ -164,22 +168,14 @@ namespace Raven.Client.Documents.Queries
             foreach (var kvp in qp)
             {
                 Write(kvp.Key);
-                WriteParameterValue(kvp.Value, 100);
+                WriteParameterValue(kvp.Value, conventions, serializer);
             }
+
+            _serializer = null;
         }
 
-        private void WriteParameterValue(object value, int level)
+        private void WriteParameterValue(object value, DocumentConventions conventions, IJsonSerializer serializer)
         {
-            if (level <= 0)
-            {
-                if (value is null)
-                    _buffer.WriteByte(0);
-                else
-                    Write(value.ToString());
-
-                return;
-            }
-
             switch (value)
             {
                 case string s:
@@ -271,8 +267,8 @@ namespace Raven.Client.Documents.Queries
                     var dictionaryEnumerator = dict.GetEnumerator();
                     while (dictionaryEnumerator.MoveNext())
                     {
-                        WriteParameterValue(dictionaryEnumerator.Key, level - 1);
-                        WriteParameterValue(dictionaryEnumerator.Value, level - 1);
+                        WriteParameterValue(dictionaryEnumerator.Key, conventions, serializer);
+                        WriteParameterValue(dictionaryEnumerator.Value, conventions, serializer);
                         hadDictionaryValues = true;
                     }
                     if (hadDictionaryValues == false)
@@ -286,7 +282,7 @@ namespace Raven.Client.Documents.Queries
                     var enumerator = e.GetEnumerator();
                     while (enumerator.MoveNext())
                     {
-                        WriteParameterValue(enumerator.Current, level - 1);
+                        WriteParameterValue(enumerator.Current, conventions, serializer);
                         hadEnumerableValues = true;
                     }
                     if (hadEnumerableValues == false)
@@ -295,48 +291,42 @@ namespace Raven.Client.Documents.Queries
                     }
 
                     break;
-                case CultureInfo ci:
-                    Write(ci.ToString());
-                    break;
 
                 default:
 
                     var valueType = value.GetType();
                     if (valueType.IsPrimitive == false)
                     {
-                        bool hasObjectValues = false;
-                        foreach (var memberInfo in ReflectionUtil.GetPropertiesAndFieldsFor(valueType, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                        using (var writer = conventions.Serialization.CreateWriter(_context))
                         {
-                            if (TryGetMemberValue(memberInfo, value, out var memberValue) == false)
-                                continue;
+                            writer.WriteStartObject();
+                            writer.WritePropertyName("Value");
 
-                            WriteParameterValue(memberValue, level - 1);
-                            hasObjectValues = true;
-                        }
-                        if (hasObjectValues == false)
-                        {
-                            Write("empty-object");
+                            if (_serializer == null)
+                                _serializer = conventions.Serialization.CreateSerializer();
+
+                            _serializer.Serialize(writer, value);
+
+                            writer.WriteEndObject();
+
+                            writer.FinalizeDocument();
+
+                            using (var reader = writer.CreateReader())
+                                Write(reader);
                         }
                     }
-
-                    Write(value.ToString());
+                    else
+                    {
+                        Write(value.ToString());
+                    }
 
                     break;
             }
+        }
 
-            static bool TryGetMemberValue(MemberInfo memberInfo, object value, out object memberValue)
-            {
-                try
-                {
-                    memberValue = memberInfo.GetValue(value);
-                    return true;
-                }
-                catch
-                {
-                    memberValue = null;
-                    return false;
-                }
-            }
+        private void Write(BlittableJsonReaderObject json)
+        {
+            _buffer.Write(json.BasePointer, json.Size);
         }
     }
 }

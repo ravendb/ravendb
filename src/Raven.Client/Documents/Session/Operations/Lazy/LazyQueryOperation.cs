@@ -11,13 +11,13 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 {
     internal class LazyQueryOperation<T> : ILazyOperation
     {
-        private readonly DocumentConventions _conventions;
+        private readonly InMemoryDocumentSessionOperations _session;
         private readonly QueryOperation _queryOperation;
         private readonly Action<QueryResult> _afterQueryExecuted;
 
-        public LazyQueryOperation(DocumentConventions conventions, QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted)
+        public LazyQueryOperation(InMemoryDocumentSessionOperations session, QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted)
         {
-            _conventions = conventions;
+            _session = session;
             _queryOperation = queryOperation;
             _afterQueryExecuted = afterQueryExecuted;
         }
@@ -29,8 +29,8 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
                 CanCacheAggressively = _queryOperation.IndexQuery.DisableCaching == false &&  _queryOperation.IndexQuery.WaitForNonStaleResults == false,
                 Url = "/queries",
                 Method = HttpMethod.Post,
-                Query = $"?queryHash={_queryOperation.IndexQuery.GetQueryHash(ctx)}",
-                Content = new IndexQueryContent(_conventions, _queryOperation.IndexQuery)
+                Query = $"?queryHash={_queryOperation.IndexQuery.GetQueryHash(ctx, _session.Conventions, _session.JsonSerializer)}",
+                Content = new IndexQueryContent(_session.Conventions, _queryOperation.IndexQuery)
             };
         }
 

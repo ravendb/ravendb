@@ -13,7 +13,7 @@ namespace Raven.Server.Web.System
     public class DatabasesDebugHandler : RequestHandler
     {
         [RavenAction("/admin/debug/databases/idle", "GET", AuthorizationStatus.Operator)]
-        public async Task Idle()
+        public Task Idle()
         {
             //var name = GetStringQueryString("name", required: false);
 
@@ -49,6 +49,8 @@ namespace Raven.Server.Web.System
 
                 writer.WriteEndObject();
             }
+
+            return Task.CompletedTask;
         }
 
         public class IdleDatabaseStatistics : IDynamicJson

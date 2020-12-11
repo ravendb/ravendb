@@ -191,7 +191,6 @@ namespace Raven.Server.Documents
         public readonly SystemTime Time = new SystemTime();
 
         public ScriptRunnerCache Scripts;
-        private string _lockFile;
         public readonly TransactionOperationsMerger TxMerger;
 
         public SubscriptionStorage SubscriptionStorage { get; }

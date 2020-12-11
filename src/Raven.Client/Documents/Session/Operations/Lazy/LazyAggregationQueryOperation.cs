@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Commands.MultiGet;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Json.Serialization;
@@ -12,14 +11,14 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 {
     internal class LazyAggregationQueryOperation : ILazyOperation
     {
-        private readonly DocumentConventions _conventions;
+        private readonly InMemoryDocumentSessionOperations _session;
         private readonly IndexQuery _indexQuery;
         private readonly Action<QueryResult> _invokeAfterQueryExecuted;
         private readonly Func<QueryResult, Dictionary<string, FacetResult>> _processResults;
 
-        public LazyAggregationQueryOperation(DocumentConventions conventions, IndexQuery indexQuery, Action<QueryResult> invokeAfterQueryExecuted, Func<QueryResult, Dictionary<string, FacetResult>> processResults)
+        public LazyAggregationQueryOperation(InMemoryDocumentSessionOperations session, IndexQuery indexQuery, Action<QueryResult> invokeAfterQueryExecuted, Func<QueryResult, Dictionary<string, FacetResult>> processResults)
         {
-            _conventions = conventions;
+            _session = session;
             _indexQuery = indexQuery;
             _invokeAfterQueryExecuted = invokeAfterQueryExecuted;
             _processResults = processResults;
@@ -31,8 +30,8 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             {
                 Url = "/queries",
                 Method = HttpMethod.Post,
-                Query = $"?queryHash={_indexQuery.GetQueryHash(ctx)}",
-                Content = new IndexQueryContent(_conventions, _indexQuery)
+                Query = $"?queryHash={_indexQuery.GetQueryHash(ctx, _session.Conventions, _session.JsonSerializer)}",
+                Content = new IndexQueryContent(_session.Conventions, _indexQuery)
             };
         }
 
