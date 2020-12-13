@@ -52,7 +52,7 @@
     <IsWindows64>false</IsWindows64>
     <IsMacOS>false</IsMacOS>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'macos'">
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64'">
     <IsAnyOS>false</IsAnyOS>
     <IsLinux64>false</IsLinux64>
     <IsLinuxArm32>false</IsLinuxArm32>
