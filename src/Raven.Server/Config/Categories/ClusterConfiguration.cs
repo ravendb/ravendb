@@ -107,7 +107,7 @@ namespace Raven.Server.Config.Categories
         public int LogHistoryMaxEntries { get; set; }
 
         [Description("Excceding the allowed change vector distance between two nodes, will move the lagged node to rehab.")]
-        [DefaultValue(10000)]
+        [DefaultValue(10_000)]
         [ConfigurationEntry("Cluster.MaxChangeVectorDistance", ConfigurationEntryScope.ServerWideOnly)]
         public long MaxChangeVectorDistance { get; set; }
     }
