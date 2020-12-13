@@ -8,6 +8,7 @@ using System;
 using System.Text;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
+using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
@@ -319,7 +320,7 @@ namespace Raven.Client.Documents.Session.Tokens
 
                     Options.WhereShape.WriteTo(writer);
 
-                    if (Math.Abs(Options.DistanceErrorPct - Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct) > double.Epsilon)
+                    if (Options.DistanceErrorPct.AlmostEquals(Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct) == false)
                     {
                         writer.Append(", ");
                         writer.Append(Options.DistanceErrorPct);
