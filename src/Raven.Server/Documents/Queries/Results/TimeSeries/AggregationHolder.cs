@@ -310,6 +310,34 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                         }
 
                         break;
+                    case InterpolationType.Last:
+
+                        while (start < to)
+                        {
+                            yield return ToJson(scale, start, end, result.Key, startData);
+
+                            gapData.Range.MoveToNextRange();
+                            start = gapData.Range.Start;
+                            end = gapData.Range.End;
+
+                            point = start;
+                        }
+
+                        break;
+                    case InterpolationType.Next:
+
+                        while (start < to)
+                        {
+                            yield return ToJson(scale, start, end, result.Key, endData);
+
+                            gapData.Range.MoveToNextRange();
+                            start = gapData.Range.Start;
+                            end = gapData.Range.End;
+
+                            point = start;
+                        }
+
+                        break;    
                     default:
                         throw new ArgumentOutOfRangeException("Unknown InterpolationType : " + _interpolationType);
                 }

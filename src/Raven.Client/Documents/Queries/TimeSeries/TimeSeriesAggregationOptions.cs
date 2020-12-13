@@ -9,6 +9,8 @@
     {
         None,
         Linear,
-        Nearest
+        Nearest,
+        Last,
+        Next
     }
 }
