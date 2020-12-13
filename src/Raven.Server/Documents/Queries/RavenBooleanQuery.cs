@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Lucene.Net.Search;
 using Raven.Server.Documents.Queries.AST;
+using Sparrow.Extensions;
 using Query = Lucene.Net.Search.Query;
 
 namespace Raven.Server.Documents.Queries
@@ -10,7 +11,7 @@ namespace Raven.Server.Documents.Queries
     {
         private readonly OperatorType _operator;
 
-        public bool AnyBoost => Math.Abs(Boost - 1.0f) >= float.Epsilon;
+        public bool AnyBoost => Boost.AlmostEquals(1.0f) == false;
 
         public RavenBooleanQuery(OperatorType @operator)
         {
