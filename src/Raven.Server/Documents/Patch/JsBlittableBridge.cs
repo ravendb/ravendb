@@ -17,6 +17,7 @@ using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Server.Extensions;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Utils;
 
@@ -311,15 +312,8 @@ namespace Raven.Server.Documents.Patch
             bool IsDoubleType()
             {
                 var roundedNumber = Math.Round(d, 0);
-
-                var digitsAfterDecimalPoint = Math.Abs(roundedNumber - d);
-                if (digitsAfterDecimalPoint < double.Epsilon)
-                {
-                    if (digitsAfterDecimalPoint == 0 && Math.Abs(roundedNumber) <= long.MaxValue)
-                        return false;
-
-                    return true;
-                }
+                if (roundedNumber.AlmostEquals(d))
+                    return false;
 
                 return true;
             }

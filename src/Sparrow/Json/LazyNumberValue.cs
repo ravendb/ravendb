@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers.Text;
 using System.Runtime.CompilerServices;
+using Sparrow.Extensions;
 
 namespace Sparrow.Json
 {
@@ -172,7 +173,7 @@ namespace Sparrow.Json
                 return Equals(lazyDouble);
 
             if (obj is double dbl)
-                return Math.Abs(this - dbl) < double.Epsilon;
+                return dbl.AlmostEquals(this);
 
             if (obj is decimal dec)
                 return ((decimal)this).Equals(dec);
@@ -187,7 +188,7 @@ namespace Sparrow.Json
         protected bool Equals(LazyNumberValue other)
         {
             if (_val != null && other._val != null)
-                return Math.Abs(_val.Value - other._val.Value) < double.Epsilon;
+                return _val.Value.AlmostEquals(other._val.Value);
 
             if (_decimalVal != null && other._decimalVal != null)
                 return _decimalVal.Value.Equals(other._decimalVal.Value);
