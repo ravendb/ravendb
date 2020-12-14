@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -446,71 +447,6 @@ namespace SlowTests.Cluster
 
                 await SetupReplicationAsync(store1, store2);
                 Assert.True(WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Karmel"));
-            }
-        }
-
-        [Fact]
-        public async Task ResolveInFavorOfLocalClusterTransaction()
-        {
-            var user1 = new User()
-            {
-                Name = "Source"
-            };
-            var user2 = new User()
-            {
-                Name = "Dest"
-            };
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
-            {
-                using (var session = store2.OpenAsyncSession())
-                {
-                    session.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-                    await session.StoreAsync(user2, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                using (var session = store1.OpenAsyncSession(new SessionOptions
-                {
-                    TransactionMode = TransactionMode.ClusterWide
-                }))
-                {
-                    await session.StoreAsync(user1, "users/1");
-                    await session.SaveChangesAsync();
-                }
-                await SetupReplicationAsync(store1, store2);
-
-                // 1. at first we will resolve to the local, since both are form cluster transaction
-                var resolvedToLocal = await WaitForValueAsync(async () =>
-                {
-                    using (var session = store2.OpenAsyncSession())
-                    {
-                        var user = await session.LoadAsync<User>("users/1");
-                        if (user == null)
-                            return false;
-
-                        if (user.Name != "Dest")
-                            return false;
-                        var changeVector = session.Advanced.GetChangeVectorFor(user);
-                        var entries = changeVector.ToChangeVector();
-                        return entries.Length == 2;
-                    }
-                }, true);
-                Assert.True(resolvedToLocal);
-
-                // 2. after the resolution the document is stripped from the cluster transaction flag
-                using (var session = store1.OpenAsyncSession(new SessionOptions
-                {
-                    TransactionMode = TransactionMode.ClusterWide
-                }))
-                {
-                    user1.Name = "Source 2";
-                    await session.StoreAsync(user1, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                // 3. so in the next conflict we will be overwriting it.
-                Assert.True(WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Source 2"));
             }
         }
 
