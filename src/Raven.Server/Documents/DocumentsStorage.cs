@@ -248,6 +248,7 @@ namespace Raven.Server.Documents
             options.PrefetchSegmentSize = DocumentDatabase.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = DocumentDatabase.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
             options.SyncJournalsCountThreshold = DocumentDatabase.Configuration.Storage.SyncJournalsCountThreshold;
+            options.SyncJournalsMaxSizeInMegabytesThreshold = DocumentDatabase.Configuration.Storage.SyncJournalsMaxSizeInMegabytesThreshold;
             options.IgnoreInvalidJournalErrors = DocumentDatabase.Configuration.Storage.IgnoreInvalidJournalErrors;
             options.SkipChecksumValidationOnDatabaseLoading = DocumentDatabase.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
             options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = DocumentDatabase.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;

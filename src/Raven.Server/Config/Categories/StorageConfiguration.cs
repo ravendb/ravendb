@@ -91,6 +91,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.SyncJournalsCountThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int SyncJournalsCountThreshold { get; set; }
 
+        [Description("Max amount of unsynchronized bytes before requesting a sync and removing unused journal files.")]
+        [DefaultValue(256)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Storage.SyncJournalsMaxSizeInMegabytesThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size SyncJournalsMaxSizeInMegabytesThreshold { get; set; }
+
         /// <summary>
         /// Specifies the time interval between each IoMetrics Cleaner run
         /// </summary>

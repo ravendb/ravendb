@@ -660,9 +660,11 @@ namespace Raven.Server.ServerWide
             options.PrefetchSegmentSize = Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
             options.SyncJournalsCountThreshold = Configuration.Storage.SyncJournalsCountThreshold;
+            options.SyncJournalsMaxSizeInMegabytesThreshold = Configuration.Storage.SyncJournalsMaxSizeInMegabytesThreshold;
             options.IgnoreInvalidJournalErrors = Configuration.Storage.IgnoreInvalidJournalErrors;
             options.SkipChecksumValidationOnDatabaseLoading = Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
             options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
+            options.SyncJournalsMaxSizeInMegabytesThreshold = Configuration.Storage.SyncJournalsMaxSizeInMegabytesThreshold;
 
             DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, Configuration.Storage, nameof(DirectoryExecUtils.EnvironmentType.System), DirectoryExecUtils.EnvironmentType.System, Logger);
 

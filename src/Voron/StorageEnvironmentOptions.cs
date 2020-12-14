@@ -75,8 +75,8 @@ namespace Voron
             {
                 _forceUsing32BitsPager = value;
                 MaxLogFileSize = (value ? 32 : 256) * Constants.Size.Megabyte;
-                MaxScratchBufferSize = (value ? 32 : 256) * Constants.Size.Megabyte;
-                MaxNumberOfPagesInJournalBeforeFlush = (value ? 4 : 32) * Constants.Size.Megabyte / Constants.Storage.PageSize;
+                MaxScratchBufferSize = (value ? 32 : 256) * Constants.Size.Megabyte;                
+                MaxNumberOfPagesInJournalBeforeFlush = (value ? 4 : 128) * Constants.Size.Megabyte / Constants.Storage.PageSize;
             }
         }
 
@@ -182,6 +182,8 @@ namespace Voron
             }
         }
 
+        public Size SyncJournalsMaxSizeInMegabytesThreshold { get; set; }
+
         public bool OwnsPagers { get; set; }
 
         public bool ManualFlushing { get; set; }
@@ -258,13 +260,11 @@ namespace Voron
                 if (_log.IsOperationsEnabled)
                     _log.Operations($"Catastrophic failure in {this}, StackTrace:'{stacktrace}'", e);
             });
-
-
-            
-
+          
             PrefetchSegmentSize = 4 * Constants.Size.Megabyte;
             PrefetchResetThreshold = shouldConfigPagersRunInLimitedMemoryEnvironment?256*(long)Constants.Size.Megabyte: 8 * (long)Constants.Size.Gigabyte;
             SyncJournalsCountThreshold = 2;
+            SyncJournalsMaxSizeInMegabytesThreshold = new Size(128, SizeUnit.Megabytes);
 
             ScratchSpaceUsage = new ScratchSpaceUsageMonitor();
         }
@@ -1194,7 +1194,7 @@ namespace Voron
             get
             {
                 if (_timeToSyncAfterFlushInSec < 1)
-                    _timeToSyncAfterFlushInSec = 30;
+                    _timeToSyncAfterFlushInSec = 120;
                 return _timeToSyncAfterFlushInSec;
             }
             set => _timeToSyncAfterFlushInSec = value;
