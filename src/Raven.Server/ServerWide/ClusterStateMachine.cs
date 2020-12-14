@@ -1184,7 +1184,7 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        private void NotifyAndSetCompleted(long index)
+        public void NotifyAndSetCompleted(long index)
         {
             try
             {

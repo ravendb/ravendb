@@ -26,7 +26,6 @@ namespace SlowTests.Voron.Compaction
             IOExtensions.DeleteDirectory(compactedData);
         }
 
-
         [Theory]
         [InlineDataWithRandomSeed()]
         public void ShouldOccupyLessSpace(int seed)
@@ -302,7 +301,6 @@ namespace SlowTests.Voron.Compaction
                             {
                                 if (readResult == null)
                                 {
-
                                 }
 
                                 Assert.NotNull(readResult);
@@ -319,8 +317,19 @@ namespace SlowTests.Voron.Compaction
 
         public static long GetDirSize(DirectoryInfo d)
         {
-            var files = d.GetFiles();
-            var size = files.Sum(x => x.Length);
+            var size = 0L;
+
+            foreach (var file in d.GetFiles())
+            {
+                try
+                {
+                    size += file.Length;
+                }
+                catch
+                {
+                    // file can be deleted
+                }
+            }
 
             var directories = d.GetDirectories();
             size += directories.Sum(x => GetDirSize(x));

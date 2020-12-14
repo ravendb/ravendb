@@ -86,7 +86,8 @@ namespace RachisTests.DatabaseCluster
             {
                 CreateDatabase = true,
                 ReplicationFactor = clusterSize,
-                Server = leader
+                Server = leader,
+                DeleteDatabaseOnDispose = false // we bring one node down, so we can't delete the entire database, but we run in mem, so we don't care
             }))
             {
                 var index = new UsersByName();
@@ -100,7 +101,7 @@ namespace RachisTests.DatabaseCluster
                     }, "users/1");
                     await session.SaveChangesAsync();
                 }
-                DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
                 using (var session = store.OpenAsyncSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges(TimeSpan.FromSeconds(30), replicas: 1);
@@ -165,6 +166,49 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(clusterSize - 1, val);
                 val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 1);
                 Assert.Equal(1, val);
+            }
+        }
+
+        [Fact]
+        public async Task MoveToRehabOnLargeGap()
+        {
+            var clusterSize = 3;
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.MaxChangeVectorDistance)] = "1";
+            var cluster = await CreateRaftCluster(clusterSize,watcherCluster: true);
+            using (var store = GetDocumentStore(new Options
+            {
+                ReplicationFactor = 3,
+                Server = cluster.Leader,
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }))
+            {
+                var broken = await BreakReplication(cluster.Leader.ServerStore, store.Database);
+                var val = await WaitForValueAsync(async () => await GetMembersCount(store), 3);
+                Assert.Equal(3, val);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.StoreAsync(new User(), "users/2");
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForUserToContinueTheTest(store);
+
+                val = await WaitForValueAsync(async () => await GetMembersCount(store), 1);
+                Assert.Equal(1, val);
+
+                val = await WaitForValueAsync(async () => await GetRehabCount(store), 2);
+                Assert.Equal(2, val);
+
+                broken.Mend();
+
+                val = await WaitForValueAsync(async () => await GetMembersCount(store), 3);
+                Assert.Equal(3, val);
+
             }
         }
 
@@ -1705,9 +1749,9 @@ namespace RachisTests.DatabaseCluster
             return res.Topology.Promotables.Count;
         }
 
-        private static async Task<int> GetRehabCount(IDocumentStore store, string databaseName)
+        private static async Task<int> GetRehabCount(IDocumentStore store, string databaseName = null)
         {
-            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName ?? store.Database));
             if (res == null)
             {
                 return -1;
@@ -1715,9 +1759,9 @@ namespace RachisTests.DatabaseCluster
             return res.Topology.Rehabs.Count;
         }
 
-        private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)
+        private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName = null)
         {
-            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName ?? store.Database));
             if (res == null)
             {
                 return -1;
