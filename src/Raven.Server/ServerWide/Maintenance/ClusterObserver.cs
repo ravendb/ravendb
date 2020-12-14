@@ -322,8 +322,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (cleanUpState != null)
                 {
-                    var guid = "cleanup/" + GetGuid(cleanUpState);
-                    if (_engine.ContainsGuid(guid) == false)
+                    var guid = "cleanup/" + GetCommandId(cleanUpState);
+                    if (_engine.ContainsCommandId(guid) == false)
                     {
                         foreach (var kvp in cleanUpState)
                         {
@@ -347,7 +347,7 @@ namespace Raven.Server.ServerWide.Maintenance
         }
 
 
-        private static string GetGuid(Dictionary<string, long> dic)
+        private static string GetCommandId(Dictionary<string, long> dic)
         {
             if (dic == null)
                 return Guid.Empty.ToString();
