@@ -1255,6 +1255,68 @@ namespace SlowTests.Cluster
             }
         }
 
+        [Fact]
+        public async Task ClusterTransactionConflict()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User()
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store2.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User()
+                    {
+                        Name = "Grisha"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                await Task.WhenAll(SetupReplicationAsync(store1, store2),SetupReplicationAsync(store2, store1));
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store2, store1);
+
+                using (var session = store1.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var u = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("Grisha",u.Name);
+                }
+
+                using (var session = store2.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var u = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("Grisha",u.Name);
+                }
+
+                var t1 = EnsureNoReplicationLoop(Server, store1.Database);
+                var t2 = EnsureNoReplicationLoop(Server, store2.Database);
+
+                await Task.WhenAll(t1, t2);
+                await t1;
+                await t2;
+            }
+        }
+
         [Theory]
         [InlineData("")]
         [InlineData(" ")]

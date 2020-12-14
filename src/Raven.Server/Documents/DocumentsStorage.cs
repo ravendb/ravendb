@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
@@ -1733,6 +1734,8 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
 
+            Debug.Assert(FlagsProperlySet(flags, changeVector, out var reason), reason);
+
             try
             {
                 using (ModifyLowerIdIfNeeded(context, table, lowerId, out var nonConflictedLowerId))
@@ -1771,6 +1774,37 @@ namespace Raven.Server.Documents
             }
 
             return (newEtag, changeVector);
+        }
+
+        public static bool FlagsProperlySet(DocumentFlags flags, string changeVector, out string reason)
+        {
+            reason = null;
+            var cvArray = changeVector.ToChangeVector();
+
+            if (flags.Contain(DocumentFlags.FromClusterTransaction))
+            {
+                if (cvArray.Length != 1)
+                {
+                    reason = $"FromClusterTransaction, expect change vector of length 1, {changeVector}";
+                    return false;
+                }
+                if (cvArray[0].NodeTag != "RAFT".ParseNodeTag())
+                {
+                    reason = $"FromClusterTransaction, expect only RAFT, {changeVector}";
+                    return false;
+                }
+            }
+
+            if (cvArray.Length == 1 && cvArray[0].NodeTag == "RAFT".ParseNodeTag())
+            {
+                if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
+                {
+                    reason = $"flags must set FromClusterTransaction for the change vector: {changeVector}";
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private IDisposable ModifyLowerIdIfNeeded(DocumentsOperationContext context, Table table, Slice lowerId, out Slice nonConflictedLowerId)

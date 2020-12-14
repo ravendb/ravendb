@@ -1418,6 +1418,18 @@ namespace Raven.Server.Documents.Replication
                                             _replicationInfo.Logger.Info(
                                                 $"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {item.ChangeVector}");
 
+                                        if (hasLocalClusterTx == hasRemoteClusterTx)
+                                        {
+                                            // when hasLocalClusterTx and hasRemoteClusterTx both 'true'
+                                            // it is a case of a conflict between documents which were modified in a cluster transaction
+                                            // in two _different clusters_, so we will treat it as a "normal" conflict
+
+                                            IsIncomingReplication = false;
+                                            _replicationInfo.ConflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks,
+                                                document, rcvdChangeVector, item.Flags);
+                                            continue;
+                                        }
+
                                         // we will always prefer the local
                                         if (hasLocalClusterTx)
                                         {
@@ -1446,16 +1458,7 @@ namespace Raven.Server.Documents.Replication
                                         // otherwise we will choose the remote document from the transaction
                                         if (hasRemoteClusterTx)
                                         {
-                                            flags = flags.Strip(DocumentFlags.FromClusterTransaction);
                                             goto case ConflictStatus.Update;
-                                        }
-                                        else
-                                        {
-                                            // if the conflict is going to be resolved locally, that means that we have local work to do
-                                            // that we need to distribute to our siblings
-                                            IsIncomingReplication = false;
-                                            _replicationInfo.ConflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks,
-                                                document, rcvdChangeVector, item.Flags);
                                         }
 
                                         break;
