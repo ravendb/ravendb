@@ -468,7 +468,7 @@ namespace Raven.Server.Commercial
             return licenseStatus;
         }
 
-        public async ValueTask TryActivateLicenseAsync(bool throwOnActivationFailure)
+        public async Task TryActivateLicenseAsync(bool throwOnActivationFailure)
         {
             if (LicenseStatus.Type != LicenseType.None)
                 return;
