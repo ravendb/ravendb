@@ -793,7 +793,7 @@ namespace Raven.Server.Utils.Cli
                 return false;
             }
 
-            cli._server.ServerStore.EnsureNotPassiveAsync().AsTask().Wait();
+            cli._server.ServerStore.EnsureNotPassiveAsync().Wait(cli._server.ServerStore.ServerShutdown);
 
             var certDef = new CertificateDefinition
             {
@@ -864,7 +864,7 @@ namespace Raven.Server.Utils.Cli
                     password = args[1];
             }
 
-            cli._server.ServerStore.EnsureNotPassiveAsync().AsTask().Wait();
+            cli._server.ServerStore.EnsureNotPassiveAsync().Wait(cli._server.ServerStore.ServerShutdown);
 
             X509Certificate2Collection cert = new X509Certificate2Collection();
             byte[] certBytes;
