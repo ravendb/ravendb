@@ -112,5 +112,10 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Cluster.CompareExchangeExpiredDeleteFrequencyInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CompareExchangeExpiredCleanupInterval { get; set; }
+
+        [Description("Excceding the allowed change vector distance between two nodes, will move the lagged node to rehab.")]
+        [DefaultValue(10_000)]
+        [ConfigurationEntry("Cluster.MaxChangeVectorDistance", ConfigurationEntryScope.ServerWideOnly)]
+        public long MaxChangeVectorDistance { get; set; }
     }
 }

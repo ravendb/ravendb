@@ -549,6 +549,15 @@ namespace Raven.Server.Rachis
 
         protected abstract void InitializeState(ClusterOperationContext context, ClusterChanges changes);
 
+        public bool ContainsCommandId(string guid)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                return LogHistory.ContainsCommandId(ctx, guid);
+            }
+        }
+
         public async Task WaitForState(RachisState rachisState, CancellationToken token)
         {
             while (token.IsCancellationRequested == false)
