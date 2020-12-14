@@ -124,7 +124,6 @@ namespace Raven.Server
                 // we ignore either all or none at the moment
                 ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
             }
-            BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
 
             BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
 
