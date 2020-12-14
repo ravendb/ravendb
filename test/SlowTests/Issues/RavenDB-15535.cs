@@ -391,7 +391,7 @@ namespace SlowTests.Issues
                 {
                     session.Store(new User() { Name = "Toli" }, "users/3");
                     session.SaveChanges();
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "users/3", null, TimeSpan.FromSeconds(15));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "users/3", null, TimeSpan.FromSeconds(15)));
                 }
 
                 var revisionCountList = new List<long>();
