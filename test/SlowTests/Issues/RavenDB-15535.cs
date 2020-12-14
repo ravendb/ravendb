@@ -125,8 +125,7 @@ namespace SlowTests.Issues
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
 
-                var documentDatabase = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, leader.ServerStore.Engine.OperationTimeout);
+                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
 
                 var tasks = new List<Task>
                 {
@@ -145,7 +144,7 @@ namespace SlowTests.Issues
                 var revisionCountList = new List<long>();
                 foreach (var server in Servers)
                 {
-                    documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                    var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                     using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
@@ -301,8 +300,7 @@ namespace SlowTests.Issues
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
 
-                var documentDatabase = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, leader.ServerStore.Engine.OperationTimeout);
+                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
 
                 var tasks = new List<Task>
                 {
@@ -321,7 +319,7 @@ namespace SlowTests.Issues
                 var revisionCountList = new List<long>();
                 foreach (var server in Servers)
                 {
-                    documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                    var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                     using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
@@ -335,7 +333,7 @@ namespace SlowTests.Issues
                 revisionCountList.Clear();
                 foreach (var server in Servers)
                 {
-                    documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                    var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                     using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
@@ -376,8 +374,7 @@ namespace SlowTests.Issues
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
 
-                var documentDatabase = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, leader.ServerStore.Engine.OperationTimeout);
+                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
 
                 var tasks = new List<Task>
                 {
@@ -397,7 +394,7 @@ namespace SlowTests.Issues
                 var revisionCountList = new List<long>();
                 foreach (var server in Servers)
                 {
-                    documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                    var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                     using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
@@ -411,7 +408,7 @@ namespace SlowTests.Issues
                 revisionCountList.Clear();
                 foreach (var server in Servers)
                 {
-                    documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                    var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                     using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
