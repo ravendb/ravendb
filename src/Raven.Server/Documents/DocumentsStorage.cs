@@ -1734,7 +1734,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
 
-            Debug.Assert(FlagsProperlySet(flags, changeVector, out var reason), reason);
+            FlagsProperlySet(flags, changeVector);
 
             try
             {
@@ -1776,35 +1776,30 @@ namespace Raven.Server.Documents
             return (newEtag, changeVector);
         }
 
-        public static bool FlagsProperlySet(DocumentFlags flags, string changeVector, out string reason)
+        [Conditional("DEBUG")]
+        public static void FlagsProperlySet(DocumentFlags flags, string changeVector)
         {
-            reason = null;
             var cvArray = changeVector.ToChangeVector();
 
             if (flags.Contain(DocumentFlags.FromClusterTransaction))
             {
                 if (cvArray.Length != 1)
                 {
-                    reason = $"FromClusterTransaction, expect change vector of length 1, {changeVector}";
-                    return false;
+                    Debug.Assert(false, $"FromClusterTransaction, expect change vector of length 1, {changeVector}");
                 }
-                if (cvArray[0].NodeTag != "RAFT".ParseNodeTag())
+                if (cvArray[0].NodeTag != ChangeVectorParser.RaftInt)
                 {
-                    reason = $"FromClusterTransaction, expect only RAFT, {changeVector}";
-                    return false;
+                    Debug.Assert(false, $"FromClusterTransaction, expect only RAFT, {changeVector}");
                 }
             }
 
-            if (cvArray.Length == 1 && cvArray[0].NodeTag == "RAFT".ParseNodeTag())
+            if (cvArray.Length == 1 && cvArray[0].NodeTag == ChangeVectorParser.RaftInt)
             {
                 if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
                 {
-                    reason = $"flags must set FromClusterTransaction for the change vector: {changeVector}";
-                    return false;
+                    Debug.Assert(false, $"flags must set FromClusterTransaction for the change vector: {changeVector}");
                 }
             }
-
-            return true;
         }
 
         private IDisposable ModifyLowerIdIfNeeded(DocumentsOperationContext context, Table table, Slice lowerId, out Slice nonConflictedLowerId)
