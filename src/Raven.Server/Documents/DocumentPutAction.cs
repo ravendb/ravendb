@@ -169,6 +169,8 @@ namespace Raven.Server.Documents
                     }
                 }
 
+                Debug.Assert(FlagsProperlySet(flags, changeVector, out var reason), reason);
+
                 using (Slice.From(context.Allocator, changeVector, out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {

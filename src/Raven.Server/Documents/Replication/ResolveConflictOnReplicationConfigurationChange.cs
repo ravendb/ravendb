@@ -247,6 +247,8 @@ namespace Raven.Server.Documents.Replication
            bool resolvedToLatest,
            DocumentConflict incoming = null)
         {
+            resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromClusterTransaction);
+
             SaveConflictedDocumentsAsRevisions(context, resolved.Id, incoming);
 
             // Resolved document should generate a new change vector, since it was changed locally. 
