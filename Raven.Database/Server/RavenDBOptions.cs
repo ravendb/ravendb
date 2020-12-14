@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Lucene.Net.Search;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -46,6 +47,8 @@ namespace Raven.Database.Server
                 if (db == null)
                 {
                     configuration.UpdateDataDirForLegacySystemDb();
+
+                    BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
 
                     // initialize before starting the first esent instance
                     SetMaxInstances(configuration);
