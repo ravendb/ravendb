@@ -4,14 +4,15 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Session;
 using Sparrow;
+using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -43,7 +44,6 @@ namespace SlowTests.Client.TimeSeries.Query
             public int? Year { get; set; }
 
             public List<string> Prizes { get; set; }
-
         }
 
         private class QueryResult
@@ -133,7 +133,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(179, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Average[0]);
-
                 }
             }
         }
@@ -194,7 +193,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(179, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Average[0]);
-
                 }
             }
         }
@@ -259,7 +257,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(179, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Average[0]);
-
                 }
             }
         }
@@ -320,7 +317,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(179, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Average[0]);
-
                 }
             }
         }
@@ -343,7 +339,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     var tsf = session.TimeSeriesFor("users/ayende", "HeartRate");
 
                     tsf.Append(baseline.AddMinutes(63), new[] { -69d }, "watches/fitbit");
-
 
                     session.SaveChanges();
                 }
@@ -369,7 +364,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var agg = result[0].Results;
 
                     Assert.Equal(1, agg.Length);
-                    
+
                     Assert.Equal(-69, agg[0].Average[0]);
                     Assert.Equal(-69, agg[0].Max[0]);
                 }
@@ -408,11 +403,11 @@ namespace SlowTests.Client.TimeSeries.Query
                     var query = session.Query<Person>()
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
-                            .Where(ts => ts.Tag.In(new[] {"watches/fitbit", "watches/apple"}))
+                            .Where(ts => ts.Tag.In(new[] { "watches/fitbit", "watches/apple" }))
                             .GroupBy("1 month")
                             .Select(g => new
                             {
-                                Avg = g.Average(), 
+                                Avg = g.Average(),
                                 Max = g.Max()
                             })
                             .ToList());
@@ -431,7 +426,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(169, agg[1].Max[0]);
                     Assert.Equal(164, agg[1].Average[0]);
-
                 }
             }
         }
@@ -475,7 +469,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/sony");
                     tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/fitbit");
 
-
                     session.SaveChanges();
                 }
 
@@ -508,7 +501,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(169, agg[1].Max[0]);
                     Assert.Equal(164, agg[1].Average[0]);
-
                 }
             }
         }
@@ -575,7 +567,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(13.69, agg[1].Max[0]);
                     Assert.Equal(13.64, agg[1].Average[0]);
-
                 }
             }
         }
@@ -651,7 +642,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(179, agg[1].Max[0]);
                     Assert.Equal(179, agg[1].Average[0]);
-
                 }
             }
         }
@@ -712,7 +702,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(179, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Average[0]);
-
                 }
             }
         }
@@ -782,7 +771,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(179, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Min[0]);
                     Assert.Equal(174, agg[1].Average[0]);
-
                 }
             }
         }
@@ -853,7 +841,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(179, aggregation[1].Max[0]);
                     Assert.Equal(169, aggregation[1].Min[0]);
                     Assert.Equal(174, aggregation[1].Average[0]);
-
                 }
             }
         }
@@ -920,7 +907,6 @@ namespace SlowTests.Client.TimeSeries.Query
                                     Max = g.Max()
                                 })
                                 .ToList(),
-                            
                         });
 
                     var result = query.First();
@@ -951,7 +937,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(159, aggregation[1].Max[0]);
                     Assert.Equal(159, aggregation[1].Average[0]);
-
                 }
             }
         }
@@ -967,22 +952,22 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "karmel"}, id);
+                    await session.StoreAsync(new User { Name = "karmel" }, id);
 
                     var tsf = session.TimeSeriesFor(id, name);
                     for (int i = 0; i < 100; i++)
                     {
-                        tsf.Append(baseline.AddDays(i), new[] {1d, 2d, 3d});
+                        tsf.Append(baseline.AddDays(i), new[] { 1d, 2d, 3d });
                     }
 
                     for (int i = 100; i < 200; i++)
                     {
-                        tsf.Append(baseline.AddDays(i), new[] {1d, 2d});
+                        tsf.Append(baseline.AddDays(i), new[] { 1d, 2d });
                     }
 
                     for (int i = 200; i < 300; i++)
                     {
-                        tsf.Append(baseline.AddDays(i), new[] {1d, 2d, 4d});
+                        tsf.Append(baseline.AddDays(i), new[] { 1d, 2d, 4d });
                     }
                     await session.SaveChangesAsync();
                 }
@@ -1043,18 +1028,18 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "karmel"}, id);
+                    await session.StoreAsync(new User { Name = "karmel" }, id);
 
                     var tsf = session.TimeSeriesFor(id, name);
                     for (int i = 2; i < 66; i++)
                     {
-                        tsf.Append(baseline.AddDays(i), new[] {1d, 2d});
+                        tsf.Append(baseline.AddDays(i), new[] { 1d, 2d });
                     }
                     await session.SaveChangesAsync();
 
                     for (int i = 0; i < 96; i++)
                     {
-                        tsf.Append(baseline.AddHours(i), new[] {1d, 2d, 3d});
+                        tsf.Append(baseline.AddHours(i), new[] { 1d, 2d, 3d });
                     }
                     await session.SaveChangesAsync();
                 }
@@ -1120,7 +1105,7 @@ namespace SlowTests.Client.TimeSeries.Query
                             })
                             .ToList());
 
-                    // should add 'val' as query parameter  
+                    // should add 'val' as query parameter
                     Assert.Contains("Values[0] > $p0", query.ToString());
 
                     var result = query.First();
@@ -1138,8 +1123,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(179, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Average[0]);
                     Assert.Equal(159, agg[1].Min[0]);
-
-
                 }
             }
         }
@@ -1199,8 +1182,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(179, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Average[0]);
                     Assert.Equal(159, agg[1].Min[0]);
-
-
                 }
             }
         }
@@ -1243,7 +1224,6 @@ namespace SlowTests.Client.TimeSeries.Query
                             })
                             .ToList());
 
-
                     var result = query.First();
 
                     Assert.Equal(4, result.Count);
@@ -1259,8 +1239,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(159, agg[1].Max[0]);
                     Assert.Equal(159, agg[1].Average[0]);
                     Assert.Equal(159, agg[1].Min[0]);
-
-
                 }
             }
         }
@@ -1285,7 +1263,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     {
                         Accuracy = 1.8
                     }, "watches/apple");
-
 
                     var tsf = session.TimeSeriesFor("people/1", "HeartRate");
 
@@ -1427,7 +1404,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var query = session.Query<Person>()
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .LoadByTag<Watch>()
-                            .Where((ts, src) => (src != null && src.Accuracy > 2.2) || 
+                            .Where((ts, src) => (src != null && src.Accuracy > 2.2) ||
                                                 (ts.Tag != "watches/sony" && ts.Values[0] > d))
                             .GroupBy(g => g.Months(1))
                             .Select(g => new
@@ -1437,7 +1414,6 @@ namespace SlowTests.Client.TimeSeries.Query
                                 Min = g.Min()
                             })
                             .ToList());
-
 
                     var queryString = query.ToString();
 
@@ -1462,7 +1438,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(169, agg[1].Max[0]);
                     Assert.Equal(164, agg[1].Average[0]);
                     Assert.Equal(159, agg[1].Min[0]);
-
                 }
             }
         }
@@ -1502,7 +1477,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(10, result.Count);
                     Assert.Equal(5, result.Results.Length);
 
-                    for (int i = 0; i < 5; i ++)
+                    for (int i = 0; i < 5; i++)
                     {
                         Assert.Equal(4 * i + 1, result.Results[i].Sum[0]);
                     }
@@ -1578,7 +1553,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     var ex = Assert.Throws<InvalidOperationException>(() => query.ToList());
                     Assert.NotNull(ex.InnerException);
                     Assert.Contains("Cannot have multiple Where calls in TimeSeries functions ", ex.InnerException.Message);
-
                 }
 
                 using (var session = store.OpenSession())
@@ -1597,7 +1571,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     var ex = Assert.Throws<InvalidOperationException>(() => query.ToList());
                     Assert.NotNull(ex.InnerException);
                     Assert.Contains("Cannot have multiple Select calls in TimeSeries functions ", ex.InnerException.Message);
-
                 }
             }
         }
@@ -1809,7 +1782,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(169, timeSeriesValues[5].Values[0]);
                     Assert.Equal(baseline.AddMonths(1).AddMinutes(63), timeSeriesValues[5].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal("watches/fitbit", timeSeriesValues[5].Tag);
-
                 }
             }
         }
@@ -1871,7 +1843,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(169, timeSeriesValues[4].Values[0]);
                     Assert.Equal(baseline.AddMonths(1).AddMinutes(63), timeSeriesValues[4].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-
                 }
             }
         }
@@ -1890,7 +1861,6 @@ namespace SlowTests.Client.TimeSeries.Query
                         Name = "Oren",
                         Age = 35
                     }, "users/ayende");
-
 
                     var tsf = session.TimeSeriesFor("users/ayende", "HeartRate");
 
@@ -1937,7 +1907,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(169, timeSeriesValues[4].Values[0]);
                     Assert.Equal(baseline.AddMonths(1).AddMinutes(63), timeSeriesValues[4].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-
                 }
             }
         }
@@ -1996,7 +1965,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(169, timeSeriesValues[4].Values[0]);
                     Assert.Equal(baseline.AddMonths(1).AddMinutes(63), timeSeriesValues[4].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-
                 }
             }
         }
@@ -2097,7 +2065,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(13.69, timeSeriesValues[3].Values[0]);
                     Assert.Equal(baseline.AddMonths(1).AddMinutes(63), timeSeriesValues[3].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-
                 }
             }
         }
@@ -2169,7 +2136,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(179, timeSeriesValues[3].Values[0]);
                     Assert.Equal(baseline.AddMonths(1).AddMinutes(62), timeSeriesValues[3].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-
                 }
             }
         }
@@ -2245,7 +2211,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(169, timeSeriesValues[4].Values[0]);
                     Assert.Equal(baseline.AddMonths(1).AddMinutes(63), timeSeriesValues[4].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-
                 }
             }
         }
@@ -2283,7 +2248,7 @@ namespace SlowTests.Client.TimeSeries.Query
                             .Where(ts => ts.Values[0] > val)
                             .ToList());
 
-                    // should add 'val' as query parameter  
+                    // should add 'val' as query parameter
                     Assert.Contains("Values[0] > $p0", query.ToString());
 
                     var queryResult = query.First();
@@ -2302,7 +2267,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(169, timeSeriesValues[3].Values[0]);
                     Assert.Equal(baseline.AddMonths(1).AddMinutes(63), timeSeriesValues[3].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-
                 }
             }
         }
@@ -2355,7 +2319,6 @@ namespace SlowTests.Client.TimeSeries.Query
                             BloodPressure = RavenQuery.TimeSeries(p, "BloodPressure")
                                 .Where(ts => ts.Tag == "watches/apple")
                                 .ToList(),
-
                         });
 
                     var queryResult = query.First();
@@ -2378,7 +2341,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(79, bloodPressureValues[0].Values[0]);
                     Assert.Equal(159, bloodPressureValues[1].Values[0]);
-
                 }
             }
         }
@@ -2534,7 +2496,7 @@ namespace SlowTests.Client.TimeSeries.Query
                             .GroupBy(g => g.Hours(1))
                             .Select(ts => new
                             {
-                                Max = ts.Max(), 
+                                Max = ts.Max(),
                                 Min = ts.Min()
                             })
                             .Offset(offset)
@@ -2741,7 +2703,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     tsf.Append(baseline.AddMonths(6).AddMinutes(2), new[] { 579d }, "watches/sony");
                     tsf.Append(baseline.AddMonths(6).AddMinutes(3), new[] { 569d }, "watches/fitbit");
 
-
                     session.SaveChanges();
                 }
 
@@ -2822,14 +2783,13 @@ namespace SlowTests.Client.TimeSeries.Query
                     tsf.Append(baseline.AddMonths(6).AddMinutes(2), new[] { 579d }, "watches/sony");
                     tsf.Append(baseline.AddMonths(6).AddMinutes(3), new[] { 569d }, "watches/fitbit");
 
-
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var offset = TimeZoneInfo.Local.BaseUtcOffset;
-                    
+
                     var query = session.Query<Person>()
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate")
                             .Offset(offset)
@@ -2904,7 +2864,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 {
                     var result = session.Query<Person>()
                         .Where(p => p.Id == id)
-                        .Select(p => 
+                        .Select(p =>
                         RavenQuery.TimeSeries(p, "HeartRate")
                             .FromLast(g => g.Milliseconds(100))
                             .ToList())
@@ -2958,7 +2918,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(2, result.Count);
                     Assert.Equal(2, result.Results.Length);
-
                 }
             }
         }
@@ -2999,8 +2958,8 @@ namespace SlowTests.Client.TimeSeries.Query
                                 .GroupBy(g => g.Minutes(10))
                                 .Select(x => new
                                 {
-                                    Min = x.Min(), 
-                                    Max = x.Max(), 
+                                    Min = x.Min(),
+                                    Max = x.Max(),
                                     Avg = x.Average()
                                 })
                                 .ToList())
@@ -3008,7 +2967,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(31, result.Count);
                     Assert.Equal(4, result.Results.Length);
-
                 }
             }
         }
@@ -3039,7 +2997,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     session.SaveChanges();
                 }
 
-
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Person>()
@@ -3048,7 +3005,6 @@ namespace SlowTests.Client.TimeSeries.Query
                             .FromLast(g => g.Hours(12))
                             .ToList())
                         .First();
-
 
                     var expectedInitialTimestamp = baseline.AddDays(3).AddHours(-12);
                     var expectedInitialValueValue = totalMinutes - TimeSpan.FromHours(12).TotalMinutes;
@@ -3221,7 +3177,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenSession())
                 {
-                    var tag = "watches/apple"; 
+                    var tag = "watches/apple";
 
                     var result = session.Query<Person>()
                         .Where(p => p.Id == id)
@@ -3271,7 +3227,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     session.SaveChanges();
                 }
 
-
                 using (var session = store.OpenSession())
                 {
                     var offset = TimeZoneInfo.Local.BaseUtcOffset;
@@ -3283,7 +3238,6 @@ namespace SlowTests.Client.TimeSeries.Query
                             .Offset(offset)
                             .ToList())
                         .First();
-
 
                     var expectedInitialTimestamp = baseline.Add(offset).AddDays(3).AddHours(-12);
                     var expectedInitialValueValue = totalMinutes - TimeSpan.FromHours(12).TotalMinutes;
@@ -3342,7 +3296,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(baseline, result.Results[0].Timestamp);
                     Assert.Equal(baseline.AddMilliseconds(30), result.Results[1].Timestamp);
                     Assert.Equal("2nd", result.Results[1].Tag);
-
                 }
             }
         }
@@ -3765,7 +3718,7 @@ namespace SlowTests.Client.TimeSeries.Query
                         .Select(x => RavenQuery.TimeSeries(x, "HeartRate", baseline, baseline.AddDays(1))
                             .FromLast(g => g.Hours(6))
                             .GroupBy(g => g.Hours(1))
-                            .Select(x => new {Avg = x.Average()})
+                            .Select(x => new { Avg = x.Average() })
                             .ToList());
 
                     var ex = Assert.Throws<InvalidOperationException>(() => query.ToList());
@@ -4022,7 +3975,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(expectedTotalCount, result.Count);
 
                     var scale = 0.001;
-                    var tolerance = double.Epsilon;
 
                     for (int i = 0; i < result.Results.Length; i++)
                     {
@@ -4032,7 +3984,7 @@ namespace SlowTests.Client.TimeSeries.Query
                         var expectedVal = i * scale;
                         var val = result.Results[i].Value;
 
-                        Assert.True(Math.Abs(expectedVal - val) < tolerance);
+                        Assert.True(expectedVal.AlmostEquals(val));
                         Assert.Equal(expectedVal, result.Results[i].Value);
                     }
                 }
@@ -4152,7 +4104,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(expectedTotalCount, result.Count);
 
-                    var tolerance = double.Epsilon;
                     var baselineWithOffset = baseline.Add(offset);
 
                     for (int i = 0; i < result.Results.Length; i++)
@@ -4163,7 +4114,7 @@ namespace SlowTests.Client.TimeSeries.Query
                         var expectedVal = i * scale;
                         var val = result.Results[i].Value;
 
-                        Assert.True(Math.Abs(expectedVal - val) < tolerance);
+                        Assert.True(expectedVal.AlmostEquals(val));
                         Assert.Equal(expectedVal, result.Results[i].Value);
                     }
                 }
