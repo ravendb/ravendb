@@ -313,7 +313,11 @@ namespace Raven.Server.Documents.Patch
             {
                 var roundedNumber = Math.Round(d, 0);
                 if (roundedNumber.AlmostEquals(d))
-                    return false;
+                {
+                    var digitsAfterDecimalPoint = Math.Abs(roundedNumber - d);
+                    if (digitsAfterDecimalPoint == 0 && Math.Abs(roundedNumber) <= long.MaxValue)
+                        return false;
+                }
 
                 return true;
             }
