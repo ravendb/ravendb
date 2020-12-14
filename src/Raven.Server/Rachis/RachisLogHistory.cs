@@ -379,7 +379,7 @@ namespace Raven.Server.Rachis
             return guid;
         }
 
-        public bool ContainsGuid(ClusterOperationContext context, string guid)
+        public bool ContainsCommandId(ClusterOperationContext context, string guid)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
             if (table == null)

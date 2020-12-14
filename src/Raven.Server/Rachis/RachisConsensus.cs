@@ -538,12 +538,12 @@ namespace Raven.Server.Rachis
             };
         }
 
-        public bool ContainsGuid(string guid)
+        public bool ContainsCommandId(string guid)
         {
             using (ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                return LogHistory.ContainsGuid(ctx, guid);
+                return LogHistory.ContainsCommandId(ctx, guid);
             }
         }
 
