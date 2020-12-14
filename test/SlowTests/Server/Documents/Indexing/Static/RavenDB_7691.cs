@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
+using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,7 +37,7 @@ return {
     FloatNegativeInfinity : scalarToRawString(x, u=> u.FloatNegativeInfinity),
     FloatPositiveInfinity : scalarToRawString(x, u=> u.FloatPositiveInfinity),
     FloatNan : scalarToRawString(x, u=> u.FloatNan),
-    UintMaxVal : scalarToRawString(x, u=> u.UintMaxVal),    
+    UintMaxVal : scalarToRawString(x, u=> u.UintMaxVal),
     UlongMaxVal : scalarToRawString(x, u=> u.UlongMaxVal),
     StringMaxLength : scalarToRawString(x, u=> u.StringMaxLength),
     DateMaxPercision : scalarToRawString(x, u=> u.DateMaxPercision),
@@ -63,13 +64,14 @@ from EdgeCaseValues as e select MyProjection(e)";
         {
             public double DoubleVal;
         }
+
         public class EdgeCaseValues
         {
             public DateTime DateMaxPercision;
             public DateTimeOffset DateTimeOffsetMaxVal;
             public DateTimeOffset DateTimeOffsetMinVal;
             public decimal DecimalMaxVal;
-            public decimal DecimalMinVal;            
+            public decimal DecimalMinVal;
             public double DoubleEpsilon;
             public double DoubleMaxVal;
             public double DoubleMinVal;
@@ -160,7 +162,6 @@ from EdgeCaseValues as e select MyProjection(e)";
             }
         }
 
-
         [Fact]
         public async Task CanParseNumericEdgeCasesRawValuesInJSProjection()
         {
@@ -215,7 +216,6 @@ from EdgeCaseValues as e select MyProjection(e)";
             }
         }
 
-
         [Fact]
         public async Task ScalarToRawThrowsOnIllegalLambdas()
         {
@@ -230,7 +230,6 @@ from EdgeCaseValues as e select MyProjection(e)";
                     await session.StoreAsync(edgeCaseValues);
                     await session.SaveChangesAsync();
                 }
-
 
                 // modify, then access raw, then access regular
                 using (var session = store.OpenAsyncSession())
@@ -278,10 +277,9 @@ return x;
 }
 from EdgeCaseValues as e select MyProjection(e)"
                 ).FirstAsync());
-
                 }
             }
-            }
+        }
 
         [Fact]
         public async Task CanModifyRawAndOriginalValuesTogether()
@@ -299,7 +297,6 @@ from EdgeCaseValues as e select MyProjection(e)"
                     await session.SaveChangesAsync();
                 }
 
-
                 // modify, then access raw, then access regular
                 using (var session = store.OpenAsyncSession())
                 {
@@ -314,9 +311,7 @@ return x;
 from EdgeCaseValues as e select MyProjection(e)"
                     ).FirstAsync();
 
-                    
                     Assert.Equal(4, edgeCaseDeserialized.IntMinVal);
-
                 }
 
                 // modify, then access regular, then access raw
@@ -336,7 +331,6 @@ from EdgeCaseValues as e select MyProjection(e)"
 
                     // TODO: we should probably document this behavior
                     Assert.Equal(4, edgeCaseDeserialized.IntMinVal);
-
                 }
 
                 // access raw, then original, then modify
@@ -353,7 +347,6 @@ from EdgeCaseValues as e select MyProjection(e)"
                     ).FirstAsync();
 
                     Assert.Equal(4, edgeCaseDeserialized.IntMinVal);
-                                        
                 }
 
                 // access original, then raw, then modify
@@ -370,8 +363,6 @@ from EdgeCaseValues as e select MyProjection(e)"
                     ).FirstAsync();
 
                     Assert.Equal(4, edgeCaseDeserialized.IntMinVal);
-
-                    
                 }
 
                 // same, with decimal
@@ -388,9 +379,7 @@ from EdgeCaseValues as e select MyProjection(e)"
                     ).FirstAsync();
 
                     Assert.Equal(4, edgeCaseDeserialized.DecimalMaxVal);
-                    
                 }
-
 
                 // same, with string
                 using (var session = store.OpenAsyncSession())
@@ -406,21 +395,28 @@ from EdgeCaseValues as e select MyProjection(e)"
                     ).FirstAsync();
 
                     Assert.Equal("shorter string", edgeCaseDeserialized.StringMaxLength);
-
                 }
             }
-        }       
+        }
 
         private static void AssertFieldsValuesEqual(EdgeCaseValues edgeCaseValues, EdgeCaseValues edgeCaseDeserialized)
         {
             var edgeCaseValuesType = typeof(EdgeCaseValues);
             foreach (var field in edgeCaseValuesType.GetFields(BindingFlags.Instance | BindingFlags.Public))
             {
-                Assert.Equal(field.GetValue(edgeCaseValues), field.GetValue(edgeCaseDeserialized));
+                var value1 = field.GetValue(edgeCaseValues);
+                var value2 = field.GetValue(edgeCaseDeserialized);
+
+                if (value1 is double dbl1 && value2 is double dbl2)
+                    Assert.True(dbl1.AlmostEquals(dbl2));
+                else if (value1 is float flt1 && value2 is float flt2)
+                    Assert.True(flt1.AlmostEquals(flt2));
+                else
+                    Assert.Equal(value1, value2);
             }
         }
 
-        [Fact]        
+        [Fact]
         public async Task CanIndexBigNumbersEdgeCases()
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
@@ -434,8 +430,6 @@ from EdgeCaseValues as e select MyProjection(e)"
                 {
                     await session.StoreAsync(edgeCaseValues);
                     await session.SaveChangesAsync();
-                
-                
 
                     Assert.NotEmpty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.IntMinVal == edgeCaseValues.IntMinVal).ToListAsync());
 
@@ -528,7 +522,6 @@ from EdgeCaseValues as e select MyProjection(e)"
 
                     Assert.NotEmpty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.UlongMaxVal == edgeCaseValues.UlongMaxVal).ToListAsync());
 
-
                     //Assert.NotEmpty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.StringMaxLength == edgeCaseValues.StringMaxLength).ToListAsync());
 
                     //int stringMaxLengthMinus1 = edgeCaseValues.StringMaxLength.Length - 1;
@@ -595,16 +588,15 @@ from EdgeCaseValues as e select MyProjection(e)"
         private static EdgeCaseValues GenerateEdgeCasePercisionValues()
         {
             return new EdgeCaseValues
-            {                
+            {
                 DecimalMaxVal = long.MaxValue,
                 DecimalMinVal = long.MinValue,
                 DoubleMinVal = long.MaxValue,
-                DoubleMaxVal = long.MinValue,                
+                DoubleMaxVal = long.MinValue,
                 FloatMinVal = int.MinValue,
-                FloatMaxVal = int.MaxValue                
+                FloatMaxVal = int.MaxValue
             };
         }
-
 
         private static EdgeCaseValues GenerateEdgeCaseValues()
         {
