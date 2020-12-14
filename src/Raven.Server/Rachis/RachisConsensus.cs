@@ -538,6 +538,15 @@ namespace Raven.Server.Rachis
             };
         }
 
+        public bool ContainsCommandId(string guid)
+        {
+            using (ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                return LogHistory.ContainsCommandId(ctx, guid);
+            }
+        }
+
         protected abstract void InitializeState(ClusterOperationContext context, ClusterChanges changes);
 
         public async Task WaitForState(RachisState rachisState, CancellationToken token)
@@ -604,20 +613,24 @@ namespace Raven.Server.Rachis
                             if (clusterTopology.Members.ContainsKey(tag))
                                 return;
                             break;
+
                         case Leader.TopologyModification.Promotable:
                             if (clusterTopology.Promotables.ContainsKey(tag))
                                 return;
                             break;
+
                         case Leader.TopologyModification.NonVoter:
                             if (clusterTopology.Watchers.ContainsKey(tag))
                                 return;
                             break;
+
                         case Leader.TopologyModification.Remove:
                             if (clusterTopology.Members.ContainsKey(tag) == false &&
                                 clusterTopology.Promotables.ContainsKey(tag) == false &&
                                 clusterTopology.Watchers.ContainsKey(tag) == false)
                                 return;
                             break;
+
                         default:
                             throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
                     }
@@ -1165,6 +1178,7 @@ namespace Raven.Server.Rachis
                             var elector = new Elector(this, remoteConnection);
                             elector.Run();
                             break;
+
                         case InitialMessageType.AppendEntries:
                             if (Follower.CheckIfValidLeader(this, remoteConnection, out var negotiation))
                             {
@@ -1172,6 +1186,7 @@ namespace Raven.Server.Rachis
                                 follower.AcceptConnection(negotiation);
                             }
                             break;
+
                         default:
                             throw new ArgumentOutOfRangeException("Unknown initial message value: " +
                                                                   initialMessage.InitialMessageType +
@@ -1355,12 +1370,12 @@ namespace Raven.Server.Rachis
                 table.Delete(reader.Id);
                 truncatedIndex = entryIndex;
 
-                if (truncatedIndex % 1024 == 0 && 
+                if (truncatedIndex % 1024 == 0 &&
                     sp.ElapsedMilliseconds > (int)ElectionTimeout.TotalMilliseconds / 3)
                 {
                     Timeout.Defer(LeaderTag);
                     break;
-            }
+                }
             }
 
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
@@ -1610,9 +1625,11 @@ namespace Raven.Server.Rachis
                             if (value <= commitIndex)
                                 return;
                             break;
+
                         case CommitIndexModification.AnyChange:
                             await WaitForCommitChangeOrThrowTimeoutException(timeoutTask, task);
                             return;
+
                         default:
                             throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
                     }
@@ -2012,13 +2029,16 @@ namespace Raven.Server.Rachis
                 case RachisState.Passive:
                 case RachisState.Candidate:
                     return null;
+
                 case RachisState.Follower:
                     return safe ? Volatile.Read(ref _leaderTag) : _leaderTag;
+
                 case RachisState.LeaderElect:
                 case RachisState.Leader:
                     if (CurrentLeader?.Running != true)
                         return null;
                     return safe ? Volatile.Read(ref _tag) : _tag;
+
                 default:
                     throw new ArgumentOutOfRangeException();
             }

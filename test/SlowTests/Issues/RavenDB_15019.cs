@@ -4,6 +4,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -47,19 +48,19 @@ namespace SlowTests.Issues
 
                 var terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Item.DblNullValue), fromValue: null));
                 Assert.Equal(1, terms.Length);
-                Assert.True(double.Parse(terms[0], CultureInfo.InvariantCulture) - 1.1 < double.Epsilon);
+                Assert.True(double.Parse(terms[0], CultureInfo.InvariantCulture).AlmostEquals(1.1));
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Item.DblValue), fromValue: null));
                 Assert.Equal(1, terms.Length);
-                Assert.True(double.Parse(terms[0], CultureInfo.InvariantCulture) - 2.1 < double.Epsilon);
+                Assert.True(double.Parse(terms[0], CultureInfo.InvariantCulture).AlmostEquals(2.1));
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Item.FltNullValue), fromValue: null));
                 Assert.Equal(1, terms.Length);
-                Assert.True(float.Parse(terms[0], CultureInfo.InvariantCulture) - 3.1f < float.Epsilon);
+                Assert.True(float.Parse(terms[0], CultureInfo.InvariantCulture).AlmostEquals(3.1f));
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Item.FltValue), fromValue: null));
                 Assert.Equal(1, terms.Length);
-                Assert.True(float.Parse(terms[0], CultureInfo.InvariantCulture) - 4.1f < float.Epsilon);
+                Assert.True(float.Parse(terms[0], CultureInfo.InvariantCulture).AlmostEquals(4.1f));
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Item.IntNullValue), fromValue: null));
                 Assert.Equal(1, terms.Length);

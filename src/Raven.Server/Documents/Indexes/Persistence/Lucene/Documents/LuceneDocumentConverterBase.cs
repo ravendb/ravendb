@@ -17,6 +17,7 @@ using Sparrow.Binary;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Platform;
 using LuceneDocument = Lucene.Net.Documents.Document;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -64,9 +65,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected readonly ConversionScope Scope;
 
-        private readonly Dictionary<int, CachedFieldItem<Field>> _fieldsCache = new Dictionary<int, CachedFieldItem<Field>>(NumericEqualityComparer.BoxedInstanceInt32);
+        private static readonly int MaximumNumberOfItemsInFieldsCacheForMultipleItemsSameField = PlatformDetails.Is32Bits == false ? 8 * 1024 : 2 * 1024;
 
-        private readonly Dictionary<int, CachedFieldItem<NumericField>> _numericFieldsCache = new Dictionary<int, CachedFieldItem<NumericField>>(NumericEqualityComparer.BoxedInstanceInt32);
+        private int _numberOfItemsInFieldsCacheForMultipleItemsSameField;
+
+        private int _numberOfItemsInNumericFieldsCacheForMultipleItemsSameField;
+
+        private Dictionary<int, CachedFieldItem<Field>> _fieldsCache = new Dictionary<int, CachedFieldItem<Field>>(NumericEqualityComparer.BoxedInstanceInt32);
+
+        private Dictionary<int, CachedFieldItem<NumericField>> _numericFieldsCache = new Dictionary<int, CachedFieldItem<NumericField>>(NumericEqualityComparer.BoxedInstanceInt32);
 
         public readonly LuceneDocument Document = new LuceneDocument();
 
@@ -84,7 +91,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             if (_fieldsCache.Count > 256)
             {
-                _fieldsCache.Clear();
+                var fieldsCache = _fieldsCache;
+                _fieldsCache = new Dictionary<int, CachedFieldItem<Field>>(NumericEqualityComparer.BoxedInstanceInt32);
+                _numberOfItemsInFieldsCacheForMultipleItemsSameField = 0;
+
+                ClearFieldCache(fieldsCache);
+            }
+
+            if (_numericFieldsCache.Count > 256)
+            {
+                var fieldsCache = _numericFieldsCache;
+                _numericFieldsCache = new Dictionary<int, CachedFieldItem<NumericField>>(NumericEqualityComparer.BoxedInstanceInt32);
+                _numberOfItemsInNumericFieldsCacheForMultipleItemsSameField = 0;
+
+                ClearFieldCache(fieldsCache);
             }
         }
 
@@ -180,6 +200,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 case ValueType.Stream:
                     defaultIndexing = Field.Index.ANALYZED;
                     break;
+
                 case ValueType.DateTime:
                 case ValueType.DateTimeOffset:
                 case ValueType.TimeSpan:
@@ -193,6 +214,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 case ValueType.DynamicJsonObject:
                     defaultIndexing = Field.Index.NOT_ANALYZED_NO_NORMS;
                     break;
+
                 default:
                     defaultIndexing = Field.Index.ANALYZED_NO_NORMS;
                     break;
@@ -453,9 +475,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         case double d:
                             s = d.ToString("G");
                             break;
+
                         case decimal dm:
                             s = dm.ToString("G");
                             break;
+
                         case float f:
                             s = f.ToString("G");
                             break;
@@ -631,12 +655,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 field.Boost = 1;
                 field.OmitNorms = true;
 
-                _fieldsCache[cacheKey] = new CachedFieldItem<Field>
+                AddToFieldsCache(cacheKey, _multipleItemsSameFieldCount.Count > 0, cached, new CachedFieldItem<Field>
                 {
                     Key = new FieldCacheKey(name, index, store, termVector, _multipleItemsSameFieldCount.ToArray()),
                     Field = field,
                     LazyStringReader = stringReader
-                };
+                });
             }
             else
             {
@@ -701,6 +725,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     yield return numericFieldDouble.SetDoubleValue(doubleValue);
                     yield return numericFieldLong.SetLongValue((long)doubleValue);
                     break;
+
                 case NumberParseResult.Long:
                     yield return numericFieldDouble.SetDoubleValue(longValue);
                     yield return numericFieldLong.SetLongValue(longValue);
@@ -722,11 +747,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (_numericFieldsCache.TryGetValue(cacheKey, out CachedFieldItem<NumericField> cached) == false ||
                 !cached.Key.IsSame(name, index, store, termVector, _multipleItemsSameFieldCount))
             {
-                _numericFieldsCache[cacheKey] = new CachedFieldItem<NumericField>
+                AddToNumericFieldsCache(cacheKey, _multipleItemsSameFieldCount.Count > 0, cached, new CachedFieldItem<NumericField>
                 {
                     Key = new FieldCacheKey(name, index, store, termVector, _multipleItemsSameFieldCount.ToArray()),
                     Field = numericField = new NumericField(name, store, true)
-                };
+                });
             }
             else
             {
@@ -772,10 +797,59 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public void Dispose()
         {
-            foreach (var cachedFieldItem in _fieldsCache.Values)
-            {
+            ClearFieldCache(_fieldsCache);
+            ClearFieldCache(_numericFieldsCache);
+
+            _numberOfItemsInFieldsCacheForMultipleItemsSameField = 0;
+            _numberOfItemsInNumericFieldsCacheForMultipleItemsSameField = 0;
+        }
+
+        private static void ClearFieldCache<T>(Dictionary<int, CachedFieldItem<T>> fieldCache)
+            where T : AbstractField
+        {
+            if (fieldCache == null)
+                return;
+
+            foreach (var cachedFieldItem in fieldCache.Values)
                 cachedFieldItem.Dispose();
+
+            fieldCache.Clear();
+        }
+
+        private void AddToFieldsCache(int cacheKey, bool isMultipleItemsSameField, CachedFieldItem<Field> oldItem, CachedFieldItem<Field> newItem)
+        {
+            var addToCache = isMultipleItemsSameField == false || _numberOfItemsInFieldsCacheForMultipleItemsSameField < MaximumNumberOfItemsInFieldsCacheForMultipleItemsSameField;
+
+            if (addToCache == false)
+            {
+                newItem.Dispose();
+                return;
             }
+
+            oldItem?.Dispose();
+
+            _fieldsCache[cacheKey] = newItem;
+
+            if (isMultipleItemsSameField)
+                _numberOfItemsInFieldsCacheForMultipleItemsSameField++;
+        }
+
+        private void AddToNumericFieldsCache(int cacheKey, bool isMultipleItemsSameField, CachedFieldItem<NumericField> oldItem, CachedFieldItem<NumericField> newItem)
+        {
+            var addToCache = isMultipleItemsSameField == false || _numberOfItemsInNumericFieldsCacheForMultipleItemsSameField < MaximumNumberOfItemsInFieldsCacheForMultipleItemsSameField;
+
+            if (addToCache == false)
+            {
+                newItem.Dispose();
+                return;
+            }
+
+            oldItem?.Dispose();
+
+            _numericFieldsCache[cacheKey] = newItem;
+
+            if (isMultipleItemsSameField)
+                _numberOfItemsInNumericFieldsCacheForMultipleItemsSameField++;
         }
 
         private static bool IsNumber(object value)

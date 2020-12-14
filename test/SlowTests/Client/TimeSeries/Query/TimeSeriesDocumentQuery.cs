@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Client.TimeSeries.Query
             public string Id { get; set; }
 
             public string Name { get; set; }
-            
+
             public int Age { get; set; }
         }
 
@@ -88,7 +89,6 @@ select min(), max(), avg()
                     Assert.Equal(169, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Min[0]);
                     Assert.Equal(169, agg[1].Average[0]);
-
                 }
             }
         }
@@ -153,7 +153,6 @@ where Tag = 'watches/fitbit'
                     Assert.Equal(new[] { 169d }, values[2].Values);
                     Assert.Equal("watches/fitbit", values[2].Tag);
                     Assert.Equal(baseline.AddMonths(1).AddMinutes(63), values[2].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-
                 }
             }
         }
@@ -216,7 +215,6 @@ select min(), max(), avg()
                     Assert.Equal(169, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Min[0]);
                     Assert.Equal(169, agg[1].Average[0]);
-
                 }
             }
         }
@@ -281,7 +279,6 @@ where Tag = 'watches/fitbit'
                     Assert.Equal(new[] { 169d }, values[2].Values);
                     Assert.Equal("watches/fitbit", values[2].Tag);
                     Assert.Equal(baseline.AddMonths(1).AddMinutes(63), values[2].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-
                 }
             }
         }
@@ -499,7 +496,6 @@ where Tag = 'watches/fitbit'
                     Assert.Equal(169, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Min[0]);
                     Assert.Equal(169, agg[1].Average[0]);
-
                 }
             }
         }
@@ -558,7 +554,6 @@ where Tag = 'watches/fitbit'
                     Assert.Equal(169, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Min[0]);
                     Assert.Equal(169, agg[1].Average[0]);
-
                 }
             }
         }
@@ -735,7 +730,6 @@ where Tag = 'watches/fitbit'
 
                     Assert.Equal(179, agg[1].Max[0]);
                     Assert.Equal(179, agg[1].Average[0]);
-
                 }
             }
         }
@@ -902,7 +896,6 @@ where Tag = 'watches/fitbit'
                     session.SaveChanges();
                 }
 
-
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.DocumentQuery<Person>()
@@ -967,7 +960,7 @@ where Tag = 'watches/fitbit'
                             .GroupBy(g => g.Seconds(10))
                             .Select(x => x.Average())
                             .ToList());
-                    
+
                     var result = query.First();
 
                     Assert.Equal(2, result.Count);
@@ -1010,7 +1003,7 @@ where Tag = 'watches/fitbit'
                             .Between(baseline, baseline.AddDays(1))
                             .FromLast(g => g.Hours(6))
                             .GroupBy(g => g.Hours(1))
-                            .Select(x => new {Avg = x.Average()})
+                            .Select(x => new { Avg = x.Average() })
                             .ToList()));
 
                     Assert.NotNull(ex.InnerException);
@@ -1180,7 +1173,7 @@ where Tag = 'watches/fitbit'
                             .From("HeartRate")
                             .Between(baseline, baseline.AddDays(3))
                             .GroupBy(g => g.Hours(1))
-                            .Select(x => new {Max = x.Max(), Min = x.Min()})
+                            .Select(x => new { Max = x.Max(), Min = x.Min() })
                             .Scale(scale)
                             .ToList());
 
@@ -1258,7 +1251,6 @@ where Tag = 'watches/fitbit'
 
                     Assert.Equal(expectedTotalCount, result.Count);
 
-                    var tolerance = double.Epsilon;
                     var baselineWithOffset = baseline.Add(offset);
 
                     for (int i = 0; i < result.Results.Length; i++)
@@ -1269,7 +1261,7 @@ where Tag = 'watches/fitbit'
                         var expectedVal = i * scale;
                         var val = result.Results[i].Value;
 
-                        Assert.True(Math.Abs(expectedVal - val) < tolerance);
+                        Assert.True(expectedVal.AlmostEquals(val));
                         Assert.Equal(expectedVal, result.Results[i].Value);
                     }
                 }

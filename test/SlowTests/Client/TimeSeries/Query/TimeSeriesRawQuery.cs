@@ -11,6 +11,7 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -42,9 +43,9 @@ namespace SlowTests.Client.TimeSeries.Query
             {
                 Map = users => from u in users
                                select new
-                                {
-                                    u.Age
-                                };
+                               {
+                                   u.Age
+                               };
             }
         }
 
@@ -56,10 +57,9 @@ namespace SlowTests.Client.TimeSeries.Query
 
             public string WorksAt { get; set; }
 
-            public string Event { get; set;  }
+            public string Event { get; set; }
 
-            public AdditionalData AdditionalData { get; set;  }
-
+            public AdditionalData AdditionalData { get; set; }
         }
 
         private class AdditionalData
@@ -81,14 +81,13 @@ namespace SlowTests.Client.TimeSeries.Query
             public DateTime End { get; set; }
 
             public string Description { get; set; }
-
         }
 
         private class Watch
         {
-            public string Manufacturer { get; set;  }
+            public string Manufacturer { get; set; }
 
-            public double Accuracy { get; set;  }
+            public double Accuracy { get; set; }
 
             public AdditionalData AdditionalData { get; set; }
 
@@ -99,7 +98,6 @@ namespace SlowTests.Client.TimeSeries.Query
             public bool IsoCompliant;
 
             public DateTime EndOfWarranty { get; set; }
-
         }
 
         public class RawQueryResult
@@ -144,7 +142,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-    declare timeseries out(u) 
+    declare timeseries out(u)
     {
         from u.Heartrate between $start and $end
         group by 1h
@@ -228,7 +226,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-    declare timeseries out(u) 
+    declare timeseries out(u)
     {
         from u.Heartrate between $start and $end
         group by 1h
@@ -270,7 +268,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Oren", Age = 50}, "users/ayende");
+                    session.Store(new User { Name = "Oren", Age = 50 }, "users/ayende");
 
                     var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
                     tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
@@ -283,7 +281,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-    declare timeseries out(u) 
+    declare timeseries out(u)
     {
         from u.Heartrate between $start and $end
         group by 1h
@@ -342,7 +340,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-    declare timeseries out(u) 
+    declare timeseries out(u)
     {
         from u.Heartrate between $start and $end
         group by 1h
@@ -412,15 +410,15 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<RawQueryResult>(@"
-declare timeseries out(p) 
+declare timeseries out(p)
 {
-    from p.HeartRate between $start and $end 
-    group by 1h 
+    from p.HeartRate between $start and $end
+    group by 1h
     select min(), max()
 }
-from index 'People' as p 
+from index 'People' as p
 where p.Age > 49
-select out(p) as HeartRate, p.Name 
+select out(p) as HeartRate, p.Name
 ")
                         .AddParameter("start", baseline.EnsureUtc())
                         .AddParameter("end", baseline.AddDays(1).EnsureUtc());
@@ -448,7 +446,6 @@ select out(p) as HeartRate, p.Name
 
                         Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
-
                     }
                 }
             }
@@ -461,7 +458,6 @@ select out(p) as HeartRate, p.Name
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var baseline2 = DateTime.Today.AddDays(-1);
-
 
                 using (var session = store.OpenSession())
                 {
@@ -496,19 +492,19 @@ select out(p) as HeartRate, p.Name
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<RawQueryResult>(@"
-declare timeseries heart_rate(doc) 
+declare timeseries heart_rate(doc)
 {
     from doc.HeartRate between $start and $end
-    group by 1h 
+    group by 1h
     select min(), max()
 }
-declare timeseries blood_pressure(doc) 
+declare timeseries blood_pressure(doc)
 {
-    from doc.BloodPressure between $start2 and $end2 
-    group by 1h 
+    from doc.BloodPressure between $start2 and $end2
+    group by 1h
     select min(), max(), avg()
 }
-from index 'People' as p 
+from index 'People' as p
 where p.Age > 49
 select heart_rate(p) as HeartRate, blood_pressure(p) as BloodPressure
 ")
@@ -556,7 +552,6 @@ select heart_rate(p) as HeartRate, blood_pressure(p) as BloodPressure
 
                         Assert.Equal(baseline2.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(baseline2.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
-
                     }
                 }
             }
@@ -598,10 +593,10 @@ select heart_rate(p) as HeartRate, blood_pressure(p) as BloodPressure
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(c) 
+declare timeseries out(c)
 {
     from c.Stocks between $start and $end
-    group by 1h 
+    group by 1h
     select min(), max(), avg()
 }
 from People as p
@@ -670,10 +665,10 @@ select out(Company)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-from People as p 
+from People as p
 select timeseries(
-    from HeartRate between $start and $end 
-    group by 1h 
+    from HeartRate between $start and $end
+    group by 1h
     select min(), max())
 ")
                         .AddParameter("start", baseline.EnsureUtc())
@@ -733,11 +728,11 @@ select timeseries(
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-from People as p 
+from People as p
 where p.Age > 49
 select timeseries(
-    from HeartRate between $start and $end 
-    group by 1h 
+    from HeartRate between $start and $end
+    group by 1h
     select min(), max())
 ")
                         .AddParameter("start", baseline.EnsureUtc())
@@ -804,8 +799,8 @@ select timeseries(
 from index 'People'
 where Age > 49
 select timeseries(
-    from HeartRate between $start and $end 
-    group by 1h 
+    from HeartRate between $start and $end
+    group by 1h
     select min(), max())
 ")
                         .AddParameter("start", baseline.EnsureUtc())
@@ -872,8 +867,8 @@ select timeseries(
 from index 'People'
 where Age > 49
 select timeseries(
-    from HeartRate between $start and $end 
-    group by 1h 
+    from HeartRate between $start and $end
+    group by 1h
     select min(), max())
 as HeartRate
 ")
@@ -943,10 +938,10 @@ as HeartRate
 from index 'People'
 where Age > 49
 select timeseries(
-    from HeartRate between $start and $end 
-    group by 1h 
+    from HeartRate between $start and $end
+    group by 1h
     select min(), max())
-as HeartRate, Name 
+as HeartRate, Name
 ")
                         .AddParameter("start", baseline.EnsureUtc())
                         .AddParameter("end", baseline.AddDays(1).EnsureUtc());
@@ -974,7 +969,6 @@ as HeartRate, Name
 
                         Assert.Equal(baseline.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(baseline.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
-
                     }
                 }
             }
@@ -987,7 +981,6 @@ as HeartRate, Name
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var baseline2 = DateTime.Today.AddDays(-1);
-
 
                 using (var session = store.OpenSession())
                 {
@@ -1026,11 +1019,11 @@ from index 'People'
 where Age > 49
 select timeseries(
     from HeartRate between $start and $end
-    group by 1h 
+    group by 1h
     select min(), max())
 as HeartRate, timeseries(
-    from BloodPressure between $start2 and $end2 
-    group by 1h 
+    from BloodPressure between $start2 and $end2
+    group by 1h
     select min(), max(), avg())
 as BloodPressure
 ")
@@ -1078,7 +1071,6 @@ as BloodPressure
 
                         Assert.Equal(baseline2.AddMinutes(60), val.From, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(baseline2.AddMinutes(120), val.To, RavenTestHelper.DateTimeComparer.Instance);
-
                     }
                 }
             }
@@ -1123,7 +1115,7 @@ from People as p
 where p.Age > 49
 select timeseries(
     from p.HeartRate between $start and $end
-    group by 1h 
+    group by 1h
     select min(), max())
 as HeartRate
 ")
@@ -1201,7 +1193,7 @@ where p.Age > 49
 load p.WorksAt as Company
 select timeseries(
     from Company.Stocks between $start and $end
-    group by 1h 
+    group by 1h
     select min(), max(), avg())
 as Stocks
 ")
@@ -1277,7 +1269,7 @@ from People as doc
 where doc.Age > 49
 select timeseries(from doc.HeartRate between $start and $end
         where Values[0] < 70 or Tag = 'watches/fitbit'
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg())
 ")
                         .AddParameter("start", baseline.EnsureUtc())
@@ -1362,10 +1354,10 @@ select timeseries(from doc.HeartRate between $start and $end
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>($@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {{
     from x.HeartRate between $start and $end
-    group by '1 {syntax}' 
+    group by '1 {syntax}'
     select min(), max(), avg()
 }}
 from People as doc
@@ -1449,10 +1441,10 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate
-    group by '1 month' 
+    group by '1 month'
     select min(), max()
 }
 from People as doc
@@ -1534,7 +1526,7 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
 }
@@ -1582,7 +1574,7 @@ select out(doc)
                         Assert.Equal(159, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
                         Assert.Equal(baseline.AddMonths(1).AddMinutes(61), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-                        
+
                         val = agg.Results[4];
 
                         Assert.Equal(1, val.Values.Length);
@@ -1596,7 +1588,6 @@ select out(doc)
                         Assert.Equal(169, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
                         Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-
                     }
                 }
             }
@@ -1638,7 +1629,7 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
 }
@@ -1704,7 +1695,6 @@ select out(doc)
                         Assert.Equal(269, val.Values[1]);
                         Assert.Equal("watches/fitbit", val.Tag);
                         Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-
                     }
                 }
             }
@@ -1719,7 +1709,6 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
-
                     for (int i = 1; i <= 3; i++)
                     {
                         var id = $"people/{i}";
@@ -1754,10 +1743,10 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(p, e) 
+declare timeseries out(p, e)
 {
     from p.HeartRate between $start and $end
-    group by '1 month' 
+    group by '1 month'
     select min(), max()
 }
 from People as doc
@@ -1842,13 +1831,13 @@ select out(doc, e)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries heart_rate(doc) 
+declare timeseries heart_rate(doc)
 {
     from doc.HeartRate between $start and $end
     group by '1 month'
     select min(), max(), avg()
 }
-from People as p 
+from People as p
 where p.Age > 49
 select heart_rate(p)
 ")
@@ -1906,7 +1895,6 @@ select heart_rate(p)
 
                         Assert.Equal(expectedFrom, val.From);
                         Assert.Equal(expectedTo, val.To);
-
                     }
                 }
             }
@@ -1953,20 +1941,19 @@ select heart_rate(p)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>($@"
-declare timeseries heart_rate(doc) 
+declare timeseries heart_rate(doc)
 {{
     from doc.HeartRate between $start and $end
     group by '1 day'
     select min(), max(), avg(), first(), last()
     offset '{offset}'
 }}
-from People as p 
+from People as p
 where p.Age > 49
 select heart_rate(p)
 ")
                         .AddParameter("start", baseline.EnsureUtc())
                         .AddParameter("end", baseline.AddMonths(3).EnsureUtc());
-
 
                     var result = query.ToList();
 
@@ -2091,7 +2078,6 @@ select heart_rate(p)
 
                         Assert.Equal(expectedFrom, val.From, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal(expectedTo, val.To, RavenTestHelper.DateTimeComparer.Instance);
-
                     }
                 }
             }
@@ -2133,7 +2119,7 @@ select heart_rate(p)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate
         where Tag == 'watches/fitbit'
@@ -2142,9 +2128,9 @@ from People as doc
 where doc.Age > 49
 select out(doc)
 ");
-                    
+
                     var result = query.ToList();
-              
+
                     Assert.Equal(2, result.Count);
 
                     for (int i = 0; i < 2; i++)
@@ -2180,7 +2166,6 @@ select out(doc)
                         Assert.Equal(169, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
                         Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-
                     }
                 }
             }
@@ -2222,7 +2207,7 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate
         where Values[0] > 70
@@ -2269,7 +2254,6 @@ select out(doc)
                         Assert.Equal(169, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
                         Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-
                     }
                 }
             }
@@ -2339,7 +2323,6 @@ select timeseries(from doc.HeartRate where Tag == 'watches/fitbit' and Values[0]
                         Assert.Equal(169, val.Values[0]);
                         Assert.Equal("watches/fitbit", val.Tag);
                         Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-
                     }
                 }
             }
@@ -2381,11 +2364,11 @@ select timeseries(from doc.HeartRate where Tag == 'watches/fitbit' and Values[0]
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         where Tag == 'watches/fitbit'
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -2470,11 +2453,11 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         where Values[0] > 70
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -2559,11 +2542,11 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         where Values[0] < 70 or Tag = 'watches/fitbit'
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -2648,11 +2631,11 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         where Values[1] != null
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -2745,11 +2728,11 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         where Values[1] != null OR NOT Tag = 'watches/fitbit'
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -2846,11 +2829,11 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         where Values[1] != null AND NOT Tag = 'watches/apple'
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -2947,11 +2930,11 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         where Values[0] > $val
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -3044,11 +3027,11 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x, val) 
+declare timeseries out(x, val)
 {
     from x.HeartRate between $start and $end
         where Values[0] > val
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -3141,11 +3124,11 @@ select out(doc, c.AccountsReceivable)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x, y) 
+declare timeseries out(x, y)
 {
     from x.HeartRate between $start and $end
         where Values[0] > y.AccountsReceivable
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -3232,11 +3215,11 @@ select out(doc, c)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         where Tag in ('watches/fitbit', 'watches/apple')
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -3322,11 +3305,11 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         where Values[0] in (50, 59, 79, 99, 159, 179)
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -3430,12 +3413,12 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
-        load Tag as src    
+        load Tag as src
         where src.Accuracy > 2
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -3550,12 +3533,12 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
-        load Tag as src    
+        load Tag as src
         where src.AdditionalData.NestedClass.Accuracy > 2.15
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -3667,12 +3650,12 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
-        load Tag as src    
+        load Tag as src
         where src.IsoCompliant = true
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -3784,12 +3767,12 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
-        load Tag as src    
+        load Tag as src
         where TimeStamp <= src.EndOfWarranty
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -3901,12 +3884,12 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
-        load Tag as src    
+        load Tag as src
         where src.EndOfWarranty >= TimeStamp
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -4015,12 +3998,12 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         load Tag as src
         where src.Manufacturer in ('Apple', 'Sony')
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -4129,12 +4112,12 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         load Tag as src
         where src.Accuracy in (2, 2.25, 2.5, 2.8, 3)
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -4221,11 +4204,11 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         where Values[0] between 70 and 170
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -4334,12 +4317,12 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         load Tag as src
         where src.Accuracy between 2.2 and 2.8
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -4448,12 +4431,12 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         load Tag as src
         where src.Accuracy between $minVal and $maxVal
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -4567,12 +4550,12 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         load Tag as src
         where Values[0] between src.Min and src.Max
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -4686,13 +4669,13 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         load Tag as src
-        where (Tag = 'watches/fitbit' AND Values[0] between src.Min and src.Max) OR 
-              (src.IsoCompliant = true AND Values[0] > $val)  
-    group by '1 month' 
+        where (Tag = 'watches/fitbit' AND Values[0] between src.Min and src.Max) OR
+              (src.IsoCompliant = true AND Values[0] > $val)
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -4790,10 +4773,10 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x, e) 
+declare timeseries out(x, e)
 {
     from x.HeartRate between e.Start and e.End
-    group by '1 hour' 
+    group by '1 hour'
     select min(), max(), avg()
 }
 from People as doc
@@ -4876,7 +4859,7 @@ select out(doc, e)
 
                     session.Store(new Person
                     {
-                        Name = "dardasaba", 
+                        Name = "dardasaba",
                         Age = 120,
                         Event = $"events/1"
                     }, id);
@@ -4890,7 +4873,7 @@ select out(doc, e)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x, e) 
+declare timeseries out(x, e)
 {
     from x.HeartRate between e.Start and '9999'
     select min(), max(), avg()
@@ -4921,7 +4904,7 @@ select out(doc, e)
 
                         var e = new Event
                         {
-                            Start = baseline.AddMonths(i - 1).EnsureUtc(), 
+                            Start = baseline.AddMonths(i - 1).EnsureUtc(),
                             End = baseline.AddMonths(3).EnsureUtc()
                         };
 
@@ -4959,10 +4942,10 @@ select out(doc, e)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between x.AdditionalData.NestedClass.Event.Start and x.AdditionalData.NestedClass.Event.End
-    group by '1 hour' 
+    group by '1 hour'
     select min(), max(), avg()
 }
 from People as doc
@@ -5057,7 +5040,6 @@ select out(doc)
                         tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
                         tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/fitbit");
                         tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/fitbit");
-
                     }
 
                     session.SaveChanges();
@@ -5066,11 +5048,11 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x, e) 
+declare timeseries out(x, e)
 {
     from x.HeartRate between $start and $end
         where Values[0] > e.AccountsReceivable
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as doc
@@ -5122,7 +5104,7 @@ select out(doc, c)
                     Assert.Equal(1, agg.Results.Length);
 
                     val = agg.Results[0];
-                    
+
                     Assert.Equal(159, val.Min[0]);
                     Assert.Equal(179, val.Max[0]);
                     Assert.Equal(169, val.Average[0]);
@@ -5132,7 +5114,6 @@ select out(doc, c)
 
                     Assert.Equal(expectedFrom, val.From);
                     Assert.Equal(expectedTo, val.To);
-
                 }
             }
         }
@@ -5179,12 +5160,12 @@ select out(doc, c)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         load Tag as src
         where src != null and src.Accuracy > 2
-    group by '1 month' 
+    group by '1 month'
     select min(), max(), avg()
 }
 from People as p
@@ -5192,7 +5173,6 @@ select out(p)
 ")
                         .AddParameter("start", baseline.EnsureUtc())
                         .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
-
 
                     var agg = query.First();
 
@@ -5255,12 +5235,12 @@ select out(p)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
         load Tag as src
         where Values[0] > src.EndOfWarranty
-    group by '1 month' 
+    group by '1 month'
     select max()
 }
 from People as p
@@ -5271,7 +5251,6 @@ select out(p)
 
                     var ex = Assert.Throws<InvalidQueryException>(() => query.ToList());
                     Assert.Contains("Operator '>' cannot be applied to operands of type 'double' and 'Sparrow.Json.LazyStringValue'", ex.Message);
-
                 }
             }
         }
@@ -5311,7 +5290,7 @@ select out(p)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
     where Tag != null
@@ -5330,12 +5309,11 @@ select out(p)
                     Assert.Equal(179, agg.Results[0].Max[0]);
                     Assert.Equal(from, agg.Results[0].From);
                     Assert.Equal(to, agg.Results[0].To);
-
                 }
             }
         }
 
-         [Fact]
+        [Fact]
         public void CanQueryTimeSeriesAggregation_SelectWithoutGroupBy_FullRange()
         {
             using (var store = GetDocumentStore())
@@ -5368,7 +5346,7 @@ select out(p)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate
     where Tag != null
@@ -5385,7 +5363,6 @@ select out(p)
                     Assert.Equal(179, agg.Results[0].Max[0]);
                     Assert.Equal(DateTime.MinValue, agg.Results[0].From);
                     Assert.Equal(DateTime.MaxValue, agg.Results[0].To);
-
                 }
             }
         }
@@ -5418,7 +5395,7 @@ select out(p)
 
                     tsf.Append(baseline.AddHours(2).AddMinutes(1), new[] { 259d }, "watches/fitbit");
                     tsf.Append(baseline.AddHours(2).AddMinutes(2), new[] { 279d }, "watches/apple");
-                    tsf.Append(baseline.AddHours(2).AddMinutes(3),new[] { 269d }, "watches/sony");
+                    tsf.Append(baseline.AddHours(2).AddMinutes(3), new[] { 269d }, "watches/sony");
 
                     tsf.Append(baseline.AddMonths(1).AddMinutes(1), new[] { 359d }, "watches/apple");
                     tsf.Append(baseline.AddMonths(1).AddMinutes(2), new[] { 379d }, "watches/sony");
@@ -5432,17 +5409,16 @@ select out(p)
                     tsf.Append(baseline.AddMonths(6).AddHours(2).AddMinutes(2), new[] { 579d }, "watches/sony");
                     tsf.Append(baseline.AddMonths(6).AddHours(2).AddMinutes(3), new[] { 569d }, "watches/fitbit");
 
-
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
-    group by '1h' 
+    group by '1h'
     select min(), max()
     offset '02:00'
 }
@@ -5560,10 +5536,10 @@ select out(p)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
-    group by '1h' 
+    group by '1h'
     select min(), max()
     offset '-02:00'
 }
@@ -5658,14 +5634,13 @@ select out(p)
                     tsf.Append(baseline.AddMonths(6).AddMinutes(2), new[] { 579d }, "watches/sony");
                     tsf.Append(baseline.AddMonths(6).AddMinutes(3), new[] { 569d }, "watches/fitbit");
 
-
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
     offset '02:00'
@@ -5708,7 +5683,6 @@ select out(p)
                     Assert.Equal(DateTimeKind.Unspecified, result.Results[10].Timestamp.Kind);
                     Assert.Equal(baselineWithOffset.AddMonths(6).AddMinutes(3), result.Results[11].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(DateTimeKind.Unspecified, result.Results[11].Timestamp.Kind);
-
                 }
             }
         }
@@ -5755,17 +5729,16 @@ select out(p)
                     tsf.Append(baseline.AddMonths(6).AddHours(2).AddMinutes(2), new[] { 579d }, "watches/sony");
                     tsf.Append(baseline.AddMonths(6).AddHours(2).AddMinutes(3), new[] { 569d }, "watches/fitbit");
 
-
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
-    group by '1h' 
+    group by '1h'
     select min(), max()
     offset $offset
 }
@@ -5881,7 +5854,6 @@ select out(p)
                     tsf.Append(baseline.AddMonths(6).AddHours(2).AddMinutes(2), new[] { 579d }, "watches/sony");
                     tsf.Append(baseline.AddMonths(6).AddHours(2).AddMinutes(3), new[] { 569d }, "watches/fitbit");
 
-
                     session.SaveChanges();
                 }
 
@@ -5890,10 +5862,10 @@ select out(p)
                     var offset = TimeZoneInfo.Local.BaseUtcOffset;
 
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate between $start and $end
-    group by '1h' 
+    group by '1h'
     select min(), max()
     offset $offset
 }
@@ -5995,11 +5967,11 @@ select out(p)
                     var offset = 2;
 
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
-    from x.HeartRate 
+    from x.HeartRate
     between $start and $end
-    group by '1h' 
+    group by '1h'
     select min(), max()
     offset $offset
 }
@@ -6044,7 +6016,7 @@ select out(p)")
     where Tag != $t
     group by '2 minutes'
 }
-from People 
+from People
 select out()
 ")
                         .AddParameter("t", "watches/sony");
@@ -6143,9 +6115,9 @@ select out()");
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
-    from x.HeartRate 
+    from x.HeartRate
     last 100 ms
 }
 from People as doc
@@ -6159,7 +6131,6 @@ select out(doc)
                     Assert.Equal(baseline.AddMinutes(totalMinutes), result.Results[0].Timestamp);
                     Assert.Equal(baseline.AddMinutes(totalMinutes).AddMilliseconds(10), result.Results[1].Timestamp);
                     Assert.Equal("last", result.Results[1].Tag);
-
                 }
             }
         }
@@ -6193,9 +6164,9 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
-    from x.HeartRate 
+    from x.HeartRate
     last 90 second
     group by 10 seconds
     select avg()
@@ -6209,7 +6180,6 @@ select out(doc)
 
                     Assert.Equal(2, result.Count);
                     Assert.Equal(2, result.Results.Length);
-
                 }
             }
         }
@@ -6243,9 +6213,9 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
-    from x.HeartRate 
+    from x.HeartRate
     last 30 minutes
     group by 10 minutes
     select min(), max(), avg()
@@ -6259,7 +6229,6 @@ select out(doc)
 
                     Assert.Equal(31, result.Count);
                     Assert.Equal(4, result.Results.Length);
-
                 }
             }
         }
@@ -6290,11 +6259,10 @@ select out(doc)
                     session.SaveChanges();
                 }
 
-
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate last 12h
 }
@@ -6349,7 +6317,7 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate last 12h
     group by 1h
@@ -6426,9 +6394,9 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
-    from x.HeartRate 
+    from x.HeartRate
     last 1 day
     group by 1 hour
     select min(), max(), avg()
@@ -6439,7 +6407,6 @@ select out(doc)
 ")
                         .AddParameter("id", id)
                         .First();
-
 
                     Assert.Equal(TimeSpan.FromDays(1).TotalMinutes + 1, result.Count);
                     Assert.Equal(TimeSpan.FromDays(1).TotalHours + 1, result.Results.Length);
@@ -6479,7 +6446,7 @@ select out(doc)
 from People as doc
 where id(doc) = $id
 select timeseries(
-    from doc.HeartRate 
+    from doc.HeartRate
     last 12h
     group by 1h
     select min(), max(), avg()
@@ -6552,7 +6519,7 @@ select timeseries(
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate last 12h
     where tag = $tag
@@ -6665,9 +6632,9 @@ select out(p)
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
-    from x.HeartRate 
+    from x.HeartRate
     first 100 ms
 }
 from People as doc
@@ -6713,9 +6680,9 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
-    from x.HeartRate 
+    from x.HeartRate
     first 90 second
     group by 10 seconds
     select avg()
@@ -6734,7 +6701,6 @@ select out(doc)
                     Assert.Equal(result.Results[0].From.AddSeconds(10), result.Results[0].To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(baseline.AddMinutes(1), result.Results[1].From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(result.Results[1].From.AddSeconds(10), result.Results[1].To, RavenTestHelper.DateTimeComparer.Instance);
-
                 }
             }
         }
@@ -6768,9 +6734,9 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
-    from x.HeartRate 
+    from x.HeartRate
     first 30 minutes
     group by 10 minutes
     select min(), max(), avg()
@@ -6822,7 +6788,7 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<TimeSeriesRawResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate first 12h
 }
@@ -6875,7 +6841,7 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate first 12h
     group by 1h
@@ -6896,7 +6862,7 @@ select out(doc)
 
                     for (int i = 0; i < expectedBucketsCount - 1; i++)
                     {
-                        var expectedMin =  60 * i;
+                        var expectedMin = 60 * i;
                         var expectedMax = expectedMin + 59;
                         var expectedAvg = (expectedMin + expectedMax) / 2.0;
                         var expectedFrom = baseline.AddMinutes(i * 60);
@@ -6950,9 +6916,9 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
-    from x.HeartRate 
+    from x.HeartRate
     first 1 day
     group by 1 hour
     select min(), max(), avg()
@@ -7008,7 +6974,7 @@ select out(doc)
 from People as doc
 where id(doc) = $id
 select timeseries(
-    from doc.HeartRate 
+    from doc.HeartRate
     first 12h
     group by 1h
     select min(), max(), avg()
@@ -7079,9 +7045,9 @@ select timeseries(
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
-    from x.HeartRate 
+    from x.HeartRate
     FIRST 12h
     where tag = $tag
     group by 1h
@@ -7189,7 +7155,7 @@ select out(p)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate
     between $stat and $end
@@ -7204,7 +7170,6 @@ select out(doc)
                         .AddParameter("id", id)
                         .AddParameter("start", baseline)
                         .AddParameter("end", baseline.AddDays(1));
-
 
                     var ex = Assert.Throws<InvalidQueryException>(() => query.ToList());
                     Assert.Contains("Cannot have both 'Last' and 'Between' in the same Time Series query function", ex.Message);
@@ -7235,7 +7200,7 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate
     between $stat and $end
@@ -7250,7 +7215,6 @@ select out(doc)
                         .AddParameter("id", id)
                         .AddParameter("start", baseline)
                         .AddParameter("end", baseline.AddDays(1));
-
 
                     var ex = Assert.Throws<InvalidQueryException>(() => query.ToList());
                     Assert.Contains("Cannot have both 'First' and 'Between' in the same Time Series query function", ex.Message);
@@ -7281,7 +7245,7 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
-declare timeseries out(x) 
+declare timeseries out(x)
 {
     from x.HeartRate
     first 6 hours
@@ -7296,7 +7260,6 @@ select out(doc)
                         .AddParameter("id", id)
                         .AddParameter("start", baseline)
                         .AddParameter("end", baseline.AddDays(1));
-
 
                     var ex = Assert.Throws<InvalidQueryException>(() => query.ToList());
                     Assert.Contains("Cannot have both 'First' and 'Last' in the same Time Series query function", ex.Message);
@@ -7351,11 +7314,11 @@ select out(doc)
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesRawResult<StockPrice>>(@"
 declare timeseries out(c){
-    from c.StockPrices 
+    from c.StockPrices
     between $start and $end
     where High > 45.99
 }
-from Companies as c 
+from Companies as c
 where id() == 'companies/1'
 select out(c)
 ")
@@ -7423,7 +7386,7 @@ select out(c)
 from Companies
 where id() == 'companies/1'
 select timeseries(
-    from StockPrices 
+    from StockPrices
     between $start and $end
     where High > 45.99
     group by '7 days'
@@ -7444,7 +7407,7 @@ select timeseries(
                 }
             }
         }
-    
+
         [Fact]
         public void CanQueryTimeSeriesRaw_UsingScale()
         {
@@ -7477,7 +7440,7 @@ select timeseries(
                             @"
 declare timeseries out(doc)
 {
-    from doc.HeartRate 
+    from doc.HeartRate
     between $start and $end
     scale 0.001
 }
@@ -7495,7 +7458,6 @@ select out(p)
                     Assert.Equal(expectedTotalCount, result.Count);
 
                     var scale = 0.001;
-                    var tolerance = double.Epsilon;
 
                     for (int i = 0; i < result.Results.Length; i++)
                     {
@@ -7505,7 +7467,7 @@ select out(p)
                         var expectedVal = i * scale;
                         var val = result.Results[i].Value;
 
-                        Assert.True(Math.Abs(expectedVal - val) < tolerance);
+                        Assert.True(expectedVal.AlmostEquals(val));
                         Assert.Equal(expectedVal, result.Results[i].Value);
                     }
                 }
@@ -7680,7 +7642,7 @@ select out(p)
 
                 using (var session = store.OpenSession())
                 {
-                    // test with double 
+                    // test with double
 
                     var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(
                             @"
@@ -7726,7 +7688,7 @@ select out(p)
 
                 using (var session = store.OpenSession())
                 {
-                    // test with long 
+                    // test with long
 
                     var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(
                             @"
@@ -7742,7 +7704,7 @@ where id(p) = $id
 select out(p)
 ")
                         .AddParameter("id", id)
-                        .AddParameter("scale", 10_000) 
+                        .AddParameter("scale", 10_000)
                         .AddParameter("start", baseline)
                         .AddParameter("end", baseline.AddDays(3))
                         .First();
@@ -7767,7 +7729,6 @@ select out(p)
                         Assert.Equal(expectedMax, max);
                     }
                 }
-
             }
         }
 
@@ -7806,7 +7767,7 @@ select out(p)
                             @"
 declare timeseries out(doc)
 {
-    from doc.HeartRate 
+    from doc.HeartRate
     between $start and $end
     scale $scale
     offset $offset
@@ -7826,7 +7787,6 @@ select out(p)
 
                     Assert.Equal(expectedTotalCount, result.Count);
 
-                    var tolerance = double.Epsilon;
                     var baselineWithOffset = baseline.Add(offset);
 
                     for (int i = 0; i < result.Results.Length; i++)
@@ -7837,12 +7797,11 @@ select out(p)
                         var expectedVal = i * scale;
                         var val = result.Results[i].Value;
 
-                        Assert.True(Math.Abs(expectedVal - val) < tolerance);
+                        Assert.True(expectedVal.AlmostEquals(val));
                         Assert.Equal(expectedVal, result.Results[i].Value);
                     }
                 }
             }
         }
-
     }
 }

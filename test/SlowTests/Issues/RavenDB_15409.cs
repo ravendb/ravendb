@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
 using Xunit;
@@ -37,6 +38,17 @@ namespace SlowTests.Issues
             {
                 Assert.Equal(expected.Single(), CountOfRaftCommandByType(server, nameof(UpdateLicenseLimitsCommand)));
             }
+        }
+
+        [Fact]
+        public async Task CanWaitForTopologyModification()
+        {
+            var (servers, leader) = await CreateRaftCluster(3);
+            var follower = servers.First(x => x != leader);
+
+            // demote node to watcher
+            await leader.ServerStore.Engine.ModifyTopologyAsync(follower.ServerStore.NodeTag, follower.WebUrl, Leader.TopologyModification.NonVoter);
+            await WaitForRaftIndexToBeAppliedInCluster(10, TimeSpan.FromSeconds(15));
         }
 
         public RavenDB_15409(ITestOutputHelper output) : base(output)

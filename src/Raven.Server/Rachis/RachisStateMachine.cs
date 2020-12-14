@@ -46,6 +46,7 @@ namespace Raven.Server.Rachis
                 if (flags != RachisEntryFlags.StateMachineCommand)
                 {
                     _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, null, null);
+                    serverStore.Cluster.NotifyAndSetCompleted(index);
                     continue;
                 }
 
