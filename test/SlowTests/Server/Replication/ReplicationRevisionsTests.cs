@@ -26,14 +26,14 @@ namespace SlowTests.Server.Replication
         }
         
         [Fact]
-        public async Task ReplicateRevision_WhenSourceDataFromExportAndDocDeleted_ShouldNotResuscitateTheDoc()
+        public async Task ReplicateRevision_WhenSourceDataFromExportAndDocDeleted_ShouldNotRecreateTheDoc()
         {
             var exportFile = GetTempFileName();
             var settings = new Dictionary<string,string>()
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "120",
             };
-            var (nodes, leader) = await CreateRaftCluster(2, customSettings: settings);
+            var (nodes, leader) = await CreateRaftCluster(2, customSettings: settings, watcherCluster: true);
             var nodeTags = nodes.Select(n => n.ServerStore.NodeTag).ToArray();
 
             using (var store = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 1}))
@@ -50,14 +50,21 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
-                await AssertWaitForValueAsync(async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2);
+                Assert.Equal(2,
+                    await AssertWaitForValueAsync(
+                        async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2));
                 
                 await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, nodeTags.First(n => n == firstNode)));
-                await AssertWaitForValueAsync(async () =>
+                Assert.Equal(1,
+                    await AssertWaitForValueAsync(
+                        async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 1));
+                Assert.True(await AssertWaitForValueAsync(async () =>
                 {
                     var dbRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                     return dbRecord?.DeletionInProgress == null || dbRecord.DeletionInProgress.Count == 0;
-                }, true);
+                }, true));
+
+                await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = store.Urls.First(), Database = store.Database }));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -92,8 +99,8 @@ namespace SlowTests.Server.Replication
                     var firstNodeDocs = await session.Query<User>().ToArrayAsync();
                     Assert.Equal(0, firstNodeDocs.Length);
                 }
-                
-                await AssertWaitForNotNullAsync(async () => await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database)), 30000);
+
+                var result = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
                 await AssertWaitForValueAsync(async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2);
 
                 await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = store.Urls.First(), Database = store.Database }));
@@ -109,11 +116,11 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public async Task ReplicateRevision_WhenSourceDataFromIncrementalBackupAndDocDeleted_ShouldNotResuscitateTheDoc()
+        public async Task ReplicateRevision_WhenSourceDataFromIncrementalBackupAndDocDeleted_ShouldNotRecreateTheDoc()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder", forceCreateDir: true);
             
-            var (nodes, leader) = await CreateRaftCluster(2);
+            var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);
 
             using (var store = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 2}))
             {
@@ -178,8 +185,8 @@ namespace SlowTests.Server.Replication
                     var firstNodeDocs = await session.Query<User>().ToArrayAsync();
                     Assert.Equal(0, firstNodeDocs.Length);
                 }
-                
-                await AssertWaitForNotNullAsync(async () => await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database)), 30000);
+
+                var result = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
                 await AssertWaitForValueAsync(async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2);
 
                 await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = store.Urls.First(), Database = store.Database }));
