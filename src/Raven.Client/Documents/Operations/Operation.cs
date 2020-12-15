@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Operations
             }
         }
 
-        private async Task<TaskCompletionSource<IOperationResult>> InitializeResult()
+        private async Task<Task<IOperationResult>> InitializeResult()
         {
             await _lock.WaitAsync().ConfigureAwait(false);
             try
@@ -90,7 +90,7 @@ namespace Raven.Client.Documents.Operations
                 if (_result.Task.IsCompleted)
                     _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                return _result;
+                return _result.Task;
             }
             finally
             {
@@ -111,7 +111,10 @@ namespace Raven.Client.Documents.Operations
                     await observable.EnsureSubscribedNow().ConfigureAwait(false);
                     changes.ConnectionStatusChanged += OnConnectionStatusChanged;
 
+                    // We start the operation before we subscribe,
+                    // so if we subscribe after the operation was already completed we will miss the notification for it. 
                     await FetchOperationStatus().ConfigureAwait(false);
+
                     break;
                 case OperationStatusFetchMode.Polling:
                     while (_isProcessing)
@@ -319,11 +322,11 @@ namespace Raven.Client.Documents.Operations
                 bool completed;
                 try
                 {
-                    completed = await result.Task.WaitWithTimeout(timeout).ConfigureAwait(false);
+                    completed = await result.WaitWithTimeout(timeout).ConfigureAwait(false);
                 }
-                catch
+                catch (Exception e)
                 {
-                    await StopProcessingUnderLock().ConfigureAwait(false);
+                    await StopProcessingUnderLock(e).ConfigureAwait(false);
                     completed = true;
                 }
 
@@ -334,7 +337,7 @@ namespace Raven.Client.Documents.Operations
                 }
 
                 await _additionalTask.ConfigureAwait(false);
-                return (TResult)await result.Task.ConfigureAwait(false); // already done waiting but in failure we want the exception itself and not AggregateException
+                return (TResult)await result.ConfigureAwait(false); // already done waiting but in failure we want the exception itself and not AggregateException 
             }
         }
 

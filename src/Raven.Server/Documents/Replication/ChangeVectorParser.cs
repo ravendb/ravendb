@@ -6,6 +6,9 @@ namespace Raven.Server.Documents.Replication
 {
     public static class ChangeVectorParser
     {
+        public const string RaftTag = "RAFT";
+        public static int RaftInt = RaftTag.ParseNodeTag();
+
         private enum State
         {
             Tag,

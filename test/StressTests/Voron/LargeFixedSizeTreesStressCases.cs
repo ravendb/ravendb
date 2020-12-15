@@ -27,6 +27,8 @@ namespace StressTests.Voron
         [Theory]
         [InlineDataWithRandomSeed(1000000)]
         [InlineDataWithRandomSeed(2000000)]
+        [InlineData(2000000, 1877749431)]// reproduced a bug, do not remove
+        [InlineData(2000000, 1432104715)]// reproduced a bug, do not remove
         public void CanDeleteRange_RandomRanges(int count, int seed)
         {
             using (var test = new LargeFixedSizeTrees(Output))

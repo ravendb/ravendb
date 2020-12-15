@@ -1175,45 +1175,25 @@ namespace Raven.Server.Documents.Replication
                                             _replicationInfo.Logger.Info(
                                                 $"Conflict check resolved to Conflict operation, resolving conflict for doc = {doc.Id}, with change vector = {doc.ChangeVector}");
 
-                                        // we will always prefer the local
-                                        if (hasLocalClusterTx)
+                                        if (hasLocalClusterTx == hasRemoteClusterTx)
                                         {
-                                            // we have to strip the cluster tx flag from the local document
-                                            var local = database.DocumentsStorage.GetDocumentOrTombstone(context, doc.Id, throwOnConflict: false);
-                                            flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction);
-                                            if (local.Document != null)
-                                            {
-                                                rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Document.ChangeVector);
-                                                resolvedDocument = local.Document.Data.Clone(context);
-                                            }
-                                            else if (local.Tombstone != null)
-                                            {
-                                                rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Tombstone.ChangeVector);
-                                                resolvedDocument = null;
-                                            }
-                                            else
-                                            {
-                                                throw new InvalidOperationException("Local cluster tx but no matching document / tombstone for: " + doc.Id +
-                                                                                    ", this should not be possible");
-                                            }
+                                            // when hasLocalClusterTx and hasRemoteClusterTx both 'true'
+                                            // it is a case of a conflict between documents which were modified in a cluster transaction
+                                            // in two _different clusters_, so we will treat it as a "normal" conflict
 
-                                            goto case ConflictStatus.Update;
-                                        }
-
-                                        // otherwise we will choose the remote document from the transaction
-                                        if (hasRemoteClusterTx)
-                                        {
-                                            flags = flags.Strip(DocumentFlags.FromClusterTransaction);
-                                            goto case ConflictStatus.Update;
-                                        }
-                                        else
-                                        {
-                                            // if the conflict is going to be resolved locally, that means that we have local work to do
-                                            // that we need to distribute to our siblings
                                             IsIncomingReplication = false;
                                             _replicationInfo.ConflictManager.HandleConflictForDocument(context, doc.Id, doc.Collection, doc.LastModifiedTicks,
                                                 document, rcvdChangeVector, doc.Flags);
+                                            continue;
                                         }
+
+                                        // cluster tx has precedence over regular tx
+
+                                        if (hasLocalClusterTx)
+                                            goto case ConflictStatus.AlreadyMerged;
+
+                                        if (hasRemoteClusterTx)
+                                            goto case ConflictStatus.Update;
 
                                         break;
                                     case ConflictStatus.AlreadyMerged:
