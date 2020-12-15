@@ -21,8 +21,7 @@ namespace Raven.Client.Documents.Operations
 
                 await _requestExecutor.ExecuteAsync(command, context, sessionInfo, token).ConfigureAwait(false);
                 var node = command.SelectedNodeTag ?? command.Result.OperationNodeTag;
-                return new Operation(_requestExecutor, () => _store.Changes(_databaseName, node), _requestExecutor.Conventions, command.Result.OperationId,
-                    command.SelectedNodeTag ?? command.Result.OperationNodeTag);
+                return new Operation(_requestExecutor, () => _store.Changes(_databaseName, node), _requestExecutor.Conventions, command.Result.OperationId, node);
             }
         }
     }
