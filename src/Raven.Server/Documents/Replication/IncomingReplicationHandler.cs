@@ -1430,36 +1430,13 @@ namespace Raven.Server.Documents.Replication
                                             continue;
                                         }
 
-                                        // we will always prefer the local
+                                        // cluster tx has precedence over regular tx
+
                                         if (hasLocalClusterTx)
-                                        {
-                                            // we have to strip the cluster tx flag from the local document
-                                            var local = database.DocumentsStorage.GetDocumentOrTombstone(context, item.Id, throwOnConflict: false);
-                                            flags = item.Flags.Strip(DocumentFlags.FromClusterTransaction);
-                                            if (local.Document != null)
-                                            {
-                                                rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Document.ChangeVector);
-                                                resolvedDocument = local.Document.Data.Clone(context);
-                                            }
-                                            else if (local.Tombstone != null)
-                                            {
-                                                rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Tombstone.ChangeVector);
-                                                resolvedDocument = null;
-                                            }
-                                            else
-                                            {
-                                                throw new InvalidOperationException("Local cluster tx but no matching document / tombstone for: " + item.Id +
-                                                                                    ", this should not be possible");
-                                            }
+                                            goto case ConflictStatus.AlreadyMerged;
 
-                                            goto case ConflictStatus.Update;
-                                        }
-
-                                        // otherwise we will choose the remote document from the transaction
                                         if (hasRemoteClusterTx)
-                                        {
                                             goto case ConflictStatus.Update;
-                                        }
 
                                         break;
                                     case ConflictStatus.AlreadyMerged:
