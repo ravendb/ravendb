@@ -16,9 +16,9 @@
                             </div>
                         </div>
                         <div class="clearfix toolbar">
-                            <div class="pull-right-sm flex-horizontal">
+                            <div class="pull-right-sm flex-horizontal query-save">
                                 <div class="input-group query-save" data-bind="css: { active: inSaveMode }, validationOptions: { insertMessages: false }, validationElement: querySaveName">
-                                    <input class="form-control" style="display: none" placeholder="Query name" data-bind="textInput: querySaveName">
+                                    <input class="form-control" style="display: none" placeholder="Query name" data-bind="textInput: querySaveName, hasFocus: saveQueryFocus">
                                     <span class="input-group-btn">
                             <button class="btn btn-success" data-class="active" type="button" data-bind="click: saveQuery" title="Save query under given name">
                                 <i class="icon-save"></i> <span data-bind="text: inSaveMode() ? 'Save' : 'Save...'"></span>

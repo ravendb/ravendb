@@ -4,7 +4,7 @@
             <div class="clearfix toolbar">
                 <div class="pull-right-sm flex-horizontal">
                     <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationOptions: { insertMessages: false }, validationElement: patchSaveName">
-                        <input class="form-control" style="display: none" placeholder="Patch name" data-bind="textInput: patchSaveName">
+                        <input class="form-control" style="display: none" placeholder="Patch name" data-bind="textInput: patchSaveName, hasFocus: patchSaveFocus">
                         <span class="input-group-btn">
                             <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch, css: { 'btn-spinner': spinners.save }" title="Save patch under given name">
                                 <i class="icon-save"></i> <span data-bind="text: inSaveMode() ? 'Save' : 'Save...'"></span>

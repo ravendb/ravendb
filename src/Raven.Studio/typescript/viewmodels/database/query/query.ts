@@ -87,6 +87,7 @@ class query extends viewModelBase {
 
     static readonly ContainerSelector = "#queryContainer";
     static readonly $body = $("body");
+    static readonly SaveQuerySelector = ".query-save";
 
     static readonly SearchTypes: stringSearchType[] = ["Exact", "Starts With", "Ends With", "Contains"];
     static readonly RangeSearchTypes: rangeSearchType[] = ["Numeric Double", "Numeric Long", "Alphabetical", "Datetime"];
@@ -95,6 +96,8 @@ class query extends viewModelBase {
     static lastQuery = new Map<string, string>();
     
     autoOpenGraph: boolean = false;
+
+    saveQueryFocus = ko.observable<boolean>(false);
 
     clientVersion = viewModelBase.clientVersion;
 
@@ -517,6 +520,18 @@ class query extends viewModelBase {
         super.attached();
 
         this.createKeyboardShortcut("ctrl+enter", () => this.runQuery(), query.ContainerSelector);
+        
+        
+        this.createKeyboardShortcut("ctrl+s", () => {
+            if (!this.inSaveMode()) {
+                this.saveQuery();
+                this.saveQueryFocus(true);
+            }
+        }, query.ContainerSelector);
+        
+        this.createKeyboardShortcut("enter", () => {
+            this.saveQuery();
+        }, query.SaveQuerySelector);
 
         /* TODO
         this.createKeyboardShortcut("F2", () => this.editSelectedIndex(), query.containerSelector);
@@ -994,6 +1009,8 @@ class query extends viewModelBase {
                 } else {
                     this.saveQueryToStorage(this.criteria().toStorageDto());
                 }
+                
+                this.inSaveMode(false);
             }
         } else {
             if (this.isValid(this.criteria().validationGroup)) {

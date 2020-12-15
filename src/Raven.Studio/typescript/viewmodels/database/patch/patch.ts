@@ -131,10 +131,12 @@ class patch extends viewModelBase {
 
     static readonly $body = $("body");
     static readonly ContainerSelector = "#patchContainer";
+    static readonly patchSaveSelector = ".patch-save";
 
     static lastQuery = new Map<string, string>();
 
     patchSaveName = ko.observable<string>();
+    patchSaveFocus = ko.observable<boolean>(false);
     saveValidationGroup: KnockoutValidationGroup;
 
     inSaveMode = ko.observable<boolean>();
@@ -237,6 +239,17 @@ class patch extends viewModelBase {
                 this.runPatch();
             }
         }, patch.ContainerSelector);
+        
+        this.createKeyboardShortcut("ctrl+s", () => {
+            if (!this.inSaveMode()) {
+                this.savePatch();
+                this.patchSaveFocus(true);
+            }
+        }, patch.ContainerSelector);
+        
+        this.createKeyboardShortcut("enter", () => {
+            this.savePatch();
+        }, patch.patchSaveSelector);
     }
 
     private showPreview(doc: document) {

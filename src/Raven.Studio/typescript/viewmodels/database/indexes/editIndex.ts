@@ -37,6 +37,7 @@ import popoverUtils = require("common/popoverUtils");
 class editIndex extends viewModelBase {
 
     static readonly $body = $("body");
+    static readonly ContainerSelector = ".edit-index";
 
     isEditingExistingIndex = ko.observable<boolean>(false);
     editedIndex = ko.observable<indexDefinition>();
@@ -165,6 +166,10 @@ class editIndex extends viewModelBase {
 
     attached() {
         super.attached();
+        
+        this.createKeyboardShortcut("ctrl+s", () => {
+            this.save();
+        }, editIndex.ContainerSelector);
         
         popoverUtils.longWithHover($("#reduce-output-info"),
             {
