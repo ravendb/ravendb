@@ -101,8 +101,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         public IDisposable SetDocument(LazyStringValue key, object document, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer, out bool shouldSkip)
         {
             Document.GetFields().Clear();
-            
-            CurrentIndexingScope.Current.CreatedFieldsCount = 0;
+
+            if (CurrentIndexingScope.Current != null)
+                CurrentIndexingScope.Current.CreatedFieldsCount = 0;
 
             int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, document, indexContext, writeBuffer);
             if (_fields.Count > 0)
