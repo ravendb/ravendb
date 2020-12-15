@@ -50,7 +50,7 @@ interface revisionToCompare {
 
 class editDocument extends viewModelBase {
 
-    static editDocSelector = "#editDocumentContainer";
+    static editDocSelector = ".editDocument";
     static documentNameSelector = "#documentName";
     static docEditorSelector = "#docEditor";
     static docEditorSelectorRight = "#docEditorRight";
@@ -565,7 +565,7 @@ class editDocument extends viewModelBase {
         this.createKeyboardShortcut("alt+shift+r", () => this.refreshDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+s", () => this.saveDocument(), editDocument.editDocSelector); 
+        this.createKeyboardShortcut("ctrl+s", () => this.saveDocument(), editDocument.editDocSelector); 
         // Q. Why do we have to setup ALT+S, when we could just use HTML's accesskey attribute?
         // A. Because the accesskey attribute causes the save button to take focus, thus stealing the focus from the user's editing spot in the doc editor, disrupting his workflow.
     }
@@ -735,6 +735,10 @@ class editDocument extends viewModelBase {
     }
 
     saveDocument() {
+        if (!this.isSaveEnabled()) {
+            return ;
+        }
+        
         if (this.isValid(this.globalValidationGroup)) {
             $.when<boolean>(this.maybeConfirmWarnings())
                 .then((canSave: boolean) => {
