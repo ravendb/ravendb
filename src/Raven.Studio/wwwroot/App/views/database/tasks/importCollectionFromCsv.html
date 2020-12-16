@@ -21,11 +21,15 @@
                                     <p class="help-block" data-bind="validationMessage: importedFileName"></p>
                                 </div>
                                 <div class="bg-info text-info padding padding-xs margin-top margin-top-sm flex-horizontal">
-                                    <small class="flex-start"><i class="icon-info"></i></small>
-                                    <ul class="no-margin">
-                                        <li><small>CSV file must contain headers.</small></li>
-                                        <li><small>Each column will be treated as a property.</small></li>
-                                    </ul>
+                                    <div class="flex-start">
+                                        <small><i class="icon-info"></i></small>
+                                    </div>
+                                    <div>
+                                        <ul class="no-margin">
+                                            <li><small>CSV file must contain headers.</small></li>
+                                            <li><small>Each column will be treated as a property.</small></li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -35,12 +39,16 @@
                                 <input placeholder="Enter collection name (only if doesn't exist in file)" class="form-control" type="text" name="csvImportCollection" id="csvImportCollection" 
                                        data-bind="textInput: customCollectionName" autocomplete="off" />
                                 <div class="bg-info text-info padding padding-xs margin-top margin-top-sm flex-horizontal">
-                                    <small class="flex-start"><i class="icon-info"></i></small>
-                                    <ul class="no-margin">
-                                        <li><small>The Collection name will be derived from the CSV file column <strong>@metadata.@collection</strong> - if it exists.</small></li>
-                                        <li><small>Else, you can enter a collection name here.</small></li>
-                                        <li><small>If not specified, then the collection name will be derived from the CSV file name.</small></li>
-                                    </ul>
+                                    <div class="flex-start">
+                                        <small><i class="icon-info"></i></small>
+                                    </div>
+                                    <div>
+                                        <ul class="no-margin">
+                                            <li><small>The Collection name will be derived from the CSV file column <strong>@metadata.@collection</strong> - if it exists.</small></li>
+                                            <li><small>Else, you can enter a collection name here.</small></li>
+                                            <li><small>If not specified, then the collection name will be derived from the CSV file name.</small></li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>

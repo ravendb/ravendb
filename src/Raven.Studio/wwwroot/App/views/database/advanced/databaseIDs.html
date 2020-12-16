@@ -1,0 +1,85 @@
+<div class="content-container" id="databaseIDs">
+    <form data-bind="submit: saveUnusedDatabaseIDs" novalidate autocomplete="off" class="flex-form">
+        <div class="content-margin">
+            <div class="row">
+                <div class="col-xs-12 col-xl-6 margin-top margin-top-lg no-padding-right">
+                    <div class="panel padding margin-bottom no-padding-right">
+                        <div class="panel-body no-padding-right">
+                            <div class="form-group">
+                                <label class="control-label">Database ID</label>
+                                <div class="margin-top margin-top-xs" >
+                                    <strong class="form-control-static" data-bind="text: databaseID"></strong>
+                                </div>
+                            </div>
+                            <div class="form-group margin-top margin-top-lg">
+                                <label class="control-label">Change Vector</label>
+                                <div class="margin-top margin-top-sm flex-grow">
+                                    <div data-bind="foreach: databaseChangeVector">
+                                        <div class="row container-fluid">
+                                            <div class="col-xs-7 badge margin-bottom margin-bottom-sm change-vector-entry" data-bind="text: $data">
+                                            </div>
+                                            <div class="col-xs-5">
+                                                <span class="has-disable-reason" data-placement="right"
+                                                      data-bind="attr: { 'data-original-title': $parent.itemIsInsideUnusedList($data)() ? 'ID entry already in list' : '' }">
+                                                    <button class="btn btn-default btn-sm margin-bottom margin-bottom-sm add-to-unused-btn" title="Click to add the database ID from this entry to the unused database IDs"
+                                                            data-bind="visible: $parent.canAddIdToUnusedIDs($data), disable: $parent.itemIsInsideUnusedList($data), click: _.partial($parent.addToUnusedList, $data)">
+                                                        <span>Add to unused</span><i class="margin-left margin-left-sm icon-arrow-filled-right"></i>
+                                                    </button>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xs-12 col-xl-6">
+                    <div class="margin-top margin-top-lg">
+                        <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }">
+                            <i class="icon-save"></i><span>Save</span>
+                        </button>
+                    </div>
+                    <div class="panel padding margin-top margin-top-sm">
+                        <div class="bg-info text-info padding padding-xs margin-top flex-horizontal">
+                            <div class="flex-start">
+                                <small><i class="icon-info"></i></small>
+                            </div>
+                            <div class="margin-left">
+                                <small>The Unused Database IDs will not be used when generating a Change Vector for a new or modified document.</small>
+                            </div>
+                        </div>
+                        <div class="form-group margin-top margin-top-lg">
+                            <label class="control-label"><strong>Unused Database IDs</strong></label>
+                            <div class="flex-grow">
+                                <div class="flex-horizontal">
+                                    <div class="flex-grow">
+                                        <input class="form-control" placeholder="Enter database ID to add" data-bind="textInput: inputDatabaseId" />
+                                    </div>
+                                    <button class="btn btn-info" data-bind="click: addInputToUnusedList, enable: inputDatabaseId">
+                                        <i class="icon-plus"></i><span>Add ID</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="visible: unusedDatabaseIDs().length">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="flex-grow">
+                                <ul class="well collection-list margin-bottom margin-bottom-lg" data-bind="foreach: unusedDatabaseIDs">
+                                    <li>
+                                        <div class="name" data-bind="text: $data"></div>
+                                        <a title="Remove this ID from the unused list" href="#" data-bind="click: _.partial($parent.removeFromUnusedList, $data)"><i class="icon-trash"></i></a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="text-center text-muted margin-top margin-top-lg margin-bottom margin-bottom-lg" data-bind="visible: !unusedDatabaseIDs().length">
+                            <i class="icon-lg icon-empty-set"></i>
+                            <h3 class="margin-top">No unused database IDs are set</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
