@@ -61,7 +61,7 @@
     <IsWindows64>false</IsWindows64>
     <IsMacOS>true</IsMacOS>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'rpi'">
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'linux-arm'">
     <IsAnyOS>false</IsAnyOS>
     <IsLinux64>false</IsLinux64>
     <IsLinuxArm32>true</IsLinuxArm32>
