@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -108,28 +107,34 @@ namespace Raven.Client.Connection
         public override void UpdateReplicationInformationFromDocument(JsonDocument document)
         {
             var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocumentWithClusterInformation>();
-            ReplicationDestinations = replicationDocument.Destinations.Select(x =>
-            {
-                var url = string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url : x.ClientVisibleUrl;
-                if (string.IsNullOrEmpty(url))
-                    return null;
-                if (x.CanBeFailover() == false)
-                    return null;
-                if (string.IsNullOrEmpty(x.Database))
-                    return new OperationMetadata(url, x.Username, x.Password, x.Domain, x.ApiKey, x.ClusterInformation);
+            var destinations = new List<OperationMetadata>(replicationDocument.Destinations.Count);
 
-                return new OperationMetadata(
-                    MultiDatabase.GetRootDatabaseUrl(url) + "/databases/" + x.Database + "/",
-                    x.Username,
-                    x.Password,
-                    x.Domain,
-                    x.ApiKey,
-                    x.ClusterInformation);
-            })
+            foreach (var destination in replicationDocument.Destinations)
+            {
+                OperationMetadata operationMetadata;
+                var url = string.IsNullOrEmpty(destination.ClientVisibleUrl) ? destination.Url : destination.ClientVisibleUrl;
                 // filter out replication destination that don't have the url setup, we don't know how to reach them
                 // so we might as well ignore them. Probably private replication destination (using connection string names only)
-                .Where(x => x != null)
-                .ToList();
+                if (string.IsNullOrEmpty(url))
+                    continue;
+                if (destination.CanBeFailover() == false)
+                    continue;
+                if (string.IsNullOrEmpty(destination.Database))
+                    operationMetadata = new OperationMetadata(url, destination.Username, destination.Password, destination.Domain, destination.ApiKey, destination.ClusterInformation);
+
+                operationMetadata = new OperationMetadata(
+                    MultiDatabase.GetRootDatabaseUrl(url) + "/databases/" + destination.Database + "/",
+                    destination.Username,
+                    destination.Password,
+                    destination.Domain,
+                    destination.ApiKey,
+                    destination.ClusterInformation);
+
+                destinations.Add(operationMetadata);
+            }
+
+            ReplicationDestinations = destinations;
+
             foreach (var replicationDestination in ReplicationDestinations)
             {
                 FailureCounter value;
