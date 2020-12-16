@@ -30,7 +30,7 @@ namespace Raven.Client.Changes
         private readonly string url;
         private readonly OperationCredentials credentials;
         private readonly HttpJsonRequestFactory jsonRequestFactory;
-        private readonly Action onDispose;                
+        private readonly Action onDispose;
 
         private IDisposable connection;
         private DateTime lastHeartbeat;
@@ -43,7 +43,7 @@ namespace Raven.Client.Changes
         private const int Idle = 0;
 
         // This is the StateCounters, it is not related to the counters database
-        protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);        
+        protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);
 
         protected RemoteChangesClientBase(
             string url,
@@ -65,7 +65,7 @@ namespace Raven.Client.Changes
             this.url = url;
             this.credentials = new OperationCredentials(apiKey, credentials);
             this.jsonRequestFactory = jsonRequestFactory;
-            this.onDispose = onDispose;            
+            this.onDispose = onDispose;
             Conventions = conventions;
             Task = EstablishConnection()
                         .ObserveException()
@@ -346,7 +346,7 @@ namespace Raven.Client.Changes
             var value = ravenJObject.Value<RavenJObject>("Value");
             var type = ravenJObject.Value<string>("Type");
             if (logger.IsDebugEnabled)
-            logger.Debug("Got notification from {0} id {1} of type {2}", url, id, dataFromConnection);
+                logger.Debug("Got notification from {0} id {1} of type {2}", url, id, dataFromConnection);
 
             switch (type)
             {
