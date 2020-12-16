@@ -84,10 +84,5 @@ namespace Raven.Client.Documents.Queries
         /// Detailed timings for various parts of a query (Lucene search, loading documents, transforming results) - if requested.
         /// </summary>
         public QueryTimings Timings { get; set; }
-        
-        /// <summary>
-        /// List of longitude & latitude document properties names in a spatial query
-        /// </summary>
-        public SpatialProperty[] SpatialProperties { get; set; }
     }
 }

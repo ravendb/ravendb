@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -44,6 +45,20 @@ namespace Raven.Server.Documents.Queries
                     TimeSeriesFields.Add(field.Key);
                 }
             }
+        }
+        
+        /// <summary>
+        /// If the query returned spatial properties results, this field will contain
+        /// the list of longitude & latitude document properties names from the spatial query
+        /// </summary>
+        public SpatialProperty[] SpatialProperties { get; set; }
+        
+        public void RegisterSpatialProperties(IndexQueryServerSide query)
+        {
+            if (query.AddSpatialProperties == false || query.Metadata.SpatialProperties == null)
+                return;
+
+            SpatialProperties = query.Metadata.SpatialProperties.ToArray();
         }
 
         public abstract void AddResult(T result);

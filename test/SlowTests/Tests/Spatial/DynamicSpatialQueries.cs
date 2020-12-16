@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -36,17 +37,17 @@ namespace SlowTests.Tests.Spatial
 
                 using (var commands = store.Commands())
                 {
-                    var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), spatial.circle(50, 44.75, -93.35))");
+                    var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), spatial.circle(50, 44.75, -93.35))&addSpatialProperties=true");
 
                     Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
                     Assert.Equal(3, results);
                     
-                    Assert.True(json.TryGet(nameof(QueryResult.SpatialProperties), out BlittableJsonReaderArray spatialResults));
-                    Assert.Equal(1, spatialResults.Length);
+                    Assert.True(json.TryGet(nameof(DocumentQueryResult.SpatialProperties), out BlittableJsonReaderArray spatialProperties));
+                    Assert.Equal(1, spatialProperties.Length);
                     
-                    (spatialResults[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LatitudeProperty), out string lat);
+                    (spatialProperties[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LatitudeProperty), out string lat);
                     Assert.Equal(lat, "Location1.Latitude");
-                    (spatialResults[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LongitudeProperty), out string lng);
+                    (spatialProperties[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LongitudeProperty), out string lng);
                     Assert.Equal(lng, "Location1.Longitude");
                 }
             }
@@ -81,19 +82,19 @@ namespace SlowTests.Tests.Spatial
                     var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs " +
                         "where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), spatial.circle(50, 44.75, -93.35)) " +
                         "or spatial.within(spatial.point(Location2.Latitude, Location2.Longitude), spatial.circle(50, 45.75, -94.35)) " +
-                        $"or spatial.within(spatial.point(Location3.Latitude, Location3.Longitude), spatial.wkt('{boundingPolygon}'))");
+                        $"or spatial.within(spatial.point(Location3.Latitude, Location3.Longitude), spatial.wkt('{boundingPolygon}'))&addSpatialProperties=true");
 
                     Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
                     Assert.Equal(4, results);
                     
-                    Assert.True(json.TryGet(nameof(QueryResult.SpatialProperties), out BlittableJsonReaderArray spatialResults));
-                    Assert.Equal(3, spatialResults.Length);
+                    Assert.True(json.TryGet(nameof(DocumentQueryResult.SpatialProperties), out BlittableJsonReaderArray spatialProperties));
+                    Assert.Equal(3, spatialProperties.Length);
 
-                    for (var i = 0; i < spatialResults.Length; i++)
+                    for (var i = 0; i < spatialProperties.Length; i++)
                     {
-                        Assert.True((spatialResults[i] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LatitudeProperty), out string lat));
+                        Assert.True((spatialProperties[i] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LatitudeProperty), out string lat));
                         Assert.Equal(lat, $"Location{i+1}.Latitude");
-                        Assert.True((spatialResults[i] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LongitudeProperty), out string lng));
+                        Assert.True((spatialProperties[i] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LongitudeProperty), out string lng));
                         Assert.Equal(lng, $"Location{i+1}.Longitude");
                     } 
                 }
@@ -125,17 +126,17 @@ namespace SlowTests.Tests.Spatial
                 {
                     var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs " +
                                                                               "where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), spatial.circle(50, 44.75, -93.35)) " +
-                                                                              "select Location1 as SomeAlias");
+                                                                              "select Location1 as SomeAlias&addSpatialProperties=true");
 
                     Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
                     Assert.Equal(3, results);
                     
-                    Assert.True(json.TryGet(nameof(QueryResult.SpatialProperties), out BlittableJsonReaderArray spatialResults));
-                    Assert.Equal(1, spatialResults.Length);
+                    Assert.True(json.TryGet(nameof(DocumentQueryResult.SpatialProperties), out BlittableJsonReaderArray spatialProperties));
+                    Assert.Equal(1, spatialProperties.Length);
 
-                    (spatialResults[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LatitudeProperty), out string lat);
+                    (spatialProperties[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LatitudeProperty), out string lat);
                     Assert.Equal(lat, "SomeAlias.Latitude");
-                    (spatialResults[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LongitudeProperty), out string lng);
+                    (spatialProperties[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LongitudeProperty), out string lng);
                     Assert.Equal(lng, "SomeAlias.Longitude");
                 }
             }

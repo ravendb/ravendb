@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Queries
 
         public DateTime LastQueriedAt;
 
-        public List<SpatialProperty> SpatialResults;
+        public List<SpatialProperty> SpatialProperties;
 
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
@@ -2334,8 +2334,8 @@ namespace Raven.Server.Documents.Queries
                                 longitudePropertyPath = GetPathWithAliasName(longitudePropertyPath);
                             }
                             
-                            _metadata.SpatialResults ??= new List<SpatialProperty>();
-                            _metadata.SpatialResults.Add(new SpatialProperty(latitudePropertyPath, longitudePropertyPath));
+                            _metadata.SpatialProperties ??= new List<SpatialProperty>();
+                            _metadata.SpatialProperties.Add(new SpatialProperty(latitudePropertyPath, longitudePropertyPath));
                             
                             break;
                         default:

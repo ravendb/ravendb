@@ -78,8 +78,7 @@ namespace Raven.Client.Documents.Queries
                 CounterIncludes = CounterIncludes,
                 IncludedCounterNames = IncludedCounterNames,
                 TimeSeriesIncludes = TimeSeriesIncludes,
-                CompareExchangeValueIncludes = CompareExchangeValueIncludes,
-                SpatialProperties = SpatialProperties
+                CompareExchangeValueIncludes = CompareExchangeValueIncludes
             };
         }
     }
