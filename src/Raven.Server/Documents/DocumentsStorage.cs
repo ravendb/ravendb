@@ -1810,6 +1810,8 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
 
+            FlagsProperlySet(flags, changeVector);
+
             try
             {
                 using (ModifyLowerIdIfNeeded(context, table, lowerId, out var nonConflictedLowerId))
@@ -1848,6 +1850,32 @@ namespace Raven.Server.Documents
             }
 
             return (newEtag, changeVector);
+        }
+
+        [Conditional("DEBUG")]
+        public static void FlagsProperlySet(DocumentFlags flags, string changeVector)
+        {
+            var cvArray = changeVector.ToChangeVector();
+
+            if (flags.Contain(DocumentFlags.FromClusterTransaction))
+            {
+                if (cvArray.Length != 1)
+                {
+                    Debug.Assert(false, $"FromClusterTransaction, expect change vector of length 1, {changeVector}");
+                }
+                if (cvArray[0].NodeTag != ChangeVectorParser.RaftInt)
+                {
+                    Debug.Assert(false, $"FromClusterTransaction, expect only RAFT, {changeVector}");
+                }
+            }
+
+            if (cvArray.Length == 1 && cvArray[0].NodeTag == ChangeVectorParser.RaftInt)
+            {
+                if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
+                {
+                    Debug.Assert(false, $"flags must set FromClusterTransaction for the change vector: {changeVector}");
+                }
+            }
         }
 
         private IDisposable ModifyLowerIdIfNeeded(DocumentsOperationContext context, Table table, Slice lowerId, out Slice nonConflictedLowerId)
