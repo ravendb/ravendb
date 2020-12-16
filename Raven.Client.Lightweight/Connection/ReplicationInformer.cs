@@ -62,7 +62,11 @@ namespace Raven.Client.Connection
 
             try
             {
-                await replicationLock.WaitAsync().ConfigureAwait(false);
+                // Do a quick synchronous check before we resort to async/await with the state-machine overhead.
+                if (!replicationLock.Wait(0))
+                {
+                    await replicationLock.WaitAsync().ConfigureAwait(false);
+                }
 
                 if (firstTime && force == false)
                 {
@@ -87,7 +91,7 @@ namespace Raven.Client.Connection
                         if (task.Exception != null)
                             Log.ErrorException("Failed to refresh replication information", task.Exception);
                         refreshReplicationInformationTask = null;
-                    }, TaskContinuationOptions.ExecuteSynchronously);
+                    }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
             }
             finally
             {
@@ -160,7 +164,11 @@ namespace Raven.Client.Connection
         {
             try
             {
-                await replicationLock.WaitAsync().ConfigureAwait(false);
+                // Do a quick synchronous check before we resort to async/await with the state-machine overhead.
+                if (!replicationLock.Wait(0))
+                {
+                    await replicationLock.WaitAsync().ConfigureAwait(false);
+                }
 
                 var serverHash = ServerHash.GetServerHash(url);
 
