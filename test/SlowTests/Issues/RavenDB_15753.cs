@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
@@ -123,6 +124,39 @@ namespace SlowTests.Issues
 
                 Assert.Contains("Cannot load NuGet package 'System.Xml.ReaderWriter' version '4.3.1' from 'http://some.url.that.does.not.exist.com'", e.Message);
                 Assert.Contains("Unable to load the service index for source", e.Message);
+            }
+        }
+
+        [Fact]
+        public void AdditionalAssemblies_NuGet_Live()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+                {
+                    Name = "HtmlIndex",
+                    Maps =
+                    {
+                        "from c in docs.Companies select new { Name = typeof(HtmlAgilityPack.HtmlNode).Name }"
+                    },
+                    AdditionalAssemblies =
+                    {
+                        AdditionalAssembly.FromNuGet("HtmlAgilityPack", "1.11.28")
+                    }
+                }));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company
+                    {
+                        Name = "HR"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
             }
         }
 
