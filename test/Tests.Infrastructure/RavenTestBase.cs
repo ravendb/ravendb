@@ -130,6 +130,12 @@ namespace FastTests
             await WaitForRaftIndexToBeAppliedInCluster(updateIndex, TimeSpan.FromSeconds(10));
         }
 
+        protected async Task WaitForRaftCommandToBeAppliedInLocalServer(string commandType)
+        {
+            var updateIndex = LastRaftIndexForCommand(Server, commandType);
+            await Server.ServerStore.Cluster.WaitForIndexNotification(updateIndex, TimeSpan.FromSeconds(10));
+        }
+
         protected long LastRaftIndexForCommand(RavenServer server, string commandType)
         {
             var updateIndex = 0L;
@@ -171,31 +177,44 @@ namespace FastTests
             return count;
         }
 
-        protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan timeout)
+        protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan? timeout = null)
         {
-            if (Servers.Count == 0)
-                return;
+            await WaitForRaftIndexToBeAppliedOnClusterNodes(index, Servers, timeout);
+        }
 
-            var tasks = Servers.Where(s => s.ServerStore.Disposed == false &&
-                                           s.ServerStore.Engine.CurrentState != RachisState.Passive)
+        protected async Task WaitForRaftIndexToBeAppliedOnClusterNodes(long index, List<RavenServer> nodes, TimeSpan? timeout = null)
+        {
+            if (nodes.Count == 0)
+                throw new InvalidOperationException("Cannot wait for raft index to be applied when the cluster is empty. Make sure you are using the right server.");
+
+            if (timeout.HasValue == false)
+                timeout = Debugger.IsAttached ? TimeSpan.FromSeconds(300) : TimeSpan.FromSeconds(60);
+
+            var tasks = nodes.Where(s => s.ServerStore.Disposed == false &&
+                                          s.ServerStore.Engine.CurrentState != RachisState.Passive)
                 .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
                 .ToList();
 
-            if (await Task.WhenAll(tasks).WaitAsync(timeout))
+            if (await Task.WhenAll(tasks).WaitAsync(timeout.Value))
                 return;
 
-            var message = $"Timed out after {timeout} waiting for index {index} because out of {Servers.Count} servers" +
+            ThrowTimeoutException(nodes, tasks, index, timeout.Value);
+        }
+
+        private void ThrowTimeoutException(List<RavenServer> nodes, List<Task> tasks, long index, TimeSpan timeout)
+        {
+            var message = $"Timed out after {timeout} waiting for index {index} because out of {nodes.Count} servers" +
                           " we got confirmations that it was applied only on the following servers: ";
 
             for (var i = 0; i < tasks.Count; i++)
             {
-                message += $"{Environment.NewLine}Url: {Servers[i].WebUrl}. Applied: {tasks[i].IsCompleted}.";
+                message += $"{Environment.NewLine}Url: {nodes[i].WebUrl}. Applied: {tasks[i].IsCompleted}.";
                 if (tasks[i].IsCompleted == false)
                 {
-                    using (Servers[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (nodes[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         context.OpenReadTransaction();
-                        message += $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{context.ReadObject(Servers[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}";
+                        message += $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{context.ReadObject(nodes[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}";
                     }
                 }
             }

@@ -469,7 +469,7 @@ namespace Raven.Client.Documents.Changes
         {
             try
             {
-                (_nodeIndex, _serverNode) = nodeTag == null
+                (_nodeIndex, _serverNode) = nodeTag == null || _requestExecutor.Conventions.DisableTopologyUpdates
                     ? await _requestExecutor.GetPreferredNode().ConfigureAwait(false)
                     : await _requestExecutor.GetRequestedNode(nodeTag).ConfigureAwait(false);
             }

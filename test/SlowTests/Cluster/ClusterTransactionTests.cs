@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -16,7 +17,9 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -302,29 +305,25 @@ namespace SlowTests.Cluster
         {
             var file = GetTempFileName();
 
-            var leader = await CreateRaftClusterAndGetLeader(3);
-            var user1 = new User()
-            {
-                Name = "Karmel"
-            };
-            var user2 = new User()
-            {
-                Name = "Oren"
-            };
-            var user3 = new User()
-            {
-                Name = "Indych"
-            };
+            var (_, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var user1 = new User() {Name = "Karmel"};
+            var user2 = new User() {Name = "Oren"};
+            var user3 = new User() {Name = "Indych"};
 
-            using (var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 2 }))
+            var toDispose = Servers.First(s => s != leader);
+            var removedTag = toDispose.ServerStore.NodeTag;
+
+            var members = new List<string> {"A", "B", "C"};
+            members.Remove(removedTag);
+
+            leader.ServerStore.Observer.Suspended = true;
+
+            using (var store = GetDocumentStore(new Options {Server = leader, ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology {Members = members}}))
             {
                 // we kill one server so we would not clean the pending cluster transactions.
-                await DisposeAndRemoveServer(Servers.First(s => s != leader));
+                await DisposeAndRemoveServer(toDispose);
 
-                using (var session = store.OpenAsyncSession(new SessionOptions
-                {
-                    TransactionMode = TransactionMode.ClusterWide
-                }))
+                using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
                 {
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/karmel", user1);
                     await session.StoreAsync(user1, "foo/bar");
@@ -354,7 +353,7 @@ namespace SlowTests.Cluster
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
             }
 
-            using (var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 2 }))
+            using (var store = GetDocumentStore(new Options {Server = leader, ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology {Members = members}}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -363,10 +362,19 @@ namespace SlowTests.Cluster
                     session.Advanced.Evict(user1);
 
                     var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+
+                    // change the primary node
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    record.Topology.Members.Reverse();
+                    await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(store.Database, record.Topology.Members));
+                    await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode
+                    {
+                        Url = store.Urls[0], Database = store.Database
+                    }));
+
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-                    var user = await session.LoadAsync<User>("foo/bar");
-                    session.Advanced.Evict(user);
-                    Assert.Equal(user3.Name, user.Name);
+
+                    Assert.True(WaitForDocument<User>(store, "foo/bar", u => user3.Name == u.Name));
                 }
             }
         }
@@ -440,71 +448,6 @@ namespace SlowTests.Cluster
 
                 await SetupReplicationAsync(store1, store2);
                 Assert.True(WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Karmel"));
-            }
-        }
-
-        [Fact]
-        public async Task ResolveInFavorOfLocalClusterTransaction()
-        {
-            var user1 = new User()
-            {
-                Name = "Source"
-            };
-            var user2 = new User()
-            {
-                Name = "Dest"
-            };
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
-            {
-                using (var session = store2.OpenAsyncSession())
-                {
-                    session.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-                    await session.StoreAsync(user2, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                using (var session = store1.OpenAsyncSession(new SessionOptions
-                {
-                    TransactionMode = TransactionMode.ClusterWide
-                }))
-                {
-                    await session.StoreAsync(user1, "users/1");
-                    await session.SaveChangesAsync();
-                }
-                await SetupReplicationAsync(store1, store2);
-
-                // 1. at first we will resolve to the local, since both are form cluster transaction
-                var resolvedToLocal = await WaitForValueAsync(async () =>
-                {
-                    using (var session = store2.OpenAsyncSession())
-                    {
-                        var user = await session.LoadAsync<User>("users/1");
-                        if (user == null)
-                            return false;
-
-                        if (user.Name != "Dest")
-                            return false;
-                        var changeVector = session.Advanced.GetChangeVectorFor(user);
-                        var entries = changeVector.ToChangeVector();
-                        return entries.Length == 2;
-                    }
-                }, true);
-                Assert.True(resolvedToLocal);
-
-                // 2. after the resolution the document is stripped from the cluster transaction flag
-                using (var session = store1.OpenAsyncSession(new SessionOptions
-                {
-                    TransactionMode = TransactionMode.ClusterWide
-                }))
-                {
-                    user1.Name = "Source 2";
-                    await session.StoreAsync(user1, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                // 3. so in the next conflict we will be overwriting it.
-                Assert.True(WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Source 2"));
             }
         }
 
@@ -1269,6 +1212,68 @@ namespace SlowTests.Cluster
                     var compareExchangeValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<List<string>>(id);
                     Assert.True(value.SequenceEqual(compareExchangeValue.Value));
                 }
+            }
+        }
+
+        [Fact]
+        public async Task ClusterTransactionConflict()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User()
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store2.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User()
+                    {
+                        Name = "Grisha"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                await Task.WhenAll(SetupReplicationAsync(store1, store2),SetupReplicationAsync(store2, store1));
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store2, store1);
+
+                using (var session = store1.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var u = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("Grisha",u.Name);
+                }
+
+                using (var session = store2.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var u = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("Grisha",u.Name);
+                }
+
+                var t1 = EnsureNoReplicationLoop(Server, store1.Database);
+                var t2 = EnsureNoReplicationLoop(Server, store2.Database);
+
+                await Task.WhenAll(t1, t2);
+                await t1;
+                await t2;
             }
         }
 

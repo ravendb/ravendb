@@ -80,7 +80,8 @@ namespace Raven.Client.Documents.Operations
                 var command = operation.GetCommand(RequestExecutor.Conventions, context);
 
                 await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
-                return new Operation(RequestExecutor, () => _store.Changes(_databaseName), RequestExecutor.Conventions, command.Result.OperationId, command.SelectedNodeTag ?? command.Result.OperationNodeTag);
+                var node = command.SelectedNodeTag ?? command.Result.OperationNodeTag;
+                return new Operation(RequestExecutor, () => _store.Changes(_databaseName, node), RequestExecutor.Conventions, command.Result.OperationId, node);
             }
         }
 
