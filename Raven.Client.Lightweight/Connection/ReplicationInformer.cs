@@ -226,6 +226,6 @@ namespace Raven.Client.Connection
 
             var replicationInformationTaskCopy = refreshReplicationInformationTask;
             if (replicationInformationTaskCopy != null)
-                replicationInformationTaskCopy.Wait();
+                replicationInformationTaskCopy.GetAwaiter().GetResult();
         }
 }}
