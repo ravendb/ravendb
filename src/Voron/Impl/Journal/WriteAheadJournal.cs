@@ -186,7 +186,7 @@ namespace Voron.Impl.Journal
                 journalToStartReadingFrom == -1)
                 journalToStartReadingFrom++;
 
-            var recycleLastJournal = false;
+            var deleteLastJournal = false;
             for (var journalNumber = journalToStartReadingFrom; journalNumber <= logInfo.CurrentJournal; journalNumber++)
             {
                 addToInitLog?.Invoke($"Recovering journal {journalNumber} (upto last journal {logInfo.CurrentJournal})");
@@ -197,9 +197,9 @@ namespace Voron.Impl.Journal
                     using (var recoveryPager = _env.Options.CreateTemporaryBufferPager(journalRecoveryName, initialSize))
                     using (var pager = _env.Options.OpenJournalPager(journalNumber, logInfo))
                     {
-                        var isMoreThanMaxFileSize = RecoverCurrentJournalSizeAndCheckIfLargerThanMaxLogFileSize(pager);
+                        RecoverCurrentJournalSize(pager, out var isMoreThanMaxFileSize);
                         if (journalNumber == logInfo.CurrentJournal)
-                            recycleLastJournal = isMoreThanMaxFileSize;
+                            deleteLastJournal = isMoreThanMaxFileSize;
 
                         var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
                         using (var journalReader = new JournalReader(pager, _dataPager, recoveryPager, modifiedPages, logInfo, transactionHeader))
@@ -339,8 +339,9 @@ namespace Voron.Impl.Journal
                         _journalApplicator.AddJournalToDelete(journalFile);
                         toDelete.Add(journalFile);
                     }
-                    else if (recycleLastJournal)
+                    else if (deleteLastJournal)
                     {
+                        Debug.Assert(journalFile.Number == logInfo.CurrentJournal, "journalFile.Number == logInfo.CurrentJournal");
                         _journalApplicator.AddJournalToDelete(journalFile);
                         toDelete.Add(journalFile);
                     }
@@ -402,15 +403,18 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private bool RecoverCurrentJournalSizeAndCheckIfLargerThanMaxLogFileSize(AbstractPager pager)
+        private void RecoverCurrentJournalSize(AbstractPager pager, out bool isMoreThanMaxFileSize)
         {
             var journalSize = Bits.PowerOf2(pager.TotalAllocationSize);
-            if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
-                return true;
+            if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size{
+            {
+                isMoreThanMaxFileSize = true;
+                return;
+            }
 
             // this set the size of the _next_ journal file size
             _currentJournalFileSize = Math.Min(journalSize, _env.Options.MaxLogFileSize);
-            return false;
+            isMoreThanMaxFileSize = false;
         }
 
 
