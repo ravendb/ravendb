@@ -82,7 +82,10 @@ namespace Raven.Client.Connection
                     return;
 
                 if (refreshReplicationInformationTask != null)
+                {
                     await refreshReplicationInformationTask.ConfigureAwait(false);
+                    return;
+                }
 
                 refreshReplicationInformationTask = RefreshReplicationInformationInternalAsync(url, getReplicationDestinations).
                     ContinueWith(task =>
