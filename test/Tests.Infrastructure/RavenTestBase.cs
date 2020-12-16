@@ -128,6 +128,12 @@ namespace FastTests
             await WaitForRaftIndexToBeAppliedInCluster(updateIndex, TimeSpan.FromSeconds(10));
         }
 
+        protected async Task WaitForRaftCommandToBeAppliedInLocalServer(string commandType)
+        {
+            var updateIndex = LastRaftIndexForCommand(Server, commandType);
+            await Server.ServerStore.Cluster.WaitForIndexNotification(updateIndex, TimeSpan.FromSeconds(10));
+        }
+
         protected long LastRaftIndexForCommand(RavenServer server, string commandType)
         {
             var updateIndex = 0L;

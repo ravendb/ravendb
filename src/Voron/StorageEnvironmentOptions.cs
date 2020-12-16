@@ -573,10 +573,18 @@ namespace Voron
 
                         try
                         {
-                            if (File.Exists(filename) == false)
+                            var journalFile = new FileInfo(filename);
+                            if (journalFile.Exists == false)
                                 continue;
 
-                            File.Move(filename, desiredPath.FullPath);
+                            if (journalFile.Length > MaxLogFileSize && desiredSize <= MaxLogFileSize)
+                            {
+                                // delete journals that are bigger than MaxLogFileSize when tx desiredSize is smaller than MaxLogFileSize
+                                TryDelete(filename);
+                                continue;
+                            }
+
+                            journalFile.MoveTo(desiredPath.FullPath);
                             break;
                         }
                         catch (Exception ex)
@@ -614,6 +622,13 @@ namespace Voron
                                 continue;
                             }
 
+                            if (fileInfo.Length > MaxLogFileSize && desiredSize <= MaxLogFileSize)
+                            {
+                                _journalsForReuse.RemoveAt(0);
+                                TryDelete(fileInfo.FullName);
+
+                                continue;
+                            }
                         }
                         catch (IOException)
                         {
