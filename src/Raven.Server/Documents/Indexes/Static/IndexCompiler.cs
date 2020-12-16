@@ -53,8 +53,14 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             AssemblyLoadContext.Default.Resolving += (ctx, name) =>
             {
-                if (AdditionalAssemblies.IsValueCreated && AdditionalAssemblies.Value.TryGetValue(name.Name, out var assembly))
-                    return assembly.Assembly;
+                if (AdditionalAssemblies.IsValueCreated)
+                {
+                    if (AdditionalAssemblies.Value.TryGetValue(name.FullName, out var assembly))
+                        return assembly.Assembly;
+
+                    if (AdditionalAssemblies.Value.TryGetValue(name.Name, out assembly))
+                        return assembly.Assembly;
+                }
 
                 if (name.Name == LuceneAssemblyName.Name)
                     return LuceneAssembly;
@@ -78,7 +84,9 @@ namespace Raven.Server.Documents.Indexes.Static
                     var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
                     var reference = CreateMetadataReferenceFromAssembly(assembly);
 
-                    results.TryAdd(name.Name, new AdditionalAssemblyServerSide(name, assembly, reference, AdditionalAssemblyType.BaseDirectory));
+                    var result = new AdditionalAssemblyServerSide(name, assembly, reference, AdditionalAssemblyType.BaseDirectory);
+                    results.TryAdd(name.FullName, result);
+                    results.TryAdd(name.Name, result);
 
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Loaded additional assembly from '{path}' and registered it under '{name.Name}'.");
@@ -429,7 +437,20 @@ namespace Raven.Server.Documents.Indexes.Static
 
             static MetadataReference RegisterAssembly(Assembly assembly)
             {
-                return AdditionalAssemblies.Value.GetOrAdd(assembly.FullName, _ => new AdditionalAssemblyServerSide(assembly.GetName(), assembly, CreateMetadataReferenceFromAssembly(assembly), AdditionalAssemblyType.Package)).AssemblyMetadataReference;
+                var assemblyName = assembly.GetName();
+
+                if (AdditionalAssemblies.Value.TryGetValue(assemblyName.FullName, out var additionalAssembly))
+                    return additionalAssembly.AssemblyMetadataReference;
+
+                if (AdditionalAssemblies.Value.TryGetValue(assemblyName.Name, out additionalAssembly))
+                    return additionalAssembly.AssemblyMetadataReference;
+
+                additionalAssembly = new AdditionalAssemblyServerSide(assemblyName, assembly, CreateMetadataReferenceFromAssembly(assembly), AdditionalAssemblyType.Package);
+
+                AdditionalAssemblies.Value.TryAdd(assemblyName.FullName, additionalAssembly);
+                AdditionalAssemblies.Value.TryAdd(assemblyName.Name, additionalAssembly);
+
+                return additionalAssembly.AssemblyMetadataReference;
             }
 
             static Assembly LoadAssembly(string path)
