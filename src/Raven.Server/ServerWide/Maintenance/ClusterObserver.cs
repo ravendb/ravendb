@@ -128,7 +128,12 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         _iteration++;
                         var newStats = _maintenance.GetStats();
-                        AnalyzeLatestStats(newStats, prevStats).Wait(token);
+                        
+                        // ReSharper disable once MethodSupportsCancellation
+                        // we explicitly not passing a token here, since it will throw operation cancelled,
+                        // but the original task might continue to run (with an open tx)
+
+                        AnalyzeLatestStats(newStats, prevStats).Wait();
                         prevStats = newStats;
                     }
                 }
@@ -171,157 +176,156 @@ namespace Raven.Server.ServerWide.Maintenance
         private async Task AnalyzeLatestStats(
             Dictionary<string, ClusterNodeStatusReport> newStats,
             Dictionary<string, ClusterNodeStatusReport> prevStats
-            )
+        )
         {
             var currentLeader = _engine.CurrentLeader;
             if (currentLeader == null)
                 return;
 
+            var updateCommands = new List<(UpdateTopologyCommand Update, string Reason)>();
+            Dictionary<string, long> cleanUpState = null;
+            List<DeleteDatabaseCommand> deletions = null;
+            List<string> databases;
+
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                var updateCommands = new List<(UpdateTopologyCommand Update, string Reason)>();
-                Dictionary<string, long> cleanUpState = null;
-                List<DeleteDatabaseCommand> deletions = null;
+                databases = _engine.StateMachine.GetDatabaseNames(context).ToList();
+            }
+
+            var now = SystemTime.UtcNow;
+            var cleanupIndexes = now.Ticks - _lastIndexCleanupTimeInTicks >= _server.Configuration.Indexing.CleanupInterval.AsTimeSpan.Ticks;
+            var cleanupTombstones = now.Ticks - _lastTombstonesCleanupTimeInTicks >= _server.Configuration.Cluster.CompareExchangeTombstonesCleanupInterval.AsTimeSpan.Ticks;
+
+            foreach (var database in databases)
+            {
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var now = SystemTime.UtcNow;
-                    var cleanupIndexes = now.Ticks - _lastIndexCleanupTimeInTicks >= _server.Configuration.Indexing.CleanupInterval.AsTimeSpan.Ticks;
-                    var cleanupTombstones = now.Ticks - _lastTombstonesCleanupTimeInTicks >= _server.Configuration.Cluster.CompareExchangeTombstonesCleanupInterval.AsTimeSpan.Ticks;
-
                     var clusterTopology = _server.GetClusterTopology(context);
-                    foreach (var database in _engine.StateMachine.GetDatabaseNames(context))
+
+                    _cts.Token.ThrowIfCancellationRequested();
+
+                    using (var rawRecord = _engine.StateMachine.ReadRawDatabaseRecord(context, database, out long etag))
                     {
-                        using (var rawRecord = _engine.StateMachine.ReadRawDatabaseRecord(context, database, out long etag))
+                        if (rawRecord == null)
                         {
-                            if (rawRecord == null)
-                            {
-                                LogMessage($"Can't analyze the stats of database the {database}, because the database record is null.", database: database);
-                                continue;
-                            }
-
-                            var databaseTopology = rawRecord.Topology;
-                            var topologyStamp = databaseTopology?.Stamp ?? new LeaderStamp
-                            {
-                                Index = -1,
-                                LeadersTicks = -1,
-                                Term = -1
-                            };
-                            var graceIfLeaderChanged = _term > topologyStamp.Term && currentLeader.LeaderShipDuration < _stabilizationTimeMs;
-                            var letStatsBecomeStable = _term == topologyStamp.Term &&
-                                (currentLeader.LeaderShipDuration - topologyStamp.LeadersTicks < _stabilizationTimeMs);
-                            if (graceIfLeaderChanged || letStatsBecomeStable)
-                            {
-                                LogMessage($"We give more time for the '{database}' stats to become stable, so we skip analyzing it for now.", database: database);
-                                continue;
-                            }
-
-                            var state = new DatabaseObservationState
-                            {
-                                Name = database,
-                                DatabaseTopology = databaseTopology,
-                                ClusterTopology = clusterTopology,
-                                Current = newStats,
-                                Previous = prevStats,
-
-                                RawDatabase = rawRecord,
-                            };
-
-                            if (state.ReadDatabaseDisabled() == true)
-                                continue;
-
-                            var updateReason = UpdateDatabaseTopology(state, ref deletions);
-                            if (updateReason != null)
-                            {
-                                AddToDecisionLog(database, updateReason);
-
-                                var cmd = new UpdateTopologyCommand(database, RaftIdGenerator.NewId())
-                                {
-                                    Topology = databaseTopology,
-                                    RaftCommandIndex = etag
-                                };
-
-                                updateCommands.Add((cmd, updateReason));
-                            }
-
-                            var cleanUp = CleanUpDatabaseValues(state);
-                            if (cleanUp != null)
-                            {
-                                if (cleanUpState == null)
-                                    cleanUpState = new Dictionary<string, long>();
-
-                                cleanUpState.Add(database, cleanUp.Value);
-                            }
-
-                            if (cleanupIndexes)
-                                await CleanUpUnusedAutoIndexes(state);
-
-                            if (cleanupTombstones)
-                                _hasMoreTombstones |= await CleanUpCompareExchangeTombstones(database, context);
-                        }
-                    }
-
-                    if (cleanupIndexes)
-                        _lastIndexCleanupTimeInTicks = now.Ticks;
-
-                    if (cleanupTombstones && _hasMoreTombstones == false)
-                        _lastTombstonesCleanupTimeInTicks = now.Ticks;
-                }
-
-                foreach (var command in updateCommands)
-                {
-                    try
-                    {
-                        await UpdateTopology(command.Update);
-                        var alert = AlertRaised.Create(
-                            command.Update.DatabaseName,
-                            $"Topology of database '{command.Update.DatabaseName}' was changed",
-                            command.Reason,
-                            AlertType.DatabaseTopologyWarning,
-                            NotificationSeverity.Warning
-                        );
-                        NotificationCenter.Add(alert);
-                    }
-                    catch (ConcurrencyException)
-                    {
-                        // this is sort of expected, if the database was
-                        // modified by someone else, we'll avoid changing
-                        // it and run the logic again on the next round
-                        AddToDecisionLog(command.Update.DatabaseName, $"Topology of database '{command.Update.DatabaseName}' was not changed, reason: {nameof(ConcurrencyException)}");
-                    }
-                }
-                if (deletions != null)
-                {
-                    foreach (var command in deletions)
-                    {
-                        AddToDecisionLog(command.DatabaseName,
-                             $"We reached the replication factor on '{command.DatabaseName}', so we try to remove promotables/rehabs from: {string.Join(", ", command.FromNodes)}");
-
-                        await Delete(command);
-                    }
-                }
-
-                if (cleanUpState != null)
-                {
-                    var guid = "cleanup/" + GetCommandId(cleanUpState);
-                    if (_engine.ContainsCommandId(guid) == false)
-                    {
-                        foreach (var kvp in cleanUpState)
-                        {
-                            AddToDecisionLog(kvp.Key, $"Should clean up values up to raft index {kvp.Value}.");
+                            LogMessage($"Can't analyze the stats of database the {database}, because the database record is null.", database: database);
+                            continue;
                         }
 
-                        var cmd = new CleanUpClusterStateCommand(guid)
+                        var databaseTopology = rawRecord.Topology;
+                        var topologyStamp = databaseTopology?.Stamp ?? new LeaderStamp {Index = -1, LeadersTicks = -1, Term = -1};
+                        var graceIfLeaderChanged = _term > topologyStamp.Term && currentLeader.LeaderShipDuration < _stabilizationTimeMs;
+                        var letStatsBecomeStable = _term == topologyStamp.Term &&
+                                                   (currentLeader.LeaderShipDuration - topologyStamp.LeadersTicks < _stabilizationTimeMs);
+                        if (graceIfLeaderChanged || letStatsBecomeStable)
                         {
-                            ClusterTransactionsCleanup = cleanUpState
+                            LogMessage($"We give more time for the '{database}' stats to become stable, so we skip analyzing it for now.", database: database);
+                            continue;
+                        }
+
+                        var state = new DatabaseObservationState
+                        {
+                            Name = database,
+                            DatabaseTopology = databaseTopology,
+                            ClusterTopology = clusterTopology,
+                            Current = newStats,
+                            Previous = prevStats,
+                            RawDatabase = rawRecord,
                         };
 
-                        if (_engine.LeaderTag != _server.NodeTag)
+                        if (state.ReadDatabaseDisabled() == true)
+                            continue;
+
+                        var updateReason = UpdateDatabaseTopology(state, ref deletions);
+                        if (updateReason != null)
                         {
-                            throw new NotLeadingException("This node is no longer the leader, so abort the cleaning.");
+                            AddToDecisionLog(database, updateReason);
+
+                            var cmd = new UpdateTopologyCommand(database, RaftIdGenerator.NewId()) {Topology = databaseTopology, RaftCommandIndex = etag};
+
+                            updateCommands.Add((cmd, updateReason));
                         }
 
-                        await _engine.PutAsync(cmd);
+                        var cleanUp = CleanUpDatabaseValues(state);
+                        if (cleanUp != null)
+                        {
+                            if (cleanUpState == null)
+                                cleanUpState = new Dictionary<string, long>();
+
+                            cleanUpState.Add(database, cleanUp.Value);
+                        }
+
+                        if (cleanupIndexes)
+                            await CleanUpUnusedAutoIndexes(state);
+
+                        if (cleanupTombstones)
+                            _hasMoreTombstones |= await CleanUpCompareExchangeTombstones(database, context);
                     }
+                }
+            }
+
+            if (cleanupIndexes)
+                _lastIndexCleanupTimeInTicks = now.Ticks;
+
+            if (cleanupTombstones && _hasMoreTombstones == false)
+                _lastTombstonesCleanupTimeInTicks = now.Ticks;
+
+
+            foreach (var command in updateCommands)
+            {
+                try
+                {
+                    await UpdateTopology(command.Update);
+                    var alert = AlertRaised.Create(
+                        command.Update.DatabaseName,
+                        $"Topology of database '{command.Update.DatabaseName}' was changed",
+                        command.Reason,
+                        AlertType.DatabaseTopologyWarning,
+                        NotificationSeverity.Warning
+                    );
+                    NotificationCenter.Add(alert);
+                }
+                catch (ConcurrencyException)
+                {
+                    // this is sort of expected, if the database was
+                    // modified by someone else, we'll avoid changing
+                    // it and run the logic again on the next round
+                    AddToDecisionLog(command.Update.DatabaseName,
+                        $"Topology of database '{command.Update.DatabaseName}' was not changed, reason: {nameof(ConcurrencyException)}");
+                }
+            }
+
+            if (deletions != null)
+            {
+                foreach (var command in deletions)
+                {
+                    AddToDecisionLog(command.DatabaseName,
+                        $"We reached the replication factor on '{command.DatabaseName}', so we try to remove promotables/rehabs from: {string.Join(", ", command.FromNodes)}");
+
+                    await Delete(command);
+                }
+            }
+
+            if (cleanUpState != null)
+            {
+                var guid = "cleanup/" + GetCommandId(cleanUpState);
+                if (_engine.ContainsCommandId(guid) == false)
+                {
+                    foreach (var kvp in cleanUpState)
+                    {
+                        AddToDecisionLog(kvp.Key, $"Should clean up values up to raft index {kvp.Value}.");
+                    }
+
+                    var cmd = new CleanUpClusterStateCommand(guid) {ClusterTransactionsCleanup = cleanUpState};
+
+                    if (_engine.LeaderTag != _server.NodeTag)
+                    {
+                        throw new NotLeadingException("This node is no longer the leader, so abort the cleaning.");
+                    }
+
+                    await _engine.PutAsync(cmd);
                 }
             }
         }
@@ -897,7 +901,6 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             // check every node pair, and if one of them is lagging behind, move him to rehab
             reason = null;
-
             var members = state.DatabaseTopology.Members;
             for (int i = 0; i < members.Count - 1; i++)
             {
@@ -916,9 +919,11 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue;
 
                     var currentDistance = ChangeVectorUtils.Distance(current1, current2);
+                    if (Math.Abs(currentDistance) <= _maxChangeVectorDistance)
+                        continue;
+
                     var prevDistance = ChangeVectorUtils.Distance(prev1, prev2);
-                    if (Math.Abs(currentDistance) > _maxChangeVectorDistance && 
-                        Math.Abs(prevDistance) > _maxChangeVectorDistance)
+                    if (Math.Abs(prevDistance) > _maxChangeVectorDistance)
                     {
                         var rehab = currentDistance > 0 ? member2 : member1;
                         var rehabCheck = prevDistance > 0 ? member2 : member1;
@@ -929,7 +934,6 @@ namespace Raven.Server.ServerWide.Maintenance
                         state.DatabaseTopology.Rehabs.Add(rehab);
                         reason =
                             $"Node {rehab} for database '{state.Name}' moved to rehab, because he is lagging behind. (distance between {member1} and {member2} is {currentDistance})";
-
                         state.DatabaseTopology.DemotionReasons[rehab] = $"distance between {member1} and {member2} is {currentDistance}";
 
                         return false;
@@ -1503,6 +1507,7 @@ namespace Raven.Server.ServerWide.Maintenance
         public void Dispose()
         {
             _cts.Cancel();
+
             try
             {
                 if (_observe.Join((int)TimeSpan.FromSeconds(30).TotalMilliseconds) == false)
