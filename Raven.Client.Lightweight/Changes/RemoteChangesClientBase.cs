@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -9,7 +11,9 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Changes
@@ -31,7 +35,11 @@ namespace Raven.Client.Changes
         private readonly OperationCredentials credentials;
         private readonly HttpJsonRequestFactory jsonRequestFactory;
         private readonly Action onDispose;
-
+        private readonly Task worker;
+        private readonly ConcurrentQueue<Work> workQueue;
+        private CancellationTokenSource tokenSource;
+        volatile TaskCompletionSource<bool> syncSource = TaskCompletionSourceFactory.Create<bool>();
+        private CancellationTokenRegistration tokenRegistration;
         private IDisposable connection;
         private DateTime lastHeartbeat;
 
@@ -41,6 +49,7 @@ namespace Raven.Client.Changes
         private int isReconnecting = 0;
         private const int Reconnecting = 1;
         private const int Idle = 0;
+
 
         // This is the StateCounters, it is not related to the counters database
         protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);
@@ -63,9 +72,13 @@ namespace Raven.Client.Changes
             id = Interlocked.Increment(ref connectionCounter) + "/" + Base62Util.Base62Random();
 
             this.url = url;
+            workQueue = new ConcurrentQueue<Work>();
+            tokenSource = new CancellationTokenSource();
+            tokenRegistration = tokenSource.Token.Register(() => syncSource.TrySetCanceled());
             this.credentials = new OperationCredentials(apiKey, credentials);
             this.jsonRequestFactory = jsonRequestFactory;
             this.onDispose = onDispose;
+            worker = Worker();
             Conventions = conventions;
             Task = EstablishConnection()
                         .ObserveException()
@@ -85,7 +98,6 @@ namespace Raven.Client.Changes
         {
             logger.Info("Connection ({1}) status changed, new status: {0}", Connected, url);
         }
-
 
         public Task<TChangesApi> Task { get; private set; }
 
@@ -201,46 +213,92 @@ namespace Raven.Client.Changes
             }
         }
 
-        private Task lastSendTask;
+        async Task Worker()
+        {
+            while (tokenSource.IsCancellationRequested == false)
+            {
+                try
+                {
+                    await syncSource.Task.ConfigureAwait(false);
+                    syncSource = TaskCompletionSourceFactory.Create<bool>();
+                }
+                catch (TaskCanceledException)
+                {
+                    // Swallowing the task cancellation in case we are stopping work.
+                }
+
+                await WorkUntilEmpty().ConfigureAwait(false);
+            }
+
+            // drain
+            await WorkUntilEmpty().ConfigureAwait(false);
+        }
+
+        private async Task WorkUntilEmpty()
+        {
+            Work work;
+            while (workQueue.TryDequeue(out work))
+            {
+                using (work)
+                {
+                    try
+                    {
+                        await work.SendTask.ConfigureAwait(false);
+                        work.DoneTask.TrySetResult(true);
+                    }
+                    catch (Exception e)
+                    {
+                        work.DoneTask.TrySetException(e);
+                    }
+                }
+            }
+        }
+
+        struct Work : IDisposable
+        {
+            readonly HttpJsonRequest request;
+            public readonly TaskCompletionSource<bool> DoneTask;
+            public readonly Task SendTask;
+
+            public Work(TaskCompletionSource<bool> doneTask, HttpJsonRequest request, Task sendTask)
+            {
+                DoneTask = doneTask;
+                this.request = request;
+                SendTask = sendTask;
+            }
+
+            public void Dispose()
+            {
+                request.Dispose();
+            }
+        }
 
         protected Task Send(string command, string value)
         {
-            lock (this)
+            logger.Info("Sending command {0} - {1} to {2} with id {3}", command, value, url, id);
+            var sendUrlBuilder = new StringBuilder();
+            sendUrlBuilder.Append(url);
+            sendUrlBuilder.Append("/changes/config?id=");
+            sendUrlBuilder.Append(id);
+            sendUrlBuilder.Append("&command=");
+            sendUrlBuilder.Append(command);
+
+            if (string.IsNullOrEmpty(value) == false)
             {
-                logger.Info("Sending command {0} - {1} to {2} with id {3}", command, value, url, id);
-                var sendTask = lastSendTask;
-                if (sendTask != null)
-                {
-                    return sendTask.ContinueWith(_ =>
-                    {
-                        Send(command, value);
-                    });
-                }
-
-                try
-                {
-                    var sendUrl = url + "/changes/config?id=" + id + "&command=" + command;
-                    if (string.IsNullOrEmpty(value) == false)
-                        sendUrl += "&value=" + Uri.EscapeUriString(value);
-
-                    var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, HttpMethods.Get, credentials, Conventions)
-                    {
-                        AvoidCachingRequest = true
-                    };
-                    var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-                    lastSendTask = request.ExecuteRequestAsync().ObserveException();
-
-                    return lastSendTask.ContinueWith(task =>
-                    {
-                        lastSendTask = null;
-                        request.Dispose();
-                    });
-                }
-                catch (Exception e)
-                {
-                    return new CompletedTask(e).Task.ObserveException();
-                }
+                sendUrlBuilder.Append("&value=");
+                sendUrlBuilder.Append(Uri.EscapeUriString(value));
             }
+
+            var requestParams = new CreateHttpJsonRequestParams(null, sendUrlBuilder.ToString(), HttpMethods.Get, credentials, Conventions)
+            {
+                AvoidCachingRequest = true
+            };
+            var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
+            var done = TaskCompletionSourceFactory.Create<bool>();
+            var work = new Work(done, request, request.ExecuteRequestAsync());
+            workQueue.Enqueue(work);
+            syncSource.TrySetResult(true);
+            return done.Task;
         }
 
         public void Dispose()
@@ -248,36 +306,40 @@ namespace Raven.Client.Changes
             if (disposed)
                 return;
 
-            DisposeAsync().Wait();
+            DisposeAsync().GetAwaiter().GetResult();
         }
 
         private volatile bool disposed;
 
-        public Task DisposeAsync()
+        public async Task DisposeAsync()
         {
             if (disposed)
-                return new CompletedTask();
+                return;
 
             disposed = true;
             onDispose();
 
             DisposeHeartbeatTimer();
 
-            return Send("disconnect", null).
-                ContinueWith(_ =>
-                {
-                    try
-                    {
-                        if (connection != null)
-                            connection.Dispose();
-                    }
-                    catch (Exception e)
-                    {
-                        logger.ErrorException("Got error from server connection for " + url + " on id " + id, e);
-                    }
-                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-        }
+            try
+            {
+                await Send("disconnect", null).ConfigureAwait(false);
 
+                tokenSource.Cancel();
+                // will drain and handle disconnect command
+                await worker.ConfigureAwait(false);
+
+                if (connection != null)
+                    connection.Dispose();
+
+                tokenRegistration.Dispose();
+                tokenSource.Dispose();
+            }
+            catch (Exception e)
+            {
+                logger.ErrorException("Got error from server connection for " + url + " on id " + id, e);
+            }
+        }
 
         public virtual void OnError(Exception error)
         {
