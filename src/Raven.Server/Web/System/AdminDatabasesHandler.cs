@@ -1175,7 +1175,7 @@ namespace Raven.Server.Web.System
             await ServerStore.EnsureNotPassiveAsync();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var json = context.ReadForDisk(RequestBodyStream(), "unused-databases-ids"))
+            using (var json = context.ReadForDisk(RequestBodyStream(), "DatabaseIds"))
             {
                 var parameters = JsonDeserializationServer.Parameters.UnusedDatabaseParameters(json);
                 var command = new UpdateUnusedDatabaseIdsCommand(database, parameters.DatabaseIds, GetRaftRequestIdFromQuery());
