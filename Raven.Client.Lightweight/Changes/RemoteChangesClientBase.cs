@@ -73,7 +73,7 @@ namespace Raven.Client.Changes
                         {
                             task.AssertNotFailed();
                             return this as TChangesApi;
-                        });
+                        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
         protected TConventions Conventions { get; private set; }
@@ -275,7 +275,7 @@ namespace Raven.Client.Changes
                     {
                         logger.ErrorException("Got error from server connection for " + url + " on id " + id, e);
                     }
-                });
+                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
 
@@ -335,7 +335,7 @@ namespace Raven.Client.Changes
                         value.Error(task.Exception);
                     }
                     Counters.Clear();
-                });
+                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
         public void OnNext(string dataFromConnection)
