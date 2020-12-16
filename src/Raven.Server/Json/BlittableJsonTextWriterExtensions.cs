@@ -231,7 +231,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteSpatialPropertyResult(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, SpatialProperty result)
+        private static void WriteSpatialPropertyResult(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, SpatialProperty result)
         {
             writer.WriteStartObject();
 
