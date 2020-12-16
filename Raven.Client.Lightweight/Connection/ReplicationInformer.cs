@@ -146,12 +146,14 @@ namespace Raven.Client.Connection
 
         public void RefreshReplicationInformation(AsyncServerClient serverClient)
         {
-            RefreshReplicationInformationInternal(serverClient.Url, () => AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), null)));
+            AsyncHelpers.RunSync(() =>
+                RefreshReplicationInformationInternalAsync(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), null)));
         }
 
         public override void RefreshReplicationInformation(ServerClient serverClient)
         {
-            RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinations(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), null));
+            AsyncHelpers.RunSync(() =>
+                RefreshReplicationInformationInternalAsync(serverClient.Url, () => Task.FromResult(serverClient.DirectGetReplicationDestinations(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), null))));
         }
 
         private async Task RefreshReplicationInformationInternalAsync(string url, Func<Task<ReplicationDocumentWithClusterInformation>> getReplicationDestinations)
@@ -215,65 +217,6 @@ namespace Raven.Client.Connection
             finally
             {
                 replicationLock.Release();
-            }
-        }
-
-        private void RefreshReplicationInformationInternal(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
-        {
-            lock (this)
-            {
-                var serverHash = ServerHash.GetServerHash(url);
-
-                JsonDocument document;
-                var fromFailoverUrls = false;
-
-                try
-                {
-                    var replicationDestinations = getReplicationDestinations();
-                    document = replicationDestinations == null ? null : RavenJObject.FromObject(replicationDestinations).ToJsonDocument();
-                    FailureCounters.FailureCounts[url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
-                }
-                catch (Exception e)
-                {
-                    Log.ErrorException("Could not contact master for new replication information", e);
-                    document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
-
-                    if (document == null)
-                    {
-                        if (FailoverServers != null && FailoverServers.Length > 0) // try to use configured failover servers
-                        {
-                            var failoverServers = new ReplicationDocument { Destinations = new List<ReplicationDestination>() };
-
-                            foreach (var failover in FailoverServers)
-                            {
-                                failoverServers.Destinations.Add(failover);
-                            }
-
-                            document = new JsonDocument
-                                       {
-                                           DataAsJson = RavenJObject.FromObject(failoverServers)
-                                       };
-
-                            fromFailoverUrls = true;
-                        }
-                    }
-                }
-
-
-                if (document == null)
-                {
-                    lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
-                    ReplicationDestinations = new List<OperationMetadata>(); // clear destinations that could be retrieved from local storage
-                    Log.Info("Replication destinations cleared for url " + url + ". Failover servers count: " + (FailoverServers?.Length??0));
-                    return;
-                }
-
-                if (!fromFailoverUrls)
-                    ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
-
-                UpdateReplicationInformationFromDocument(document);
-
-                lastReplicationUpdate = SystemTime.UtcNow;
             }
         }
 
