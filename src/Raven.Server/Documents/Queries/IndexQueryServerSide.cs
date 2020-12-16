@@ -82,6 +82,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool AddTimeSeriesNames;
 
+        public bool AddSpatialProperties;
+
         public bool IsStream;
 
         public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
