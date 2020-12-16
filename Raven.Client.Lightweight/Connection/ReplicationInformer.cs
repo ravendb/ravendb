@@ -81,9 +81,10 @@ namespace Raven.Client.Connection
                 if (lastReplicationUpdate.Add(Conventions.TimeToWaitBetweenReplicationTopologyUpdates) > SystemTime.UtcNow && force == false)
                     return;
 
-                if (refreshReplicationInformationTask != null)
+                var taskCopy = refreshReplicationInformationTask;
+                if (taskCopy != null)
                 {
-                    await refreshReplicationInformationTask.ConfigureAwait(false);
+                    await taskCopy.ConfigureAwait(false);
                     return;
                 }
 
