@@ -2093,9 +2093,34 @@ namespace Raven.Server.ServerWide
 
                     _server.ServerCertificateChanged -= OnServerCertificateChanged;
 
+                    var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");
+
+                    exceptionAggregator.Execute(() =>
+                    {
+                        try
+                        {
+                            _engine?.Dispose();
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            //we are disposing, so don't care
+                        }
+                    });
+
+                    exceptionAggregator.Execute(() =>
+                    {
+                        if (_clusterMaintenanceSetupTask != null && _clusterMaintenanceSetupTask != PoolOfThreads.LongRunningWork.Current)
+                            _clusterMaintenanceSetupTask.Join(int.MaxValue);
+                    });
+
+                    exceptionAggregator.Execute(() =>
+                    {
+                        if (_updateTopologyChangeNotification != null && _updateTopologyChangeNotification != PoolOfThreads.LongRunningWork.Current)
+                            _updateTopologyChangeNotification.Join(int.MaxValue);
+                    });
+
                     var toDispose = new List<IDisposable>
                     {
-                        _engine,
                         StorageSpaceMonitor,
                         NotificationCenter,
                         LicenseManager,
@@ -2106,8 +2131,6 @@ namespace Raven.Server.ServerWide
                         ByteStringMemoryCache.Cleaner,
                         InitializationCompleted
                     };
-
-                    var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");
 
                     foreach (var disposable in toDispose)
                         exceptionAggregator.Execute(() =>
@@ -2124,18 +2147,6 @@ namespace Raven.Server.ServerWide
                             {
                             }
                         });
-
-                    exceptionAggregator.Execute(() =>
-                    {
-                        if (_clusterMaintenanceSetupTask != null && _clusterMaintenanceSetupTask != PoolOfThreads.LongRunningWork.Current)
-                            _clusterMaintenanceSetupTask.Join(int.MaxValue);
-                    });
-
-                    exceptionAggregator.Execute(() =>
-                    {
-                        if (_updateTopologyChangeNotification != null && _updateTopologyChangeNotification != PoolOfThreads.LongRunningWork.Current)
-                            _updateTopologyChangeNotification.Join(int.MaxValue);
-                    });
 
                     exceptionAggregator.Execute(_shutdownNotification.Dispose);
 

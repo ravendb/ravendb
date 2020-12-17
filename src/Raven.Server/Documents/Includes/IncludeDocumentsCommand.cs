@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Includes
                         {
                             json = _context.ReadForMemory(value.Range, "Facet/Object");
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
                             // expected, we can ignore this
                             continue;
