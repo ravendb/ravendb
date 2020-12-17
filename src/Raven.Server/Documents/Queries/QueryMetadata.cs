@@ -2330,13 +2330,17 @@ namespace Raven.Server.Documents.Queries
 
                             if (_metadata.SelectFields != null)
                             {
-                                latitudePropertyPath = GetPathWithAliasName(latitudePropertyPath);
-                                longitudePropertyPath = GetPathWithAliasName(longitudePropertyPath);
+                                var latitudePropertySelectedFieldPath = GetSelectedFieldPath(latitudePropertyPath);
+                                var longitudePropertySelectedFieldPath = GetSelectedFieldPath(longitudePropertyPath);
+                                if (latitudePropertySelectedFieldPath != null && longitudePropertySelectedFieldPath != null)
+                                {
+                                    AddSpatialPropertiesToMetadata(latitudePropertySelectedFieldPath, longitudePropertySelectedFieldPath);
+                                }
                             }
-                            
-                            _metadata.SpatialProperties ??= new List<SpatialProperty>();
-                            _metadata.SpatialProperties.Add(new SpatialProperty(latitudePropertyPath, longitudePropertyPath));
-                            
+                            else
+                            {
+                                AddSpatialPropertiesToMetadata(latitudePropertyPath, longitudePropertyPath);
+                            }
                             break;
                         default:
                             throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() or wkt() method", QueryText, parameters);
@@ -2394,19 +2398,31 @@ namespace Raven.Server.Documents.Queries
                 _metadata.AddWhereField(new QueryFieldName(f.FieldValue, f.IsQuoted), parameters);
             }
 
-            private string GetPathWithAliasName(string propertyPath)
+            private string GetSelectedFieldPath(string propertyPath)
             {
-                var dotPosition = propertyPath.IndexOf(".");
-                var firstField = propertyPath.Substring(0, dotPosition);
-                var theRest = propertyPath.Substring(dotPosition);
-
-                var selectedField = Array.Find(_metadata.SelectFields, x => x.Name.ToString() == firstField);
-                if (selectedField?.Alias != null)
+                foreach (var selectField in _metadata.SelectFields)
                 {
-                    return selectedField.Alias + theRest;
+                    var selectedName = selectField.Name.ToString();
+                    var selectedNameLength = selectedName.Length;
+                    
+                    if (propertyPath.StartsWith(selectedName) && (propertyPath.Length == selectedNameLength || propertyPath[selectedNameLength] == '.'))
+                    {
+                        if (selectField.Alias != null)
+                        {
+                            return selectField.Alias + propertyPath.Substring(selectedNameLength);
+                        }
+
+                        return propertyPath;
+                    }
                 }
 
-                return propertyPath;
+                return null;
+            }
+
+            private void AddSpatialPropertiesToMetadata(string latitudePropertyPath, string longitudePropertyPath)
+            {
+                _metadata.SpatialProperties ??= new List<SpatialProperty>();
+                _metadata.SpatialProperties.Add(new SpatialProperty(latitudePropertyPath, longitudePropertyPath));
             }
         }
 

@@ -1213,11 +1213,12 @@ class query extends viewModelBase {
                 let pointsArray: geoPoint[] = [];
                 for (let i = 0; i < queryResults.items.length; i++) {
                     const item = queryResults.items[i];
-
-                    const latitudeValue = _.get(item, latitudeProperty) as number;
-                    const longitudeValue = _.get(item, longitudeProperty) as number;
+                    const flatItem = generalUtils.flattenObj(item, "");
                     
-                    if (latitudeValue != null && longitudeValue != null) { 
+                    const latitudeValue = _.get(flatItem, latitudeProperty) as number;
+                    const longitudeValue = _.get(flatItem, longitudeProperty) as number;
+                    
+                    if (latitudeValue != null && longitudeValue != null) {
                         const point: geoPoint = { latitude: latitudeValue, longitude: longitudeValue, popupContent: item };
                         pointsArray.push(point);
                         this.totalNumberOfMarkers(this.totalNumberOfMarkers() + 1);
