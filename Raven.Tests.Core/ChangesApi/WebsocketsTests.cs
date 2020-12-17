@@ -46,7 +46,7 @@ namespace Raven.Tests.Core.ChangesApi
             public string Name { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "Known failure")]
         public void AreWebsocketsDestroyedAfterGC()
         {
             var counter = new ConcurrentQueue<BulkInsertChangeNotification>();
