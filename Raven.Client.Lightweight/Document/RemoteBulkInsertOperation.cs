@@ -64,7 +64,6 @@ namespace Raven.Client.Document
         private static readonly RavenJObject SkipMarker = new RavenJObject();
         private HttpJsonRequest operationRequest;
         private readonly Task operationTask;
-        private readonly Task completedTask = Task.FromResult(0);
         private bool aborted;
         private bool waitedForPreviousTask;
         private readonly Stopwatch _timing = Stopwatch.StartNew();
@@ -244,7 +243,7 @@ namespace Raven.Client.Document
             return requestUrl.ToString();
         }
 
-        private Task WriteQueueToServer(Stream stream, BulkInsertOptions options, CancellationToken cancellationToken)
+        private async Task WriteQueueToServer(Stream stream, BulkInsertOptions options, CancellationToken cancellationToken)
         {
             while (true)
             {
@@ -259,7 +258,8 @@ namespace Raven.Client.Document
 
                     if (document == null) // marker
                     {
-                        return FlushBatch(stream, batch);
+                        await FlushBatch(stream, batch).ConfigureAwait(false);
+                        return;
                     }
                     if (ReferenceEquals(SkipMarker, document)) // ignore this, just filling the queue
                     {
@@ -267,7 +267,7 @@ namespace Raven.Client.Document
                     }
                     if (ReferenceEquals(AbortMarker, document)) // abort immediately
                     {
-                        return completedTask;
+                        return;
                     }
 
                     batch.Add(document);
@@ -280,7 +280,7 @@ namespace Raven.Client.Document
                         break;
                 }
 
-                return FlushBatch(stream, batch);
+                await FlushBatch(stream, batch).ConfigureAwait(false);
             }
         }
 
