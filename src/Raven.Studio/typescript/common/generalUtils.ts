@@ -642,6 +642,20 @@ class genUtils {
         div.remove();
         return html;
     }
+    
+    static flattenObj(obj: any, parentKey: string, res = {}) {
+        for (let key in obj){
+            const propName = parentKey ? parentKey + "." + key : key;
+            const value = obj[key];
+
+            if (typeof value === "object"){
+                genUtils.flattenObj(value, propName, res);
+            } else {
+                (<any>res)[propName] = value;
+            }
+        }
+        return res;
+    }
 } 
 
 export = genUtils;

@@ -37,7 +37,8 @@ namespace SlowTests.Tests.Spatial
 
                 using (var commands = store.Commands())
                 {
-                    var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), spatial.circle(50, 44.75, -93.35))&addSpatialProperties=true");
+                    var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), spatial.circle(50, 44.75, -93.35))" +
+                                                                              "&addSpatialProperties=true");
 
                     Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
                     Assert.Equal(3, results);
@@ -80,9 +81,10 @@ namespace SlowTests.Tests.Spatial
                 using (var commands = store.Commands())
                 {
                     var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs " +
-                        "where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), spatial.circle(50, 44.75, -93.35)) " +
-                        "or spatial.within(spatial.point(Location2.Latitude, Location2.Longitude), spatial.circle(50, 45.75, -94.35)) " +
-                        $"or spatial.within(spatial.point(Location3.Latitude, Location3.Longitude), spatial.wkt('{boundingPolygon}'))&addSpatialProperties=true");
+                                                                              "where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), spatial.circle(50, 44.75, -93.35)) " +
+                                                                              "or spatial.within(spatial.point(Location2.Latitude, Location2.Longitude), spatial.circle(50, 45.75, -94.35)) " +
+                                                                              $"or spatial.within(spatial.point(Location3.Latitude, Location3.Longitude), spatial.wkt('{boundingPolygon}'))" +
+                                                                              "&addSpatialProperties=true");
 
                     Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
                     Assert.Equal(4, results);
@@ -102,7 +104,7 @@ namespace SlowTests.Tests.Spatial
         }
         
         [Fact]
-        public void VerifySelectedSpatialPropertiesInResultsTest()
+        public void VerifySelectedSpatialPropertiesWithAliasInResultsTest()
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
@@ -126,7 +128,8 @@ namespace SlowTests.Tests.Spatial
                 {
                     var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs " +
                                                                               "where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), spatial.circle(50, 44.75, -93.35)) " +
-                                                                              "select Location1 as SomeAlias&addSpatialProperties=true");
+                                                                              "select Location1 as SomeAlias" +
+                                                                              "&addSpatialProperties=true");
 
                     Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
                     Assert.Equal(3, results);
@@ -138,6 +141,120 @@ namespace SlowTests.Tests.Spatial
                     Assert.Equal(lat, "SomeAlias.Latitude");
                     (spatialProperties[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LongitudeProperty), out string lng);
                     Assert.Equal(lng, "SomeAlias.Longitude");
+                }
+            }
+        }
+
+        [Fact]
+        public void VerifySelectedSpatialPropertiesWithoutAliasInResultsTest()
+        {
+            var house1 = new GeoDoc(44.75, -93.35);
+            var house2 = new GeoDoc(44.751, -93.351);
+            var house3 = new GeoDoc(44.752, -93.352);
+            var house4 = new GeoDoc(45.75, -94.35);
+
+            using (var store = GetDocumentStore())
+            {
+                store.Initialize();
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(house1);
+                    session.Store(house2);
+                    session.Store(house3);
+                    session.Store(house4);
+                    session.SaveChanges();
+                }
+
+                using (var commands = store.Commands())
+                {
+                    var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs " +
+                                                                              "where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), spatial.circle(50, 44.75, -93.35)) " +
+                                                                              "select Location1" +
+                                                                              "&addSpatialProperties=true");
+
+                    Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
+                    Assert.Equal(3, results);
+                    
+                    Assert.True(json.TryGet(nameof(DocumentQueryResult.SpatialProperties), out BlittableJsonReaderArray spatialProperties));
+                    Assert.Equal(1, spatialProperties.Length);
+
+                    (spatialProperties[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LatitudeProperty), out string lat);
+                    Assert.Equal(lat, "Location1.Latitude");
+                    (spatialProperties[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LongitudeProperty), out string lng);
+                    Assert.Equal(lng, "Location1.Longitude");
+                }
+            }
+        }
+        
+        [Fact]
+        public void VerifyNoSpatialPropertiesInResultsWhenSelectingOnlyLatitudePropertyTest()
+        {
+            var house1 = new GeoDoc(44.75, -93.35);
+            var house2 = new GeoDoc(44.751, -93.351);
+            var house3 = new GeoDoc(44.752, -93.352);
+            var house4 = new GeoDoc(45.75, -94.35);
+
+            using (var store = GetDocumentStore())
+            {
+                store.Initialize();
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(house1);
+                    session.Store(house2);
+                    session.Store(house3);
+                    session.Store(house4);
+                    session.SaveChanges();
+                }
+
+                using (var commands = store.Commands())
+                {
+                    var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs " +
+                                                                              "where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), spatial.circle(50, 44.75, -93.35)) " +
+                                                                              "select Location1.latitude" +
+                                                                              "&addSpatialProperties=true");
+
+                    Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
+                    Assert.Equal(3, results);
+                    
+                    Assert.False(json.TryGet(nameof(DocumentQueryResult.SpatialProperties), out BlittableJsonReaderArray spatialProperties));
+                }
+            }
+        }
+        
+        [Fact]
+        public void VerifyNoSpatialPropertiesInResultsWhenSelectingNonSpatialFieldTest()
+        {
+            var house1 = new GeoDoc(44.75, -93.35);
+            var house2 = new GeoDoc(44.751, -93.351);
+            var house3 = new GeoDoc(44.752, -93.352);
+            var house4 = new GeoDoc(45.75, -94.35);
+
+            using (var store = GetDocumentStore())
+            {
+                store.Initialize();
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(house1);
+                    session.Store(house2);
+                    session.Store(house3);
+                    session.Store(house4);
+                    session.SaveChanges();
+                }
+
+                using (var commands = store.Commands())
+                {
+                    var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs " +
+                                                                              "where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), spatial.circle(50, 44.75, -93.35)) " +
+                                                                              "select Id" +
+                                                                              "&addSpatialProperties=true");
+
+                    Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
+                    Assert.Equal(3, results);
+                    
+                    Assert.False(json.TryGet(nameof(DocumentQueryResult.SpatialProperties), out BlittableJsonReaderArray spatialProperties));
                 }
             }
         }
