@@ -6,6 +6,9 @@ import queryCriteria = require("models/database/query/queryCriteria");
 import queryUtil = require("common/queryUtil");
 
 class queryCommand extends commandBase {
+
+    private static readonly missingEndOfQuery = "Expected end of query"; 
+    
     constructor(private db: database, private skip: number, private take: number, private criteria: queryCriteria, private disableCache?: boolean) {
         super();
     }
@@ -21,12 +24,20 @@ class queryCommand extends commandBase {
                 explanations: results.Explanations,
                 timings: results.Timings,
                 includes: results.Includes }) as pagedResultExtended<document>;
+        
         return this.query(this.getUrl(), null, this.db, selector)
             .fail((response: JQueryXHR) => {
                 if (response.status === 404) {
                     this.reportError("Error querying index", "Index was not found", response.statusText)
                 } else {
-                    this.reportError("Error querying index", response.responseText, response.statusText)
+                    const responseText = response.responseText;
+                    let errorTitle = "Error querying index";
+
+                    if (responseText.includes(queryCommand.missingEndOfQuery)) {
+                        errorTitle = "Incorrect query command syntax";
+                    }
+                    
+                    this.reportError(errorTitle, responseText, response.statusText);
                 }
             });
     }
@@ -45,7 +56,6 @@ class queryCommand extends commandBase {
         
         return [parameters, rql];
     }
-
 
     static extractQueryParameters(queryText: string) {
         const arrayOfLines = queryText.match(/[^\r\n]+/g);
@@ -90,7 +100,6 @@ f();
         const rql = queryText.substring(match.index);
         return [parameters, rql];
     }
-    
     
     getUrl() {
         const criteria = this.criteria;
