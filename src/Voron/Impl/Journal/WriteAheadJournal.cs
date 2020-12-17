@@ -363,8 +363,9 @@ namespace Voron.Impl.Journal
 #if DEBUG
                 if (instanceOfLastFlushedJournal == null)
                 {
-                    Debug.Assert(toDelete.Count == 0, $"Last flushed journal (number: {lastFlushedJournal}) doesn't exist so we didn't call {nameof(_journalApplicator.SetLastFlushed)} but" +
-                                                      $" there are still some journals to delete ({string.Join(", ", toDelete.Select(x => x.Number))}. )");
+                    Debug.Assert(toDelete.Count == 0 || deleteLastJournal, $"Last flushed journal (number: {lastFlushedJournal}) doesn't exist so we didn't call {nameof(_journalApplicator.SetLastFlushed)}" +
+                                                                           $" and didn't mark to delete last journal but," +
+                                                                           $" there are still some journals to delete ({string.Join(", ", toDelete.Select(x => x.Number))}. )");
                 }
 #endif
             }
