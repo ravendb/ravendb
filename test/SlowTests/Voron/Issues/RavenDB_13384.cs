@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using FastTests.Voron;
 using Voron;
 using Voron.Impl.Journal;
@@ -30,7 +31,7 @@ namespace SlowTests.Voron.Issues
 
             using (var tx = Env.WriteTransaction())
             {
-                tx.CreateTree("tree").Add("item", new byte[]{ 1, 2, 3});
+                tx.CreateTree("tree").Add("item", new byte[] { 1, 2, 3 });
 
                 tx.Commit();
             }
@@ -39,7 +40,7 @@ namespace SlowTests.Voron.Issues
 
             using (var tx = Env.WriteTransaction())
             {
-                tx.CreateTree("tree").Add("item", new byte[] { 1, 2, 3 });
+                tx.CreateTree("tree").Add("item", new byte[] { 3, 2, 1 });
 
                 Assert.Throws<InvalidOperationException>(() =>
                 {
@@ -56,6 +57,16 @@ namespace SlowTests.Voron.Issues
             Assert.Equal(numberOfJournals + 1, Env.Journal.Files.Count);
 
             RestartDatabase();
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var result = tx.ReadTree("tree").Read("item");
+                Assert.NotNull(result);
+                var buf = new byte[3];
+                var read = result.Reader.Read(buf, 0, 3);
+                Assert.Equal(3, read);
+                Assert.True(buf.SequenceEqual(new byte[] { 1, 2, 3 }), "buf.SequenceEqual(new byte[] { 1, 2, 3 })");
+            }
 
             using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
             {
@@ -83,13 +94,23 @@ namespace SlowTests.Voron.Issues
             {
                 using (var tx = Env.WriteTransaction())
                 {
-                    tx.CreateTree("tree").Add("item", new byte[] { 1, 2, 3 });
+                    tx.CreateTree("tree").Add("item", new byte[] { 4, 5, 6 });
 
                     tx.Commit();
                 }
             }
 
             RestartDatabase();
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var result = tx.ReadTree("tree").Read("item");
+                Assert.NotNull(result);
+                var buf = new byte[3];
+                var read = result.Reader.Read(buf, 0, 3);
+                Assert.Equal(3, read);
+                Assert.True(buf.SequenceEqual(new byte[] { 4, 5, 6 }), "buf.SequenceEqual(new byte[] { 4, 5, 6 })");
+            }
 
             Env.FlushLogToDataFile();
 
@@ -104,13 +125,23 @@ namespace SlowTests.Voron.Issues
             {
                 using (var tx = Env.WriteTransaction())
                 {
-                    tx.CreateTree("tree").Add("item", new byte[] { 1, 2, 3 });
+                    tx.CreateTree("tree").Add("item", new byte[] { 7, 8, 9 });
 
                     tx.Commit();
                 }
             }
 
             Env.FlushLogToDataFile();
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var result = tx.ReadTree("tree").Read("item");
+                Assert.NotNull(result);
+                var buf = new byte[3];
+                var read = result.Reader.Read(buf, 0, 3);
+                Assert.Equal(3, read);
+                Assert.True(buf.SequenceEqual(new byte[] { 7, 8, 9 }), "buf.SequenceEqual(new byte[] { 7, 8, 9 })");
+            }
 
             using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
             {
