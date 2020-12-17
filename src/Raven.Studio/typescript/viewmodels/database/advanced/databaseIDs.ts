@@ -57,8 +57,8 @@ class databaseIDs extends viewModelBase {
                     const fetchUnusedIDsTask = this.fetchUnusedDatabaseIDs();
 
                     return $.when<any>(fetchStatsTask, fetchUnusedIDsTask)
-                        .then(() => (deferred.resolve({ can: true })))
-                        .fail(() => (deferred.resolve({ redirect: appUrl.forStatus(this.activeDatabase()) })));
+                        .then(() => deferred.resolve({ can: true }))
+                        .fail(() => deferred.resolve({ redirect: appUrl.forStatus(this.activeDatabase()) }));
                 }
 
                 return deferred;
