@@ -183,6 +183,8 @@ namespace Raven.Server.Documents
                     }
                 }
 
+                FlagsProperlySet(flags, changeVector);
+
                 using (Slice.From(context.Allocator, changeVector, out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {

@@ -23,6 +23,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
@@ -1214,6 +1215,8 @@ namespace RachisTests.DatabaseCluster
                     "0N64iiIdYUKcO+yq1V0cPA"
                 }));
 
+                await WaitForRaftCommandToBeAppliedInLocalServer(nameof(UpdateUnusedDatabaseIdsCommand));
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = new User();
@@ -1223,6 +1226,8 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 await store.Maintenance.Server.SendAsync(new UpdateUnusedDatabasesOperation(store.Database, null));
+                await WaitForRaftCommandToBeAppliedInLocalServer(nameof(UpdateUnusedDatabaseIdsCommand));
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = new User();

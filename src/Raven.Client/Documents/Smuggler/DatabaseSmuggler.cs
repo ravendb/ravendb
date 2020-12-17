@@ -120,7 +120,7 @@ namespace Raven.Client.Documents.Smuggler
 
                 return new Operation(
                     _requestExecutor,
-                    () => _store.Changes(_databaseName),
+                    () => _store.Changes(_databaseName, getOperationIdCommand.NodeTag),
                     _requestExecutor.Conventions,
                     operationId,
                     getOperationIdCommand.NodeTag,
@@ -261,7 +261,8 @@ namespace Raven.Client.Documents.Smuggler
                         await tcs.Task.ConfigureAwait(false);
                     }
 
-                    return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _requestExecutor.Conventions, operationId, nodeTag: getOperationIdCommand.NodeTag, additionalTask: task);
+                    return new Operation(_requestExecutor, () => _store.Changes(_databaseName, getOperationIdCommand.NodeTag), _requestExecutor.Conventions, operationId,
+                        nodeTag: getOperationIdCommand.NodeTag, additionalTask: task);
                 }
             }
             catch (Exception e)
