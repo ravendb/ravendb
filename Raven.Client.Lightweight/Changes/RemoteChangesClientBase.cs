@@ -105,7 +105,7 @@ namespace Raven.Client.Changes
         {
             foreach (var value in Counters.ValuesSnapshot)
             {
-                value.Task.Wait();
+                value.Task.GetAwaiter().GetResult();
             }
         }
 
