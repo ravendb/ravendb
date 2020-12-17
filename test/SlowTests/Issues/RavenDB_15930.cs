@@ -28,10 +28,13 @@ namespace SlowTests.Issues
             CreateAndPopulateTree(startWithBigTx: false);
 
             // restart
-            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath(DataDir), manualFlushing: false)))
+            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath(DataDir), manualFlushing: true)))
             {
                 var journalPath = env.Options.JournalPath.FullPath;
                 var journalsCount = new DirectoryInfo(journalPath).GetFiles().Length;
+
+                env.FlushLogToDataFile();
+                env.ForceSyncDataFile();
                 Assert.True(SpinWait.SpinUntil(() => new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*").Length == journalsCount,
                     TimeSpan.FromSeconds(30)));
             }
