@@ -79,7 +79,7 @@ namespace SlowTests.Issues
                         {
                             Assert.Equal("+Name:john^2.0 +Name:bob^3.0 +Name:george^4.0 +Name:georgina^5.0 +Name:jane^6.0", GetLuceneQuery(usersAnd, context, serializer, buildSteps));
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
                             foreach (string buildStep in buildSteps)
                             {
@@ -105,7 +105,7 @@ namespace SlowTests.Issues
                         {
                             Assert.Equal("(+Name:john^2.0 +Name:bob^3.0 +Name:george^4.0) Name:georgina^5.0 Name:jane^6.0", GetLuceneQuery(usersAndOrMixed, context, serializer, buildSteps));
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
                             foreach (string buildStep in buildSteps)
                             {
@@ -133,7 +133,7 @@ namespace SlowTests.Issues
                         {
                             Assert.Equal("Name:john^2.0 Name:bob^3.0 (+Name:george^4.0 +Name:georgina^5.0 +Name:jane^6.0)", GetLuceneQuery(usersAndOrMixed2, context, serializer, buildSteps));
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
                             foreach (string buildStep in buildSteps)
                             {
@@ -161,7 +161,7 @@ namespace SlowTests.Issues
                         {
                             Assert.Equal("Name:john^2.0 (+Name:bob^3.0 +Name:george^4.0) (+Name:georgina^5.0 +Name:jane^6.0)", GetLuceneQuery(usersAndOrMixed3, context, serializer, buildSteps));
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
                             foreach (string buildStep in buildSteps)
                             {
