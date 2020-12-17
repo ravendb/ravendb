@@ -8,6 +8,7 @@ import messagePublisher = require("common/messagePublisher");
 import accessManager = require("common/shell/accessManager");
 import eventsCollector = require("common/eventsCollector");
 import saveDatabaseRecordCommand = require("commands/resources/saveDatabaseRecordCommand");
+import genUtils = require("common/generalUtils");
 
 class databaseRecord extends viewModelBase {
     isDocumentCollapsed = ko.observable<boolean>(false);
@@ -150,7 +151,7 @@ class databaseRecord extends viewModelBase {
             .then(result => {
                 if (result.can) {
                     let dto = JSON.parse(this.documentText());
-                    dto.Settings = this.flattenSettings(dto.Settings, "");
+                    dto.Settings = genUtils.flattenObj(dto.Settings, "");
                     
                     new saveDatabaseRecordCommand(this.activeDatabase(), dto, dto.Etag)
                         .execute()
@@ -160,20 +161,6 @@ class databaseRecord extends viewModelBase {
                         });
                 }
             });
-    }
-
-    private flattenSettings(obj: any, parentKey: string, res = {}) {
-        for (let key in obj){
-            const propName = parentKey ? parentKey + "." + key : key;
-            const value = obj[key];
-            
-            if (typeof value === "object"){
-                this.flattenSettings(value, propName, res);
-            } else {
-                (<any>res)[propName] = value;
-            }
-        }
-        return res;
     }
 
     private fetchDatabaseRecord(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
