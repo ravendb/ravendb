@@ -330,12 +330,12 @@ namespace Raven.Server.Utils
                     aIndex++;
                     bIndex++;
                 }
-                else if (compare < 1)
+                else if (compare < 0)
                 {
                     diff += aElement.Etag;
                     aIndex++;
                 }
-                else if (compare > 1)
+                else
                 {
                     diff -= bElement.Etag;
                     bIndex++;
