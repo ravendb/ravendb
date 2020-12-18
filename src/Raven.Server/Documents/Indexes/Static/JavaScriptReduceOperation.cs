@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Jint;
 using Jint.Native;
@@ -261,6 +262,9 @@ namespace Raven.Server.Documents.Indexes.Static
                         {
                             BlittableJsonReaderObject bjro => new BlittableObjectInstance(Engine, null, bjro, null, null, null),
                             Document doc => new BlittableObjectInstance(Engine, null, doc.Data, doc),
+                            LazyStringValue lsv => new JsString(lsv.ToString()),
+                            LazyCompressedStringValue lcsv => new JsString(lcsv.ToString()),
+                            LazyNumberValue lnv => new JsNumber(lnv.ToDouble(CultureInfo.InvariantCulture)),
                           _ =>  JsValue.FromObject(Engine, value)
                         };
                         

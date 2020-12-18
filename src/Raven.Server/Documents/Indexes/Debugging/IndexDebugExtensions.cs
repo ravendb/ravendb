@@ -322,21 +322,20 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
         private static string GetTreeName(BlittableJsonReaderObject reduceEntry, IndexDefinitionBase indexDefinition, JsonOperationContext context)
         {
-            HashSet<CompiledIndexField> groupByFields;
+            Dictionary<string, CompiledIndexField> groupByFields;
 
             if (indexDefinition is MapReduceIndexDefinition)
                 groupByFields = ((MapReduceIndexDefinition)indexDefinition).GroupByFields;
             else if (indexDefinition is AutoMapReduceIndexDefinition)
-                groupByFields = ((AutoMapReduceIndexDefinition)indexDefinition).GroupByFields.Keys
-                    .Select(x => (CompiledIndexField)new SimpleField(x))
-                    .ToHashSet();
+                groupByFields = ((AutoMapReduceIndexDefinition)indexDefinition).GroupByFields
+                    .ToDictionary(x => x.Key, x => (CompiledIndexField)new SimpleField(x.Key));
             else
                 throw new InvalidOperationException("Invalid map reduce index definition: " + indexDefinition.GetType());
 
             foreach (var prop in reduceEntry.GetPropertyNames())
             {
                 var skip = false;
-                foreach (var groupByField in groupByFields)
+                foreach (var groupByField in groupByFields.Values)
                 {
                     if (groupByField.IsMatch(prop))
                     {
