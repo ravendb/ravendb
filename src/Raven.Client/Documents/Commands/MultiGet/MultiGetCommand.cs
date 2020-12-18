@@ -24,11 +24,23 @@ namespace Raven.Client.Documents.Commands.MultiGet
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             ResponseType = RavenCommandResponseType.Raw;
+            _cachedValues = new List<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)>(commands.Count);
+        }
+        
+        private readonly List<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)> _cachedValues;
+
+        ~MultiGetCommand()
+        {
+            ReleaseCachedValues();
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             _baseUrl = $"{node.Url}/databases/{node.Database}";
+
+            // in case we had a fail over and we call this method again on the same instance
+            ReleaseCachedValues();
+            GC.ReRegisterForFinalize(this);
 
             var request = new HttpRequestMessage
             {
@@ -49,53 +61,54 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
                             first = false;
                             var cacheKey = GetCacheKey(command, out string _);
-                            using (_cache.Get(ctx, cacheKey, out string cachedChangeVector, out var _))
+                            var release = _cache.Get(ctx, cacheKey, out string cachedChangeVector, out var item);
+                            _cachedValues.Add((release, item));
+                            
+                            var headers = new Dictionary<string, string>();
+                            if (cachedChangeVector != null)
+                                headers["If-None-Match"] = $"\"{cachedChangeVector}\"";
+
+                            foreach (var header in command.Headers)
+                                headers[header.Key] = header.Value;
+
+                            writer.WriteStartObject();
+
+                            writer.WritePropertyName(nameof(GetRequest.Url));
+                            writer.WriteString($"/databases/{node.Database}{command.Url}");
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(nameof(GetRequest.Query));
+                            writer.WriteString(command.Query);
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(nameof(GetRequest.Method));
+                            writer.WriteString(command.Method?.Method);
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(nameof(GetRequest.Headers));
+                            writer.WriteStartObject();
+
+                            var firstInner = true;
+                            foreach (var kvp in headers)
                             {
-                                var headers = new Dictionary<string, string>();
-                                if (cachedChangeVector != null)
-                                    headers["If-None-Match"] = $"\"{cachedChangeVector}\"";
+                                if (firstInner == false)
+                                    writer.WriteComma();
 
-                                foreach (var header in command.Headers)
-                                    headers[header.Key] = header.Value;
-
-                                writer.WriteStartObject();
-
-                                writer.WritePropertyName(nameof(GetRequest.Url));
-                                writer.WriteString($"/databases/{node.Database}{command.Url}");
-                                writer.WriteComma();
-
-                                writer.WritePropertyName(nameof(GetRequest.Query));
-                                writer.WriteString(command.Query);
-                                writer.WriteComma();
-
-                                writer.WritePropertyName(nameof(GetRequest.Method));
-                                writer.WriteString(command.Method?.Method);
-                                writer.WriteComma();
-
-                                writer.WritePropertyName(nameof(GetRequest.Headers));
-                                writer.WriteStartObject();
-
-                                var firstInner = true;
-                                foreach (var kvp in headers)
-                                {
-                                    if (firstInner == false)
-                                        writer.WriteComma();
-
-                                    firstInner = false;
-                                    writer.WritePropertyName(kvp.Key);
-                                    writer.WriteString(kvp.Value);
-                                }
-                                writer.WriteEndObject();
-                                writer.WriteComma();
-
-                                writer.WritePropertyName(nameof(GetRequest.Content));
-                                if (command.Content != null)
-                                    command.Content.WriteContent(writer, ctx);
-                                else
-                                    writer.WriteNull();
-
-                                writer.WriteEndObject();
+                                firstInner = false;
+                                writer.WritePropertyName(kvp.Key);
+                                writer.WriteString(kvp.Value);
                             }
+
+                            writer.WriteEndObject();
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(nameof(GetRequest.Content));
+                            if (command.Content != null)
+                                command.Content.WriteContent(writer, ctx);
+                            else
+                                writer.WriteNull();
+
+                            writer.WriteEndObject();
                         }
                         writer.WriteEndArray();
 
@@ -109,6 +122,16 @@ namespace Raven.Client.Documents.Commands.MultiGet
             return request;
         }
 
+        private void ReleaseCachedValues()
+        {
+            GC.SuppressFinalize(this);
+            foreach (var (release, _) in _cachedValues)
+            {
+                release.Dispose();
+            }
+            _cachedValues.Clear();
+        }
+
         private string GetCacheKey(GetRequest command, out string requestUrl)
         {
             requestUrl = $"{_baseUrl}{command.UrlAndQuery}";
@@ -118,40 +141,47 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
-            var state = new JsonParserState();
-            using (var parser = new UnmanagedJsonParser(context, state, "multi_get/response"))
-            using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
-            using (var peepingTomStream = new PeepingTomStream(stream, context))
+            try
             {
-                if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
-                    ThrowInvalidJsonResponse(peepingTomStream);
-
-                if (state.CurrentTokenType != JsonParserToken.StartObject)
-                    ThrowInvalidJsonResponse(peepingTomStream);
-
-                var property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
-                if (property != nameof(BlittableArrayResult.Results))
-                    ThrowInvalidJsonResponse(peepingTomStream);
-
-                var i = 0;
-                Result = new List<GetResponse>();
-                foreach (var getResponse in ReadResponses(context, peepingTomStream, parser, state, buffer))
+                var state = new JsonParserState();
+                using (var parser = new UnmanagedJsonParser(context, state, "multi_get/response"))
+                using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
+                using (var peepingTomStream = new PeepingTomStream(stream, context))
                 {
-                    var command = _commands[i];
+                    if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
+                        ThrowInvalidJsonResponse(peepingTomStream);
 
-                    MaybeSetCache(getResponse, command);
-                    MaybeReadFromCache(getResponse, command, context);
+                    if (state.CurrentTokenType != JsonParserToken.StartObject)
+                        ThrowInvalidJsonResponse(peepingTomStream);
 
-                    Result.Add(getResponse);
+                    var property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
+                    if (property != nameof(BlittableArrayResult.Results))
+                        ThrowInvalidJsonResponse(peepingTomStream);
 
-                    i++;
+                    var i = 0;
+                    Result = new List<GetResponse>();
+                    foreach (var getResponse in ReadResponses(context, peepingTomStream, parser, state, buffer))
+                    {
+                        var command = _commands[i];
+
+                        MaybeSetCache(getResponse, command);
+                        MaybeReadFromCache(getResponse, i, command, context);
+
+                        Result.Add(getResponse);
+
+                        i++;
+                    }
+
+                    if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
+                        ThrowInvalidJsonResponse(peepingTomStream);
+
+                    if (state.CurrentTokenType != JsonParserToken.EndObject)
+                        ThrowInvalidJsonResponse(peepingTomStream);
                 }
-
-                if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
-                    ThrowInvalidJsonResponse(peepingTomStream);
-
-                if (state.CurrentTokenType != JsonParserToken.EndObject)
-                    ThrowInvalidJsonResponse(peepingTomStream);
+            }
+            finally
+            {
+                ReleaseCachedValues();
             }
         }
 
@@ -249,16 +279,12 @@ namespace Raven.Client.Documents.Commands.MultiGet
             return getResponse;
         }
 
-        private void MaybeReadFromCache(GetResponse getResponse, GetRequest command, JsonOperationContext context)
+        private void MaybeReadFromCache(GetResponse getResponse, int index, GetRequest command, JsonOperationContext context)
         {
             if (getResponse.StatusCode != HttpStatusCode.NotModified)
                 return;
 
-            var cacheKey = GetCacheKey(command, out string _);
-            using (_cache.Get(context, cacheKey, out string _, out BlittableJsonReaderObject cachedResponse))
-            {
-                getResponse.Result = cachedResponse;
-            }
+            getResponse.Result = _cachedValues[index].Item2;
         }
 
         private void MaybeSetCache(GetResponse getResponse, GetRequest command)
