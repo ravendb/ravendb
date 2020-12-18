@@ -329,18 +329,21 @@ namespace Raven.Client.Changes
                 await Send("disconnect", null).ConfigureAwait(false);
 
                 tokenSource.Cancel();
-                // will drain and handle disconnect command
-                await worker.ConfigureAwait(false);
 
+                // will drain if necessary
+                await worker.ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                logger.ErrorException("Got error from server connection for " + url + " on id " + id, e);
+            }
+            finally
+            {
                 if (connection != null)
                     connection.Dispose();
 
                 tokenRegistration.Dispose();
                 tokenSource.Dispose();
-            }
-            catch (Exception e)
-            {
-                logger.ErrorException("Got error from server connection for " + url + " on id " + id, e);
             }
         }
 
