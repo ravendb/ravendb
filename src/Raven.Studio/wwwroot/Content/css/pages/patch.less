@@ -53,11 +53,12 @@
         width: 100%;
         height: 500px;
         max-width: calc(100vw ~"-" @grid-gutter-width/3*4);
-        max-height: 55vh;
+        height: 40vh;
+        overflow-x: hidden;
+        overflow-y: auto;
 
         @media (min-width:@screen-sm) {
             width: 1000px;
-            max-height: 65vh;
         }
 
         @media (min-width:@screen-md) {
@@ -77,7 +78,7 @@
         .patch-preview-container, .patch-list-container {
             flex-grow: 1;
             flex-shrink: 0;
-            padding: @grid-gutter-width/4;
+            padding: @grid-gutter-width/2;
             position: relative;
             background-color: @panel-bg;
         }
@@ -134,6 +135,8 @@
             li {
                 display: flex;
                 align-items: center;
+                padding: @grid-gutter-width/6 0;
+                border-bottom: 1px solid @panel-bg;
 
                 &:hover {
                     background-color: lighten(@well-bg,3%);
@@ -160,6 +163,8 @@
                 .name {
                     flex-grow: 1;
                     font-weight: bold;
+                    word-break: break-all;
+                    margin-right: @grid-gutter-width/2;
                 }
 
                 .modified {
