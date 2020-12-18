@@ -244,11 +244,14 @@ namespace Raven.Client.Changes
                     try
                     {
                         await work.SendTask.ConfigureAwait(false);
-                        work.DoneTask.TrySetResult(true);
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
-                        work.DoneTask.TrySetException(e);
+                        // intentionally swallowed to keep the previous behavior of ObserveException
+                    }
+                    finally
+                    {
+                        work.DoneTask.TrySetResult(true);
                     }
                 }
             }
