@@ -221,13 +221,13 @@ namespace Raven.Client.Changes
                 {
                     await syncSource.Task.ConfigureAwait(false);
                     syncSource = TaskCompletionSourceFactory.Create<bool>();
+
+                    await WorkUntilEmpty().ConfigureAwait(false);
                 }
                 catch (TaskCanceledException)
                 {
                     // Swallowing the task cancellation in case we are stopping work.
                 }
-
-                await WorkUntilEmpty().ConfigureAwait(false);
             }
 
             // drain
