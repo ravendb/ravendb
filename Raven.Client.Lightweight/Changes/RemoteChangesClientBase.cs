@@ -257,7 +257,7 @@ namespace Raven.Client.Changes
             }
         }
 
-        struct Work : IDisposable
+        sealed class Work : IDisposable
         {
             readonly HttpJsonRequest request;
             public readonly TaskCompletionSource<bool> DoneTask;
