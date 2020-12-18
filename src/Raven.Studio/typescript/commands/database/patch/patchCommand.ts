@@ -12,6 +12,8 @@ interface patchCommandOptions {
 
 class patchCommand extends commandBase {
 
+    private static readonly missingUpdateClause = "Update operations must end with UPDATE clause";
+    
     constructor(private queryStr: string, private db: database, private options: patchCommandOptions = null) {
         super();
                 
@@ -49,7 +51,14 @@ class patchCommand extends commandBase {
                 return response;
             })
             .fail((response: JQueryXHR) => {
-                this.reportError(`Failed to ${this.options.test ? 'test' : 'schedule' } patch`, response.responseText, response.statusText);
+                const responseText = response.responseText;
+                let errorTitle = `Failed to ${this.options.test ? "test" : "schedule" } patch`;
+                
+                if (responseText.includes(patchCommand.missingUpdateClause)) {
+                    errorTitle = "Incorrect patch command syntax";
+                }
+               
+                this.reportError(errorTitle, responseText, response.statusText);
             });
     }
 }
