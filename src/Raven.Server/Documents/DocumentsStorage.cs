@@ -2314,7 +2314,7 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static DateTime TableValueToDateTime(int index, ref TableValueReader tvr)
         {
-            return new DateTime(*(long*)tvr.Read(index, out _));
+            return new DateTime(*(long*)tvr.Read(index, out _), DateTimeKind.Utc);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
