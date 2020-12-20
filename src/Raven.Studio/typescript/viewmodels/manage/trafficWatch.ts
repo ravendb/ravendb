@@ -58,6 +58,9 @@ class trafficWatch extends viewModelBase {
     private duringManualScrollEvent = false;
 
     private typesMultiSelectRefreshThrottle = _.throttle(() => this.syncMultiSelect(), 1000);
+
+    isPauseLogs = ko.observable<boolean>(false);
+    isConnectedToWebSocket = ko.observable<boolean>(false);
     
     constructor() {
         super();
@@ -295,7 +298,9 @@ class trafficWatch extends viewModelBase {
     connectWebSocket() {
         eventsCollector.default.reportEvent("traffic-watch", "connect");
         
-        const ws = new trafficWatchWebSocketClient(data => this.onData(data));
+        const ws = new trafficWatchWebSocketClient(data => this.onData(data),
+                                                   () => this.onConnectionEstablished(),
+                                                   () => this.onConnectionClosed());
         this.liveClient(ws);
     }
 
@@ -305,6 +310,10 @@ class trafficWatch extends viewModelBase {
             this.pause();
             return;
         }
+
+        if (!this.isConnectedToWebSocket()) {
+            this.isConnectedToWebSocket(true);
+        }
         
         this.allData.push(data);
         
@@ -313,6 +322,16 @@ class trafficWatch extends viewModelBase {
 
         if (!this.appendElementsTask) {
             this.appendElementsTask = setTimeout(() => this.onAppendPendingEntries(), 333);
+        }
+    }
+
+    private onConnectionEstablished() {
+        this.isConnectedToWebSocket(true);
+    }
+
+    private onConnectionClosed() {
+        if (!this.isPauseLogs() && this.isConnectedToWebSocket()) {
+            this.isConnectedToWebSocket(false);
         }
     }
 
@@ -335,6 +354,9 @@ class trafficWatch extends viewModelBase {
         eventsCollector.default.reportEvent("traffic-watch", "pause");
         
         if (this.liveClient()) {
+            this.isPauseLogs(true);
+            this.isConnectedToWebSocket(false);
+            
             this.liveClient().dispose();
             this.liveClient(null);
         }
@@ -342,6 +364,7 @@ class trafficWatch extends viewModelBase {
     
     resume() {
         this.connectWebSocket();
+        this.isPauseLogs(false);
     }
 
     clear() {
