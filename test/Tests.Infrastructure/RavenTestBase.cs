@@ -356,7 +356,7 @@ namespace FastTests
 
                             if (Servers.Contains(serverToUse) && result != null)
                             {
-                                var timeout = options.DeleteTimeout ?? TimeSpan.FromSeconds(Debugger.IsAttached ? 5 : 1);
+                                var timeout = options.DeleteTimeout ?? TimeSpan.FromSeconds(Debugger.IsAttached ? 150 : 15);
                                 AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
                             }
                         }
@@ -643,22 +643,22 @@ namespace FastTests
             Assert.Equal(expectedVal, ret);
             return ret;
         }
-        
+
         protected async Task<T> AssertWaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class
         {
             var ret = await WaitForNotNullAsync(act, timeout, interval);
             Assert.NotNull(ret);
             return ret;
         }
-        
+
         protected async Task<T> WaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class =>
             await WaitForPredicateAsync(a => a != null, act, timeout, interval);
-        
+
         protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
         {
             return await WaitForPredicateAsync(t => t.Equals(expectedVal), act, timeout, interval);
         }
-        
+
         private static async Task<T> WaitForPredicateAsync<T>(Predicate<T> predicate, Func<Task<T>> act, int timeout = 15000, int interval = 100)
         {
             if (Debugger.IsAttached)
@@ -683,7 +683,7 @@ namespace FastTests
                 await Task.Delay(interval);
             }
         }
-        
+
         protected async Task<T> WaitForValueAsync<T>(Func<T> act, T expectedVal, int timeout = 15000)
         {
             if (Debugger.IsAttached)
@@ -864,11 +864,11 @@ namespace FastTests
         }
 
         protected X509Certificate2 RegisterClientCertificate(
-            X509Certificate2 serverCertificate, 
-            X509Certificate2 clientCertificate, 
-            Dictionary<string, DatabaseAccess> permissions, 
-            SecurityClearance clearance = SecurityClearance.ValidUser, 
-            RavenServer server = null, 
+            X509Certificate2 serverCertificate,
+            X509Certificate2 clientCertificate,
+            Dictionary<string, DatabaseAccess> permissions,
+            SecurityClearance clearance = SecurityClearance.ValidUser,
+            RavenServer server = null,
             string certificateName = "client certificate")
         {
             using var store = GetDocumentStore(new Options
@@ -877,7 +877,7 @@ namespace FastTests
                 Server = server,
                 ClientCertificate = serverCertificate,
                 AdminCertificate = serverCertificate,
-                ModifyDocumentStore = s => s.Conventions = new DocumentConventions {DisableTopologyUpdates = true}
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions { DisableTopologyUpdates = true }
             });
             store.Maintenance.Server.Send(new PutClientCertificateOperation(certificateName, clientCertificate, permissions, clearance));
             return clientCertificate;
