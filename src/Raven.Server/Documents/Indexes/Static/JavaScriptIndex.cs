@@ -5,7 +5,6 @@ using System.Text;
 using Esprima;
 using Jint;
 using Jint.Native;
-using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime;
@@ -256,10 +255,13 @@ function map(name, lambda) {
             {
                 case IndexSourceType.Documents:
                     return new JavaScriptIndex(definition, configuration);
+
                 case IndexSourceType.TimeSeries:
                     return new TimeSeriesJavaScriptIndex(definition, configuration);
+
                 case IndexSourceType.Counters:
                     return new CountersJavaScriptIndex(definition, configuration);
+
                 default:
                     throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
@@ -279,6 +281,8 @@ function map(name, lambda) {
                         AddMapInternal(collection, subCollection, (IndexingFunc)operation.IndexingFunction);
 
                         HasDynamicFields |= operation.HasDynamicReturns;
+                        HasBoostedFields |= operation.HasBoostedFields;
+
                         fields.UnionWith(operation.Fields);
                         foreach (var (k, v) in operation.FieldOptions)
                         {
@@ -509,10 +513,13 @@ function map(name, lambda) {
                 {
                     case null:
                         return DynamicJsNull.ImplicitNull;
+
                     case DynamicNullObject dno:
                         return dno.IsExplicitNull ? DynamicJsNull.ExplicitNull : DynamicJsNull.ImplicitNull;
+
                     case DynamicBlittableJson dbj:
                         return new BlittableObjectInstance(_engine, null, dbj.BlittableJson, id: null, lastModified: null, changeVector: null);
+
                     default:
                         return _javaScriptUtils.TranslateToJs(_engine, context: null, value);
                 }
@@ -541,7 +548,6 @@ function groupBy(lambda) {
     return reduce;
 }
 
-
 // createSpatialField(wkt: string)
 // createSpatialField(lat: number, lng: number)
 
@@ -555,6 +561,10 @@ function createSpatialField() {
 
 function createField(name, value, options) {
     return { $name: name, $value: value, $options: options }
+}
+
+function boost(value, boost) {
+    return { $value: value, $boost: boost }
 }
 ";
 

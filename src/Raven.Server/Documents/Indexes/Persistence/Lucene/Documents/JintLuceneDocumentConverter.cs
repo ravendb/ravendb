@@ -39,9 +39,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             indexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
         }
 
-        private const string CreatedFieldValuePropertyName = "$value";
-        private const string CreatedFieldOptionsPropertyName = "$options";
-        private const string CreatedFieldNamePropertyName = "$name";
+        private const string ValuePropertyName = "$value";
+        private const string OptionsPropertyName = "$options";
+        private const string NamePropertyName = "$name";
+        private const string SpatialPropertyName = "$spatial";
+        private const string BoostPropertyName = "$boost";
 
         protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer)
         {
@@ -71,6 +73,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 newFields++;
             }
 
+            if (TryGetBoostedValue(documentToProcess, out var boostedValue, out var documentBoost))
+            {
+                if (IsObject(boostedValue) == false)
+                    throw new InvalidOperationException($"Invalid boosted value. Expected object but got '{boostedValue.Type}' with value '{boostedValue}'.");
+
+                documentToProcess = boostedValue.AsObject();
+            }
+
             foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
             {
                 var propertyAsString = property.AsString();
@@ -79,62 +89,94 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     field = _fields[propertyAsString] = IndexField.Create(propertyAsString, new IndexFieldOptions(), _allFields);
 
                 object value;
+                float? propertyBoost = null;
+                int numberOfCreatedFields;
                 var actualValue = propertyDescriptor.Value;
-                if (actualValue.IsObject() && actualValue.IsArray() == false)
+                var isObject = IsObject(actualValue);
+                if (isObject)
                 {
-                    //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name
-                    //so we must use field.Name and not property from this point on.
-                    var val = TryDetectDynamicFieldCreation(propertyAsString, actualValue.AsObject(), field);
-                    if (val != null)
+                    if (TryGetBoostedValue(actualValue.AsObject(), out boostedValue, out propertyBoost))
                     {
-                        if (val.IsObject() && val.AsObject().TryGetValue("$spatial", out _))
-                        {
-                            actualValue = val; //Here we populate the dynamic spatial field that will be handled below.
-                        }
-                        else
-                        {
-                            value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine, context: indexContext);
-                            newFields += GetRegularFields(instance, field, value, indexContext, out _);
-                            continue;
-                        }
+                        actualValue = boostedValue;
+                        isObject = IsObject(actualValue);
                     }
 
-                    var objectValue = actualValue.AsObject();
-                    if (objectValue.HasOwnProperty("$spatial") && objectValue.TryGetValue("$spatial", out var inner))
+                    if (isObject)
                     {
-                        SpatialField spatialField;
-                        IEnumerable<AbstractField> spatial;
-                        if (inner.IsString())
+                        //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name
+                        //so we must use field.Name and not property from this point on.
+                        var val = TryDetectDynamicFieldCreation(propertyAsString, actualValue.AsObject(), field);
+                        if (val != null)
                         {
-                            spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
-                            spatial = StaticIndexBase.CreateSpatialField(spatialField, inner.AsString());
-                        }
-                        else if (inner.IsObject())
-                        {
-                            var innerObject = inner.AsObject();
-                            if (innerObject.HasOwnProperty("Lat") && innerObject.HasOwnProperty("Lng") && innerObject.TryGetValue("Lat", out var lat)
-                                && lat.IsNumber() && innerObject.TryGetValue("Lng", out var lng) && lng.IsNumber())
+                            if (val.IsObject() && val.AsObject().TryGetValue(SpatialPropertyName, out _))
                             {
-                                spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                spatial = StaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
+                                actualValue = val; //Here we populate the dynamic spatial field that will be handled below.
+                            }
+                            else
+                            {
+                                value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine, context: indexContext);
+                                numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, out _);
+
+                                newFields += numberOfCreatedFields;
+
+                                BoostDocument(instance, numberOfCreatedFields, documentBoost);
+
+                                if (value is IDisposable toDispose1)
+                                {
+                                    // the value was converted to a lucene field and isn't needed anymore
+                                    toDispose1.Dispose();
+                                }
+
+                                continue;
+                            }
+                        }
+
+                        var objectValue = actualValue.AsObject();
+                        if (objectValue.HasOwnProperty(SpatialPropertyName) && objectValue.TryGetValue(SpatialPropertyName, out var inner))
+                        {
+                            SpatialField spatialField;
+                            IEnumerable<AbstractField> spatial;
+                            if (inner.IsString())
+                            {
+                                spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
+                                spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, inner.AsString());
+                            }
+                            else if (inner.IsObject())
+                            {
+                                var innerObject = inner.AsObject();
+                                if (innerObject.HasOwnProperty("Lat") && innerObject.HasOwnProperty("Lng") && innerObject.TryGetValue("Lat", out var lat)
+                                    && lat.IsNumber() && innerObject.TryGetValue("Lng", out var lng) && lng.IsNumber())
+                                {
+                                    spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
+                                    spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
+                                }
+                                else
+                                {
+                                    continue; //Ignoring bad spatial field
+                                }
                             }
                             else
                             {
                                 continue; //Ignoring bad spatial field
                             }
-                        }
-                        else
-                        {
-                            continue; //Ignoring bad spatial field
-                        }
-                        newFields += GetRegularFields(instance, field, spatial, indexContext, out _);
 
-                        continue;
+                            numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(spatial, propertyBoost), indexContext, out _);
+
+                            newFields += numberOfCreatedFields;
+
+                            BoostDocument(instance, numberOfCreatedFields, documentBoost);
+
+                            continue;
+                        }
                     }
                 }
 
-                value = TypeConverter.ToBlittableSupportedType(propertyDescriptor.Value, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine, context: indexContext);
-                newFields += GetRegularFields(instance, field, value, indexContext, out _);
+                value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine, context: indexContext);
+                numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, out _);
+
+                newFields += numberOfCreatedFields;
+
+                BoostDocument(instance, numberOfCreatedFields, documentBoost);
 
                 if (value is IDisposable toDispose)
                 {
@@ -144,21 +186,72 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
 
             return newFields;
+
+            static bool IsObject(JsValue value)
+            {
+                return value.IsObject() && value.IsArray() == false;
+            }
+
+            static object CreateValueForIndexing(object value, float? boost)
+            {
+                if (boost.HasValue == false)
+                    return value;
+
+                return new BoostedValue
+                {
+                    Boost = boost.Value,
+                    Value = value
+                };
+            }
+
+            static void BoostDocument(T instance, int numberOfCreatedFields, float? boost)
+            {
+                if (boost.HasValue == false)
+                    return;
+
+                var fields = instance.GetFields();
+                for (int idx = fields.Count - 1; numberOfCreatedFields > 0; numberOfCreatedFields--, idx--)
+                {
+                    var luceneField = fields[idx];
+                    luceneField.Boost = boost.Value;
+                    luceneField.OmitNorms = false;
+                }
+            }
+        }
+
+        private static bool TryGetBoostedValue(ObjectInstance valueToCheck, out JsValue value, out float? boost)
+        {
+            value = JsValue.Undefined;
+            boost = null;
+
+            if (valueToCheck.TryGetValue(BoostPropertyName, out var boostValue) == false)
+                return false;
+
+            if (valueToCheck.TryGetValue(ValuePropertyName, out var valueValue) == false)
+                return false;
+
+            if (boostValue.IsNumber() == false)
+                return false;
+
+            boost = (float)boostValue.AsNumber();
+            value = valueValue;
+
+            return true;
         }
 
         private static JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field)
         {
             //We have a field creation here _ = {"$value":val, "$name","$options":{...}}
-            if (!valueAsObject.HasOwnProperty(CreatedFieldValuePropertyName))
+            if (!valueAsObject.HasOwnProperty(ValuePropertyName))
                 return null;
 
-            var value = valueAsObject.GetOwnProperty(CreatedFieldValuePropertyName).Value;
-            PropertyDescriptor nameProperty = valueAsObject.GetOwnProperty(CreatedFieldNamePropertyName);
+            var value = valueAsObject.GetOwnProperty(ValuePropertyName).Value;
+            PropertyDescriptor nameProperty = valueAsObject.GetOwnProperty(NamePropertyName);
             if (nameProperty != null)
             {
                 var fieldNameObj = nameProperty.Value;
                 if (fieldNameObj.IsString() == false)
-                    throw new ArgumentException($"Dynamic field {property} is expected to have a string {CreatedFieldNamePropertyName} property but got {fieldNameObj}");
+                    throw new ArgumentException($"Dynamic field {property} is expected to have a string {NamePropertyName} property but got {fieldNameObj}");
 
                 field.Name = fieldNameObj.AsString();
             }
@@ -166,14 +259,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 field.Name = property;
             }
-            
-            if (valueAsObject.HasOwnProperty(CreatedFieldOptionsPropertyName))
+
+            if (valueAsObject.HasOwnProperty(OptionsPropertyName))
             {
-                var options = valueAsObject.GetOwnProperty(CreatedFieldOptionsPropertyName).Value;
+                var options = valueAsObject.GetOwnProperty(OptionsPropertyName).Value;
                 if (options.IsObject() == false)
                 {
                     throw new ArgumentException($"Dynamic field {property} is expected to contain an object with three properties " +
-                                                $"{CreatedFieldOptionsPropertyName}, {CreatedFieldNamePropertyName} and {CreatedFieldOptionsPropertyName} the later should be a valid IndexFieldOptions object.");
+                                                $"{OptionsPropertyName}, {NamePropertyName} and {OptionsPropertyName} the later should be a valid IndexFieldOptions object.");
                 }
 
                 var optionObj = options.AsObject();

@@ -21,6 +21,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public bool HasDynamicReturns;
 
+        public bool HasBoostedFields;
+
         public HashSet<string> Fields = new HashSet<string>();
         public Dictionary<string, IndexFieldOptions> FieldOptions = new Dictionary<string, IndexFieldOptions>();
         private readonly Engine _engine;
@@ -91,6 +93,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public void Analyze(Engine engine)
         {
             HasDynamicReturns = false;
+            HasBoostedFields = false;
 
             IFunction theFuncAst;
             switch (MapFunc)
@@ -98,9 +101,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 case ArrowFunctionInstance afi:
                     theFuncAst = afi.FunctionDeclaration;
                     break;
+
                 case ScriptFunctionInstance sfi:
                     theFuncAst = sfi.FunctionDeclaration;
                     break;
+
                 default:
                     return;
             }
@@ -117,33 +122,57 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (returnStatement.Argument == null) // return;
                     continue;
 
-                if (!(returnStatement.Argument is ObjectExpression oe))
+                switch (returnStatement.Argument)
                 {
-                    HasDynamicReturns = true;
-                    continue;
-                }
-                //If we got here we must validate that all return statements have the same structure.
-                //Having zero fields means its the first return statements we encounter that has a structure.
-                if (Fields.Count == 0)
-                {
-                    foreach (var prop in oe.Properties)
-                    {
-                        if (prop is Property property)
-                        {
-                            var fieldName = property.GetKey(engine);
-                            var fieldNameAsString = fieldName.AsString();
-                            if (fieldName == "_")
-                                HasDynamicReturns = true;
+                    case ObjectExpression oe:
 
-                            Fields.Add(fieldNameAsString);
+                        //If we got here we must validate that all return statements have the same structure.
+                        //Having zero fields means its the first return statements we encounter that has a structure.
+                        if (Fields.Count == 0)
+                        {
+                            foreach (var prop in oe.Properties)
+                            {
+                                if (prop is Property property)
+                                {
+                                    var fieldName = property.GetKey(engine);
+                                    var fieldNameAsString = fieldName.AsString();
+                                    if (fieldName == "_")
+                                        HasDynamicReturns = true;
+
+                                    Fields.Add(fieldNameAsString);
+
+                                    var fieldValue = property.Value;
+                                    if (IsBoostExpression(fieldValue))
+                                        HasBoostedFields = true;
+                                }
+                            }
                         }
-                    }
+                        else if (CompareFields(oe) == false)
+                        {
+                            throw new InvalidOperationException($"Index {IndexName} contains different return structure from different code paths," +
+                                                                $" expected properties: {string.Join(", ", Fields)} but also got:{string.Join(", ", oe.Properties.Select(x => x.GetKey(engine)))}");
+                        }
+
+                        break;
+
+                    case CallExpression ce:
+
+                        if (IsBoostExpression(ce))
+                            HasBoostedFields = true;
+                        else
+                            HasDynamicReturns = true;
+
+                        break;
+
+                    default:
+                        HasDynamicReturns = true;
+                        break;
                 }
-                else if (CompareFields(oe) == false)
-                {
-                    throw new InvalidOperationException($"Index {IndexName} contains different return structure from different code paths," +
-                                                        $" expected properties: {string.Join(", ", Fields)} but also got:{string.Join(", ", oe.Properties.Select(x => x.GetKey(engine)))}");
-                }
+            }
+
+            static bool IsBoostExpression(Expression expression)
+            {
+                return expression is CallExpression ce && ce.Callee is Identifier identifier && identifier.Name == "boost";
             }
         }
 
