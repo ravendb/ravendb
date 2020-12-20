@@ -1,61 +1,17 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq.Indexing;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Tests.Indexes
+namespace SlowTests.Issues
 {
-    public class BoostingDuringIndexing : RavenTestBase
+    public class RavenDB_15901 : RavenTestBase
     {
-        public BoostingDuringIndexing(ITestOutputHelper output) : base(output)
+        public RavenDB_15901(ITestOutputHelper output) : base(output)
         {
-        }
-
-        private class User
-        {
-            public string FirstName { get; set; }
-            public string LastName { get; set; }
-        }
-
-        private class Account
-        {
-            public string Name { get; set; }
-        }
-
-        private class UsersByName : AbstractIndexCreationTask<User>
-        {
-            public UsersByName()
-            {
-                Map = users => from user in users
-                               select new
-                               {
-                                   FirstName = user.FirstName.Boost(3),
-                                   user.LastName
-                               };
-            }
-        }
-
-        private class UsersAndAccounts : AbstractMultiMapIndexCreationTask<UsersAndAccounts.Result>
-        {
-            public class Result
-            {
-                public string Name { get; set; }
-            }
-
-            public UsersAndAccounts()
-            {
-                AddMap<User>(users =>
-                             from user in users
-                             select new { Name = user.FirstName }
-                    );
-                AddMap<Account>(accounts =>
-                                from account in accounts
-                                select new { account.Name }.Boost(3)
-                    );
-            }
         }
 
         [Fact]
@@ -78,8 +34,6 @@ namespace SlowTests.Tests.Indexes
                     });
                     session.SaveChanges();
                 }
-
-                WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -119,6 +73,8 @@ namespace SlowTests.Tests.Indexes
                     session.SaveChanges();
                 }
 
+                WaitForIndexing(store);
+
                 using (var session = store.OpenSession())
                 {
                     var users = session.Query<User, UsersByName>()
@@ -129,6 +85,45 @@ namespace SlowTests.Tests.Indexes
                     Assert.Equal("Ayende", users[0].FirstName);
                     Assert.Equal("Oren", users[1].FirstName);
                 }
+            }
+        }
+
+        private class User
+        {
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
+        }
+
+        private class Account
+        {
+            public string Name { get; set; }
+        }
+
+        private class UsersByName : AbstractJavaScriptIndexCreationTask
+        {
+            public UsersByName()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"map('Users', function (u) { return { FirstName: boost(u.FirstName, 3), LastName: u.LastName }; })",
+                };
+            }
+        }
+
+        private class UsersAndAccounts : AbstractJavaScriptIndexCreationTask
+        {
+            public class Result
+            {
+                public string Name { get; set; }
+            }
+
+            public UsersAndAccounts()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"map('Users', function (u) { return { Name: u.FirstName }; })",
+                    @"map('Accounts', function (a) { return boost({ Name: a.Name }, 3) })"
+                };
             }
         }
     }
