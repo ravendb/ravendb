@@ -111,9 +111,10 @@ namespace Raven.Server.Documents.Handlers
             var state = new JsonParserState();
             using (ctx.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
             using (var parser = new UnmanagedJsonParser(ctx, state, "bulk_docs"))
-            using (var modifier = new BlittableMetadataModifier(ctx))
+            /* In case we have a conflict between attachment with the same name we need attachment information from metadata */
+            /* we can't know from advanced if we will need this information so we save this for all batch commands */
+            using (var modifier = new BlittableMetadataModifier(ctx, false, false,DatabaseItemType.Attachments))
             {
-                modifier.OperateOnTypes |= DatabaseItemType.Attachments;
                 while (parser.Read() == false)
                     await RefillParserBuffer(stream, buffer, parser);
 

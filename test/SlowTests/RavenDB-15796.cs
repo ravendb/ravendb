@@ -1,14 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
-using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using SlowTests.Core.Utils.Entities;
+using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -52,20 +54,58 @@ namespace SlowTests
                         await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
                     }
 
-                    using (var session2 = store2.OpenAsyncSession())
+                    using (var session2 = store2.OpenSession())
                     {
-                        await session2.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
-                        await session2.SaveChangesAsync();
+                         session2.Store(new User { Name = "Fitzchak" }, "users/1");
+                         session2.SaveChanges();
 
                         using (var a2 = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                         {
                             store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a2, "a1/png"));
                         }
                         await SetupReplicationAsync(store1, store2);
+
+                        await Task.Delay(3000);
+                        var conflicts = (await store2.Commands().GetConflictsForAsync("users/1")).ToList();
+                        Assert.Equal(2, conflicts.Count);
+                        var requestExecutor = store2.GetRequestExecutor();
+
+                        using (var context = JsonOperationContext.ShortTermSingleUse())
+                        using (var stringStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(_conflictedDocument)))
+                        using (var blittableJson = context.Read(stringStream, "Reading of foo/bar"))
+                        {
+                            var result = new InMemoryDocumentSessionOperations.SaveChangesData((InMemoryDocumentSessionOperations)session2);
+                            result.SessionCommands.Add(new PutCommandDataWithBlittableJson("users/1", null, blittableJson));
+                            var co = new SingleNodeBatchCommand(DocumentConventions.Default, context, result.SessionCommands, result.Options);
+                            await requestExecutor.ExecuteAsync(co, context);
+                        }
+                        conflicts = (await store2.Commands().GetConflictsForAsync("users/1")).ToList();
+                        Assert.Equal(0, conflicts.Count);
                     }
                 }
-                WaitForUserToContinueTheTest(store2);
             }
         }
+
+        private const string _conflictedDocument = @"
+        {
+    ""Name"": ""Fitzchak"",
+        ""LastName"": null,
+        ""AddressId"": null,
+        ""Count"": 0,
+        ""@metadata"": {
+            ""@collection"": ""Users"",
+            ""Raven-Clr-Type"": ""SlowTests.Core.Utils.Entities.User, SlowTests"",
+            ""@attachments"": [
+            {
+                ""Name"": ""a1"",
+            ""Hash"": ""Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco="",
+        ""ContentType"": ""a1/png"",
+        ""Size"": 5
+            }
+            ]
+        }
     }
+        ";
+    }
+
 }
