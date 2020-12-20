@@ -119,6 +119,11 @@ namespace Raven.Server.Documents
                 }
 
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
+                if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == true &&
+                    metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                {
+                    flags &= ~DocumentFlags.HasAttachments;
+                }
                 nonPersistentFlags |= result.NonPersistentFlags;
 
                 if (UpdateLastDatabaseChangeVector(context, result.ChangeVector, flags, nonPersistentFlags))
