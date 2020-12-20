@@ -119,11 +119,7 @@ namespace Raven.Server.Documents
                 }
 
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
-                if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == true &&
-                    metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
-                {
-                    flags &= ~DocumentFlags.HasAttachments;
-                }
+
                 nonPersistentFlags |= result.NonPersistentFlags;
 
                 if (UpdateLastDatabaseChangeVector(context, result.ChangeVector, flags, nonPersistentFlags))
@@ -173,7 +169,12 @@ namespace Raven.Server.Documents
                         _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
                     }
                 }
-
+                if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == true &&
+                    metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                {
+                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler) == false)
+                        flags &= ~DocumentFlags.HasAttachments;
+                }
                 FlagsProperlySet(flags, changeVector);
 
                 using (Slice.From(context.Allocator, changeVector, out var cv))
