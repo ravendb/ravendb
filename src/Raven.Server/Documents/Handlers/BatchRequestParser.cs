@@ -11,8 +11,8 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Extensions;
-using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Exceptions;
@@ -113,6 +113,7 @@ namespace Raven.Server.Documents.Handlers
             using (var parser = new UnmanagedJsonParser(ctx, state, "bulk_docs"))
             using (var modifier = new BlittableMetadataModifier(ctx))
             {
+                modifier.OperateOnTypes |= DatabaseItemType.Attachments;
                 while (parser.Read() == false)
                     await RefillParserBuffer(stream, buffer, parser);
 
