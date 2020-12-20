@@ -1,4 +1,3 @@
-import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import adminLogsWebSocketClient = require("common/adminLogsWebSocketClient");
 import adminLogsConfig = require("models/database/debug/adminLogsConfig");
@@ -51,7 +50,7 @@ class heightCalculator {
             charactersInline++;
         }
         
-        charactersInline -= 3; // substract few character to have extra space for scrolls
+        charactersInline -= 3; // subtract few character to have extra space for scrolls
         
         const doubleLinesHeight = row.element.height();
         
@@ -67,7 +66,6 @@ class adminLogs extends viewModelBase {
 
     private liveClient = ko.observable<adminLogsWebSocketClient>();
     private listController = ko.observable<listViewController<string>>();
-    private headerSeen = false;
     
     private allData = [] as string[];
     
@@ -95,6 +93,9 @@ class adminLogs extends viewModelBase {
 
     validationGroup: KnockoutValidationGroup;
     enableApply: KnockoutComputed<boolean>;
+
+    isPauseLogs = ko.observable<boolean>(false);
+    isConnectedToWebSocket = ko.observable<boolean>(false);
     
     constructor() {
         super();
@@ -107,7 +108,7 @@ class adminLogs extends viewModelBase {
     }
     
     private initObservables() {
-        this.filter.throttle(500).subscribe(() => this.filterLogEntries(true));        
+        this.filter.throttle(500).subscribe(() => this.filterLogEntries(true));
         this.onlyErrors.subscribe(() => this.filterLogEntries(true));
 
         this.enableApply = ko.pureComputed(() => {
@@ -258,22 +259,25 @@ class adminLogs extends viewModelBase {
     
     connectWebSocket() {
         eventsCollector.default.reportEvent("admin-logs", "connect");
-        const ws = new adminLogsWebSocketClient(this.configuration(), data => this.onData(data));
+        const ws = new adminLogsWebSocketClient(this.configuration(),
+                                                data => this.onData(data),
+                                                () => this.onConnectionClosed());
         this.liveClient(ws);
-        
-        this.headerSeen = false;
     }
     
     pauseLogs() {
         eventsCollector.default.reportEvent("admin-logs", "pause");
+        
         if (this.liveClient()) {
             this.liveClient().dispose();
             this.liveClient(null);
+            this.isPauseLogs(true);
         }
     }
     
     resumeLogs() {
         this.connectWebSocket();
+        this.isPauseLogs(false);
     }
     
     private onData(data: string) {
@@ -282,19 +286,37 @@ class adminLogs extends viewModelBase {
             this.pauseLogs();
             return;
         }
-        
-        data = data.trim();
-        
-        if (!this.headerSeen) {
-            this.headerSeen = true;
-            return;
+
+        let customizedMsg = false;
+        if (!this.isConnectedToWebSocket()) {
+            this.isConnectedToWebSocket(true);
+            // replace the initial 'headers' msg
+            data = "Connection established";
+            customizedMsg = true;
         }
-        
-        this.allData.push(data);
-        this.pendingMessages.push(data);
-        
+
+       this.addMessage(data.trim(), customizedMsg);
+
         if (!this.appendElementsTask) {
             this.appendElementsTask = setTimeout(() => this.onAppendPendingMessages(), 333);
+        }
+    }
+
+    private onConnectionClosed() {
+        const customMsg = this.isPauseLogs() ? "Connection paused" : "Connection closed";
+        this.addMessage(customMsg, true);
+        this.isConnectedToWebSocket(false);
+    }
+    
+    private addMessage(msg: string, customizedMsg: boolean = false) {
+        if (customizedMsg) {
+            // msg artificially inserted by studio, not real data from ws...
+            const time = new Date().toISOString();
+            msg = `${time}, ${msg}`;
+            this.listController().pushElements([...this.pendingMessages, msg]);
+        } else {
+            this.allData.push(msg);
+            this.pendingMessages.push(msg);
         }
     }
     

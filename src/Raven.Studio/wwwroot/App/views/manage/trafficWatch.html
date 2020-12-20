@@ -22,7 +22,7 @@
             <div class="checkbox">
                 <input class="styled" id="onlyErrors" type="checkbox" data-bind="checked: onlyErrors">
                 <label for="onlyErrors">Show errors only</label>
-            </div>          
+            </div>
         </div>
         <div class="flex-separator"></div>
         <div class="panel margin-bottom margin-sm flex-grow">
@@ -67,6 +67,13 @@
     </div>
     <div class="flex-horizontal">
         <div class="flex-separator"></div>
+        <div class="margin-left margin-left-lg bg-warning text-warning padding padding-xs" data-bind="visible: !isConnectedToWebSocket()">
+            <small>
+                <i class="icon-warning"></i>
+                <span data-bind="visible: !isPauseLogs()">Not connected to web socket, trying to connect</span>
+                <span data-bind="visible: isPauseLogs" class="margin-left margin-left-sm">Traffic Watch log is paused</span>
+            </small>
+        </div>
         <div class="btn-group">
             <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleTail, css: { active: tailEnabled }">
                 <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>
