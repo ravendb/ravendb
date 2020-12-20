@@ -23,6 +23,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     public interface ILuceneDocumentWrapper
     {
         void Add(AbstractField field);
+
         IList<IFieldable> GetFields();
     }
 
@@ -102,8 +103,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             Document.GetFields().Clear();
 
-            if (CurrentIndexingScope.Current != null)
-                CurrentIndexingScope.Current.CreatedFieldsCount = 0;
+            var scope = CurrentIndexingScope.Current;
+            if (scope != null)
+                scope.CreatedFieldsCount = 0;
 
             int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, document, indexContext, writeBuffer);
             if (_fields.Count > 0)
@@ -145,6 +147,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 case ValueType.Enum:
                     defaultIndexing = Field.Index.ANALYZED;
                     break;
+
                 case ValueType.DateTime:
                 case ValueType.DateTimeOffset:
                 case ValueType.TimeSpan:
@@ -158,6 +161,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 case ValueType.DynamicJsonObject:
                     defaultIndexing = Field.Index.NOT_ANALYZED_NO_NORMS;
                     break;
+
                 default:
                     defaultIndexing = Field.Index.ANALYZED_NO_NORMS;
                     break;
@@ -310,9 +314,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         continue;
 
                     using var i = NestedField(count++);
-                    
-                    newFields += GetRegularFields(instance, field, itemToIndex, indexContext, out _, nestedArray: true);
 
+                    newFields += GetRegularFields(instance, field, itemToIndex, indexContext, out _, nestedArray: true);
                 }
 
                 return newFields;
@@ -395,9 +398,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         case double d:
                             s = d.ToString("G");
                             break;
+
                         case decimal dm:
                             s = dm.ToString("G");
                             break;
+
                         case float f:
                             s = f.ToString("G");
                             break;
@@ -428,9 +433,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return new ReduceMultipleValuesScope(this);
         }
 
-        public struct ReduceMultipleValuesScope : IDisposable
+        public readonly struct ReduceMultipleValuesScope : IDisposable
         {
-            LuceneDocumentConverterBase _parent;
+            private readonly LuceneDocumentConverterBase _parent;
 
             public ReduceMultipleValuesScope(LuceneDocumentConverterBase parent)
             {
@@ -529,7 +534,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (IsNumber(value))
                 return ValueType.Numeric;
 
-
             return ValueType.ConvertToJson;
         }
 
@@ -627,6 +631,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     yield return numericFieldDouble.SetDoubleValue(doubleValue);
                     yield return numericFieldLong.SetLongValue((long)doubleValue);
                     break;
+
                 case NumberParseResult.Long:
                     yield return numericFieldDouble.SetDoubleValue(longValue);
                     yield return numericFieldLong.SetLongValue(longValue);
