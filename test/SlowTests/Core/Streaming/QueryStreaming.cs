@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -236,6 +237,71 @@ namespace SlowTests.Core.Streaming
             }
         }
 
+        class TestObj
+        {
+            public string Id { get; set; }
+            public Dictionary<string, string> Prop { get; set; }
+        }
+        
+        [Fact]
+        public async Task QueryStream_WhenDocsContainsMultipleUniqPropertyNames_ShouldNotBeVeryVerySlow()
+        {
+            using var store = GetDocumentStore();
+
+            var objs = Enumerable.Range(0, 100000).Select(_ => new TestObj
+            {
+                Prop = new Dictionary<string, string>
+                {
+                    {Guid.NewGuid().ToString("n"), "someValue"},
+                    {Guid.NewGuid().ToString("n"), "someValue"},
+                    {Guid.NewGuid().ToString("n"), "someValue"}
+                }
+            }).ToArray();
+
+            var j = 0;
+            while (j < objs.Length)
+            {
+                using var session = store.OpenAsyncSession();
+                for (var i = 0; i < 100 && j < objs.Length; i++, j++)
+                {
+                    await session.StoreAsync(objs[j]);
+                }
+                await session.SaveChangesAsync();
+            }
+
+            await Assert(Task.Run(() =>
+            {
+                using var session = store.OpenSession();
+                using (var stream = session.Advanced.Stream(session.Query<dynamic>()))
+                {
+                    while (true)
+                    {
+                        if (stream.MoveNext() == false)
+                            break;
+                    }
+                }
+            }));
+
+            await Assert(Task.Run(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                await using(var stream = await session.Advanced.StreamAsync(session.Query<dynamic>()))
+                {
+                    while (true)
+                    {
+                        if (await stream.MoveNextAsync() == false)
+                            break;
+                    }
+                }
+            }));
+
+            static async Task Assert(Task test)
+            {
+                await Task.WhenAny(test, Task.Delay(TimeSpan.FromMinutes(2)));
+                Xunit.Assert.True(test.IsCompletedSuccessfully);
+            }
+        }
+        
         [Fact]
         public void Streaming_Results_Should_Sort_Properly()
         {
