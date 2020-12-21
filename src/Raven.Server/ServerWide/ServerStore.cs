@@ -3069,7 +3069,8 @@ namespace Raven.Server.ServerWide
             var res = new DynamicJsonValue
             {
                 [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
-                [nameof(TcpConnectionInfo.Certificate)] = _server.Certificate.CertificateForClients
+                [nameof(TcpConnectionInfo.Certificate)] = _server.Certificate.CertificateForClients,
+                [nameof(TcpConnectionInfo.NodeTag)] = NodeTag
             };
 
             var urls = GetNodeClusterTcpServerUrls(clientRequestedNodeUrl, forExternalUse);

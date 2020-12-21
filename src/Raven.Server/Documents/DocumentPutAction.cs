@@ -148,6 +148,7 @@ namespace Raven.Server.Documents
                 }
 
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
+
                 nonPersistentFlags |= result.NonPersistentFlags;
 
                 if (UpdateLastDatabaseChangeVector(context, result.ChangeVector, flags, nonPersistentFlags)) 

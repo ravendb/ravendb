@@ -200,8 +200,10 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                         tcpInfo = command.Result;
-
-                        _redirectNode = requestExecutor.Topology.Nodes.Where(x => tcpInfo.Urls.Contains(x.Url)).FirstOrDefault();
+                        if (tcpInfo.NodeTag != null)
+                        {
+                            _redirectNode = requestExecutor.Topology.Nodes.FirstOrDefault(x => x.ClusterTag == tcpInfo.NodeTag);
+                        }
                     }
                     catch (ClientVersionMismatchException)
                     {
