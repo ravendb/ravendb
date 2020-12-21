@@ -2412,10 +2412,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                var methodCallExpression = context.Node as MethodCallExpression;
-
-                if (methodCallExpression?.Method.Name != "Metadata"
-                    && methodCallExpression?.Method.Name != "GetMetadataFor")
+                if (!(context.Node is MethodCallExpression methodCallExpression))
                     return;
 
                 if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery)
@@ -2423,13 +2420,34 @@ namespace Raven.Client.Util
                     && methodCallExpression.Object?.Type != typeof(IAsyncAdvancedSessionOperations))
                     return;
 
-                context.PreventDefault();
-                var writer = context.GetWriter();
-                using (writer.Operation(methodCallExpression))
+                switch (methodCallExpression.Method.Name)
                 {
-                    writer.Write("getMetadata(");
-                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                    writer.Write(")");
+                    case "LastModified":
+                    {
+                        context.PreventDefault();
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            writer.Write("getMetadata(");
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            writer.Write(")['@last-modified']");
+                        }
+                        break;
+                    }
+                    case "Metadata":
+                    case "GetMetadataFor":
+                    {
+                        context.PreventDefault();
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            writer.Write("getMetadata(");
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            writer.Write(")");
+                        }
+
+                        break;
+                    }
                 }
             }
         }
