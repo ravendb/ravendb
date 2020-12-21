@@ -16,7 +16,10 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
@@ -112,7 +115,8 @@ namespace RachisTests
             {
                 Server = cluster.Leader,
                 ReplicationFactor = dBGroupSize,
-                ModifyDocumentStore = s => s.Conventions.ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.RoundRobin
+                ModifyDocumentStore = s => s.Conventions.ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.RoundRobin,
+                RunInMemory = false
             }))
             {
                 using (var session = store.OpenAsyncSession())
@@ -125,7 +129,7 @@ namespace RachisTests
                 var workerTasks = new List<Task>();
                 for (var i = 0; i < SubscriptionsCount; i++)
                 {
-                    await GenerateWaitingSubscriptions(cdeArray.GetArray(), store, i, workerTasks, cts.Token);
+                    await GenerateWaitingSubscriptions(cdeArray.GetArray(), store, i, workerTasks, cluster.Nodes, cts.Token);
                 }
 
                 _ = Task.Run(async () => await ContinuouslyGenerateDocs(DocsBatchSize, store, cts.Token), cts.Token);
@@ -345,13 +349,19 @@ namespace RachisTests
             }
         }
 
-        private async Task GenerateWaitingSubscriptions(CountdownEvent[] cdes, DocumentStore store, int index, List<Task> workerTasks, CancellationToken token)
+        private async Task GenerateWaitingSubscriptions(CountdownEvent[] cdes, DocumentStore store, int index, List<Task> workerTasks, List<RavenServer> nodes, CancellationToken token)
         {
             var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
             {
                 Query = "from Users",
                 Name = "Subscription" + index
             }, token: token);
+
+            var subscription = await GetSubscription(subsId, store.Database, nodes, token);
+            Assert.NotNull(subscription);
+
+            await WaitForRaftIndexToBeAppliedOnClusterNodes(subscription.SubscriptionId, nodes);
+
             foreach (var cde in cdes)
             {
                 workerTasks.Add(GenerateSubscriptionThatSignalsToCDEUponCompletion(cde, store, subsId, token));
@@ -575,11 +585,11 @@ namespace RachisTests
             }
         }
 
-        private static async Task DropSubscriptions(string databaseName, int SubscriptionsCount, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster, CancellationToken token)
+        private static async Task DropSubscriptions(string databaseName, int SubscriptionsCount, (List<RavenServer> Nodes, RavenServer Leader) cluster, CancellationToken token)
         {
             foreach (var curNode in cluster.Nodes)
             {
-                Raven.Server.Documents.DocumentDatabase db = null;
+                DocumentDatabase db;
                 try
                 {
                     db = await curNode.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).WithCancellation(token);
@@ -607,7 +617,46 @@ namespace RachisTests
             }
         }
 
-        private async Task<Raven.Server.RavenServer> ToggleServer(Raven.Server.RavenServer node, bool shouldTrapRevivedNodesIntoCandidate)
+        private static async Task<SubscriptionStorage.SubscriptionGeneralDataAndStats> GetSubscription(string name, string database, List<RavenServer> nodes, CancellationToken token)
+        {
+            foreach (var curNode in nodes)
+            {
+                DocumentDatabase db;
+                try
+                {
+                    db = await curNode.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database).WithCancellation(token);
+                }
+                catch (DatabaseNotRelevantException)
+                {
+                    continue;
+                }
+
+                using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    SubscriptionStorage.SubscriptionGeneralDataAndStats subscription = null;
+                    try
+                    {
+                        subscription = db
+                            .SubscriptionStorage
+                            .GetSubscription(context, id: null, name, history: false);
+                    }
+                    catch (SubscriptionDoesNotExistException)
+                    {
+                        // expected
+                    }
+
+                    if (subscription == null)
+                        continue;
+
+                    return subscription;
+                }
+            }
+
+            return null;
+        }
+
+        private async Task<RavenServer> ToggleServer(Raven.Server.RavenServer node, bool shouldTrapRevivedNodesIntoCandidate)
         {
             if (node.Disposed)
             {
