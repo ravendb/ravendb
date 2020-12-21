@@ -95,7 +95,7 @@ class adminLogs extends viewModelBase {
     enableApply: KnockoutComputed<boolean>;
 
     isPauseLogs = ko.observable<boolean>(false);
-    isConnectedToWebSocket = ko.observable<boolean>(false);
+    connectionJustOpened = ko.observable<boolean>(false);
     
     constructor() {
         super();
@@ -228,14 +228,19 @@ class adminLogs extends viewModelBase {
         return item.includes("EXCEPTION:") || item.includes("Exception:") || item.includes("FATAL ERROR:");
     }
     
+    private isCustomizedItem(item: string): boolean {
+        return (item.includes("Connection established") || item.includes("Connection closed") || item.includes("Connection paused"));
+    }
+    
     // noinspection JSMethodCanBeStatic
     itemHtmlProvider(item: string) {
-        const errorClass = this.hasError(item) ? "class='bg-danger'" : "";
-
-        return $("<pre class='item'></pre>")
+        const errorClass = this.hasError(item) ? `class="bg-danger"` : "";
+        const customMsgClass = this.isCustomizedItem(item) ? "custom-msg" : "";
+        
+        return $(`<pre class="item ${customMsgClass}"></pre>`)
             .addClass("flex-horizontal")
             .prepend(`<span ${errorClass}>${generalUtils.escapeHtml(item)}</span>`)
-            .prepend("<a href='#' class='copy-item-button margin-right margin-right-sm flex-start' title='Copy log msg to clipboard'><i class='icon-copy'></i></a>");
+            .prepend(`<a href="#" class="copy-item-button margin-right margin-right-sm flex-start" title="Copy log msg to clipboard"><i class="icon-copy"></i></a>`);
     }
     
     compositionComplete() {
@@ -259,10 +264,24 @@ class adminLogs extends viewModelBase {
     
     connectWebSocket() {
         eventsCollector.default.reportEvent("admin-logs", "connect");
-        const ws = new adminLogsWebSocketClient(this.configuration(),
-                                                data => this.onData(data),
-                                                () => this.onConnectionClosed());
+        const ws = new adminLogsWebSocketClient(this.configuration(), data => this.onData(data));
         this.liveClient(ws);
+
+        this.liveClient().connectionOpened.subscribe((opened) => {
+            if (opened) {
+                this.connectionJustOpened(opened);
+            } else {
+                const customMsg = this.isPauseLogs() ? "Connection paused" : "Connection closed";
+                this.addMessage(customMsg, true);
+            }
+        });
+    }
+
+    isConnectedToWebSocket() {
+        if (this.liveClient() && this.liveClient().connectionOpened()) {
+            return true;
+        }
+        return false;
     }
     
     pauseLogs() {
@@ -288,8 +307,8 @@ class adminLogs extends viewModelBase {
         }
 
         let customizedMsg = false;
-        if (!this.isConnectedToWebSocket()) {
-            this.isConnectedToWebSocket(true);
+        if (this.connectionJustOpened()) {
+            this.connectionJustOpened(false);
             // replace the initial 'headers' msg
             data = "Connection established";
             customizedMsg = true;
@@ -301,18 +320,12 @@ class adminLogs extends viewModelBase {
             this.appendElementsTask = setTimeout(() => this.onAppendPendingMessages(), 333);
         }
     }
-
-    private onConnectionClosed() {
-        const customMsg = this.isPauseLogs() ? "Connection paused" : "Connection closed";
-        this.addMessage(customMsg, true);
-        this.isConnectedToWebSocket(false);
-    }
     
     private addMessage(msg: string, customizedMsg: boolean = false) {
         if (customizedMsg) {
             // msg artificially inserted by studio, not real data from ws...
             const time = new Date().toISOString();
-            msg = `${time}, ${msg}`;
+            msg = `${time.replace("Z", "0000Z")}, ${msg}`;
             this.listController().pushElements([...this.pendingMessages, msg]);
         } else {
             this.allData.push(msg);

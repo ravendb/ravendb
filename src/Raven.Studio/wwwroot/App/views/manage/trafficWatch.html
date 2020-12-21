@@ -67,13 +67,6 @@
     </div>
     <div class="flex-horizontal">
         <div class="flex-separator"></div>
-        <div class="margin-left margin-left-lg bg-warning text-warning padding padding-xs" data-bind="visible: !isConnectedToWebSocket()">
-            <small>
-                <i class="icon-warning"></i>
-                <span data-bind="visible: !isPauseLogs()">Not connected to web socket, trying to connect</span>
-                <span data-bind="visible: isPauseLogs" class="margin-left margin-left-sm">Traffic Watch log is paused</span>
-            </small>
-        </div>
         <div class="btn-group">
             <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleTail, css: { active: tailEnabled }">
                 <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>
@@ -84,6 +77,12 @@
         </div>
     </div>
     <div class="flex-grow">
+        <div class="results-error" data-bind="visible: !isConnectedToWebSocket()">
+            <div class="help-block bg-warning text-warning">
+                <span data-bind="visible: isPauseLogs"><i class="icon-warning"></i><span>Traffic Watch log is paused</span></span>
+                <span data-bind="visible: !isPauseLogs()"><i class="btn-spinner"></i><span class="margin-left">Trying to Connect</span></span>
+            </div>
+        </div>
         <div class="has-error results-error" data-bind="visible: isBufferFull">
             <div class="help-block">
                 <i class="icon-danger"></i><span> The log buffer is full. <a href="#" data-bind="click: clear">Clear all entries.</a></span>

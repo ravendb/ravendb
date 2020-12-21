@@ -4,6 +4,10 @@
             background-color: @panel-bg;
         }
         
+        &.custom-msg {
+            color: darken(@state-info-text, 7%);
+        }
+
         border: none;
         white-space: pre-wrap;
         font-size: 13px;
@@ -34,12 +38,16 @@
     .even {
         .item {
             &:not(.bg-danger) {
-                background-color: lighten(@panel-bg,5%);
+                background-color: lighten(@panel-bg, 5%);
             }
             
             span {
                 &.bg-danger {
                     background-color: lighten(@state-danger-bg, 6%);
+                }
+                
+                &.custom-msg {
+                    color: darken(@state-info-text, 7%);
                 }
             }
         }
@@ -56,7 +64,7 @@
     }
 
     .full-width {
-       width: 100%;
+        width: 100%;
     }
 
     #adminLogsPath {
