@@ -38,6 +38,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         [ThreadStatic]
         public static CurrentIndexingScope Current;
+        
+        public int CreatedFieldsCount;
 
         static CurrentIndexingScope()
         {

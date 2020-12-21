@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Exceptions;
@@ -25,7 +26,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class BatchRequestParser
+    public static class BatchRequestParser
     {
         public struct CommandData
         {
@@ -128,7 +129,9 @@ namespace Raven.Server.Documents.Handlers
             var state = new JsonParserState();
             using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
             using (var parser = new UnmanagedJsonParser(context, state, "bulk_docs"))
-            using (var modifier = new BlittableMetadataModifier(context))
+            /* In case we have a conflict between attachment with the same name we need attachment information from metadata */
+            /* we can't know from advanced if we will need this information so we save this for all batch commands */
+            using (var modifier = new BlittableMetadataModifier(context, legacyImport: false, readLegacyEtag: false,DatabaseItemType.Attachments))
             {
                 while (parser.Read() == false)
                     await RefillParserBuffer(stream, buffer, parser);
