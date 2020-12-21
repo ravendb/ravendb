@@ -5,16 +5,10 @@ import endpoints = require("endpoints");
 class trafficWatchWebSocketClient extends abstractWebSocketClient<Raven.Client.Documents.Changes.TrafficWatchChange> {
 
     private readonly onData: (data: Raven.Client.Documents.Changes.TrafficWatchChange) => void;
-    private readonly onConnectionStarted: () => void;
-    private readonly onConnectionClosed: () => void;
 
-    constructor(onData: (data: Raven.Client.Documents.Changes.TrafficWatchChange) => void,
-                onConnectionEstablished: () => void,
-                onConnectionClosed: () => void) {
+    constructor(onData: (data: Raven.Client.Documents.Changes.TrafficWatchChange) => void) {
         super(null);
         this.onData = onData;
-        this.onConnectionStarted = onConnectionEstablished;
-        this.onConnectionClosed = onConnectionClosed;
     }
 
     get connectionDescription() {
@@ -27,14 +21,6 @@ class trafficWatchWebSocketClient extends abstractWebSocketClient<Raven.Client.D
 
     get autoReconnect() {
         return true;
-    }
-
-    protected onConnectionEstablished() {
-        this.onConnectionStarted();
-    }
-
-    protected onClose() {
-        this.onConnectionClosed();
     }
     
     protected onMessage(e: Raven.Client.Documents.Changes.TrafficWatchChange) {

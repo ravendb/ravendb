@@ -7,14 +7,10 @@ import appUrl = require("common/appUrl");
 class adminLogsWebSocketClient extends abstractWebSocketClient<string> {
 
     private readonly onData: (data: string) => void;
-    private readonly onConnectionClosed: () => void;
 
-    constructor(config: adminLogsConfig,
-                onData: (data: string) => void,
-                onConnectionClosed: () => void) {
+    constructor(config: adminLogsConfig, onData: (data: string) => void) {
         super(null, config);
         this.onData = onData;
-        this.onConnectionClosed = onConnectionClosed;
     }
 
     protected isJsonBasedClient() {
@@ -46,10 +42,6 @@ class adminLogsWebSocketClient extends abstractWebSocketClient<string> {
 
     get autoReconnect() {
         return true;
-    }
-    
-    protected onClose() {
-        this.onConnectionClosed();
     }
 
     protected onMessage(e: string) {
