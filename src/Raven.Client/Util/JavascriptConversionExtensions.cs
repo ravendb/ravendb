@@ -2430,7 +2430,7 @@ namespace Raven.Client.Util
                         {
                             writer.Write("getMetadata(");
                             context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                            writer.Write(")['@last-modified']");
+                            writer.Write(")['" + Constants.Documents.Metadata.LastModified + "']");
                         }
                         break;
                     }
