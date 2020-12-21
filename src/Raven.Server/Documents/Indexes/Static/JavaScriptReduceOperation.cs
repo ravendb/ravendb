@@ -257,7 +257,14 @@ namespace Raven.Server.Documents.Indexes.Static
 
                         var value = groupByField.GetValue(null, prop.Value);
 
-                        key.Put(propertyName, JsValue.FromObject(Engine, value), throwOnError: false);
+                        JsValue jsValue = value switch 
+                        {
+                            BlittableJsonReaderObject bjro => new BlittableObjectInstance(Engine, null, bjro, null, null, null),
+                            Document doc => new BlittableObjectInstance(Engine, null, doc.Data, doc),
+                          _ =>  JsValue.FromObject(Engine, value)
+                        };
+                        
+                        key.Put(propertyName, jsValue, throwOnError: false);
                     }
                 }
 
