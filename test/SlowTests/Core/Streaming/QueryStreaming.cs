@@ -256,17 +256,31 @@ namespace SlowTests.Core.Streaming
                     {Guid.NewGuid().ToString("n"), "someValue"},
                     {Guid.NewGuid().ToString("n"), "someValue"}
                 }
-            }).ToArray();
+            });
 
-            var j = 0;
-            while (j < objs.Length)
             {
-                using var session = store.OpenAsyncSession();
-                for (var i = 0; i < 100 && j < objs.Length; i++, j++)
+                // After solving RavenDB-16040/RavenDB-16039 the iteration can be simplified 
+                var session = store.OpenAsyncSession();
+                try
                 {
-                    await session.StoreAsync(objs[j]);
+                    var i = 0;
+                    foreach (var obj in objs)
+                    {
+                        await session.StoreAsync(obj);
+                        i++;
+                        if (i % 100 == 0)
+                        {
+                            await session.SaveChangesAsync();
+                            session.Dispose();
+                            session = store.OpenAsyncSession();
+                        }
+                    }
+                    await session.SaveChangesAsync();
                 }
-                await session.SaveChangesAsync();
+                finally
+                {
+                    session.Dispose();
+                }
             }
 
             await Assert(Task.Run(() =>
