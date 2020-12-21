@@ -2422,7 +2422,7 @@ namespace Raven.Client.Util
 
                 switch (methodCallExpression.Method.Name)
                 {
-                    case "LastModified":
+                    case nameof(RavenQuery.LastModified):
                     {
                         context.PreventDefault();
                         var writer = context.GetWriter();
@@ -2434,8 +2434,8 @@ namespace Raven.Client.Util
                         }
                         break;
                     }
-                    case "Metadata":
-                    case "GetMetadataFor":
+                    case nameof(RavenQuery.Metadata):
+                    case nameof(IAdvancedSessionOperations.GetMetadataFor):
                     {
                         context.PreventDefault();
                         var writer = context.GetWriter();
