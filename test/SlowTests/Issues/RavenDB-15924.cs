@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -13,7 +12,7 @@ namespace SlowTests.Issues
         public RavenDB_15924(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         [Fact]
         public void ShouldWork()
         {
@@ -35,7 +34,7 @@ namespace SlowTests.Issues
             {
                 return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
             }
-            
+
             using (var session = store.OpenSession())
             {
                 // Exact search for one quote
@@ -49,17 +48,17 @@ namespace SlowTests.Issues
                 Assert.Equal(4, q2.Count());
 
                 // Exact search for two quotes
-                var q3 = session.Query<Doc, DocsIndex>().Search(x => x.StrVal,Escape( "\"\""));
+                var q3 = session.Query<Doc, DocsIndex>().Search(x => x.StrVal, Escape("\"\""));
                 Assert.Equal(1, q3.Count());
 
                 // Exact search for two escaped quotes enclosed in quotes
                 // from index 'DocsIndex' where search(StrVal, '\"\\\"\\\"\"')
                 var q4 = session.Query<Doc, DocsIndex>().Search(x => x.StrVal, Escape("\"\\\"\\\"\""));
                 Assert.Equal(1, q4.Count());
-                
+
                 // Exact search for three escaped quotes enclosed in quotes
                 // from index 'DocsIndex' where search(StrVal, '\"\\\"\\\"\\\"\"')
-                var q5 = session.Query<Doc, DocsIndex>().Search(x => x.StrVal,Escape( "\"\\\"\\\"\\\"\""));
+                var q5 = session.Query<Doc, DocsIndex>().Search(x => x.StrVal, Escape("\"\\\"\\\"\\\"\""));
                 Assert.Equal(1, q5.Count());
             }
         }
