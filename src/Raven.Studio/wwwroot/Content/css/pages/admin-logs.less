@@ -4,8 +4,10 @@
             background-color: @panel-bg;
         }
         
-        &.custom-msg {
-            color: darken(@state-info-text, 7%);
+        span {
+            &.studio-item-info {
+                color: darken(@state-info-text, 7%);
+            }
         }
 
         border: none;
@@ -44,10 +46,6 @@
             span {
                 &.bg-danger {
                     background-color: lighten(@state-danger-bg, 6%);
-                }
-                
-                &.custom-msg {
-                    color: darken(@state-info-text, 7%);
                 }
             }
         }

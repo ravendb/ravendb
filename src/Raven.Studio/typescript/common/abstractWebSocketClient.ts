@@ -5,7 +5,7 @@ import appUrl = require("common/appUrl");
 abstract class abstractWebSocketClient<T> {
 
     private static readonly readyStateOpen = 1;
-    connectionOpened = ko.observable<boolean>(false);
+    isConnected = ko.observable<boolean>(false);
 
     connectToWebSocketTask: JQueryDeferred<void>;
 
@@ -81,13 +81,13 @@ abstract class abstractWebSocketClient<T> {
         }
         
         this.webSocket.onerror = (e) => {
-            if (!this.connectionOpened()) {
+            if (!this.isConnected()) {
                 this.onError(e);
             }
         };
         
         this.webSocket.onclose = (e: CloseEvent) => {
-            this.connectionOpened(false);
+            this.isConnected(false);
             this.onClose(e);
             
             if (!e.wasClean) {
@@ -100,7 +100,7 @@ abstract class abstractWebSocketClient<T> {
         };
         
         this.webSocket.onopen = () => {
-            this.connectionOpened(true);
+            this.isConnected(true);
             this.onOpen();
         }
     }
