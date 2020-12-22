@@ -25,6 +25,12 @@ class documentWarningsConfirm extends dialogViewModelBase {
         dialog.close(this, false);
         this.onGoto(warning);
     }
+
+    warningLocation(warning: AceAjax.Annotation) {
+        return ko.pureComputed(() => {
+            return `Line: ${warning.row + 1}, Column: ${warning.column}`;
+        })
+    }
 }
 
 export = documentWarningsConfirm;

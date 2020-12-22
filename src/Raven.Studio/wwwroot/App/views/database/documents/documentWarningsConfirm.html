@@ -1,4 +1,4 @@
-<div class="modal-dialog modal-lg" role="document">
+<div class="modal-dialog modal-lg edit-document-warnings" role="document">
     <div class="modal-content">
         <div class="modal-header">
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
@@ -7,29 +7,26 @@
             <h4 class="modal-title">Document warnings</h4>
         </div>
         <div class="modal-body">
-
-            Following warnings have been detected that might affect the data of the document:
-            
-            <table class="table">
+            <div class="margin-top margin-top-lg">
+                The following detected warnings might affect the document data:
+            </div>
+            <table class="table table-condensed table-striped table-bordered margin-top margin-top-lg">
                 <thead>
-                <tr>
-                    <th>&nbsp;</th>
-                    <th>Location</th>
-                    <th>Description</th>
-                </tr>
+                    <tr>
+                        <th>Location</th>
+                        <th>Description</th>
+                    </tr>
                 </thead>
                 <tbody data-bind="foreach: warnings">
                     <tr>
-                        <td>
-                            <i class="icon-warning text-warning"></i>
-                        </td>
                         <td nowrap="nowrap">
-                            <a href="#" class="text-warning" data-bind="click: $root.goTo.bind($root, $data)" title="Show warning in document editor">
-                                <span data-bind="text: 'Line: ' + row + ', Column: ' + column"></span>
+                            <a href="#" class="text-warning" data-bind="click: $root.goTo.bind($root, $data)" title="Go to warning in document editor">
+                                <i class="icon-warning text-warning"></i>
+                                <span data-bind="text: $root.warningLocation($data)"></span>
                             </a>
                         </td>
                         <td>
-                            <span data-bind="text: text"></span>
+                            <span class="description" data-bind="text: text"></span>
                         </td>
                     </tr>
                 </tbody>

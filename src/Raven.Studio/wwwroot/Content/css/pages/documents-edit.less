@@ -1,13 +1,13 @@
 
 .fullScreen {
-    .editDocument {
+    .edit-document {
         .right-editor {
             transform: none !important; // get rid of transform in fullscreen mode, as position fixed, does't work with transform    
         }
     }
 }
 
-.editDocument {
+.edit-document {
     display: flex;
     .absolute-fill;
 
@@ -267,6 +267,14 @@
                 .icon-style;
                 content: @trash;
             }
+        }
+    }
+}
+
+.edit-document-warnings {
+    table {
+        .description {
+            white-space:pre-line;
         }
     }
 }
