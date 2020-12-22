@@ -35,7 +35,6 @@ namespace Raven.Server.Documents.Queries
     public static class QueryBuilder
     {
         private static readonly KeywordAnalyzer KeywordAnalyzer = new KeywordAnalyzer();
-        private static readonly char[] WhiteSpaceCharacters = new[]{' ', '\t'};
 
         private static readonly MultiTermQuery.ConstantScoreAutoRewrite _secondaryBetweenRewriteMethod = new MultiTermQuery.ConstantScoreAutoRewrite
         {
