@@ -302,10 +302,7 @@ class trafficWatch extends viewModelBase {
     }
     
     isConnectedToWebSocket() {
-        if (this.liveClient() && this.liveClient().connectionOpened()) {
-            return true;
-        }        
-        return false;
+        return this.liveClient() && this.liveClient().isConnected();
     }
 
     private onData(data: Raven.Client.Documents.Changes.TrafficWatchChange) {
