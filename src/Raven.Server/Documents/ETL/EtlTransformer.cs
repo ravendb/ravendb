@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TimeSeries;
@@ -58,11 +59,14 @@ namespace Raven.Server.Documents.ETL
 
             DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadTo, LoadToFunctionTranslator));
 
-            for (var i = 0; i < LoadToDestinations.Length; i++)
+            foreach (var collection in LoadToDestinations)
             {
-                var collection = LoadToDestinations[i];
                 var name = Transformation.LoadTo + collection;
-                var clrFunctionInstance = new ClrFunctionInstance(DocumentScript.ScriptEngine, name, (value, values) => LoadToFunctionTranslator(collection, value, values));
+
+                var collection1 = collection;
+                var clrFunctionInstance = LoadToS3 ? new ClrFunctionInstance(DocumentScript.ScriptEngine, name, (value, values) => LoadToS3FunctionTranslator(collection1, value, values))
+                    : new ClrFunctionInstance(DocumentScript.ScriptEngine, name, (value, values) => LoadToFunctionTranslator(collection, value, values));
+
                 DocumentScript.ScriptEngine.SetValue(name, clrFunctionInstance);
             }
 
@@ -119,6 +123,37 @@ namespace Raven.Server.Documents.ETL
             // already be calling that.
             var result = new ScriptRunnerResult(DocumentScript, args[0].AsObject());
             LoadToFunction(name, result);
+            return result.Instance;
+        }
+
+        private JsValue LoadToS3FunctionTranslator(string name, JsValue self, JsValue[] args)
+        {
+            if (args.Length != 2)
+                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) must be called with exactly 2 parameters");
+
+            string key = default;
+            if (args[0].IsString())
+            {
+                key = args[0].AsString();
+            }
+            else if (args[0].IsDate())
+            {
+                key = args[0].AsDate().ToString();
+            }
+            else
+            {
+                // todo
+                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be a string or date");
+            }
+
+            if (args[1].IsObject() == false)
+                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'obj' must be an object");
+
+            // explicitly not disposing here, this will clear the context from the JavaScriptUtils, but this is 
+            // called _midway_ through the script, so that is not something that we want to do. The caller will
+            // already be calling that.
+            var result = new ScriptRunnerResult(DocumentScript, args[0].AsObject());
+            LoadToFunction(name, result, key);
             return result.Instance;
         }
 
@@ -377,11 +412,13 @@ namespace Raven.Server.Documents.ETL
         
         protected abstract string[] LoadToDestinations { get; }
 
-        protected abstract void LoadToFunction(string tableName, ScriptRunnerResult colsAsObject);
+        protected abstract void LoadToFunction(string tableName, ScriptRunnerResult colsAsObject, string key = null);
 
         public abstract List<TTransformed> GetTransformedResults();
 
         public abstract void Transform(TExtracted item, EtlStatsScope stats, EtlProcessState state);
+
+        protected virtual bool LoadToS3 => false;
 
         public static void ThrowLoadParameterIsMandatory(string parameterName)
         {

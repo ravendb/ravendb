@@ -114,6 +114,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return ShouldTrackAttachmentTombstones(Transformation);
         }
 
+        protected override bool ShouldWait(out int ticks)
+        {
+            ticks = default;
+            return false;
+        }
+
         public static bool ShouldTrackAttachmentTombstones(Transformation transformation)
         {
             return transformation.IsEmptyScript;

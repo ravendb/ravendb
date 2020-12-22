@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         protected override string[] LoadToDestinations { get; }
 
-        protected override void LoadToFunction(string tableName, ScriptRunnerResult cols)
+        protected override void LoadToFunction(string tableName, ScriptRunnerResult cols, string key = null)
         {
             if (tableName == null)
                 ThrowLoadParameterIsMandatory(nameof(tableName));
