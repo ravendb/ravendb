@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -13,6 +14,8 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.Documents.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.Extensions;
@@ -583,6 +586,18 @@ namespace Raven.Client.Documents.BulkInsert
             return new TimeSeriesBulkInsert(this, id, name);
         }
 
+        public TypedTimeSeriesBulkInsert<TValues> TimeSeriesFor<TValues>(string id, string name = null) where TValues : new()
+        {
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentException("Document id cannot be null or empty", nameof(id));
+
+            var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>(_conventions);
+            if (string.IsNullOrEmpty(tsName))
+                throw new ArgumentException("Time series name cannot be null or empty", nameof(name));
+
+            return new TypedTimeSeriesBulkInsert<TValues>(this, id, tsName);
+        }
+
         public struct CountersBulkInsert
         {
             private readonly BulkInsertOperation _operation;
@@ -708,7 +723,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        public class TimeSeriesBulkInsert : IDisposable
+        public abstract class TimeSeriesBulkInsertBase : IDisposable
         {
             private readonly BulkInsertOperation _operation;
             private readonly string _id;
@@ -716,7 +731,7 @@ namespace Raven.Client.Documents.BulkInsert
             private bool _first = true;
             private int _timeSeriesInBatch = 0;
 
-            public TimeSeriesBulkInsert(BulkInsertOperation operation, string id, string name)
+            protected TimeSeriesBulkInsertBase(BulkInsertOperation operation, string id, string name)
             {
                 operation.EndPreviousCommandIfNeeded();
 
@@ -727,27 +742,7 @@ namespace Raven.Client.Documents.BulkInsert
                 _operation._inProgressCommand = CommandType.TimeSeries;
             }
 
-            public void Append(DateTime timestamp, double value, string tag = null)
-            {
-                AsyncHelpers.RunSync(() => AppendAsync(timestamp, new[] { value }, tag));
-            }
-
-            public Task AppendAsync(DateTime timestamp, double value, string tag = null)
-            {
-                return AppendAsyncInternal(timestamp, new[] { value }, tag);
-            }
-
-            public void Append(DateTime timestamp, ICollection<double> values, string tag = null)
-            {
-                AsyncHelpers.RunSync(() => AppendAsync(timestamp, values, tag));
-            }
-
-            public Task AppendAsync(DateTime timestamp, ICollection<double> values, string tag = null)
-            {
-                return AppendAsyncInternal(timestamp, values, tag);
-            }
-
-            private async Task AppendAsyncInternal(DateTime timestamp, ICollection<double> values, string tag = null)
+            protected async Task AppendAsyncInternal(DateTime timestamp, ICollection<double> values, string tag = null)
             {
                 using (_operation.ConcurrencyCheck())
                 {
@@ -837,6 +832,66 @@ namespace Raven.Client.Documents.BulkInsert
 
                 if (_first == false)
                     _operation._currentWriter.Write("]}}");
+            }
+        }
+
+        public class TimeSeriesBulkInsert : TimeSeriesBulkInsertBase
+        {
+            public TimeSeriesBulkInsert(BulkInsertOperation operation, string id, string name) : base(operation, id, name)
+            {
+            }
+
+            public void Append(DateTime timestamp, double value, string tag = null)
+            {
+                AsyncHelpers.RunSync(() => AppendAsync(timestamp, new[] { value }, tag));
+            }
+
+            public Task AppendAsync(DateTime timestamp, double value, string tag = null)
+            {
+                return AppendAsyncInternal(timestamp, new[] { value }, tag);
+            }
+
+            public void Append(DateTime timestamp, ICollection<double> values, string tag = null)
+            {
+                AsyncHelpers.RunSync(() => AppendAsync(timestamp, values, tag));
+            }
+
+            public Task AppendAsync(DateTime timestamp, ICollection<double> values, string tag = null)
+            {
+                return AppendAsyncInternal(timestamp, values, tag);
+            }
+        }
+
+        public class TypedTimeSeriesBulkInsert<TValues> : TimeSeriesBulkInsertBase where TValues : new()
+        {
+            public TypedTimeSeriesBulkInsert(BulkInsertOperation operation, string id, string name): base(operation, id, name)
+            {
+            }
+
+            public void Append(DateTime timestamp, TValues value, string tag = null)
+            {
+                AsyncHelpers.RunSync(() => AppendAsync(timestamp, value, tag));
+            }
+
+            public Task AppendAsync(DateTime timestamp, TValues value, string tag = null)
+            {
+                if (value is ICollection<double> doubles)
+                {
+                    return AppendAsyncInternal(timestamp, doubles, tag);
+                }
+
+                var values = TimeSeriesValuesHelper.GetValues(value).ToArray();
+                return AppendAsyncInternal(timestamp, values, tag);
+            }
+
+            public void Append(TimeSeriesEntry<TValues> entry)
+            {
+                AsyncHelpers.RunSync(() => AppendAsync(entry));
+            }
+
+            public Task AppendAsync(TimeSeriesEntry<TValues> entry)
+            {
+                return AppendAsync(entry.Timestamp, entry.Value, entry.Tag);
             }
         }
 
