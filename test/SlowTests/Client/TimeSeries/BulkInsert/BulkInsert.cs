@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
@@ -14,7 +13,6 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.Attachments;
-using SlowTests.Issues;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -22,7 +20,7 @@ using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Client.TimeSeries
+namespace SlowTests.Client.TimeSeries.BulkInsert
 {
     public class BulkInsert : RavenTestBase
     {
