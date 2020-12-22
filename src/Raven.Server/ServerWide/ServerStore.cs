@@ -735,7 +735,7 @@ namespace Raven.Server.ServerWide
                     return;
 
                 var swapSize = MemoryInformation.GetMemoryInfo().TotalSwapSize;
-                if (swapSize < Configuration.PerformanceHints.MinSwapSize)
+                if (swapSize < Configuration.PerformanceHints.MinSwapSize - new Sparrow.Size(100, SizeUnit.Megabytes))
                     NotificationCenter.Add(AlertRaised.Create(null,
                         "Low swap size",
                         $"The current swap size is '{swapSize}' and it is lower then the threshold defined '{Configuration.PerformanceHints.MinSwapSize}'",
