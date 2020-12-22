@@ -165,6 +165,8 @@ namespace Raven.Server.Documents.ETL
         protected abstract IEnumerator<TExtracted> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection);
 
         protected abstract bool ShouldTrackAttachmentTombstones();
+
+        protected abstract bool ShouldWait(out int ticks);
         
         public override long TaskId => Configuration.TaskId;
 
@@ -637,6 +639,12 @@ namespace Raven.Server.Documents.ETL
 
                 try
                 {
+                    if (ShouldWait(out var delay))
+                    {
+                        //todo
+                        Thread.Sleep(delay);
+                    }
+
                     _waitForChanges.Reset();
 
                     var startTime = Database.Time.GetUtcNow();

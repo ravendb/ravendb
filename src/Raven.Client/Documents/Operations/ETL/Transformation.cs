@@ -16,8 +16,6 @@ namespace Raven.Client.Documents.Operations.ETL
 
         internal const string AttachmentMarker = "$attachment/";
 
-        
-
         internal const string GenericDeleteDocumentsBehaviorFunctionKey = "$deleteDocumentsBehavior<>";
 
         internal const string GenericDeleteDocumentsBehaviorFunctionName = "deleteDocumentsBehavior";
@@ -249,7 +247,6 @@ namespace Raven.Client.Documents.Operations.ETL
         internal bool IsAddingAttachments { get; private set; }
 
         internal bool IsLoadingAttachments { get; private set; }
-
 
         public Transformation()
         {
