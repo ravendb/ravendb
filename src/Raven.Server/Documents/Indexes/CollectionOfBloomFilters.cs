@@ -16,6 +16,7 @@ namespace Raven.Server.Documents.Indexes
     {
         private static readonly Slice Count64Slice;
         private static readonly Slice Count32Slice;
+        internal static readonly Slice VersionSlice;
 
         static CollectionOfBloomFilters()
         {
@@ -23,6 +24,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 Slice.From(ctx, "Count64", ByteStringType.Immutable, out Count64Slice);
                 Slice.From(ctx, "Count32", ByteStringType.Immutable, out Count32Slice);
+                Slice.From(ctx, "Version", ByteStringType.Immutable, out VersionSlice);
             }
         }
 
@@ -36,15 +38,18 @@ namespace Raven.Server.Documents.Indexes
         private BloomFilter[] _filters;
         private BloomFilter _currentFilter;
         private Mode _mode;
+        public readonly long Version;
         private readonly Tree _tree;
         public bool Consumed;
         private static readonly long _consumed = -1L;
 
-        private CollectionOfBloomFilters(Mode mode, Tree tree, TransactionOperationContext context)
+        private CollectionOfBloomFilters(Mode mode, long version, Tree tree, TransactionOperationContext context)
         {
             _mode = mode;
             _context = context;
             _tree = tree;
+
+            Version = version;
         }
 
         public int Count
@@ -62,13 +67,15 @@ namespace Raven.Server.Documents.Indexes
 
         public static CollectionOfBloomFilters Load(Mode mode, TransactionOperationContext indexContext)
         {
+            var isNew = indexContext.Transaction.InnerTransaction.ReadTree("BloomFilters") == null;
             var tree = indexContext.Transaction.InnerTransaction.CreateTree("BloomFilters");
+            var version = GetVersion(tree, isNew);
             var count = GetCount(tree, ref mode);
             if (count == _consumed)
             {
                 Debug.Assert(mode == Mode.X86, "BloomFilters in x64 mode got consumed, should not happen and likely a bug!");
 
-                var consumedCollection = new CollectionOfBloomFilters(mode, tree: null, context: null)
+                var consumedCollection = new CollectionOfBloomFilters(mode, version, tree: null, context: null)
                 {
                     Consumed = true
                 };
@@ -76,7 +83,7 @@ namespace Raven.Server.Documents.Indexes
                 return consumedCollection;
             }
 
-            var collection = new CollectionOfBloomFilters(mode, tree, indexContext);
+            var collection = new CollectionOfBloomFilters(mode, version, tree, indexContext);
 
             for (var i = 0; i < count; i++)
             {
@@ -84,10 +91,11 @@ namespace Raven.Server.Documents.Indexes
                 switch (mode)
                 {
                     case Mode.X64:
-                        filter = new BloomFilter64(i, tree, writable: false, allocator: indexContext.Allocator);
+                        filter = new BloomFilter64(i, version, tree, writable: false, allocator: indexContext.Allocator);
                         break;
+
                     case Mode.X86:
-                        filter = new BloomFilter32(i, tree, writable: false, allocator: indexContext.Allocator);
+                        filter = new BloomFilter32(i, version, tree, writable: false, allocator: indexContext.Allocator);
                         break;
                 }
 
@@ -97,6 +105,17 @@ namespace Raven.Server.Documents.Indexes
             collection.Initialize();
 
             return collection;
+        }
+
+        internal static long GetVersion(Tree tree, bool isNew)
+        {
+            var read = tree.Read(VersionSlice);
+            if (read != null)
+                return read.Reader.ReadLittleEndianInt64();
+
+            return isNew
+                ? BloomFilterVersion.CurrentVersion
+                : BloomFilterVersion.BaseVersion;
         }
 
         private static long GetCount(Tree tree, ref Mode mode)
@@ -117,6 +136,8 @@ namespace Raven.Server.Documents.Indexes
 
         private void Initialize()
         {
+            _tree.Add(VersionSlice, Version);
+
             if (_filters != null && _filters.Length > 0)
             {
                 ExpandFiltersIfNecessary();
@@ -134,14 +155,14 @@ namespace Raven.Server.Documents.Indexes
 
                 Debug.Assert(_tree.ShouldGoToOverflowPage(BloomFilter64.PtrSize));
 
-                return new BloomFilter64(number, _tree, writable: true, allocator: _context.Allocator);
+                return new BloomFilter64(number, Version, _tree, writable: true, allocator: _context.Allocator);
             }
 
             _tree.Increment(Count32Slice, 1);
 
             Debug.Assert(_tree.ShouldGoToOverflowPage(BloomFilter32.PtrSize));
 
-            return new BloomFilter32(number, _tree, writable: true, allocator: _context.Allocator);
+            return new BloomFilter32(number, Version, _tree, writable: true, allocator: _context.Allocator);
         }
 
         internal void AddFilter(BloomFilter filter)
@@ -160,10 +181,12 @@ namespace Raven.Server.Documents.Indexes
                     if (filter is BloomFilter32)
                         throw new InvalidOperationException("Cannot add 32-bit filter in 64-bit mode.");
                     break;
+
                 case Mode.X86:
                     if (filter is BloomFilter64)
                         throw new InvalidOperationException("Cannot add 64-bit filter in 32-bit mode.");
                     break;
+
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -243,7 +266,6 @@ namespace Raven.Server.Documents.Indexes
 
         public void Dispose()
         {
-
         }
 
         public class BloomFilter32 : BloomFilter
@@ -253,8 +275,8 @@ namespace Raven.Server.Documents.Indexes
 
             private const ulong M = PtrSize * PtrBitVector.BitsPerByte;
 
-            public BloomFilter32(int key, Tree tree, bool writable, ByteStringContext allocator)
-                : base(key, tree, writable, M, PtrSize, MaxCapacity, allocator)
+            public BloomFilter32(int key, long version, Tree tree, bool writable, ByteStringContext allocator)
+                : base(key, version, tree, writable, M, PtrSize, MaxCapacity, allocator)
             {
             }
         }
@@ -266,8 +288,8 @@ namespace Raven.Server.Documents.Indexes
 
             private const ulong M = PtrSize * PtrBitVector.BitsPerByte;
 
-            public BloomFilter64(int key, Tree tree, bool writable, ByteStringContext allocator)
-                : base(key, tree, writable, M, PtrSize, MaxCapacity, allocator)
+            public BloomFilter64(int key, long version, Tree tree, bool writable, ByteStringContext allocator)
+                : base(key, version, tree, writable, M, PtrSize, MaxCapacity, allocator)
             {
             }
         }
@@ -277,6 +299,7 @@ namespace Raven.Server.Documents.Indexes
             private const long K = 10;
 
             private readonly int _key;
+            private readonly long _version;
             private readonly Slice _keySlice;
             private readonly Tree _tree;
             private readonly ulong _m;
@@ -294,9 +317,10 @@ namespace Raven.Server.Documents.Indexes
 
             public readonly int Capacity;
 
-            protected BloomFilter(int key, Tree tree, bool writable, ulong m, int ptrSize, int capacity, ByteStringContext allocator)
+            protected BloomFilter(int key, long version, Tree tree, bool writable, ulong m, int ptrSize, int capacity, ByteStringContext allocator)
             {
                 _key = key;
+                _version = version;
                 _tree = tree;
                 _m = m;
                 _ptrSize = ptrSize;
@@ -383,7 +407,18 @@ namespace Raven.Server.Documents.Indexes
 
             private Partition GetPartition(ulong ptrPosition, out ulong partitionPtrPosition)
             {
-                var partitionNumber = ptrPosition % _partitionCount;
+                ulong partitionNumber;
+                switch (_version)
+                {
+                    case BloomFilterVersion.BaseVersion:
+                        partitionNumber = ptrPosition % _partitionCount;
+                        break;
+
+                    default:
+                        partitionNumber = ptrPosition / Partition.PartitionSize;
+                        break;
+                }
+
                 partitionPtrPosition = ptrPosition % Partition.PartitionSize;
 
                 return GetPartitionByNumber(partitionNumber);
@@ -419,7 +454,7 @@ namespace Raven.Server.Documents.Indexes
                 if (partition.Writable)
                     return;
 
-                // we can safely pass the raw pointer here and dispose DirectAdd scope immediately because 
+                // we can safely pass the raw pointer here and dispose DirectAdd scope immediately because
                 // filter's content will be written to an overflow
 
                 Debug.Assert(_tree.ShouldGoToOverflowPage(_ptrSize));
@@ -487,7 +522,6 @@ namespace Raven.Server.Documents.Indexes
 
             public void Dispose()
             {
-
             }
 
             private class Partition
@@ -503,5 +537,17 @@ namespace Raven.Server.Documents.Indexes
                 public bool IsEmpty;
             }
         }
+    }
+
+    public static class BloomFilterVersion
+    {
+        public const long BaseVersion = 40_000;
+
+        public const long PartitionFix = 42_000;
+
+        /// <summary>
+        /// Remember to bump this
+        /// </summary>
+        public const long CurrentVersion = PartitionFix;
     }
 }
