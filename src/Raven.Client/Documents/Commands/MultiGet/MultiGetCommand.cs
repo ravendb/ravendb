@@ -29,18 +29,12 @@ namespace Raven.Client.Documents.Commands.MultiGet
         
         private readonly List<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)> _cachedValues;
 
-        ~MultiGetCommand()
-        {
-            ReleaseCachedValues();
-        }
-
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             _baseUrl = $"{node.Url}/databases/{node.Database}";
 
             // in case we had a fail over and we call this method again on the same instance
             ReleaseCachedValues();
-            GC.ReRegisterForFinalize(this);
 
             var request = new HttpRequestMessage
             {
