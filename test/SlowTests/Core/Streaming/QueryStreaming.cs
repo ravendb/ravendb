@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,6 +14,7 @@ using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
+using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -237,25 +237,16 @@ namespace SlowTests.Core.Streaming
             }
         }
 
-        class TestObj
-        {
-            public string Id { get; set; }
-            public Dictionary<string, string> Prop { get; set; }
-        }
-        
         [Fact]
         public async Task QueryStream_WhenDocsContainsMultipleUniqPropertyNames_ShouldNotBeVeryVerySlow()
         {
             using var store = GetDocumentStore();
 
-            var objs = Enumerable.Range(0, 100000).Select(_ => new TestObj
+            var objs = Enumerable.Range(0, 100000).Select(_ => new DynamicJsonValue
             {
-                Prop = new Dictionary<string, string>
-                {
-                    {Guid.NewGuid().ToString("n"), "someValue"},
-                    {Guid.NewGuid().ToString("n"), "someValue"},
-                    {Guid.NewGuid().ToString("n"), "someValue"}
-                }
+                [Guid.NewGuid().ToString("n")] = "someValue",
+                [Guid.NewGuid().ToString("n")] = "someValue",
+                [Guid.NewGuid().ToString("n")] = "someValue"
             });
 
             {
@@ -312,6 +303,8 @@ namespace SlowTests.Core.Streaming
             static async Task Assert(Task test)
             {
                 await Task.WhenAny(test, Task.Delay(TimeSpan.FromMinutes(2)));
+                if (test.IsFaulted)
+                    await test;
                 Xunit.Assert.True(test.IsCompletedSuccessfully);
             }
         }

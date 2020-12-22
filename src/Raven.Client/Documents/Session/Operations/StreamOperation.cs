@@ -277,7 +277,7 @@ namespace Raven.Client.Documents.Session.Operations
             public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult response, bool isQueryStream, bool isTimeSeriesStream, bool isAsync, StreamQueryStatistics streamQueryStatistics, CancellationToken token = default)
             {
                 _response = response ?? throw new InvalidOperationException("The index does not exists, failed to stream results");
-                _contextDispose = session.RequestExecutor.ContextPool.AllocateOperationContext(out _builderContext);
+                _returnContext = session.RequestExecutor.ContextPool.AllocateOperationContext(out _builderContext);
                 _peepingTomStream = new PeepingTomStream(_response.Stream, session.Context);
                 _session = session;
                 _isQueryStream = isQueryStream;
@@ -303,9 +303,8 @@ namespace Raven.Client.Documents.Session.Operations
             private readonly CancellationToken _token;
             private readonly PeepingTomStream _peepingTomStream;
             private int _docsCountOnCachedRenewSession;
-            private bool _cachedItemsRenew;
             private readonly JsonOperationContext _builderContext;
-            private readonly IDisposable _contextDispose;
+            private readonly IDisposable _returnContext;
             private BlittableJsonDocumentBuilder _builder;
             
 #if NETSTANDARD2_0 || NETCOREAPP2_1
@@ -338,7 +337,8 @@ namespace Raven.Client.Documents.Session.Operations
                 _parser.Dispose();
                 _returnBuffer.Dispose();
                 _peepingTomStream.Dispose();
-                _contextDispose.Dispose();
+                _builder.Dispose();
+                _returnContext.Dispose();
             }
 
             public bool MoveNext()
@@ -363,30 +363,24 @@ namespace Raven.Client.Documents.Session.Operations
                     return false;
                 }
 
-                _builder ??= new BlittableJsonDocumentBuilder(_builderContext, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state);
+                _builder.Renew("readArray/singleResult", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    
+                if (_isTimeSeriesStream)
+                    UnmanagedJsonParserHelper.ReadProperty(_builder, _peepingTomStream, _parser, _buffer);
+                else
+                    UnmanagedJsonParserHelper.ReadObject(_builder, _peepingTomStream, _parser, _buffer);
+
+                Current = _builder.CreateReader();
+
+                _builder.Reset();
+                    
+                if (_isTimeSeriesStream)
                 {
-                    if (_cachedItemsRenew == false)
-                        _cachedItemsRenew = _builder.NeedResetPropertiesCache();
-
-                    _builder.Renew("readArray/singleResult", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                    
-                    if (_isTimeSeriesStream)
-                        UnmanagedJsonParserHelper.ReadProperty(_builder, _peepingTomStream, _parser, _buffer);
-                    else
-                        UnmanagedJsonParserHelper.ReadObject(_builder, _peepingTomStream, _parser, _buffer);
-
-                    Current = _builder.CreateReader();
-
-                    _builder.Reset();
-                    
-                    if (_isTimeSeriesStream)
-                    {
-                        _timeSeriesIt = new TimeSeriesStreamEnumerator(_builderContext, _peepingTomStream, _parser, _state, _buffer);
-                        _timeSeriesIt.Initialize();
-                    }
-
-                    return true;
+                    _timeSeriesIt = new TimeSeriesStreamEnumerator(_builderContext, _peepingTomStream, _parser, _state, _buffer);
+                    _timeSeriesIt.Initialize();
                 }
+
+                return true;
             }
 
             public async ValueTask<bool> MoveNextAsync()
@@ -412,24 +406,23 @@ namespace Raven.Client.Documents.Session.Operations
                     return false;
                 }
 
-                _builder = new BlittableJsonDocumentBuilder(_builderContext, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state);
+                _builder.Renew("readArray/singleResult", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                if (_isTimeSeriesStream)
+                    await UnmanagedJsonParserHelper.ReadPropertyAsync(_builder, _peepingTomStream, _parser, _buffer, _token).ConfigureAwait(false);
+                else
+                    await UnmanagedJsonParserHelper.ReadObjectAsync(_builder, _peepingTomStream, _parser, _buffer, _token).ConfigureAwait(false);
+
+                Current = _builder.CreateReader();
+                    
+                _builder.Reset();
+
+                if (_isTimeSeriesStream)
                 {
-                    if (_cachedItemsRenew == false)
-                        _cachedItemsRenew = _builder.NeedResetPropertiesCache();
-
-                    if (_isTimeSeriesStream)
-                        await UnmanagedJsonParserHelper.ReadPropertyAsync(_builder, _peepingTomStream, _parser, _buffer, _token).ConfigureAwait(false);
-                    else
-                        await UnmanagedJsonParserHelper.ReadObjectAsync(_builder, _peepingTomStream, _parser, _buffer, _token).ConfigureAwait(false);
-
-                    Current = _builder.CreateReader();
-                    if (_isTimeSeriesStream)
-                    {
-                        _timeSeriesIt = new TimeSeriesStreamEnumerator(_builderContext, _peepingTomStream, _parser, _state, _buffer);
-                        await _timeSeriesIt.InitializeAsync().ConfigureAwait(false);
-                    }
-                    return true;
+                    _timeSeriesIt = new TimeSeriesStreamEnumerator(_builderContext, _peepingTomStream, _parser, _state, _buffer);
+                    await _timeSeriesIt.InitializeAsync().ConfigureAwait(false);
                 }
+                return true;
             }
 
             private TimeSeriesStreamEnumerator _timeSeriesIt;
@@ -449,6 +442,7 @@ namespace Raven.Client.Documents.Session.Operations
 
                     _state = new JsonParserState();
                     _parser = new UnmanagedJsonParser(_session.Context, _state, "stream contents");
+                    _builder = new BlittableJsonDocumentBuilder(_builderContext, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state);
                     _returnBuffer = _session.Context.GetMemoryBuffer(out _buffer);
 
                     if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
@@ -489,6 +483,7 @@ namespace Raven.Client.Documents.Session.Operations
 
                     _state = new JsonParserState();
                     _parser = new UnmanagedJsonParser(_session.Context, _state, "stream contents");
+                    _builder = new BlittableJsonDocumentBuilder(_builderContext, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state);
                     _returnBuffer = _session.Context.GetMemoryBuffer(out _buffer);
 
                     if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer, _token).ConfigureAwait(false) == false)
@@ -580,8 +575,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             private void CheckIfContextNeedsToBeRenewed()
             {
-                if (_builderContext.CachedProperties.PropertiesDiscovered > 1024 ||
-                    _builderContext.AllocatedMemory > 4 * 1024 * 1024 ||
+                if (_builderContext.AllocatedMemory > 4 * 1024 * 1024 ||
                     _docsCountOnCachedRenewSession > _maxDocsCountOnCachedRenewSession)
                 {
                     _builderContext.Reset();
@@ -589,15 +583,11 @@ namespace Raven.Client.Documents.Session.Operations
                     _docsCountOnCachedRenewSession = 0;
                     return;
                 }
-                
-                if (_cachedItemsRenew)
-                {
-                    _builderContext.CachedProperties.Reset();
-                    _builderContext.CachedProperties.Renew();
 
-                    ++_docsCountOnCachedRenewSession;
-                    _cachedItemsRenew = false;
-                }
+                if (_builder.NeedResetPropertiesCache())
+                    _builderContext.CachedProperties = new CachedProperties(_builderContext);
+                
+                ++_docsCountOnCachedRenewSession;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
