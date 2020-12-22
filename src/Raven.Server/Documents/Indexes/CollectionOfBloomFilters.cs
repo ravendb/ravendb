@@ -14,6 +14,8 @@ namespace Raven.Server.Documents.Indexes
 {
     public class CollectionOfBloomFilters : IDisposable
     {
+        private const string BloomFiltersTreeName = "BloomFilters";
+
         private static readonly Slice Count64Slice;
         private static readonly Slice Count32Slice;
         internal static readonly Slice VersionSlice;
@@ -67,8 +69,14 @@ namespace Raven.Server.Documents.Indexes
 
         public static CollectionOfBloomFilters Load(Mode mode, TransactionOperationContext indexContext)
         {
-            var isNew = indexContext.Transaction.InnerTransaction.ReadTree("BloomFilters") == null;
-            var tree = indexContext.Transaction.InnerTransaction.CreateTree("BloomFilters");
+            var isNew = false;
+            var tree = indexContext.Transaction.InnerTransaction.ReadTree(BloomFiltersTreeName);
+            if (tree == null)
+            {
+                isNew = true;
+                tree = indexContext.Transaction.InnerTransaction.CreateTree(BloomFiltersTreeName);
+            }
+
             var version = GetVersion(tree, isNew);
             var count = GetCount(tree, ref mode);
             if (count == _consumed)
