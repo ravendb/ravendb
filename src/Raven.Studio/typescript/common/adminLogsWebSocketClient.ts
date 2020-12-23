@@ -41,13 +41,12 @@ class adminLogsWebSocketClient extends abstractWebSocketClient<string> {
     }
 
     get autoReconnect() {
-        return false;
+        return true;
     }
 
     protected onMessage(e: string) {
         this.onData(e);
     }
-
 }
 
 export = adminLogsWebSocketClient;

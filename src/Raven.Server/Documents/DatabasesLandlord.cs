@@ -32,8 +32,10 @@ namespace Raven.Server.Documents
     {
         public const string DoNotRemove = "DoNotRemove";
         private readonly AsyncReaderWriterLock _disposing = new AsyncReaderWriterLock();
+
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(StringSegmentComparer.OrdinalIgnoreCase);
+
         private readonly ConcurrentDictionary<string, Timer> _wakeupTimers = new ConcurrentDictionary<string, Timer>();
 
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
@@ -120,10 +122,10 @@ namespace Raven.Server.Documents
 
                     if (changeType == ClusterDatabaseChangeType.RecordRestored)
                     {
-                        // - a successful restore operation ends when we successfully restored	
-                        // the database files and saved the updated the database record	
-                        // - this is the first time that the database was loaded so there is no need to call	
-                        // StateChanged after the database was restored	
+                        // - a successful restore operation ends when we successfully restored
+                        // the database files and saved the updated the database record
+                        // - this is the first time that the database was loaded so there is no need to call
+                        // StateChanged after the database was restored
                         // - the database will be started on demand
                         return;
                     }
@@ -131,9 +133,9 @@ namespace Raven.Server.Documents
                     if (DatabasesCache.TryGetValue(databaseName, out var task) == false)
                     {
                         // if the database isn't loaded, but it is relevant for this node, we need to create
-                        // it. This is important so things like replication will start pumping, and that 
+                        // it. This is important so things like replication will start pumping, and that
                         // configuration changes such as running periodic backup will get a chance to run, which
-                        // they wouldn't unless the database is loaded / will have a request on it.          
+                        // they wouldn't unless the database is loaded / will have a request on it.
                         task = TryGetOrCreateResourceStore(databaseName, ignoreBeenDeleted: true);
                     }
 
@@ -220,6 +222,7 @@ namespace Raven.Server.Documents
                 case nameof(PutServerWideBackupConfigurationCommand):
                 case nameof(UpdatePeriodicBackupStatusCommand):
                     return true;
+
                 default:
                     return false;
             }
@@ -357,7 +360,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                // At this point the db record still exists but the db was effectively deleted 
+                // At this point the db record still exists but the db was effectively deleted
                 // from this node so we can also remove its secret key from this node.
                 if (record.Encrypted)
                 {
@@ -446,7 +449,7 @@ namespace Raven.Server.Documents
                     var numberOfBatches = count / batchSize;
                     if (count % batchSize != 0)
                     {
-                        // if we have a reminder, we need another batch 
+                        // if we have a reminder, we need another batch
                         numberOfBatches++;
                     }
 
@@ -533,7 +536,7 @@ namespace Raven.Server.Documents
                 {
                     if (database.IsFaulted)
                     {
-                        // If a database was unloaded, this is what we get from DatabasesCache. 
+                        // If a database was unloaded, this is what we get from DatabasesCache.
                         // We want to keep the exception there until UnloadAndLockDatabase is disposed.
                         var extractSingleInnerException = database.Exception.ExtractSingleInnerException();
                         if (Equals(extractSingleInnerException.Data[DoNotRemove], true))
@@ -833,7 +836,7 @@ namespace Raven.Server.Documents
 
         protected RavenConfiguration CreateConfiguration(DatabaseRecord record)
         {
-            Debug.Assert(_serverStore.Disposed == false);
+            Debug.Assert(_serverStore.Disposed == false, "_serverStore.Disposed == false");
             var config = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, record.DatabaseName);
 
             foreach (var setting in record.Settings)

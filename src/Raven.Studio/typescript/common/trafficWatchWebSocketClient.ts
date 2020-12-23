@@ -1,5 +1,4 @@
 /// <reference path="../../typings/tsd.d.ts" />
-
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
 
@@ -21,14 +20,12 @@ class trafficWatchWebSocketClient extends abstractWebSocketClient<Raven.Client.D
     }
 
     get autoReconnect() {
-        return false;
+        return true;
     }
-
+    
     protected onMessage(e: Raven.Client.Documents.Changes.TrafficWatchChange) {
         this.onData(e);
     }
-
 }
 
 export = trafficWatchWebSocketClient;
-
