@@ -14,6 +14,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -26,7 +27,7 @@ namespace FastTests
 {
     public abstract class RavenLowLevelTestBase : TestBase
     {
-        private readonly List<string> _databases = new List<string>();
+        private readonly ConcurrentSet<string> _databases = new ConcurrentSet<string>();
 
         protected RavenLowLevelTestBase(ITestOutputHelper output) : base(output)
         {
@@ -120,20 +121,6 @@ namespace FastTests
             {
                 foreach (var database in _databases)
                 {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        try
-                        {
-                            Server.ServerStore.DatabasesLandlord.UnloadDirectly(database);
-                        }
-                        catch (DatabaseDisabledException)
-                        {
-                        }
-                        catch (AggregateException ae) when (ae.InnerException is DatabaseDisabledException)
-                        {
-                        }
-                    });
-
                     exceptionAggregator.Execute(() =>
                     {
                         AsyncHelpers.RunSync(async () =>

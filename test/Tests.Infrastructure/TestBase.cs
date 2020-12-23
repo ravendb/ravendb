@@ -692,7 +692,6 @@ namespace FastTests
             var path = RavenTestHelper.NewDataPath(prefix, 0, forceCreateDir);
 
             GlobalPathsToDelete.Add(path);
-            _localPathsToDelete.Add(path);
 
             return path;
         }
