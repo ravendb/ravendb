@@ -1,4 +1,4 @@
-﻿using JetBrains.Annotations;
+﻿using System;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
@@ -32,9 +32,14 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             if (record.AutoIndexes.TryGetValue(IndexName, out AutoIndexDefinition autoIndex))
             {
                 autoIndex.State = State;
+                return null;
             }
-
-            return null;
+            if (record.Indexes.TryGetValue(IndexName, out IndexDefinition indexDefinition))
+            {
+                indexDefinition.State = State;
+                return null;
+            }
+            throw new InvalidOperationException($"Can not change index: {IndexName} state. Index doesn't exist");
         }
 
         public override void FillJson(DynamicJsonValue json)
