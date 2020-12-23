@@ -1,5 +1,4 @@
 /// <reference path="../../typings/tsd.d.ts" />
-
 import database = require("models/resources/database");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 
@@ -18,7 +17,7 @@ abstract class eventsWebSocketClient<T> extends abstractWebSocketClient<T> {
         return true;
     }
 
-    protected reconnect() {
+    protected onConnectionEstablished() {
         //send changes connection args after reconnecting
         this.sentMessages.forEach(args => this.send(args.Command, args.Param, false));
 
@@ -71,7 +70,6 @@ abstract class eventsWebSocketClient<T> extends abstractWebSocketClient<T> {
             }
         }
     }
-
 }
 
 export = eventsWebSocketClient;

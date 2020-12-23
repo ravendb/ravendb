@@ -58,6 +58,8 @@ class trafficWatch extends viewModelBase {
     private duringManualScrollEvent = false;
 
     private typesMultiSelectRefreshThrottle = _.throttle(() => this.syncMultiSelect(), 1000);
+
+    isPauseLogs = ko.observable<boolean>(false);
     
     constructor() {
         super();
@@ -310,6 +312,10 @@ class trafficWatch extends viewModelBase {
         const ws = new trafficWatchWebSocketClient(data => this.onData(data));
         this.liveClient(ws);
     }
+    
+    isConnectedToWebSocket() {
+        return this.liveClient() && this.liveClient().isConnected();
+    }
 
     private onData(data: Raven.Client.Documents.Changes.TrafficWatchChange) {
         if (this.allData.length === trafficWatch.maxBufferSize) {
@@ -347,6 +353,7 @@ class trafficWatch extends viewModelBase {
         eventsCollector.default.reportEvent("traffic-watch", "pause");
         
         if (this.liveClient()) {
+            this.isPauseLogs(true);
             this.liveClient().dispose();
             this.liveClient(null);
         }
@@ -354,6 +361,7 @@ class trafficWatch extends viewModelBase {
     
     resume() {
         this.connectWebSocket();
+        this.isPauseLogs(false);
     }
 
     clear() {
