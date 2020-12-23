@@ -32,14 +32,13 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             if (record.AutoIndexes.TryGetValue(IndexName, out AutoIndexDefinition autoIndex))
             {
                 autoIndex.State = State;
-                return null;
             }
-            if (record.Indexes.TryGetValue(IndexName, out IndexDefinition indexDefinition))
+            else if (record.Indexes.TryGetValue(IndexName, out IndexDefinition indexDefinition))
             {
                 indexDefinition.State = State;
-                return null;
             }
-            throw new InvalidOperationException($"Can not change index: {IndexName} state. Index doesn't exist");
+
+            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)
