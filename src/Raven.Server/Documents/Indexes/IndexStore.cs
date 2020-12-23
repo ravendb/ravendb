@@ -413,7 +413,7 @@ namespace Raven.Server.Documents.Indexes
                     return null;
                 }
 
-                UpdateStaticIndexLockModeAndPriority(definition, currentIndex, currentDifferences);
+                UpdateStaticIndexDefinition(definition, currentIndex, currentDifferences);
 
                 var prefixesOfDocumentsToDelete = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -795,7 +795,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void UpdateIndex(IndexDefinition definition, Index existingIndex, IndexDefinitionCompareDifferences indexDifferences)
         {
-            UpdateStaticIndexLockModeAndPriority(definition, existingIndex, indexDifferences);
+            UpdateStaticIndexDefinition(definition, existingIndex, indexDifferences);
 
             switch (definition.SourceType)
             {
@@ -852,13 +852,18 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private static void UpdateStaticIndexLockModeAndPriority(IndexDefinition definition, Index existingIndex, IndexDefinitionCompareDifferences indexDifferences)
+        private static void UpdateStaticIndexDefinition(IndexDefinition definition, Index existingIndex, IndexDefinitionCompareDifferences indexDifferences)
         {
             if (definition.LockMode.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.LockMode) != 0)
                 existingIndex.SetLock(definition.LockMode.Value);
 
             if (definition.Priority.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.Priority) != 0)
                 existingIndex.SetPriority(definition.Priority.Value);
+
+            if (definition.State.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.State) != 0)
+            {
+                existingIndex.SetState((IndexState)definition.State);
+            }
         }
 
         internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex, out IndexDefinitionCompareDifferences differences)
@@ -1492,9 +1497,9 @@ namespace Raven.Server.Documents.Indexes
 
                 if (differences != IndexDefinitionCompareDifferences.None)
                 {
-                    // database record has different lock mode / priority setting than persisted locally
+                    // database record has different lock mode / priority / state setting than persisted locally
 
-                    UpdateStaticIndexLockModeAndPriority(staticIndexDefinition, index, differences);
+                    UpdateStaticIndexDefinition(staticIndexDefinition, index, differences);
                 }
 
                 var startIndex = true;

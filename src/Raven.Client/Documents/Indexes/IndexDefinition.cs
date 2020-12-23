@@ -33,6 +33,11 @@ namespace Raven.Client.Documents.Indexes
         public IndexPriority? Priority { get; set; }
 
         /// <summary>
+        /// Index state
+        /// </summary>
+        public IndexState? State { get; set; }
+
+        /// <summary>
         /// Index lock mode:
         /// <para>- Unlock - all index definition changes acceptable</para>
         /// <para>- LockedIgnore - all index definition changes will be ignored, only log entry will be created</para>
@@ -153,6 +158,18 @@ namespace Raven.Client.Documents.Indexes
                 else
                 {
                     result |= IndexDefinitionCompareDifferences.Priority;
+                }
+            }
+
+            if (State != other.State)
+            {
+                if ((State == null && other.State == IndexState.Normal) || (State == IndexState.Normal && other.State == null))
+                {
+                    // same
+                }
+                else
+                {
+                    result |= IndexDefinitionCompareDifferences.State;
                 }
             }
 
