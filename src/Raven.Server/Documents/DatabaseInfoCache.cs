@@ -47,21 +47,23 @@ namespace Raven.Server.Documents
         public unsafe void InsertDatabaseInfo(DynamicJsonValue databaseInfo, string databaseName)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
             {
-                var table = tx.InnerTransaction.OpenTable(_databaseInfoSchema, DatabaseInfoSchema.DatabaseInfoTree);
                 using (var id = context.GetLazyString(databaseName.ToLowerInvariant()))
                 using (var json = context.ReadObject(databaseInfo, "DatabaseInfo", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    using (table.Allocate(out TableValueBuilder tvb))
+                    using (var tx = context.OpenWriteTransaction())
                     {
-                        tvb.Add(id.Buffer, id.Size);
-                        tvb.Add(json.BasePointer, json.Size);
+                        var table = tx.InnerTransaction.OpenTable(_databaseInfoSchema, DatabaseInfoSchema.DatabaseInfoTree);
+                        using (table.Allocate(out TableValueBuilder tvb))
+                        {
+                            tvb.Add(id.Buffer, id.Size);
+                            tvb.Add(json.BasePointer, json.Size);
 
-                        table.Set(tvb);
+                            table.Set(tvb);
+                        }
+                        tx.Commit();
                     }
                 }
-                tx.Commit();
             }
         }
 
