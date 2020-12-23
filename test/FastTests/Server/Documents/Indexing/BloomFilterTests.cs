@@ -26,7 +26,7 @@ namespace FastTests.Server.Documents.Indexing
                     var key1 = context.GetLazyString("orders/1");
                     var key2 = context.GetLazyString("orders/2");
 
-                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, tree, writable: true, allocator: context.Allocator))
+                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: true, allocator: context.Allocator))
                     {
                         Assert.False(filter.Contains(key1));
                         Assert.False(filter.Contains(key2));
@@ -69,7 +69,7 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     var tree = tx.CreateTree("Filters");
 
-                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, tree, writable: true, allocator: context.Allocator))
+                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: true, allocator: context.Allocator))
                     {
                         Assert.True(filter.Add(key1));
                         Assert.Equal(1, filter.Count);
@@ -84,7 +84,7 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     var tree = tx.CreateTree("Filters");
 
-                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, tree, writable: false, allocator: context.Allocator))
+                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: false, allocator: context.Allocator))
                     {
                         Assert.False(filter.Add(key1));
                         Assert.Equal(1, filter.Count);
@@ -105,7 +105,7 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     var tree = tx.CreateTree("Filters");
 
-                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, tree, writable: true, allocator: context.Allocator))
+                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: true, allocator: context.Allocator))
                     {
                         Assert.True(filter.Add(key1));
                         Assert.Equal(1, filter.Count);
@@ -122,7 +122,7 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     var tree = tx.CreateTree("Filters");
 
-                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, tree, writable: false, allocator: context.Allocator))
+                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: false, allocator: context.Allocator))
                     {
                         Assert.False(filter.Writable);
 
@@ -148,7 +148,7 @@ namespace FastTests.Server.Documents.Indexing
                     var tree = context.Transaction.InnerTransaction.CreateTree("BloomFilters");
                     tree.Increment("Count64", 2);
 
-                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, tree, writable: true, allocator: context.Allocator))
+                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: true, allocator: context.Allocator))
                     {
                         Assert.False(filter.ReadOnly);
                         filter.MakeReadOnly();

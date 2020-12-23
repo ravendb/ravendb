@@ -23,6 +23,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -216,13 +217,16 @@ namespace RachisTests
                 using var subsWorker = store.Subscriptions.GetSubscriptionWorker<User>(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subsId)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
-                }
-                );
+                });
 
                 HashSet<string> redirects = new HashSet<string>();
                 var mre = new ManualResetEvent(false);
+                var processedItems = new List<string>();
                 subsWorker.AfterAcknowledgment += batch =>
                 {
+                    foreach (var item in batch.Items)
+                        processedItems.Add(item.Result.Name);
+
                     mre.Set();
                     return Task.CompletedTask;
                 };
@@ -231,56 +235,73 @@ namespace RachisTests
                     redirects.Add(subsWorker.CurrentNodeTag);
                 };
 
-                var processedItems = new List<string>();
-                var task = subsWorker.Run(x =>
-                {
-                    foreach (var item in x.Items)
-                        processedItems.Add(item.Result.Name);
+                _ = subsWorker.Run(x => { });
 
-                    mre.Set();
-                });
                 List<string> toggledNodes = new List<string>();
                 var toggleCount = Math.Round(clusterSize * 0.51);
+                string previousResponsibleNode = string.Empty;
                 for (int i = 0; i < toggleCount; i++)
                 {
-                    string responsibleNode = null;
+                    string currentResponsibleNode = string.Empty;
                     await ActionWithLeader(async l =>
                     {
-                        var documentDatabase = await l.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-                        using (documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                        using (context.OpenReadTransaction())
-                        {
-                            responsibleNode = documentDatabase.SubscriptionStorage.GetResponsibleNode(context, subsId);
-                        }
+                        currentResponsibleNode = await GetResponsibleNodeAndCompareWithPrevious(l, databaseName, previousResponsibleNode, subsId);
                     });
-                    Assert.NotNull(responsibleNode);
-                    toggledNodes.Add(responsibleNode);
-                    var nodeIndex = cluster.Nodes.FindIndex(x => x.ServerStore.NodeTag == responsibleNode);
-                    var node = cluster.Nodes[nodeIndex];
 
-                    if (i != 0) mre.Reset();
+                    toggledNodes.Add(currentResponsibleNode);
+                    previousResponsibleNode = currentResponsibleNode;
+
+                    var node = cluster.Nodes.FirstOrDefault(x => x.ServerStore.NodeTag == currentResponsibleNode);
+                    Assert.NotNull(node);
+
+                    if (i != 0)
+                        mre.Reset();
+
                     using (var session = store.OpenSession())
                     {
-                        session.Store(new User()
+                        session.Store(new User
                         {
                             Name = namesList[i]
                         });
                         session.SaveChanges();
                     }
+
                     Assert.True(mre.WaitOne(TimeSpan.FromSeconds(15)), "no ack");
 
                     var res = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
-                    Assert.Equal(responsibleNode, res.NodeTag);
-                    await Task.Delay(5000);
+                    Assert.Equal(currentResponsibleNode, res.NodeTag);
                 }
 
                 Assert.True(redirects.Count >= toggleCount, $"redirects count : {redirects.Count}, leaderNodeTag: {cluster.Leader.ServerStore.NodeTag}, missing: {string.Join(", ", cluster.Nodes.Select(x => x.ServerStore.NodeTag).Except(redirects))}, offline: {string.Join(", ", toggledNodes)}");
                 Assert.Equal(namesList.Count, processedItems.Count);
                 for (int i = 0; i < namesList.Count; i++)
                 {
-                  Assert.Equal(namesList[i], processedItems[i]);
+                    Assert.Equal(namesList[i], processedItems[i]);
                 }
             }
+        }
+
+        private static async Task<string> GetResponsibleNodeAndCompareWithPrevious(RavenServer l, string databaseName, string previousResponsibleNode, string subsId)
+        {
+            string currentResponsibleNode = string.Empty;
+            var responsibleTime = Debugger.IsAttached || PlatformDetails.Is32Bits ? 300_000 : 30_000;
+            var documentDatabase = await l.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+
+            var sp = Stopwatch.StartNew();
+            while (previousResponsibleNode == currentResponsibleNode || string.IsNullOrEmpty(currentResponsibleNode))
+            {
+                using (documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    currentResponsibleNode = documentDatabase.SubscriptionStorage.GetResponsibleNode(context, subsId);
+                }
+
+                await Task.Delay(1000);
+
+                Assert.True(sp.ElapsedMilliseconds < responsibleTime, $"Could not get the subscription ResponsibleNode in responsible time '{responsibleTime}'");
+            }
+
+            return currentResponsibleNode;
         }
 
         [Fact]

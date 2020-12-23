@@ -1,11 +1,11 @@
 /// <reference path="../../typings/tsd.d.ts" />
-
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 
 abstract class abstractWebSocketClient<T> {
 
     private static readonly readyStateOpen = 1;
+    isConnected = ko.observable<boolean>(false);
 
     connectToWebSocketTask: JQueryDeferred<void>;
 
@@ -56,16 +56,11 @@ abstract class abstractWebSocketClient<T> {
         action.call(this);
     }
 
-    protected onClose(e: CloseEvent) {
-        // empty
-    }
-
     protected isJsonBasedClient() {
         return true;
     }
     
     private connectWebSocket(connectArgs: any) {
-        let connectionOpened: boolean = false;
         
         const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
         const queryString = this.webSocketUrlFactory(connectArgs);
@@ -86,35 +81,42 @@ abstract class abstractWebSocketClient<T> {
         }
         
         this.webSocket.onerror = (e) => {
-            if (connectionOpened === false) {
+            if (!this.isConnected()) {
                 this.onError(e);
             }
         };
+        
         this.webSocket.onclose = (e: CloseEvent) => {
+            this.isConnected(false);
             this.onClose(e);
+            
             if (!e.wasClean) {
                 this.onError(e);
+            }
 
-                if (this.autoReconnect) {
-                    // Connection has closed uncleanly, so try to reconnect.
-                    this.connect(() => this.connectWebSocket(connectArgs));
-                }
+            if (this.autoReconnect) {
+                this.connect(() => this.connectWebSocket(connectArgs));
             }
         };
+        
         this.webSocket.onopen = () => {
+            this.isConnected(true);
             this.onOpen();
-            connectionOpened = true;
         }
     }
 
     protected onOpen() {
         console.log("Connected to WebSocket changes API (" + this.connectionDescription + ")");
         
-        this.reconnect();
+        this.onConnectionEstablished();
         this.connectToWebSocketTask.resolve();
     }
 
-    protected reconnect() {
+    protected onConnectionEstablished() {
+        // empty by design
+    }
+
+    protected onClose(e: CloseEvent) {
         // empty by design
     }
 
