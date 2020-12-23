@@ -202,6 +202,14 @@ namespace SlowTests.Issues
 
                 var val = await WaitForValueAsync(async () => await GetMembersCount(store, database), 2, 20000);
                 Assert.Equal(2, val);
+
+                var delCount = await WaitForValueAsync(() =>
+                {
+                    var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(database));
+                    return record.DeletionInProgress.Count;
+                }, 0, 15000);
+                Assert.Equal(0, delCount);
+
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(database, testServer.ServerStore.NodeTag));
 
                 var documentDatabase = await testServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
