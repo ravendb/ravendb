@@ -734,8 +734,9 @@ namespace Raven.Server.ServerWide
                 if (PlatformDetails.RunningOnDocker) 
                     return;
 
+                var errorThreshold = new Sparrow.Size(128, SizeUnit.Megabytes);
                 var swapSize = MemoryInformation.GetMemoryInfo().TotalSwapSize;
-                if (swapSize < Configuration.PerformanceHints.MinSwapSize - new Sparrow.Size(100, SizeUnit.Megabytes))
+                if (swapSize < Configuration.PerformanceHints.MinSwapSize - errorThreshold)
                     NotificationCenter.Add(AlertRaised.Create(null,
                         "Low swap size",
                         $"The current swap size is '{swapSize}' and it is lower then the threshold defined '{Configuration.PerformanceHints.MinSwapSize}'",
