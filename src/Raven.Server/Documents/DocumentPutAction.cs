@@ -155,7 +155,7 @@ namespace Raven.Server.Documents
                     
                     if (shouldVersion)
                     {
-                        if (ShouldVersionOldDocument(flags, oldDoc))
+                        if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(flags, oldDoc))
                         {
                             var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
                             var oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
@@ -242,20 +242,6 @@ namespace Raven.Server.Documents
                 throw new InvalidDataException("The incoming document " + id + " has changed _during_ the put process, " +
                                                "this is likely because you are trying to save a document that is already stored and was moved");
             }
-        }
-
-        private static bool ShouldVersionOldDocument(DocumentFlags flags, BlittableJsonReaderObject oldDoc)
-        {
-            if (oldDoc == null)
-                return false; // no document to version
-
-            if (flags.Contain(DocumentFlags.HasRevisions))
-                return false; // version already exists
-
-            if (flags.Contain(DocumentFlags.Resolved))
-                return false; // we already versioned it with the a conflicted flag
-            
-            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
