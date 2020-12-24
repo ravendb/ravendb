@@ -46,45 +46,46 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task DeleteDocumentWithResolvedFlagAfterEnableRevisions()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var stream = GetDump("RavenDB_15898.1.ravendbdump"))
-                {
-                    var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-                }
-                var configuration = new RevisionsConfiguration
-                {
-                    Default = new RevisionsCollectionConfiguration
-                    {
-                        Disabled = false,
-                        MinimumRevisionsToKeep = 5
-                    }
-                };
-                var database = await GetDatabase(store.Database);
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                {
-                    var configurationJson = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
-                    var (index, _) = await database.ServerStore.ModifyDatabaseRevisions(context, store.Database, configurationJson, Guid.NewGuid().ToString());
-                    await database.RachisLogIndexNotifications.WaitForIndexNotification(index, database.ServerStore.Engine.OperationTimeout);
-                }
-                using (var session = store.OpenSession())
-                {
-                    session.Delete("users/1");
-                    session.SaveChanges();
-                }
-
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                {
-                    context.OpenReadTransaction();
-                    var count = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
-                    Assert.Equal(1, count);
-                }
-            }
-        }
+        // [Fact]
+        // public async Task DeleteDocumentWithResolvedFlagAfterEnableRevisions()
+        // {
+        //     using (var store = GetDocumentStore())
+        //     {
+        //         using (var stream = GetDump("RavenDB_15898.1.ravendbdump"))
+        //         {
+        //             var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+        //             await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+        //         }
+        //         var configuration = new RevisionsConfiguration
+        //         {
+        //             Default = new RevisionsCollectionConfiguration
+        //             {
+        //                 Disabled = false,
+        //                 MinimumRevisionsToKeep = 5
+        //             }
+        //         };
+        //         var database = await GetDatabase(store.Database);
+        //         using (var context = JsonOperationContext.ShortTermSingleUse())
+        //         {
+        //             var configurationJson = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
+        //             var (index, _) = await database.ServerStore.ModifyDatabaseRevisions(context, store.Database, configurationJson, Guid.NewGuid().ToString());
+        //             await database.RachisLogIndexNotifications.WaitForIndexNotification(index, database.ServerStore.Engine.OperationTimeout);
+        //         }
+        //         
+        //         using (var session = store.OpenSession())
+        //         {
+        //             session.Delete("users/1");
+        //             session.SaveChanges();
+        //         }
+        //
+        //         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        //         {
+        //             context.OpenReadTransaction();
+        //             var count = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
+        //             Assert.Equal(1, count);
+        //         }
+        //     }
+        // }
 
         [Fact]
         public async Task DeleteDocumentWithoutResolvedFlagAfterEnableRevisions()
