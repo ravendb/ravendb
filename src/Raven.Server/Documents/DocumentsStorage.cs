@@ -1541,7 +1541,8 @@ namespace Raven.Server.Documents
                 var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
 
                 if (collectionName.IsHiLo == false &&
-                    (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
+                    ((flags & DocumentFlags.Artificial) != DocumentFlags.Artificial) &&
+                    (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false))
                 {
                     var shouldVersion = DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
                         collectionName, nonPersistentFlags, local.Document.Data, null, context, id, lastModifiedTicks, ref flags, out var configuration);
