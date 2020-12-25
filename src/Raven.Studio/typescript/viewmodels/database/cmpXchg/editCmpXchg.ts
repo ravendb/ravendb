@@ -265,7 +265,7 @@ class editCmpXchg extends viewModelBase {
 
         popoverUtils.longWithHover($(".key-info"),
             {
-                content: `<small>A unique identifier that is reserved accross the cluster</small>`,
+                content: `<small>A unique identifier that is <strong>reserved accross the cluster</strong></small>`,
                 html: true,
                 placement: "bottom"
             });
@@ -283,7 +283,8 @@ class editCmpXchg extends viewModelBase {
                               <li><small>The Metadata is associated with the Key, similar to a document's metadata.</small></li>
                               <li>
                                   <small>Can be used to set the <strong>Compare Exchange item expiration.</strong></small><br>
-                                  <small>Set the <code>@expires</code> field to schedule expiration.</small>
+                                  <small>Set the <i>@expires</i> field to schedule expiration.</small><br>
+                                  <small>e.g. <code>{ "@expires": "2021-02-26T13:09:37.4040256Z" }</code></small>
                               </li>
                           </ul>`,
                 html: true,
