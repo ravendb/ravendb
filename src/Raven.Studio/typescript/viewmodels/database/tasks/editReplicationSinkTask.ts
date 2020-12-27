@@ -52,7 +52,7 @@ class editReplicationSinkTask extends viewModelBase {
     constructor() {
         super();
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "onConfigurationFileSelected",
-                                   "certFileSelected", "removeCertificate", "downloadServerCertificate");
+                                   "certFileSelected", "removeCertificate", "downloadServerCertificate", "removeDiscoveryUrl");
     }
 
     canActivate(args: any) {
@@ -332,11 +332,25 @@ class editReplicationSinkTask extends viewModelBase {
 
         this.newConnectionString()
             .testConnection(urlToTest)
-            .done(result => this.testConnectionResult(result))
+            .done(result => {
+                this.testConnectionResult(result);
+                if (result.Error) {
+                    const url = this.newConnectionString().topologyDiscoveryUrls().find(x => x.discoveryUrlName() === urlToTest);
+                    url.hasTestError(true);
+                }
+            })
             .always(() => {
                 this.spinners.test(false);
-                this.newConnectionString().selectedUrlToTest(null);
+                this.fullErrorDetailsVisible(false);
             });
+    }
+
+    removeDiscoveryUrl(url: discoveryUrl) {
+        if (url.discoveryUrlName() === this.newConnectionString().selectedUrlToTest() && url.hasTestError()) {
+            this.testConnectionResult(null);
+        }
+
+        this.newConnectionString().removeDiscoveryUrl(url);
     }
 
     onConfigurationFileSelected(fileInput: HTMLInputElement) {

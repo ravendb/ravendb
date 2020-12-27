@@ -10,6 +10,7 @@ import generalUtils = require("common/generalUtils");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import discoveryUrl = require("models/database/settings/discoveryUrl");
 
 class editServerWideExternalReplication extends viewModelBase {
     
@@ -18,6 +19,7 @@ class editServerWideExternalReplication extends viewModelBase {
 
     connectionStringForTest = ko.observable<connectionStringRavenEtlModel>();
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
+    
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
 
@@ -30,7 +32,7 @@ class editServerWideExternalReplication extends viewModelBase {
     
     constructor() {
         super();
-        this.bindToCurrentInstance("onTestConnection");
+        this.bindToCurrentInstance("onTestConnection", "removeDiscoveryUrl");
     }
     
     activate(args: any) {
@@ -91,12 +93,8 @@ class editServerWideExternalReplication extends viewModelBase {
         this.connectionStringForTest(connectionStringRavenEtlModel.empty());
 
         this.possibleMentors(clusterTopologyManager.default.topology().nodes().map(x => x.tag()));
-        
-        this.editedTask().connectionString().topologyDiscoveryUrls.subscribe((urlList) => {
-           if (!urlList.length) {
-               this.testConnectionResult(null);
-           } 
-        });
+
+        this.editedTask().connectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
         
         this.shortErrorText = ko.pureComputed(() => {
             const result = this.testConnectionResult();
@@ -147,11 +145,25 @@ class editServerWideExternalReplication extends viewModelBase {
 
         this.connectionStringForTest()
             .testConnection(urlToTest)
-            .done(result => this.testConnectionResult(result))
+            .done(result => {
+                this.testConnectionResult(result);
+                if (result.Error) {
+                    const url = this.editedTask().connectionString().topologyDiscoveryUrls().find(x => x.discoveryUrlName() === urlToTest);
+                    url.hasTestError(true);
+                }
+            })
             .always(() => {
                 this.spinners.test(false);
-                this.connectionStringForTest().selectedUrlToTest(null);
+                this.fullErrorDetailsVisible(false);
             });
+    }
+
+    removeDiscoveryUrl(url: discoveryUrl) {
+        if (url.discoveryUrlName() === this.connectionStringForTest().selectedUrlToTest() && url.hasTestError()) {
+            this.testConnectionResult(null);
+        }
+
+        this.editedTask().connectionString().removeDiscoveryUrl(url);
     }
 }
 
