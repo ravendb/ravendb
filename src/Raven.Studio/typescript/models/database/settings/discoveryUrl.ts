@@ -7,20 +7,22 @@ class discoveryUrl {
 
     static usingHttps = location.protocol === "https:";
     
+    hasTestError = ko.observable<boolean>(false);
+    
     dirtyFlag: () => DirtyFlag;
     
-    constructor(urlName: string) {      
+    constructor(urlName: string) {
 
         this.discoveryUrlName(urlName);
         this.initValidation();
         
-        this.dirtyFlag = new ko.DirtyFlag([           
+        this.dirtyFlag = new ko.DirtyFlag([
             this.discoveryUrlName,
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
     
     initValidation() {
-        this.discoveryUrlName.extend({         
+        this.discoveryUrlName.extend({
             validUrl: true
         });
         

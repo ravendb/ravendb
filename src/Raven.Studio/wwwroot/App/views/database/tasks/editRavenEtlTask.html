@@ -1,7 +1,7 @@
 <div class="content-margin edit-raven-etl-task" data-bind="css: { 'test-mode': enableTestArea }">
     <div class="row flex-row absolute-fill">
         <div class="col-xs-12 col-lg-6 flex-vertical">
-            <form class="flex-form" data-bind="submit: saveRavenEtl">
+            <form class="flex-form" data-bind="submit: saveRavenEtl" autocomplete="off">
                 <div class="flex-header">
                     <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
                         <i class="icon-save"></i><span>Save</span>
@@ -11,14 +11,14 @@
                     </button>
                 </div>
                 <div class="panel">
-                    <div class="panel-body" data-bind="with: editedRavenEtl">                       
+                    <div class="panel-body" data-bind="with: editedRavenEtl">
                         <h3 data-bind="text: $parent.isAddingNewRavenEtlTask() ? `New RavenDB ETL` : `Edit RavenDB ETL`"></h3>
                         <div class="form-group">
                             <label for="taskName" class="control-label">Task Name</label>
                             <div class="flex-grow">
-                                <input type="text" autocomplete="off" class="form-control" id="taskName" placeholder="Enter a descriptive name for the RavenDB ETL task (optional)" data-bind="textInput: taskName">
+                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the RavenDB ETL task (optional)" data-bind="textInput: taskName">
                             </div>
-                        </div>                       
+                        </div>
                         <div data-bind="if: $root.activeDatabase() && $root.activeDatabase().isEncrypted"> 
                             <div class="form-group">
                                 <label class="control-label">&nbsp;</label>
@@ -31,7 +31,7 @@
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle">
                                     <input id="toggle-non-encrypted-channel" type="checkbox" data-bind="checked: allowEtlOnNonEncryptedChannel">
-                                    <label  for="toggle-non-encrypted-channel">Allow ETL on a non-encrypted communication channel</label>
+                                    <label for="toggle-non-encrypted-channel">Allow ETL on a non-encrypted communication channel</label>
                                 </div>
                             </div>
                         </div>
@@ -108,11 +108,11 @@
                                     <label for="loadTimeout" class="control-label">Http Request Timeout</label>
                                     <div class="flex-grow">
                                         <div class="input-group">
-                                            <input type="number" min="0" class="form-control" placeholder="Use default timeout (100s)" id="loadTimeout" data-bind="numericInput: loadRequestTimeout" autocomplete="off">
+                                            <input type="number" min="0" class="form-control" placeholder="Use default timeout (100s)" id="loadTimeout" data-bind="numericInput: loadRequestTimeout">
                                             <div class="input-group-addon">seconds</div>
                                         </div>
                                     </div>
-                                </div>                                
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -141,8 +141,8 @@
                                             <ul>
                                                 <li>The URL is correct</li>
                                                 <li>Both RavenDB and the target machine are up and running</li>
-                                                <li>There is no firewall settings on either machine blocking usage of that URL</li>
-                                                <li>There is no network configurations that prevent communication</li>
+                                                <li>There are no firewall settings on either machine blocking usage of that URL</li>
+                                                <li>There are no network configurations that prevent communication</li>
                                             </ul>
                                         </div>
                                     </div>
@@ -233,13 +233,13 @@
                                                data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput' }, disable: $root.collections().length === 0" />
                                         <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                         <ul class="dropdown-menu" role="menu" style="display: none;"
-                                            data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutocompleter(transformScriptCollections, inputCollection)">                                            
+                                            data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutocompleter(transformScriptCollections, inputCollection)">
                                             <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
                                                 <a role="menuitem" tabindex="-1" href="#">
                                                     <span data-bind="text: $data"></span>
                                                 </a>
                                                 <div class="divider" data-bind="visible: $root.constructor.isApplyToAll($data)"></div>
-                                            </li>   
+                                            </li>
                                         </ul>
                                         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScriptCollections">
                                             <div class="help-block" data-bind="validationMessage: transformScriptCollections"></div>
@@ -261,7 +261,7 @@
                             </div>
                         </div>
                         <div class="flex-horizontal">
-                            <button class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') +  ' this transformation script' }">
+                            <button class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') + ' this transformation script' }">
                                 <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
                             </button>
                             <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
@@ -272,14 +272,13 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="js-test-area" data-bind="collapse: $root.enableTestArea()">
                     <div class="panel">
                         <div class="panel-body flex-form" data-bind="with: $root.test">
                             <div class="form-group flex-horizontal">
                                 <label class="control-label">Document ID</label>
                                 <div class="flex-grow" data-bind="validationElement: documentId">
-                                    <input type="text" id="documentId" data-bind="textInput: documentId" class="form-control" placeholder="Document ID"
+                                    <input type="text" id="documentId" data-bind="textInput: documentId" class="form-control" placeholder="Document ID" autocomplete="off"
                                            title="This field is required." data-orig-title=""/><span class="help-block" style="display: none;"></span>
                                     <ul class="documentIdAutocomplete dropdown-menu autocomplete-list" role="menu"
                                         data-bind="autoComplete: '#documentId', foreach: docsIdsAutocompleteResults">
@@ -308,7 +307,6 @@
                                     </ul>
                                 </div>
                             </div>
-
                             <div class="flex-horizontal">
                                 <div class="flex-separator"></div>
                                 <button type="button" class="btn btn-primary margin-right margin-right-sm" data-bind="click: runTest, css: { 'btn-spinner': spinners.test }, disable: spinners.test()">
@@ -329,7 +327,6 @@
         <div class="absolute-center text-center" data-bind="visible: !testAlreadyExecuted() && !loadedDocument()">
             <i class="icon-info icon-xl"></i>
             Choose <strong>Document ID</strong> used for test and click <strong>Test</strong> button.
-
         </div>
         <div class="tabs">
             <ul class="nav nav-tabs" role="tablist">

@@ -140,8 +140,11 @@
                                     <ul class="well collection-list" data-bind="foreach: topologyDiscoveryUrls">
                                         <li>
                                             <div class="name" data-bind="text: $data.discoveryUrlName"></div>
+                                            <div class="text-warning margin-top margin-top-xs" data-bind="if: hasTestError" title="Connection test failed!">
+                                                <i class="icon-warning"></i>
+                                            </div>
                                             <a title="Remove url" href="#"
-                                               data-bind="click: $parent.removeDiscoveryUrl.bind($parent, $data)">
+                                               data-bind="click: _.partial($root.removeDiscoveryUrl, $data)">
                                                 <i class="icon-trash"></i>
                                             </a>
                                             <a class="btn btn-default" title="Test url connection" href="#"
@@ -184,8 +187,8 @@
                                     <ul>
                                         <li>The URL is correct</li>
                                         <li>Both RavenDB and the target machine are up and running</li>
-                                        <li>There is no firewall settings on either machine blocking usage of that URL</li>
-                                        <li>There is no network configurations that prevent communication</li>
+                                        <li>There are no firewall settings on either machine blocking usage of that URL</li>
+                                        <li>There are no network configurations that prevent communication</li>
                                     </ul>
                                 </div>
                             </div>

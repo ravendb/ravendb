@@ -11,7 +11,7 @@
                     </button>
                 </div>
                 <div class="panel">
-                    <div class="panel-body" data-bind="with: editedExternalReplication">                      
+                    <div class="panel-body" data-bind="with: editedExternalReplication">
                         <h3 data-bind="text: $parent.isAddingNewReplicationTask() ? `New External Replication` : `Edit External Replication`"></h3>
                         <div class="form-group" data-bind="validationElement: taskName">
                             <label for="taskName" class="control-label">Task Name</label>
@@ -34,7 +34,7 @@
                                     <label class="control-label">Delay Time</label>
                                 </div>
                                 <div class="flex-grow">
-                                    <input type="text" class="form-control" data-bind="durationPicker: delayReplicationTime, durationPickerOptions: { showDays: true, showSeconds: true }" />                                   
+                                    <input type="text" class="form-control" data-bind="durationPicker: delayReplicationTime, durationPickerOptions: { showDays: true, showSeconds: true }" />
                                 </div>
                             </div>
                         </div>
@@ -68,7 +68,7 @@
                                     <span class="help-block" data-bind="validationMessage: mentorNode"></span>
                                 </div>
                             </div>
-                        </div>                        
+                        </div>
                         <div class="form-group">
                             <label class="control-label">&nbsp;</label>
                             <div class="toggle">
@@ -92,10 +92,10 @@
                                 </button>
                                 <ul class="dropdown-menu"
                                     data-bind="foreach: $root.ravenEtlConnectionStringsDetails">
-                                    <li data-bind="click: _.partial($root.useConnectionString, $data.Name)">                                       
+                                    <li data-bind="click: _.partial($root.useConnectionString, $data.Name)">
                                         <a href="#">
-                                            <div class="row">                                               
-                                                <strong class="col-xs-7" data-bind="text: $data.Name"></strong>                                                
+                                            <div class="row">
+                                                <strong class="col-xs-7" data-bind="text: $data.Name"></strong>
                                                 <small class="col-xs-2">Destination DB:</small>
                                                 <small class="col-xs-3" data-bind="text: $data.Database"></small>
                                             </div>
@@ -131,14 +131,14 @@
                                             <ul>
                                                 <li>The URL is correct</li>
                                                 <li>Both RavenDB and the target machine are up and running</li>
-                                                <li>There is no firewall settings on either machine blocking usage of that URL</li>
-                                                <li>There is no network configurations that prevent communication</li>
+                                                <li>There are no firewall settings on either machine blocking usage of that URL</li>
+                                                <li>There are no network configurations that prevent communication</li>
                                             </ul>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>    
+                        </div>
                         <div class="panel-addon" data-bind="visible: ravenEtlConnectionStringsDetails().length === 0 && !createNewConnectionString()">
                             <div class="padding bg-warning small">
                                 <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
