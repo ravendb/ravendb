@@ -1,22 +1,18 @@
 function CheckPrerequisites () {
 
-    if ($(Get-Command "npm" -ErrorAction SilentlyContinue) -eq $null) {
+    if ($null -eq $(Get-Command "npm" -ErrorAction SilentlyContinue)) {
         throw "NPM not found in path."
     }
 
-    if ($(Get-Command "git" -ErrorAction SilentlyContinue) -eq $null) {
+    if ($null -eq $(Get-Command "git" -ErrorAction SilentlyContinue)) {
         throw "git not found in path."
     }
 
-    if ($(Get-Command "dotnet" -ErrorAction SilentlyContinue) -eq $null) {
+    if ($null -eq $(Get-Command "dotnet" -ErrorAction SilentlyContinue)) {
         throw "dotnet not found in path."
     }
 
-    if ($($IsWindows -eq $False) -and $(Get-Command "mono" -ErrorAction SilentlyContinue) -eq $null) {
-        throw "Mono not found in path."
-    }
-
-    if ($(Get-Command "node" -ErrorAction SilentlyContinue) -eq $null) {
+    if ($null -eq $(Get-Command "node" -ErrorAction SilentlyContinue)) {
         throw "Node.js not found in path."
     }
 
