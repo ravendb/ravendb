@@ -206,7 +206,7 @@ class editRavenEtlTask extends viewModelBase {
         aceEditorBindingHandler.install();
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "removeTransformationScript",
                                    "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp",
-                                   "toggleTestArea", "toggleAdvancedArea", "removeDiscoveryUrl");
+                                   "toggleTestArea", "toggleAdvancedArea");
     }
 
     activate(args: any) {
@@ -295,6 +295,7 @@ class editRavenEtlTask extends viewModelBase {
         
         // Discard test connection result when needed
         this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
+        this.newConnectionString().topologyDiscoveryUrls.subscribe(() => this.testConnectionResult(null));
         this.newConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
 
         this.enableTestArea.subscribe(testMode => {
@@ -332,33 +333,19 @@ class editRavenEtlTask extends viewModelBase {
         this.editedRavenEtl().connectionStringName(connectionStringToUse);
     }
 
-    onTestConnectionRaven(urlToTest: string) {
+    onTestConnectionRaven(urlToTest: discoveryUrl) {
         eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
         this.spinners.test(true);
-        this.newConnectionString().selectedUrlToTest(urlToTest);
+        this.newConnectionString().selectedUrlToTest(urlToTest.discoveryUrlName());
         this.testConnectionResult(null);
 
         this.newConnectionString()
             .testConnection(urlToTest)
-            .done(result => {
-                this.testConnectionResult(result);
-                if (result.Error) {
-                    const url = this.newConnectionString().topologyDiscoveryUrls().find(x => x.discoveryUrlName() === urlToTest);
-                    url.hasTestError(true);
-                }
-            })
+            .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);
                 this.fullErrorDetailsVisible(false);
             });
-    }
-    
-    removeDiscoveryUrl(url: discoveryUrl) {
-        if (url.discoveryUrlName() === this.newConnectionString().selectedUrlToTest() && url.hasTestError()) {
-            this.testConnectionResult(null);
-        }
-
-        this.newConnectionString().removeDiscoveryUrl(url);
     }
 
     saveRavenEtl() {

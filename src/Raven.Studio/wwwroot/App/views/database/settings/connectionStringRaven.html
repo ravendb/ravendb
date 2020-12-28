@@ -31,11 +31,11 @@
                     <i class="icon-warning"></i>
                 </div>
                 <a title="Remove url" href="#"
-                   data-bind="click: _.partial($root.removeDiscoveryUrl, $data)">
+                   data-bind="click: $parent.removeDiscoveryUrl.bind($parent, $data)">
                     <i class="icon-trash"></i>
                 </a>
                 <a class="btn btn-default" title="Test url connection" href="#"
-                   data-bind="click: _.partial($root.onTestConnectionRaven, $data.discoveryUrlName()), disable: $root.spinners.test,
+                   data-bind="click: _.partial($root.onTestConnectionRaven, $data), disable: $root.spinners.test,
                               css: { 'btn-spinner': $root.spinners.test() && $parent.selectedUrlToTest() === $data.discoveryUrlName() }">
                     <i class="icon-rocket"></i>
                 </a>

@@ -35,8 +35,7 @@ class connectionStrings extends viewModelBase {
         super();
 
         this.initObservables();
-        this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "confirmDelete", "isConnectionStringInUse",
-                                   "onTestConnectionRaven", "removeDiscoveryUrl");
+        this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "confirmDelete", "isConnectionStringInUse", "onTestConnectionRaven");
         
         const currentlyEditedObjectIsDirty = ko.pureComputed(() => {
             const ravenEtl = this.editedRavenEtlConnectionString();
@@ -196,6 +195,7 @@ class connectionStrings extends viewModelBase {
     onAddRavenEtl() {
         eventsCollector.default.reportEvent("connection-strings", "add-raven-etl");
         this.editedRavenEtlConnectionString(connectionStringRavenEtlModel.empty());
+        this.editedRavenEtlConnectionString().topologyDiscoveryUrls.subscribe(() => this.clearTestResult());
         this.editedRavenEtlConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.clearTestResult());
 
         this.editedSqlEtlConnectionString(null);
@@ -218,6 +218,7 @@ class connectionStrings extends viewModelBase {
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 this.editedRavenEtlConnectionString(new connectionStringRavenEtlModel(result.RavenConnectionStrings[connectionStringName], false, this.getTasksThatUseThisString(connectionStringName, "Raven")));
+                this.editedRavenEtlConnectionString().topologyDiscoveryUrls.subscribe(() => this.clearTestResult());
                 this.editedRavenEtlConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.clearTestResult());
                 this.editedSqlEtlConnectionString(null);
             });
@@ -275,35 +276,20 @@ class connectionStrings extends viewModelBase {
         }
     }
     
-    onTestConnectionRaven(urlToTest: string) {
+    onTestConnectionRaven(urlToTest: discoveryUrl) {
         this.clearTestResult();
         const ravenConnectionString = this.editedRavenEtlConnectionString();
         eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
         
         this.spinners.test(true);
-        ravenConnectionString.selectedUrlToTest(urlToTest);
+        ravenConnectionString.selectedUrlToTest(urlToTest.discoveryUrlName());
 
         ravenConnectionString.testConnection(urlToTest)
-            .done(result => {
-                this.testConnectionResult(result);
-                if (result.Error) {
-                    const url = ravenConnectionString.topologyDiscoveryUrls().find(x => x.discoveryUrlName() === urlToTest);
-                    url.hasTestError(true);
-                }
-            })
-            .always(() => { 
+            .done(result => this.testConnectionResult(result))
+            .always(() => {
                 this.spinners.test(false);
                 this.fullErrorDetailsVisible(false);
             });
-    }
-
-    removeDiscoveryUrl(url: discoveryUrl) {
-        const ravenConnectionString = this.editedRavenEtlConnectionString();
-        if (url.discoveryUrlName() === ravenConnectionString.selectedUrlToTest() && url.hasTestError()) {
-            this.clearTestResult();
-        }
-
-        ravenConnectionString.removeDiscoveryUrl(url);
     }
     
     onCloseEdit() {

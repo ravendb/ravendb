@@ -52,7 +52,7 @@ class editReplicationSinkTask extends viewModelBase {
     constructor() {
         super();
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "onConfigurationFileSelected",
-                                   "certFileSelected", "removeCertificate", "downloadServerCertificate", "removeDiscoveryUrl");
+                                   "certFileSelected", "removeCertificate", "downloadServerCertificate");
     }
 
     canActivate(args: any) {
@@ -187,6 +187,7 @@ class editReplicationSinkTask extends viewModelBase {
         
         // Discard test connection result when needed
         this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
+        this.newConnectionString().topologyDiscoveryUrls.subscribe(() => this.testConnectionResult(null));
         this.newConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
       
         const readDebounced = _.debounce(() => this.editedSinkTask().replicationAccess().tryReadCertificate(), 1500);
@@ -324,33 +325,19 @@ class editReplicationSinkTask extends viewModelBase {
         this.editedSinkTask().connectionStringName(connectionStringToUse);
     }
     
-    onTestConnectionRaven(urlToTest: string) {
+    onTestConnectionRaven(urlToTest: discoveryUrl) {
         eventsCollector.default.reportEvent("pull-replication-sink", "test-connection");
         this.spinners.test(true);
-        this.newConnectionString().selectedUrlToTest(urlToTest);
+        this.newConnectionString().selectedUrlToTest(urlToTest.discoveryUrlName());
         this.testConnectionResult(null);
 
         this.newConnectionString()
             .testConnection(urlToTest)
-            .done(result => {
-                this.testConnectionResult(result);
-                if (result.Error) {
-                    const url = this.newConnectionString().topologyDiscoveryUrls().find(x => x.discoveryUrlName() === urlToTest);
-                    url.hasTestError(true);
-                }
-            })
+            .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);
                 this.fullErrorDetailsVisible(false);
             });
-    }
-
-    removeDiscoveryUrl(url: discoveryUrl) {
-        if (url.discoveryUrlName() === this.newConnectionString().selectedUrlToTest() && url.hasTestError()) {
-            this.testConnectionResult(null);
-        }
-
-        this.newConnectionString().removeDiscoveryUrl(url);
     }
 
     onConfigurationFileSelected(fileInput: HTMLInputElement) {
