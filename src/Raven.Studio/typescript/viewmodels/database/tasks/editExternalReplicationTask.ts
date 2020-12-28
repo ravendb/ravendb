@@ -41,7 +41,7 @@ class editExternalReplicationTask extends viewModelBase {
 
     constructor() {
         super();
-        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "removeDiscoveryUrl");
+        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven");
     }
 
     activate(args: any) { 
@@ -121,6 +121,7 @@ class editExternalReplicationTask extends viewModelBase {
         
         // Discard test connection result when needed
         this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
+        this.newConnectionString().topologyDiscoveryUrls.subscribe(() => this.testConnectionResult(null));
         this.newConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
 
         this.dirtyFlag = new ko.DirtyFlag([
@@ -222,33 +223,19 @@ class editExternalReplicationTask extends viewModelBase {
         this.editedExternalReplication().connectionStringName(connectionStringToUse);
     }
     
-    onTestConnectionRaven(urlToTest: string) {
+    onTestConnectionRaven(urlToTest: discoveryUrl) {
         eventsCollector.default.reportEvent("external-replication", "test-connection");
         this.spinners.test(true);
-        this.newConnectionString().selectedUrlToTest(urlToTest);
+        this.newConnectionString().selectedUrlToTest(urlToTest.discoveryUrlName());
         this.testConnectionResult(null);
 
         this.newConnectionString()
             .testConnection(urlToTest)
-            .done(result => {
-                this.testConnectionResult(result);
-                if (result.Error) {
-                    const url = this.newConnectionString().topologyDiscoveryUrls().find(x => x.discoveryUrlName() === urlToTest);
-                    url.hasTestError(true);
-                }
-            })
+            .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);
                 this.fullErrorDetailsVisible(false);
             });
-    }
-
-    removeDiscoveryUrl(url: discoveryUrl) {
-        if (url.discoveryUrlName() === this.newConnectionString().selectedUrlToTest() && url.hasTestError()) {
-            this.testConnectionResult(null);
-        }
-        
-        this.newConnectionString().removeDiscoveryUrl(url);
     }
 }
 

@@ -32,7 +32,7 @@ class editServerWideExternalReplication extends viewModelBase {
     
     constructor() {
         super();
-        this.bindToCurrentInstance("onTestConnection", "removeDiscoveryUrl");
+        this.bindToCurrentInstance("onTestConnection");
     }
     
     activate(args: any) {
@@ -94,6 +94,7 @@ class editServerWideExternalReplication extends viewModelBase {
 
         this.possibleMentors(clusterTopologyManager.default.topology().nodes().map(x => x.tag()));
 
+        this.editedTask().connectionString().topologyDiscoveryUrls.subscribe(() => this.testConnectionResult(null));
         this.editedTask().connectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
         
         this.shortErrorText = ko.pureComputed(() => {
@@ -137,33 +138,19 @@ class editServerWideExternalReplication extends viewModelBase {
         return this.isValid(this.editedTask().validationGroup);
     }
 
-    onTestConnection(urlToTest: string) {
+    onTestConnection(urlToTest: discoveryUrl) {
         eventsCollector.default.reportEvent("external-replication", "test-connection");
         this.spinners.test(true);
-        this.connectionStringForTest().selectedUrlToTest(urlToTest);
+        this.connectionStringForTest().selectedUrlToTest(urlToTest.discoveryUrlName());
         this.testConnectionResult(null);
 
         this.connectionStringForTest()
             .testConnection(urlToTest)
-            .done(result => {
-                this.testConnectionResult(result);
-                if (result.Error) {
-                    const url = this.editedTask().connectionString().topologyDiscoveryUrls().find(x => x.discoveryUrlName() === urlToTest);
-                    url.hasTestError(true);
-                }
-            })
+            .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);
                 this.fullErrorDetailsVisible(false);
             });
-    }
-
-    removeDiscoveryUrl(url: discoveryUrl) {
-        if (url.discoveryUrlName() === this.connectionStringForTest().selectedUrlToTest() && url.hasTestError()) {
-            this.testConnectionResult(null);
-        }
-
-        this.editedTask().connectionString().removeDiscoveryUrl(url);
     }
 }
 
