@@ -137,7 +137,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/advanced/databaseIDs',
             title: 'Unused Database IDs',
             nav: access.showDatabaseIDsMenuItem,
-            css: 'icon-settings',
+            css: 'icon-database-id',
             dynamicHash: appUrls.databaseIDs
         })
     ];
