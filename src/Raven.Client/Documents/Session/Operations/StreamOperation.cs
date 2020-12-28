@@ -345,7 +345,7 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 AssertInitialized();
 
-                CheckIfContextNeedsToBeRenewed();
+                CheckIfContextOrCacheNeedToBeRenewed();
 
                 _timeSeriesIt?.Dispose();
 
@@ -387,7 +387,7 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 AssertInitialized();
 
-                CheckIfContextNeedsToBeRenewed();
+                CheckIfContextOrCacheNeedToBeRenewed();
 
                 if (_timeSeriesIt != null)
                     await _timeSeriesIt.DisposeAsync().ConfigureAwait(false);
@@ -573,7 +573,7 @@ namespace Raven.Client.Documents.Session.Operations
                 }
             }
 
-            private void CheckIfContextNeedsToBeRenewed()
+            private void CheckIfContextOrCacheNeedToBeRenewed()
             {
                 if (_builderContext.AllocatedMemory > 4 * 1024 * 1024 ||
                     _docsCountOnCachedRenewSession > _maxDocsCountOnCachedRenewSession)
@@ -584,8 +584,11 @@ namespace Raven.Client.Documents.Session.Operations
                     return;
                 }
 
-                if (_builder.NeedResetPropertiesCache())
-                    _builderContext.CachedProperties = new CachedProperties(_builderContext);
+                if (_builder.NeedClearPropertiesCache())
+                {
+                    _builderContext.CachedProperties.ClearRenew();
+                    return;
+                }
                 
                 ++_docsCountOnCachedRenewSession;
             }

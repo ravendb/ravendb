@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -240,10 +241,16 @@ namespace SlowTests.Core.Streaming
         [Fact]
         public async Task QueryStream_WhenDocsContainsMultipleUniqPropertyNames_ShouldNotBeVeryVerySlow()
         {
-            using var store = GetDocumentStore();
-
-            var objs = Enumerable.Range(0, 100000).Select(_ => new DynamicJsonValue
+            using var store = GetDocumentStore(new Options
             {
+                ModifyDocumentStore = s => s.Conventions.FindClrType = (t, b) => "SomeType"
+            });
+
+            var objs = Enumerable.Range(0, 50000).Select(_ => new Dictionary<string, string>
+            {
+                [Guid.NewGuid().ToString("n")] = "someValue",
+                [Guid.NewGuid().ToString("n")] = "someValue",
+                [Guid.NewGuid().ToString("n")] = "someValue",
                 [Guid.NewGuid().ToString("n")] = "someValue",
                 [Guid.NewGuid().ToString("n")] = "someValue",
                 [Guid.NewGuid().ToString("n")] = "someValue"
@@ -259,7 +266,7 @@ namespace SlowTests.Core.Streaming
                     {
                         await session.StoreAsync(obj);
                         i++;
-                        if (i % 100 == 0)
+                        if (i % 50 == 0)
                         {
                             await session.SaveChangesAsync();
                             session.Dispose();
