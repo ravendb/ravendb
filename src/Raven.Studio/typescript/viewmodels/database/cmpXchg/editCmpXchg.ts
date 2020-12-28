@@ -10,7 +10,7 @@ import getCompareExchangeItemCommand = require("commands/database/cmpXchg/getCom
 import saveCompareExchangeItemCommand = require("commands/database/cmpXchg/saveCompareExchangeItemCommand");
 import deleteCompareExchangeConfirm = require("viewmodels/database/documents/deleteCompareExchangeConfirm");
 import deleteCompareExchangeProgress = require("viewmodels/database/documents/deleteCompareExchangeProgress");
-import compareExchangeWarningsConfirm = require("viewmodels/database/documents/compareExchangeWarningsConfirm");
+import editorWarningsConfirm = require("viewmodels/database/documents/editorWarningsConfirm");
 import viewModelBase = require("viewmodels/viewModelBase");
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
@@ -328,15 +328,13 @@ class editCmpXchg extends viewModelBase {
             .filter((x: AceAjax.Annotation) => x.type === "warning");
 
         if (valueWarnings.length || metadataWarnings.length) {
-            const viewModel = new compareExchangeWarningsConfirm(valueWarnings, metadataWarnings,
-                valueWarning => {
+            const viewModel = new editorWarningsConfirm("Compare Exchange",
+                [{ source: "Value", warnings: valueWarnings }, { source: "Metadata", warnings: metadataWarnings }],
+                (warning, source)  => {
+                    const editor = source === "Value" ? this.valueEditor() : this.metadataEditor();
                     // gotoLine is not zero based so we add 1
-                    this.valueEditor().contentEditor.gotoLine(valueWarning.row + 1, valueWarning.column, true);
-                    this.valueEditor().contentEditor.focus();
-                },
-                metadataWarning => {
-                    this.metadataEditor().contentEditor.gotoLine(metadataWarning.row + 1, metadataWarning.column, true);
-                    this.metadataEditor().contentEditor.focus();
+                    editor.contentEditor.gotoLine(warning.row + 1, warning.column, true);
+                    editor.contentEditor.focus();
                 });
             
             return app.showBootstrapDialog(viewModel);

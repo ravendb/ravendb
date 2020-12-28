@@ -4,23 +4,25 @@
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
                 <i class="icon-cancel"></i>
             </button>
-            <h4 class="modal-title">Document warnings</h4>
+            <h4 class="modal-title"><span data-bind="text: textForTitle"></span><span> Warnings</span></h4>
         </div>
         <div class="modal-body">
             <div class="margin-top margin-top-lg">
-                The following detected warnings might affect the document data:
+                The following detected warnings might affect the <span data-bind="text: textForTitle"></span> data:
             </div>
-            <table class="table table-condensed table-striped table-bordered margin-top margin-top-lg">
-                <thead>
+            <div data-bind="foreach: warningsList">
+                <table class="table table-condensed table-striped table-bordered margin-top margin-top-lg" data-bind="visible: warnings.length">
+                    <thead>
                     <tr>
-                        <th>Location</th>
+                        <th>Location in <span data-bind="text: source"></span></th>
                         <th>Description</th>
                     </tr>
-                </thead>
-                <tbody data-bind="foreach: warnings">
+                    </thead>
+                    <tbody data-bind="foreach: warnings">
                     <tr>
                         <td nowrap="nowrap">
-                            <a href="#" class="text-warning" data-bind="click: $root.goTo.bind($root, $data)" title="Go to warning in document editor">
+                            <a href="#" class="text-warning"
+                               data-bind="click: $root.goTo.bind($root, $data, $parent.source), attr: { 'title': 'Go to warning in ' + $parent.source + ' editor' }">
                                 <i class="icon-warning text-warning"></i>
                                 <span data-bind="text: $root.warningLocation($data)"></span>
                             </a>
@@ -29,8 +31,9 @@
                             <span class="description" data-bind="text: text"></span>
                         </td>
                     </tr>
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
