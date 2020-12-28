@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        internal IndexSearcherHoldingState GetStateHolder(Transaction tx)
+        private IndexSearcherHoldingState GetStateHolder(Transaction tx)
         {
             var txId = tx.LowLevelTransaction.Id;
 
@@ -63,8 +63,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     continue;
                 }
-
-                Interlocked.Increment(ref state.Usage);
 
                 return state;
             }
@@ -150,8 +148,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             public IndexSearcher GetIndexSearcher(IState state)
             {
-                _indexSearcherInitializationState = state;
-                return _lazyIndexSearcher.Value;
+                Interlocked.Increment(ref Usage);
+
+                lock (this)
+                {
+                    _indexSearcherInitializationState = state;
+                    return _lazyIndexSearcher.Value;
+                }
             }
 
             ~IndexSearcherHoldingState()
@@ -167,15 +170,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (_lazyIndexSearcher.IsValueCreated == false)
                     return;
 
-                using (_lazyIndexSearcher.Value)
-                using (_lazyIndexSearcher.Value.IndexReader)
-                { }
+                var old = _lazyIndexSearcher.Value;
 
-                _lazyIndexSearcher = new Lazy<IndexSearcher>(() =>
+                lock (this)
                 {
-                    Debug.Assert(_indexSearcherInitializationState != null);
-                    return _recreateSearcher(_indexSearcherInitializationState);
-                }); 
+                    if (Usage > 0)
+                        return;
+
+                    _lazyIndexSearcher = new Lazy<IndexSearcher>(() =>
+                    {
+                        Debug.Assert(_indexSearcherInitializationState != null);
+                        return _recreateSearcher(_indexSearcherInitializationState);
+                    }); 
+                }
+
+                using (old)
+                using (old.IndexReader)
+                { }
             }
 
             public void MarkForDisposal()
