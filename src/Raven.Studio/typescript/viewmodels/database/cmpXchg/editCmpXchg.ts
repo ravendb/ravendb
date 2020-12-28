@@ -68,7 +68,6 @@ class editorInfo {
     }
     
     private updateNewlineLayout(unescapeNewline: boolean) {
-
         if (unescapeNewline) {
             this.contentText(documentHelpers.unescapeNewlinesAndTabsInTextFields(this.contentText()));
             this.contentEditor.getSession().setMode('ace/mode/json_newline_friendly');
@@ -328,7 +327,7 @@ class editCmpXchg extends viewModelBase {
         const metadataWarnings = this.metadataEditor().contentEditor.getSession().getAnnotations()
             .filter((x: AceAjax.Annotation) => x.type === "warning");
 
-        if (valueWarnings.length + metadataWarnings.length) {
+        if (valueWarnings.length || metadataWarnings.length) {
             const viewModel = new compareExchangeWarningsConfirm(valueWarnings, metadataWarnings,
                 valueWarning => {
                     // gotoLine is not zero based so we add 1
@@ -381,7 +380,7 @@ class editCmpXchg extends viewModelBase {
             .done(cmpXchngItem => {
                 this.key(cmpXchngItem.Key);
                 this.loadedIndex(cmpXchngItem.Index);
-                this.createEditors(cmpXchngItem.Value.Object,cmpXchngItem.Value["@metadata"]);
+                this.createEditors(cmpXchngItem.Value.Object, cmpXchngItem.Value["@metadata"]);
                 loadTask.resolve(cmpXchngItem.Value.Object);
             })
             .fail(() => loadTask.reject())
@@ -400,7 +399,7 @@ class editCmpXchg extends viewModelBase {
             const savedValueDto = saveResult.Value.Object;
             this.valueEditor().content(savedValueDto);
 
-            const savedMetadataDto = saveResult.Value['@metadata'];
+            const savedMetadataDto = saveResult.Value["@metadata"];
             this.metadataEditor().content(savedMetadataDto);
 
             this.valueEditor().tryRestoreSelection();
@@ -455,7 +454,7 @@ class editCmpXchg extends viewModelBase {
     
     refresh() {
         eventsCollector.default.reportEvent("cmpXchg", "refresh");
-        this.canContinueIfNotDirty("Refresh", "You have unsaved data. Are you sure you want to continue?")
+        this.canContinueIfNotDirty("Refresh", "Reload compare exchange item?")
             .done(() => {
                 const key = this.key();
                 this.key("");

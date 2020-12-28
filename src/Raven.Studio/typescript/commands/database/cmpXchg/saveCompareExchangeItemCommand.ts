@@ -5,7 +5,7 @@ import endpoints = require("endpoints");
 class saveCompareExchangeItemCommand extends commandBase {
 
     constructor(private database: database, private key: string, private index: number,
-                private valueData: any, private metaData: any) {
+                private valueData: any, private metadata: any) {
         super();
     }
 
@@ -19,8 +19,8 @@ class saveCompareExchangeItemCommand extends commandBase {
             Object: this.valueData
         };
         
-        if (!_.isUndefined(this.metaData)) {
-            payload["@metadata"] = this.metaData;
+        if (!_.isUndefined(this.metadata)) {
+            payload["@metadata"] = this.metadata;
         }
         
         const url = endpoints.databases.compareExchange.cmpxchg + this.urlEncodeArgs(args);
