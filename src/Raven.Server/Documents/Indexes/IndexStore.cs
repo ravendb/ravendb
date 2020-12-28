@@ -1558,7 +1558,7 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var index in _indexes)
             {
-                index.Cleanup();
+                index.Cleanup(everything: true);
             }
 
             long etag;

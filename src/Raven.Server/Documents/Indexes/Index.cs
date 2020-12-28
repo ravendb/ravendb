@@ -1381,7 +1381,7 @@ namespace Raven.Server.Documents.Indexes
 
                             if (_lowMemoryFlag.IsRaised())
                             {
-                                ReduceMemoryUsage(storageEnvironment);
+                                ReduceMemoryUsage(storageEnvironment, everything: true);
                             }
                             else if (_allocationCleanupNeeded > 0)
                             {
@@ -1428,7 +1428,7 @@ namespace Raven.Server.Documents.Indexes
                                 // there is no work to be done, and hasn't been for a while,
                                 // so this is a good time to release resources we won't need
                                 // anytime soon
-                                ReduceMemoryUsage(storageEnvironment);
+                                ReduceMemoryUsage(storageEnvironment, everything: forceMemoryCleanup);
 
                                 if (forceMemoryCleanup)
                                     continue;
@@ -1510,12 +1510,12 @@ namespace Raven.Server.Documents.Indexes
             batchCompletedAction?.Invoke((Name, didWork));
         }
 
-        public void Cleanup()
+        public void Cleanup(bool everything = false)
         {
             if (_initialized == false)
                 return;
 
-            ReduceMemoryUsage(_environment);
+            ReduceMemoryUsage(_environment, everything);
         }
 
         protected virtual bool ShouldReplace()
@@ -1575,7 +1575,7 @@ namespace Raven.Server.Documents.Indexes
                 _logsAppliedEvent.Set();
         }
 
-        private void ReduceMemoryUsage(StorageEnvironment environment)
+        private void ReduceMemoryUsage(StorageEnvironment environment, bool everything = false)
         {
             if (_indexingInProgress.Wait(0) == false)
                 return;
@@ -1589,7 +1589,7 @@ namespace Raven.Server.Documents.Indexes
                 DocumentDatabase.DocumentsStorage.ContextPool.Clean();
                 _contextPool.Clean();
                 ByteStringMemoryCache.CleanForCurrentThread();
-                IndexPersistence.Clean(underLowMem: _lowMemoryFlag.IsRaised());
+                IndexPersistence.Clean(everything: everything);
                 environment?.Cleanup();
 
                 _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
@@ -2232,7 +2232,7 @@ namespace Raven.Server.Documents.Indexes
 
                 Stop(disableIndex: true);
                 SetState(IndexState.Disabled);
-                Cleanup();
+                Cleanup(everything: true);
             }
         }
 

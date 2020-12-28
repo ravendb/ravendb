@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
 
-        public void Cleanup(long oldestTx, bool underLowMem = false)
+        public void Cleanup(long oldestTx, bool everything = false)
         {
             // note: cleanup cannot be called concurrently
 
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
-            if (underLowMem)
+            if (everything)
             {
                 foreach (var state in _states)
                 {
