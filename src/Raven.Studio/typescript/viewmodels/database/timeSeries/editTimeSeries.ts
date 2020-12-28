@@ -138,8 +138,8 @@ class editTimeSeries extends viewModelBase {
         }
     }
     
-    private getValuesNamesToUse(possibleValuesCount: number): string[] {
-        const definedNamedValues = this.getDefinedNamedValues();
+    private getValuesNamesToUse(possibleValuesCount: number, timeSeriesName?: string): string[] {
+        const definedNamedValues = this.getDefinedNamedValues(timeSeriesName);
             
         const valuesNamesToUse = _.range(0, possibleValuesCount).map(idx => "Value #" + idx);
 
@@ -152,11 +152,11 @@ class editTimeSeries extends viewModelBase {
         return valuesNamesToUse;
     }
     
-    private getDefinedNamedValues(): string[] {
+    private getDefinedNamedValues(timeSeriesName?: string): string[] {
         const collection = this.documentCollection();
-        const sourceTimeSeriesName = this.getSourceTimeSeriesName();
+        const sourceTimeSeriesName = timeSeriesName || this.getSourceTimeSeriesName();
 
-        let namedValues: string[];
+        let namedValues: string[] = [];
         if (collection && sourceTimeSeriesName) {
             const matchingCollection = Object.keys(this.namedValuesCache)
                 .find(x => x.toLocaleLowerCase() === collection.toLocaleLowerCase());
@@ -425,6 +425,11 @@ class editTimeSeries extends viewModelBase {
         
         const createTimeSeriesDialog = new editTimeSeriesEntry(this.documentId(), this.activeDatabase(), tsNameToUse, valuesNamesToUse);
         
+        createTimeSeriesDialog.model().name.subscribe((newName) => {
+            const valuesNames = this.getValuesNamesToUse(timeSeriesEntryModel.numberOfPossibleValues, newName);
+            createTimeSeriesDialog.valuesNames(valuesNames);
+        });
+        
         app.showBootstrapDialog(createTimeSeriesDialog)
             .done((seriesName) => {
                 if (seriesName) {
@@ -432,7 +437,6 @@ class editTimeSeries extends viewModelBase {
                 } else if (!this.timeSeriesName()) {
                     // user didn't create new entry, but we requested creation 
                     // redirect back to document
-                 
                     router.navigate(this.urlForDocument());
                 }
             });

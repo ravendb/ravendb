@@ -27,13 +27,17 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     
     lockSeriesName: boolean;
     lockTimeStamp: boolean;
+
+    valuesNames = ko.observableArray<string>([]);
     
-    constructor(private documentId: string, 
-                private db: database, 
+    constructor(private documentId: string,
+                private db: database,
                 private timeSeriesName: string,
-                private valuesNames: string[],
+                valuesNames: string[],
                 private editDto?: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
         super();
+        
+        this.valuesNames(valuesNames);
         
         this.lockTimeStamp = !!editDto;
         this.lockSeriesName = !!this.timeSeriesName;
@@ -68,15 +72,17 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     }
     
     getValueName(idx: number) {
-        if (this.valuesNames.length) {
-            // for an existing timeseries
-            return this.valuesNames[idx];
-        } else {
-            // for a new timeseries
-            const possibleValuesCount = timeSeriesEntryModel.numberOfPossibleValues;
-            const possibleValuesNames = _.range(0, possibleValuesCount).map(idx => "Value #" + idx);
-            return possibleValuesNames[idx];
-        }
+        return ko.pureComputed(() => {
+            if (this.valuesNames().length) {
+                // for an existing timeseries
+                return this.valuesNames()[idx];
+            } else {
+                // for a new timeseries
+                const possibleValuesCount = timeSeriesEntryModel.numberOfPossibleValues;
+                const possibleValuesNames = _.range(0, possibleValuesCount).map(idx => "Value #" + idx);
+                return possibleValuesNames[idx];
+            }
+        });
     }
     
     save() {
