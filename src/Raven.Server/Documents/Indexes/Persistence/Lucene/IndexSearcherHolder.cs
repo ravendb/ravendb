@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -73,35 +72,44 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             throw new InvalidOperationException($"Could not get an index searcher state holder for transaction {txId}");
         }
 
-        public void Cleanup(long oldestTx)
+
+        public void Cleanup(long oldestTx, bool underLowMem = false)
         {
             // note: cleanup cannot be called concurrently
 
-            if (_states.Count == 1)
-                return;
-
-            // let's mark states which are no longer needed as ready for disposal
-
-            for (var i = _states.Count - 1; i >= 1; i--)
+            if (_states.Count > 1)
             {
-                var state = _states[i];
+                // let's mark states which are no longer needed as ready for disposal
 
-                if (state.AsOfTxId >= oldestTx)
-                    break;
-
-                var nextState = _states[i - 1];
-
-                if (nextState.AsOfTxId > oldestTx)
-                    break;
-
-                Interlocked.Increment(ref state.Usage);
-
-                using (state)
+                for (var i = _states.Count - 1; i >= 1; i--)
                 {
-                    state.MarkForDisposal();
-                }
+                    var state = _states[i];
 
-                _states = _states.Remove(state);
+                    if (state.AsOfTxId >= oldestTx)
+                        break;
+
+                    var nextState = _states[i - 1];
+
+                    if (nextState.AsOfTxId > oldestTx)
+                        break;
+
+                    Interlocked.Increment(ref state.Usage);
+
+                    using (state)
+                    {
+                        state.MarkForDisposal();
+                    }
+
+                    _states = _states.Remove(state);
+                }
+            }
+
+            if (underLowMem)
+            {
+                foreach (var state in _states)
+                {
+                    state.MoveBackToLazy();
+                }
             }
         }
 
@@ -120,10 +128,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             private readonly Func<IState, IndexSearcher> _recreateSearcher;
             private readonly Logger _logger;
-            private readonly ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue> _docsCache = new ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue>();
 
             private IState _indexSearcherInitializationState;
-            private readonly Lazy<IndexSearcher> _lazyIndexSearcher;
+            private Lazy<IndexSearcher> _lazyIndexSearcher;
 
             public SingleUseFlag ShouldDispose = new SingleUseFlag();
             public int Usage;
@@ -153,6 +160,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     _logger.Info($"IndexSearcherHoldingState wasn't properly disposed. Usage count: {Usage}, tx id: {AsOfTxId}, should dispose: {ShouldDispose.IsRaised()}");
 
                 Dispose();
+            }
+
+            public void MoveBackToLazy()
+            {
+                if (_lazyIndexSearcher.IsValueCreated == false)
+                    return;
+
+                using (_lazyIndexSearcher.Value)
+                using (_lazyIndexSearcher.Value.IndexReader)
+                { }
+
+                _lazyIndexSearcher = new Lazy<IndexSearcher>(() =>
+                {
+                    Debug.Assert(_indexSearcherInitializationState != null);
+                    return _recreateSearcher(_indexSearcherInitializationState);
+                }); 
             }
 
             public void MarkForDisposal()

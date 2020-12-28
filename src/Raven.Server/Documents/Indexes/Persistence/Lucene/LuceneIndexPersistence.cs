@@ -182,8 +182,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         }
                     }
 
-                    if (reader == null)
-                        reader = _lastReader = IndexReader.Open(_directory, readOnly: true, state);
+                    reader ??= _lastReader = IndexReader.Open(_directory, readOnly: true, state);
 
                     reader.IncRef();
 
@@ -192,10 +191,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public void Clean()
+        
+
+        public void Clean(bool underLowMem = false)
         {
             _converter?.Clean();
-            _indexSearcherHolder.Cleanup(_index._indexStorage.Environment().PossibleOldestReadTransaction(null));
+            _indexSearcherHolder.Cleanup(_index._indexStorage.Environment().PossibleOldestReadTransaction(null), underLowMem);
+
+            if (underLowMem)
+            {
+                lock (this)
+                {
+                    _lastReader?.Dispose();
+                    _lastReader = null;
+                }
+            }
         }
 
         public void Initialize(StorageEnvironment environment)
