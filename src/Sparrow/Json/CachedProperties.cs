@@ -47,6 +47,25 @@ namespace Sparrow.Json
             _cachedSorts = null;
         }
 
+        public void Clear()
+        {
+            Reset();
+            _docPropNames.Clear();
+            _propertiesSortOrder.Clear();
+            _propertyNameToId.Clear();
+            _propertyNameCounter = 0;
+            _propertiesNeedSorting = false;
+            PropertiesDiscovered = 0;
+            _hasDuplicates = false;
+            DocumentNumber = 0;
+        }
+
+        public void ClearRenew()
+        {
+            Clear();
+            Renew();
+        }
+
         private struct PropertySorter : IComparer<BlittableJsonDocumentBuilder.PropertyTag>
         {
             private readonly CachedProperties properties;
