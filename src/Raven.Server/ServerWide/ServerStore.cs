@@ -2341,7 +2341,8 @@ namespace Raven.Server.ServerWide
             if (_engine.CurrentState != RachisState.Passive)
                 return;
 
-            _engine.Bootstrap(publicServerUrl ?? _server.ServerStore.GetNodeHttpServerUrl(), nodeTag);
+            if (_engine.Bootstrap(publicServerUrl ?? _server.ServerStore.GetNodeHttpServerUrl(), nodeTag) == false)
+                return;
 
             if (skipLicenseActivation == false)
                 LicenseManager.TryActivateLicense(Server.ThrowOnLicenseActivationFailure);
