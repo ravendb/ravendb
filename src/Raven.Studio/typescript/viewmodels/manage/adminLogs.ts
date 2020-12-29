@@ -183,31 +183,33 @@ class adminLogs extends viewModelBase {
     }
     
     filterLogEntries(fromFilterChange: boolean) {
-        const searchText = this.filter().toLocaleLowerCase();
-        const errorsOnly = this.onlyErrors();
-
         if (fromFilterChange) {
             this.listController().reset();
         }
 
+        const filterFunction = this.getFilterFunction();
+
+        const filteredItems = fromFilterChange ?
+            this.allData.filter(filterFunction) :
+            this.pendingMessages.filter(filterFunction);
+
+        this.listController().pushElements(filteredItems);
+    }
+    
+    getFilterFunction(): (item: string) => boolean {
+        const searchText = this.filter().toLocaleLowerCase();
+        const errorsOnly = this.onlyErrors();
+
         if (searchText || errorsOnly) {
-            let filterFunction: (item: string) => boolean = null;
             if (searchText && errorsOnly) {
-                filterFunction = x => (x.toLocaleLowerCase().includes(searchText) && this.hasError(x)) || this.isStudioItem(x);
+                return x => (x.toLocaleLowerCase().includes(searchText) && this.hasError(x)) || this.isStudioItem(x);
             } else if (searchText) {
-                filterFunction = x => x.toLocaleLowerCase().includes(searchText) || this.isStudioItem(x);
+                return x => x.toLocaleLowerCase().includes(searchText) || this.isStudioItem(x);
             } else {
-                filterFunction = x => this.hasError(x) || this.isStudioItem(x);
+                return x => this.hasError(x) || this.isStudioItem(x);
             }
-            
-            const filteredItems = fromFilterChange
-                ? this.allData.filter(filterFunction)
-                : this.pendingMessages.filter(filterFunction);
-            
-            this.listController().pushElements(filteredItems);
-        } else {
-            this.listController().pushElements(fromFilterChange ? this.allData : this.pendingMessages);
         }
+        return x => true;
     }
 
     applyConfiguration() {
@@ -334,7 +336,7 @@ class adminLogs extends viewModelBase {
         }
 
         if (!this.appendElementsTask) {
-            this.appendElementsTask = setTimeout(() => this.onAppendPendingMessages(), 333);
+            this.appendElementsTask = setTimeout(() => this.onMessageAdded(), 333);
         }
     }
 
@@ -348,16 +350,19 @@ class adminLogs extends viewModelBase {
         this.allData.push(msg);
         
         if (showMessageNow) {
-            this.listController().pushElements([...this.pendingMessages, msg]);
+            const filteredItems = this.pendingMessages.filter(this.getFilterFunction());
+            this.listController().pushElements([...filteredItems, msg]);
+            this.pendingMessages.length = 0;
+            
         } else {
             this.pendingMessages.push(msg);
         }
     }
     
-    private onAppendPendingMessages() {
+    private onMessageAdded() {
         if (this.mouseDown()) {
             // looks like user wants to select something - wait with updates 
-            this.appendElementsTask = setTimeout(() => this.onAppendPendingMessages(), 700);
+            this.appendElementsTask = setTimeout(() => this.onMessageAdded(), 700);
             return;
         }
         
