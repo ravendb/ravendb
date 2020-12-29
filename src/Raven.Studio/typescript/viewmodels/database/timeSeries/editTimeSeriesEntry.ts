@@ -33,11 +33,9 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     constructor(private documentId: string,
                 private db: database,
                 private timeSeriesName: string,
-                valuesNames: string[],
+                private valuesNamesProvider: (timeseriesName: string) => string[],
                 private editDto?: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
         super();
-        
-        this.valuesNames(valuesNames);
         
         this.lockTimeStamp = !!editDto;
         this.lockSeriesName = !!this.timeSeriesName;
@@ -64,6 +62,17 @@ class editTimeSeriesEntry extends dialogViewModelBase {
             const date = moment(model.timestamp());
             return date.local().format(editTimeSeriesEntry.localTimeFormat) + " (local)"
         });
+
+        if (!!this.timeSeriesName) {
+            this.getValuesNames();
+        }
+        
+        this.model().name.subscribe(() => this.getValuesNames());
+    }
+    
+    private getValuesNames() {
+        const valuesNames = this.valuesNamesProvider(this.model().name());
+        this.valuesNames(valuesNames);
     }
 
     compositionComplete() {
