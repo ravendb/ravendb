@@ -430,8 +430,11 @@ namespace FastTests
             catch (NoLeaderException)
             {
             }
-            catch
+            catch (Exception e)
             {
+                if (e is RavenException && (e.InnerException is TimeoutException || e.InnerException is OperationCanceledException))
+                    return null;
+
                 if (Servers.Contains(serverToUse))
                 {
                     if (Servers.All(s => s.Disposed))
