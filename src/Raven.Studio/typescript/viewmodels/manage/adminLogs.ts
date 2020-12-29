@@ -189,11 +189,11 @@ class adminLogs extends viewModelBase {
 
         const filterFunction = this.getFilterFunction();
 
-        const filteredItems = fromFilterChange ?
-            this.allData.filter(filterFunction) :
-            this.pendingMessages.filter(filterFunction);
+        const itemsToPush = fromFilterChange ?
+            (filterFunction ? this.allData.filter(filterFunction) : this.allData) :
+            (filterFunction ? this.pendingMessages.filter(filterFunction) : this.pendingMessages);
 
-        this.listController().pushElements(filteredItems);
+        this.listController().pushElements(itemsToPush);
     }
     
     getFilterFunction(): (item: string) => boolean {
@@ -209,7 +209,7 @@ class adminLogs extends viewModelBase {
                 return x => this.hasError(x) || this.isStudioItem(x);
             }
         }
-        return x => true;
+        return null;
     }
 
     applyConfiguration() {
@@ -350,8 +350,10 @@ class adminLogs extends viewModelBase {
         this.allData.push(msg);
         
         if (showMessageNow) {
-            const filteredItems = this.pendingMessages.filter(this.getFilterFunction());
-            this.listController().pushElements([...filteredItems, msg]);
+            const filterFunction = this.getFilterFunction();
+            const itemsToPush = filterFunction ? this.pendingMessages.filter(this.getFilterFunction()) : this.pendingMessages;
+            
+            this.listController().pushElements([...itemsToPush, msg]);
             this.pendingMessages.length = 0;
             
         } else {
