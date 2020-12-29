@@ -242,14 +242,9 @@ class editTimeSeries extends viewModelBase {
         const possibleValuesCount = this.isRollupTimeSeries() ? 
             timeSeriesEntryModel.numberOfPossibleRollupValues : 
             timeSeriesEntryModel.numberOfPossibleValues;
-        
-        const editTimeSeriesEntryDialog = new editTimeSeriesEntry(
-            this.documentId(),
-            this.activeDatabase(),
-            this.timeSeriesName(),
-            this.getValuesNamesToUse(possibleValuesCount),
-            item
-        );
+
+        const editTimeSeriesEntryDialog = new editTimeSeriesEntry(this.documentId(),
+            this.activeDatabase(), this.timeSeriesName(), tsName => this.getValuesNamesToUse(possibleValuesCount, tsName), item);
         
         app.showBootstrapDialog(editTimeSeriesEntryDialog)
             .done((seriesName) => {
@@ -421,14 +416,9 @@ class editTimeSeries extends viewModelBase {
     
     createTimeSeries(createNew: boolean) {
         const tsNameToUse = createNew ? null : this.timeSeriesName();
-        const valuesNamesToUse = createNew ? [] : this.getValuesNamesToUse(timeSeriesEntryModel.numberOfPossibleValues);
         
-        const createTimeSeriesDialog = new editTimeSeriesEntry(this.documentId(), this.activeDatabase(), tsNameToUse, valuesNamesToUse);
-        
-        createTimeSeriesDialog.model().name.subscribe((newName) => {
-            const valuesNames = this.getValuesNamesToUse(timeSeriesEntryModel.numberOfPossibleValues, newName);
-            createTimeSeriesDialog.valuesNames(valuesNames);
-        });
+        const createTimeSeriesDialog = new editTimeSeriesEntry(this.documentId(),
+            this.activeDatabase(), tsNameToUse, tsName => this.getValuesNamesToUse(timeSeriesEntryModel.numberOfPossibleValues, tsName));
         
         app.showBootstrapDialog(createTimeSeriesDialog)
             .done((seriesName) => {
