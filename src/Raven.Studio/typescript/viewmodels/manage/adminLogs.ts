@@ -75,7 +75,7 @@ class adminLogs extends viewModelBase {
 
     headerValuePlaceholder: KnockoutComputed<string>;
     
-    private appendElementsTask: number;
+    private appendTask: number;
     private pendingMessages = [] as string[];
     private heightCalculator = new heightCalculator();
     
@@ -110,8 +110,8 @@ class adminLogs extends viewModelBase {
     }
     
     private initObservables() {
-        this.filter.throttle(500).subscribe(() => this.filterLogEntries(true));
-        this.onlyErrors.subscribe(() => this.filterLogEntries(true));
+        this.filter.throttle(500).subscribe(() => this.filterAndAppendLogEntries(true));
+        this.onlyErrors.subscribe(() => this.filterAndAppendLogEntries(true));
 
         this.enableApply = ko.pureComputed(() => {
             return this.isValid(this.validationGroup);
@@ -182,17 +182,18 @@ class adminLogs extends viewModelBase {
         });
     }
     
-    filterLogEntries(fromFilterChange: boolean) {
+    filterAndAppendLogEntries(fromFilterChange: boolean) {
         if (fromFilterChange) {
             this.listController().reset();
         }
 
+        let itemsToPush = fromFilterChange ? this.allData : this.pendingMessages;
+        
         const filterFunction = this.getFilterFunction();
-
-        const itemsToPush = fromFilterChange ?
-            (filterFunction ? this.allData.filter(filterFunction) : this.allData) :
-            (filterFunction ? this.pendingMessages.filter(filterFunction) : this.pendingMessages);
-
+        if (filterFunction) {
+            itemsToPush =  itemsToPush.filter(filterFunction)
+        }
+        
         this.listController().pushElements(itemsToPush);
     }
     
@@ -334,43 +335,37 @@ class adminLogs extends viewModelBase {
         } else {
             this.addMessage(data.trim());
         }
-
-        if (!this.appendElementsTask) {
-            this.appendElementsTask = setTimeout(() => this.onMessageAdded(), 333);
-        }
     }
 
     private addStudioMessage(msg: string) {
         const time = new Date().toISOString();
         msg = `${time.replace("Z", "0000Z")}, ${adminLogs.studioMsgPart} ${msg}`;
-        this.addMessage(msg, true);
+        this.addMessage(msg);
     }
     
-    private addMessage(msg: string, showMessageNow: boolean = false) {
+    private addMessage(msg: string) {
         this.allData.push(msg);
+        this.pendingMessages.push(msg);
         
-        if (showMessageNow) {
-            const filterFunction = this.getFilterFunction();
-            const itemsToPush = filterFunction ? this.pendingMessages.filter(this.getFilterFunction()) : this.pendingMessages;
-            
-            this.listController().pushElements([...itemsToPush, msg]);
-            this.pendingMessages.length = 0;
-            
-        } else {
-            this.pendingMessages.push(msg);
+        this.scheduleAppendTask();
+    }
+    
+    private scheduleAppendTask() {
+        if (!this.appendTask) {
+            this.appendTask = setTimeout(() => this.appendPendingMessages(), 333);
         }
     }
     
-    private onMessageAdded() {
+    private appendPendingMessages() {
         if (this.mouseDown()) {
             // looks like user wants to select something - wait with updates 
-            this.appendElementsTask = setTimeout(() => this.onMessageAdded(), 700);
+            this.appendTask = setTimeout(() => this.appendPendingMessages(), 700);
             return;
         }
         
-        this.appendElementsTask = null;
-
-        this.filterLogEntries(false);
+        this.appendTask = null;
+        
+        this.filterAndAppendLogEntries(false);
 
         this.pendingMessages.length = 0;
 
