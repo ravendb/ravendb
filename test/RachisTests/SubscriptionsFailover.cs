@@ -343,7 +343,9 @@ namespace RachisTests
                 Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (1st assert)");
                 ackSent.Reset(true);
 
-                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName).ConfigureAwait(false);
+                var disposedTag = await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName).ConfigureAwait(false);
+                await WaitForResponsibleNodeToChange(defaultDatabase, subscription.SubscriptionName, disposedTag);
+
                 continueMre.Set();
                 expectedRevisionsCount += 2;
 
@@ -571,7 +573,7 @@ namespace RachisTests
             return (subscription, task);
         }
 
-        private async Task KillServerWhereSubscriptionWorks(string defaultDatabase, string subscriptionName)
+        private async Task<string> KillServerWhereSubscriptionWorks(string defaultDatabase, string subscriptionName)
         {
             var sp = Stopwatch.StartNew();
             try
@@ -602,6 +604,41 @@ namespace RachisTests
                         continue;
                     }
                     await DisposeServerAndWaitForFinishOfDisposalAsync(server);
+                    return tag;
+                }
+
+                return null;
+            }
+            finally
+            {
+                Assert.True(sp.ElapsedMilliseconds < _reasonableWaitTime.TotalMilliseconds);
+            }
+        }
+
+        private async Task WaitForResponsibleNodeToChange(string database, string subscriptionName, string responsibleNode)
+        {
+            var sp = Stopwatch.StartNew();
+            try
+            {
+                while (sp.ElapsedMilliseconds < _reasonableWaitTime.TotalMilliseconds)
+                {
+                    string tag;
+                    var someServer = Servers.First(x => x.Disposed == false);
+                    using (someServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var databaseRecord = someServer.ServerStore.Cluster.ReadDatabase(context, database);
+                        var db = await someServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database).ConfigureAwait(false);
+                        var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
+                        tag = databaseRecord.Topology.WhoseTaskIsIt(someServer.ServerStore.Engine.CurrentState, subscriptionState, null);
+                    }
+
+                    if (tag == null || tag == responsibleNode)
+                    {
+                        await Task.Delay(333);
+                        continue;
+                    }
+
                     return;
                 }
             }
