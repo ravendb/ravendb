@@ -12,6 +12,11 @@
 @dashboard-used-space-color: #009de0;
 
 #dashboard-container {
+    
+    .js-animate {
+        position: absolute;
+        overflow: hidden;
+    }
 
     .disabled {
         a {
@@ -390,8 +395,10 @@
 
     .panel-title {
         i {
-            line-height: 10px;
-            top: 1px;
+            top: 6px;
+        }
+        span {
+            padding-left: 20px;
         }
     }
 
@@ -461,6 +468,7 @@
                 display: flex;
                 flex-direction: column;
                 margin-bottom: 0;
+                position: relative;
             }
 
             .panel-body {
@@ -483,6 +491,10 @@
 
         .list-container {
             min-height: 70px;
+        }
+        
+        i {
+            top: 16px;
         }
     }
 
