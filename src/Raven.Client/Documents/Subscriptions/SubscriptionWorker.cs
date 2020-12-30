@@ -705,12 +705,11 @@ namespace Raven.Client.Documents.Subscriptions
             switch (ex)
             {
                 case SubscriptionDoesNotBelongToNodeException se:
-                    AssertLastConnectionFailure();
-
                     var requestExecutor = _store.GetRequestExecutor(_dbName);
 
                     if (se.AppropriateNode == null)
                     {
+                        AssertLastConnectionFailure();
                         _redirectNode = null;
                         return true;
                     }
