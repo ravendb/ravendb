@@ -41,9 +41,14 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
             var topology = record.Topology;
-            var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
-            if (topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode) != NodeTag)
-                throw new SubscriptionDoesNotBelongToNodeException($"Can't update subscription with name {subscriptionName} by node {NodeTag}, because it's not its task to update this subscription");
+            var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag));
+            if (appropriateNode != NodeTag)
+                throw new SubscriptionDoesNotBelongToNodeException(
+                    $"Cannot apply {nameof(AcknowledgeSubscriptionBatchCommand)} for subscription '{subscriptionName}' with id '{SubscriptionId}', on database '{DatabaseName}', on node '{NodeTag}'," +
+                    $" because the subscription task belongs to '{appropriateNode ?? "N/A"}'.")
+                {
+                    AppropriateNode = appropriateNode
+                };
 
             if (ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
             {
