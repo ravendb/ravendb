@@ -70,11 +70,7 @@ class machineResourcesSection {
             $('.dashboard-cpu-memory [data-toggle="tooltip"]').tooltip();
         }
         
-        this.blink();
-    }
-    
-    private blink() {
-        viewHelpers.animate($(".dashboard-cpu-memory .js-animate"), "blink-round-style");
+        // do NOT blink - see RavenDB-16052
     }
     
     private static cpuTooltip(data: dashboardChartTooltipProviderArgs) {
