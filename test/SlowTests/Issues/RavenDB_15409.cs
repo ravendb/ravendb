@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
+using Sparrow.Json;
+using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,12 +19,15 @@ namespace SlowTests.Issues
         [Fact]
         public async Task DoNotCallUpdateLicenseLimitsCommandOnEveryLeaderChange()
         {
+            await using var logStream = new MemoryStream();
+            LoggingSource.Instance.AttachPipeSink(logStream);
+
             var (servers, leader) = await CreateRaftCluster(3);
             await WaitForRaftIndexToBeAppliedInCluster(9, TimeSpan.FromSeconds(15));
             var expected = new HashSet<long>();
             foreach (var server in servers)
             {
-                expected.Add(CountOfRaftCommandByType(server, nameof(UpdateLicenseLimitsCommand)));
+                expected.Add(GetRaftCommandByType(server, nameof(UpdateLicenseLimitsCommand)).Count());
             }
 
             Assert.Single(expected);
@@ -34,9 +41,22 @@ namespace SlowTests.Issues
                 });
             }
 
-            foreach (var server in servers)
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
-                Assert.Equal(expected.Single(), CountOfRaftCommandByType(server, nameof(UpdateLicenseLimitsCommand)));
+                async Task<string> MassageFactory()
+                {
+                    LoggingSource.Instance.DetachPipeSink();
+                    logStream.Seek(0, SeekOrigin.Begin);
+                    using StreamReader reader = new(logStream);
+                    return await reader.ReadToEndAsync();
+                }
+                await RavenTestHelper.AssertAllAsync(MassageFactory, servers.Select(s => (Action)(() =>
+                {
+                    var actual = GetRaftCommandByType(s, nameof(UpdateLicenseLimitsCommand)).Count();
+                    Assert.True(expected.Single() == actual, 
+                        $"{s.ServerStore.NodeTag} expect {expected.Single()} actual {actual} " +
+                                $" {string.Join($"{Environment.NewLine}\t", GetRaftCommandByType(s).Select(c => ctx.ReadObject(c, "raftCommand").ToString()))}");
+                })).ToArray());
             }
         }
 
