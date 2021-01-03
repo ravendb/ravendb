@@ -2,14 +2,6 @@
     <div class="flex-window edit-index">
         <form class="flex-form" autocomplete="off" data-bind="submit: save">
             <div class="toolbar">
-                <div class="row">
-                    <div class="col-lg-6">
-                        <div class="input-group toolbar" data-bind="validationElement: editedIndex().name">
-                            <div class="input-group-addon">Index name</div>
-                            <input class="form-control" data-bind="textInput: editedIndex().name, enable: canEditIndexName, hasFocus: indexNameHasFocus" />
-                        </div>
-                    </div>
-                </div>
                 <div class="flex-horizontal">
                     <div class="btn-group flex-grow">
                         <button class="btn btn-primary" data-bind="enable: isSaveEnabled(), css: { 'btn-spinner': saveInProgress }"><i class="icon-save"></i><span>Save</span></button>
@@ -24,9 +16,23 @@
                     </div>
                 </div>
             </div>
+            <div class="row margin-top margin-top-sm">
+                <div class="col-sm-2">
+                    <h2 class="margin-bottom margin-bottom-xs on-base-background">Index</h2>
+                </div>
+                <div class="col-sm-10 col-lg-8">
+                    <div data-bind="if: !canEditIndexName()" class="force-text-wrap">
+                        <h2 data-bind="text: editedIndex().name, attr: { title: editedIndex().name }"></h2>
+                    </div>
+                    <div data-bind="if: canEditIndexName, validationElement: editedIndex().name">
+                        <input class="form-control margin-bottom margin-bottom-sm" 
+                               data-bind="textInput: editedIndex().name, enable: canEditIndexName, hasFocus: indexNameHasFocus" placeholder="Enter index name" />
+                    </div>
+                </div>
+            </div>
             <div class="row">
                 <div class="col-sm-2">
-                    <h2 id="map-title" class="margin-bottom margin-bottom-xs on-base-background">Maps</h2>
+                    <h2 id="map-title" class="margin-bottom margin-bottom-xs on-base-background margin-top">Maps</h2>
                     <a href="#" data-bind="click: mapIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
                 </div>
                 <div class="col-sm-10">
@@ -61,7 +67,7 @@
             </div>
             <div class="row">
                 <div class="col-sm-2">
-                    <h2 id="reduce-title" class="margin-bottom margin-bottom-xs on-base-background">Reduce</h2>
+                    <h2 id="reduce-title" class="margin-bottom margin-bottom-xs on-base-background margin-top">Reduce</h2>
                     <a href="#" data-bind="click: mapReduceIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
                 </div>
                 <div class="col-sm-10" data-bind="with: editedIndex()">
@@ -86,7 +92,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="margin-bottom" data-bind="visible: !hasReduce()">
+                    <div class="margin-bottom margin-top" data-bind="visible: !hasReduce()">
                         <button class="btn btn-info" data-bind="click: $root.addReduce">
                             <i class="icon-plus"></i><span>Add Reduction</span>
                         </button>
