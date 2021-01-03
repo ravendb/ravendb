@@ -42,20 +42,26 @@ class statistics extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
-        const self = this;
-        $('.stats .js-size-tooltip').tooltip({
+        $('.stats .size-tooltip').tooltip({
             container: "body",
             html: true,
             placement: "right",
             title: () => {
                 return `Data: <strong>${this.stats().dataSizeOnDisk}</strong><br />
                 Temp: <strong>${this.stats().tempBuffersSizeOnDisk}</strong><br />
-                Total: <strong>${this.stats().totalSizeOnDisk}</strong>
-                `
+                Total: <strong>${this.stats().totalSizeOnDisk}</strong>`
             }
         });
 
-        popoverUtils.longWithHover($(".js-identities-header"),
+        const cvTooltip = this.stats().databaseChangeVector.map(cv => `<small>${cv.fullFormat}</small>`)
+            .join("<br>");
+
+        popoverUtils.longWithHover($(".cv-tooltip"),
+            {
+                content: `<div>${cvTooltip}</div>`
+            });
+        
+        popoverUtils.longWithHover($(".identities-header"),
             {
                 content: "<div>Identities allow you to have consecutive IDs across the cluster.</div>"
             });
