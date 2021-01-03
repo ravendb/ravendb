@@ -20,6 +20,7 @@ using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -156,6 +157,50 @@ namespace RachisTests
                 var dbName = GetDatabaseName();
                 var db = await CreateDatabaseInCluster(dbName, 4, leader.WebUrl);
                 Assert.False(db.Servers.Contains(serverToDispose));
+            }
+        }
+
+        [Fact]
+        public async Task EqualChangeVectorAfterAddingNode()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Replication.MaxItemsCount)] = "1";
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "3";
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.MaxChangeVectorDistance)] = "1";
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.WorkerSamplePeriod)] = "50";
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.SupervisorSamplePeriod)] = "100";
+
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = 1
+            }))
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User());
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
+                await WaitAndAssertForValueAsync(() => GetMembersCount(store), 2);
+
+                await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
+                await WaitAndAssertForValueAsync(() => GetMembersCount(store), 3);
+
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    var changeVectors = cluster.Nodes.Select(s =>
+                        s.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).Result.ReadLastEtagAndChangeVector().ChangeVector.ToChangeVector()
+                            .SerializeVector()).ToHashSet();
+
+                    return Task.FromResult(changeVectors.Count);
+                }, 1);
             }
         }
 
