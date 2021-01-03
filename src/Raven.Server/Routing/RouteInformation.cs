@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using StringSegment = Sparrow.StringSegment;
@@ -27,6 +28,7 @@ namespace Raven.Server.Routing
         public bool DisableOnCpuCreditsExhaustion;
 
         private HandleRequest _request;
+        private HandleRequest _shardedRequest;
         private RouteType _typeOfRoute;
 
         public bool IsDebugInformationEndpoint;
@@ -52,17 +54,28 @@ namespace Raven.Server.Routing
         }
 
         public RouteType TypeOfRoute => _typeOfRoute;
-
+        
+        public void BuildSharded(MethodInfo shardedAction)
+        {
+            _shardedRequest = BuildInternal(shardedAction);
+        }
+        
         public void Build(MethodInfo action)
         {
-            if (action.ReturnType != typeof(Task))
-                throw new InvalidOperationException(action.DeclaringType.FullName + "." + action.Name +
-                                                    " must return Task");
-
             if (typeof(DatabaseRequestHandler).IsAssignableFrom(action.DeclaringType))
             {
                 _typeOfRoute = RouteType.Databases;
             }
+
+            _request = BuildInternal(action);
+        }
+
+        
+        private static HandleRequest BuildInternal(MethodInfo action)
+        {
+            if (action.ReturnType != typeof(Task))
+                throw new InvalidOperationException(action.DeclaringType.FullName + "." + action.Name +
+                                                    " must return Task");
 
             // CurrentRequestContext currentRequestContext
             var currentRequestContext = Expression.Parameter(typeof(RequestHandlerContext), "currentRequestContext");
@@ -76,7 +89,7 @@ namespace Raven.Server.Routing
                 Expression.Call(handler, nameof(RequestHandler.Init), new Type[0], currentRequestContext),
                 Expression.Call(handler, action.Name, new Type[0]));
             // .Handle();
-            _request = Expression.Lambda<HandleRequest>(block, currentRequestContext).Compile();
+            return Expression.Lambda<HandleRequest>(block, currentRequestContext).Compile();
         }
         
         public Task CreateDatabase(RequestHandlerContext context)
@@ -114,38 +127,45 @@ namespace Raven.Server.Routing
             }
 
             var databasesLandlord = context.RavenServer.ServerStore.DatabasesLandlord;
-            var database = databasesLandlord.TryGetOrCreateResourceStore(databaseName);
-
-            if (database.IsCompletedSuccessfully)
+            var result = databasesLandlord.TryGetOrCreateDatabase(databaseName);
+            switch (result.DatabaseStatus)
             {
-                context.Database = database.Result;
-
-                if (context.Database == null)
-                    DatabaseDoesNotExistException.Throw(databaseName.Value);
-
-                // ReSharper disable once PossibleNullReferenceException
-                if (context.Database.DatabaseShutdownCompleted.IsSet)
-                {
-                    using (context.RavenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
+                case DatabasesLandlord.DatabaseSearchResult.Status.Sharded:
+                    context.ShardedContext = result.ShardedContext;
+                    return null;
+                default:
+                    var database = result.DatabaseTask;
+                    if (database.IsCompletedSuccessfully)
                     {
-                        if (context.RavenServer.ServerStore.Cluster.DatabaseExists(ctx, databaseName.Value))
+                        context.Database = database.Result;
+
+                        if (context.Database == null)
+                            DatabaseDoesNotExistException.Throw(databaseName.Value);
+
+                        // ReSharper disable once PossibleNullReferenceException
+                        if (context.Database.DatabaseShutdownCompleted.IsSet)
                         {
-                            // db got disabled during loading
-                            throw new DatabaseDisabledException($"Cannot complete the request, because {databaseName.Value} has been disabled.");
+                            using (context.RavenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                            using (ctx.OpenReadTransaction())
+                            {
+                                if (context.RavenServer.ServerStore.Cluster.DatabaseExists(ctx, databaseName.Value))
+                                {
+                                    // db got disabled during loading
+                                    throw new DatabaseDisabledException($"Cannot complete the request, because {databaseName.Value} has been disabled.");
+                                }
+                            }
+
+                            // db got deleted during loading
+                            DatabaseDoesNotExistException.ThrowWithMessage(databaseName.Value, "Cannot complete the request.");
                         }
+
+                        return context.Database.DatabaseShutdown.IsCancellationRequested == false
+                            ? Task.CompletedTask
+                            : UnlikelyWaitForDatabaseToUnload(context, context.Database, databasesLandlord, databaseName);
                     }
 
-                    // db got deleted during loading
-                    DatabaseDoesNotExistException.ThrowWithMessage(databaseName.Value, "Cannot complete the request.");
-                }
-
-                return context.Database.DatabaseShutdown.IsCancellationRequested == false
-                    ? Task.CompletedTask
-                    : UnlikelyWaitForDatabaseToUnload(context, context.Database, databasesLandlord, databaseName);
+                    return UnlikelyWaitForDatabaseToLoad(context, database, databasesLandlord, databaseName);
             }
-
-            return UnlikelyWaitForDatabaseToLoad(context, database, databasesLandlord, databaseName);
         }
 
         private async Task UnlikelyWaitForDatabaseToUnload(RequestHandlerContext context, DocumentDatabase database,
@@ -203,6 +223,18 @@ namespace Raven.Server.Routing
                 return Tuple.Create<HandleRequest, Task<HandleRequest>>(_request, null);
             }
             var database = CreateDatabase(context);
+            if (database == null)
+            {
+#if DEBUG
+                if (_shardedRequest == null)
+                {
+                    throw new InvalidOperationException("Unable to run request " + context.HttpContext.Request.GetFullUrl() +
+                                                        ", the database is sharded, but no shared route is defined for this operation!");
+                }
+#endif
+                return Tuple.Create<HandleRequest, Task<HandleRequest>>(_shardedRequest, null);
+            }
+
             if (database.Status == TaskStatus.RanToCompletion)
             {
                 return Tuple.Create<HandleRequest, Task<HandleRequest>>(_request, null);

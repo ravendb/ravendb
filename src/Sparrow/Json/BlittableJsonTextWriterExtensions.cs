@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
@@ -118,6 +119,24 @@ namespace Sparrow.Json
                 first = false;
 
                 writer.WriteObject(item);
+            }
+            writer.WriteEndArray();
+        }
+
+        public static async Task WriteArrayAsync(this AsyncBlittableJsonTextWriter writer, string name, IEnumerable<BlittableJsonReaderObject> items)
+        {
+            writer.WritePropertyName(name);
+
+            writer.WriteStartArray();
+            var first = true;
+            foreach (var item in items)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WriteObject(item);
+                await writer.MaybeOuterFlushAsync().ConfigureAwait(false);
             }
             writer.WriteEndArray();
         }

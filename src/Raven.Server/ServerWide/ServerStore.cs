@@ -766,11 +766,49 @@ namespace Raven.Server.ServerWide
             switch (cmd)
             {
                 case AddDatabaseCommand addDatabase:
-                    if (addDatabase.Record.Topology.Count == 0)
+                    var clusterTopology = GetClusterTopology(ctx);
+                    if (addDatabase.Record.Topology != null )
                     {
-                        AssignNodesToDatabase(GetClusterTopology(ctx), addDatabase.Record);
+                        if (addDatabase.Record.Topology.Count == 0)
+                        {
+                            AssignNodesToDatabase(clusterTopology,
+                                addDatabase.Record.DatabaseName,
+                                addDatabase.Encrypted,
+                                addDatabase.Record.Topology);
+                        }
+                        Debug.Assert(addDatabase.Record.Topology.Count != 0, "Empty topology after AssignNodesToDatabase");
+
                     }
-                    Debug.Assert(addDatabase.Record.Topology.Count != 0, "Empty topology after AssignNodesToDatabase");
+                    else
+                    {
+                        if (addDatabase.Record.ShardAllocations == null ||
+                            addDatabase.Record.ShardAllocations.Count == 0)
+                        {
+                            addDatabase.Record.ShardAllocations = new List<DatabaseRecord.ShardRangeAssignment>();
+                            var start = 0;
+                            var step = (1024*1024) / addDatabase.Record.Shards.Length;
+                            for (int i = 0; i < addDatabase.Record.Shards.Length; i++)
+                            {
+                                addDatabase.Record.ShardAllocations.Add(new DatabaseRecord.ShardRangeAssignment
+                                {
+                                    Shard = i,
+                                    RangeStart = start
+                                });
+                                start += step;
+                            }
+                        }
+                        foreach (var shard in addDatabase.Record.Shards)
+                        {
+                            if(shard.Count == 0)
+                            {
+                                AssignNodesToDatabase(clusterTopology,
+                                    addDatabase.Record.DatabaseName,
+                                    addDatabase.Encrypted,
+                                    shard);
+                            }
+                            Debug.Assert(shard.Count != 0, "Empty shard topology after AssignNodesToDatabase");
+                        }
+                    }
                     break;
             }
         }
@@ -2380,34 +2418,32 @@ namespace Raven.Server.ServerWide
             return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
         }
 
-        public void AssignNodesToDatabase(ClusterTopology clusterTopology, DatabaseRecord record)
+        public void AssignNodesToDatabase(ClusterTopology clusterTopology, string name, bool encrypted, DatabaseTopology databaseTopology)
         {
-            var topology = record.Topology;
-
-            Debug.Assert(topology != null);
+            Debug.Assert(databaseTopology != null);
 
             if (clusterTopology.AllNodes.Count == 0)
-                throw new InvalidOperationException($"Database {record.DatabaseName} cannot be created, because the cluster topology is empty (shouldn't happen)!");
+                throw new InvalidOperationException($"Database {name} cannot be created, because the cluster topology is empty (shouldn't happen)!");
 
-            if (record.Topology.ReplicationFactor == 0)
-                throw new InvalidOperationException($"Database {record.DatabaseName} cannot be created with replication factor of 0.");
+            if (databaseTopology.ReplicationFactor == 0)
+                throw new InvalidOperationException($"Database {name} cannot be created with replication factor of 0.");
 
             var clusterNodes = clusterTopology.Members.Keys
                 .Concat(clusterTopology.Watchers.Keys)
                 .ToList();
 
-            if (record.Encrypted)
+            if (encrypted)
             {
                 clusterNodes.RemoveAll(n => AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(n)));
-                if (clusterNodes.Count < topology.ReplicationFactor)
+                if (clusterNodes.Count < databaseTopology.ReplicationFactor)
                     throw new InvalidOperationException(
-                        $"Database {record.DatabaseName} is encrypted and requires {topology.ReplicationFactor} node(s) which supports SSL. There are {clusterNodes.Count} such node(s) available in the cluster.");
+                        $"Database {name} is encrypted and requires {databaseTopology.ReplicationFactor} node(s) which supports SSL. There are {clusterNodes.Count} such node(s) available in the cluster.");
             }
 
-            if (clusterNodes.Count < topology.ReplicationFactor)
+            if (clusterNodes.Count < databaseTopology.ReplicationFactor)
             {
                 throw new InvalidOperationException(
-                    $"Database {record.DatabaseName} requires {topology.ReplicationFactor} node(s) but there are {clusterNodes.Count} nodes available in the cluster.");
+                    $"Database {name} requires {databaseTopology.ReplicationFactor} node(s) but there are {clusterNodes.Count} nodes available in the cluster.");
             }
 
             var disconnectedNodes = new List<string>();
@@ -2427,20 +2463,20 @@ namespace Raven.Server.ServerWide
             var offset = new Random().Next();
 
             // first we would prefer the connected nodes
-            var factor = topology.ReplicationFactor;
+            var factor = databaseTopology.ReplicationFactor;
             var count = Math.Min(clusterNodes.Count, factor);
             for (var i = 0; i < count; i++)
             {
                 factor--;
                 var selectedNode = clusterNodes[(i + offset) % clusterNodes.Count];
-                topology.Members.Add(selectedNode);
+                databaseTopology.Members.Add(selectedNode);
             }
 
             // only if all the online nodes are occupied, try to place on the disconnected
             for (int i = 0; i < Math.Min(disconnectedNodes.Count, factor); i++)
             {
                 var selectedNode = disconnectedNodes[(i + offset) % disconnectedNodes.Count];
-                topology.Members.Add(selectedNode);
+                databaseTopology.Members.Add(selectedNode);
             }
         }
 
@@ -2450,16 +2486,17 @@ namespace Raven.Server.ServerWide
         {
             databaseValues ??= new Dictionary<string, BlittableJsonReaderObject>();
 
-            Debug.Assert(record.Topology != null);
-
-            if (string.IsNullOrEmpty(record.Topology.DatabaseTopologyIdBase64))
-                record.Topology.DatabaseTopologyIdBase64 = Guid.NewGuid().ToBase64Unpadded();
-
-            record.Topology.Stamp = new LeaderStamp
+            if (record.Topology != null)
             {
-                Term = _engine.CurrentTerm,
-                LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0
-            };
+                InitializeTopology(record.Topology);
+            }
+            else
+            {
+                foreach (var shardTopology in record.Shards)
+                {
+                    InitializeTopology(shardTopology);
+                }
+            }
 
             var addDatabaseCommand = new AddDatabaseCommand(raftRequestId)
             {
@@ -2471,6 +2508,20 @@ namespace Raven.Server.ServerWide
             };
 
             return SendToLeaderAsync(addDatabaseCommand);
+
+            void InitializeTopology(DatabaseTopology topology)
+            {
+                Debug.Assert(topology != null);
+
+                if (string.IsNullOrEmpty(topology.DatabaseTopologyIdBase64))
+                    topology.DatabaseTopologyIdBase64 = Guid.NewGuid().ToBase64Unpadded();
+
+                topology.Stamp = new LeaderStamp
+                {
+                    Term = _engine.CurrentTerm,
+                    LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0
+                };
+            }
         }
 
         public async Task EnsureNotPassiveAsync(string publicServerUrl = null, string nodeTag = "A", bool skipLicenseActivation = false)

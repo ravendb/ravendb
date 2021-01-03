@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
@@ -49,6 +50,15 @@ namespace Raven.Client.ServerWide
         public DatabaseStateStatus DatabaseState;
 
         public DatabaseTopology Topology;
+
+        public DatabaseTopology[] Shards;
+
+        public List<ShardRangeAssignment> ShardAllocations = new List<ShardRangeAssignment>();
+        public class ShardRangeAssignment
+        {
+            public int RangeStart;
+            public int Shard;
+        }
 
         // public OnGoingTasks tasks;  tasks for this node..
         // list backup.. list sub .. list etl.. list repl(watchers).. list sql
@@ -100,6 +110,8 @@ namespace Raven.Client.ServerWide
         public long TruncatedClusterTransactionCommandsCount;
 
         public HashSet<string> UnusedDatabaseIds = new HashSet<string>();
+        [JsonIgnore]
+        public bool IsSharded => Shards?.Length > 0;
 
         public void AddSorter(SorterDefinition definition)
         {
@@ -289,6 +301,28 @@ namespace Raven.Client.ServerWide
                 count += AutoIndexes.Count;
 
             return count;
+        }
+
+        public bool ValidateTopologyNodes()
+        {
+            if (Topology != null && Topology.Count > 0)
+                return true;
+
+            return Shards != null && Shards.All(shard => shard?.Count > 0);
+        }
+
+        public IEnumerable<string> GetTopologyMembers(Func<DatabaseTopology, List<string>> get)
+        {
+            if (Topology != null)
+                return get(Topology);
+
+            var set = new HashSet<string>();
+            foreach (var shard in Shards)
+            {
+                set.UnionWith(get(shard));
+            }
+
+            return set.ToList();
         }
     }
 

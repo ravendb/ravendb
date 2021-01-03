@@ -19,17 +19,22 @@ namespace Raven.Server.ServerWide.Commands
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.Topology = Topology;
-            if (record.Topology.Stamp == null)
+            SetLeaderStampForTopology(record.Topology, etag);
+            if (record.IsSharded == false) 
+                return;
+            
+            foreach (var shardTopology in record.Shards)
             {
-                record.Topology.Stamp = new LeaderStamp
-                {
-                    Term = -1,
-                    LeadersTicks = -1,
-                    Index = -1
-                };
+                SetLeaderStampForTopology(shardTopology, etag);
             }
-            record.Topology.Stamp.Index = etag;
         }
+        
+        private static void SetLeaderStampForTopology(DatabaseTopology topology, long etag)
+        {
+            topology.Stamp ??= new LeaderStamp {Term = -1, LeadersTicks = -1, Index = -1};
+            topology.Stamp.Index = etag;
+        }
+
 
         public override void FillJson(DynamicJsonValue json)
         {

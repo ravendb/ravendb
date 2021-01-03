@@ -214,6 +214,13 @@ namespace Raven.Server.ServerWide.Maintenance
                             LogMessage($"Can't analyze the stats of database the {database}, because the database record is null.", database: database);
                             continue;
                         }
+                        if (rawRecord.IsSharded())
+                        {
+                            if (DateTime.Today < new DateTime(2021, 2, 1))
+                                continue; //TODO: Need to handle sharding here
+                            throw new InvalidOperationException("Need to handle sharded dbs in ClusterObserver!");
+                        }
+
 
                         var databaseTopology = rawRecord.Topology;
                         var topologyStamp = databaseTopology?.Stamp ?? new LeaderStamp { Index = -1, LeadersTicks = -1, Term = -1 };

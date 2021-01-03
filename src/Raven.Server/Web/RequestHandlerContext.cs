@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
 
 namespace Raven.Server.Web
@@ -10,5 +11,6 @@ namespace Raven.Server.Web
         public RavenServer RavenServer;
         public RouteMatch RouteMatch;
         public DocumentDatabase Database;
+        public ShardedContext ShardedContext;
     }
 }

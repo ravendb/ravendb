@@ -1273,16 +1273,16 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 remove = JsonDeserializationCluster.RemoveNodeFromDatabaseCommand(cmd);
                 var databaseName = remove.DatabaseName;
+                int shardIndex = TryGetShardIndexAndDatabaseName(ref databaseName);
                 var databaseNameLowered = databaseName.ToLowerInvariant();
                 using (Slice.From(context.Allocator, "db/" + databaseNameLowered, out Slice lowerKey))
                 using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
                 {
-                    if (items.ReadByKey(lowerKey, out TableValueReader reader) == false)
+                    var rawRecord = ReadRawDatabaseRecord(context, databaseName, out _);
+                    if (rawRecord == null)
                         throw new DatabaseDoesNotExistException($"The database {databaseName} does not exists");
 
-                    var doc = new BlittableJsonReaderObject(reader.Read(2, out int size), size, context);
-
-                    if (doc.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject _) == false)
+                    if (rawRecord.Topology == null)
                     {
                         items.DeleteByKey(lowerKey);
                         NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
@@ -1290,8 +1290,17 @@ namespace Raven.Server.ServerWide
                         return;
                     }
 
-                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
-                    remove.UpdateDatabaseRecord(databaseRecord, index);
+                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
+
+                    if (shardIndex == -1) // not sharded
+                    {
+                        remove.UpdateDatabaseRecord(databaseRecord, index);
+                    }
+                    else //sharded
+                    {
+                        remove.UpdateShardedDatabaseRecord(databaseRecord, shardIndex, index);
+                    }
+
 
                     if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
                     {
@@ -1412,7 +1421,7 @@ namespace Raven.Server.ServerWide
             Exception exception = null;
             try
             {
-                Debug.Assert(addDatabaseCommand.Record.Topology.Count != 0, "Attempt to add database with no nodes");
+                Debug.Assert(addDatabaseCommand.Record.ValidateTopologyNodes(), "Attempt to add database with no nodes");
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out Slice valueName))
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out Slice valueNameLowered))
@@ -1447,7 +1456,16 @@ namespace Raven.Server.ServerWide
                     {
                         UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
                         SetDatabaseValues(addDatabaseCommand.DatabaseValues, addDatabaseCommand.Name, context, index, items);
-                        return addDatabaseCommand.Record.Topology.Members;
+                        if (addDatabaseCommand.Record.Topology != null)
+                            return addDatabaseCommand.Record.Topology.Members;
+
+                        var set = new HashSet<string>();
+                        foreach (var shard in addDatabaseCommand.Record.Shards)
+                        {
+                            set.UnionWith(shard.Members);
+                        }
+
+                        return set.ToList();
                     }
 
                     void VerifyUnchangedTasks(BlittableJsonReaderObject dbDoc)
@@ -2990,22 +3008,56 @@ namespace Raven.Server.ServerWide
         public RawDatabaseRecord ReadRawDatabaseRecord<TTransaction>(TransactionOperationContext<TTransaction> context, string name, out long etag)
             where TTransaction : RavenTransaction
         {
+            int shardIndex = TryGetShardIndexAndDatabaseName(ref name);
             var rawRecord = Read(context, "db/" + name.ToLowerInvariant(), out etag);
             if (rawRecord == null)
                 return null;
-
-            return new RawDatabaseRecord(rawRecord);
+            var databaseRecord = BuildShardedDatabaseRecord(context, rawRecord, shardIndex);
+            return new RawDatabaseRecord(context, databaseRecord);
         }
+        
+        private static BlittableJsonReaderObject BuildShardedDatabaseRecord(JsonOperationContext context, BlittableJsonReaderObject rawRecord, int shardIndex)
+        {
+            if (rawRecord == null)
+                return null;
+
+            if (shardIndex != -1)
+            {
+                rawRecord = new RawDatabaseRecord(context, rawRecord)
+                    .GetShardedDatabaseRecord(shardIndex)
+                    .Raw;
+            }
+
+            return rawRecord;
+        }
+
 
         public RawDatabaseRecord ReadRawDatabaseRecord<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
             where TTransaction : RavenTransaction
         {
             return ReadRawDatabaseRecord(context, name, out _);
         }
+        
+        
+        private static int TryGetShardIndexAndDatabaseName(ref string name)
+        {
+            int shardIndex = name.IndexOf('$');
+            if (shardIndex != -1)
+            {
+                var slice = name.AsSpan().Slice(shardIndex + 1);
+                name = name.Substring(0, shardIndex);
+                if (int.TryParse(slice, out shardIndex) == false)
+                    throw new ArgumentNullException(nameof(name), "Unable to parse sharded database name: " + name);
+            }
+
+            return shardIndex;
+        }
 
         public bool DatabaseExists<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
             where TTransaction : RavenTransaction
         {
+            TryGetShardIndexAndDatabaseName(ref name);
+
             var dbKey = "db/" + name.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -3379,7 +3431,7 @@ namespace Raven.Server.ServerWide
                     if (oldDatabaseRecord == null)
                         continue;
 
-                    var rawDatabaseRecord = new RawDatabaseRecord(oldDatabaseRecord);
+                    var rawDatabaseRecord = new RawDatabaseRecord(context, oldDatabaseRecord);
                     switch (command.Value.Type)
                     {
                         case ToggleDatabasesStateCommand.Parameters.ToggleType.Databases:

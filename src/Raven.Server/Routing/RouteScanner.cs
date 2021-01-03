@@ -97,7 +97,30 @@ namespace Raven.Server.Routing
                     routeInfo.Build(memberInfo);
                 }
             }
+            
+            if (predicate == null)
+            {
+                var shardedActions = typeof(RouteScanner).GetTypeInfo().Assembly.GetTypes()
+                    .SelectMany(type => type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
+                    .Where(type => type.IsDefined(typeof(RavenShardedActionAttribute)))
+                    .ToList();
 
+                foreach (var shardedAction in shardedActions)
+                {
+                    foreach (var route in shardedAction.GetCustomAttributes<RavenShardedActionAttribute>())
+                    {
+
+                        var routeKey = route.Method + route.Path;
+                        if (routes.TryGetValue(routeKey, out RouteInformation routeInfo) == false)
+                        {
+                            throw new InvalidOperationException(
+                                $"Sharded action {shardedAction.Name} on {shardedAction.DeclaringType} was specified, but there is matching normal action");
+                        }
+
+                        routeInfo.BuildSharded(shardedAction);
+                    }
+                }
+            }
             return routes;
         }
         

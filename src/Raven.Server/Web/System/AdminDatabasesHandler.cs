@@ -27,7 +27,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
-using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -441,22 +440,17 @@ namespace Raven.Server.Web.System
             var clusterTopology = ServerStore.GetClusterTopology(context);
             ValidateClusterMembers(clusterTopology, databaseRecord);
 
-            if (databaseRecord.Topology?.Count > 0)
+            if (databaseRecord.Shards?.Length > 0)
             {
-                var topology = databaseRecord.Topology;
-                foreach (var node in topology.AllNodes)
+                for (var i = 0; i < databaseRecord.Shards.Length; i++)
                 {
-                    if (clusterTopology.Contains(node) == false)
-                        throw new ArgumentException($"Failed to add node {node}, because we don't have it in the cluster.");
+                    databaseRecord.Shards[i] =
+                        UpdateDatabaseTopology(databaseRecord.Shards[i], clusterTopology, replicationFactor);
                 }
-                topology.ReplicationFactor = Math.Min(topology.Count, clusterTopology.AllNodes.Count);
             }
             else
             {
-                if (databaseRecord.Topology == null)
-                    databaseRecord.Topology = new DatabaseTopology();
-
-                databaseRecord.Topology.ReplicationFactor = Math.Min(replicationFactor, clusterTopology.AllNodes.Count);
+                databaseRecord.Topology = UpdateDatabaseTopology(databaseRecord.Topology, clusterTopology, replicationFactor);
             }
 
             var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
@@ -474,10 +468,45 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var topology = ServerStore.Cluster.ReadDatabaseTopology(ctx, name);
+                DatabaseTopology topology;
+                if (databaseRecord.Shards?.Length > 0)
+                {
+                    topology = new DatabaseTopology
+                    {
+                        Members = nodeUrlsAddedTo,
+                    };
+                }
+                else
+                {
+                    topology = ServerStore.Cluster.ReadDatabaseTopology(ctx, name);
+                }
                 return (newIndex, topology, nodeUrlsAddedTo);
             }
         }
+        
+        private static DatabaseTopology UpdateDatabaseTopology(DatabaseTopology topology, ClusterTopology clusterTopology, int replicationFactor)
+        {
+            if (topology?.Members?.Count > 0)
+            {
+                foreach (var member in topology.Members)
+                {
+                    if (clusterTopology.Contains(member) == false)
+                        throw new ArgumentException($"Failed to add node {member}, because we don't have it in the cluster.");
+                }
+
+                topology.ReplicationFactor = topology.Members.Count;
+            }
+            else
+            {
+                if (topology == null)
+                    topology = new DatabaseTopology();
+
+                topology.ReplicationFactor = Math.Min(replicationFactor, clusterTopology.AllNodes.Count);
+            }
+
+            return topology;
+        }
+
 
         [RavenAction("/admin/databases/reorder", "POST", AuthorizationStatus.Operator)]
         public async Task Reorder()

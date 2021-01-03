@@ -15,17 +15,20 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide
 {
     public class RawDatabaseRecord : IDisposable
     {
         private BlittableJsonReaderObject _record;
+        private readonly JsonOperationContext _context;
 
         private DatabaseRecord _materializedRecord;
 
-        public RawDatabaseRecord(BlittableJsonReaderObject record)
+        public RawDatabaseRecord(JsonOperationContext context,BlittableJsonReaderObject record)
         {
+            _context = context;
             _record = record ?? throw new ArgumentNullException(nameof(record));
         }
 
@@ -49,12 +52,7 @@ namespace Raven.Server.ServerWide
                 if (_materializedRecord != null)
                     return _materializedRecord.Disabled;
 
-                if (_isDisabled == null)
-                {
-                    _isDisabled = _record.TryGet(nameof(DatabaseRecord.Disabled), out bool disabled)
-                        ? disabled
-                        : false;
-                }
+                _isDisabled ??= _record.TryGet(nameof(DatabaseRecord.Disabled), out bool disabled) && disabled;
 
                 return _isDisabled.Value;
             }
@@ -69,12 +67,7 @@ namespace Raven.Server.ServerWide
                 if (_materializedRecord != null)
                     return _materializedRecord.Encrypted;
 
-                if (_isEncrypted == null)
-                {
-                    _isEncrypted = _record.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted)
-                        ? encrypted
-                        : false;
-                }
+                _isEncrypted ??= _record.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted) && encrypted;
 
                 return _isEncrypted.Value;
             }
@@ -89,12 +82,9 @@ namespace Raven.Server.ServerWide
                 if (_materializedRecord != null)
                     return _materializedRecord.EtagForBackup;
 
-                if (_etagForBackup == null)
-                {
-                    _etagForBackup = _record.TryGet(nameof(DatabaseRecord.EtagForBackup), out long etagForBackup)
-                        ? etagForBackup
-                        : 0;
-                }
+                _etagForBackup ??= _record.TryGet(nameof(DatabaseRecord.EtagForBackup), out long etagForBackup)
+                    ? etagForBackup
+                    : 0;
 
                 return _etagForBackup.Value;
             }
@@ -129,6 +119,57 @@ namespace Raven.Server.ServerWide
                     _topology = JsonDeserializationCluster.DatabaseTopology(topologyJson);
 
                 return _topology;
+            }
+        }
+        
+         public bool IsSharded()
+        {
+            _record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array);
+            return array != null && array.Length > 0;
+        }
+
+        public RawDatabaseRecord GetShardedDatabaseRecord(int index)
+        {
+            _record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array);
+            var name = DatabaseName;
+            var shardedTopology = (BlittableJsonReaderObject)array[index];
+            var shardName = name + "$" + index;
+            _record.Modifications = new DynamicJsonValue(_record)
+            {
+                [nameof(DatabaseRecord.DatabaseName)] = shardName,
+                [nameof(DatabaseRecord.Topology)] = shardedTopology,
+                [nameof(DatabaseRecord.ShardAllocations)] = null,
+                [nameof(DatabaseRecord.Shards)] = null,
+            };
+
+            return new RawDatabaseRecord(_context, _context.ReadObject(_record, shardName));
+        }
+
+        public IEnumerable<RawDatabaseRecord> GetShardedDatabaseRecords()
+        {
+            if(_record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array) == false 
+               || array == null)
+                yield break;
+
+            var name = DatabaseName;
+
+            for (var index = 0; index < array.Length; index++)
+            {
+                using (var clone = _record.CloneOnTheSameContext())
+                {
+                    var shardedTopology = (BlittableJsonReaderObject)array[index];
+                    var shardName = name + "$" + index;
+                    clone.Modifications = new DynamicJsonValue(clone)
+                    {
+                        [nameof(DatabaseRecord.DatabaseName)] = shardName,
+                        [nameof(DatabaseRecord.Topology)] = shardedTopology,
+                        [nameof(DatabaseRecord.ShardAllocations)] = null,
+                        [nameof(DatabaseRecord.Shards)] = null,
+                    };
+                    var modifiedClone = _context.ReadObject(clone, shardName);
+                    var shardRecord = new RawDatabaseRecord(_context, modifiedClone);
+                    yield return shardRecord;
+                }
             }
         }
 

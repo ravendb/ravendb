@@ -42,45 +42,68 @@ namespace Raven.Server.ServerWide.Commands
             {
                 foreach (var node in FromNodes)
                 {
-                    if (record.Topology.RelevantFor(node) == false)
+                    if (record.IsSharded == false)
                     {
-                        DatabaseDoesNotExistException.ThrowWithMessage(record.DatabaseName, $"Request to delete database from node '{node}' failed.");
+                        RemoveDatabaseFromSingleNode(record,record.Topology, node,string.Empty, deletionInProgressStatus);
                     }
-
-                    // rehabs will be removed only once the replication sent all the documents to the mentor
-                    if (record.Topology.Rehabs.Contains(node) == false) 
-                        record.Topology.RemoveFromTopology(node);
-
-                    if (UpdateReplicationFactor)
+                    else
                     {
-                        record.Topology.ReplicationFactor--;
+                        for (int i = 0; i < record.Shards.Length; i++)
+                        {
+                            RemoveDatabaseFromSingleNode(record, record.Shards[i], node, $"${i}", deletionInProgressStatus);
+
+                        }
                     }
-                    if (ClusterNodes.Contains(node))
-                        record.DeletionInProgress[node] = deletionInProgressStatus;
                 }
             }
             else
             {
-                var allNodes = record.Topology.Members.Select(m => m)
-                    .Concat(record.Topology.Promotables.Select(p => p))
-                    .Concat(record.Topology.Rehabs.Select(r => r));
-
-                foreach (var node in allNodes)
+                for (var i = 0; i < record.Shards.Length; i++)
                 {
-                    if (ClusterNodes.Contains(node))
-                        record.DeletionInProgress[node] = deletionInProgressStatus;
+                    record.Shards[i] = RemoveDatabaseFromAllNodes(record, record.Shards[i], $"${i}", deletionInProgressStatus);
                 }
 
                 record.Topology = new DatabaseTopology
                 {
-                    Stamp = record.Topology.Stamp,
+                    Stamp = record.Topology?.Stamp, 
                     ReplicationFactor = 0
                 };
             }
-
-            record.Topology.Stamp.Index = etag;
         }
 
+        
+        private DatabaseTopology RemoveDatabaseFromAllNodes(DatabaseRecord record,DatabaseTopology topology,string shardIndex, DeletionInProgressStatus deletionInProgressStatus)
+        {
+            var allNodes = topology.AllNodes.Distinct();
+
+            foreach (var node in allNodes)
+            {
+                if (ClusterNodes.Contains(node))
+                    record.DeletionInProgress[node + shardIndex] = deletionInProgressStatus;
+            }
+
+            return new DatabaseTopology {Stamp = record.Topology?.Stamp, ReplicationFactor = 0};
+        }
+
+        private void RemoveDatabaseFromSingleNode(DatabaseRecord record, DatabaseTopology topology, string node,string shardIndex, DeletionInProgressStatus deletionInProgressStatus)
+        {
+            if (topology.RelevantFor(node) == false)
+            {
+                DatabaseDoesNotExistException.ThrowWithMessage(record.DatabaseName, $"Request to delete database from node '{node}' failed.");
+            }
+
+            // rehabs will be removed only once the replication sent all the documents to the mentor
+            if (topology.Rehabs.Contains(node) == false)
+                topology.RemoveFromTopology(node);
+
+            if (UpdateReplicationFactor)
+            {
+                topology.ReplicationFactor--;
+            }
+
+            if (ClusterNodes.Contains(node))
+                record.DeletionInProgress[node + shardIndex] = deletionInProgressStatus;
+        }
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(HardDelete)] = HardDelete;

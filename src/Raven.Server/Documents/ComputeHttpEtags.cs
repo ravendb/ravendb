@@ -119,6 +119,40 @@ namespace Raven.Server.Documents
 
             return FinalizeHash(size, state);
         }
+        
+        public static unsafe string CombineEtags(IEnumerable<string> etags)
+        {
+
+            var size = Sodium.crypto_generichash_bytes();
+            Debug.Assert((int)size == 32);
+            var cryptoGenerichashStatebytes = (int)Sodium.crypto_generichash_statebytes();
+            byte* state = stackalloc byte[cryptoGenerichashStatebytes];
+            if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
+                ThrowFailToInitHash();
+
+            foreach (var etag in etags)
+            {
+                HashChangeVector(state, etag);
+            }
+
+            byte* final = stackalloc byte[(int)size];
+            if (Sodium.crypto_generichash_final(state, final, size) != 0)
+                ThrowFailedToFinalizeHash();
+
+            var str = new string(' ', 49);
+            fixed (char* p = str)
+            {
+                p[0] = 'H';
+                p[1] = 'a';
+                p[2] = 's';
+                p[3] = 'h';
+                p[4] = '-';
+                var len = Base64.ConvertToBase64Array(p + 5, final, 0, 32);
+                Debug.Assert(len == 44);
+            }
+
+            return str;
+        }
 
         internal static unsafe void HashChangeVector(byte* state, string? changeVector)
         {

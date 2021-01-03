@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 
 namespace Raven.Client.Extensions
@@ -69,6 +70,11 @@ namespace Raven.Client.Extensions
                 return responseHeader.Substring(1, responseHeader.Length - 2);
 
             return responseHeader;
+        }
+        
+        public static bool IsSuccessStatusCode(this HttpStatusCode statusCode)
+        {
+            return (int)statusCode >= 200 && (int)statusCode <= 299;
         }
     }
 }
