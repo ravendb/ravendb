@@ -17,6 +17,7 @@ class databaseInfo {
     totalTempBuffersSize = ko.observable<number>();
     bundles = ko.observableArray<string>();
     backupStatus = ko.observable<string>();
+    lastBackupText = ko.observable<string>();
     lastFullOrIncrementalBackup = ko.observable<string>();
     dynamicDatabaseDistribution = ko.observable<boolean>();
     priorityOrder = ko.observableArray<string>();
@@ -89,6 +90,7 @@ class databaseInfo {
 
     private computeBackupStatus(backupInfo: Raven.Client.ServerWide.Operations.BackupInfo) {
         if (!backupInfo || !backupInfo.LastBackup) {
+            this.lastBackupText("Never  backed up");
             return "text-danger";
         }
 
@@ -96,6 +98,7 @@ class databaseInfo {
         const diff = moment().utc().diff(dateInUtc);
         const durationInSeconds = moment.duration(diff).asSeconds();
 
+        this.lastBackupText(`Backed up ${this.lastFullOrIncrementalBackup()}`);
         return durationInSeconds > databaseInfo.dayAsSeconds ? "text-warning" : "text-success";
     }
     
