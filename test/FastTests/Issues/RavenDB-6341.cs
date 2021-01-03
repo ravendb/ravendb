@@ -68,7 +68,8 @@ namespace FastTests.Issues
             {
                 foreach (var commandType in assembly
                     .GetTypes()
-                    .Where(x => IsSubclassOfGenericType(typeof(RavenCommand<>), x)))
+                    .Where(x => IsSubclassOfGenericType(typeof(RavenCommand<>), x))
+                    .Where(x => x.IsNotPublic == false))
                 {
                     yield return commandType;
                 }

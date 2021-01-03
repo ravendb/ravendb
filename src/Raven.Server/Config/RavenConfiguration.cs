@@ -108,7 +108,8 @@ namespace Raven.Server.Config
             _customConfigPath = customConfigPath;
             PathSettingBase<string>.ValidatePath(_customConfigPath);
             _configBuilder = new ConfigurationBuilder();
-            AddEnvironmentVariables();
+            if (resourceType == ResourceType.Server)
+                AddEnvironmentVariables();
             AddJsonConfigurationVariables(customConfigPath);
 
             Settings = _configBuilder.Build();

@@ -8,6 +8,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Raven.Client.Extensions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
@@ -137,8 +138,11 @@ namespace Raven.Server.Config.Categories
 
                     var settingValue = getSetting(entry.Key);
 
-                    if (type != ResourceType.Server && entry.Scope == ConfigurationEntryScope.ServerWideOnly && settingValue.CurrentValue != null)
+                    if (type != ResourceType.Server && entry.Scope == ConfigurationEntryScope.ServerWideOnly && settingValue.CurrentValue != null && 
+                        settingValue.KeyExistsInDatabaseRecord)
+                    {
                         throw new InvalidOperationException($"Configuration '{entry.Key}' can only be set at server level.");
+                    }
 
                     string value = null;
 

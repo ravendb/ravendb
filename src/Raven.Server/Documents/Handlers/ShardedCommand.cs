@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class ShardedCommand : RavenCommand<BlittableJsonReaderObject>
+    internal class ShardedCommand : RavenCommand<BlittableJsonReaderObject>
     {
         public BlittableJsonReaderObject Content;
         public Dictionary<string, string> Headers = new Dictionary<string, string>();

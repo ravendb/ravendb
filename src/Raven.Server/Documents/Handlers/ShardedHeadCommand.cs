@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class ShardedHeadCommand : RavenCommand<string>
+    internal class ShardedHeadCommand : RavenCommand<string>
     {
         public string ChangeVector;
         public string Id;
