@@ -770,7 +770,7 @@ namespace Raven.Server.Documents.Replication
                     return false;
                 }
 
-                return _replicationBatchReply.CurrentEtag > lastReceivedEtag;
+                return _replicationBatchReply.CurrentEtag >= lastReceivedEtag;
             }
 
             internal bool Init()
@@ -819,6 +819,7 @@ namespace Raven.Server.Documents.Replication
                         }
                     };
                 }
+               
                 return result.IsValid ? 1 : 0;
             }
 
@@ -841,10 +842,19 @@ namespace Raven.Server.Documents.Replication
                 var update = new UpdateSiblingCurrentEtag(replicationBatchReply, _waitForChanges);
                 if (update.InitAndValidate(_lastDestinationEtag))
                 {
-                    // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
-                    // is purely advisory. We just want to have the information up to date at some point, and we won't 
-                    // miss anything much if this isn't there.
-                    _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
+                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var status = ChangeVectorUtils.GetConflictStatus(replicationBatchReply.DatabaseChangeVector,
+                            DocumentsStorage.GetDatabaseChangeVector(ctx));
+                        if (status == ConflictStatus.AlreadyMerged)
+                        {
+                            // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
+                            // is purely advisory. We just want to have the information up to date at some point, and we won't 
+                            // miss anything much if this isn't there.
+                            _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
+                        }
+                    }
                 }
             }
             _lastDestinationEtag = replicationBatchReply.CurrentEtag;
