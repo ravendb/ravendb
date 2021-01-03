@@ -126,6 +126,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             private readonly Func<IState, IndexSearcher> _recreateSearcher;
             private readonly Logger _logger;
+            private readonly MultipleUseFlag _isMovingToLazy = new MultipleUseFlag();
 
             private IState _indexSearcherInitializationState;
             private Lazy<IndexSearcher> _lazyIndexSearcher;
@@ -150,11 +151,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 Interlocked.Increment(ref Usage);
 
-                lock (this)
+                if (_isMovingToLazy.IsRaised())
                 {
-                    _indexSearcherInitializationState = state;
-                    return _lazyIndexSearcher.Value;
+                    lock (this)
+                    {
+                        _indexSearcherInitializationState = state;
+                        return _lazyIndexSearcher.Value;
+                    }
                 }
+
+                _indexSearcherInitializationState = state;
+                return _lazyIndexSearcher.Value;
             }
 
             ~IndexSearcherHoldingState()
@@ -165,27 +172,38 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 Dispose();
             }
 
+
             public void MoveBackToLazy()
             {
-                if (_lazyIndexSearcher.IsValueCreated == false)
-                    return;
+                var old = _lazyIndexSearcher;
 
-                var old = _lazyIndexSearcher.Value;
+                if (old.IsValueCreated == false)
+                    return;
 
                 lock (this)
                 {
-                    if (Usage > 0)
+                    if (old != _lazyIndexSearcher)
                         return;
+                    
+                    _isMovingToLazy.Raise();
+
+                    if (Volatile.Read(ref Usage) > 0)
+                    {
+                        _isMovingToLazy.Lower();
+                        return;
+                    }
 
                     _lazyIndexSearcher = new Lazy<IndexSearcher>(() =>
                     {
                         Debug.Assert(_indexSearcherInitializationState != null);
                         return _recreateSearcher(_indexSearcherInitializationState);
                     }); 
+
+                    _isMovingToLazy.Lower();
                 }
 
-                using (old)
-                using (old.IndexReader)
+                using (old.Value)
+                using (old.Value.IndexReader)
                 { }
             }
 
