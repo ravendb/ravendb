@@ -43,12 +43,11 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             var topology = record.Topology;
             var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag));
             if (appropriateNode != NodeTag)
+            {
                 throw new SubscriptionDoesNotBelongToNodeException(
                     $"Cannot apply {nameof(AcknowledgeSubscriptionBatchCommand)} for subscription '{subscriptionName}' with id '{SubscriptionId}', on database '{DatabaseName}', on node '{NodeTag}'," +
-                    $" because the subscription task belongs to '{appropriateNode ?? "N/A"}'.")
-                {
-                    AppropriateNode = appropriateNode
-                };
+                    $" because the subscription task belongs to '{appropriateNode ?? "N/A"}'.") {AppropriateNode = appropriateNode};
+            }
 
             if (ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
             {
