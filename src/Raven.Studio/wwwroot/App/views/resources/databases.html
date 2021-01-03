@@ -279,12 +279,12 @@
         </div>
     </div>
     <div class="properties-item item-last-backup" data-bind="visible: $root.createIsLocalDatabaseObservable(name)()">
-        <div data-bind="attr: { class: 'properties-value value-only ' + backupStatus() }">
-            <div class="set-size" title="Last backup time"
-                 data-bind="css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
+        <div class="properties-value value-only">
+            <a class="set-size" title="Click to navigate to Ongoing Tasks view to create a backup"
+               data-bind="css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, attr: { href: $root.ongoingTasksUrl($data), class: backupStatus() }">
                 <i class="icon-backup"></i>
-                <span data-bind="text: backupStatus() !== 'text-danger' ? 'Backed up ' + lastFullOrIncrementalBackup() : 'Never backed up'"></span>
-            </div>
+                <span data-bind="text: lastBackupText"></span>
+            </a>
         </div>
     </div>
     <div class="properties-item" data-bind="visible: indexingErrors()">
