@@ -9,6 +9,7 @@ using Raven.Server.ServerWide.Commands;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Tests.Infrastructure;
+using Voron.Util;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,6 +21,7 @@ namespace SlowTests.Issues
         public async Task DoNotCallUpdateLicenseLimitsCommandOnEveryLeaderChange()
         {
             await using var logStream = new MemoryStream();
+            using var dispose = new DisposableAction(() => LoggingSource.Instance.DetachPipeSink());
             LoggingSource.Instance.AttachPipeSink(logStream);
 
             var (servers, leader) = await CreateRaftCluster(3);
