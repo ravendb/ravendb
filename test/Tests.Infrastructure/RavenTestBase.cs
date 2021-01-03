@@ -249,8 +249,6 @@ namespace FastTests
                     {
                         Settings =
                         {
-                            [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
-                            [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1",
                             [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString(),
                             [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
                             [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString(),
@@ -657,6 +655,12 @@ namespace FastTests
         protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
         {
             return await WaitForPredicateAsync(t => t.Equals(expectedVal), act, timeout, interval);
+        }
+
+        protected async Task WaitAndAssertForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
+        {
+            var val = await WaitForPredicateAsync(t => t.Equals(expectedVal), act, timeout, interval);
+            Assert.Equal(expectedVal, val);
         }
 
         private static async Task<T> WaitForPredicateAsync<T>(Predicate<T> predicate, Func<Task<T>> act, int timeout = 15000, int interval = 100)
