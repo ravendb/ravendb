@@ -278,30 +278,39 @@ namespace Raven.Client.Changes
 
         protected Task Send(string command, string value)
         {
-            logger.Info("Sending command {0} - {1} to {2} with id {3}", command, value, url, id);
-            var sendUrlBuilder = new StringBuilder();
-            sendUrlBuilder.Append(url);
-            sendUrlBuilder.Append("/changes/config?id=");
-            sendUrlBuilder.Append(id);
-            sendUrlBuilder.Append("&command=");
-            sendUrlBuilder.Append(command);
-
-            if (string.IsNullOrEmpty(value) == false)
+            try
             {
-                sendUrlBuilder.Append("&value=");
-                sendUrlBuilder.Append(Uri.EscapeUriString(value));
+                logger.Info("Sending command {0} - {1} to {2} with id {3}", command, value, url, id);
+                var sendUrlBuilder = new StringBuilder();
+                sendUrlBuilder.Append(url);
+                sendUrlBuilder.Append("/changes/config?id=");
+                sendUrlBuilder.Append(id);
+                sendUrlBuilder.Append("&command=");
+                sendUrlBuilder.Append(command);
+
+                if (string.IsNullOrEmpty(value) == false)
+                {
+                    sendUrlBuilder.Append("&value=");
+                    sendUrlBuilder.Append(Uri.EscapeUriString(value));
+                }
+
+                var requestParams = new CreateHttpJsonRequestParams(null, sendUrlBuilder.ToString(), HttpMethods.Get, credentials, Conventions)
+                {
+                    AvoidCachingRequest = true
+                };
+                var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
+                var done = TaskCompletionSourceFactory.Create<bool>();
+                var work = new Work(done, request, request.ExecuteRequestAsync());
+                workQueue.Enqueue(work);
+                syncSource.TrySetResult(true);
+                return done.Task;
             }
-
-            var requestParams = new CreateHttpJsonRequestParams(null, sendUrlBuilder.ToString(), HttpMethods.Get, credentials, Conventions)
+            catch (Exception)
             {
-                AvoidCachingRequest = true
-            };
-            var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-            var done = TaskCompletionSourceFactory.Create<bool>();
-            var work = new Work(done, request, request.ExecuteRequestAsync());
-            workQueue.Enqueue(work);
-            syncSource.TrySetResult(true);
-            return done.Task;
+                // intentionally swallowed to keep the previous behavior of ObserveException
+                // mostly relevant when the document store is being disposed then jsonRequestFactory might throw an ObjectDisposedException
+                return new CompletedTask();
+            }
         }
 
         public void Dispose()
