@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
 
-        public void Cleanup(long oldestTx, bool everything = false)
+        public void Cleanup(long oldestTx, CleanupMode mode = CleanupMode.Regular)
         {
             // note: cleanup cannot be called concurrently
 
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
-            if (everything)
+            if (mode == CleanupMode.Deep)
             {
                 foreach (var state in _states)
                 {
@@ -187,19 +187,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     
                     _isMovingToLazy.Raise();
 
-                    if (Volatile.Read(ref Usage) > 0)
+                    try
+                    {
+                        if (Volatile.Read(ref Usage) > 0)
+                            return;
+
+                        _lazyIndexSearcher = new Lazy<IndexSearcher>(() =>
+                        {
+                            Debug.Assert(_indexSearcherInitializationState != null);
+                            return _recreateSearcher(_indexSearcherInitializationState);
+                        }); 
+                    }
+                    finally
                     {
                         _isMovingToLazy.Lower();
-                        return;
                     }
-
-                    _lazyIndexSearcher = new Lazy<IndexSearcher>(() =>
-                    {
-                        Debug.Assert(_indexSearcherInitializationState != null);
-                        return _recreateSearcher(_indexSearcherInitializationState);
-                    }); 
-
-                    _isMovingToLazy.Lower();
                 }
 
                 using (old.Value)

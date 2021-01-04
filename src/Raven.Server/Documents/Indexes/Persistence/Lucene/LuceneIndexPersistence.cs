@@ -193,12 +193,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         
 
-        public void Clean(bool everything = false)
+        public void Clean(CleanupMode mode)
         {
             _converter?.Clean();
-            _indexSearcherHolder.Cleanup(_index._indexStorage.Environment().PossibleOldestReadTransaction(null), everything);
+            _indexSearcherHolder.Cleanup(_index._indexStorage.Environment().PossibleOldestReadTransaction(null), mode);
 
-            if (everything)
+            if (mode == CleanupMode.Deep)
             {
                 lock (this)
                 {

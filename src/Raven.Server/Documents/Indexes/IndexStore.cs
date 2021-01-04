@@ -1554,11 +1554,11 @@ namespace Raven.Server.Documents.Indexes
             return _indexes;
         }
 
-        public void RunIdleOperations()
+        public void RunIdleOperations(CleanupMode mode = CleanupMode.Regular)
         {
             foreach (var index in _indexes)
             {
-                index.Cleanup(everything: true);
+                index.Cleanup(mode);
             }
 
             long etag;
