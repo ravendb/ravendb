@@ -90,7 +90,7 @@ class databaseInfo {
 
     private computeBackupStatus(backupInfo: Raven.Client.ServerWide.Operations.BackupInfo) {
         if (!backupInfo || !backupInfo.LastBackup) {
-            this.lastBackupText("Never  backed up");
+            this.lastBackupText("Never backed up");
             return "text-danger";
         }
 
