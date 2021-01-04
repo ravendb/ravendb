@@ -783,6 +783,20 @@ namespace Raven.Server.Documents.Replication
                 return true;
             }
 
+            internal bool DryRun(DocumentsOperationContext context)
+            {
+                var changeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+
+                var status = ChangeVectorUtils.GetConflictStatus(_replicationBatchReply.DatabaseChangeVector,
+                    changeVector);
+
+                if (status != ConflictStatus.AlreadyMerged)
+                    return false;
+
+                var result = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, changeVector);
+                return result.IsValid;
+            }
+
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 if (string.IsNullOrEmpty(context.LastDatabaseChangeVector))
@@ -845,9 +859,7 @@ namespace Raven.Server.Documents.Replication
                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
-                        var status = ChangeVectorUtils.GetConflictStatus(replicationBatchReply.DatabaseChangeVector,
-                            DocumentsStorage.GetDatabaseChangeVector(ctx));
-                        if (status == ConflictStatus.AlreadyMerged)
+                        if (update.DryRun(ctx))
                         {
                             // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
                             // is purely advisory. We just want to have the information up to date at some point, and we won't 
