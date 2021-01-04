@@ -380,13 +380,15 @@
     <div class="flex-vertical edit-index auto-index">
         <div class="toolbar">
             <div class="row">
-                <div class="col-lg-8 col-xl-6 flex-horizontal">
-                    <div class="input-group flex-grow" data-bind="validationElement: editedIndex().name">
-                        <div class="input-group-addon">Index name</div>
-                        <input class="form-control" data-bind="textInput: editedIndex().name" disabled />
+                <div class="col-lg-8 col-xl-8">
+                    <div class="force-text-wrap flex-horizontal">
+                        <div class="label">
+                            <h3>Index</h3>
+                        </div>
+                        <h2 data-bind="text: editedIndex().name, attr: { title: editedIndex().name }" class="margin-left"></h2>
                     </div>
                 </div>
-                <div class="col-lg-4 col-xl-6 flex-horizontal">
+                <div class="col-lg-4 col-xl-4 flex-horizontal">
                     <div class="flex-separator"></div>
                     <div class="btn-group">
                         <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i><span>Query</span></a>
@@ -396,7 +398,7 @@
                 </div>
             </div>
         </div>
-        <div>
+        <div class="margin-top">
             <h2 class="label-margin" data-bind="visible: editedIndex().hasReduce">Map-Reduce</h2>
             <h2 class="label-margin" data-bind="visible: !editedIndex().hasReduce()">Map</h2>
             <div>
