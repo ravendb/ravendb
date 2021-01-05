@@ -243,7 +243,7 @@ namespace Raven.Client.Changes
                 {
                     try
                     {
-                        await work.SendTask.ConfigureAwait(false);
+                        await work.ExecuteAsync().ConfigureAwait(false);
                     }
                     catch (Exception)
                     {
@@ -261,14 +261,14 @@ namespace Raven.Client.Changes
         {
             readonly HttpJsonRequest request;
             public readonly TaskCompletionSource<bool> DoneTask;
-            public readonly Task SendTask;
 
-            public Work(TaskCompletionSource<bool> doneTask, HttpJsonRequest request, Task sendTask)
+            public Work(TaskCompletionSource<bool> doneTask, HttpJsonRequest request)
             {
                 DoneTask = doneTask;
                 this.request = request;
-                SendTask = sendTask;
             }
+
+            public Task ExecuteAsync() => request.ExecuteRequestAsync();
 
             public void Dispose()
             {
@@ -301,7 +301,7 @@ namespace Raven.Client.Changes
                     AvoidCachingRequest = true
                 };
                 var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-                workQueue.Enqueue(new Work(done, request, request.ExecuteRequestAsync()));
+                workQueue.Enqueue(new Work(done, request));
 
                 syncSource.TrySetResult(true);
             }
