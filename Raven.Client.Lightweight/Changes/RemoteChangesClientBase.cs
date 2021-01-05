@@ -201,7 +201,7 @@ namespace Raven.Client.Changes
             }
         }
 
-        protected Task Send(string command, string value)
+        protected async Task Send(string command, string value)
         {
             try
             {
@@ -223,17 +223,14 @@ namespace Raven.Client.Changes
                 {
                     AvoidCachingRequest = true
                 };
-                var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-                var sendTask = request.ExecuteRequestAsync().ObserveException();
-
-                return sendTask.ContinueWith(task =>
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams))
                 {
-                    request.Dispose();
-                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                    await request.ExecuteRequestAsync().ConfigureAwait(false);
+                }
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                return new CompletedTask(e).Task.ObserveException();
+                // intentionally swallowed to keep the previous behavior of ObserveException
             }
         }
 
@@ -247,29 +244,29 @@ namespace Raven.Client.Changes
 
         private volatile bool disposed;
 
-        public Task DisposeAsync()
+        public async Task DisposeAsync()
         {
             if (disposed)
-                return new CompletedTask();
+                return;
 
             disposed = true;
             onDispose();
 
             DisposeHeartbeatTimer();
 
-            return Send("disconnect", null).
-                ContinueWith(_ =>
-                {
-                    try
-                    {
-                        if (connection != null)
-                            connection.Dispose();
-                    }
-                    catch (Exception e)
-                    {
-                        logger.ErrorException("Got error from server connection for " + url + " on id " + id, e);
-                    }
-                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            try
+            {
+                await Send("disconnect", null).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                logger.ErrorException("Got error from server connection for " + url + " on id " + id, e);
+            }
+            finally
+            {
+                if (connection != null)
+                    connection.Dispose();
+            }
         }
 
 
