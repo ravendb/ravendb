@@ -278,6 +278,8 @@ namespace Raven.Client.Changes
 
         protected Task Send(string command, string value)
         {
+            var done = TaskCompletionSourceFactory.Create<bool>();
+
             try
             {
                 logger.Info("Sending command {0} - {1} to {2} with id {3}", command, value, url, id);
@@ -299,18 +301,17 @@ namespace Raven.Client.Changes
                     AvoidCachingRequest = true
                 };
                 var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-                var done = TaskCompletionSourceFactory.Create<bool>();
-                var work = new Work(done, request, request.ExecuteRequestAsync());
-                workQueue.Enqueue(work);
+                workQueue.Enqueue(new Work(done, request, request.ExecuteRequestAsync()));
+
                 syncSource.TrySetResult(true);
-                return done.Task;
             }
             catch (Exception)
             {
                 // intentionally swallowed to keep the previous behavior of ObserveException
                 // mostly relevant when the document store is being disposed then jsonRequestFactory might throw an ObjectDisposedException
-                return new CompletedTask();
+                done.TrySetResult(true);
             }
+            return done.Task;
         }
 
         public void Dispose()
