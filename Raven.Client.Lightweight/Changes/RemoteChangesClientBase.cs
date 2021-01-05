@@ -242,7 +242,7 @@ namespace Raven.Client.Changes
             if (disposed)
                 return;
 
-            DisposeAsync().Wait();
+            DisposeAsync().GetAwaiter().GetResult();
         }
 
         private volatile bool disposed;
