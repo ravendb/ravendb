@@ -16,24 +16,26 @@ namespace Raven.Server.Documents
     {
         public static readonly Document ExplicitNull = new Document();
 
-        private bool _disposed;
-        private ulong? _hash;
-        private bool _metadataEnsured;
-
-        public long Etag;
         public LazyStringValue Id;
         public LazyStringValue LowerId;
-        public long StorageId;
         public BlittableJsonReaderObject Data;
-        public float? IndexScore;
-        public SpatialResult? Distance;
         public string ChangeVector;
+        public TimeSeriesStream TimeSeriesStream;
+        public SpatialResult? Distance;
+
+        private ulong? _hash;
+        public long Etag;
+        public long StorageId;
+        public float? IndexScore;
         public DateTime LastModified;
         public DocumentFlags Flags;
         public NonPersistentDocumentFlags NonPersistentFlags;
         public short TransactionMarker;
 
-        public TimeSeriesStream TimeSeriesStream;
+        private bool _metadataEnsured;
+        public bool IgnoreDispose;
+        private bool _disposed;
+
 
         public unsafe ulong DataHash
         {
@@ -95,7 +97,7 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            if (_disposed)
+            if (_disposed || IgnoreDispose)
                 return;
 
             Id?.Dispose();
