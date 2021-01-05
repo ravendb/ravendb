@@ -209,13 +209,14 @@ namespace Raven.Client.Changes
         {
             try
             {
+                logger.Info("Sending command {0} - {1} to {2} with id {3}", command, value, url, id);
+                
                 // Do a quick synchronous check before we resort to async/await with the state-machine overhead.
                 if (!sendLimitter.Wait(0))
                 {
                     await sendLimitter.WaitAsync(tokenSource.Token).ConfigureAwait(false);
                 }
 
-                logger.Info("Sending command {0} - {1} to {2} with id {3}", command, value, url, id);
                 var sendUrlBuilder = new StringBuilder();
                 sendUrlBuilder.Append(url);
                 sendUrlBuilder.Append("/changes/config?id=");
