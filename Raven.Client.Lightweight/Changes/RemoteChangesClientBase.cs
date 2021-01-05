@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -85,7 +86,6 @@ namespace Raven.Client.Changes
         {
             logger.Info("Connection ({1}) status changed, new status: {0}", Connected, url);
         }
-
 
         public Task<TChangesApi> Task { get; private set; }
 
@@ -201,45 +201,39 @@ namespace Raven.Client.Changes
             }
         }
 
-        private Task lastSendTask;
-
         protected Task Send(string command, string value)
         {
-            lock (this)
+            try
             {
                 logger.Info("Sending command {0} - {1} to {2} with id {3}", command, value, url, id);
-                var sendTask = lastSendTask;
-                if (sendTask != null)
+                var sendUrlBuilder = new StringBuilder();
+                sendUrlBuilder.Append(url);
+                sendUrlBuilder.Append("/changes/config?id=");
+                sendUrlBuilder.Append(id);
+                sendUrlBuilder.Append("&command=");
+                sendUrlBuilder.Append(command);
+
+                if (string.IsNullOrEmpty(value) == false)
                 {
-                    return sendTask.ContinueWith(_ =>
-                    {
-                        Send(command, value);
-                    });
+                    sendUrlBuilder.Append("&value=");
+                    sendUrlBuilder.Append(Uri.EscapeUriString(value));
                 }
 
-                try
+                var requestParams = new CreateHttpJsonRequestParams(null, sendUrlBuilder.ToString(), HttpMethods.Get, credentials, Conventions)
                 {
-                    var sendUrl = url + "/changes/config?id=" + id + "&command=" + command;
-                    if (string.IsNullOrEmpty(value) == false)
-                        sendUrl += "&value=" + Uri.EscapeUriString(value);
+                    AvoidCachingRequest = true
+                };
+                var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
+                var sendTask = request.ExecuteRequestAsync().ObserveException();
 
-                    var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, HttpMethods.Get, credentials, Conventions)
-                    {
-                        AvoidCachingRequest = true
-                    };
-                    var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-                    lastSendTask = request.ExecuteRequestAsync().ObserveException();
-
-                    return lastSendTask.ContinueWith(task =>
-                    {
-                        lastSendTask = null;
-                        request.Dispose();
-                    });
-                }
-                catch (Exception e)
+                return sendTask.ContinueWith(task =>
                 {
-                    return new CompletedTask(e).Task.ObserveException();
-                }
+                    request.Dispose();
+                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            }
+            catch (Exception e)
+            {
+                return new CompletedTask(e).Task.ObserveException();
             }
         }
 
