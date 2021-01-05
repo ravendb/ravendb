@@ -32,6 +32,8 @@ namespace Raven.Client.Changes
         private readonly OperationCredentials credentials;
         private readonly HttpJsonRequestFactory jsonRequestFactory;
         private readonly Action onDispose;
+        private readonly SemaphoreSlim sendLimitter;
+        private readonly CancellationTokenSource tokenSource;
 
         private IDisposable connection;
         private DateTime lastHeartbeat;
@@ -66,6 +68,8 @@ namespace Raven.Client.Changes
             this.url = url;
             this.credentials = new OperationCredentials(apiKey, credentials);
             this.jsonRequestFactory = jsonRequestFactory;
+            this.sendLimitter = new SemaphoreSlim(1);
+            this.tokenSource = new CancellationTokenSource();
             this.onDispose = onDispose;
             Conventions = conventions;
             Task = EstablishConnection()
@@ -201,10 +205,16 @@ namespace Raven.Client.Changes
             }
         }
 
-        protected Task Send(string command, string value)
+        protected async Task Send(string command, string value)
         {
             try
             {
+                // Do a quick synchronous check before we resort to async/await with the state-machine overhead.
+                if (!sendLimitter.Wait(0))
+                {
+                    await sendLimitter.WaitAsync(tokenSource.Token).ConfigureAwait(false);
+                }
+
                 logger.Info("Sending command {0} - {1} to {2} with id {3}", command, value, url, id);
                 var sendUrlBuilder = new StringBuilder();
                 sendUrlBuilder.Append(url);
@@ -223,17 +233,18 @@ namespace Raven.Client.Changes
                 {
                     AvoidCachingRequest = true
                 };
-                var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-                var sendTask = request.ExecuteRequestAsync().ObserveException();
-
-                return sendTask.ContinueWith(task =>
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams))
                 {
-                    request.Dispose();
-                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                    await request.ExecuteRequestAsync().ConfigureAwait(false);
+                }
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                return new CompletedTask(e).Task.ObserveException();
+                // intentionally swallowed to keep the previous behavior of ObserveException
+            }
+            finally
+            {
+                sendLimitter.Release();
             }
         }
 
@@ -247,31 +258,34 @@ namespace Raven.Client.Changes
 
         private volatile bool disposed;
 
-        public Task DisposeAsync()
+        public async Task DisposeAsync()
         {
             if (disposed)
-                return new CompletedTask();
+                return;
 
             disposed = true;
             onDispose();
 
             DisposeHeartbeatTimer();
 
-            return Send("disconnect", null).
-                ContinueWith(_ =>
-                {
-                    try
-                    {
-                        if (connection != null)
-                            connection.Dispose();
-                    }
-                    catch (Exception e)
-                    {
-                        logger.ErrorException("Got error from server connection for " + url + " on id " + id, e);
-                    }
-                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-        }
+            try
+            {
+                await Send("disconnect", null).ConfigureAwait(false);
 
+                tokenSource.Cancel();
+            }
+            catch (Exception e)
+            {
+                logger.ErrorException("Got error from server connection for " + url + " on id " + id, e);
+            }
+            finally
+            {
+                if (connection != null)
+                    connection.Dispose();
+
+                tokenSource.Dispose();
+            }
+        }
 
         public virtual void OnError(Exception error)
         {
