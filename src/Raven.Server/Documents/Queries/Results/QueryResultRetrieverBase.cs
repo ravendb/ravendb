@@ -675,7 +675,11 @@ namespace Raven.Server.Documents.Queries.Results
                 if (_loadedDocuments.TryGetValue(docId, out var doc) == false)
                 {
                     using (_loadScope = _loadScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Load)))
+                    {
                         _loadedDocuments[docId] = doc = LoadDocument(docId);
+                        if (doc != null)
+                            doc.IgnoreDispose = true;
+                    }
                 }
                 if (doc == null)
                     continue;
