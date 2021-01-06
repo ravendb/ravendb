@@ -108,9 +108,9 @@ update
 
         public override async Task InitAsync(DocumentStore store)
         {
-            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord("1M_Companies_Patch")));
-            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord("1M_Companies_Patch_Put")));
-            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord("1M_Companies_Patch_Delete")));
+            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(CreateDatabaseRecord("1M_Companies_Patch")));
+            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(CreateDatabaseRecord("1M_Companies_Patch_Put")));
+            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(CreateDatabaseRecord("1M_Companies_Patch_Delete")));
 
             using (var bulkInsert1 = store.BulkInsert("1M_Companies_Patch"))
             using (var bulkInsert2 = store.BulkInsert("1M_Companies_Patch_Put"))

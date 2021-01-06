@@ -1743,45 +1743,5 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(1, rehab);
             }
         }
-
-        private static async Task<int> GetPromotableCount(IDocumentStore store, string databaseName)
-        {
-            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-            if (res == null)
-            {
-                return -1;
-            }
-            return res.Topology.Promotables.Count;
-        }
-
-        private static async Task<int> GetRehabCount(IDocumentStore store, string databaseName = null)
-        {
-            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName ?? store.Database));
-            if (res == null)
-            {
-                return -1;
-            }
-            return res.Topology.Rehabs.Count;
-        }
-
-        private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName = null)
-        {
-            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName ?? store.Database));
-            if (res == null)
-            {
-                return -1;
-            }
-            return res.Topology.Members.Count;
-        }
-
-        private static async Task<int> GetDeletionCount(IDocumentStore store, string databaseName)
-        {
-            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-            if (res == null)
-            {
-                return -1;
-            }
-            return res.DeletionInProgress.Count;
-        }
     }
 }

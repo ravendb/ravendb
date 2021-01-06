@@ -2,13 +2,16 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
 using Raven.Server.Config;
 using Xunit.Abstractions;
@@ -23,26 +26,69 @@ namespace BenchmarkTests
 
         public abstract Task InitAsync(DocumentStore store);
 
-        protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]
+            string caller = null)
         {
-            if (options == null)
+            var customSettings = new Dictionary<string, string>
             {
-                options = new ServerCreationOptions();
+                {RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime), int.MaxValue.ToString()}
+            };
+            
+            if (Encrypted)
+            {
+                var serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
+                SetupServerAuthentication(customSettings, serverUrl);
             }
-            if (options.CustomSettings == null)
-                options.CustomSettings = new Dictionary<string, string>();
+            else
+            {
+                var serverUrl = UseFiddlerUrl("http://127.0.0.1:0");
+                customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl;
+            }
 
-            options.CustomSettings[RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = int.MaxValue.ToString();
+            var co = new ServerCreationOptions
+            {
+                CustomSettings = customSettings,
+                RunInMemory = false, 
+                RegisterForDisposal = false,
+                NodeTag = "A",
+                DataDirectory = RavenTestHelper.NewDataPath("benchmark", 0, true)
+            };
+            var server = base.GetNewServer(co, caller);
+            Servers.Add(server);
 
-            return base.GetNewServer(options, caller);
+            return server;
+        }
+
+        protected bool Encrypted
+        {
+            get
+            {
+                return bool.TryParse(Environment.GetEnvironmentVariable("TEST_FORCE_ENCRYPTED_STORAGE"), out var value) && value;
+            }
         }
 
         protected DocumentStore GetSimpleDocumentStore(string databaseName, bool deleteDatabaseOnDispose = true)
         {
+            X509Certificate2 adminCert = null;
+            
+            if (Encrypted)
+            {
+                var certificates = GenerateAndSaveSelfSignedCertificate();
+                adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value,
+                    certificates.ClientCertificate1.Value,
+                    new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin,
+                    Server);
+            }
+            
+
             var store = new DocumentStore
             {
-                Urls = new[] { Server.WebUrl },
-                Database = databaseName
+                Urls = new[]
+                {
+                    Server.WebUrl
+                }, 
+                Database = databaseName, 
+                Certificate = adminCert
             };
 
             if (deleteDatabaseOnDispose)
@@ -67,9 +113,23 @@ namespace BenchmarkTests
 
         protected override DocumentStore GetDocumentStore(Options options = null, [CallerMemberName]string caller = null)
         {
+            // since we want server to survive between tests runs 
+            // we have to cheat a little bit
+            // benchmark tests are divided into 2 phases: 
+            // 1. initialization 
+            // 2. actual test execution (this part is measured)
+            
+            var server = Server; 
+
+            if (Servers.Contains(server) == false)
+            {
+                Servers.Add(server);
+            }
+
             if (options == null)
                 options = new Options();
 
+            options.Encrypted = Encrypted && options.CreateDatabase; // don't set encryption if we don't create new db
             options.ModifyDatabaseRecord = record => record.Settings.Remove(RavenConfiguration.GetKey(x => x.Core.RunInMemory));
 
             return base.GetDocumentStore(options, caller);
@@ -102,6 +162,19 @@ namespace BenchmarkTests
             }
 
             throw new TimeoutException($"The index '{indexName}' stayed stale for more than {timeout.Value}.");
+        }
+
+        protected DatabaseRecord CreateDatabaseRecord(string databaseName)
+        {
+            var databaseRecord = new DatabaseRecord(databaseName);
+            
+            if (Encrypted)
+            {
+                PutSecrectKeyForDatabaseInServersStore(databaseName, Server);
+                databaseRecord.Encrypted = true;
+            }
+
+            return databaseRecord;
         }
     }
 }

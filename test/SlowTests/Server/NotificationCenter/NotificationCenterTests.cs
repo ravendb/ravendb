@@ -553,7 +553,7 @@ namespace SlowTests.Server.NotificationCenter
         public void WhenActualSwapSmallerThenMinSwapConfigured_ShouldRaiseNotification()
         {
             var memoryInfoResult = MemoryInformation.GetMemoryInfo();
-            var minSwapConfig = memoryInfoResult.TotalSwapSize + new Sparrow.Size(1, SizeUnit.Megabytes);
+            var minSwapConfig = memoryInfoResult.TotalSwapSize + new Sparrow.Size(130, SizeUnit.Megabytes);
             var customSettings = new Dictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.PerformanceHints.MinSwapSize)] = minSwapConfig.GetValue(SizeUnit.Megabytes).ToString()

@@ -26,6 +26,7 @@ namespace StressTests.Client.Attachments
             {
                 using (var stress = new AttachmentsBigFiles(Output))
                 {
+                    stress.SetServerDisposeTimeout(5 * 60_000);
                     await stress.BatchRequestWithLongMultiPartSections(size, hash, encrypted);
                 }
             }
@@ -46,6 +47,7 @@ namespace StressTests.Client.Attachments
             {
                 using (var stress = new AttachmentsBigFiles(Output))
                 {
+                    stress.SetServerDisposeTimeout(5 * 60_000);
                     await stress.SupportHugeAttachment(size, hash, encrypted);
                 }
             }
