@@ -604,7 +604,7 @@ namespace Raven.Server.Utils
             return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.Create(type, value));
         }
 
-        public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, HashSet<CompiledIndexField> groupByFields)
+        public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, Dictionary<string, CompiledIndexField> groupByFields)
         {
             var type = value.GetType();
 

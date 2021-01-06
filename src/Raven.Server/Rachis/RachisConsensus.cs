@@ -1861,7 +1861,7 @@ namespace Raven.Server.Rachis
             public Guid? TopologyId;
         }
 
-        public void Bootstrap(string selfUrl, string nodeTag)
+        public bool Bootstrap(string selfUrl, string nodeTag)
         {
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));
@@ -1870,7 +1870,7 @@ namespace Raven.Server.Rachis
             using (var tx = ctx.OpenWriteTransaction())
             {
                 if (CurrentState != RachisState.Passive)
-                    return;
+                    return false;
 
                 var newTag = _tag;
                 if (_tag == InitialTag)
@@ -1903,6 +1903,8 @@ namespace Raven.Server.Rachis
 
                 tx.Commit();
             }
+
+            return true;
         }
 
         public string HardResetToNewCluster(string nodeTag = "A")
