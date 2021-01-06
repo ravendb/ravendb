@@ -378,23 +378,26 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 else if (ex is SubscriptionDoesNotBelongToNodeException subscriptionDoesNotBelongException)
                 {
-                    try
+                    if (string.IsNullOrEmpty(subscriptionDoesNotBelongException.AppropriateNode) == false)
                     {
-                        using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                        using (ctx.OpenReadTransaction())
+                        try
                         {
-                            // check that the subscription exists on AppropriateNode
-                            var clusterTopology = server.GetClusterTopology(ctx);
-                            using (var requester = ClusterRequestExecutor.CreateForSingleNode(
-                                clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode), server.Server.Certificate.Certificate))
+                            using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                            using (ctx.OpenReadTransaction())
                             {
-                                await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);
+                                // check that the subscription exists on AppropriateNode
+                                var clusterTopology = server.GetClusterTopology(ctx);
+                                using (var requester = ClusterRequestExecutor.CreateForSingleNode(
+                                    clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode), server.Server.Certificate.Certificate))
+                                {
+                                    await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);
+                                }
                             }
                         }
-                    }
-                    catch
-                    {
-                        // we let the client try to connect to AppropriateNode
+                        catch
+                        {
+                            // we let the client try to connect to AppropriateNode
+                        }
                     }
 
                     connection.AddToStatusDescription("Redirecting subscription client to different server");
@@ -407,6 +410,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
                         [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
                         [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString(),
                         [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
                         {
                             [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode,

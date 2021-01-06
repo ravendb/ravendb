@@ -265,8 +265,6 @@ namespace FastTests
                     {
                         Settings =
                         {
-                            [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
-                            [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1",
                             [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString(),
                             [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
                             [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString(),
@@ -450,8 +448,11 @@ namespace FastTests
             catch (NoLeaderException)
             {
             }
-            catch
+            catch (Exception e)
             {
+                if (e is RavenException && (e.InnerException is TimeoutException || e.InnerException is OperationCanceledException))
+                    return null;
+
                 if (Servers.Contains(serverToUse))
                 {
                     if (Servers.All(s => s.Disposed))
@@ -701,6 +702,12 @@ namespace FastTests
         {
             var result = await WaitForNullAsync(act, timeout, interval);
             Assert.Null(result);
+        }
+
+        protected async Task WaitAndAssertForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
+        {
+            var val = await WaitForPredicateAsync(t => t.Equals(expectedVal), act, timeout, interval);
+            Assert.Equal(expectedVal, val);
         }
 
         protected async Task<T> WaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class =>

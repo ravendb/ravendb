@@ -54,7 +54,7 @@ namespace Raven.Client.Http
 
         private static readonly GetStatisticsOperation BackwardCompatibilityFailureCheckOperation = new GetStatisticsOperation(debugTag: "failure=check");
         private static readonly DatabaseHealthCheckOperation FailureCheckOperation = new DatabaseHealthCheckOperation();
-        private ConcurrentSet<string> _useOldFailureCheckOperation;
+        private static ConcurrentSet<string> _useOldFailureCheckOperation;
 
         private readonly SemaphoreSlim _updateDatabaseTopologySemaphore = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _updateClientConfigurationSemaphore = new SemaphoreSlim(1, 1);
@@ -1729,7 +1729,8 @@ namespace Raven.Client.Http
             }
             catch (ClientVersionMismatchException e) when (e.Message.Contains(nameof(RouteNotFoundException)))
             {
-                _useOldFailureCheckOperation ??= new ConcurrentSet<string>();
+                Interlocked.CompareExchange(ref _useOldFailureCheckOperation, new ConcurrentSet<string>(), null);
+                // ReSharper disable once PossibleNullReferenceException
                 _useOldFailureCheckOperation.Add(serverNode.Url);
                 await ExecuteOldHealthCheck().ConfigureAwait(false);
             }

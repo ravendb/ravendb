@@ -782,7 +782,7 @@ namespace Raven.Server.Documents.Replication
                     return false;
                 }
 
-                return _replicationBatchReply.CurrentEtag > lastReceivedEtag;
+                return _replicationBatchReply.CurrentEtag >= lastReceivedEtag;
             }
 
             internal bool Init()
@@ -793,6 +793,20 @@ namespace Raven.Server.Documents.Replication
                 _dbId = dbGuid.ToBase64Unpadded();
 
                 return true;
+            }
+
+            internal bool DryRun(DocumentsOperationContext context)
+            {
+                var changeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+
+                var status = ChangeVectorUtils.GetConflictStatus(_replicationBatchReply.DatabaseChangeVector,
+                    changeVector);
+
+                if (status != ConflictStatus.AlreadyMerged)
+                    return false;
+
+                var result = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, changeVector);
+                return result.IsValid;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -831,6 +845,7 @@ namespace Raven.Server.Documents.Replication
                         }
                     };
                 }
+               
                 return result.IsValid ? 1 : 0;
             }
 
@@ -853,10 +868,17 @@ namespace Raven.Server.Documents.Replication
                 var update = new UpdateSiblingCurrentEtag(replicationBatchReply, _waitForChanges);
                 if (update.InitAndValidate(_lastDestinationEtag))
                 {
-                    // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
-                    // is purely advisory. We just want to have the information up to date at some point, and we won't 
-                    // miss anything much if this isn't there.
-                    _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
+                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        if (update.DryRun(ctx))
+                        {
+                            // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
+                            // is purely advisory. We just want to have the information up to date at some point, and we won't 
+                            // miss anything much if this isn't there.
+                            _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
+                        }
+                    }
                 }
             }
             _lastDestinationEtag = replicationBatchReply.CurrentEtag;

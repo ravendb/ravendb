@@ -17,7 +17,7 @@ namespace Raven.Client.Exceptions.Documents.Subscriptions
         {
         }
 
-        public SubscriptionDoesNotBelongToNodeException(string message, string appropriateNode, Dictionary<string, string> reasons) : base(message)
+        public SubscriptionDoesNotBelongToNodeException(string message, Exception inner, string appropriateNode, Dictionary<string, string> reasons) : base(message, inner)
         {
             AppropriateNode = appropriateNode;
             Reasons = reasons;            

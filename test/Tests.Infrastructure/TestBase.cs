@@ -75,6 +75,8 @@ namespace FastTests
 
         private bool _doNotReuseServer;
 
+        private int _disposeTimeout = 60000;
+
         private IDictionary<string, string> _customServerSettings;
 
         public static void IgnoreProcessorAffinityChanges(bool ignore)
@@ -454,7 +456,7 @@ namespace FastTests
         {
             if (_localServer != _globalServer && _globalServer != null)
             {
-                DisposeServer(_localServer);
+                DisposeServer(_localServer, _disposeTimeout);
                 _localServer = null;
             }
 
@@ -743,7 +745,7 @@ namespace FastTests
 
                 exceptionAggregator.Execute(() =>
                 {
-                    DisposeServer(_localServer);
+                    DisposeServer(_localServer, _disposeTimeout);
                     _localServer = null;
                 });
             }
@@ -755,7 +757,7 @@ namespace FastTests
                 if (i == 0)
                     DownloadAndSaveDebugPackage(shouldSaveDebugPackage, serverForDisposal, exceptionAggregator, Context);
 
-                exceptionAggregator.Execute(() => DisposeServer(serverForDisposal));
+                exceptionAggregator.Execute(() => DisposeServer(serverForDisposal, _disposeTimeout));
             }
 
             ServersForDisposal = null;
@@ -780,6 +782,11 @@ namespace FastTests
         {
             return ConcurrentTestsSemaphore.WaitAsync()
                 .ContinueWith(x => _concurrentTestsSemaphoreTaken.Raise());
+        }
+
+        internal void SetServerDisposeTimeout(int timeout)
+        {
+            _disposeTimeout = timeout;
         }
 
         public Task DisposeAsync()

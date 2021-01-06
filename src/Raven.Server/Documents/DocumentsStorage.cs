@@ -1656,12 +1656,23 @@ namespace Raven.Server.Documents
                 var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
 
                 if (collectionName.IsHiLo == false &&
-                    (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
+                    ((flags & DocumentFlags.Artificial) != DocumentFlags.Artificial) &&
+                    (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false))
                 {
-                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
-                        (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
+                    var shouldVersion = DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
+                        collectionName, nonPersistentFlags, local.Document.Data, null, context, id, lastModifiedTicks, ref flags, out var configuration);
+
+                    if (shouldVersion)
                     {
-                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, nonPersistentFlags, documentFlags);
+                        if (DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(flags, local.Document.Data))
+                        {
+                            DocumentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, local.Document.Data, flags | DocumentFlags.HasRevisions, NonPersistentDocumentFlags.None,
+                                local.Document.ChangeVector, local.Document.LastModified.Ticks, configuration, collectionName);
+                        }
+
+                        flags |= DocumentFlags.HasRevisions;
+                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
+                            modifiedTicks, nonPersistentFlags, documentFlags);
                     }
                 }
 

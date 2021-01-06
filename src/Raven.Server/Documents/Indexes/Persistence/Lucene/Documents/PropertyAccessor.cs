@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             throw new InvalidOperationException(string.Format("The {0} property was not found", name));
         }
 
-        protected PropertyAccessor(Type type, HashSet<CompiledIndexField> groupByFields = null)
+        protected PropertyAccessor(Type type, Dictionary<string, CompiledIndexField> groupByFields = null)
         {
             var isValueType = type.IsValueType;
             foreach (var prop in type.GetProperties())
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 if (groupByFields != null)
                 {
-                    foreach (var groupByField in groupByFields)
+                    foreach (var groupByField in groupByFields.Values)
                     {
                         if (groupByField.IsMatch(prop.Name))
                         {
@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             public CompiledIndexField GroupByField;
         }
 
-        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, HashSet<CompiledIndexField> groupByFields, bool isObjectInstance = false)
+        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, Dictionary<string, CompiledIndexField> groupByFields, bool isObjectInstance = false)
         {
             if (isObjectInstance || type == typeof(ObjectInstance) || type.IsSubclassOf(typeof(ObjectInstance)))
                 return new JintPropertyAccessor(groupByFields);
@@ -159,14 +159,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             return new PropertyAccessor(type, groupByFields);
         }
-
     }
 
     internal class JintPropertyAccessor : IPropertyAccessor
     {
-        private readonly HashSet<CompiledIndexField> _groupByFields;
+        private readonly Dictionary<string, CompiledIndexField> _groupByFields;
 
-        public JintPropertyAccessor(HashSet<CompiledIndexField> groupByFields)
+        public JintPropertyAccessor(Dictionary<string, CompiledIndexField> groupByFields)
         {
             _groupByFields = groupByFields;
         }
@@ -180,7 +179,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var propertyAsString = property.Key.AsString();
 
                 CompiledIndexField field = null;
-                var isGroupByField = _groupByFields?.TryGetValue(new SimpleField(propertyAsString), out field) ?? false;
+                var isGroupByField = _groupByFields?.TryGetValue(propertyAsString, out field) ?? false;
 
                 yield return (propertyAsString, GetValue(property.Value.Value), field, isGroupByField);
             }
@@ -214,8 +213,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 {
                     case LazyStringValue lsv:
                         return lsv;
+
                     case LazyCompressedStringValue lcsv:
                         return lcsv;
+
                     case LazyNumberValue lnv:
                         return lnv; //should be already blittable supported type.
                 }
