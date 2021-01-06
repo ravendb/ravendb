@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly List<KeyValuePair<string, DictionaryValueAccessor>> _propertiesInOrder =
             new List<KeyValuePair<string, DictionaryValueAccessor>>();
 
-        private DictionaryAccessor(Dictionary<string, object> instance, HashSet<CompiledIndexField> groupByFields = null)
+        private DictionaryAccessor(Dictionary<string, object> instance, Dictionary<string, CompiledIndexField> groupByFields = null)
         {
             if (instance == null)
                 throw new NotSupportedException("Indexed dictionary must be of type: Dictionary<string, object>");
@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 if (groupByFields != null)
                 {
-                    foreach (var groupByField in groupByFields)
+                    foreach (var groupByField in groupByFields.Values)
                     {
                         if (groupByField.IsMatch(key))
                         {
@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        internal static DictionaryAccessor Create(Dictionary<string, object> instance, HashSet<CompiledIndexField> groupByFields = null)
+        internal static DictionaryAccessor Create(Dictionary<string, object> instance, Dictionary<string, CompiledIndexField> groupByFields = null)
         {
             return new DictionaryAccessor(instance, groupByFields);
         }

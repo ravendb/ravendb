@@ -459,7 +459,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private IndexingStatsScope _stats;
             private IndexingStatsScope _createBlittableResultStats;
             private readonly ReduceKeyProcessor _reduceKeyProcessor;
-            private readonly HashSet<CompiledIndexField> _groupByFields;
+            private readonly Dictionary<string, CompiledIndexField> _groupByFields;
             private readonly bool _isMultiMap;
             private IPropertyAccessor _propertyAccessor;
             private readonly AbstractStaticIndexBase _compiledIndex;
@@ -505,7 +505,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 private readonly IEnumerator _enumerator;
                 private readonly AnonymousObjectToBlittableMapResultsEnumerableWrapper _parent;
                 private readonly IndexingStatsScope _createBlittableResult;
-                private readonly HashSet<CompiledIndexField> _groupByFields;
+                private readonly Dictionary<string, CompiledIndexField> _groupByFields;
                 private readonly ReduceKeyProcessor _reduceKeyProcessor;
 
                 public Enumerator(IEnumerator enumerator, AnonymousObjectToBlittableMapResultsEnumerableWrapper parent, IndexingStatsScope createBlittableResult)
@@ -577,12 +577,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     _reduceKeyProcessor.ReleaseBuffer();
                 }
 
-                private static void ThrowMissingGroupByFieldsInMapOutput(object output, HashSet<CompiledIndexField> groupByFields, AbstractStaticIndexBase compiledIndex)
+                private static void ThrowMissingGroupByFieldsInMapOutput(object output, Dictionary<string, CompiledIndexField> groupByFields, AbstractStaticIndexBase compiledIndex)
                 {
                     throw new InvalidOperationException(
                         $"The output of the mapping function does not contain all fields that the index is supposed to group by.{Environment.NewLine}" +
                         $"Output: {output}{Environment.NewLine}" +
-                        $"Group by fields: {string.Join(",", groupByFields.Select(x => x.Name))}{Environment.NewLine}" +
+                        $"Group by fields: {string.Join(",", groupByFields.Select(x => x.Key))}{Environment.NewLine}" +
                         $"Compiled index def:{Environment.NewLine}{compiledIndex.Source}");
                 }
             }
