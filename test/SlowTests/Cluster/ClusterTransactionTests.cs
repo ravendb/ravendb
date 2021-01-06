@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client;
@@ -23,7 +23,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -40,7 +39,7 @@ namespace SlowTests.Cluster
         {
         }
 
-        protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName] string caller = null)
         {
             if (options == null)
             {
@@ -105,7 +104,7 @@ namespace SlowTests.Cluster
             }))
             {
                 var count = 0;
-                var parallelism = Environment.ProcessorCount * 5;
+                var parallelism = RavenTestHelper.DefaultParallelOptions.MaxDegreeOfParallelism;
 
                 for (var i = 0; i < 10; i++)
                 {
@@ -114,13 +113,13 @@ namespace SlowTests.Cluster
                     {
                         tasks.Add(Task.Run(async () =>
                         {
-                            using (var session = leaderStore.OpenSession(new SessionOptions
+                            using (var session = leaderStore.OpenAsyncSession(new SessionOptions
                             {
                                 TransactionMode = TransactionMode.ClusterWide
                             }))
                             {
                                 session.Advanced.ClusterTransaction.CreateCompareExchangeValue($"usernames/{Interlocked.Increment(ref count)}", new User());
-                                session.SaveChanges();
+                                await session.SaveChangesAsync();
                             }
 
                             await ActionWithLeader((l) =>
@@ -132,14 +131,14 @@ namespace SlowTests.Cluster
                     }
 
                     await Task.WhenAll(tasks.ToArray());
-                    using (var session = leaderStore.OpenSession(new SessionOptions
+                    using (var session = leaderStore.OpenAsyncSession(new SessionOptions
                     {
                         TransactionMode = TransactionMode.ClusterWide
                     }))
                     {
-                        var results = session.Advanced.ClusterTransaction.GetCompareExchangeValues<User>(
+                        var results = await session.Advanced.ClusterTransaction.GetCompareExchangeValuesAsync<User>(
                             Enumerable.Range(i * parallelism, parallelism).Select(x =>
-                                $"usernames/{Interlocked.Increment(ref count)}").ToArray<string>());
+                                $"usernames/{Interlocked.Increment(ref count)}").ToArray());
                         Assert.Equal(parallelism, results.Count);
                     }
                 }
@@ -306,24 +305,24 @@ namespace SlowTests.Cluster
             var file = GetTempFileName();
 
             var (_, leader) = await CreateRaftCluster(3, watcherCluster: true);
-            var user1 = new User() {Name = "Karmel"};
-            var user2 = new User() {Name = "Oren"};
-            var user3 = new User() {Name = "Indych"};
+            var user1 = new User() { Name = "Karmel" };
+            var user2 = new User() { Name = "Oren" };
+            var user3 = new User() { Name = "Indych" };
 
             var toDispose = Servers.First(s => s != leader);
             var removedTag = toDispose.ServerStore.NodeTag;
 
-            var members = new List<string> {"A", "B", "C"};
+            var members = new List<string> { "A", "B", "C" };
             members.Remove(removedTag);
 
             leader.ServerStore.Observer.Suspended = true;
 
-            using (var store = GetDocumentStore(new Options {Server = leader, ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology {Members = members}}))
+            using (var store = GetDocumentStore(new Options { Server = leader, ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology { Members = members } }))
             {
                 // we kill one server so we would not clean the pending cluster transactions.
                 await DisposeAndRemoveServer(toDispose);
 
-                using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/karmel", user1);
                     await session.StoreAsync(user1, "foo/bar");
@@ -352,7 +351,7 @@ namespace SlowTests.Cluster
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
             }
 
-            using (var store = GetDocumentStore(new Options {Server = leader, ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology {Members = members}}))
+            using (var store = GetDocumentStore(new Options { Server = leader, ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology { Members = members } }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -368,7 +367,8 @@ namespace SlowTests.Cluster
                     await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(store.Database, record.Topology.Members));
                     await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode
                     {
-                        Url = store.Urls[0], Database = store.Database
+                        Url = store.Urls[0],
+                        Database = store.Database
                     }));
 
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -625,7 +625,7 @@ namespace SlowTests.Cluster
                 var task2 = Task.Run(async () => await AddUser(store, email, userId));
                 var task3 = Task.Run(async () =>
                 {
-                    using (var session = store.OpenAsyncSession(new SessionOptions{NoTracking = true}))
+                    using (var session = store.OpenAsyncSession(new SessionOptions { NoTracking = true }))
                     {
                         while (true)
                         {
@@ -967,7 +967,7 @@ namespace SlowTests.Cluster
                     Assert.NotNull(await session.Advanced.Revisions.GetAsync<User>(changeVector));
                 }
 
-                using (var session = leaderStore.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                using (var session = leaderStore.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     session.Delete("foo/bar/2");
                     session.Advanced.WaitForIndexesAfterSaveChanges();
@@ -1221,7 +1221,7 @@ namespace SlowTests.Cluster
                     await session.SaveChangesAsync();
                 }
 
-                await Task.WhenAll(SetupReplicationAsync(store1, store2),SetupReplicationAsync(store2, store1));
+                await Task.WhenAll(SetupReplicationAsync(store1, store2), SetupReplicationAsync(store2, store1));
 
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store2, store1);
@@ -1232,7 +1232,7 @@ namespace SlowTests.Cluster
                 }))
                 {
                     var u = await session.LoadAsync<User>("users/1");
-                    Assert.Equal("Grisha",u.Name);
+                    Assert.Equal("Grisha", u.Name);
                 }
 
                 using (var session = store2.OpenAsyncSession(new SessionOptions
@@ -1241,7 +1241,7 @@ namespace SlowTests.Cluster
                 }))
                 {
                     var u = await session.LoadAsync<User>("users/1");
-                    Assert.Equal("Grisha",u.Name);
+                    Assert.Equal("Grisha", u.Name);
                 }
 
                 var t1 = EnsureNoReplicationLoop(Server, store1.Database);
@@ -1267,8 +1267,8 @@ namespace SlowTests.Cluster
                 {
                     TransactionMode = TransactionMode.ClusterWide
                 });
-                
-                var entity = new User {Id = id};
+
+                var entity = new User { Id = id };
                 await session.StoreAsync(entity);
                 await session.SaveChangesAsync();
                 WaitForUserToContinueTheTest(store);
@@ -1281,10 +1281,10 @@ namespace SlowTests.Cluster
                 {
                     if (e.ToString().Contains(nameof(RachisApplyException)))
                         return true;
-                    if (e is AggregateException ae) 
+                    if (e is AggregateException ae)
                         return ae.InnerExceptions.Any(ContainsRachisException);
 
-                    if (e.InnerException == null) 
+                    if (e.InnerException == null)
                         return false;
                     e = e.InnerException;
                 }
