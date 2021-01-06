@@ -1105,7 +1105,7 @@ namespace Voron.Data.Tables
                 if (it.Seek(seekValue) == false)
                     yield break;
 
-                if (isStartAfter && it.MoveNext() == false)
+                if (isStartAfter && SliceComparer.Equals(it.CurrentKey, startAfter) && it.MoveNext() == false)
                     yield break;
 
                 if (it.Skip(skip) == false)
