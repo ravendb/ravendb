@@ -68,7 +68,8 @@ namespace Raven.Server.Documents
             onProgress(progress);
 
             long startEtag = 0;
-            var internalQueryOperationStart = 0;
+            var alreadySeenIdsCount = new Reference<long>();
+            string startAfterId = null;
 
             using (var rateGate = options.MaxOpsPerSecond.HasValue
                     ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1))
@@ -81,14 +82,15 @@ namespace Raven.Server.Documents
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     ids.Clear();
+
+                    Database.ForTestingPurposes?.CollectionRunnerBeforeOpenReadTransaction?.Invoke();
+
                     using (context.OpenReadTransaction())
                     {
-                        foreach (var document in GetDocuments(context, collectionName, startEtag, internalQueryOperationStart, OperationBatchSize, isAllDocs, DocumentFields.Id))
+                        foreach (var document in GetDocuments(context, collectionName, startEtag, startAfterId, alreadySeenIdsCount, OperationBatchSize, isAllDocs, DocumentFields.Id, out bool isStartsWithOrIdQuery))
                         {
                             using (document)
                             {
-                                internalQueryOperationStart++;
-
                                 cancellationToken.ThrowIfCancellationRequested();
 
                                 token.Delay();
@@ -96,8 +98,10 @@ namespace Raven.Server.Documents
                                 if (isAllDocs && document.Id.StartsWith(HiLoHandler.RavenHiloIdPrefix, StringComparison.OrdinalIgnoreCase))
                                     continue;
 
-                                if (document.Etag > lastEtag) // we don't want to go over the documents that we have patched
+                                // start with and id queries aren't ordered by the etag
+                                if (isStartsWithOrIdQuery == false && document.Etag > lastEtag) 
                                 {
+                                    // we don't want to go over the documents that we have patched
                                     end = true;
                                     break;
                                 }
@@ -116,6 +120,7 @@ namespace Raven.Server.Documents
                                     break;
                                 }
 
+                                startAfterId = document.Id;
                                 ids.Enqueue(document.Id);
                             }
                         }
@@ -151,20 +156,25 @@ namespace Raven.Server.Documents
             };
         }
 
-        protected IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, long start, int batchSize, bool isAllDocs, DocumentFields fields)
+        protected IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, string startAfterId, Reference<long> alreadySeenIdsCount, int batchSize, bool isAllDocs, DocumentFields fields, out bool isStartsWithOrIdQuery)
         {
             if (_collectionQuery != null && _collectionQuery.Metadata.WhereFields.Count > 0)
             {
                 if (_operationQuery == null)
                     _operationQuery = ConvertToOperationQuery(_collectionQuery, batchSize);
 
+                isStartsWithOrIdQuery = true;
+
                 return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, new FieldsToFetch(_operationQuery, null),
                     collectionName, _operationQuery, null, context, null, null, new Reference<int>())
                 {
                     Fields = fields,
-                    InternalQueryOperationStart = start
+                    StartAfterId = startAfterId,
+                    AlreadySeenIdsCount = alreadySeenIdsCount
                 };
             }
+
+            isStartsWithOrIdQuery = false;
 
             if (isAllDocs)
                 return Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, batchSize, fields);
