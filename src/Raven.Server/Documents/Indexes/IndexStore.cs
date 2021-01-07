@@ -1558,7 +1558,14 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var index in _indexes)
             {
-                index.Cleanup(mode);
+                var current = mode;
+                if (current != CleanupMode.Deep)
+                {
+                    if (index.NoQueryInLast10Minutes())
+                        current = CleanupMode.Deep;
+                }
+
+                index.Cleanup(current);
             }
 
             long etag;
