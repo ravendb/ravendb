@@ -885,7 +885,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, long start, long take, Reference<int> totalCount)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take, Reference<int> totalCount)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -921,7 +921,7 @@ namespace Raven.Server.Documents
             return GetDocuments(context, listOfIds, start, take, totalCount);
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, string collection, long start, long take, Reference<int> totalCount)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, string collection, long start, long take, Reference<int> totalCount)
         {
             foreach (var doc in GetDocuments(context, ids, start, take, totalCount))
             {

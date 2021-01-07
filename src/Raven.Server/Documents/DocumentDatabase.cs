@@ -67,7 +67,7 @@ namespace Raven.Server.Documents
         private readonly Action<string> _addToInitLog;
         private readonly Logger _logger;
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
-        private TestingStuff _forTestingPurposes;
+        internal TestingStuff ForTestingPurposes;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
 
@@ -636,7 +636,7 @@ namespace Raven.Server.Documents
         {
             _databaseShutdown.Cancel();
 
-            _forTestingPurposes?.ActionToCallDuringDocumentDatabaseInternalDispose?.Invoke();
+            ForTestingPurposes?.ActionToCallDuringDocumentDatabaseInternalDispose?.Invoke();
 
             //before we dispose of the database we take its latest info to be displayed in the studio
             try
@@ -653,7 +653,7 @@ namespace Raven.Server.Documents
                     _logger.Info("Failed to generate and store database info", e);
             }
 
-            if (_forTestingPurposes == null || _forTestingPurposes.SkipDrainAllRequests == false)
+            if (ForTestingPurposes == null || ForTestingPurposes.SkipDrainAllRequests == false)
             {
                 // we'll wait for 1 minute to drain all the requests
                 // from the database
@@ -1652,15 +1652,17 @@ namespace Raven.Server.Documents
 
         internal TestingStuff ForTestingPurposesOnly()
         {
-            if (_forTestingPurposes != null)
-                return _forTestingPurposes;
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
 
-            return _forTestingPurposes = new TestingStuff();
+            return ForTestingPurposes = new TestingStuff();
         }
 
         internal class TestingStuff
         {
             internal Action ActionToCallDuringDocumentDatabaseInternalDispose;
+
+            internal Action CollectionRunnerBeforeOpenReadTransaction;
 
             internal bool SkipDrainAllRequests = false;
 
