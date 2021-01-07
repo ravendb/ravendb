@@ -2542,7 +2542,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var last = _lastQueryingTime;
             return last.HasValue == false || 
-                   DocumentDatabase.Time.UtcDateTime() - last.Value > TimeSpan.FromMinutes(10);
+                   DocumentDatabase.Time.GetUtcNow() - last.Value > TimeSpan.FromMinutes(10);
         }
 
         private void MarkQueried(DateTime time)
