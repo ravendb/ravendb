@@ -18,6 +18,7 @@ using Raven.Client.Connection.Request;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Client.Metrics;
+using Raven.Client.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -25,12 +26,14 @@ namespace Raven.Client.Connection
     public class ReplicationInformer : ReplicationInformerBase<ServerClient>, IDocumentStoreReplicationInformer
     {
         private readonly SemaphoreSlim replicationLock = new SemaphoreSlim(1);
+        private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
         private bool firstTime = true;
 
         private DateTime lastReplicationUpdate = DateTime.MinValue;
 
         private Task refreshReplicationInformationTask;
+
 
         public ReplicationInformer(DocumentConvention conventions, HttpJsonRequestFactory jsonRequestFactory, Func<string, IRequestTimeMetric> requestTimeMetricGetter)
             : base(conventions, jsonRequestFactory, requestTimeMetricGetter)
@@ -64,7 +67,15 @@ namespace Raven.Client.Connection
                 // Do a quick synchronous check before we resort to async/await with the state-machine overhead.
                 if (!replicationLock.Wait(0))
                 {
-                    await replicationLock.WaitAsync().ConfigureAwait(false);
+                    try
+                    {
+                        await replicationLock.WaitAsync(cancellationTokenSource.Token).ConfigureAwait(false);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // graceful shutdown
+                        return;
+                    }
                 }
 
                 if (firstTime && force == false)
@@ -176,7 +187,15 @@ namespace Raven.Client.Connection
                 // Do a quick synchronous check before we resort to async/await with the state-machine overhead.
                 if (!replicationLock.Wait(0))
                 {
-                    await replicationLock.WaitAsync().ConfigureAwait(false);
+                    try
+                    {
+                        await replicationLock.WaitAsync(cancellationTokenSource.Token).ConfigureAwait(false);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // graceful shutdown
+                        return;
+                    }
                 }
 
                 var serverHash = ServerHash.GetServerHash(url);
@@ -241,8 +260,16 @@ namespace Raven.Client.Connection
         {
             base.Dispose();
 
-            var replicationInformationTaskCopy = refreshReplicationInformationTask;
-            if (replicationInformationTaskCopy != null)
-                replicationInformationTaskCopy.GetAwaiter().GetResult();
+            cancellationTokenSource.Cancel();
+            try
+            {
+                var replicationInformationTaskCopy = refreshReplicationInformationTask;
+                if (replicationInformationTaskCopy != null)
+                    replicationInformationTaskCopy.GetAwaiter().GetResult();
+            }
+            finally
+            {
+                cancellationTokenSource.Dispose();
+            }
         }
 }}
