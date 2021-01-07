@@ -1381,7 +1381,7 @@ namespace Raven.Server.Documents.Indexes
 
                             if (_lowMemoryFlag.IsRaised())
                             {
-                                ReduceMemoryUsage(storageEnvironment, CleanupMode.Deep);
+                                ReduceMemoryUsage(storageEnvironment, CleanupMode.Regular);
                             }
                             else if (_allocationCleanupNeeded > 0)
                             {
@@ -1428,7 +1428,7 @@ namespace Raven.Server.Documents.Indexes
                                 // there is no work to be done, and hasn't been for a while,
                                 // so this is a good time to release resources we won't need
                                 // anytime soon
-                                ReduceMemoryUsage(storageEnvironment, forceMemoryCleanup ? CleanupMode.Deep : CleanupMode.Regular);
+                                ReduceMemoryUsage(storageEnvironment, CleanupMode.Regular);
 
                                 if (forceMemoryCleanup)
                                     continue;
