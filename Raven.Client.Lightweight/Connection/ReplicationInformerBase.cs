@@ -23,6 +23,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Connection;
+using Raven.Client.Util;
 
 namespace Raven.Client.Connection
 {
@@ -123,7 +124,7 @@ namespace Raven.Client.Connection
             var currentTask = failureCounter.CheckDestination;
             if ((currentTask.IsCompleted || currentTask.IsFaulted || currentTask.IsCanceled) && DelayTimeInMiliSec > 0)
             {
-                var tcs = new TaskCompletionSource<object>();
+                var tcs = TaskCompletionSourceFactory.Create<object>();
                 var old = Interlocked.CompareExchange(ref failureCounter.CheckDestination, tcs.Task, currentTask);
                 if (old == currentTask)
                 {
@@ -151,7 +152,7 @@ namespace Raven.Client.Connection
                                     tcs.TrySetCanceled();
                                     break;
                             }
-                        }, token);
+                        }, token, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                 }
             }
 
