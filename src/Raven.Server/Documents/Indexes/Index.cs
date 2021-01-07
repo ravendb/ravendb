@@ -1428,7 +1428,9 @@ namespace Raven.Server.Documents.Indexes
                                 // there is no work to be done, and hasn't been for a while,
                                 // so this is a good time to release resources we won't need
                                 // anytime soon
-                                ReduceMemoryUsage(storageEnvironment, CleanupMode.Regular);
+
+                                var mode = NoQueryInLast10Minutes() ? CleanupMode.Deep : CleanupMode.Regular;
+                                ReduceMemoryUsage(storageEnvironment, mode);
 
                                 if (forceMemoryCleanup)
                                     continue;
@@ -2534,6 +2536,13 @@ namespace Raven.Server.Documents.Indexes
         public DateTime? GetLastQueryingTime()
         {
             return _lastQueryingTime;
+        }
+
+        public bool NoQueryInLast10Minutes()
+        {
+            var last = _lastQueryingTime;
+            return last.HasValue == false || 
+                   DocumentDatabase.Time.UtcDateTime() - last.Value > TimeSpan.FromMinutes(10);
         }
 
         private void MarkQueried(DateTime time)
