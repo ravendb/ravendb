@@ -189,6 +189,49 @@ namespace SlowTests.Issues
         [Theory]
         [InlineData("from Users")]
         [InlineData("from @all_docs")]
+        public async Task DeleteByIdQueryWithDeletedDocument(string baseQuery)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var idsList = new List<string>();
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    for (var i = 0; i < 1200; i++)
+                    {
+                        var id = i.ToString();
+                        idsList.Add(id);
+                        await bulkInsert.StoreAsync(new User(), id);
+                    }
+                }
+
+                await SetAction(store, "840", delete: true);
+
+                var query = $"{baseQuery} where id() in (";
+                var first = true;
+                foreach (var id in idsList)
+                {
+                    if (first == false)
+                        query += ",";
+
+                    first = false;
+                    query += $"'{id}'";
+                }
+                query += ")";
+
+                var operation = await store.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = query }));
+                operation.WaitForCompletion<BulkOperationResult>(TimeSpan.FromSeconds(30000));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var docsCount = await session.Query<User>().CountAsync();
+                    Assert.Equal(0, docsCount);
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData("from Users")]
+        [InlineData("from @all_docs")]
         public async Task PatchByStartsWithQuery(string baseQuery)
         {
             using (var store = GetDocumentStore())
@@ -300,13 +343,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Test()
-        {
-            
-        }
-
-        private async Task SetAction(DocumentStore store, string documentId)
+        private async Task SetAction(DocumentStore store, string documentId, bool delete = false)
         {
             var count = 0;
             var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
@@ -318,7 +355,15 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(), documentId);
+                    if (delete)
+                    {
+                        session.Delete(documentId);
+                    }
+                    else
+                    {
+                        session.Store(new User(), documentId);
+                    }
+
                     session.SaveChanges();
                 }
             };
