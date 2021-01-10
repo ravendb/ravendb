@@ -37,9 +37,11 @@ import generalUtils = require("common/generalUtils");
 import timeSeriesColumn = require("widgets/virtualGrid/columns/timeSeriesColumn");
 import timeSeriesPlotDetails = require("viewmodels/common/timeSeriesPlotDetails");
 import timeSeriesQueryResult = require("models/database/timeSeries/timeSeriesQueryResult");
-import spatialMapLayerModel = require("models/database/query/spatialMapLayerModel");
+import spatialMarkersLayerModel = require("models/database/query/spatialMarkersLayerModel");
 import spatialQueryMap = require("viewmodels/database/query/spatialQueryMap");
 import popoverUtils = require("common/popoverUtils");
+import spatialCircleModel = require("models/database/query/spatialCircleModel");
+import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph";
 
@@ -1203,14 +1205,16 @@ class query extends viewModelBase {
         if (spatialProperties && queryResults.items.length) {
             this.isSpatialQuery(true);
 
-            // Each spatial map model will contain the layer of markers per spatial properties pair
-            const spatialMapModels: spatialMapLayerModel[] = [];
+            // Each spatial markers model will contain the layer of markers per spatial properties pair
+            const spatialMarkersLayers: spatialMarkersLayerModel[] = [];
+            const spatialCirclesLayer: spatialCircleModel[] = [];
+            const spatialPolygonsLayer: spatialPolygonModel[] = [];
 
             for (let i = 0; i < spatialProperties.length; i++) {
                 const latitudeProperty = spatialProperties[i].LatitudeProperty;
                 const longitudeProperty = spatialProperties[i].LongitudeProperty;
 
-                let pointsArray: geoPoint[] = [];
+                let pointsArray: geoPointInfo[] = [];
                 for (let i = 0; i < queryResults.items.length; i++) {
                     const item = queryResults.items[i];
                     const flatItem = generalUtils.flattenObj(item, "");
@@ -1219,17 +1223,34 @@ class query extends viewModelBase {
                     const longitudeValue = _.get(flatItem, longitudeProperty) as number;
                     
                     if (latitudeValue != null && longitudeValue != null) {
-                        const point: geoPoint = { latitude: latitudeValue, longitude: longitudeValue, popupContent: item };
+                        const point: geoPointInfo = { Latitude: latitudeValue, Longitude: longitudeValue, PopupContent: item };
                         pointsArray.push(point);
                         this.totalNumberOfMarkers(this.totalNumberOfMarkers() + 1);
                     }
                 }
 
-                const layerModel = new spatialMapLayerModel(latitudeProperty, longitudeProperty, pointsArray);
-                spatialMapModels.push(layerModel);
+                const layer = new spatialMarkersLayerModel(latitudeProperty, longitudeProperty, pointsArray);
+                spatialMarkersLayers.push(layer);
             }
 
-            const spatialMapView = new spatialQueryMap(spatialMapModels);
+            const spatialShapes = queryResults.additionalResultInfo.SpatialShapes;
+            for (let i = 0; i < spatialShapes.length; i++) {
+                const shape = spatialShapes[i];
+                switch (shape.ShapeType) {
+                    case "Circle": {
+                        const circle = new spatialCircleModel(shape as Raven.Client.Documents.Indexes.Spatial.Circle);
+                        spatialCirclesLayer.push(circle);
+                    }
+                        break;
+                    case "Polygon": {
+                        const polygon = new spatialPolygonModel(shape as Raven.Client.Documents.Indexes.Spatial.Polygon);
+                        spatialPolygonsLayer.push(polygon);
+                    }
+                        break;
+                }
+            }
+            
+            const spatialMapView = new spatialQueryMap(spatialMarkersLayers, spatialCirclesLayer, spatialPolygonsLayer);
             this.spatialMap(spatialMapView);
         }
     }

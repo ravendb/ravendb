@@ -244,6 +244,58 @@ namespace Raven.Server.Json
             
             writer.WriteEndObject();
         }
+
+        private static void WriteSpatialShapeResult(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, SpatialShapeBase result)
+        {
+            writer.WriteStartObject();
+            
+            writer.WritePropertyName(nameof(result.ShapeType));
+            writer.WriteString(result.ShapeType.ToString());
+            writer.WriteComma();
+
+            if (result.ShapeType == SpatialShape.Circle)
+            {
+                var circle  = result as Circle;
+                writer.WritePropertyName(nameof(circle.Center));
+                writer.WriteStartObject();
+                writer.WritePoint(context, circle.Center);
+                writer.WriteEndObject();
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(circle.Radius));
+                writer.WriteDouble(circle.Radius);
+                writer.WriteComma();
+                 
+                writer.WritePropertyName(nameof(circle.Units));
+                writer.WriteString(circle.Units.ToString());
+            }
+            
+            else if (result.ShapeType == SpatialShape.Polygon)
+            {
+                var polygon = result as Polygon;
+                writer.WriteArray(context, nameof(polygon.Vertices), polygon.Vertices, 
+                    (w, c, point) => w.WriteSpatialPointResult(c, point));
+            }
+            
+            writer.WriteEndObject();
+        }
+
+        private static void WriteSpatialPointResult(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, LatLong result)
+        {
+            writer.WriteStartObject();
+            writer.WritePoint(context, result);
+            writer.WriteEndObject();
+        }
+
+        private static void WritePoint(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, LatLong result)
+        {
+            writer.WritePropertyName(nameof(result.Latitude));
+            writer.WriteDouble(result.Latitude);
+            writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(result.Longitude));
+            writer.WriteDouble(result.Longitude);
+        }
         
         public static void WriteSuggestionResult(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, SuggestionResult result)
         {
@@ -497,7 +549,16 @@ namespace Raven.Server.Json
             if (spatialProperties != null)
             {
                 writer.WriteComma();
-                writer.WriteArray(context, nameof(result.SpatialProperties), spatialProperties, (w, c, spatialProperty) => w.WriteSpatialPropertyResult(c, spatialProperty));
+                writer.WriteArray(context, nameof(result.SpatialProperties), spatialProperties, 
+                    (w, c, spatialProperty) => w.WriteSpatialPropertyResult(c, spatialProperty));
+            }
+            
+            var spatialShapes = result.SpatialShapes;
+            if (spatialShapes != null)
+            {
+                writer.WriteComma();
+                writer.WriteArray(context, nameof(result.SpatialShapes), spatialShapes, 
+                    (w, c, spatialShape) => w.WriteSpatialShapeResult(c, spatialShape));
             }
 
             writeAdditionalData?.Invoke(writer);

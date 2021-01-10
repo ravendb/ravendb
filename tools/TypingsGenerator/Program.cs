@@ -9,6 +9,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
@@ -256,6 +257,13 @@ namespace TypingsGenerator
             // query
             scripter.AddType(typeof(QueryResult<,>));
             scripter.AddType(typeof(PutResult));
+            
+            // spatial query
+            scripter.AddType(typeof(SpatialUnits));
+            scripter.AddType(typeof(SpatialShape));
+            scripter.AddType(typeof(SpatialShapeBase));
+            scripter.AddType(typeof(Circle));
+            scripter.AddType(typeof(Polygon));
 
             // patch
             scripter.AddType(typeof(PatchRequest));

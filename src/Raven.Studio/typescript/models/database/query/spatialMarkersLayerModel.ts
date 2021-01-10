@@ -1,11 +1,11 @@
-class spatialMapLayerModel {
+class spatialMarkersLayerModel {
     
     latitudeProperty: string;
     longitudeProperty: string;
     
-    geoPoints = ko.observableArray<geoPoint>([]);
+    geoPoints = ko.observableArray<geoPointInfo>([]);
     
-    constructor(latitudePropertyName: string, longitudePropertyName: string, geoPoints: geoPoint[]) {
+    constructor(latitudePropertyName: string, longitudePropertyName: string, geoPoints: geoPointInfo[]) {
         this.latitudeProperty = latitudePropertyName;
         this.longitudeProperty = longitudePropertyName;
         
@@ -13,4 +13,4 @@ class spatialMapLayerModel {
     }
 }
 
-export = spatialMapLayerModel;
+export = spatialMarkersLayerModel;
