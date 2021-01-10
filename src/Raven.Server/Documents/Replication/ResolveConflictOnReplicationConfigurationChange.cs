@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -12,6 +14,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.Replication
@@ -22,10 +25,7 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private readonly ReplicationLoader _replicationLoader;
 
-        public Task ResolveConflictsTask = Task.CompletedTask;
-
         internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
-        public ConflictSolver ConflictSolver => _replicationLoader.ConflictSolverConfig;
 
         public ResolveConflictOnReplicationConfigurationChange(ReplicationLoader replicationLoader, Logger log)
         {
@@ -37,31 +37,68 @@ namespace Raven.Server.Documents.Replication
 
         public long ConflictsCount => _database.DocumentsStorage?.ConflictsStorage?.ConflictsCount ?? 0;
 
-        public void RunConflictResolversOnce()
-        {
-            UpdateScriptResolvers();
+        private long _processedRaftIndex;
 
-            if (ConflictsCount > 0 && ConflictSolver?.IsEmpty() == false)
+        private readonly SemaphoreSlim _runOnce = new SemaphoreSlim(1, 1);
+
+        private async Task<IDisposable> RunOnceAsync()
+        {
+            await _runOnce.WaitAsync(_database.DatabaseShutdown);
+
+            return new DisposableAction(() => _runOnce.Release());
+        }
+
+        public void WaitForBackgroundResolveTask()
+        {
+            _runOnce.Wait(TimeSpan.FromSeconds(60));
+            _runOnce.Dispose();
+        }
+
+        public async Task RunConflictResolversOnce(ConflictSolver solver, long index)
+        {
+            // update to larger index;
+            if (ThreadingHelper.InterlockedExchangeMax(ref _processedRaftIndex, index) == false)
+                return;
+            
+            try
             {
-                try
+                using (await RunOnceAsync())
                 {
-                    ResolveConflictsTask.Wait(TimeSpan.FromSeconds(60));
+                    if (Interlocked.Read(ref _processedRaftIndex) > index)
+                        return;
+
+                    UpdateScriptResolvers(solver);
+
+                    if (ConflictsCount > 0 && solver?.IsEmpty() == false)
+                    {
+                        await ResolveConflictsInBackground(solver);
+                    }
                 }
-                catch (Exception e)
-                {
-                    if (_log.IsInfoEnabled)
-                        _log.Info("Failed to wait for a previous task of automatic conflict resolution", e);
-                }
-                ResolveConflictsTask = Task.Run(ResolveConflictsInBackground);
+            }
+            catch (OperationCanceledException)
+            {
+                // shutdown
+            }
+            catch (ObjectDisposedException)
+            {
+                // shutdown
+            }
+            catch (Exception e)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info("Failed to wait for a previous task of automatic conflict resolution", e);
             }
         }
 
-        private async Task ResolveConflictsInBackground()
+        private async Task ResolveConflictsInBackground(ConflictSolver solver)
         {
             try
             {
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                bool retry;
+                do
                 {
+                    retry = false;
+                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
                         var resolvedConflicts = new List<(DocumentConflict ResolvedConflict, long MaxConflictEtag, bool ResolvedToLatest)>();
@@ -97,7 +134,7 @@ namespace Raven.Server.Documents.Replication
                                 }
                             }
 
-                            if (ConflictSolver?.ResolveToLatest == true)
+                            if (solver?.ResolveToLatest == true)
                             {
                                 resolved = ResolveToLatest(conflicts);
                                 resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromReplication);
@@ -114,11 +151,10 @@ namespace Raven.Server.Documents.Replication
                         {
                             var cmd = new PutResolvedConflictsCommand(_database.DocumentsStorage.ConflictsStorage, resolvedConflicts, this);
                             await _database.TxMerger.Enqueue(cmd);
-                            if (cmd.RequiresRetry)
-                                RunConflictResolversOnce();
+                            retry = cmd.RequiresRetry;
                         }
                     }
-                }
+                } while (retry);
             }
             catch (Exception e)
             {
@@ -181,16 +217,16 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void UpdateScriptResolvers()
+        private void UpdateScriptResolvers(ConflictSolver conflictSolver)
         {
-            if (ConflictSolver?.ResolveByCollection == null)
+            if (conflictSolver?.ResolveByCollection == null)
             {
                 if (ScriptConflictResolversCache.Count > 0)
                     ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
                 return;
             }
             var copy = new Dictionary<string, ScriptResolver>();
-            foreach (var kvp in ConflictSolver.ResolveByCollection)
+            foreach (var kvp in conflictSolver.ResolveByCollection)
             {
                 var collection = kvp.Key;
                 var script = kvp.Value.Script;

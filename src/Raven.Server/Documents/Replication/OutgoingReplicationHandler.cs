@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Replication
         public event Action<OutgoingReplicationHandler> SuccessfulTwoWaysCommunication;
         public event Action<OutgoingReplicationHandler> SuccessfulReplication;
 
-        public ReplicationNode Destination;
+        public readonly ReplicationNode Destination;
         private readonly bool _external;
 
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
@@ -96,11 +96,29 @@ namespace Raven.Server.Documents.Replication
             _external = external;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _tcpConnectionOptions = tcpConnectionOptions ??
-                                    new TcpConnectionOptions() {DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication,};
+                                    new TcpConnectionOptions {DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication};
             _connectionInfo = connectionInfo;
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _database.Changes.OnCounterChange += OnCounterChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
+        }
+
+        public override int GetHashCode()
+        {
+            return Destination.GetHashCode();
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+            return Equals((OutgoingReplicationHandler)obj);
+        }
+
+        public bool Equals(OutgoingReplicationHandler other)
+        {
+            return Destination.Equals(other.Destination);
         }
 
         public OutgoingReplicationPerformanceStats[] GetReplicationPerformance()
@@ -273,7 +291,7 @@ namespace Raven.Server.Documents.Replication
             using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
             using (ctx.GetManagedBuffer(out _buffer))
             {
-                _parent.RunPullReplicationAsSink(tcpOptions, _buffer, Destination as PullReplicationAsSink);
+                _parent.RunPullReplicationAsSink(tcpOptions, _buffer, Destination as PullReplicationAsSink, this);
             }
         }
 

@@ -15,6 +15,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -282,7 +283,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
             using (var store = GetDocumentStore())
             {
-                store.ExecuteIndex(new DailyInvoicesIndex());
+                await store.ExecuteIndexAsync(new DailyInvoicesIndex());
 
                 var date = new DateTime(2017, 1, 1);
 
@@ -307,7 +308,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 WaitForIndexing(store);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 await store.ExecuteIndexAsync(new Replacement_AverageFieldAdded.DailyInvoicesIndex());
 

@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Replication
                     conflictedDoc))
                     return;
 
-                if (_conflictResolver.ConflictSolver?.ResolveToLatest ?? true)
+                if (_database.ReplicationLoader.ConflictSolverConfig?.ResolveToLatest ?? true)
                 {
                     var conflicts = new List<DocumentConflict>
                     {
