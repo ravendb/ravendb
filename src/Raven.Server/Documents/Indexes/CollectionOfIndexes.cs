@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly ConcurrentDictionary<string, ConcurrentSet<Index>> _indexesByCollection = 
             new ConcurrentDictionary<string, ConcurrentSet<Index>>(StringComparer.OrdinalIgnoreCase);
 
-        private class IndexNameComparer : IEqualityComparer<string>
+        public class IndexNameComparer : IEqualityComparer<string>
         {
             public static readonly IndexNameComparer Instance = new IndexNameComparer();
 

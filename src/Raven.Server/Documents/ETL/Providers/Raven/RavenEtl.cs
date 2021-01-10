@@ -173,9 +173,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             throw new TimeoutException(message, e);
         }
 
-        public override void Dispose()
+        public override void Dispose(string reason)
         {
-            base.Dispose();
+            base.Dispose(reason);
 
             if (_configuration.TestMode == false)
             {

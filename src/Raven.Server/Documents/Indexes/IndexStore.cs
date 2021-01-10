@@ -73,6 +73,10 @@ namespace Raven.Server.Documents.Indexes
                                                  IndexCompiler.IndexExtension.Length -
                                                  4; // ".dll"
 
+        private readonly DisposeOnce<SingleAttempt> _dispose;
+
+        public bool IsDisposed => _dispose.Disposed;
+
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
@@ -81,37 +85,42 @@ namespace Raven.Server.Documents.Indexes
 
             var stoppedConcurrentIndexBatches = _documentDatabase.Configuration.Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory;
             StoppedConcurrentIndexBatches = new SemaphoreSlim(stoppedConcurrentIndexBatches);
+
+            _dispose = new DisposeOnce<SingleAttempt>(DisposeInternal);
         }
 
-        public int HandleDatabaseRecordChange(DatabaseRecord record, long raftIndex)
+        public Task HandleDatabaseRecordChange(DatabaseRecord record, long raftIndex)
         {
             if (record == null)
-                return 0;
+                return Task.CompletedTask;
 
-            HandleSorters(record, raftIndex);
-            HandleDeletes(record, raftIndex);
+            var indexesToStart = new Dictionary<string, Lazy<Index>>(CollectionOfIndexes.IndexNameComparer.Instance);
+            var indexesToDelete = new HashSet<Index>();
+            var exceptions = new ConcurrentSet<Exception>();
 
-            var newIndexesToStart = new List<Index>();
-            ConcurrentSet<Index> indexesToDelete = null;
+            HandleSorters(record, exceptions);
+            HandleDeletes(record, indexesToDelete);
+            HandleChangesForStaticIndexes(record, indexesToStart, indexesToDelete, exceptions);
+            HandleChangesForAutoIndexes(record, indexesToStart, exceptions);
 
-            try
+            var deleteTask = GetIndexDeletionTask(indexesToDelete, exceptions);
+
+            if (indexesToStart.Count == 0)
+                return deleteTask;
+
+            return Task.Run(async () =>
             {
-                HandleChangesForStaticIndexes(record, raftIndex, newIndexesToStart);
-                HandleChangesForAutoIndexes(record, raftIndex, newIndexesToStart);
-
-                if (newIndexesToStart.Count <= 0)
-                    return 0;
-
-                indexesToDelete = new ConcurrentSet<Index>();
+                await deleteTask;
 
                 var sp = Stopwatch.StartNew();
-
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Starting {newIndexesToStart.Count} new index{(newIndexesToStart.Count > 1 ? "es" : string.Empty)}");
+                    Logger.Info($"Starting {indexesToStart.Count} new index{(indexesToStart.Count > 1 ? "es" : string.Empty)}");
 
-                ExecuteForIndexes(newIndexesToStart, index =>
+                ExecuteForIndexes(indexesToStart, kvp =>
                 {
-                    var indexLock = GetIndexLock(index.Name);
+                    var name = kvp.Key;
+                    var lazyIndex = kvp.Value;
+                    var indexLock = GetIndexLock(name);
 
                     try
                     {
@@ -119,7 +128,8 @@ namespace Raven.Server.Documents.Indexes
                     }
                     catch (OperationCanceledException e)
                     {
-                        AddToIndexesToDelete(index);
+                        if (lazyIndex.IsValueCreated)
+                            lazyIndex.Value.Dispose(delete: true);
 
                         _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
                         return;
@@ -127,15 +137,22 @@ namespace Raven.Server.Documents.Indexes
 
                     try
                     {
+                        if (_indexes.TryGetByName(name, out _))
+                            return; // already started
+
+                        var index = lazyIndex.Value;
                         StartIndex(index);
                     }
                     catch (Exception e)
                     {
-                        AddToIndexesToDelete(index);
+                        if (lazyIndex.IsValueCreated)
+                            lazyIndex.Value.Dispose(delete: true);
 
                         _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
+
+                        exceptions.Add(e);
                         if (Logger.IsInfoEnabled)
-                            Logger.Info($"Could not start index `{index.Name}`", e);
+                            Logger.Info($"Could not start index `{name}`", e);
                     }
                     finally
                     {
@@ -144,42 +161,46 @@ namespace Raven.Server.Documents.Indexes
                 });
 
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Started {newIndexesToStart.Count} new index{(newIndexesToStart.Count > 1 ? "es" : string.Empty)}, took: {sp.ElapsedMilliseconds}ms");
+                    Logger.Info($"Started {indexesToStart.Count} new index{(indexesToStart.Count > 1 ? "es" : string.Empty)}, took: {sp.ElapsedMilliseconds}ms");
 
-                var numberOfIndexesToDelete = HandleIndexesToDelete();
+                if (exceptions.Count > 0)
+                {
+                    if (exceptions.Count == 1)
+                        throw new Exception("An error occurred during record index changes", exceptions.First());
 
-                return newIndexesToStart.Count - numberOfIndexesToDelete;
-            }
-            catch
-            {
-                HandleIndexesToDelete();
-
-                throw;
-            }
-
-            void AddToIndexesToDelete(Index index)
-            {
-                if (index == null)
-                    return;
-
-                // dispose only if we do not have this index
-                if (_indexes.TryGetByName(index.Name, out var oldIndex) == false || ReferenceEquals(oldIndex, index) == false)
-                    indexesToDelete.Add(index);
-            }
-
-            int HandleIndexesToDelete()
-            {
-                if (indexesToDelete == null)
-                    return 0;
-
-                foreach (var index in indexesToDelete)
-                    DeleteIndexInternal(index, raiseNotification: false);
-
-                return indexesToDelete.Count;
-            }
+                    throw new AggregateException("Some errors occurred during record index changes", exceptions);
+                }
+            });
         }
 
-        private void ExecuteForIndexes(IEnumerable<Index> indexes, Action<Index> action)
+        private Task GetIndexDeletionTask(HashSet<Index> indexesToDelete, ConcurrentSet<Exception> exceptions)
+        {
+            if (indexesToDelete.Count == 0)
+                return Task.CompletedTask;
+
+            return Task.Run(() =>
+            {
+                ExecuteForIndexes(indexesToDelete, index =>
+                {
+                    try
+                    {
+                        using (IndexLock(index.Name))
+                        {
+                            DeleteIndexInternal(index);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        exceptions.Add(e);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Could not delete index {index.Name}", e);
+                    }
+                });
+            });
+        }
+
+
+        private void ExecuteForIndexes<T>(IEnumerable<T> indexes, Action<T> action)
         {
             var numberOfUtilizedCores = GetNumberOfUtilizedCores();
 
@@ -198,7 +219,7 @@ namespace Raven.Server.Documents.Indexes
                 : ProcessorInfo.ProcessorCount;
         }
 
-        private void HandleSorters(DatabaseRecord record, long index)
+        private void HandleSorters(DatabaseRecord record, ConcurrentSet<Exception> exceptions)
         {
             try
             {
@@ -206,13 +227,13 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                exceptions.Add(e);
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Could not update sorters", e);
             }
         }
 
-        private void HandleChangesForAutoIndexes(DatabaseRecord record, long index, List<Index> indexesToStart)
+        private void HandleChangesForAutoIndexes(DatabaseRecord record, Dictionary<string, Lazy<Index>> indexesToStart, ConcurrentSet<Exception> exceptions)
         {
             foreach (var kvp in record.AutoIndexes)
             {
@@ -225,18 +246,18 @@ namespace Raven.Server.Documents.Indexes
 
                     var indexToStart = HandleAutoIndexChange(name, definition);
                     if (indexToStart != null)
-                        indexesToStart.Add(indexToStart);
+                        indexesToStart.Add(definition.Name, indexToStart);
                 }
                 catch (Exception e)
                 {
-                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                    exceptions.Add(e);
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Could not create auto index {name}", e);
                 }
             }
         }
 
-        private Index HandleAutoIndexChange(string name, AutoIndexDefinitionBase definition)
+        private Lazy<Index> HandleAutoIndexChange(string name, AutoIndexDefinitionBase definition)
         {
             using (IndexLock(name))
             {
@@ -281,12 +302,12 @@ namespace Raven.Server.Documents.Indexes
                     return null;
                 }
 
-                Index index;
+                Lazy<Index> index;
 
                 if (definition is AutoMapIndexDefinition)
-                    index = AutoMapIndex.CreateNew((AutoMapIndexDefinition)definition, _documentDatabase);
+                    index = new Lazy<Index>(() => AutoMapIndex.CreateNew((AutoMapIndexDefinition)definition, _documentDatabase));
                 else if (definition is AutoMapReduceIndexDefinition)
-                    index = AutoMapReduceIndex.CreateNew((AutoMapReduceIndexDefinition)definition, _documentDatabase);
+                    index = new Lazy<Index>(() => AutoMapReduceIndex.CreateNew((AutoMapReduceIndexDefinition)definition, _documentDatabase));
                 else
                     throw new NotImplementedException($"Unknown index definition type: {definition.GetType().FullName}");
 
@@ -347,7 +368,7 @@ namespace Raven.Server.Documents.Indexes
             throw new NotSupportedException("Cannot create auto-index from " + definition.Type);
         }
 
-        private void HandleChangesForStaticIndexes(DatabaseRecord record, long index, List<Index> indexesToStart)
+        private void HandleChangesForStaticIndexes(DatabaseRecord record, Dictionary<string, Lazy<Index>> indexesToStart, HashSet<Index> indexesToDelete, ConcurrentSet<Exception> exceptions)
         {
             foreach (var kvp in record.Indexes)
             {
@@ -358,13 +379,13 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    var indexToStart = HandleStaticIndexChange(name, definition);
+                    var indexToStart = HandleStaticIndexChange(name, definition, indexesToDelete);
                     if (indexToStart != null)
-                        indexesToStart.Add(indexToStart);
+                        indexesToStart.Add(definition.Name, indexToStart);
                 }
                 catch (Exception exception)
                 {
-                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, exception);
+                    exceptions.Add(exception);
 
                     var indexName = name;
                     if (Logger.IsInfoEnabled)
@@ -392,7 +413,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private Index HandleStaticIndexChange(string name, IndexDefinition definition)
+        private Lazy<Index> HandleStaticIndexChange(string name, IndexDefinition definition, HashSet<Index> indexesToDelete)
         {
             using (IndexLock(name))
             {
@@ -429,7 +450,7 @@ namespace Raven.Server.Documents.Indexes
                             }
                         }
 
-                        DeleteIndexInternal(replacementIndex);
+                        indexesToDelete.Add(replacementIndex);
                     }
 
                     return null;
@@ -441,7 +462,7 @@ namespace Raven.Server.Documents.Indexes
 
                     var replacementIndex = GetIndex(replacementIndexName);
                     if (replacementIndex != null)
-                        DeleteIndexInternal(replacementIndex);
+                        indexesToDelete.Add(replacementIndex);
 
                     if (currentDifferences != IndexDefinitionCompareDifferences.None)
                         UpdateIndex(definition, currentIndex, currentDifferences);
@@ -485,26 +506,29 @@ namespace Raven.Server.Documents.Indexes
                             CollectPrefixesOfDocumentsToDelete(oldReplacementMapReduceIndex, ref prefixesOfDocumentsToDelete);
                         }
 
-                        DeleteIndexInternal(replacementIndex);
+                        indexesToDelete.Add(replacementIndex);
                     }
                 }
 
-                Index index;
+                Lazy<Index> index;
                 switch (definition.Type)
                 {
                     case IndexType.Map:
                     case IndexType.JavaScriptMap:
-                        index = MapIndex.CreateNew(definition, _documentDatabase);
+                        index = new Lazy<Index>(() => MapIndex.CreateNew(definition, _documentDatabase));
                         break;
 
                     case IndexType.MapReduce:
                     case IndexType.JavaScriptMapReduce:
-                        var mapReduceIndex = MapReduceIndex.CreateNew(definition, _documentDatabase);
+                        index = new Lazy<Index>(() =>
+                        {
+                            var mapReduceIndex = MapReduceIndex.CreateNew(definition, _documentDatabase);
 
-                        if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete.Count > 0)
-                            mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
+                            if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete.Count > 0)
+                                mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
 
-                        index = mapReduceIndex;
+                            return mapReduceIndex;
+                        });
                         break;
 
                     default:
@@ -541,12 +565,10 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void HandleDeletes(DatabaseRecord record, long raftLogIndex)
+        private void HandleDeletes(DatabaseRecord record, HashSet<Index> indexesToDelete)
         {
             foreach (var index in _indexes)
             {
-                _documentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
-
                 var indexNormalizedName = index.Name;
                 if (indexNormalizedName.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix))
                 {
@@ -555,16 +577,7 @@ namespace Raven.Server.Documents.Indexes
                 if (record.Indexes.ContainsKey(indexNormalizedName) || record.AutoIndexes.ContainsKey(indexNormalizedName))
                     continue;
 
-                try
-                {
-                    DeleteIndexInternal(index);
-                }
-                catch (Exception e)
-                {
-                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftLogIndex, e);
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Could not delete index {index.Name}", e);
-                }
+                indexesToDelete.Add(index);
             }
         }
 
@@ -580,9 +593,16 @@ namespace Raven.Server.Documents.Indexes
             if (_documentDatabase.Configuration.Indexing.RunInMemory)
                 return Task.CompletedTask;
 
-            return Task.Run(() =>
+            var sp = Stopwatch.StartNew();
+            return OpenIndexesFromRecord(record, raftIndex, addToInitLog).ContinueWith(t =>
             {
-                OpenIndexesFromRecord(record, raftIndex, addToInitLog);
+                var result = t.IsCompletedSuccessfully ? "successfully" : "due to error or cancellation";
+                addToInitLog($"IndexStore initialization is completed {result}, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
+
+                if (t.IsFaulted)
+                {
+                    addToInitLog($"IndexStore initialization errors:{Environment.NewLine}{t.Exception}");
+                }
             });
         }
 
@@ -998,7 +1018,7 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
-                index.Dispose();
+                index.Dispose(delete: true);
             }
             catch (Exception e)
             {
@@ -1014,31 +1034,6 @@ namespace Raven.Server.Documents.Indexes
                     Type = IndexChangeTypes.IndexRemoved
                 });
             }
-
-            // we always want to try to delete the directories
-            // because Voron and Periodic Backup are creating temp ones
-            //if (index.Configuration.RunInMemory)
-            //    return;
-
-            var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name);
-
-            var indexPath = index.Configuration.StoragePath.Combine(name);
-
-            var indexTempPath = index.Configuration.TempPath?.Combine(name);
-
-            try
-            {
-                IOExtensions.DeleteDirectory(indexPath.FullPath);
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to delete the index {name} directory", e);
-                throw;
-            }
-
-            if (indexTempPath != null)
-                IOExtensions.DeleteDirectory(indexTempPath.FullPath);
         }
 
         public IndexRunningStatus Status
@@ -1182,12 +1177,13 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public SharedMultipleUseFlag IsDisposed = new SharedMultipleUseFlag(false);
-
         public void Dispose()
         {
-            IsDisposed.Raise();
+            _dispose.Dispose();
+        }
 
+        private void DisposeInternal()
+        {
             var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(IndexStore)}");
 
             // waiting for all the indexes that are currently being initialized to finish
@@ -1265,7 +1261,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void OpenIndexesFromRecord(DatabaseRecord record, long raftIndex, Action<string> addToInitLog)
+        private Task OpenIndexesFromRecord(DatabaseRecord record, long raftIndex, Action<string> addToInitLog)
         {
             var path = _documentDatabase.Configuration.Indexing.StoragePath;
 
@@ -1300,12 +1296,9 @@ namespace Raven.Server.Documents.Indexes
             //    }
             //}
 
-            var totalSp = Stopwatch.StartNew();
-
             foreach (var kvp in record.Indexes)
             {
-                if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
-                    return;
+                _documentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
 
                 var name = kvp.Key;
                 var definition = kvp.Value;
@@ -1326,8 +1319,7 @@ namespace Raven.Server.Documents.Indexes
 
             foreach (var kvp in record.AutoIndexes)
             {
-                if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
-                    return;
+                _documentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
 
                 var name = kvp.Key;
                 var definition = kvp.Value;
@@ -1347,16 +1339,14 @@ namespace Raven.Server.Documents.Indexes
             }
 
             // loading the new indexes
-            var startIndexSp = Stopwatch.StartNew();
-
             addToInitLog("Starting new indexes");
-            var startedIndexes = HandleDatabaseRecordChange(record, raftIndex);
-            addToInitLog($"Started {startedIndexes} new index{(startedIndexes > 1 ? "es" : string.Empty)}, took: {startIndexSp.ElapsedMilliseconds}ms");
 
-            addToInitLog($"IndexStore initialization is completed, took: {totalSp.ElapsedMilliseconds:#,#;;0}ms");
+            var task = HandleDatabaseRecordChange(record, raftIndex);
 
             if (exceptions != null && exceptions.Count > 0)
                 throw new AggregateException("Could not load some of the indexes", exceptions);
+
+            return task;
         }
 
         public void OpenFaultyIndex(Index index)
@@ -1476,6 +1466,11 @@ namespace Raven.Server.Documents.Indexes
         public IEnumerable<Index> GetIndexesForCollection(string collection)
         {
             return _indexes.GetForCollection(collection);
+        }
+
+        public void AddIndex(Index index)
+        {
+            _indexes.Add(index);
         }
 
         public IEnumerable<Index> GetIndexes()
@@ -1959,6 +1954,17 @@ namespace Raven.Server.Documents.Indexes
                 _store.ValidateStaticIndex(definition);
 
                 _command.Static.Add(definition);
+            }
+
+            public async Task SaveIfNeeded()
+            {
+                if (_command == null)
+                    return;
+
+                if (_command.Static.Count + _command.Auto.Count > 50)
+                {
+                    await SaveAsync();
+                }
             }
 
             public async Task SaveAsync()

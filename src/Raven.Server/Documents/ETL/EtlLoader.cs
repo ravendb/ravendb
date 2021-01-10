@@ -13,12 +13,13 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
-using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.ETL
 {
@@ -26,8 +27,8 @@ namespace Raven.Server.Documents.ETL
     {
         private const string AlertTitle = "ETL loader";
 
-        private EtlProcess[] _processes = new EtlProcess[0];
-        private readonly HashSet<string> _uniqueConfigurationNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // read and modified under a lock.
+        private ConcurrentSet<EtlProcess> _processes = new ConcurrentSet<EtlProcess>();
+        private readonly ConcurrentSet<string> _uniqueConfigurationNames = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase); // read and modified under a lock.
 
         private DatabaseRecord _databaseRecord;
 
@@ -56,15 +57,15 @@ namespace Raven.Server.Documents.ETL
             database.TombstoneCleaner.Subscribe(this);
         }
 
-        public EtlProcess[] Processes => _processes;
+        public EtlProcess[] Processes => _processes.ToArray();
 
         public List<RavenEtlConfiguration> RavenDestinations;
 
         public List<SqlEtlConfiguration> SqlDestinations;
 
-        public void Initialize(DatabaseRecord record)
+        public void Initialize(DatabaseRecord record, long index)
         {
-            LoadProcesses(record, record.RavenEtls, record.SqlEtls, toRemove: null);
+            LoadProcesses(record, record.RavenEtls, record.SqlEtls, index);
         }
 
         public event Action<EtlProcess> ProcessAdded;
@@ -80,29 +81,24 @@ namespace Raven.Server.Documents.ETL
             ProcessRemoved?.Invoke(process);
         }
 
+        private long _processedRaftIndex;
+
         private void LoadProcesses(DatabaseRecord record,
             List<RavenEtlConfiguration> newRavenDestinations,
             List<SqlEtlConfiguration> newSqlDestinations,
-            List<EtlProcess> toRemove)
+            long index)
         {
+            if (ThreadingHelper.InterlockedExchangeMax(ref _processedRaftIndex, index) == false)
+                return;
+
             lock (_loadProcessedLock)
             {
+                if (Interlocked.Read(ref _processedRaftIndex) > index)
+                    return;
+
                 _databaseRecord = record;
                 RavenDestinations = _databaseRecord.RavenEtls;
                 SqlDestinations = _databaseRecord.SqlEtls;
-
-                var processes = new List<EtlProcess>(_processes);
-
-                if (toRemove != null && toRemove.Count > 0)
-                {
-                    foreach (var process in toRemove)
-                    {
-                        processes.Remove(process);
-                        _uniqueConfigurationNames.Remove(process.ConfigurationName);
-
-                        OnProcessRemoved(process);
-                    }
-                }
 
                 var ensureUniqueConfigurationNames = _uniqueConfigurationNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -113,8 +109,10 @@ namespace Raven.Server.Documents.ETL
                 if (newSqlDestinations != null && newSqlDestinations.Count > 0)
                     newProcesses.AddRange(GetRelevantProcesses<SqlEtlConfiguration, SqlConnectionString>(newSqlDestinations, ensureUniqueConfigurationNames));
 
-                processes.AddRange(newProcesses);
-                _processes = processes.ToArray();
+                foreach (var newProcess in newProcesses)
+                {
+                    _processes.Add(newProcess);
+                }
 
                 HandleChangesSubscriptions();
 
@@ -133,7 +131,7 @@ namespace Raven.Server.Documents.ETL
         {
             // this is supposed to be called only under lock
 
-            if (_processes.Length > 0)
+            if (_processes.Count > 0)
             {
                 if (_isSubscribedToDocumentChanges == false)
                 {
@@ -338,13 +336,11 @@ namespace Raven.Server.Documents.ETL
         private void NotifyAboutWork(DocumentChange documentChange, CounterChange counterChange)
         {
             var processes = _processes;
-
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < processes.Length; i++)
+            foreach (var etlProcess in processes)
             {
                 try
                 {
-                    processes[i].NotifyAboutWork(documentChange, counterChange);
+                    etlProcess.NotifyAboutWork(documentChange, counterChange);
                 }
                 catch (ObjectDisposedException)
                 {
@@ -378,15 +374,17 @@ namespace Raven.Server.Documents.ETL
             return whoseTaskIsIt == _serverStore.NodeTag;
         }
 
-        public void HandleDatabaseRecordChange(DatabaseRecord record)
+        public Task HandleDatabaseRecordChange(DatabaseRecord record, long index)
         {
             if (record == null)
-                return;
+                return Task.CompletedTask;
 
             var myRavenEtl = new List<RavenEtlConfiguration>();
             var mySqlEtl = new List<SqlEtlConfiguration>();
 
             var responsibleNodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            var processes = _processes;
 
             foreach (var config in record.RavenEtls)
             {
@@ -404,9 +402,9 @@ namespace Raven.Server.Documents.ETL
                 }
             }
             
-            var toRemove = _processes.GroupBy(x => x.ConfigurationName).ToDictionary(x => x.Key, x => x.ToList());
+            var toRemove = processes.GroupBy(x => x.ConfigurationName).ToDictionary(x => x.Key, x => x.ToList());
 
-            foreach (var processesPerConfig in _processes.GroupBy(x => x.ConfigurationName))
+            foreach (var processesPerConfig in processes.GroupBy(x => x.ConfigurationName))
             {
                 var process = processesPerConfig.First();
 
@@ -457,45 +455,34 @@ namespace Raven.Server.Documents.ETL
                     throw new InvalidOperationException($"Unknown ETL process type: {process.GetType()}");
                 }
             }
-
-            Parallel.ForEach(toRemove, x =>
+           
+            return Task.Run(() =>
             {
-                foreach (var process in x.Value)
+                Parallel.ForEach(toRemove, x =>
                 {
-                    _database.DatabaseShutdown.ThrowIfCancellationRequested();
-
-                    try
+                    foreach (var process in x.Value)
                     {
-                        string reason = GetStopReason(process, myRavenEtl, mySqlEtl, responsibleNodes);
+                        var removed = _processes.TryRemove(process);
+                        _uniqueConfigurationNames.TryRemove(process.ConfigurationName);
 
-                        process.Stop(reason);
-                    }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Failed to stop ETL process {process.Name} on the database record change", e);
-                    }
-                }
-            });
+                        try
+                        {
+                            string reason = GetStopReason(process, myRavenEtl, mySqlEtl, responsibleNodes);
 
-            LoadProcesses(record, myRavenEtl, mySqlEtl, toRemove.SelectMany(x => x.Value).ToList());
+                            process.Dispose(reason);
+                        }
+                        catch (Exception e)
+                        {
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"Failed to dispose ETL process {process.Name} on the database record change", e);
+                        }
 
-            Parallel.ForEach(toRemove, x =>
-            {
-                foreach (var process in x.Value)
-                {
-                    _database.DatabaseShutdown.ThrowIfCancellationRequested();
-
-                    try
-                    {
-                        process.Dispose();
+                        if (removed)
+                            OnProcessRemoved(process);
                     }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Failed to dispose ETL process {process.Name} on the database record change", e);
-                    }
-                }
+                });
+                
+                LoadProcesses(record, myRavenEtl, mySqlEtl, index);
             });
         }
 

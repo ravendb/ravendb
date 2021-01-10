@@ -304,9 +304,9 @@ namespace Raven.Server.Documents
                 _addToInitLog("Initializing IndexStore (async)");
                 _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);
                 _addToInitLog("Initializing Replication");
-                ReplicationLoader?.Initialize(record);
+                ReplicationLoader?.Initialize(record, index);
                 _addToInitLog("Initializing ETL");
-                EtlLoader.Initialize(record);
+                EtlLoader.Initialize(record, index);
 
                 TombstoneCleaner.Start();
 
@@ -670,7 +670,7 @@ namespace Raven.Server.Documents
 
                 _forTestingPurposes?.DisposeLog?.Invoke(Name, $"Drained all requests. Took: {sp.Elapsed}");
             }
-
+            
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
 
             _forTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
@@ -1234,7 +1234,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void StateChanged(long index)
+        public async Task StateChanged(long index)
         {
             try
             {
@@ -1255,8 +1255,10 @@ namespace Raven.Server.Documents
 
                 StudioConfiguration = record.Studio;
 
-                NotifyFeaturesAboutStateChange(record, index);
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                var result = NotifyFeaturesAboutStateChange(record, index);
+
+                await result.WaitForTasks;
+                RachisLogIndexNotifications.NotifyListenersAbout(result.Index, null);
             }
             catch (Exception e)
             {
@@ -1277,10 +1279,25 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
+        private class StateChangeResult
         {
+            public readonly long Index;
+            public Task EtlTask = Task.CompletedTask;
+            public Task IndexTask = Task.CompletedTask;
+
+            public Task WaitForTasks => Task.WhenAll(EtlTask, IndexTask);
+
+            public StateChangeResult(long index)
+            {
+                Index = index;
+            }
+        }
+
+        private StateChangeResult NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
+        {
+            var result = new StateChangeResult(index);
             if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
-                return;
+                return result;
 
             var taken = false;
             while (taken == false)
@@ -1290,10 +1307,10 @@ namespace Raven.Server.Documents
                 try
                 {
                     if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
-                        return;
+                        return result;
 
                     if (DatabaseShutdown.IsCancellationRequested)
-                        return;
+                        return result;
 
                     if (taken == false)
                         continue;
@@ -1310,9 +1327,9 @@ namespace Raven.Server.Documents
 
                         SetUnusedDatabaseIds(record);
                         InitializeFromDatabaseRecord(record);
-                        IndexStore.HandleDatabaseRecordChange(record, index);
-                        ReplicationLoader?.HandleDatabaseRecordChange(record);
-                        EtlLoader?.HandleDatabaseRecordChange(record);
+                        result.IndexTask = IndexStore.HandleDatabaseRecordChange(record, index);
+                        ReplicationLoader?.HandleDatabaseRecordChange(record, index);
+                        result.EtlTask = EtlLoader?.HandleDatabaseRecordChange(record, index);
                         SubscriptionStorage?.HandleDatabaseRecordChange(record);
 
                         OnDatabaseRecordChanged(record);
@@ -1335,6 +1352,8 @@ namespace Raven.Server.Documents
                         Monitor.Exit(_clusterLocker);
                 }
             }
+
+            return result;
         }
 
         private void SetUnusedDatabaseIds(DatabaseRecord record)

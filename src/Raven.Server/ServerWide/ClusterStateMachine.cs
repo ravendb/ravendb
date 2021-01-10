@@ -49,6 +49,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
@@ -3438,7 +3439,7 @@ namespace Raven.Server.ServerWide
 
         public readonly Queue<RecentLogIndexNotification> RecentNotifications = new Queue<RecentLogIndexNotification>();
         internal Logger Log;
-
+        private SingleUseFlag _isDisposed = new SingleUseFlag();
         private class ErrorHolder
         {
             public long Index;
@@ -3452,7 +3453,12 @@ namespace Raven.Server.ServerWide
 
         public void Dispose()
         {
+            _isDisposed.Raise();
             _notifiedListeners.Dispose();
+            foreach (var task in _tasksDictionary.Values)
+            {
+                task.TrySetCanceled();
+            }
         }
 
         public async Task WaitForIndexNotification(long index, CancellationToken token)
@@ -3551,8 +3557,12 @@ namespace Raven.Server.ServerWide
             if (result.IsFaulted)
                 await result; // will throw
 
+            if (task.IsCanceled)
+                ThrowCanceledException(index, LastModifiedIndex);
+
             if (result == task)
                 return true;
+
             return false;
         }
 
@@ -3643,7 +3653,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            InterlockedExchangeMax(ref LastModifiedIndex, index);
+            ThreadingHelper.InterlockedExchangeMax(ref LastModifiedIndex, index);
             _notifiedListeners.SetAndResetAtomically();
         }
 
@@ -3673,21 +3683,11 @@ namespace Raven.Server.ServerWide
             _tasksDictionary.TryRemove(index, out _);
         }
 
-        private static void InterlockedExchangeMax(ref long location, long newValue)
-        {
-            long initialValue;
-
-            do
-            {
-                initialValue = location;
-                if (initialValue >= newValue)
-                    return;
-            } while (Interlocked.CompareExchange(ref location, newValue, initialValue) != initialValue);
-        }
-
         public void AddTask(long index)
         {
             Debug.Assert(_tasksDictionary.TryGetValue(index, out _) == false, $"{nameof(_tasksDictionary)} should not contain task with key {index}");
+            if (_isDisposed.IsRaised())
+                throw new ObjectDisposedException(nameof(RachisLogIndexNotifications));
 
             _tasksDictionary.TryAdd(index, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
         }

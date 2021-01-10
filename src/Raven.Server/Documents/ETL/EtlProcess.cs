@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -63,7 +64,12 @@ namespace Raven.Server.Documents.ETL
 
         public abstract void Stop(string reason);
 
-        public abstract void Dispose();
+        public void Dispose()
+        {
+            Dispose("Dispose");
+        }
+
+        public abstract void Dispose(string reason);
 
         public abstract void Reset();
 
@@ -126,6 +132,7 @@ namespace Raven.Server.Documents.ETL
         private readonly ServerStore _serverStore;
 
         public readonly TConfiguration Configuration;
+        private readonly DisposeOnce<SingleAttempt, string> _disposeOnce;
 
         protected EtlProcess(Transformation transformation, TConfiguration configuration, DocumentDatabase database, ServerStore serverStore, string tag)
         {
@@ -145,6 +152,7 @@ namespace Raven.Server.Documents.ETL
                 _collections = new HashSet<string>(Transformation.Collections, StringComparer.OrdinalIgnoreCase);
 
             _lastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
+            _disposeOnce = new DisposeOnce<SingleAttempt, string>(DisposeInternal);
         }
 
         protected CancellationToken CancellationToken => _cts.Token;
@@ -1133,14 +1141,16 @@ namespace Raven.Server.Documents.ETL
             return result;
         }
 
-        public override void Dispose()
+        public override void Dispose(string reason)
         {
-            if (CancellationToken.IsCancellationRequested)
-                return;
+            _disposeOnce.Dispose(reason);
+        }
 
+        public void DisposeInternal(string reason)
+        {
             var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {GetType().Name}: '{Name}'");
 
-            exceptionAggregator.Execute(() => Stop("Dispose"));
+            exceptionAggregator.Execute(() => Stop(reason));
 
             exceptionAggregator.Execute(() => _cts.Dispose());
             exceptionAggregator.Execute(() => _waitForChanges.Dispose());

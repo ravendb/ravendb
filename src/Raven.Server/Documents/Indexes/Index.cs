@@ -234,10 +234,10 @@ namespace Raven.Server.Documents.Indexes
                 _txAllocationsRatio = 2;
             }
 
-            _disposeOne = new DisposeOnce<SingleAttempt>(() =>
+            _disposeOne = new DisposeOnce<SingleAttempt, bool>(delete =>
             {
                 using (DrainRunningQueries())
-                    DisposeIndex();
+                    DisposeIndex(delete);
             });
         }
 
@@ -246,7 +246,7 @@ namespace Raven.Server.Documents.Indexes
             _mre.Set();
         }
 
-        protected virtual void DisposeIndex()
+        protected virtual void DisposeIndex(bool delete)
         {
             var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
             if (needToLock)
@@ -283,6 +283,23 @@ namespace Raven.Server.Documents.Indexes
                 exceptionAggregator.Execute(() => { _contextPool?.Dispose(); });
 
                 exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
+
+                if (delete)
+                {
+                    exceptionAggregator.Execute(() =>
+                    {
+                        var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
+
+                        var indexPath = Configuration.StoragePath.Combine(name);
+
+                        var indexTempPath = Configuration.TempPath?.Combine(name);
+
+                        IOExtensions.DeleteDirectory(indexPath.FullPath);
+
+                        if (indexTempPath != null)
+                            IOExtensions.DeleteDirectory(indexTempPath.FullPath);
+                    });
+                }
 
                 exceptionAggregator.ThrowIfNeeded();
             }
@@ -452,6 +469,7 @@ namespace Raven.Server.Documents.Indexes
         protected void Initialize(DocumentDatabase documentDatabase, IndexingConfiguration configuration, PerformanceHintsConfiguration performanceHints)
         {
             _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
+
             using (DrainRunningQueries())
             {
                 if (_initialized)
@@ -652,7 +670,7 @@ namespace Raven.Server.Documents.Indexes
             if (_initialized == false)
                 throw new InvalidOperationException($"Index '{Name}' was not initialized.");
 
-            if (DocumentDatabase.IndexStore.IsDisposed.IsRaised())
+            if (DocumentDatabase.IndexStore.IsDisposed)
             {
                 Dispose();
                 return;
@@ -798,11 +816,16 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private DisposeOnce<SingleAttempt> _disposeOne;
+        private readonly DisposeOnce<SingleAttempt, bool> _disposeOne;
 
         public void Dispose()
         {
-            _disposeOne.Dispose();
+            Dispose(delete: false);
+        }
+
+        public void Dispose(bool delete)
+        {
+            _disposeOne.Dispose(delete);
         }
 
         public bool IsStale(DocumentsOperationContext databaseContext, long? cutoff = null, List<string> stalenessReasons = null)

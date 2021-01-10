@@ -290,9 +290,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             }
         }
 
-        protected override void DisposeIndex()
+        protected override void DisposeIndex(bool delete)
         {
-            base.DisposeIndex();
+            base.DisposeIndex(delete);
             _reduceKeyProcessor.ReleaseBuffer();
         }
 
