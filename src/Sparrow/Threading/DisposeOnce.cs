@@ -38,18 +38,51 @@ namespace Sparrow.Threading
         }
     }
 
-    public sealed class DisposeOnce<TOperationMode>:IDisposable
+    public sealed class DisposeOnce<TOperationMode> : DisposeOnceAbstract<TOperationMode>
         where TOperationMode : struct, IDisposeOnceOperationMode
     {
         private readonly Action _action;
+
+        public DisposeOnce(Action action)
+        {
+            _action = action;
+        }
+
+        public override void Dispose()
+        {
+            DisposeInternal(_action);
+        }
+    }
+
+    public sealed class DisposeOnce<TOperationMode, T> : DisposeOnceAbstract<TOperationMode>
+        where TOperationMode : struct, IDisposeOnceOperationMode
+    {
+        private readonly Action<T> _action;
+
+        public DisposeOnce(Action<T> action)
+        {
+            _action = action;
+        }
+
+        public void Dispose(T state)
+        {
+            DisposeInternal(() => _action(state));
+        }
+
+        [Obsolete("Please use the overload that accepts a parameter")]
+        public override void Dispose() => throw new NotSupportedException("Please use the overload that accepts a parameter");
+    }
+
+    public abstract class DisposeOnceAbstract<TOperationMode>:IDisposable
+        where TOperationMode : struct, IDisposeOnceOperationMode
+    {
         private Tuple<MultipleUseFlag, TaskCompletionSource<object>> _state 
             = Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
 
         TOperationMode _operationModeData;
-             
-        public DisposeOnce(Action action)
+
+        protected DisposeOnceAbstract()
         {
-            _action = action;
             if (typeof(TOperationMode) != typeof(ExceptionRetry) &&
                 typeof(TOperationMode) != typeof(SingleAttempt))                
             {
@@ -60,23 +93,9 @@ namespace Sparrow.Threading
             _operationModeData.Initialize();
         }
 
-        /// <summary>
-        /// Runs the dispose action. Ensures any threads that are running it
-        /// concurrently wait for the dispose to finish if it is in progress.
-        /// 
-        /// If the dispose has already happened, the <see cref="TOperationMode"/> defines
-        /// how Dispose will react. The two approaches differ only in error
-        /// handling.
-        /// 
-        /// When behavior is <see cref="ExceptionRetry"/>, we will retry the
-        /// Dispose until it succeeds. Retry, however, happens on successive
-        /// calls to Dispose, rather than in a single attempt.
-        /// 
-        /// When behavior is <see cref="SingleAttempt"/> or <see cref="SingleAttemptWithWaitForDisposeToFinish"/>, a failure means all
-        /// subsequent calls will fail by throwing the same exception that
-        /// was thrown by the action.
-        /// </summary>
-        public void Dispose()
+        public abstract void Dispose();
+
+        protected void DisposeInternal(Action action)
         {
             _operationModeData.EnterDispose();
             try
@@ -95,7 +114,7 @@ namespace Sparrow.Threading
 
                 try
                 {
-                    _action();
+                    action();
 
                     // Let everyone know this run worked out!
                     localState.Item2.SetResult(null);

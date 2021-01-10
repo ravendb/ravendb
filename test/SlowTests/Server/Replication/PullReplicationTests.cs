@@ -519,7 +519,7 @@ namespace SlowTests.Server.Replication
                     await WaitForValueAsync(async () => (await minionStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(minionDB))).Topology.Rehabs.Count,
                         1));
 
-                EnsureReplicating((DocumentStore)hubStore, (DocumentStore)minionStore);
+                await EnsureReplicatingAsync((DocumentStore)hubStore, (DocumentStore)minionStore);
 
                 connections = await WaitForValueAsync(() => mentorDatabase.ReplicationLoader.OutgoingConnections.Count(), 3);
                 Assert.Equal(3, connections);
