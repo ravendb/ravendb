@@ -513,6 +513,13 @@ class genUtils {
         
         return fileParts.length > 1 ? fileParts.pop() : null;
     }
+
+    /***  Distance Methods ***/
+
+    // input: Miles/KM, output: Meters 
+    static getMeters(distance: number, units: Raven.Client.Documents.Indexes.Spatial.SpatialUnits) {
+        return units === "Miles" ? distance * 1609.344 : distance * 1000;
+    }
     
     /***  Other Methods ***/
 
