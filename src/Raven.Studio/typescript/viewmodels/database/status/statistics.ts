@@ -26,17 +26,20 @@ class statistics extends viewModelBase {
         super();
         
         this.bindToCurrentInstance("showStaleReasons");
+
+        this.rawJsonUrl = ko.pureComputed(() => {
+            return appUrl.forStatsRawData(this.activeDatabase());
+        });
+    }
+
+    activate() {
+        return this.fetchStats();
     }
     
     attached() {
         super.attached();
         this.statsSubscription = this.refreshStatsObservable.throttle(3000).subscribe((e) => this.fetchStats());
-        this.fetchStats();
         this.updateHelpLink('H6GYYL');
-
-        this.rawJsonUrl = ko.pureComputed(() => {
-            return appUrl.forStatsRawData(this.activeDatabase());
-        });
     }
     
     compositionComplete() {
