@@ -11,6 +11,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Logging;
 using Voron;
 
@@ -267,7 +268,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        internal async Task<long> RunRollups(bool propagateException = true)
+        internal async Task<long> RunRollups(bool propagateException = true, List<string> explanations = null)
         {
             var now = _database.Time.GetUtcNow();
             var total = 0L;
@@ -287,9 +288,14 @@ namespace Raven.Server.Documents.TimeSeries
                         Stopwatch duration;
                         using (context.OpenReadTransaction())
                         {
+                            explanations?.Add($"Preparing rollups at '{now.GetDefaultRavenFormat()}' with '{0}' start.");
+
                             _database.DocumentsStorage.TimeSeriesStorage.Rollups.PrepareRollups(context, now, 1024, start, states, out duration);
                             if (states.Count == 0)
+                            {
+                                explanations?.Add($"Cannot run rollups at '{now.GetDefaultRavenFormat()}' because there are no rollup states.");
                                 return total;
+                            }
                         }
 
                         Cts.Token.ThrowIfCancellationRequested();
@@ -297,11 +303,15 @@ namespace Raven.Server.Documents.TimeSeries
                         var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
                         var isFirstInTopology = string.Equals(topology.Members.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
 
+                        explanations?.Add($"RollupTimeSeriesCommand({now.GetDefaultRavenFormat()}, {isFirstInTopology})");
+
                         var command = new TimeSeriesRollups.RollupTimeSeriesCommand(Configuration, now, states, isFirstInTopology);
                         await _database.TxMerger.Enqueue(command);
                         
                         if (command.RolledUp > 0)
                         {
+                            explanations?.Add($"RollupTimeSeriesCommand({now.GetDefaultRavenFormat()}, {isFirstInTopology}) = {command.RolledUp}");
+
                             total += command.RolledUp;
 
                             if (Logger.IsInfoEnabled)
