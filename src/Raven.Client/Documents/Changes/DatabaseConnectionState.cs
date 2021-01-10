@@ -9,6 +9,7 @@ namespace Raven.Client.Documents.Changes
     internal class DatabaseConnectionState : IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>, IChangesConnectionState<CounterChange>
     {
         public event Action<Exception> OnError;
+
         private readonly Func<Task> _onDisconnect;
         public readonly Func<Task> OnConnect;
         private int _value;
@@ -21,7 +22,7 @@ namespace Raven.Client.Documents.Changes
         {
             if (_firstSet.Task.IsCompleted == false)
             {
-                var task =_firstSet.Task.IgnoreUnobservedExceptions();
+                var task = _firstSet.Task.IgnoreUnobservedExceptions();
 
                 connection.ContinueWith(t =>
                 {
@@ -93,8 +94,8 @@ namespace Raven.Client.Documents.Changes
             OnOperationStatusChangeNotification = null;
             OnError = null;
         }
-        
-        public DatabaseConnectionState( Func<Task> onConnect, Func<Task> onDisconnect)
+
+        public DatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect)
         {
             OnConnect = onConnect;
             _onDisconnect = onDisconnect;
