@@ -53,12 +53,19 @@ namespace Raven.Server.Documents.Queries
         /// </summary>
         public SpatialProperty[] SpatialProperties { get; set; }
         
+        /// <summary>
+        /// If the query returned spatial shapes results,
+        /// this field will contain the shapes info from the spatial query 
+        /// </summary>
+        public SpatialShapeBase[] SpatialShapes { get; set; }
+        
         public void RegisterSpatialProperties(IndexQueryServerSide query)
         {
             if (query.AddSpatialProperties == false || query.Metadata.SpatialProperties == null)
                 return;
 
             SpatialProperties = query.Metadata.SpatialProperties.ToArray();
+            SpatialShapes = query.Metadata.SpatialShapes.ToArray();
         }
 
         public abstract void AddResult(T result);

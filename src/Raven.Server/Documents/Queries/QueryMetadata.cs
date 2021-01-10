@@ -179,6 +179,8 @@ namespace Raven.Server.Documents.Queries
 
         public List<SpatialProperty> SpatialProperties;
 
+        public List<SpatialShapeBase> SpatialShapes;
+
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
             IndexFieldNames.Add(GetIndexFieldName(fieldName, parameters));
@@ -2367,18 +2369,46 @@ namespace Raven.Server.Documents.Queries
 
                 methodName = shapeExpression.Name.Value;
 
+                var args = shapeExpression.Arguments;
                 var methodType = QueryMethod.GetMethodType(methodName);
+                
                 switch (methodType)
                 {
                     case MethodType.Spatial_Circle:
-                        QueryValidator.ValidateCircle(shapeExpression.Arguments, QueryText, parameters);
+                        QueryValidator.ValidateCircle(args, QueryText, parameters);
+
+                        var unitsStr = args.Count == 4 ? (args[3] as ValueExpression).Token.ToString() : null;
+                        var circleShape = new Circle(
+                            (args[0] as ValueExpression).Token.ToString(),
+                            (args[1] as ValueExpression).Token.ToString(),
+                            (args[2] as ValueExpression).Token.ToString(),
+                            unitsStr);
+                         
+                        AddSpatialShapeToMetadata(circleShape);
                         break;
+                    
                     case MethodType.Spatial_Wkt:
-                        QueryValidator.ValidateWkt(shapeExpression.Arguments, QueryText, parameters);
+                        QueryValidator.ValidateWkt(args, QueryText, parameters);
+                        
+                        SpatialShape? shapeType = GetShapeString(args[0]);
+                        switch (shapeType)
+                        {
+                            case SpatialShape.Circle:
+                                var unitsStr2 = args.Count == 2 ? (args[1] as ValueExpression).Token.ToString() : null;
+                                var circleShape2 = new Circle((args[0] as ValueExpression).Token.ToString(), unitsStr2);
+                                AddSpatialShapeToMetadata(circleShape2);
+                                break;
+                            case SpatialShape.Polygon:
+                                var polygonShape = new Polygon((args[0] as ValueExpression).Token.ToString());
+                                AddSpatialShapeToMetadata(polygonShape);
+                                break;
+                        }
                         break;
+                    
                     case MethodType.Spatial_Point:
-                        QueryValidator.ValidatePoint(shapeExpression.Arguments, QueryText, parameters);
+                        QueryValidator.ValidatePoint(args, QueryText, parameters);
                         break;
+                    
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
                         break;
@@ -2422,7 +2452,41 @@ namespace Raven.Server.Documents.Queries
             private void AddSpatialPropertiesToMetadata(string latitudePropertyPath, string longitudePropertyPath)
             {
                 _metadata.SpatialProperties ??= new List<SpatialProperty>();
-                _metadata.SpatialProperties.Add(new SpatialProperty(latitudePropertyPath, longitudePropertyPath));
+                
+                var spatialProperty = new SpatialProperty(latitudePropertyPath, longitudePropertyPath);
+                if (_metadata.SpatialProperties.Exists(x => x.LatitudeProperty == spatialProperty.LatitudeProperty && x.LongitudeProperty == spatialProperty.LongitudeProperty) == false)
+                {
+                    _metadata.SpatialProperties.Add(spatialProperty);
+                }
+            }
+
+            private SpatialShape? GetShapeString(QueryExpression expression)
+            {
+                var expresionString = (expression as ValueExpression).Token.ToString();
+                var tokens = expresionString.Split('(');
+                if (tokens.Length == 0)
+                {
+                    throw new ArgumentException("Invalid WKT string format");
+                }
+
+                var firstToken = tokens[0].ToUpper().Trim();
+                if (firstToken == "POLYGON")
+                {
+                    return SpatialShape.Polygon;
+                }
+                
+                if (firstToken == "CIRCLE")
+                {
+                    return SpatialShape.Circle;
+                }
+
+                return null;
+            }
+            
+            private void AddSpatialShapeToMetadata(SpatialShapeBase spatialShape)
+            {
+                _metadata.SpatialShapes ??= new List<SpatialShapeBase>();
+                _metadata.SpatialShapes.Add(spatialShape);
             }
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Raven.Client.Documents.Indexes.Spatial
 {
@@ -212,6 +213,140 @@ namespace Raven.Client.Documents.Indexes.Spatial
         {
             LatitudeProperty = latitudePropertyPath;
             LongitudeProperty = longitudePropertyPath;
+        }
+    }
+
+    public enum SpatialShape
+    {
+        Polygon,
+        Circle
+    }
+
+    public class LatLong
+    {
+        public double Latitude;
+        public double Longitude;
+        
+        private LatLong()
+        {
+        }
+        
+        public LatLong(double latitude, double longitude)
+        {
+            Latitude = latitude;
+            Longitude = longitude;
+        }
+    } 
+
+    public abstract class SpatialShapeBase
+    {
+        public SpatialShape ShapeType;
+    }
+
+    public class Polygon : SpatialShapeBase
+    {
+        public List<LatLong> Vertices;
+
+        public Polygon()
+        {
+            ShapeType = SpatialShape.Polygon;
+        }
+
+        public Polygon(string polygonExpression) : this()
+        {
+            try
+            {
+                int indexStart = Regex.Matches(polygonExpression, "[(]")[1].Index + 1;
+                int indexEnd = Regex.Matches(polygonExpression, "[)]")[0].Index;
+
+                string pointsString = polygonExpression.Substring(indexStart, indexEnd - indexStart);
+                var points = pointsString.Split(',');
+
+                Vertices ??= new List<LatLong>();
+                // Loop on all except the last one, since it is a duplicate of the first one.
+                // This duplication is required only for the WKT format, but not for drawing polygon in Studio.
+                for (var i = 0; i < points.Length-1; i++)
+                {
+                    var point = points[i].Split(default(string[]), StringSplitOptions.RemoveEmptyEntries);
+                    // Revert long & lat - WKT format is [long, lat] and studio expects [lat, long]
+                    var latitude = Convert.ToDouble(point[1]);
+                    var longitude = Convert.ToDouble(point[0]);
+                    Vertices.Add(new LatLong(latitude, longitude));
+                }
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException("Invalid WKT POLYGON format. " + e.Message);
+            }
+        }
+    }
+
+    public class Circle : SpatialShapeBase
+    {
+        public LatLong Center;
+        public double Radius;
+        public SpatialUnits Units;
+        
+        public Circle()
+        {
+            ShapeType = SpatialShape.Circle;
+        }
+
+        public Circle(string radiusStr, string latitudeStr, string longitudeStr, string unitsStr) : this()
+        {
+            try
+            {
+                var latitude = Convert.ToDouble(latitudeStr);
+                var longitude = Convert.ToDouble(longitudeStr);
+                Center = new LatLong(latitude, longitude);
+                Radius = Convert.ToDouble(radiusStr);
+                Units = getUnits(unitsStr);
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException("Invalid arguments in spatial.circle. " + e.Message);
+            }
+        }
+        
+        public Circle(string circleExpression, string unitsStr) : this()
+        {
+            try
+            {
+                var tokens = circleExpression.Split('(', ')');
+                var circleItems = tokens[1].Split(default(string[]), StringSplitOptions.RemoveEmptyEntries);
+                if (circleItems.Length != 3)
+                {
+                    throw new ArgumentException("WKT CIRCLE should contain 3 params. i.e. CIRCLE(longitude latitude d=radiusDistance)");
+                }
+
+                // Revert long & lat - WKT format is [long, lat] and studio expects [lat, long]
+                var longitude = Convert.ToDouble(circleItems[0]);
+                var latitude = Convert.ToDouble(circleItems[1]);
+                Center = new LatLong(latitude, longitude);
+                
+                var radiusItems = circleItems[2].Split('=');
+                if (radiusItems.Length != 2)
+                {
+                    throw new ArgumentException("Invalid radius distance param.");
+                }
+                Radius = Convert.ToDouble(radiusItems[1]);
+                
+                Units = getUnits(unitsStr);
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException("Invalid WKT CIRCLE format. " + e.Message);
+            }
+        }
+
+        private SpatialUnits getUnits(string unitsStr)
+        {
+            if (unitsStr?.ToLower() == "miles")
+            {
+                return SpatialUnits.Miles;
+            }
+            
+            return SpatialUnits.Kilometers;
         }
     }
 }
