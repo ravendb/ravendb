@@ -2377,31 +2377,37 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Spatial_Circle:
                         QueryValidator.ValidateCircle(args, QueryText, parameters);
 
-                        var unitsStr = args.Count == 4 ? (args[3] as ValueExpression).Token.ToString() : null;
-                        var circleShape = new Circle(
-                            (args[0] as ValueExpression).Token.ToString(),
-                            (args[1] as ValueExpression).Token.ToString(),
-                            (args[2] as ValueExpression).Token.ToString(),
-                            unitsStr);
-                         
-                        AddSpatialShapeToMetadata(circleShape);
+                        if (_metadata.IsDynamic)
+                        {
+                            var unitsStr = args.Count == 4 ? (args[3] as ValueExpression).Token.ToString() : null;
+                            var circleShape = new Circle(
+                                (args[0] as ValueExpression).Token.ToString(),
+                                (args[1] as ValueExpression).Token.ToString(),
+                                (args[2] as ValueExpression).Token.ToString(),
+                                unitsStr);
+
+                            AddSpatialShapeToMetadata(circleShape);
+                        }
                         break;
                     
                     case MethodType.Spatial_Wkt:
                         QueryValidator.ValidateWkt(args, QueryText, parameters);
-                        
-                        SpatialShape? shapeType = GetShapeString(args[0]);
-                        switch (shapeType)
+
+                        if (_metadata.IsDynamic)
                         {
-                            case SpatialShape.Circle:
-                                var unitsStr2 = args.Count == 2 ? (args[1] as ValueExpression).Token.ToString() : null;
-                                var circleShape2 = new Circle((args[0] as ValueExpression).Token.ToString(), unitsStr2);
-                                AddSpatialShapeToMetadata(circleShape2);
-                                break;
-                            case SpatialShape.Polygon:
-                                var polygonShape = new Polygon((args[0] as ValueExpression).Token.ToString());
-                                AddSpatialShapeToMetadata(polygonShape);
-                                break;
+                            SpatialShape? shapeType = GetShapeString(args[0]);
+                            switch (shapeType)
+                            {
+                                case SpatialShape.Circle:
+                                    var unitsStrWkt = args.Count == 2 ? (args[1] as ValueExpression).Token.ToString() : null;
+                                    var circleShapeWkt = new Circle((args[0] as ValueExpression).Token.ToString(), unitsStrWkt);
+                                    AddSpatialShapeToMetadata(circleShapeWkt);
+                                    break;
+                                case SpatialShape.Polygon:
+                                    var polygonShape = new Polygon((args[0] as ValueExpression).Token.ToString());
+                                    AddSpatialShapeToMetadata(polygonShape);
+                                    break;
+                            }
                         }
                         break;
                     
