@@ -16,6 +16,8 @@ using Sparrow.Platform;
 using Sparrow.Utils;
 using Xunit;
 using System.Text;
+using Xunit.Sdk;
+using ExceptionAggregator = Raven.Server.Utils.ExceptionAggregator;
 
 namespace FastTests
 {
@@ -163,6 +165,17 @@ namespace FastTests
         public static void AssertAll(params Action[] asserts)
         {
             Assert.All(asserts, assert => assert());
+        }
+        public static async Task AssertAllAsync(Func<Task<string>> massageFactory, params Action[] asserts)
+        {
+            try
+            {
+                Assert.All(asserts, assert => assert());
+            }
+            catch (Exception e)
+            {
+                throw new XunitException(await massageFactory() + Environment.NewLine + e.Message);
+            }
         }
         
         private static string ConvertRespectingNewLines(string toConvert)
