@@ -48,7 +48,7 @@ namespace BenchmarkTests
             var co = new ServerCreationOptions
             {
                 CustomSettings = customSettings,
-                RunInMemory = false, 
+                RunInMemory = !Encrypted, 
                 RegisterForDisposal = false,
                 NodeTag = "A",
                 DataDirectory = RavenTestHelper.NewDataPath("benchmark", 0, true)
