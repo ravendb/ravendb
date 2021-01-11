@@ -790,6 +790,9 @@ namespace Raven.Server.Documents.Replication
                 if (Guid.TryParse(_replicationBatchReply.DatabaseId, out Guid dbGuid) == false)
                     return false;
 
+                if (_replicationBatchReply.CurrentEtag == 0)
+                    return false;
+
                 _dbId = dbGuid.ToBase64Unpadded();
 
                 return true;
