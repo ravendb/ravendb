@@ -269,12 +269,15 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(nameof(circle.Units));
                 writer.WriteString(circle.Units.ToString());
             }
-            
             else if (result.ShapeType == SpatialShape.Polygon)
             {
                 var polygon = result as Polygon;
                 writer.WriteArray(context, nameof(polygon.Vertices), polygon.Vertices, 
                     (w, c, point) => w.WriteSpatialPointResult(c, point));
+            }
+            else
+            {
+                throw new NotSupportedException($"Shape type: {result.ShapeType} is not supported.");
             }
             
             writer.WriteEndObject();
