@@ -21,9 +21,9 @@ namespace SlowTests.Issues
         private class DummyWebSocket : WebSocket
         {
             private static WebSocketReceiveResult Result { get; } = new(1, WebSocketMessageType.Text, true);
-            private readonly TaskCompletionSource<WebSocketReceiveResult> _completionSource = new();
+            private readonly TaskCompletionSource<WebSocketReceiveResult> _completionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
             private readonly MemoryStream _stream = new();
-            private int _isClose;
+            private int _isClosed;
 
             public override WebSocketCloseStatus? CloseStatus { get; }
             public override string CloseStatusDescription { get; }
@@ -32,7 +32,7 @@ namespace SlowTests.Issues
 
             public override async Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken)
             {
-                if (_isClose == 1)
+                if (_isClosed == 1)
                     throw new Exception("Closed");
 
                 await _stream.WriteAsync(buffer.Array, 0, buffer.Count, cancellationToken);
@@ -56,7 +56,7 @@ namespace SlowTests.Issues
 
             private void Close()
             {
-                if(Interlocked.CompareExchange(ref _isClose, 1, 0) == 0)
+                if(Interlocked.CompareExchange(ref _isClosed, 1, 0) == 0)
                     _completionSource.SetResult(Result);
             }
 
@@ -78,7 +78,7 @@ namespace SlowTests.Issues
             var expected = new HashSet<long>();
             foreach (var server in servers)
             {
-                expected.Add(GetRaftCommandByType(server, nameof(UpdateLicenseLimitsCommand)).Count());
+                expected.Add(GetRaftCommands(server, nameof(UpdateLicenseLimitsCommand)).Count());
             }
 
             Assert.Single(expected);
@@ -96,10 +96,10 @@ namespace SlowTests.Issues
             {
                 await RavenTestHelper.AssertAllAsync(async () => await socket.CloseAndGetLogsAsync(), servers.Select(s => (Action)(() =>
                 {
-                    var actual = GetRaftCommandByType(s, nameof(UpdateLicenseLimitsCommand)).Count();
+                    var actual = GetRaftCommands(s, nameof(UpdateLicenseLimitsCommand)).Count();
                     Assert.True(expected.Single() == actual, 
                         $"{s.ServerStore.NodeTag} expect {expected.Single()} actual {actual} " +
-                                $" {string.Join($"{Environment.NewLine}\t", GetRaftCommandByType(s).Select(c => ctx.ReadObject(c, "raftCommand").ToString()))}");
+                                $" {string.Join($"{Environment.NewLine}\t", GetRaftCommands(s).Select(c => ctx.ReadObject(c, "raftCommand").ToString()))}");
                 })).ToArray());
             }
         }

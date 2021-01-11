@@ -142,7 +142,7 @@ namespace FastTests
             return updateIndex;
         }
 
-        protected IEnumerable<DynamicJsonValue> GetRaftCommandByType(RavenServer server, string commandType = null)
+        protected IEnumerable<DynamicJsonValue> GetRaftCommands(RavenServer server, string commandType = null)
         {
             using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
