@@ -15,7 +15,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [Fact]
-        public void VerifySingleSpatialPropertyInResultsTest()
+        public void VerifySingleSpatialPropertyInResults()
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
@@ -55,7 +55,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [Fact]
-        public void VerifyMultipleSpatialPropertiesInResultsTest()
+        public void VerifyMultipleSpatialPropertiesInResults()
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
@@ -104,7 +104,7 @@ namespace SlowTests.Tests.Spatial
         }
         
         [Fact]
-        public void VerifySelectedSpatialPropertiesWithAliasInResultsTest()
+        public void VerifySelectedSpatialPropertiesWithAliasInResults()
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
@@ -146,7 +146,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [Fact]
-        public void VerifySelectedSpatialPropertiesWithoutAliasInResultsTest()
+        public void VerifySelectedSpatialPropertiesWithoutAliasInResults()
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
@@ -188,7 +188,7 @@ namespace SlowTests.Tests.Spatial
         }
         
         [Fact]
-        public void VerifyNoSpatialPropertiesInResultsWhenSelectingOnlyLatitudePropertyTest()
+        public void VerifyNoSpatialPropertiesInResultsWhenSelectingOnlyLatitudeProperty()
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
@@ -224,7 +224,7 @@ namespace SlowTests.Tests.Spatial
         }
         
         [Fact]
-        public void VerifyNoSpatialPropertiesInResultsWhenSelectingNonSpatialFieldTest()
+        public void VerifyNoSpatialPropertiesInResultsWhenSelectingNonSpatialField()
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
@@ -260,7 +260,7 @@ namespace SlowTests.Tests.Spatial
         }
         
         [Fact]
-        public void VerifyPolygonInResultsTest()
+        public void VerifyPolygonInResults()
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
@@ -308,7 +308,7 @@ namespace SlowTests.Tests.Spatial
         }
         
         [Fact]
-        public void VerifyCirclesInResultsTest()
+        public void VerifyCirclesInResults()
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
@@ -379,7 +379,7 @@ namespace SlowTests.Tests.Spatial
         }
         
         [Fact]
-        public void VerifyWKTCircleHasDistanceTest()
+        public void VerifyWKTCircleHasDistance()
         {
 
             using (var store = GetDocumentStore())
@@ -399,7 +399,7 @@ namespace SlowTests.Tests.Spatial
         }
         
         [Fact]
-        public void VerifyWKTCircleDistanceFormatTest()
+        public void VerifyWKTCircleDistanceFormat()
         {
             using (var store = GetDocumentStore())
             {
