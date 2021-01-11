@@ -1300,6 +1300,8 @@ namespace Raven.Server.Documents
                 return result;
 
             var taken = false;
+            Stopwatch sp = default;
+
             while (taken == false)
             {
                 Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
@@ -1314,6 +1316,8 @@ namespace Raven.Server.Documents
 
                     if (taken == false)
                         continue;
+
+                    sp = Stopwatch.StartNew();
 
                     Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
                         $"{Name} != {record.DatabaseName}");
@@ -1349,7 +1353,21 @@ namespace Raven.Server.Documents
                 finally
                 {
                     if (taken)
+                    {
+                        if (sp?.Elapsed > TimeSpan.FromSeconds(5))
+                        {
+                            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                            using (ctx.OpenReadTransaction())
+                            {
+                                var logs = ServerStore.Engine.LogHistory.GetLogByIndex(ctx, index).Select(djv => ctx.ReadObject(djv, "djv").ToString());
+                                Console.WriteLine(
+                                    $"Lock held for very long time {sp.Elapsed} in database {Name} for command {index} ({string.Join(", ", logs)})");
+                            }
+
+
+                        }
                         Monitor.Exit(_clusterLocker);
+                    }
                 }
             }
 
