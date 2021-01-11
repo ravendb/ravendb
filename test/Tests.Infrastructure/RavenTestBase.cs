@@ -156,23 +156,18 @@ namespace FastTests
             return updateIndex;
         }
 
-        protected long CountOfRaftCommandByType(RavenServer server, string commandType)
+        protected IEnumerable<DynamicJsonValue> GetRaftCommands(RavenServer server, string commandType = null)
         {
-            var count = 0L;
             using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 foreach (var entry in server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
                 {
                     var type = entry[nameof(RachisLogHistory.LogHistoryColumn.Type)].ToString();
-                    if (type == commandType)
-                    {
-                        count++;
-                    }
+                    if (commandType == null || commandType == type)
+                        yield return entry;
                 }
             }
-
-            return count;
         }
 
         protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan? timeout = null)

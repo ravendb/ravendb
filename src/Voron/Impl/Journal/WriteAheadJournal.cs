@@ -267,18 +267,24 @@ namespace Voron.Impl.Journal
                 // corruption when applying journals at recovery time rather than at usage.
                 var tempTx = new TempPagerTransaction();
 
-                var sortedPages = modifiedPages.ToArray();
-                Array.Sort(sortedPages);
-
-                long minPageChecked = -1;
-
                 if (_env.Options.SkipChecksumValidationOnDatabaseLoading == false)
                 {
                     // we need to iterate from the end in order to filter out pages that was overwritten by later transaction
-                    addToInitLog?.Invoke($"Validate checksum on {sortedPages.Length} pages");
+                    var sortedPages = modifiedPages.ToArray();
+
+                    Array.Sort(sortedPages);
+
+                    long minPageChecked = -1;
+                    long minPageOverlappedByAnotherPage = -1;
+
+                    addToInitLog?.Invoke($"Validate checksum on {modifiedPages.Count} pages");
+
                     var sp = Stopwatch.StartNew();
+
                     for (var i = sortedPages.Length - 1; i >= 0; i--)
                     {
+                        var modifiedPage = sortedPages[i];
+
                         if (sp.Elapsed.TotalSeconds >= 60)
                         {
                             sp.Restart();
@@ -287,14 +293,24 @@ namespace Voron.Impl.Journal
 
                         using (tempTx) // release any resources, we just wanted to validate things
                         {
-                            var modifiedPage = sortedPages[i];
-
                             var ptr = (PageHeader*)_dataPager.AcquirePagePointerWithOverflowHandling(tempTx, modifiedPage, null);
 
-                            var maxPageRange = modifiedPage + VirtualPagerLegacyExtensions.GetNumberOfPages(ptr) - 1;
+                            int numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfPages(ptr);
+                            var maxPageRange = modifiedPage + numberOfPages - 1;
 
                             if (minPageChecked != -1 && maxPageRange >= minPageChecked)
                             {
+                                // this page is not in use, there is a valid page having higher number which overlaps this one
+
+                                minPageOverlappedByAnotherPage = modifiedPage;
+                                continue;
+                            }
+
+                            if (minPageOverlappedByAnotherPage != -1 && maxPageRange >= minPageOverlappedByAnotherPage)
+                            {
+                                // this page is not in use, there is a page having higher number which overlaps this one and was modified in later transaction
+
+                                minPageOverlappedByAnotherPage = modifiedPage;
                                 continue;
                             }
 
@@ -303,6 +319,7 @@ namespace Voron.Impl.Journal
                             minPageChecked = modifiedPage;
                         }
                     }
+
                     sp.Stop();
                     addToInitLog?.Invoke($"Validate of {sortedPages.Length} pages completed in {sp.Elapsed}");
                 }
@@ -310,7 +327,7 @@ namespace Voron.Impl.Journal
                 {
                     if (RuntimeInformation.OSArchitecture == Architecture.Arm || RuntimeInformation.OSArchitecture == Architecture.Arm64)
                     {
-                        addToInitLog?.Invoke($"SkipChecksumValidationOnDbLoading set to true. Skipping checksum validation of {sortedPages.Length} pages.");
+                        addToInitLog?.Invoke($"SkipChecksumValidationOnDbLoading set to true. Skipping checksum validation of {modifiedPages.Count} pages.");
                     }
                     else
                     {
