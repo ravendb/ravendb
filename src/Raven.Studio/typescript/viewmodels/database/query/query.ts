@@ -1199,7 +1199,7 @@ class query extends viewModelBase {
     
     private onSpatialLoaded(queryResults: pagedResultExtended<document>) {
         this.isSpatialQuery(false);
-        this.totalNumberOfMarkers(0);
+        let markersCount = 0;
         
         const spatialProperties = queryResults.additionalResultInfo.SpatialProperties;
         if (spatialProperties && queryResults.items.length) {
@@ -1225,13 +1225,15 @@ class query extends viewModelBase {
                     if (latitudeValue != null && longitudeValue != null) {
                         const point: geoPointInfo = { Latitude: latitudeValue, Longitude: longitudeValue, PopupContent: item };
                         pointsArray.push(point);
-                        this.totalNumberOfMarkers(this.totalNumberOfMarkers() + 1);
+                        markersCount++;
                     }
                 }
 
                 const layer = new spatialMarkersLayerModel(latitudeProperty, longitudeProperty, pointsArray);
                 spatialMarkersLayers.push(layer);
             }
+
+            this.totalNumberOfMarkers(markersCount);
 
             const spatialShapes = queryResults.additionalResultInfo.SpatialShapes;
             for (let i = 0; i < spatialShapes.length; i++) {

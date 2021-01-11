@@ -51,7 +51,7 @@ class spatialQueryMap extends viewModelBase {
         }
         
         const dataLayers: Control.LayersObject = {};
-        let markersGroups: MarkerClusterGroup[] = [];
+        const markersGroups: MarkerClusterGroup[] = [];
 
         this.markersLayers().forEach((markersLayer) => {
             const markers: Layer[] = [];
