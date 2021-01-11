@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -20,6 +21,8 @@ namespace SlowTests.Issues
         [Fact]
         public async Task CanGetValueAfterDbFirstCreation_WithPreviousError()
         {
+            DoNotReuseServer();
+
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60)))
             using (var store = GetDocumentStore())
             using (var documentStore = new DocumentStore
@@ -33,9 +36,11 @@ namespace SlowTests.Issues
                 var t = documentStore.Changes()
                     .ForDocumentsInCollection<Version>();
 
-                await Assert.ThrowsAnyAsync<Exception>(() => t.EnsureSubscribedNow().WithCancellation(cts.Token));
+                _ = t.Subscribe(_ => { });
 
-                _ = t.Subscribe(x => { });
+                var e = await Assert.ThrowsAnyAsync<Exception>(() => t.EnsureSubscribedNow().WithCancellation(cts.Token));
+                e = e.ExtractSingleInnerException();
+                Assert.True(e is DatabaseDoesNotExistException);
 
                 // Check if the database exists.
                 var getResult = await documentStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(documentStore.Database), cts.Token).ConfigureAwait(false);
