@@ -26,15 +26,14 @@ class spatialQueryMap extends viewModelBase {
     }
     
     private createMap() {
-
         const osmMap = this.getStreetMapTileLayer();
         const otmMap = this.getTopographyMapTileLayer();
-        const baseLayers =  {
+        const baseLayers = {
             "Streets Map": osmMap,
             "Topography Map": otmMap
         };
 
-        const generatePopupContent = (doc: document) => {
+        const generatePopupHtml = (doc: document) => {
             const docDto = doc.toDto(true);
             const metaDto = docDto["@metadata"];
             documentMetadata.filterMetadata(metaDto);
@@ -42,27 +41,23 @@ class spatialQueryMap extends viewModelBase {
             let text = JSON.stringify(docDto, null, 4);
             text = Prism.highlight(text, (Prism.languages as any)["javascript"]);
 
-            const textHtml = `<div>
-                                    <h4>Document: ${genUtils.escapeHtml(doc.getId())}</h4>
-                                    <hr>
-                                    <pre>${text}</pre>
-                              </div>`;
-            return textHtml;
+            return `<div>
+                          <h4>Document: ${genUtils.escapeHtml(doc.getId())}</h4>
+                          <hr>
+                          <pre>${text}</pre>
+                    </div>`;
         }
         
         const dataLayers: Control.LayersObject = {};
         const markersGroups: MarkerClusterGroup[] = [];
 
-        this.markersLayers().forEach((markersLayer) => {
-            const markers: Layer[] = [];
-            const markersGroup = L.markerClusterGroup();
-
-            markersLayer.geoPoints().forEach((point) => {
-                const pointMarker = L.marker([point.Latitude, point.Longitude], { title: point.PopupContent.getId() })
-                                     .bindPopup(generatePopupContent(point.PopupContent), { 'className' : 'custom-popup', 'maxWidth': 600, 'maxHeight': 400 } );
-                markers.push(pointMarker);
+        this.markersLayers().forEach(markersLayer => {
+            const markers = markersLayer.geoPoints().map(point => {
+                return L.marker([point.Latitude, point.Longitude], { title: point.PopupContent.getId() })
+                    .bindPopup(generatePopupHtml(point.PopupContent), { "className" : "custom-popup", "maxWidth": 600, "maxHeight": 400 } );
             });
 
+            const markersGroup = L.markerClusterGroup();
             markersGroup.addLayers(markers);
             const numberOfMarkersInLayer = markers.length;
             
@@ -77,21 +72,11 @@ class spatialQueryMap extends viewModelBase {
             markersGroups.push(markersGroup);
         })
         
-        const polyArray: Layer[] = [];
-        for (let i = 0; i < this.polygonsLayer().length; i++) {
-            const poly = this.polygonsLayer()[i];
-            const polyItem = L.polygon(poly.vertices,
-                { color: spatialPolygonModel.colors[i % spatialPolygonModel.colors.length] });
-            polyArray.push(polyItem);
-        }
+        const polyArray = this.polygonsLayer().map((poly, index) => L.polygon(poly.vertices,
+            { color: spatialPolygonModel.colors[index % spatialPolygonModel.colors.length] }));
 
-        const circleArray: Layer[] = [];
-        for (let i = 0; i < this.circlesLayer().length; i++) {
-            const circle = this.circlesLayer()[i];
-            const circleItem = L.circle([circle.latitude, circle.longitude],
-                { color: spatialCircleModel.colors[i % spatialCircleModel.colors.length], fillOpacity: 0.4, radius: circle.radius });
-            circleArray.push(circleItem);
-        }
+        const circleArray = this.circlesLayer().map((circle, index) => L.circle([circle.latitude, circle.longitude],
+            { color: spatialCircleModel.colors[index % spatialCircleModel.colors.length], fillOpacity: 0.4, radius: circle.radius }));
         
         const polyLayer = L.layerGroup(polyArray);
         const circleLayer = L.layerGroup(circleArray);
@@ -118,8 +103,8 @@ class spatialQueryMap extends viewModelBase {
         const mapBounds = L.latLngBounds([]);
         markersGroups.forEach(group => mapBounds.extend(group.getBounds()));
        
-        polyArray.forEach(poly => mapBounds.extend((poly as L.Polygon).getBounds()));
-        circleArray.forEach(circ => mapBounds.extend((circ as L.Circle).getBounds()));
+        polyArray.forEach(poly => mapBounds.extend(poly.getBounds()));
+        circleArray.forEach(circ => mapBounds.extend(circ.getBounds()));
         
         map.fitBounds(mapBounds, {padding: [50, 50]});
     }
