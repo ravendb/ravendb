@@ -23,16 +23,14 @@ namespace SlowTests.Issues
         [InlineData(7)]
         public async Task Can_failover_after_consecutive_failures(int nodes)
         {
-            const string databaseName = "test";
-            var (servers, leader) = await CreateRaftCluster(nodes);
-            using (var store = new DocumentStore
+            var (_, leader) = await CreateRaftCluster(nodes);
+
+            using (var store = GetDocumentStore(new Options
             {
-                Urls = new[] { leader.WebUrl },
-                Database = databaseName
-            }.Initialize())
+                Server = leader,
+                ReplicationFactor = nodes
+            }))
             {
-                var (index, _) = await CreateDatabaseInCluster(databaseName, nodes, leader.WebUrl);
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
                 const string id = "orders/1";
 
                 using (var session = (DocumentSession)store.OpenSession())
@@ -41,8 +39,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     Assert.True(await WaitForDocumentInClusterAsync<Order>(
-                        servers,
-                        databaseName,
+                        session,
                         "orders/1",
                         u => u.Company.Equals("Hibernating Rhinos"),
                         TimeSpan.FromSeconds(10)));
@@ -62,7 +59,7 @@ namespace SlowTests.Issues
                         srv => srv.ServerStore.NodeTag.Equals(requestExecutor.TopologyNodes[i].ClusterTag, StringComparison.OrdinalIgnoreCase));
                     Assert.NotNull(serverToDispose);
 
-                    DisposeServerAndWaitForFinishOfDisposal(serverToDispose);
+                    await DisposeServerAndWaitForFinishOfDisposalAsync(serverToDispose);
                 }
 
                 using (var session = store.OpenSession())
@@ -79,17 +76,14 @@ namespace SlowTests.Issues
         [InlineData(7)]
         public async Task Will_throw_when_all_nodes_are_down(int nodes)
         {
-            const string databaseName = "test";
-            var (servers, leader) = await CreateRaftCluster(nodes);
-            using (var store = new DocumentStore
-            {
-                Urls = new []{ leader .WebUrl },
-                Database = databaseName
-            }.Initialize())
-            {
-                var (index, _) = await CreateDatabaseInCluster(databaseName, nodes, leader.WebUrl);
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+            var (_, leader) = await CreateRaftCluster(nodes);
 
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = nodes
+            }))
+            {
                 const string id = "orders/1";
 
                 using (var session = (DocumentSession)store.OpenSession())
@@ -98,8 +92,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     Assert.True(await WaitForDocumentInClusterAsync<Order>(
-                        servers,
-                        databaseName,
+                        session,
                         "orders/1",
                         u => u.Company.Equals("Hibernating Rhinos"),
                         TimeSpan.FromSeconds(10)));
@@ -119,7 +112,7 @@ namespace SlowTests.Issues
                         srv => srv.ServerStore.NodeTag.Equals(node.ClusterTag, StringComparison.OrdinalIgnoreCase));
                     Assert.NotNull(serverToDispose);
 
-                    DisposeServerAndWaitForFinishOfDisposal(serverToDispose);
+                    await DisposeServerAndWaitForFinishOfDisposalAsync(serverToDispose);
                 }
 
                 using (var session = store.OpenSession())
