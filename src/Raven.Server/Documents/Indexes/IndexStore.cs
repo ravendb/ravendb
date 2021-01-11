@@ -858,7 +858,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (definition.State.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.State) != 0)
             {
-                existingIndex.SetState((IndexState)definition.State);
+                existingIndex.SetState(definition.State.Value);
             }
         }
 
