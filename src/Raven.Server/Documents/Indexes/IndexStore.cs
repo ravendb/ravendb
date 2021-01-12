@@ -1426,11 +1426,18 @@ namespace Raven.Server.Documents.Indexes
             return _indexes;
         }
 
-        public void RunIdleOperations()
+        public void RunIdleOperations(CleanupMode mode = CleanupMode.Regular)
         {
             foreach (var index in _indexes)
             {
-                index.Cleanup();
+                var current = mode;
+                if (current != CleanupMode.Deep)
+                {
+                    if (index.NoQueryInLast10Minutes())
+                        current = CleanupMode.Deep;
+                }
+
+                index.Cleanup(current);
             }
 
             long etag;

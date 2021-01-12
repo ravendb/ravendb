@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
         public override FieldComparator NewComparator(string fieldname, int numHits, int sortPos, bool reversed)
         {
-            return new AlphaNumericFieldComparator(fieldname, _context.AllocatePooledArray<string>(numHits));
+            return new AlphaNumericFieldComparator(fieldname, numHits);
         }
     }
 }

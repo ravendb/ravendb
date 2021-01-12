@@ -31,9 +31,12 @@ namespace Raven.Server
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Program>("Server");
 
-        public static int Main(string[] args)
+        public static unsafe int Main(string[] args)
         {
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
+
+            Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
+            Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.Free;
 
             UseOnlyInvariantCultureInRavenDB();
 
