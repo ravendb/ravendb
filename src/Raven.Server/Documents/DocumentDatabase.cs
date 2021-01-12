@@ -900,8 +900,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void RunIdleOperations()
+        public void RunIdleOperations(CleanupMode mode = CleanupMode.Regular)
         {
+            Debug.Assert(mode != CleanupMode.None, "mode != CleanupMode.None");
+            if (mode == CleanupMode.None)
+                return;
+
             if (Monitor.TryEnter(_idleLocker) == false)
                 return;
 
@@ -911,7 +915,7 @@ namespace Raven.Server.Documents
                 var utcNow = DateTime.UtcNow;
 
                 _lastIdleTicks = utcNow.Ticks;
-                IndexStore?.RunIdleOperations();
+                IndexStore?.RunIdleOperations(mode);
                 Operations?.CleanupOperations();
                 SubscriptionStorage?.CleanupSubscriptions();
 
@@ -1635,5 +1639,12 @@ namespace Raven.Server.Documents
                 return new DisposableAction(() => ActionToCallDuringDocumentDatabaseInternalDispose = null);
             }
         }
+    }
+
+    public enum CleanupMode
+    {
+        None,
+        Regular,
+        Deep
     }
 }

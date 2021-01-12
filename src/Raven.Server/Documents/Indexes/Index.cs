@@ -1225,7 +1225,7 @@ namespace Raven.Server.Documents.Indexes
 
                             if (_lowMemoryFlag.IsRaised())
                             {
-                                ReduceMemoryUsage(storageEnvironment);
+                                ReduceMemoryUsage(storageEnvironment, CleanupMode.Regular);
                             }
                             else if (_allocationCleanupNeeded > 0)
                             {
@@ -1272,7 +1272,9 @@ namespace Raven.Server.Documents.Indexes
                                 // there is no work to be done, and hasn't been for a while,
                                 // so this is a good time to release resources we won't need 
                                 // anytime soon
-                                ReduceMemoryUsage(storageEnvironment);
+
+                                var mode = NoQueryInLast10Minutes() ? CleanupMode.Deep : CleanupMode.Regular;
+                                ReduceMemoryUsage(storageEnvironment, mode);
 
                                 if (forceMemoryCleanup)
                                     continue;
@@ -1353,12 +1355,12 @@ namespace Raven.Server.Documents.Indexes
             batchCompletedAction?.Invoke((Name, didWork));
         }
 
-        public void Cleanup()
+        public void Cleanup(CleanupMode mode)
         {
             if (_initialized == false)
                 return;
 
-            ReduceMemoryUsage(_environment);
+            ReduceMemoryUsage(_environment, mode);
         }
 
         protected virtual bool ShouldReplace()
@@ -1415,7 +1417,7 @@ namespace Raven.Server.Documents.Indexes
                 _logsAppliedEvent.Set();
         }
 
-        private void ReduceMemoryUsage(StorageEnvironment environment)
+        private void ReduceMemoryUsage(StorageEnvironment environment, CleanupMode mode)
         {
             if (_indexingInProgress.Wait(0) == false)
                 return;
@@ -1429,7 +1431,7 @@ namespace Raven.Server.Documents.Indexes
                 DocumentDatabase.DocumentsStorage.ContextPool.Clean();
                 _contextPool.Clean();
                 ByteStringMemoryCache.CleanForCurrentThread();
-                IndexPersistence.Clean();
+                IndexPersistence.Clean(mode);
                 environment?.Cleanup();
 
                 _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
@@ -2031,7 +2033,7 @@ namespace Raven.Server.Documents.Indexes
 
                 Stop(disableIndex: true);
                 SetState(IndexState.Disabled);
-                Cleanup();
+                Cleanup(CleanupMode.Deep);
             }
         }
 
@@ -2333,6 +2335,13 @@ namespace Raven.Server.Documents.Indexes
         public DateTime? GetLastQueryingTime()
         {
             return _lastQueryingTime;
+        }
+
+        public bool NoQueryInLast10Minutes()
+        {
+            var last = _lastQueryingTime;
+            return last.HasValue == false || 
+                   DocumentDatabase.Time.GetUtcNow() - last.Value > TimeSpan.FromMinutes(10);
         }
 
         private void MarkQueried(DateTime time)

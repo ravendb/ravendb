@@ -35,13 +35,15 @@ namespace Tests.Infrastructure
     [Trait("Category", "Rachis")]
     public class RachisConsensusTestBase : XunitLoggingBase, IDisposable
     {
-        static RachisConsensusTestBase()
+        static unsafe RachisConsensusTestBase()
         {
             XunitLogging.RedirectStreams = false;
             XunitLogging.Init();
             XunitLogging.EnableExceptionCapture();
 
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
+            Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
+            Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.Free;
             JsonDeserializationCluster.Commands.Add(nameof(TestCommand), JsonDeserializationBase.GenerateJsonDeserializationRoutine<TestCommand>());
         }
 
