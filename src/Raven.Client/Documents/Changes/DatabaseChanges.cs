@@ -408,9 +408,15 @@ namespace Raven.Client.Documents.Changes
                 return new DatabaseConnectionState(OnConnect, OnDisconnect);
             });
 
-            // try to reconnect
-            if (newValue && Volatile.Read(ref _immediateConnection) != 0)
+            if (_tcs.Task.IsFaulted)
+            {
+                counter.Set(_tcs.Task);
+            }
+            else if (newValue && Volatile.Read(ref _immediateConnection) != 0)
+            {
+                // try to reconnect
                 counter.Set(counter.OnConnect());
+            }
 
             return counter;
         }

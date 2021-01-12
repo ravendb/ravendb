@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -18,8 +19,10 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task CanGetValueAfterDbFirstCreation_WithPreviousError()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanGetValueAfterDbFirstCreation_WithPreviousError(bool waitForDatabaseChangesFailure)
         {
             DoNotReuseServer();
 
@@ -33,14 +36,16 @@ namespace SlowTests.Issues
             {
                 documentStore.Initialize();
                 // Subscribing to Changes API before database is created causes the DatabaseDoesNotExistException later on.
-                var t = documentStore.Changes()
-                    .ForDocumentsInCollection<Version>();
+                var changes = documentStore.Changes();
+                if (waitForDatabaseChangesFailure)
+                    await AssertChangesApiTaskFailure(changes);
 
-                _ = t.Subscribe(_ => { });
-
+                var t = changes.ForDocumentsInCollection<Version>();
                 var e = await Assert.ThrowsAnyAsync<Exception>(() => t.EnsureSubscribedNow().WithCancellation(cts.Token));
                 e = e.ExtractSingleInnerException();
                 Assert.True(e is DatabaseDoesNotExistException);
+
+                _ = t.Subscribe(x => { });
 
                 // Check if the database exists.
                 var getResult = await documentStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(documentStore.Database), cts.Token).ConfigureAwait(false);
@@ -64,6 +69,18 @@ namespace SlowTests.Issues
                     await documentStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(documentStore.Database, true), cts.Token);
                 }
             }
+        }
+
+        private async Task AssertChangesApiTaskFailure(IDatabaseChanges changes)
+        {
+            Task<IDatabaseChanges> changesTask = null;
+            Assert.Equal(TaskStatus.Faulted, await WaitForValueAsync(() =>
+            {
+                changesTask = changes.EnsureConnectedNow();
+                return changesTask.Status;
+            }, TaskStatus.Faulted));
+            Assert.NotNull(changesTask.Exception.InnerException);
+            Assert.Equal(typeof(DatabaseDoesNotExistException), changesTask.Exception.InnerException.GetType());
         }
     }
 }
