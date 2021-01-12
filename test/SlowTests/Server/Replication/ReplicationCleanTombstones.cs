@@ -435,7 +435,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 await ActionWithLeader((l) => WaitForRaftCommandToBeAppliedInCluster(l, nameof(UpdateEtlProcessStateCommand)));
-                Assert.True(WaitForEtlState(cluster, store, changeVectorMarker2));
+                Assert.True(await WaitForEtlState(cluster, store, changeVectorMarker2));
 
                 total = 0;
                 foreach (var server in cluster.Nodes)
@@ -475,7 +475,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        private static bool WaitForEtlState((List<RavenServer> Nodes, RavenServer Leader) cluster, DocumentStore store, string changeVectorMarker2)
+        private static async Task<bool> WaitForEtlState((List<RavenServer> Nodes, RavenServer Leader) cluster, DocumentStore store, string changeVectorMarker2)
         {
             EtlProcess etlP = null;
             foreach (var server in cluster.Nodes)
@@ -488,11 +488,11 @@ namespace SlowTests.Server.Replication
             var total = 0;
             foreach (var server in cluster.Nodes.Where(server => (server.Disposed  == false)))
             {
-                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context2))
-                using (context2.OpenReadTransaction())
+                var sw = Stopwatch.StartNew();
+                while (sw.ElapsedMilliseconds < 10000)
                 {
-                    var sw = Stopwatch.StartNew();
-                    while (sw.ElapsedMilliseconds < 10000)
+                    using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context2))
+                    using (context2.OpenReadTransaction())
                     {
                         var stateBlittable = server.ServerStore.Cluster.Read(context2,
                             EtlProcessState.GenerateItemName(store.Database, etlP.ConfigurationName, etlP.TransformationName));
@@ -504,8 +504,9 @@ namespace SlowTests.Server.Replication
                                 break;
                             }
                         }
-                        Thread.Sleep(100);
                     }
+
+                    await Task.Delay(100);
                 }
             }
             return total == 2;
