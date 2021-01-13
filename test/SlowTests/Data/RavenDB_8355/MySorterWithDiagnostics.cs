@@ -15,7 +15,7 @@ namespace SlowTests.Data.RavenDB_8355
         public MySorterWithDiagnostics(string fieldName, int numHits, int sortPos, bool reversed, List<string> diagnostics)
         {
             _diagnostics = diagnostics;
-            _inner = new AlphaNumericFieldComparator(fieldName, new string[numHits]);
+            _inner = new AlphaNumericFieldComparator(fieldName, numHits);
         }
 
         public override int Compare(int slot1, int slot2)
