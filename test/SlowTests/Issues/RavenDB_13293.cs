@@ -57,6 +57,7 @@ namespace SlowTests.Issues
                     }, "users/1-A");
                     await session.SaveChangesAsync();
                 }
+                await WaitForDocumentInClusterAsync<User>(store.GetRequestExecutor().Topology.Nodes, "users/1-A", predicate: null, TimeSpan.FromSeconds(15));
 
                 IDatabaseChanges databaseChanges;
                 foreach (var node in myNodesList)
@@ -125,7 +126,12 @@ namespace SlowTests.Issues
                     };
                     var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
                     await WaitForRaftIndexToBeAppliedOnClusterNodes(result.RaftCommandIndex, cluster.Nodes);
-                    var res = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.Backup));
+                    OngoingTask res = null;
+                    await WaitForValueAsync(async () =>
+                    {
+                        res = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.Backup));
+                        return res.ResponsibleNode.NodeTag;
+                    }, node, interval: 333);
                     Assert.NotNull(res);
                     Assert.True(node == res.MentorNode, $"node({node}) == res.MentorNode({res.MentorNode})");
                     Assert.True(node == res.ResponsibleNode.NodeTag, $"node({node}) == res.ResponsibleNode.NodeTag({res.ResponsibleNode.NodeTag})");
@@ -214,6 +220,7 @@ namespace SlowTests.Issues
                         {Constants.Documents.Metadata.Collection, "Items"}
                     });
 
+                    await WaitForDocumentInClusterAsync<dynamic>(store.GetRequestExecutor().Topology.Nodes, "items/1", predicate: null, TimeSpan.FromSeconds(15));
                     WaitForIndexingInTheCluster(store, timeout: TimeSpan.FromSeconds(60));
 
                     Operation operation = await store.Operations.SendAsync(new PatchByQueryOperation(new IndexQuery
