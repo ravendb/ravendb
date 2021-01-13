@@ -55,6 +55,11 @@ namespace Raven.Server.Rachis
 
         internal override RachisVersionValidation Validator => StateMachine.Validator;
 
+        public void SkipEntryFromRaftLog(long index)
+        {
+            StateMachine.skipIndex = index;
+        }
+
         public override void Notify(Notification notification)
         {
             _serverStore.NotificationCenter.Add(notification, updateExisting: false);
