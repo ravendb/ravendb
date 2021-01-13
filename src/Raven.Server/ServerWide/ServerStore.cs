@@ -2175,8 +2175,8 @@ namespace Raven.Server.ServerWide
 
                         var database = db.Value.Result;
 
-                        if (DatabaseNeedsToRunIdleOperations(database))
-                            database.RunIdleOperations();
+                        if (DatabaseNeedsToRunIdleOperations(database, out var mode))
+                            database.RunIdleOperations(mode);
                     }
                     catch (Exception e)
                     {
@@ -2261,7 +2261,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database)
+        private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database, out CleanupMode mode)
         {
             var now = DateTime.UtcNow;
 
@@ -2275,7 +2275,20 @@ namespace Raven.Server.ServerWide
                     maxLastWork = env.Environment.LastWorkTime;
             }
 
-            return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
+            if ((now - maxLastWork).TotalMinutes > 5)
+            {
+                mode = CleanupMode.Deep;
+                return true;
+            }
+
+            if ((now - database.LastIdleTime).TotalMinutes > 10)
+            {
+                mode = CleanupMode.Regular;
+                return true;
+            }
+
+            mode = CleanupMode.None;
+            return false;
         }
 
         public void AssignNodesToDatabase(ClusterTopology clusterTopology, DatabaseRecord record)

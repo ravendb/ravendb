@@ -40,11 +40,12 @@ namespace SlowTests.Cluster
         public async Task ProxyServer_should_work()
         {
             int serverPort = 10000;
-            using (var server = GetNewServer(new ServerCreationOptions { CustomSettings = GetServerSettingsForPort(false, out var _), RegisterForDisposal = false }))
-            using (var proxy = new ProxyServer(ref serverPort, Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2])))
-            {
-                Servers.Add(server);
 
+            var cluster = await CreateRaftCluster(1, customSettings: GetServerSettingsForPort(false, out _));
+            var server = cluster.Leader;
+
+            await using (var proxy = new ProxyServer(ref serverPort, Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2])))
+            {
                 var databaseName = GetDatabaseName();
                 using (var documentStore = new DocumentStore
                 {
