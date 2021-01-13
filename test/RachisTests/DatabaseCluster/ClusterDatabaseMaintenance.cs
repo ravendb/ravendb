@@ -1168,6 +1168,9 @@ namespace RachisTests.DatabaseCluster
 
                 await WaitForDocumentInClusterAsync<User>(store.GetRequestExecutor().TopologyNodes, "foo.bar", null, TimeSpan.FromSeconds(10));
 
+                // it takes a heartbeat to update the sibling change vector
+                await Task.Delay(2 * cluster.Leader.ServerStore.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = new User();

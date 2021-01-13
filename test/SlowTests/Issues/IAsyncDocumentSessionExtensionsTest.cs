@@ -51,6 +51,7 @@ namespace SlowTests.Issues
                 Assert.Equal(10, count);
             }
         }
+
         [Fact]
         public void CanStreamStartWith()
         {
@@ -82,6 +83,48 @@ namespace SlowTests.Issues
                     }
                 }
                 Assert.Equal(10, count);
+            }
+        }
+
+        [Fact]
+        public async Task CanStreamStartWithAndStartAfter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.StoreAsync(new User(), "users/3");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var count = await GetStreamCount("users/0");
+                    Assert.Equal(2, count);
+
+                    count = await GetStreamCount("users/1");
+                    Assert.Equal(1, count);
+
+                    count = await GetStreamCount("users/2");
+                    Assert.Equal(1, count);
+
+                    count = await GetStreamCount("users/3");
+                    Assert.Equal(0, count);
+
+                    async Task<int> GetStreamCount(string startAfter)
+                    {
+                        var stream = await session.Advanced.StreamAsync<User>("users/", startAfter: startAfter);
+
+                        var usersCount = 0;
+                        while (await stream.MoveNextAsync())
+                        {
+                            usersCount++;
+                        }
+
+                        return usersCount;
+                    }
+                }
             }
         }
     }
