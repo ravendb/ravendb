@@ -17,7 +17,7 @@ namespace Raven.Server.Rachis
         protected TransactionContextPool ContextPoolForReadOnlyOperations;
         protected RachisConsensus _parent;
         public RachisVersionValidation Validator;
-
+        public long skipIndex;
         public virtual void Initialize(RachisConsensus parent, TransactionOperationContext context)
         {
             _parent = parent;
@@ -33,6 +33,9 @@ namespace Raven.Server.Rachis
             var maxTimeAllowedToWaitForApply = _parent.Timeout.TimeoutPeriod / 4;
             for (var index = lastAppliedIndex + 1; index <= uptoInclusive; index++)
             {
+                if (skipIndex == index)
+                    continue;
+
                 var cmd = _parent.GetEntry(context, index, out RachisEntryFlags flags);
                 if (cmd == null || flags == RachisEntryFlags.Invalid)
                     throw new InvalidOperationException("Expected to apply entry " + index + " but it isn't stored");
