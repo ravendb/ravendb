@@ -71,8 +71,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             return new RevisionTombstoneReplicationItem
             {
-                Collection = Collection,
-                Id = Id
+                Collection = Collection.Clone(context),
+                Id = Id.Clone(context)
             };
         }
 

@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -62,10 +63,15 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         protected override ReplicationBatchItem CloneInternal(JsonOperationContext context)
         {
-            return new AttachmentTombstoneReplicationItem
+            var item = new AttachmentTombstoneReplicationItem();
+            var keyMem = Key.CloneToJsonContext(context, out item.Key);
+
+            item.ToDispose(new DisposableAction(() =>
             {
-                Key = Key
-            };
+                context.ReturnMemory(keyMem);
+            }));
+
+            return item;
         }
 
         public override void InnerDispose()

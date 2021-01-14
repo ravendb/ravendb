@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -121,12 +122,20 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
             var item = new AttachmentReplicationItem
             {
-                Base64Hash = Base64Hash,
-                ContentType = ContentType,
-                Name = Name,
-                Key = Key,
+                ContentType = ContentType.Clone(context),
+                Name = Name.Clone(context), 
                 Stream = stream
             };
+            
+            var baseMem = Base64Hash.CloneToJsonContext(context, out item.Base64Hash);
+            var keyMem = Key.CloneToJsonContext(context, out item.Key);
+            
+
+            item.ToDispose(new DisposableAction(() =>
+            {
+                context.ReturnMemory(baseMem);
+                context.ReturnMemory(keyMem);
+            }));
 
             return item;
         }
