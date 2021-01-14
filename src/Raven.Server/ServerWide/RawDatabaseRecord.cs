@@ -438,6 +438,30 @@ namespace Raven.Server.ServerWide
             }
         }
 
+
+        private List<ParquetEtlConfiguration> _parquetEtls;
+
+        public List<ParquetEtlConfiguration> ParquetEtls
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.ParquetEtls;
+
+                if (_parquetEtls == null)
+                {
+                    _parquetEtls = new List<ParquetEtlConfiguration>();
+                    if (_record.TryGet(nameof(DatabaseRecord.ParquetEtls), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        foreach (BlittableJsonReaderObject element in bjra)
+                            _parquetEtls.Add(JsonDeserializationCluster.ParquetEtlConfiguration(element));
+                    }
+                }
+
+                return _parquetEtls;
+            }
+        }
+
         private Dictionary<string, string> _settings;
 
         public Dictionary<string, string> Settings

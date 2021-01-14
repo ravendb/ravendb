@@ -8,65 +8,91 @@ using Parquet.Data;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Server.Documents.ETL.Providers.SQL;
+using Raven.Server.Documents.ETL.Providers.S3;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 
-namespace Raven.Server.Documents.ETL.Providers.S3
+namespace Raven.Server.Documents.ETL.Providers.Parquet
 {
-    public class S3Etl : EtlProcess<ToS3Item, RowGroups, S3EtlConfiguration, S3ConnectionString>
+    public class ParquetEtl : EtlProcess<ToParquetItem, RowGroups, ParquetEtlConfiguration, ParquetEtlConnectionString>
     {
-        public const string S3EtlTag = "S3 ETL";
+        public const string ParquetEtlTag = "Parquet ETL";
 
         public readonly S3EtlMetricsCountersManager S3Metrics = new S3EtlMetricsCountersManager();
 
         private Timer _timer;
+        private const long MinTimeToWait = 1000;
 
-        public S3Etl(Transformation transformation, S3EtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
-            : base(transformation, configuration, database, serverStore, S3EtlTag)
+        public ParquetEtl(Transformation transformation, ParquetEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
+            : base(transformation, configuration, database, serverStore, ParquetEtlTag)
         {
             Metrics = S3Metrics;
+            var etlFrequency = configuration.ETLFrequency;
+            var dueTime = GetDueTime(etlFrequency);
 
-            _timer = new Timer(_ => _waitForChanges.Set(), null, TimeSpan.Zero, configuration.ETLFrequency);
+            _timer = new Timer(_ => _waitForChanges.Set(), null, dueTime, etlFrequency);
         }
 
-        public override EtlType EtlType => EtlType.S3;
-
-        private static readonly IEnumerator<ToS3Item> EmptyEnumerator = Enumerable.Empty<ToS3Item>().GetEnumerator();
-
-        protected override IEnumerator<ToS3Item> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
+        private TimeSpan GetDueTime(TimeSpan etlFrequency)
         {
-            return new DocumentsToS3Items(docs, collection);
+            var state = GetProcessState(Database, Configuration.Name, Transformation.Name);
+            if (state.LastBatchTime <= 0) 
+                return TimeSpan.Zero;
+            
+            // todo test this
+
+            var nowMs = Database.Time.GetUtcNow().EnsureMilliseconds().Ticks / 10_000;
+            var timeSinceLastBatch = nowMs - state.LastBatchTime;
+
+            var dueTime = etlFrequency.TotalMilliseconds - timeSinceLastBatch;
+
+            if (dueTime < MinTimeToWait)
+                return TimeSpan.Zero;
+
+            return TimeSpan.FromMilliseconds(dueTime);
         }
 
-        protected override IEnumerator<ToS3Item> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
+        public override EtlType EtlType => EtlType.Parquet;
+
+        private static readonly IEnumerator<ToParquetItem> EmptyEnumerator = Enumerable.Empty<ToParquetItem>().GetEnumerator();
+
+        protected override IEnumerator<ToParquetItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
+        {
+            return new DocumentsToParquetItems(docs, collection);
+        }
+
+        protected override IEnumerator<ToParquetItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
         {
             return EmptyEnumerator; // todo
             throw new NotSupportedException("Tombstones aren't supported by S3 ETL");
         }
 
-        protected override IEnumerator<ToS3Item> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
+        protected override IEnumerator<ToParquetItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
         {
             throw new NotSupportedException("Attachment tombstones aren't supported by S3 ETL");
         }
 
-        protected override IEnumerator<ToS3Item> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection)
+        protected override IEnumerator<ToParquetItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection)
         {
             throw new NotSupportedException("Counters aren't supported by S3 ETL");
         }
 
-        protected override IEnumerator<ToS3Item> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
+        protected override IEnumerator<ToParquetItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
         {
             // todo
             throw new NotImplementedException();
         }
 
-        protected override IEnumerator<ToS3Item> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
+        protected override IEnumerator<ToParquetItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
         {
             throw new NotSupportedException("Time series deletes aren't supported by S3 ETL");
         }
+
+        protected override bool ShouldUpdateOnLastBatch => true;
+
 
         public override void NotifyAboutWork(DatabaseChange change)
         {
@@ -88,9 +114,9 @@ namespace Raven.Server.Documents.ETL.Providers.S3
 
         public override bool ShouldTrackTimeSeries() => false;
 
-        protected override EtlTransformer<ToS3Item, RowGroups> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<ToParquetItem, RowGroups> GetTransformer(DocumentsOperationContext context)
         {
-            return new S3DocumentTransformer(Transformation, Database, context, Configuration);
+            return new ParquetDocumentTransformer(Transformation, Database, context, Configuration);
         }
 
         protected override int LoadInternal(IEnumerable<RowGroups> records, DocumentsOperationContext context)
@@ -99,13 +125,12 @@ namespace Raven.Server.Documents.ETL.Providers.S3
 
             foreach (var rowGroups in records)
             {
+                var fields = rowGroups.Fields.Values;
                 var path = GetTempPath();
 
                 // todo split to multiple files if needed
                 using (Stream fileStream = File.OpenWrite(path))
                 {
-                    var fields = rowGroups.Fields;
-
                     using (var parquetWriter = new ParquetWriter(new Schema(fields), fileStream))
                     {
                         foreach (var rowGroup in rowGroups.Groups)
@@ -113,16 +138,17 @@ namespace Raven.Server.Documents.ETL.Providers.S3
                             // create a new row group in the file
                             using (ParquetRowGroupWriter groupWriter = parquetWriter.CreateRowGroup())
                             {
-                                for (var index = 0; index < rowGroup.Data.Length; index++)
+                                foreach (var kvp in rowGroup.Data)
                                 {
-                                    var data = rowGroup.Data[index];
-                                    var field = (DataField)fields[index];
+                                    var data = kvp.Value;
+                                    var field = rowGroups.Fields[kvp.Key];
                                     Array array = default;
 
                                     // todo handle more types
                                     switch (field.DataType)
                                     {
                                         case DataType.Unspecified:
+                                            // todo
                                             break;
                                         case DataType.Boolean:
                                             array = ((List<bool>)data).ToArray();
@@ -163,7 +189,7 @@ namespace Raven.Server.Documents.ETL.Providers.S3
         private string GetTempPath()
         {
             var dir = Configuration.TempDirectoryPath ?? Path.GetTempPath();
-            var fileName = $"{Guid.NewGuid()}.parquet"; 
+            var fileName = $"{Database.Name}_{Guid.NewGuid()}.parquet"; 
 
             return Path.Combine(dir, fileName);
         }
