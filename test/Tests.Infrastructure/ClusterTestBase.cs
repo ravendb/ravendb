@@ -22,6 +22,7 @@ using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Platform;
 using Xunit;
@@ -790,6 +791,70 @@ namespace Tests.Infrastructure
             {
                 WaitForIndexing(store, dbName, timeout, allowErrors, nodeTag);
             }
+        }
+
+        
+        public async Task StoreInTransactionMode(IDocumentStore store, int n)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    await session.StoreAsync(new User() { Name = "userT" + i }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+            }
+        }
+
+        public async Task DeleteInTransactionMode(IDocumentStore store, int n)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Delete( "users/1");
+                    await session.SaveChangesAsync();
+                }
+            }
+
+        }
+        public async Task DeleteAndStoreInTransactionMode(IDocumentStore store, int n)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Delete("users/1");
+                    await session.StoreAsync(new User() { Name = "userT" + i }, "users/2");
+                    await session.SaveChangesAsync();
+                }
+            }
+
+        }
+        public async Task StoreInRegularMode(IDocumentStore store, int n)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User() { Name = "userR" + i }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+            }
+
+        }
+
+        public async Task DeleteInRegularMode(IDocumentStore store, int n)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete( "users/1");
+                    await session.SaveChangesAsync();
+                }
+            }
+
         }
 
         public override void Dispose()
