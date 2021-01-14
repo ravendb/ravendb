@@ -25,13 +25,15 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public HashSet<string> SkippedTimeSeriesDocs { get; set; }
 
+        public long LastBatchTime { get; set; }
+
         private UpdateEtlProcessStateCommand()
         {
             // for deserialization
         }
 
         public UpdateEtlProcessStateCommand(string databaseName, string configurationName, string transformationName, long lastProcessedEtag, string changeVector,
-            string nodeTag, bool hasHighlyAvailableTasks, string uniqueRequestId, HashSet<string> skippedTimeSeriesDocs) : base(databaseName, uniqueRequestId)
+            string nodeTag, bool hasHighlyAvailableTasks, string uniqueRequestId, HashSet<string> skippedTimeSeriesDocs, long batchTimeMilliseconds = 0) : base(databaseName, uniqueRequestId)
         {
             ConfigurationName = configurationName;
             TransformationName = transformationName;
@@ -40,6 +42,9 @@ namespace Raven.Server.ServerWide.Commands.ETL
             NodeTag = nodeTag;
             HasHighlyAvailableTasks = hasHighlyAvailableTasks;
             SkippedTimeSeriesDocs = skippedTimeSeriesDocs;
+
+            if (batchTimeMilliseconds > 0)
+                LastBatchTime = batchTimeMilliseconds;
         }
 
         public override string GetItemId()
@@ -69,6 +74,18 @@ namespace Raven.Server.ServerWide.Commands.ETL
                     if (sqlEtls[i].Name == ConfigurationName)
                     {
                         return sqlEtls[i];
+                    }
+                }
+            }
+
+            var parquetEtls = record.ParquetEtls;
+            if (parquetEtls != null)
+            {
+                for (var i = 0; i < parquetEtls.Count; i++)
+                {
+                    if (parquetEtls[i].Name == ConfigurationName)
+                    {
+                        return parquetEtls[i];
                     }
                 }
             }
@@ -107,6 +124,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
             etlState.ChangeVector = ChangeVector;
             etlState.NodeTag = NodeTag;
             etlState.SkippedTimeSeriesDocs = SkippedTimeSeriesDocs;
+            etlState.LastBatchTime = LastBatchTime;
+
 
             return context.ReadObject(etlState.ToJson(), GetItemId());
         }

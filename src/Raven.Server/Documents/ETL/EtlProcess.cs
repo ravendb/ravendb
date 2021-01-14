@@ -711,11 +711,13 @@ namespace Raven.Server.Documents.ETL
                         statsAggregator.Complete();
                     }
 
-                    if (didWork)
+                    if (didWork || ShouldUpdateOnLastBatch)
                     {
+                        var batchTimeMilliseconds = didWork ? 0 : startTime.Ticks / 10_000;
+
                         var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
                             ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
-                            _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId(), state.SkippedTimeSeriesDocs);
+                            _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId(), state.SkippedTimeSeriesDocs, batchTimeMilliseconds);
 
                         try
                         {
@@ -731,12 +733,15 @@ namespace Raven.Server.Documents.ETL
                             return;
                         }
 
-                        if (CancellationToken.IsCancellationRequested == false)
+                        if (didWork)
                         {
-                            Database.EtlLoader.OnBatchCompleted(ConfigurationName, TransformationName, Statistics);
-                        }
+                            if (CancellationToken.IsCancellationRequested == false)
+                            {
+                                Database.EtlLoader.OnBatchCompleted(ConfigurationName, TransformationName, Statistics);
+                            }
 
-                        continue;
+                            continue;
+                        }
                     }
                     try
                     {
@@ -817,6 +822,8 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract bool ShouldFilterOutHiLoDocument();
 
+        protected virtual bool ShouldUpdateOnLastBatch => false;
+        
         private static bool AlreadyLoadedByDifferentNode(ExtractedItem item, EtlProcessState state)
         {
             var conflictStatus = ChangeVectorUtils.GetConflictStatus(
