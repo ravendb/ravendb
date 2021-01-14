@@ -633,13 +633,6 @@ namespace FastTests
             throw new TimeoutException(msg);
         }
 
-        protected async Task<T> AssertWaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
-        {
-            var ret = await WaitForValueAsync(act, expectedVal, timeout, interval);
-            Assert.Equal(expectedVal, ret);
-            return ret;
-        }
-
         protected async Task<T> AssertWaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class
         {
             var ret = await WaitForNotNullAsync(act, timeout, interval);

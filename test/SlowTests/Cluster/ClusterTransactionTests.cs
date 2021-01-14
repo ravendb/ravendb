@@ -1291,6 +1291,54 @@ namespace SlowTests.Cluster
             }
         }
 
+        [Fact]
+        public async Task ClusterTransactionShouldBeRedirectedFromPromotableNode()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var database = GetDatabaseName();
+            var dbCreation = await CreateDatabaseInClusterInner(new DatabaseRecord(database), 2, leader.WebUrl, null);
+
+            using (var storeB = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { dbCreation.Servers[0].WebUrl }
+            }.Initialize())
+            {
+                await StoreInRegularMode(storeB, 3);
+
+                var result = await leader.ServerStore.SendToLeaderAsync(new DeleteDatabaseCommand(database, Guid.NewGuid().ToString())
+                {
+                    HardDelete = true,
+                    FromNodes = new[] { dbCreation.Servers[0].ServerStore.NodeTag },
+                });
+
+                await WaitForRaftIndexToBeAppliedInCluster(result.Index, TimeSpan.FromSeconds(10));
+
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    var record = await storeB.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
+                    return record.DeletionInProgress.Count;
+                }, 0);
+
+                var breakRepl = await BreakReplication(dbCreation.Servers[1].ServerStore, database);
+
+                await storeB.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(database, dbCreation.Servers[0].ServerStore.NodeTag));
+
+                await StoreInTransactionMode(storeB, 1);
+
+                breakRepl.Mend();
+
+                var val = await WaitForValueAsync(async () => await GetMembersCount(storeB, database), 2, 20000);
+                Assert.Equal(2, val);
+
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    var record = await storeB.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
+                    return record.DeletionInProgress.Count;
+                }, 0);
+            }
+        }
+
         private class UserByName : AbstractIndexCreationTask<User>
         {
             public UserByName()
