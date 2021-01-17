@@ -136,7 +136,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(fileName) + ".ravendbdump";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-
+                HttpContext.Response.Headers["Content-Type"] = "text/ravendbdump";
+                
                 try
                 {
                     await Database.Operations.AddOperation(
