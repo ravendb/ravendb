@@ -238,5 +238,9 @@ namespace Raven.Client.Json.Serialization
 
         internal static readonly ConcurrentDictionary<Type, Func<BlittableJsonReaderObject, TimeSeriesRangeResult>> CacheForTimeSeriesRangeResult =
             new ConcurrentDictionary<Type, Func<BlittableJsonReaderObject, TimeSeriesRangeResult>>();
+
+        internal static readonly Func<BlittableJsonReaderObject, GetRevisionsCountCommand.DocumentRevisionsCount> DocumentRevisionsCount = GenerateJsonDeserializationRoutine<GetRevisionsCountCommand.DocumentRevisionsCount>();
+
+
     }
 }

@@ -297,7 +297,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
-            var documentRevisionsDetails = new DocumentRevisionsCount()
+            var documentRevisionsDetails = new GetRevisionsCountCommand.DocumentRevisionsCount()
             {
                 RevisionsCount = 0
             };
@@ -423,19 +423,6 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return Task.CompletedTask;
-        }
-    }
-
-    public class DocumentRevisionsCount : IDynamicJson
-    {
-        public long RevisionsCount { get; set; }
-        
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(RevisionsCount)] = RevisionsCount
-            };
         }
     }
 }
