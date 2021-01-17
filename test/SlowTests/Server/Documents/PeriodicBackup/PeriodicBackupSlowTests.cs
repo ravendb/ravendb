@@ -1584,7 +1584,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Assert.Equal(databaseLastEtag, backupLastEtag);
         }
 
-        private void RunBackup(long taskId, DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
+        internal static void RunBackup(long taskId, DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store, OperationStatus opStatus = OperationStatus.Completed)
         {
             var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
             var op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
@@ -1592,9 +1592,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 var status = store.Maintenance.Send(new GetOperationStateOperation(op)).Status;
                 return status;
-            }, OperationStatus.Completed);
+            }, opStatus);
 
-            Assert.Equal(OperationStatus.Completed, value);
+            Assert.Equal(opStatus, value);
         }
 
         private static string GetBackupPath(IDocumentStore store, long backTaskId, bool incremental = true)
