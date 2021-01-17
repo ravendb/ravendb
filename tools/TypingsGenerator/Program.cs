@@ -279,7 +279,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(RevertRevisionsRequest));
             scripter.AddType(typeof(RevertResult));
             scripter.AddType(typeof(EnforceConfigurationResult));
-            scripter.AddType(typeof(DocumentRevisionsCount));
+            scripter.AddType(typeof(GetRevisionsCountCommand.DocumentRevisionsCount));
             
             // server dashboard
             scripter.AddType(typeof(DashboardNotificationType));
