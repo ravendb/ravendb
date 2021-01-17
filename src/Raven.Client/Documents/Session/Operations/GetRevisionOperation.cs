@@ -113,4 +113,20 @@ namespace Raven.Client.Documents.Session.Operations
             return results;
         }
     }
+
+    internal class GetRevisionsCountOperation
+    {
+        private readonly string _docId;
+
+        public GetRevisionsCountOperation(string docId)
+        {
+            _docId = docId;
+        }
+
+        public GetRevisionsCountCommand CreateRequest()
+        {
+            return new GetRevisionsCountCommand(_docId);
+        }
+
+    }
 }

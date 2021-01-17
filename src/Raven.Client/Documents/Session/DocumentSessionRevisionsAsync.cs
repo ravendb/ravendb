@@ -82,5 +82,16 @@ namespace Raven.Client.Documents.Session
                 return operation.GetRevisionsFor<T>().FirstOrDefault();
             }
         }
+
+        public async Task<long> GetCountForAsync(string id, CancellationToken token = default)
+        {
+            using (Session.AsyncTaskHolder())
+            {
+                var operation = new GetRevisionsCountOperation(id);
+                var command = operation.CreateRequest();
+                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
+                return command.Result;
+            }
+        }
     }
 }

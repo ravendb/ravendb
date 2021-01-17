@@ -114,5 +114,13 @@ namespace Raven.Client.Documents.Session
             operation.SetResult(command.Result);
             return operation.GetRevisionsFor<T>().FirstOrDefault();
         }
+
+        public long GetCountFor(string id)
+        {
+            var operation = new GetRevisionsCountOperation(id);
+            var command = operation.CreateRequest();
+            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+            return command.Result;
+        }
     }
 }
