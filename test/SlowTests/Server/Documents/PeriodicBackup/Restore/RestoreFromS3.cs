@@ -57,11 +57,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                                         $" S3 Error: {status?.UploadToS3?.Exception}, LocalBackup Exception: {status?.LocalBackup?.Exception}");
                 Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
 
-                var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(status.LastOperationId.Value));
+                OperationState backupOperation = null;
+                var operationStatus = WaitForValue(() =>
+                {
+                    backupOperation = store.Maintenance.Send(new GetOperationStateOperation(status.LastOperationId.Value));
+                    return backupOperation.Status;
+                }, OperationStatus.Completed);
+                Assert.Equal(OperationStatus.Completed, operationStatus);
 
                 var backupResult = backupOperation.Result as BackupResult;
-                Assert.True(backupResult != null && backupResult.Counters.Processed, "backupResult != null && backupResult.Counters.Processed");
-                Assert.True(1 == backupResult.Counters.ReadCount, "1 == backupResult.Counters.ReadCount");
+                Assert.NotNull(backupResult);
+                Assert.True(backupResult.Counters.Processed, "backupResult.Counters.Processed");
+                Assert.Equal(1, backupResult.Counters.ReadCount);
 
                 using (var session = store.OpenAsyncSession())
                 {
