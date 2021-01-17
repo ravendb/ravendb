@@ -92,7 +92,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 Assert.True(4 == value, $"4 == value, Got status: {status != null}, exception: {status?.Error?.Exception}");
                 Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
 
-                var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(status.LastOperationId.Value));
+                OperationState backupOperation = null;
+                var operationStatus = WaitForValue(() =>
+                {
+                    backupOperation = store.Maintenance.Send(new GetOperationStateOperation(status.LastOperationId.Value));
+                    return backupOperation.Status;
+                }, OperationStatus.Completed);
+                Assert.Equal(OperationStatus.Completed, operationStatus);
 
                 var backupResult = backupOperation.Result as BackupResult;
                 Assert.NotNull(backupResult);
