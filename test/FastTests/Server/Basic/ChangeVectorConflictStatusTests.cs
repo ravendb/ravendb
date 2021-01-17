@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Utils;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -67,6 +68,14 @@ namespace FastTests.Server.Basic
             var y = ChangeVectorUtils.Distance(cv2, cv1);
 
             Assert.Equal(x, -y);
+        }
+
+        [Fact]
+        public void EtagShouldNotOverflow2()
+        {
+            var x = ChangeVectorUtils.TryUpdateChangeVector("C", "n0rGjcmUT0u7ctxBXlZZPg", 5554138256, "C:5554138256-n0rGjcmUT0u7ctxBXlZZPg");
+
+            Assert.False(x.IsValid);
         }
 
         [Fact]
