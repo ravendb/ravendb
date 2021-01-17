@@ -1298,6 +1298,65 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
+        [Fact]
+        public void CanGetRevisionsCountFor()
+        {
+            var company = new Company { Name = "Company Name" };
+            using (var store = GetDocumentStore())
+            {
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(company);
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    var company2 = session.Load<Company>(company.Id);
+                    company2.Address1 = "Israel";
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    var company3 = session.Load<Company>(company.Id);
+                    company3.Name = "Hibernating Rhinos";
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    var companiesRevisionsCount = session.Advanced.Revisions.GetCountFor(company.Id);
+                    Assert.Equal(3, companiesRevisionsCount);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanGetRevisionsCountForAsync()
+        {
+            var company = new Company { Name = "Company Name" };
+            using (var store = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company2 = await session.LoadAsync<Company>(company.Id);
+                    company2.Name = "Hibernating Rhinos";
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                { 
+                    var companiesRevisionsCount = await session.Advanced.Revisions.GetCountForAsync(company.Id);
+                    Assert.Equal(2, companiesRevisionsCount);
+                }
+            }
+        }
+
         public class DeleteRevisionsOperation : IMaintenanceOperation
         {
             private readonly AdminRevisionsHandler.Parameters _parameters;
