@@ -203,6 +203,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }, 4);
                 Assert.Equal(4, value);
                 var backupStatus = store.Maintenance.Send(operation);
+
+                var operationStatus = WaitForValue(() =>
+                {
+                    var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupStatus.Status.LastOperationId.Value));
+                    return backupOperation.Status;
+                }, OperationStatus.Completed);
+                Assert.Equal(OperationStatus.Completed, operationStatus);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");

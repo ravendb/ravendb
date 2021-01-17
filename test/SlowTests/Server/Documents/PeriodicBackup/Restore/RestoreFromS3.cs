@@ -180,6 +180,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+
+                var operationStatus = WaitForValue(() =>
+                {
+                    var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupStatus.LastOperationId.Value));
+                    return backupOperation.Status;
+                }, OperationStatus.Completed);
+                Assert.Equal(OperationStatus.Completed, operationStatus);
+
                 await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 value = WaitForValue(() =>
                 {
@@ -280,6 +288,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 Assert.True(1 == value, $"gotStatus? {backupStatus != null}, Status Error: {backupStatus?.Error?.Exception}," +
                                         $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
 
+                var operationStatus = WaitForValue(() =>
+                {
+                    var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupStatus.LastOperationId.Value));
+                    return backupOperation.Status;
+                }, OperationStatus.Completed);
+                Assert.Equal(OperationStatus.Completed, operationStatus);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -358,6 +373,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 Assert.True(1 == value, $"gotStatus? {backupStatus != null}, Status Error: {backupStatus?.Error?.Exception}," +
                                         $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
 
+                var operationStatus = WaitForValue(() =>
+                {
+                    var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupStatus.LastOperationId.Value));
+                    return backupOperation.Status;
+                }, OperationStatus.Completed);
+                Assert.Equal(OperationStatus.Completed, operationStatus);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "user-2" }, "users/2");
@@ -374,6 +396,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }, expectedVal: lastEtag, timeout: 30_000);
                 Assert.True(lastEtag == value, $"gotStatus? {backupStatus != null}, Status Error: {backupStatus?.Error?.Exception}," +
                                                $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
+
+                Assert.Equal(OperationStatus.Completed, WaitForValue(() =>
+                {
+                    var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupStatus.LastOperationId.Value));
+                    return backupOperation.Status;
+                }, OperationStatus.Completed));
 
                 string lastFileToRestore;
                 using (var client = new RavenAwsS3Client(defaultS3Settings))
@@ -471,6 +499,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }, expectedVal: 1, timeout: 30_000);
                 Assert.True(1 == value, $"gotStatus? {backupStatus != null}, Status Error: {backupStatus?.Error?.Exception}," +
                                    $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
+
+                var operationStatus = WaitForValue(() =>
+                {
+                    var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupStatus.LastOperationId.Value));
+                    return backupOperation.Status;
+                }, OperationStatus.Completed);
+                Assert.Equal(OperationStatus.Completed, operationStatus);
 
                 using (var session = store.OpenAsyncSession())
                 {
