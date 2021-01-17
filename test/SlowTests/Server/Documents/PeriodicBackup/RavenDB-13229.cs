@@ -74,7 +74,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
-                RunBackup(result.TaskId, documentDatabase, true, store); // FULL BACKUP
+                PeriodicBackupTestsSlow.RunBackup(result.TaskId, documentDatabase, true, store); // FULL BACKUP
             }
 
             var backupDirectory = Directory.GetDirectories(backupPath).First();
@@ -216,19 +216,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(expectedCompareExchange, numberOfCompareExchange);
                 }
             }
-        }
-
-        private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
-        {
-            var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-            var op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
-            var value = WaitForValue(() =>
-            {
-                var status = store.Maintenance.Send(new GetOperationStateOperation(op)).Status;
-                return status;
-            }, OperationStatus.Completed);
-
-            Assert.Equal(OperationStatus.Completed, value);
         }
     }
 }
