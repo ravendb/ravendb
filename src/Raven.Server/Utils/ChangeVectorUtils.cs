@@ -104,7 +104,7 @@ namespace Raven.Server.Utils
 
         private static long ParseToLong(string s, int start, int len)
         {
-            int num;
+            long num;
             num = s[start] - '0';
             for (int i = 1; i < len; i++)
             {
