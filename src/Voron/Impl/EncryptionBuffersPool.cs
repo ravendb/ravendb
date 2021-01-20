@@ -24,8 +24,6 @@ namespace Voron.Impl
 
         public static EncryptionBuffersPool Instance = new EncryptionBuffersPool();
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<EncryptionBuffersPool>("Memory");
-
-        private readonly long _maxBufferSizeToKeepInBytes = new Size(8, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
         private const int MaxNumberOfPagesToCache = 128; // 128 * 8K = 1 MB, beyond that, we'll not both
         private readonly MultipleUseFlag _isLowMemory = new MultipleUseFlag();
         private readonly MultipleUseFlag _isExtremelyLowMemory = new MultipleUseFlag();
@@ -127,8 +125,9 @@ namespace Voron.Impl
 
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
-            if (Disabled || size / Constants.Storage.PageSize > MaxNumberOfPagesToCache ||
-                (_isLowMemory.IsRaised() && generation < Generation))
+            var numberOfPages = size / Constants.Storage.PageSize;
+
+            if (Disabled || numberOfPages > MaxNumberOfPagesToCache || (_isLowMemory.IsRaised() && generation < Generation))
             {
                 // - don't want to pool large buffers
                 // - release all the buffers that were created before we got the low memory event
