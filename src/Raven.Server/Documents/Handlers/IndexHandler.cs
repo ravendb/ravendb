@@ -81,6 +81,7 @@ namespace Raven.Server.Documents.Handlers
                     var staticMapIndex = (MapIndex)index;
                     source = staticMapIndex._compiled.Source;
                     break;
+
                 case IndexType.MapReduce:
                     var staticMapReduceIndex = (MapReduceIndex)index;
                     source = staticMapReduceIndex._compiled.Source;
@@ -843,8 +844,11 @@ namespace Raven.Server.Documents.Handlers
                                     if (document != null && document.LastModified > baseLine)
                                         baseLine = document.LastModified;
                                     break;
+
+                                case IndexSourceType.Counters:
                                 case IndexSourceType.TimeSeries:
                                     break;
+
                                 default:
                                     throw new NotSupportedException($"Index with source type '{index.SourceType}' is not supported.");
                             }
