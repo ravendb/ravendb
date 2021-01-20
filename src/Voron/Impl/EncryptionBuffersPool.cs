@@ -143,7 +143,8 @@ namespace Voron.Impl
                 InPoolSince = DateTime.UtcNow
             };
 
-            var success = _items[index].TryPush(allocation);
+            var addToPerCorePool = ForTestingPurposes == null || ForTestingPurposes.CanAddToPerCorePool;
+            var success = addToPerCorePool ? _items[index].TryPush(allocation) : false;
 
             if (success)
             {
@@ -152,8 +153,10 @@ namespace Voron.Impl
                 return;
             }
 
+            var addToGlobalPool = ForTestingPurposes == null || ForTestingPurposes.CanAddToGlobalPool;
+
             var currentGlobalStack = _globalStacks[index];
-            if (currentGlobalStack.Count < _maxNumberOfAllocationsToKeepInGlobalStackPerSlot)
+            if (addToGlobalPool && currentGlobalStack.Count < _maxNumberOfAllocationsToKeepInGlobalStackPerSlot)
             {
                 // updating the thread allocations since we released the memory back to the pool
                 NativeMemory.UpdateMemoryStatsForThread(allocatingThread, size);
@@ -376,6 +379,23 @@ namespace Voron.Impl
             {
                 PlatformSpecific.NativeMemory.Free4KbAlignedMemory(Ptr, Size, null);
             }
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public bool CanAddToPerCorePool = true;
+
+            public bool CanAddToGlobalPool = true;
         }
     }
 
