@@ -136,9 +136,6 @@ namespace Voron.Impl
                 return;
             }
 
-            // updating the thread allocations since we released the memory back to the pool
-            NativeMemory.UpdateMemoryStatsForThread(allocatingThread, size);
-
             var index = Bits.MostSignificantBit(size);
             var allocation = new NativeAllocation
             {
@@ -150,11 +147,17 @@ namespace Voron.Impl
             var success = _items[index].TryPush(allocation);
 
             if (success)
+            {
+                // updating the thread allocations since we released the memory back to the pool
+                NativeMemory.UpdateMemoryStatsForThread(allocatingThread, size);
                 return;
+            }
 
             var currentGlobalStack = _globalStacks[index];
             if (currentGlobalStack.Count < _maxNumberOfAllocationsToKeepInGlobalStackPerSlot)
             {
+                // updating the thread allocations since we released the memory back to the pool
+                NativeMemory.UpdateMemoryStatsForThread(allocatingThread, size);
                 currentGlobalStack.Push(allocation);
                 return;
             }
