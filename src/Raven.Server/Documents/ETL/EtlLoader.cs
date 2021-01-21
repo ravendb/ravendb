@@ -337,10 +337,18 @@ namespace Raven.Server.Documents.ETL
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void NotifyAboutWork(DocumentChange documentChange, CounterChange counterChange)
         {
+            var processes = _processes;
+
             // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < _processes.Length; i++)
+            for (var i = 0; i < processes.Length; i++)
             {
-                _processes[i].NotifyAboutWork(documentChange, counterChange);
+                try
+                {
+                    processes[i].NotifyAboutWork(documentChange, counterChange);
+                }
+                catch (ObjectDisposedException)
+                {
+                }
             }
         }
 
