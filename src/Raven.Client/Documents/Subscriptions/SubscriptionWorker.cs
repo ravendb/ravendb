@@ -359,6 +359,7 @@ namespace Raven.Client.Documents.Subscriptions
                         $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it does not exist. " + connectionStatus.Exception);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Redirect:
                     var appropriateNode = connectionStatus.Data?[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]?.ToString();
+                    var currentNode = connectionStatus.Data?[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)]?.ToString();
                     var rawReasons = connectionStatus.Data?[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)];
                     Dictionary<string, string> reasonsDictionary = new Dictionary<string, string>();
                     if (rawReasons != null && rawReasons is BlittableJsonReaderArray rawReasonsArray)
@@ -377,7 +378,7 @@ namespace Raven.Client.Documents.Subscriptions
                         }
                     }
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}]{Environment.NewLine}Reasons:{string.Join(Environment.NewLine, reasonsDictionary.Select(x => $"{x.Key}:{x.Value}"))}",
+                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node '{currentNode}', it will be redirected to {appropriateNode}]{Environment.NewLine}Reasons:{string.Join(Environment.NewLine, reasonsDictionary.Select(x => $"{x.Key}:{x.Value}"))}",
                         inner: new SubscriptionDoesNotBelongToNodeException(connectionStatus.Exception),
                         appropriateNode,
                         reasonsDictionary);
@@ -649,11 +650,17 @@ namespace Raven.Client.Documents.Subscriptions
                                 var reqEx = _store.GetRequestExecutor(_dbName);
                                 var curTopology = reqEx.TopologyNodes;
                                 var nextNodeIndex = (_forcedTopologyUpdateAttempts++) % curTopology.Count;
-                                _redirectNode = curTopology[nextNodeIndex];
-                                if (_logger.IsInfoEnabled)
+                                try
                                 {
-                                    _logger.Info(
-                                        $"Subscription '{_options.SubscriptionName}'. Will modify redirect node from null to {_redirectNode.ClusterTag}", ex);
+                                    (_, _redirectNode) = await reqEx.GetRequestedNode(curTopology[nextNodeIndex].ClusterTag).ConfigureAwait(false);
+                                    if (_logger.IsInfoEnabled)
+                                        _logger.Info($"Subscription '{_options.SubscriptionName}'. Will modify redirect node from null to {_redirectNode.ClusterTag}", ex);
+                                }
+                                catch (Exception e)
+                                {
+                                    // will let topology to decide
+                                    if (_logger.IsInfoEnabled)
+                                        _logger.Info($"Subscription '{_options.SubscriptionName}'. Could not select the redirect node will keep it null.", e);
                                 }
                             }
 

@@ -289,7 +289,7 @@ namespace RachisTests
                 {
                     subscription = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)
                     {
-                        MaxErroneousPeriod = TimeSpan.FromSeconds(5),
+                        MaxErroneousPeriod = nodesAmount == 5 ? TimeSpan.FromSeconds(15) : TimeSpan.FromSeconds(5),
                         MaxDocsPerBatch = 1,
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(100)
                     });
@@ -355,7 +355,10 @@ namespace RachisTests
 
                 expectedRevisionsCount = (int)Math.Pow(nodesAmount, 2);
                 if (nodesAmount == 5)
-                    await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
+                {
+                    var secondDisposedTag = await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName).ConfigureAwait(false);
+                    await WaitForResponsibleNodeToChange(defaultDatabase, subscription.SubscriptionName, secondDisposedTag);
+                }
 
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (3rd assert)");
             }
