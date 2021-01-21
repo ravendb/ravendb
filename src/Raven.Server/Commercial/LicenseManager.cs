@@ -1310,6 +1310,26 @@ namespace Raven.Server.Commercial
             const string message = "Your current license doesn't include the SQL ETL feature";
             throw GenerateLicenseLimit(LimitType.SqlEtl, message);
         }
+        
+        public bool CanUseEndpointsMonitoring(bool withNotification)
+        {
+            if (IsValid(out _) == false)
+                return false;
+
+            var value = LicenseStatus.HasEndpointsMonitoring;
+            if (withNotification == false)
+                return value;
+
+            if (value)
+            {
+                DismissLicenseLimit(LimitType.EndpointsMonitoring);
+                return true;
+            }
+
+            const string details = "Your current license doesn't include the endpoints monitoring feature";
+            GenerateLicenseLimit(LimitType.EndpointsMonitoring, details, addNotification: true);
+            return false;
+        }
 
         public bool CanUseSnmpMonitoring(bool withNotification)
         {

@@ -62,6 +62,9 @@ namespace Raven.Client.Exceptions.Commercial
         EncryptedBackup,
 
         [Description("Additional Assemblies from NuGet")]
-        AdditionalAssembliesFromNuGet
+        AdditionalAssembliesFromNuGet,
+        
+        [Description("Endpoints Monitoring")]
+        EndpointsMonitoring
     }
 }
