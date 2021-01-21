@@ -66,6 +66,7 @@ namespace Raven.Server.Documents
                 }
 
                 BlittableJsonReaderObject oldDoc = null;
+                string oldChangeVector = null;
                 if (oldValue.Pointer == null)
                 {
                     // expectedChangeVector being null means we don't care, 
@@ -82,7 +83,7 @@ namespace Raven.Server.Documents
 
                     if (expectedChangeVector != null) 
                     {
-                        var oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
+                        oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
                         if (string.Compare(expectedChangeVector, oldChangeVector, StringComparison.Ordinal) != 0)
                             ThrowConcurrentException(id, expectedChangeVector, oldChangeVector);
                     }
@@ -155,9 +156,9 @@ namespace Raven.Server.Documents
                     
                     if (shouldVersion)
                     {
-                        var oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
                         if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, oldDoc, id, oldChangeVector, collectionName))
                         {
+                            oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
                             var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
                             var oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref oldValue);
                             
