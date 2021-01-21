@@ -484,14 +484,17 @@ namespace Raven.Server.Documents.Revisions
                     _database.ReplicationLoader.ConflictResolver.SaveLocalAsRevision(context, id);
                 }
 
+                nonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
+                flags = flags.Strip(DocumentFlags.Revision);
+
                 if (document == null)
                 {
                     _documentsStorage.Delete(context, lowerId, id, null, lastModifiedTicks, changeVector, collectionName,
-                        nonPersistentFlags | NonPersistentDocumentFlags.SkipRevisionCreation);
+                        nonPersistentFlags, flags);
                     return;
                 }
                 _documentsStorage.Put(context, id, null, document, lastModifiedTicks, changeVector,
-                    flags.Strip(DocumentFlags.Revision), nonPersistentFlags | NonPersistentDocumentFlags.SkipRevisionCreation);
+                    flags, nonPersistentFlags);
             }
         }
 
