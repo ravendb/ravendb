@@ -13,12 +13,12 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
 {
     public class SpatialDistanceFieldComparatorSource : FieldComparatorSource
     {
-        private readonly Point _center;
+        private readonly IPoint _center;
         private readonly IndexQueryServerSide _query;
         private readonly double _roundFactor;
         private readonly SpatialField _spatialField;
 
-        public SpatialDistanceFieldComparatorSource(SpatialField spatialField, Point center, IndexQueryServerSide query, double roundFactor)
+        public SpatialDistanceFieldComparatorSource(SpatialField spatialField, IPoint center, IndexQueryServerSide query, double roundFactor)
         {
             _spatialField = spatialField;
             _center = center;
@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             private readonly SpatialField _spatialField;
             private readonly DistanceValue[] _values;
             private DistanceValue _bottom;
-            private readonly Point _originPt;
+            private readonly IPoint _originPt;
             private bool _isGeo;
             private Dictionary<int, SpatialResult> _cache = new Dictionary<int, SpatialResult>();
             private int _currentDocBase;
@@ -56,12 +56,12 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 return null;
             }
 
-            public SpatialDistanceFieldComparator(SpatialField spatialField, Point origin, int numHits, double roundFactor)
+            public SpatialDistanceFieldComparator(SpatialField spatialField, IPoint origin, int numHits, double roundFactor)
             {
                 _spatialField = spatialField;
                 _values = new DistanceValue[numHits];
                 _originPt = origin;
-                _isGeo = _spatialField.GetContext().IsGeo();
+                _isGeo = _spatialField.GetContext().IsGeo;
                 _roundFactor = roundFactor;
             }
 
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 if (field == null)
                     return SpatialResult.Invalid;
                 var shapeAsText = field.StringValue(state);
-                Shape shape;
+                IShape shape;
                 try
                 {
                     shape = _spatialField.ReadShape(shapeAsText);
@@ -144,23 +144,23 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 {
                     return SpatialResult.Invalid;
                 }
-                var pt = shape as Point;
+                var pt = shape as IPoint;
                 if (pt == null)
-                    pt = shape.GetCenter();
+                    pt = shape.Center;
 
                 var result = new SpatialResult
                 {
-                    Latitude = pt.GetY(),
-                    Longitude = pt.GetX()
+                    Latitude = pt.Y,
+                    Longitude = pt.X
                 };
 
                 if (_isGeo == false)
                 {
-                    result.Distance = CartesianDistance(pt.GetY(), pt.GetX(), _originPt.GetY(), _originPt.GetX());
+                    result.Distance = CartesianDistance(pt.Y, pt.X, _originPt.Y, _originPt.X);
                     return result;
                 }
 
-                result.Distance = HaverstineDistanceInMiles(pt.GetY(), pt.GetX(), _originPt.GetY(), _originPt.GetX());
+                result.Distance = HaverstineDistanceInMiles(pt.Y, pt.X, _originPt.Y, _originPt.X);
 
                 switch (Units)
                 {
