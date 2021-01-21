@@ -46,7 +46,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-16051")]
+        [Fact]
         public async Task DeleteDocumentWithResolvedFlagAfterEnableRevisions()
         {
             using (var store = GetDocumentStore())
