@@ -1,6 +1,6 @@
 class spatialPolygonModel {
     
-    static readonly colors = ["#38D6CC", "#12D366", "#95E716"];
+    static readonly colors = ["#2FB4D2", "#51D27A", "#6972EE"];
     
     vertices: Array<[number, number]>;
     
