@@ -189,6 +189,16 @@ namespace Raven.Server.Documents
                 return;
             }
 
+            if (changeType == ClusterDatabaseChangeType.RecordRestored)
+            {
+                // - a successful restore operation ends when we successfully restored
+                // the database files and saved the updated the database record
+                // - this is the first time that the database was loaded so there is no need to call
+                // StateChanged after the database was restored
+                // - the database will be started on demand
+                return;
+            }
+
             if (DatabasesCache.TryGetValue(databaseName, out var task) == false)
             {
                 // if the database isn't loaded, but it is relevant for this node, we need to create
@@ -307,14 +317,17 @@ namespace Raven.Server.Documents
 
         public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord)
         {
+            var index = ClusterStateMachine.TryGetShardIndex(dbName);
+            var tag = index == -1 ? _serverStore.NodeTag : $"{_serverStore.NodeTag}${index}";
+
             var deletionInProgress = DeletionInProgressStatus.No;
-            var directDelete = rawRecord.DeletionInProgress?.TryGetValue(dbName, out deletionInProgress) == true &&
+            var directDelete = rawRecord.DeletionInProgress?.TryGetValue(tag, out deletionInProgress) == true &&
                                deletionInProgress != DeletionInProgressStatus.No;
 
             if (directDelete == false)
                 return false;
 
-            if (rawRecord.Topology.Rehabs.Contains(dbName))
+            if (rawRecord.Topology.Rehabs.Contains(_serverStore.NodeTag))
                 // If the deletion was issued from the cluster observer to maintain the replication factor we need to make sure
                 // that all the documents were replicated from this node, therefore the deletion will be called from the replication code.
                 return false;
@@ -602,6 +615,20 @@ namespace Raven.Server.Documents
                     DatabaseTask = TryGetOrCreateResourceStore(databaseName)
                 };
             }
+        }
+
+        public IEnumerable<Task<DocumentDatabase>> TryGetOrCreateShardedResourcesStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)
+        {
+            // create all database shards on this node
+            List<string> relevantDatabases;
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value))
+            {
+                relevantDatabases = databaseRecord.Topologies.Where(x => x.Topology.RelevantFor(_serverStore.NodeTag)).Select(x => x.Name).ToList();
+            }
+
+            return relevantDatabases.Select(db => TryGetOrCreateResourceStore(db, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant));
         }
 
         public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)
@@ -892,6 +919,9 @@ namespace Raven.Server.Documents
                             $"The database {databaseName.Value} is encrypted, and must be accessed only via HTTPS, but the web url used is {_serverStore.Server.WebUrl}");
                     }
                 }
+
+                if (record.IsSharded)
+                    throw new InvalidOperationException($"The database '{databaseName}' is sharded, can't call this method directly");
 
                 return CreateDatabaseConfiguration(databaseRecord.DatabaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, record);
             }

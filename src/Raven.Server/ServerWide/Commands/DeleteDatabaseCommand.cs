@@ -58,16 +58,23 @@ namespace Raven.Server.ServerWide.Commands
             }
             else
             {
-                for (var i = 0; i < record.Shards.Length; i++)
+                if (record.IsSharded == false)
                 {
-                    record.Shards[i] = RemoveDatabaseFromAllNodes(record, record.Shards[i], $"${i}", deletionInProgressStatus);
+                    RemoveDatabaseFromAllNodes(record, record.Topology, "", deletionInProgressStatus);
                 }
-
-                record.Topology = new DatabaseTopology
+                else
                 {
-                    Stamp = record.Topology?.Stamp, 
-                    ReplicationFactor = 0
-                };
+                    for (var i = 0; i < record.Shards.Length; i++)
+                    {
+                        record.Shards[i] = RemoveDatabaseFromAllNodes(record, record.Shards[i], $"${i}", deletionInProgressStatus);
+                    }
+
+                    record.Topology = new DatabaseTopology
+                    {
+                        Stamp = record.Topology?.Stamp, 
+                        ReplicationFactor = 0
+                    };
+                }
             }
         }
 

@@ -186,7 +186,7 @@ namespace FastTests
                 timeout = Debugger.IsAttached ? TimeSpan.FromSeconds(300) : TimeSpan.FromSeconds(60);
 
             var tasks = nodes.Where(s => s.ServerStore.Disposed == false &&
-                                          s.ServerStore.Engine.CurrentState != RachisState.Passive)
+                                         s.ServerStore.Engine.CurrentState != RachisState.Passive)
                 .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
                 .ToList();
 
@@ -209,7 +209,8 @@ namespace FastTests
                     using (nodes[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         context.OpenReadTransaction();
-                        message += $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{context.ReadObject(nodes[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}";
+                        message +=
+                            $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{context.ReadObject(nodes[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}";
                     }
                 }
             }
@@ -243,7 +244,8 @@ namespace FastTests
                         }
                         else
                         {
-                            throw new InvalidOperationException($"You cannot set {nameof(Options)}.{nameof(Options.Path)} when, {nameof(Options)}.{nameof(Options.ReplicationFactor)} > 1 and {nameof(Options)}.{nameof(Options.RunInMemory)} == false.");
+                            throw new InvalidOperationException(
+                                $"You cannot set {nameof(Options)}.{nameof(Options.Path)} when, {nameof(Options)}.{nameof(Options.ReplicationFactor)} > 1 and {nameof(Options)}.{nameof(Options.RunInMemory)} == false.");
                         }
                     }
                     else if (pathToUse == null)
@@ -262,7 +264,8 @@ namespace FastTests
                         {
                             [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString(),
                             [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
-                            [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString(),
+                            [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] =
+                                int.MaxValue.ToString(),
                         }
                     };
 
@@ -280,13 +283,7 @@ namespace FastTests
 
                     var store = new DocumentStore
                     {
-                        Urls = UseFiddler(serverToUse.WebUrl),
-                        Database = name,
-                        Certificate = options.ClientCertificate,
-                        Conventions =
-                        {
-                            DisableTopologyCache = true
-                        }
+                        Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.ClientCertificate, Conventions = {DisableTopologyCache = true}
                     };
 
                     options.ModifyDocumentStore?.Invoke(store);
@@ -315,12 +312,8 @@ namespace FastTests
                         {
                             if (options.AdminCertificate != null)
                             {
-                                using (var adminStore = new DocumentStore
-                                {
-                                    Urls = UseFiddler(serverToUse.WebUrl),
-                                    Database = name,
-                                    Certificate = options.AdminCertificate
-                                }.Initialize())
+                                using (var adminStore = new DocumentStore {Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate}
+                                    .Initialize())
                                 {
                                     raftCommand = adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor)).RaftCommandIndex;
                                 }
@@ -388,7 +381,8 @@ namespace FastTests
             }
             catch (TimeoutException te)
             {
-                throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{GetLastStatesFromAllServersOrderedByTime()}");
+                throw new TimeoutException(
+                    $"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{GetLastStatesFromAllServersOrderedByTime()}");
             }
         }
 
@@ -404,13 +398,18 @@ namespace FastTests
 
         private static void ApplySkipDrainAllRequestsToDatabase(RavenServer serverToUse, string name)
         {
-            try
+            foreach (var database in serverToUse.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(name))
             {
-                var documentDatabase = AsyncHelpers.RunSync(async () => await serverToUse.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name));
-                documentDatabase.ForTestingPurposesOnly().SkipDrainAllRequests = true;
-            }
-            catch (DatabaseNotRelevantException)
-            {
+                try
+                {
+                    var documentDatabase = AsyncHelpers.RunSync(async () => await database);
+                    documentDatabase.ForTestingPurposesOnly().SkipDrainAllRequests = true;
+                }
+
+                catch (DatabaseNotRelevantException)
+                {
+
+                }
             }
         }
 
