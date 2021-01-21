@@ -43,7 +43,6 @@ class spatialQueryMap extends viewModelBase {
 
             return `<div>
                           <h4>Document: ${genUtils.escapeHtml(doc.getId())}</h4>
-                          <hr>
                           <pre>${text}</pre>
                     </div>`;
         }
@@ -76,7 +75,7 @@ class spatialQueryMap extends viewModelBase {
             { color: spatialPolygonModel.colors[index % spatialPolygonModel.colors.length] }));
 
         const circleArray = this.circlesLayer().map((circle, index) => L.circle([circle.latitude, circle.longitude],
-            { color: spatialCircleModel.colors[index % spatialCircleModel.colors.length], fillOpacity: 0.4, radius: circle.radius }));
+            { color: spatialCircleModel.colors[index % spatialCircleModel.colors.length], fillOpacity: 0.2, radius: circle.radius }));
         
         const polyLayer = L.layerGroup(polyArray);
         const circleLayer = L.layerGroup(circleArray);

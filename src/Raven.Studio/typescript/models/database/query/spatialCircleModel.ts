@@ -2,7 +2,7 @@ import genUtils = require("common/generalUtils");
 
 class spatialCircleModel {
 
-    static readonly colors = ["#F54082", "#FBD500", "#B8309B"];
+    static readonly colors = ["#2FB4D2", "#EDCD51", "#7A61D4"];
    
     latitude: number;
     longitude: number;

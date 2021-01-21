@@ -222,39 +222,39 @@
             </div>
         </div>
         <div class="flex-window-head">
-            <button type="button" class="btn btn-sm"
+            <button type="button" class="btn btn-sm results-btn"
                     data-bind="css: { active: currentTab() === 'results'}, click: goToResultsTab">
                 Results &nbsp; <span class="label" data-bind="text: totalResultsForUi().toLocaleString() + (hasMoreUnboundedResults() ? '+' : ''), css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }"></span>
             </button>
-            <button type="button" class="btn btn-sm" data-bind="click: $root.goToSpatialMapTab, css: { active: showMapView }, visible: isSpatialQuery">
+            <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToSpatialMapTab, css: { active: showMapView }, visible: isSpatialQuery">
                 <span>Spatial Map</span> &nbsp; <span class="label" data-bind="text: totalNumberOfMarkers, css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }"></span>
             </button>
             <!-- ko foreach: includesCache -->
-            <button type="button" class="btn btn-sm" data-bind="click: $root.goToIncludesTab, css: { active: $parent.currentTab() === $data }">
+            <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToIncludesTab, css: { active: $parent.currentTab() === $data }">
                 <span data-bind="text: 'Includes (' + name + ')'"></span> &nbsp; <span class="label label-primary" data-bind="text: total().toLocaleString()"></span>
             </button>
             <!-- /ko -->
-            <button type="button" class="btn btn-sm" data-bind="click: $root.goToExplanationsTab, css: { active: currentTab() === 'explanations' }, visible: totalExplanations()">
+            <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToExplanationsTab, css: { active: currentTab() === 'explanations' }, visible: totalExplanations()">
                 <span>Explanations</span> &nbsp; <span class="label label-primary" data-bind="text: totalExplanations().toLocaleString()"></span>
             </button>
             <!-- ko foreach: highlightsCache -->
-            <button type="button" class="btn btn-sm" data-bind="click: $root.goToHighlightsTab, css: { active: $parent.currentTab() === $data }">
+            <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToHighlightsTab, css: { active: $parent.currentTab() === $data }">
                 <span data-bind="text: 'Highlight (' + fieldName() + ')'"></span> &nbsp; <span class="label label-primary" data-bind="text: totalCount().toLocaleString()"></span>
             </button>
             <!-- /ko -->
-            <button type="button" class="btn btn-sm" data-bind="click: $root.goToTimingsTab, css: { active: currentTab() === 'timings' }, visible: timings()">
+            <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToTimingsTab, css: { active: currentTab() === 'timings' }, visible: timings()">
                 Timings
             </button>
-            <button type="button" class="btn btn-sm" data-bind="click: $root.goToGraphTab, css: { active: currentTab() === 'graph' }, visible: isGraphQuery">
+            <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToGraphTab, css: { active: currentTab() === 'graph' }, visible: isGraphQuery">
                 Graph
             </button>
             <!-- ko foreach: timeSeriesGraphs -->
-            <button type="button" class="btn btn-sm" data-bind="click: $root.goToTimeSeriesTab, css: { active: $parent.currentTab() === $data }">
+            <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToTimeSeriesTab, css: { active: $parent.currentTab() === $data }">
                 <i class="icon-stats"></i> <span data-bind="text: 'Time Series'"></span> &nbsp; <span class="label label-primary" data-bind="click: $root.closeTimeSeriesTab"><i class="icon-cancel"></i></span>
             </button>
             <!-- /ko -->
             <!-- ko foreach: timeSeriesTables -->
-            <button type="button" class="btn btn-sm" data-bind="click: $root.goToTimeSeriesTab, css: { active: $parent.currentTab() === $data }">
+            <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToTimeSeriesTab, css: { active: $parent.currentTab() === $data }">
                 <i class="icon-table"></i> <span data-bind="text: documentId + ' - ' + name"></span> &nbsp; <span class="label label-primary" data-bind="click: $root.closeTimeSeriesTab"><i class="icon-cancel"></i></span>
             </button>
             <!-- /ko -->
