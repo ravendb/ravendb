@@ -6,6 +6,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Logging;
 using Voron.Impl;
 
 namespace Raven.Server.Documents
@@ -22,11 +23,14 @@ namespace Raven.Server.Documents
 
         private bool _replaced;
 
+        private Logger _logger;
+
         private Dictionary<string, CollectionName> _collectionCache;
 
         public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsChanges changes)
             : base(transaction)
         {
+            _logger = LoggingSource.Instance.GetLogger<DocumentsTransaction>(context.DocumentDatabase.Name);
             _context = context;
             _changes = changes;
         }
@@ -90,7 +94,18 @@ namespace Raven.Server.Documents
             if (_documentNotifications == null && _counterNotifications == null)
                 return;
 
-            ThreadPool.QueueUserWorkItem(state => ((DocumentsTransaction)state).RaiseNotifications(), this);
+            ThreadPool.QueueUserWorkItem(state =>
+            {
+                try
+                {
+                    ((DocumentsTransaction)state).RaiseNotifications();
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations("Failed to raise notifications", e);
+                }
+            }, this);
         }
 
         private void RaiseNotifications()
