@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
         static SpatialField()
         {
             GeometryServiceProvider.Instance = new NtsGeometryServices();
-            GeoContext = new NtsSpatialContext(true);
+            GeoContext = new NtsSpatialContext(new NtsSpatialContextFactory { geo = true });
         }
 
         public SpatialField(string fieldName, SpatialOptions options)
@@ -44,8 +44,8 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
         {
             if (options.Type == SpatialFieldType.Cartesian)
             {
-                var nts = new NtsSpatialContext(new GeometryFactory(), false, new CartesianDistCalc(), null);
-                nts.GetWorldBounds().Reset(options.MinX, options.MaxX, options.MinY, options.MaxY);
+                var nts = new NtsSpatialContext(new NtsSpatialContextFactory { geo = false, distCalc = new CartesianDistCalc(), worldBounds = null });
+                nts.WorldBounds.Reset(options.MinX, options.MaxX, options.MinY, options.MaxY);
                 return nts;
             }
             return GeoContext;
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
 
         public AbstractField[] CreateIndexableFields(object value)
         {
-            var shape = value as Shape;
+            var shape = value as IShape;
             if (shape != null || TryReadShape(value, out shape))
             {
                 var fields = Strategy.CreateIndexableFields(shape);
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             return Array.Empty<AbstractField>();
         }
 
-        private bool TryReadShape(object value, out Shape shape)
+        private bool TryReadShape(object value, out IShape shape)
         {
             if (value is LazyStringValue lsv)
             {
@@ -106,21 +106,21 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 return true;
             }
 
-            shape = default(Shape);
+            shape = default(IShape);
             return false;
         }
 
-        public Shape ReadShape(string shapeWkt, SpatialUnits? unitOverride = null)
+        public IShape ReadShape(string shapeWkt, SpatialUnits? unitOverride = null)
         {
             return _shapeStringReadWriter.ReadShape(shapeWkt, unitOverride);
         }
 
-        private string WriteShape(Shape shape)
+        private string WriteShape(IShape shape)
         {
             return _shapeStringReadWriter.WriteShape(shape);
         }
 
-        public Shape ReadCircle(double radius, double latitude, double longitude, SpatialUnits? unitOverride)
+        public IShape ReadCircle(double radius, double latitude, double longitude, SpatialUnits? unitOverride)
         {
             var context = GetContext();
 
@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             return context.MakeCircle(longitude, latitude, radius);
         }
 
-        public Shape ReadPoint(double latitude, double longitude)
+        public IShape ReadPoint(double latitude, double longitude)
         {
             return GetContext().MakePoint(longitude, latitude);
         }

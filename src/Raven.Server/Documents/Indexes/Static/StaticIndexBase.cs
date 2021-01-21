@@ -467,7 +467,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (lat == null || double.IsNaN(lat.Value))
                 return Enumerable.Empty<AbstractField>();
 
-            Shape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
+            IShape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
             return spatialField.CreateIndexableFields(shape);
         }
 
