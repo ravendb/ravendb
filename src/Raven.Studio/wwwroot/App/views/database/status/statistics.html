@@ -46,11 +46,11 @@
                 </div>
             </div>
             <div class="col-sm-6 col-lg-4 col-xl-3">
-                <div class="stats-item">
+                <div class="stats-item js-cv-tooltip">
                     <div class="name"><i class="icon-vector"></i><span>Database Change Vector</span></div>
                     <div class="value">
                         <span data-bind="foreach: databaseChangeVector">
-                            <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
+                            <span class="badge badge-default" data-bind="text: shortFormat"></span>
                         </span>
                         <span data-bind="visible: databaseChangeVector.length === 0">not yet defined</span>
                     </div>
@@ -210,7 +210,7 @@
     <div class="identities">
         <div class="flex-horizontal">
             <h2 class="flex-end on-base-background">Identities</h2>
-            <small class="js-identities-header identities-header flex-end"><i class="icon-info text-info"></i> </small>
+            <small class="js-identities-header identities-header flex-end"><i class="icon-info text-info"></i></small>
         </div>
         <div class="row" data-bind="visible: identities().length === 0">
             <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">

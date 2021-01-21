@@ -16,16 +16,13 @@ namespace BenchmarkTests
         [Fact]
         public async Task Initialize()
         {
-            using (GetDocumentStore()) // warm-up
+            using (GetSimpleDocumentStore(null, false)) // warm-up
             {
                 await Task.Delay(1000);
             }
 
-            using (var store = new DocumentStore())
+            using (var store = GetSimpleDocumentStore(null, false))
             {
-                store.Urls = new[] { Server.WebUrl };
-                store.Initialize();
-
                 foreach (var type in typeof(Init).Assembly.GetTypes())
                 {
                     if (type.IsSubclassOf(typeof(BenchmarkTestBase)) == false)

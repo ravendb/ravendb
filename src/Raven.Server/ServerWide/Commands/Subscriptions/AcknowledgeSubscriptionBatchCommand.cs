@@ -43,12 +43,17 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             var topology = record.Topology;
             var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
-            var whoseTaskIsIt = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
-            if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(NodeTag))
+            var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
+            if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
                 throw new DatabaseDoesNotExistException($"Stopping subscription '{subscriptionName}' on node {NodeTag}, because database '{DatabaseName}' is being deleted.");
 
-            if (whoseTaskIsIt != NodeTag)
-                throw new SubscriptionDoesNotBelongToNodeException($"Can't update subscription with name '{subscriptionName}' by node {NodeTag}, because it's not its task to update this subscription");
+            if (appropriateNode != NodeTag)
+            {
+                throw new SubscriptionDoesNotBelongToNodeException(
+                    $"Cannot apply {nameof(AcknowledgeSubscriptionBatchCommand)} for subscription '{subscriptionName}' with id '{SubscriptionId}', on database '{DatabaseName}', on node '{NodeTag}'," +
+                    $" because the subscription task belongs to '{appropriateNode ?? "N/A"}'.")
+                { AppropriateNode = appropriateNode };
+            }
 
             if (ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
             {

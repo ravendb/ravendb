@@ -746,7 +746,8 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         hasLivingNodes = true;
 
-                        if (databaseTopology.PromotablesStatus.TryGetValue(member, out var _))
+                        if (databaseTopology.PromotablesStatus.TryGetValue(member, out _) || 
+                            databaseTopology.DemotionReasons.TryGetValue(member, out _))
                         {
                             databaseTopology.DemotionReasons.Remove(member);
                             databaseTopology.PromotablesStatus.Remove(member);
@@ -997,41 +998,61 @@ namespace Raven.Server.ServerWide.Maintenance
             // check every node pair, and if one of them is lagging behind, move him to rehab
             reason = null;
             var members = state.DatabaseTopology.Members;
-            for (int i = 0; i < members.Count - 1; i++)
+            for (int i = 0; i < members.Count; i++)
             {
                 var member1 = members[i];
-                var current1 = state.GetCurrentDatabaseReport(member1)?.DatabaseChangeVector;
-                var prev1 = state.GetPreviousDatabaseReport(member1)?.DatabaseChangeVector;
+                var current1 = state.GetCurrentDatabaseReport(member1);
+                var prev1 = state.GetPreviousDatabaseReport(member1);
                 if (current1 == null || prev1 == null)
                     continue;
 
-                for (int j = i + 1; j < members.Count; j++)
+                var myCurrentEtag = current1.LastEtag;
+                var myPrevEtag = prev1.LastEtag;
+
+                for (int j = 0; j < members.Count; j++)
                 {
+                    if (i == j)
+                        continue;
+
                     var member2 = members[j];
-                    var current2 = state.GetCurrentDatabaseReport(member2)?.DatabaseChangeVector;
-                    var prev2 = state.GetPreviousDatabaseReport(member2)?.DatabaseChangeVector;
+                    var current2 = state.GetCurrentDatabaseReport(member2);
+                    var prev2 = state.GetPreviousDatabaseReport(member2);
                     if (current2 == null || prev2 == null)
                         continue;
 
-                    var currentDistance = ChangeVectorUtils.Distance(current1, current2);
-                    if (Math.Abs(currentDistance) <= _maxChangeVectorDistance)
+                    if (current1.LastSentEtag.TryGetValue(member2, out var currentLastSentEtag) == false)
                         continue;
 
-                    var prevDistance = ChangeVectorUtils.Distance(prev1, prev2);
-                    if (Math.Abs(prevDistance) > _maxChangeVectorDistance)
+                    if (prev1.LastSentEtag.TryGetValue(member2, out var prevLastSentEtag) == false)
+                        continue;
+
+                    var prevEtagDistance = myPrevEtag - prevLastSentEtag;
+                    var currentEtagDistance = myCurrentEtag - currentLastSentEtag;
+
+                    if (Math.Abs(currentEtagDistance) > _maxChangeVectorDistance && 
+                        Math.Abs(prevEtagDistance)> _maxChangeVectorDistance)
                     {
-                        var rehab = currentDistance > 0 ? member2 : member1;
-                        var rehabCheck = prevDistance > 0 ? member2 : member1;
-                        if (rehab != rehabCheck)
-                            continue; // inconsistent result, same node must be lagging
+                        // we rely both on the etag and change vector,
+                        // because the data may find a path to the node even if the direct connection between them is broken.
+                        var currentChangeVectorDistance = ChangeVectorUtils.Distance(current1.DatabaseChangeVector, current2.DatabaseChangeVector);
+                        var prevChangeVectorDistance = ChangeVectorUtils.Distance(prev1.DatabaseChangeVector, prev2.DatabaseChangeVector);
 
-                        state.DatabaseTopology.Members.Remove(rehab);
-                        state.DatabaseTopology.Rehabs.Add(rehab);
-                        reason =
-                            $"Node {rehab} for database '{state.Name}' moved to rehab, because he is lagging behind. (distance between {member1} and {member2} is {currentDistance})";
-                        state.DatabaseTopology.DemotionReasons[rehab] = $"distance between {member1} and {member2} is {currentDistance}";
+                        if (Math.Abs(currentChangeVectorDistance) > _maxChangeVectorDistance &&
+                            Math.Abs(prevChangeVectorDistance) > _maxChangeVectorDistance)
+                        {
+                            var rehab = currentChangeVectorDistance > 0 ? member2 : member1;
+                            var rehabCheck = prevChangeVectorDistance > 0 ? member2 : member1;
+                            if (rehab != rehabCheck)
+                                continue; // inconsistent result, same node must be lagging
 
-                        return false;
+                            state.DatabaseTopology.Members.Remove(rehab);
+                            state.DatabaseTopology.Rehabs.Add(rehab);
+                            reason =
+                                $"Node {rehab} for database '{state.Name}' moved to rehab, because he is lagging behind. (distance between {member1} and {member2} is {currentChangeVectorDistance})";
+                            state.DatabaseTopology.DemotionReasons[rehab] = $"distance between {member1} and {member2} is {currentChangeVectorDistance}";
+
+                            return false;
+                        }
                     }
                 }
             }

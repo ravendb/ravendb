@@ -104,7 +104,7 @@ namespace Raven.Server.Utils
 
         private static long ParseToLong(string s, int start, int len)
         {
-            int num;
+            long num;
             num = s[start] - '0';
             for (int i = 1; i < len; i++)
             {
@@ -136,17 +136,18 @@ namespace Raven.Server.Utils
             var dbIndex = oldChangeVector.IndexOf(dbIdInBase64, StringComparison.Ordinal);
             if (dbIndex < 0)
             {
-                if (string.IsNullOrEmpty(oldChangeVector) == false)
-                {
-                    vectorBuffer.Append(oldChangeVector)
-                        .Append(", ");
-                }
-
                 vectorBuffer.Append(nodeTag)
                     .Append(':')
                     .Append(etag)
                     .Append('-')
                     .Append(dbIdInBase64);
+
+                if (string.IsNullOrEmpty(oldChangeVector) == false)
+                {
+                    vectorBuffer.Append(", ").Append(oldChangeVector);
+                    // we need to maintain the dbId order
+                    return (true, vectorBuffer.ToString().ToChangeVector().SerializeVector());
+                }
 
                 return (true, vectorBuffer.ToString());
             }

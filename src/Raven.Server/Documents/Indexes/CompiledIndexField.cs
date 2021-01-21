@@ -4,6 +4,7 @@ using System.Text;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -19,7 +20,7 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly string Name;
 
-        protected bool Equals(CompiledIndexField other)
+        protected virtual bool Equals(CompiledIndexField other)
         {
             return string.Equals(Name, other.Name);
         }
@@ -83,6 +84,18 @@ namespace Raven.Server.Documents.Indexes
             PropertyName = propertyName;
         }
 
+        protected override bool Equals(CompiledIndexField other)
+        {
+            if (other is JsNestedField jnf)
+            {
+                if (PropertyName != jnf.PropertyName)
+                    return false;
+                return base.Equals(other);
+            }
+
+            return false;
+        }
+
         public override void WriteTo(StringBuilder sb)
         {
             throw new NotSupportedException();
@@ -124,6 +137,23 @@ namespace Raven.Server.Documents.Indexes
                 _field = new SimpleField(path[0]);
             else
                 _field = new NestedField(path[0], path.Skip(1).ToArray());
+        }
+
+        protected override bool Equals(CompiledIndexField other)
+        {
+            if (other is NestedField nf)
+            {
+                if (_path.Length != nf._path.Length)
+                    return false;
+                for (int i = 0; i < _path.Length; i++)
+                {
+                    if (_path[i] != nf._path[i])
+                        return false;
+                }
+                return base.Equals(other);
+            }
+
+            return false;
         }
 
         public override void WriteTo(StringBuilder sb)

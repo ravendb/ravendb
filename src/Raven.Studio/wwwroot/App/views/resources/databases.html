@@ -299,17 +299,12 @@
                 </div>
                 <!--/ko-->
                 <div class="backup">
-                    <div data-bind="attr: { class: 'properties-value value-only ' + backupStatus() }">
-                        <a class="set-size text-danger" title="Navigate to Backups view to create a backup"
-                           data-bind="css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, visible: backupStatus() === 'text-danger', attr: { href: $root.backupsViewUrl($data) }">
+                    <div class="properties-value value-only">
+                        <a class="set-size" title="Click to navigate to Backups view"
+                           data-bind="css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, attr: { href: $root.backupsViewUrl($data), class: backupStatus() }">
                             <small><i class="icon-backup"></i></small>
-                            <small>Never backed up</small>
+                            <small data-bind="text: lastBackupText"></small>
                         </a>
-                        <div class="set-size text-success" title="Last backup time"
-                             data-bind="css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, visible: backupStatus() !== 'text-danger'">
-                            <small><i class="icon-backup"></i></small>
-                            <small data-bind="text: 'Backed up ' + lastFullOrIncrementalBackup()"></small>
-                        </div>
                     </div>
                 </div>
             </div>

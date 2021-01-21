@@ -187,6 +187,7 @@ class editReplicationSinkTask extends viewModelBase {
         
         // Discard test connection result when needed
         this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
+        this.newConnectionString().topologyDiscoveryUrls.subscribe(() => this.testConnectionResult(null));
         this.newConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
       
         const readDebounced = _.debounce(() => this.editedSinkTask().replicationAccess().tryReadCertificate(), 1500);
@@ -324,10 +325,10 @@ class editReplicationSinkTask extends viewModelBase {
         this.editedSinkTask().connectionStringName(connectionStringToUse);
     }
     
-    onTestConnectionRaven(urlToTest: string) {
+    onTestConnectionRaven(urlToTest: discoveryUrl) {
         eventsCollector.default.reportEvent("pull-replication-sink", "test-connection");
         this.spinners.test(true);
-        this.newConnectionString().selectedUrlToTest(urlToTest);
+        this.newConnectionString().selectedUrlToTest(urlToTest.discoveryUrlName());
         this.testConnectionResult(null);
 
         this.newConnectionString()
@@ -335,7 +336,7 @@ class editReplicationSinkTask extends viewModelBase {
             .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);
-                this.newConnectionString().selectedUrlToTest(null);
+                this.fullErrorDetailsVisible(false);
             });
     }
 

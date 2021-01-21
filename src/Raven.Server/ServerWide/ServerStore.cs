@@ -739,8 +739,9 @@ namespace Raven.Server.ServerWide
                 if (PlatformDetails.RunningOnDocker)
                     return;
 
+                var errorThreshold = new Sparrow.Size(128, SizeUnit.Megabytes);
                 var swapSize = MemoryInformation.GetMemoryInfo().TotalSwapSize;
-                if (swapSize < Configuration.PerformanceHints.MinSwapSize)
+                if (swapSize < Configuration.PerformanceHints.MinSwapSize - errorThreshold)
                     NotificationCenter.Add(AlertRaised.Create(null,
                         "Low swap size",
                         $"The current swap size is '{swapSize}' and it is lower then the threshold defined '{Configuration.PerformanceHints.MinSwapSize}'",
@@ -2229,8 +2230,8 @@ namespace Raven.Server.ServerWide
 
                         var database = db.Value.Result;
 
-                        if (DatabaseNeedsToRunIdleOperations(database))
-                            database.RunIdleOperations();
+                        if (DatabaseNeedsToRunIdleOperations(database, out var mode))
+                            database.RunIdleOperations(mode);
                     }
                     catch (Exception e)
                     {
@@ -2400,8 +2401,8 @@ namespace Raven.Server.ServerWide
 
             return true;
         }
-
-        private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database)
+        
+        private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database, out CleanupMode mode)
         {
             var now = DateTime.UtcNow;
 
@@ -2415,7 +2416,20 @@ namespace Raven.Server.ServerWide
                     maxLastWork = env.Environment.LastWorkTime;
             }
 
-            return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
+            if ((now - maxLastWork).TotalMinutes > 5)
+            {
+                mode = CleanupMode.Deep;
+                return true;
+            }
+
+            if ((now - database.LastIdleTime).TotalMinutes > 10)
+            {
+                mode = CleanupMode.Regular;
+                return true;
+            }
+
+            mode = CleanupMode.None;
+            return false;
         }
 
         public void AssignNodesToDatabase(ClusterTopology clusterTopology, string name, bool encrypted, DatabaseTopology databaseTopology)
@@ -2529,7 +2543,8 @@ namespace Raven.Server.ServerWide
             if (_engine.CurrentState != RachisState.Passive)
                 return;
 
-            _engine.Bootstrap(publicServerUrl ?? _server.ServerStore.GetNodeHttpServerUrl(), nodeTag);
+            if (_engine.Bootstrap(publicServerUrl ?? _server.ServerStore.GetNodeHttpServerUrl(), nodeTag) == false)
+                return;
 
             if (skipLicenseActivation == false)
                 await LicenseManager.TryActivateLicenseAsync(Server.ThrowOnLicenseActivationFailure);

@@ -171,29 +171,29 @@ namespace Raven.Server.Documents.Queries
                     case OperatorType.LessThan:
                     case OperatorType.LessThanEqual:
                     case OperatorType.GreaterThanEqual:
+                    {
+                        QueryExpression right = where.Right;
+
+                        if (where.Right is MethodExpression rme)
                         {
-                            QueryExpression right = where.Right;
+                            right = EvaluateMethod(query, metadata, serverContext, documentsContext, rme, ref parameters);
+                        }
 
-                            if (where.Right is MethodExpression rme)
-                            {
-                                right = EvaluateMethod(query, metadata, serverContext, documentsContext, rme, ref parameters);
-                            }
-
-                            var fieldName = ExtractIndexFieldName(query, parameters, where.Left, metadata);
+                        var fieldName = ExtractIndexFieldName(query, parameters, where.Left, metadata);
 
                             exact = IsExact(index, exact, fieldName);
 
-                            var (value, valueType) = GetValue(query, metadata, parameters, right, true);
+                        var (value, valueType) = GetValue(query, metadata, parameters, right, true);
 
-                            var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
+                        var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
 
-                            switch (fieldType)
-                            {
-                                case LuceneFieldType.String:
-                                    if (exact && metadata.IsDynamic)
-                                        luceneFieldName = AutoIndexField.GetExactAutoIndexFieldName(luceneFieldName);
+                        switch (fieldType)
+                        {
+                            case LuceneFieldType.String:
+                                if (exact && metadata.IsDynamic)
+                                    luceneFieldName = AutoIndexField.GetExactAutoIndexFieldName(luceneFieldName);
 
-                                    exact |= valueType == ValueTokenType.Parameter;
+                                exact |= valueType == ValueTokenType.Parameter;
 
                                     if (TryUseTime(index, fieldName, value, exact, out var ticks))
                                     {
@@ -204,68 +204,68 @@ namespace Raven.Server.Documents.Queries
 
                                     var valueAsString = GetValueAsString(value);
 
-                                    switch (where.Operator)
-                                    {
-                                        case OperatorType.Equal:
-                                            return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsString, exact);
-                                        case OperatorType.NotEqual:
-                                            return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsString, exact);
-                                        case OperatorType.LessThan:
-                                            return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsString, exact);
-                                        case OperatorType.GreaterThan:
-                                            return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsString, exact);
-                                        case OperatorType.LessThanEqual:
-                                            return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsString, exact);
-                                        case OperatorType.GreaterThanEqual:
-                                            return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsString, exact);
-                                    }
-                                    break;
-                                case LuceneFieldType.Long:
-                                    var valueAsLong = (long)value;
+                                switch (where.Operator)
+                                {
+                                    case OperatorType.Equal:
+                                        return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsString, exact);
+                                    case OperatorType.NotEqual:
+                                        return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsString, exact);
+                                    case OperatorType.LessThan:
+                                        return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsString, exact);
+                                    case OperatorType.GreaterThan:
+                                        return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsString, exact);
+                                    case OperatorType.LessThanEqual:
+                                        return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsString, exact);
+                                    case OperatorType.GreaterThanEqual:
+                                        return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsString, exact);
+                                }
+                                break;
+                            case LuceneFieldType.Long:
+                                var valueAsLong = (long)value;
 
-                                    switch (where.Operator)
-                                    {
-                                        case OperatorType.Equal:
+                                switch (where.Operator)
+                                {
+                                    case OperatorType.Equal:
                                             return LuceneQueryHelper.Equal(luceneFieldName, valueAsLong);
-                                        case OperatorType.NotEqual:
+                                    case OperatorType.NotEqual:
                                             return LuceneQueryHelper.NotEqual(luceneFieldName, valueAsLong);
-                                        case OperatorType.LessThan:
+                                    case OperatorType.LessThan:
                                             return LuceneQueryHelper.LessThan(luceneFieldName, valueAsLong);
-                                        case OperatorType.GreaterThan:
+                                    case OperatorType.GreaterThan:
                                             return LuceneQueryHelper.GreaterThan(luceneFieldName, valueAsLong);
-                                        case OperatorType.LessThanEqual:
+                                    case OperatorType.LessThanEqual:
                                             return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, valueAsLong);
-                                        case OperatorType.GreaterThanEqual:
+                                    case OperatorType.GreaterThanEqual:
                                             return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, valueAsLong);
-                                    }
-                                    break;
-                                case LuceneFieldType.Double:
-                                    var valueAsDouble = (double)value;
+                                }
+                                break;
+                            case LuceneFieldType.Double:
+                                var valueAsDouble = (double)value;
 
-                                    switch (where.Operator)
-                                    {
-                                        case OperatorType.Equal:
+                                switch (where.Operator)
+                                {
+                                    case OperatorType.Equal:
                                             return LuceneQueryHelper.Equal(luceneFieldName, valueAsDouble);
-                                        case OperatorType.NotEqual:
+                                    case OperatorType.NotEqual:
                                             return LuceneQueryHelper.NotEqual(luceneFieldName, valueAsDouble);
-                                        case OperatorType.LessThan:
+                                    case OperatorType.LessThan:
                                             return LuceneQueryHelper.LessThan(luceneFieldName, valueAsDouble);
-                                        case OperatorType.GreaterThan:
+                                    case OperatorType.GreaterThan:
                                             return LuceneQueryHelper.GreaterThan(luceneFieldName, valueAsDouble);
-                                        case OperatorType.LessThanEqual:
+                                    case OperatorType.LessThanEqual:
                                             return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, valueAsDouble);
-                                        case OperatorType.GreaterThanEqual:
+                                    case OperatorType.GreaterThanEqual:
                                             return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, valueAsDouble);
-                                    }
-                                    break;
-                                default:
-                                    throw new ArgumentOutOfRangeException(nameof(fieldType), fieldType, null);
-                            }
-
-                            throw new NotSupportedException("Should not happen!");
+                                }
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(fieldType), fieldType, null);
                         }
+
+                        throw new NotSupportedException("Should not happen!");
+                    }
                     case OperatorType.And:
-                        {
+                    {
                             // translate ((Foo >= $p1) and (Foo <= $p2)) to a more efficient between query
                             if (@where.Left is BinaryExpression lbe && lbe.IsRangeOperation  && 
                                @where.Right is BinaryExpression rbe && rbe.IsRangeOperation && lbe.Left.Equals(rbe.Left) && 
@@ -298,21 +298,21 @@ namespace Raven.Server.Documents.Queries
                             var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, index, parameters, analyzer,
                                 factories, exact, secondary: true, buildSteps: buildSteps);
 
-                            if (left is RavenBooleanQuery rbq)
-                            {
+                        if (left is RavenBooleanQuery rbq)
+                        {
                                 if (rbq.TryAnd(right, buildSteps) == false)
                                     rbq = new RavenBooleanQuery(left, right, OperatorType.And, buildSteps);
-                            }
-                            else
-                            {
-                                rbq = new RavenBooleanQuery(OperatorType.And);
-                                rbq.And(left, right, buildSteps);
-                            }
-
-                            return rbq;
                         }
-                    case OperatorType.Or:
+                        else
                         {
+                            rbq = new RavenBooleanQuery(OperatorType.And);
+                                rbq.And(left, right, buildSteps);
+                        }
+
+                        return rbq;
+                    }
+                    case OperatorType.Or:
+                    {
                             var left = ToLuceneQuery(serverContext, documentsContext, query, @where.Left, metadata, index, parameters, analyzer,
                                 factories, exact, secondary: secondary, buildSteps: buildSteps);
                             var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, index, parameters, analyzer,
@@ -320,25 +320,25 @@ namespace Raven.Server.Documents.Queries
 
                             buildSteps?.Add($"OR operator: left - {left.GetType().FullName} ({left}) assembly: {left.GetType().Assembly.FullName} assemby location: {left.GetType().Assembly.Location} , right - {right.GetType().FullName} ({right}) assemlby: {right.GetType().Assembly.FullName} assemby location: {right.GetType().Assembly.Location}");
 
-                            if (left is RavenBooleanQuery rbq)
-                            {
+                        if (left is RavenBooleanQuery rbq)
+                        {
                                 if (rbq.TryOr(right, buildSteps) == false)
                                 {
                                     rbq = new RavenBooleanQuery(left, right, OperatorType.Or, buildSteps);
 
                                     buildSteps?.Add($"Created RavenBooleanQuery because TryOr returned false - {rbq}");
-                                }
+                        }
                             }
-                            else
-                            {
-                                rbq = new RavenBooleanQuery(OperatorType.Or);
+                        else
+                        {
+                            rbq = new RavenBooleanQuery(OperatorType.Or);
                                 rbq.Or(left, right, buildSteps);
 
                                 buildSteps?.Add($"Created RavenBooleanQuery - {rbq}");
-                            }
-
-                            return rbq;
                         }
+
+                        return rbq;
+                    }
                 }
             }
             if (expression is NegatedExpression ne)
@@ -347,10 +347,10 @@ namespace Raven.Server.Documents.Queries
 
                 // 'not foo and bar' should be parsed as:
                 // (not foo) and bar, instead of not (foo and bar)
-                if (ne.Expression is BinaryExpression nbe &&
+                if (ne.Expression is BinaryExpression nbe && 
                     nbe.Parenthesis == false &&
                     (nbe.Operator == OperatorType.And || nbe.Operator == OperatorType.Or)
-                    )
+                )
                 {
                     var newExpr = new BinaryExpression(new NegatedExpression(nbe.Left),
                         nbe.Right, nbe.Operator);
@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.Queries
                 buildSteps?.Add($"Between: {expression.Type} - {be}");
 
                 return TranslateBetweenQuery(query, metadata, index, parameters, exact, be, secondary);
-            }
+                }
             if (expression is InExpression ie)
             {
                 buildSteps?.Add($"In: {expression.Type} - {ie}");
@@ -817,7 +817,7 @@ namespace Raven.Server.Documents.Queries
         private static Lucene.Net.Search.Query HandleBoost(TransactionOperationContext serverContext, DocumentsOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact, List<string> buildSteps = null)
         {
-            if (expression.Arguments.Count != 2)
+            if(expression.Arguments.Count != 2)
             {
                 throw new InvalidQueryException($"Boost(expression, boostVal) requires two arguments, but was called with {expression.Arguments.Count}",
                     metadata.QueryText, parameters);
@@ -844,8 +844,8 @@ namespace Raven.Server.Documents.Queries
                     if (float.TryParse(s, out boost) == false)
                     {
                         throw new InvalidQueryException($"The boost value must be a valid float, but was called with {s}",
-                            metadata.QueryText, parameters);
-                    }
+                    metadata.QueryText, parameters);
+            }
                     break;
                 default:
                     throw new InvalidQueryException($"Unable to find boost value: {val} ({type})",
@@ -882,6 +882,7 @@ namespace Raven.Server.Documents.Queries
         private static Lucene.Net.Search.Query HandleSearch(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters,
             Analyzer analyzer, int? proximity)
         {
+         
             QueryFieldName fieldName;
             var isDocumentId = false;
             switch (expression.Arguments[0])
@@ -987,71 +988,61 @@ namespace Raven.Server.Documents.Queries
                 return LuceneTermType.String;
             }
 
+            /*
+             * Here we need to deal with value that comes from the user, which means that we
+             * have to be careful.
+             *
+             * The rules are that we'll split the terms on whitespace, except if they are quoted
+             * using ", however, you may escape the " using \, and \ using \\.
+             */
             IEnumerable<string> GetValues()
             {
-                const char spaceChar = ' ';
-                const char quotationChar = '"';
-
                 List<int> escapePositions = null;
 
+                var quoted = false;
                 var lastWordStart = 0;
                 for (var i = 0; i < valueAsString.Length; i++)
                 {
-                    var c = valueAsString[i];
-
-                    if (c == quotationChar && lastWordStart == i && IsLast(valueAsString, i) == false && IsEscaped(valueAsString, i) == false)
+                    switch (valueAsString[i])
                     {
-                        var nextCharIndex = i;
-                        escapePositions?.Clear();
-
-                        bool shouldContinue;
-                        do
-                        {
-                            nextCharIndex = valueAsString.IndexOf(quotationChar, nextCharIndex + 1);
-                            if (nextCharIndex == -1)
-                                break;
-
-                            shouldContinue = IsEscaped(valueAsString, nextCharIndex);
-                            if (shouldContinue)
+                        case '\\' when IsEscaped(valueAsString, i):
+                            AddEscapePosition(i);
+                            break;                            
+                        case '"':
+                            if (IsEscaped(valueAsString, i))
                             {
-                                if (escapePositions == null)
-                                    escapePositions = new List<int>(16);
-
-                                escapePositions.Add(nextCharIndex - 1);
+                                AddEscapePosition(i);
+                                continue;
                             }
-                        } while (shouldContinue);
+                            if (lastWordStart != i)
+                            {
+                                yield return YieldValue(valueAsString, lastWordStart, i - lastWordStart, escapePositions);
+                            }
 
-                        if (nextCharIndex == -1)
-                            continue;
-
-                        if (IsLast(valueAsString, nextCharIndex))
-                        {
-                            yield return YieldValue(valueAsString, i + 1, nextCharIndex - i - 1, escapePositions);
-
-                            i = nextCharIndex;
+                            quoted = !quoted;
+                            lastWordStart = i + 1;
+                            break;
+                        case '\t':
+                        case ' ':
+                            if(quoted)
+                                continue;
+                            
+                            yield return YieldValue(valueAsString, lastWordStart, i - lastWordStart, escapePositions);
                             lastWordStart = i + 1; // skipping
-                            continue;
-                        }
-
-                        if (IsChar(valueAsString, nextCharIndex + 1, spaceChar))
-                        {
-                            yield return YieldValue(valueAsString, i + 1, nextCharIndex - i - 1, escapePositions);
-
-                            i = nextCharIndex + 1; // +1 for space
-                            lastWordStart = i + 1; // skipping
-                            continue;
-                        }
-                    }
-
-                    if (c == spaceChar)
-                    {
-                        yield return valueAsString.Substring(lastWordStart, i - lastWordStart);
-                        lastWordStart = i + 1; // skipping
+                            break;
                     }
                 }
 
                 if (valueAsString.Length - lastWordStart > 0)
-                    yield return valueAsString.Substring(lastWordStart);
+                    yield return YieldValue(valueAsString, lastWordStart, valueAsString.Length - lastWordStart, escapePositions);
+                
+                
+
+                void AddEscapePosition(int i)
+                {
+                    escapePositions ??= new List<int>(16);
+                    escapePositions.Add(i - 1);
+                }
             }
 
             string YieldValue(string input, int startIndex, int length, List<int> escapePositions)
@@ -1061,32 +1052,33 @@ namespace Raven.Server.Documents.Queries
 
                 var sb = new StringBuilder(input, startIndex, length, length);
 
-                foreach (var escapePosition in escapePositions)
-                    sb.Remove(escapePosition - startIndex, 1);
+                for (int i = escapePositions.Count - 1; i >= 0; i--)
+                {
+                    sb.Remove(escapePositions[i] - startIndex, 1);
+                }
+                escapePositions.Clear();
 
                 return sb.ToString();
             }
 
             bool IsEscaped(string input, int index)
             {
-                if (index == 0)
-                    return false;
+                var count = 0;
+                for (int i = index - 1; i >= 0; i--)
+                {
+                    if (input[i] == '\\')
+                    {
+                        count++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
 
-                return input[index - 1] == '\\';
+                return (count & 1) == 1;
             }
 
-            bool IsChar(string input, int index, char c)
-            {
-                if (index >= input.Length)
-                    return false;
-
-                return input[index] == c;
-            }
-
-            bool IsLast(string input, int index)
-            {
-                return index == input.Length - 1;
-            }
         }
 
         private static Lucene.Net.Search.Query HandleSpatial(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters,

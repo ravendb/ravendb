@@ -3,16 +3,27 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class deleteCompareExchangeConfirm extends dialogViewModelBase {
 
-    private itemIds = ko.observableArray<string>();
+    private itemKeys = ko.observableArray<string>();
+    
+    title: string;
+    subTitleHtml: string;
 
-    constructor(itemsIds: Array<string>) {
+    constructor(itemsKeys: Array<string>) {
         super(null);
 
-        if (itemsIds.length === 0) {
-            throw new Error("Must have at least one compare exchange value to delete.");
+        if (itemsKeys.length === 0) {
+            throw new Error("Must have at least one compare exchange item to delete.");
         }
 
-        this.itemIds(itemsIds);
+        this.itemKeys(itemsKeys);
+
+        if (this.itemKeys().length === 1) {
+            this.title = "Delete compare exchange item?";
+            this.subTitleHtml = `You're deleting a compare exchange item with key:`;
+        } else {
+            this.title = "Delete compare exchange items?";
+            this.subTitleHtml = `You're deleting <strong>${this.itemKeys().length}</strong> compare exchange items with keys:`;
+        }
     }
 
     deleteItems() {

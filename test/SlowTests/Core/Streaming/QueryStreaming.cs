@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,6 +15,7 @@ using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
+using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -236,6 +238,84 @@ namespace SlowTests.Core.Streaming
             }
         }
 
+        [Fact]
+        public async Task QueryStream_WhenDocsContainsMultipleUniqPropertyNames_ShouldNotBeVeryVerySlow()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.FindClrType = (t, b) => "SomeType"
+            });
+
+            var objs = Enumerable.Range(0, 50000).Select(_ => new Dictionary<string, string>
+            {
+                [Guid.NewGuid().ToString("n")] = "someValue",
+                [Guid.NewGuid().ToString("n")] = "someValue",
+                [Guid.NewGuid().ToString("n")] = "someValue",
+                [Guid.NewGuid().ToString("n")] = "someValue",
+                [Guid.NewGuid().ToString("n")] = "someValue",
+                [Guid.NewGuid().ToString("n")] = "someValue"
+            });
+
+            {
+                // After solving RavenDB-16040/RavenDB-16039 the iteration can be simplified 
+                var session = store.OpenAsyncSession();
+                try
+                {
+                    var i = 0;
+                    foreach (var obj in objs)
+                    {
+                        await session.StoreAsync(obj);
+                        i++;
+                        if (i % 50 == 0)
+                        {
+                            await session.SaveChangesAsync();
+                            session.Dispose();
+                            session = store.OpenAsyncSession();
+                        }
+                    }
+                    await session.SaveChangesAsync();
+                }
+                finally
+                {
+                    session.Dispose();
+                }
+            }
+
+            await Assert(Task.Run(() =>
+            {
+                using var session = store.OpenSession();
+                using (var stream = session.Advanced.Stream(session.Query<dynamic>()))
+                {
+                    while (true)
+                    {
+                        if (stream.MoveNext() == false)
+                            break;
+                    }
+                }
+            }));
+
+            await Assert(Task.Run(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                await using(var stream = await session.Advanced.StreamAsync(session.Query<dynamic>()))
+                {
+                    while (true)
+                    {
+                        if (await stream.MoveNextAsync() == false)
+                            break;
+                    }
+                }
+            }));
+
+            static async Task Assert(Task test)
+            {
+                await Task.WhenAny(test, Task.Delay(TimeSpan.FromMinutes(2)));
+                if (test.IsFaulted)
+                    await test;
+                Xunit.Assert.True(test.IsCompletedSuccessfully);
+            }
+        }
+        
         [Fact]
         public void Streaming_Results_Should_Sort_Properly()
         {

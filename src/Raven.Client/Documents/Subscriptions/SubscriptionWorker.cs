@@ -380,7 +380,8 @@ namespace Raven.Client.Documents.Subscriptions
                         }
                     }
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}]{Environment.NewLine}Reasons:{string.Join(Environment.NewLine, reasonsDictionary.Select(x => $"{x.Key}:{x.Value}"))}{Environment.NewLine}Message: {connectionStatus.Message}",
+                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}]{Environment.NewLine}Reasons:{string.Join(Environment.NewLine, reasonsDictionary.Select(x => $"{x.Key}:{x.Value}"))}",
+                        inner: new SubscriptionDoesNotBelongToNodeException(connectionStatus.Exception),
                         appropriateNode,
                         reasonsDictionary);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect:
@@ -718,12 +719,11 @@ namespace Raven.Client.Documents.Subscriptions
             switch (ex)
             {
                 case SubscriptionDoesNotBelongToNodeException se:
-                    AssertLastConnectionFailure();
-
                     var requestExecutor = _store.GetRequestExecutor(_dbName);
 
                     if (se.AppropriateNode == null)
                     {
+                        AssertLastConnectionFailure();
                         _redirectNode = null;
                         return true;
                     }

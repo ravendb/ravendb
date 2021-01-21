@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class getCompareExchangeValuesCommand extends commandBase {
+class getCompareExchangeItemsCommand extends commandBase {
 
     constructor(private database: database, private prefix: string, private start: number, private take: number) {
         super();
@@ -24,7 +24,6 @@ class getCompareExchangeValuesCommand extends commandBase {
         const url = endpoints.databases.compareExchange.cmpxchg + this.urlEncodeArgs(args);
         return this.query(url, null, this.database, resultsSelector);
     }
-
 }
 
-export = getCompareExchangeValuesCommand;
+export = getCompareExchangeItemsCommand;

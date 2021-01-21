@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
-    <RuntimeFrameworkVersion>5.0.1</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>5.0.2</RuntimeFrameworkVersion>
   </PropertyGroup>
 
   <ItemGroup>

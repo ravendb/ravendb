@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <RuntimeFrameworkVersion>5.0.1</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>5.0.2</RuntimeFrameworkVersion>
     <AssemblyName>Subscriptions.Benchmark</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Subscriptions.Benchmark</PackageId>

@@ -9,14 +9,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         public MapReduceIndexDefinition(IndexDefinition definition, IEnumerable<string> collections, string[] outputFields, CompiledIndexField[] groupByFields, bool hasDynamicFields, bool hasCompareExchange, long indexVersion)
             : base(definition, collections, outputFields, hasDynamicFields, hasCompareExchange, indexVersion)
         {
-            GroupByFields = new HashSet<CompiledIndexField>(groupByFields);
+            GroupByFields = new Dictionary<string, CompiledIndexField>(groupByFields.Length);
+            foreach (var field in groupByFields)
+            {
+                GroupByFields[field.Name] = field;
+            }
             OutputReduceToCollection = definition.OutputReduceToCollection;
             ReduceOutputIndex = definition.ReduceOutputIndex;
             PatternForOutputReduceToCollectionReferences = definition.PatternForOutputReduceToCollectionReferences;
             PatternReferencesCollectionName = definition.PatternReferencesCollectionName;
         }
 
-        public HashSet<CompiledIndexField> GroupByFields { get; }
+        public Dictionary<string, CompiledIndexField> GroupByFields { get; }
         public string OutputReduceToCollection { get; }
         public long? ReduceOutputIndex { get; set; }
         public string PatternForOutputReduceToCollectionReferences { get; }

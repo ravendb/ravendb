@@ -12,6 +12,7 @@ import connectionStringRavenEtlModel = require("models/database/settings/connect
 import jsonUtil = require("common/jsonUtil");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import discoveryUrl = require("models/database/settings/discoveryUrl");
 
 class editExternalReplicationTask extends viewModelBase {
 
@@ -120,6 +121,7 @@ class editExternalReplicationTask extends viewModelBase {
         
         // Discard test connection result when needed
         this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
+        this.newConnectionString().topologyDiscoveryUrls.subscribe(() => this.testConnectionResult(null));
         this.newConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
 
         this.dirtyFlag = new ko.DirtyFlag([
@@ -221,10 +223,10 @@ class editExternalReplicationTask extends viewModelBase {
         this.editedExternalReplication().connectionStringName(connectionStringToUse);
     }
     
-    onTestConnectionRaven(urlToTest: string) {
+    onTestConnectionRaven(urlToTest: discoveryUrl) {
         eventsCollector.default.reportEvent("external-replication", "test-connection");
         this.spinners.test(true);
-        this.newConnectionString().selectedUrlToTest(urlToTest);
+        this.newConnectionString().selectedUrlToTest(urlToTest.discoveryUrlName());
         this.testConnectionResult(null);
 
         this.newConnectionString()
@@ -232,7 +234,7 @@ class editExternalReplicationTask extends viewModelBase {
             .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);
-                this.newConnectionString().selectedUrlToTest(null);
+                this.fullErrorDetailsVisible(false);
             });
     }
 }

@@ -116,9 +116,14 @@ class connectionStringRavenEtlModel extends connectionStringModel {
         }
     }
 
-    testConnection(urlToTest: string) : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
-        return new testClusterNodeConnectionCommand(urlToTest, this.database(), false)
-            .execute();
+    testConnection(urlToTest: discoveryUrl) : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
+        return new testClusterNodeConnectionCommand(urlToTest.discoveryUrlName(), this.database(), false)
+            .execute()
+            .done((result) => {
+                if (result.Error) {
+                    urlToTest.hasTestError(true);
+                }
+            });
     }
 
     saveConnectionString(db: database) : JQueryPromise<void> {

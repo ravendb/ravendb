@@ -2,12 +2,11 @@ import router = require("plugins/router");
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
-
 import eventsCollector = require("common/eventsCollector");
 import deleteCompareExchangeConfirm = require("viewmodels/database/documents/deleteCompareExchangeConfirm");
 import deleteCompareExchangeProgress = require("viewmodels/database/documents/deleteCompareExchangeProgress");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
-import getCompareExchangeValuesCommand = require("commands/database/cmpXchg/getCompareExchangeValuesCommand");
+import getCompareExchangeItemsCommand = require("commands/database/cmpXchg/getCompareExchangeItemsCommand");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
@@ -26,7 +25,7 @@ class cmpXchg extends viewModelBase {
     private columnPreview = new columnPreviewPlugin<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>();
 
     spinners = {
-        delete: ko.observable<boolean>(false),
+        delete: ko.observable<boolean>(false)
     };
 
     constructor() {
@@ -50,6 +49,7 @@ class cmpXchg extends viewModelBase {
             }
             return selectedDocsCount;
         });
+        
         this.deleteEnabled = ko.pureComputed(() => {
             const deleteInProgress = this.spinners.delete();
             const selectedDocsCount = this.selectedItemsCount();
@@ -64,10 +64,10 @@ class cmpXchg extends viewModelBase {
         continueTest.default.init(args);
     }
 
-    fetchValues(skip: number): JQueryPromise<pagedResult<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>> {
+    fetchItems(skip: number): JQueryPromise<pagedResult<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>> {
         const task = $.Deferred<pagedResult<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>>();
 
-        new getCompareExchangeValuesCommand(this.activeDatabase(), this.filter(), this.nextItemToFetchIndex || 0, 101)
+        new getCompareExchangeItemsCommand(this.activeDatabase(), this.filter(), this.nextItemToFetchIndex || 0, 101)
             .execute()
             .done(result => {
                 const hasMore = result.items.length === 101;
@@ -93,10 +93,11 @@ class cmpXchg extends viewModelBase {
 
         grid.headerVisible(true);
 
-        grid.init((s, _) => this.fetchValues(s), () => [
+        grid.init((s, _) => this.fetchItems(s), () => [
             new checkedColumn(true),
-            new hyperlinkColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Key, x => appUrl.forEditCmpXchg(x.Key, this.activeDatabase()), "Key", "300px"),
-            new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value.Object, "Value", "510px"), 
+            new hyperlinkColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Key, x => appUrl.forEditCmpXchg(x.Key, this.activeDatabase()), "Key", "20%"),
+            new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value.Object, "Value", "20%"),
+            new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value["@metadata"], "Metadata", "20%")
         ]);
         
          this.columnPreview.install(".js-cmp-xchg-grid", ".js-cmp-xchg-tooltip", 
@@ -132,12 +133,12 @@ class cmpXchg extends viewModelBase {
         if (rawSelection.mode === "exclusive" && !rawSelection.excluded.length && !rawSelection.included.length) {
             // this is special case - user select all values, with out any exclusions, suggest deleting all cmpXchg values
             // (including items which wasn't downloaded yet)
-            this.confirmationMessage("Are you sure?", "Deleting <strong>ALL</strong> compare exchange values.", { html: true, buttons: ["Cancel", "Delete All"] })
+            this.confirmationMessage("Are you sure?", "Deleting <strong>ALL</strong> compare exchange items.", { html: true, buttons: ["Cancel", "Delete All"] })
                 .done(result => {
                     if (result.can) {
                         this.spinners.delete(true);
                         
-                        new getCompareExchangeValuesCommand(this.activeDatabase(), this.filter(), 0, 2147483647)
+                        new getCompareExchangeItemsCommand(this.activeDatabase(), this.filter(), 0, 2147483647)
                             .execute()
                             .done(allValues => {
                                 const deleteProgress = new deleteCompareExchangeProgress(allValues.items, this.activeDatabase());
@@ -147,7 +148,6 @@ class cmpXchg extends viewModelBase {
                             })
                     }
                 })
-            
         } else {
             eventsCollector.default.reportEvent("cmpXchg", "delete");
 

@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class deleteCompareExchangeValueCommand extends commandBase {
+class deleteCompareExchangeItemCommand extends commandBase {
 
     constructor(private database: database, private key: string, private index: number) {
         super();
@@ -16,9 +16,8 @@ class deleteCompareExchangeValueCommand extends commandBase {
 
         const url = endpoints.databases.compareExchange.cmpxchg + this.urlEncodeArgs(args);
         return this.del<Raven.Client.Documents.Operations.CompareExchange.CompareExchangeResult<any>>(url, null, this.database)
-            .fail((response: JQueryXHR) => this.reportError("Failed to delete compare exchange value", response.responseText, response.statusText));
+            .fail((response: JQueryXHR) => this.reportError("Failed to delete Compare Exchange item", response.responseText, response.statusText));
     }
-
 }
 
-export = deleteCompareExchangeValueCommand;
+export = deleteCompareExchangeItemCommand;

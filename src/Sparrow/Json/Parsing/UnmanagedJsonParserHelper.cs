@@ -173,10 +173,9 @@ namespace Sparrow.Json.Parsing
             {
                 if (docsCountOnCachedRenewSession <= 16 * 1024)
                 {
-
                     if (cachedItemsRenew)
                     {
-                        context.CachedProperties = new CachedProperties(context);
+                        context.CachedProperties.ClearRenew();
                         ++docsCountOnCachedRenewSession;
                     }
                 }
@@ -194,8 +193,7 @@ namespace Sparrow.Json.Parsing
 
                 using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "readArray/singleResult", parser, state))
                 {
-                    if (cachedItemsRenew == false)
-                        cachedItemsRenew = builder.NeedResetPropertiesCache();
+                    cachedItemsRenew = builder.NeedClearPropertiesCache();
                     ReadObject(builder, peepingTomStream, parser, buffer);
 
                     yield return builder.CreateReader();

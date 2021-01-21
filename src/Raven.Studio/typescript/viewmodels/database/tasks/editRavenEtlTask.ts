@@ -25,6 +25,7 @@ import document = require("models/database/documents/document");
 import testRavenEtlCommand = require("commands/database/tasks/testRavenEtlCommand");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import discoveryUrl = require("models/database/settings/discoveryUrl");
 
 type resultItem = {
     header: string;
@@ -203,7 +204,9 @@ class editRavenEtlTask extends viewModelBase {
         super();
         
         aceEditorBindingHandler.install();
-        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "removeTransformationScript", "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp", "toggleTestArea", "toggleAdvancedArea");
+        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "removeTransformationScript",
+                                   "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp",
+                                   "toggleTestArea", "toggleAdvancedArea");
     }
 
     activate(args: any) {
@@ -292,6 +295,7 @@ class editRavenEtlTask extends viewModelBase {
         
         // Discard test connection result when needed
         this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
+        this.newConnectionString().topologyDiscoveryUrls.subscribe(() => this.testConnectionResult(null));
         this.newConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
 
         this.enableTestArea.subscribe(testMode => {
@@ -329,10 +333,10 @@ class editRavenEtlTask extends viewModelBase {
         this.editedRavenEtl().connectionStringName(connectionStringToUse);
     }
 
-    onTestConnectionRaven(urlToTest: string) {
+    onTestConnectionRaven(urlToTest: discoveryUrl) {
         eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
         this.spinners.test(true);
-        this.newConnectionString().selectedUrlToTest(urlToTest);
+        this.newConnectionString().selectedUrlToTest(urlToTest.discoveryUrlName());
         this.testConnectionResult(null);
 
         this.newConnectionString()
@@ -340,7 +344,7 @@ class editRavenEtlTask extends viewModelBase {
             .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);
-                this.newConnectionString().selectedUrlToTest(null);
+                this.fullErrorDetailsVisible(false);
             });
     }
 

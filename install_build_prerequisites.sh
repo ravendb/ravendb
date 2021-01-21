@@ -10,7 +10,7 @@ UBUNTU_CODENAME=$(lsb_release -c | cut -d ":" -f2 | sed 's/\t//g')
 UBUNTU_VERSION=$(lsb_release -r | cut -d ":" -f2 | sed 's/\t//g')
 
 if [[ ! "$UBUNTU_VERSION" =~ ^1[468]\.04$ ]] ; then
-    echo "Unsupported Ubuntu version: $UBUNTU_VERSION $UBUNTU_CODENAME. Must be 16.04 or 14.04."
+    echo "Unsupported Ubuntu version: $UBUNTU_VERSION $UBUNTU_CODENAME. Must be 20.04, 18.04, 16.04 or 14.04."
     exit -1
 fi
 
@@ -23,7 +23,7 @@ fi
 
 eval 
 
-echo "Installing .NET Core SDK 2.1"
+echo "Installing .NET Core SDK 5.0"
 
 if [ -z "$CURL_CMD" ]; then
     sudo apt-get install -y curl 
@@ -37,10 +37,12 @@ elif [ "$UBUNTU_VERSION" = "14.04" ] ; then
     sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-trusty-prod trusty main" > /etc/apt/sources.list.d/dotnetdev.list'
 elif [ "$UBUNTU_VERSION" = "18.04" ] ; then
     sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-bionic-prod bionic main" > /etc/apt/sources.list.d/dotnetdev.list'
+elif [ "$UBUNTU_VERSION" = "20.04" ] ; then
+    sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-focal-prod focal main" > /etc/apt/sources.list.d/dotnetdev.list'          
 fi
 
 sudo apt-get update
-sudo apt-get install -y dotnet-sdk-2.1
+sudo apt-get install -y dotnet-sdk-5.0
 
 mkdir ./dotnet_tmp
 cd ./dotnet_tmp
@@ -62,6 +64,8 @@ if [ -z "$POWERSHELL_CMD" ] ; then
         curl https://packages.microsoft.com/config/ubuntu/14.04/prod.list | sudo tee /etc/apt/sources.list.d/microsoft.list
     elif [ "$UBUNTU_VERSION" = "18.04" ] ; then
         curl https://packages.microsoft.com/config/ubuntu/18.04/prod.list | sudo tee /etc/apt/sources.list.d/microsoft.list
+    elif [ "$UBUNTU_VERSION" = "20.04" ] ; then
+        curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list | sudo tee /etc/apt/sources.list.d/microsoft.list                    
     fi
     
     sudo apt-get update
@@ -88,16 +92,6 @@ else
     else
         echo "Node $NODE_VERSION is installed."
     fi
-fi
-
-if [ -z "$MONO_CMD" ] ; then
-    echo "Mono not found. Installing..."
-    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-    echo "deb http://download.mono-project.com/repo/debian wheezy main" | sudo tee /etc/apt/sources.list.d/mono-xamarin.list
-    sudo apt-get update
-    sudo apt-get install -y mono-complete
-else 
-    echo "Mono is installed."
 fi
 
 if [ -z "$GIT_CMD" ]; then

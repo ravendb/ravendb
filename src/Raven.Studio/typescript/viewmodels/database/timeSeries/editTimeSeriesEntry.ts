@@ -27,11 +27,13 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     
     lockSeriesName: boolean;
     lockTimeStamp: boolean;
+
+    valuesNames = ko.observableArray<string>([]);
     
-    constructor(private documentId: string, 
-                private db: database, 
+    constructor(private documentId: string,
+                private db: database,
                 private timeSeriesName: string,
-                private valuesNames: string[],
+                private valuesNamesProvider: (timeseriesName: string) => string[],
                 private editDto?: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
         super();
         
@@ -60,6 +62,17 @@ class editTimeSeriesEntry extends dialogViewModelBase {
             const date = moment(model.timestamp());
             return date.local().format(editTimeSeriesEntry.localTimeFormat) + " (local)"
         });
+
+        if (!!this.timeSeriesName) {
+            this.getValuesNames();
+        }
+        
+        this.model().name.subscribe(() => this.getValuesNames());
+    }
+    
+    private getValuesNames() {
+        const valuesNames = this.valuesNamesProvider(this.model().name());
+        this.valuesNames(valuesNames);
     }
 
     compositionComplete() {
@@ -68,15 +81,17 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     }
     
     getValueName(idx: number) {
-        if (this.valuesNames.length) {
-            // for an existing timeseries
-            return this.valuesNames[idx];
-        } else {
-            // for a new timeseries
-            const possibleValuesCount = timeSeriesEntryModel.numberOfPossibleValues;
-            const possibleValuesNames = _.range(0, possibleValuesCount).map(idx => "Value #" + idx);
-            return possibleValuesNames[idx];
-        }
+        return ko.pureComputed(() => {
+            if (this.valuesNames().length) {
+                // for an existing timeseries
+                return this.valuesNames()[idx];
+            } else {
+                // for a new timeseries
+                const possibleValuesCount = timeSeriesEntryModel.numberOfPossibleValues;
+                const possibleValuesNames = _.range(0, possibleValuesCount).map(idx => "Value #" + idx);
+                return possibleValuesNames[idx];
+            }
+        });
     }
     
     save() {
