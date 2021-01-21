@@ -100,7 +100,7 @@ namespace Raven.Server.Utils.Monitoring
     public class MemoryMetrics
     {
         public long TotalMemoryInMb { get; set; }
-        public bool LowMemoryState { get; set; }
+        public bool LowState { get; set; }
         public long TotalSwapSizeInMb { get; set; }
         public long TotalSwapUsageInMb { get; set; }
         public long WorkingSetSwapUsageInMb { get; set; }
@@ -111,7 +111,7 @@ namespace Raven.Server.Utils.Monitoring
             return new DynamicJsonValue
             {
                 [nameof(TotalMemoryInMb)] = TotalMemoryInMb,
-                [nameof(LowMemoryState)] = LowMemoryState,
+                [nameof(LowState)] = LowState,
                 [nameof(TotalSwapSizeInMb)] = TotalSwapSizeInMb,
                 [nameof(TotalSwapUsageInMb)] = TotalSwapUsageInMb,
                 [nameof(WorkingSetSwapUsageInMb)] = WorkingSetSwapUsageInMb,
@@ -205,8 +205,8 @@ namespace Raven.Server.Utils.Monitoring
         public string NodeTag { get; set; }
         public RachisState NodeState { get; set; }
         public long CurrentTerm { get; set; }
-        public long ClusterIndex { get; set; }
-        public string ClusterId { get; set; }
+        public long Index { get; set; }
+        public string Id { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -215,8 +215,8 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(NodeTag)] = NodeTag,
                 [nameof(NodeState)] = NodeState,
                 [nameof(CurrentTerm)] = CurrentTerm,
-                [nameof(ClusterIndex)] = ClusterIndex,
-                [nameof(ClusterId)] = ClusterId
+                [nameof(Index)] = Index,
+                [nameof(Id)] = Id
             };
         }
     }

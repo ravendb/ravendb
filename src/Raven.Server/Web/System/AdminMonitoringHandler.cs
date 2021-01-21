@@ -42,7 +42,7 @@ namespace Raven.Server.Web.System
 
             result.ServerVersion = ServerWide.ServerVersion.Version;
             result.ServerFullVersion = ServerWide.ServerVersion.FullVersion;
-            result.UpTimeInSec = Server.Statistics.UpTime.Seconds;
+            result.UpTimeInSec = (int)Server.Statistics.UpTime.TotalSeconds;
             result.CurrentNumberOfRunningBackups = ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups;
             
             using (var currentProcess = Process.GetCurrentProcess())
@@ -142,7 +142,7 @@ namespace Raven.Server.Web.System
             var memoryInfoResult = Server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
             result.TotalMemoryInMb = memoryInfoResult.WorkingSet.GetValue(SizeUnit.Megabytes);
 
-            result.LowMemoryState = LowMemoryNotification.Instance.LowMemoryState;
+            result.LowState = LowMemoryNotification.Instance.LowMemoryState;
 
             result.TotalSwapSizeInMb = memoryInfoResult.TotalSwapSize.GetValue(SizeUnit.Megabytes);
             result.TotalSwapUsageInMb = memoryInfoResult.TotalSwapUsage.GetValue(SizeUnit.Megabytes);
@@ -222,8 +222,8 @@ namespace Raven.Server.Web.System
             }
             
             result.CurrentTerm = ServerStore.Engine.CurrentTerm;
-            result.ClusterIndex = ServerStore.LastRaftCommitIndex;
-            result.ClusterId = ServerStore.Engine.ClusterId;
+            result.Index = ServerStore.LastRaftCommitIndex;
+            result.Id = ServerStore.Engine.ClusterId;
             
             return result;
         }
