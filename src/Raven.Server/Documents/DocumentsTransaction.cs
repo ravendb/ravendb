@@ -23,14 +23,13 @@ namespace Raven.Server.Documents
 
         private bool _replaced;
 
-        private Logger _logger;
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DocumentsTransaction>("Server");
 
         private Dictionary<string, CollectionName> _collectionCache;
 
         public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsChanges changes)
             : base(transaction)
         {
-            _logger = LoggingSource.Instance.GetLogger<DocumentsTransaction>(context.DocumentDatabase.Name);
             _context = context;
             _changes = changes;
         }
@@ -102,8 +101,8 @@ namespace Raven.Server.Documents
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations("Failed to raise notifications", e);
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Failed to raise notifications for database '{_context.DocumentDatabase.Name}'.", e);
                 }
             }, this);
         }
