@@ -135,7 +135,7 @@ namespace Raven.Server.Config.Categories
         public bool IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions { get; set; }
 
         [Description("EXPERT: Disable encryption buffer pooling.")]
-        [DefaultValue(false)]
+        [DefaultValue(true)]
         [ConfigurationEntry("Storage.Encrypted.DisableBuffersPooling", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableEncryptionBuffersPooling { get; set; }
     }

@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.ETL
                     _database.Changes.OnCounterChange -= OnCounterChange;
                     _isSubscribedToCounterChanges = false;
                 }
-                
+
                 var needToWatchTimeSeries = _processes.Any(x => x.ShouldTrackTimeSeries());
                 if (needToWatchTimeSeries)
                 {
@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.ETL
 
                 _database.Changes.OnCounterChange -= OnCounterChange;
                 _isSubscribedToCounterChanges = false;
-                
+
                 _database.Changes.OnTimeSeriesChange -= OnTimeSeriesChange;
                 _isSubscribedToTimeSeriesChanges = false;
             }
@@ -204,6 +204,7 @@ namespace Raven.Server.Documents.ETL
                             connectionStringNotFound = true;
 
                         break;
+
                     case EtlType.Sql:
                         sqlConfig = config as SqlEtlConfiguration;
                         if (_databaseRecord.SqlConnectionStrings.TryGetValue(config.ConnectionStringName, out var sqlConnection))
@@ -212,6 +213,7 @@ namespace Raven.Server.Documents.ETL
                             connectionStringNotFound = true;
 
                         break;
+
                     default:
                         ThrownUnknownEtlConfiguration(config.GetType());
                         break;
@@ -343,16 +345,26 @@ namespace Raven.Server.Documents.ETL
         }
 
         private void OnCounterChange(CounterChange change) => NotifyAboutWork(change);
+
         private void OnDocumentChange(DocumentChange change) => NotifyAboutWork(change);
+
         private void OnTimeSeriesChange(TimeSeriesChange change) => NotifyAboutWork(change);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void NotifyAboutWork(DatabaseChange change)
         {
+            var processes = _processes;
+
             // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < _processes.Length; i++)
+            for (var i = 0; i < processes.Length; i++)
             {
-                _processes[i].NotifyAboutWork(change);
+                try
+                {
+                    processes[i].NotifyAboutWork(change);
+                }
+                catch (ObjectDisposedException)
+                {
+                }
             }
         }
 
@@ -590,7 +602,7 @@ namespace Raven.Server.Documents.ETL
                     MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);
 
                 foreach (var config in sqlEtls)
-                    MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);    
+                    MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);
             }
             return lastProcessedTombstones;
         }
@@ -619,6 +631,7 @@ namespace Raven.Server.Documents.ETL
                 }
             }
         }
+
         private void MarkTimeSeriesTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones) where T : ConnectionString
         {
             foreach (var transform in config.Transforms)

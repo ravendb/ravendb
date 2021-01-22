@@ -189,6 +189,27 @@ namespace FastTests.Voron
             ClearMemory(encryptionBuffersPool);
         }
 
+        [Fact]
+        public void properly_calculate_thread_total_allocations_when_we_cant_put_buffer_in_pool()
+        {
+            var encryptionBuffersPool = new EncryptionBuffersPool();
+
+            var threadStats = NativeMemory.ThreadAllocations.Value;
+            var before = threadStats.Allocations;
+
+            var ptr = encryptionBuffersPool.Get(1, out var size, out threadStats);
+
+            Assert.Equal(before + size, threadStats.TotalAllocated);
+
+            var testingStuff = encryptionBuffersPool.ForTestingPurposesOnly();
+            testingStuff.CanAddToPerCorePool = false;
+            testingStuff.CanAddToGlobalPool = false;
+
+            encryptionBuffersPool.Return(ptr, size, threadStats, encryptionBuffersPool.Generation);
+
+            Assert.Equal(before, threadStats.TotalAllocated);
+        }
+
         private static void ClearMemory(EncryptionBuffersPool encryptionBuffersPool)
         {
             encryptionBuffersPool.LowMemory(LowMemorySeverity.ExtremelyLow);

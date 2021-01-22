@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Threading;
+using Sparrow.Logging;
 using Voron.Impl;
 
 namespace Raven.Server.ServerWide
 {
     public class RavenTransaction : IDisposable
     {
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenTransaction>("Server");
 
         public Transaction InnerTransaction;
 
@@ -56,7 +58,18 @@ namespace Raven.Server.ServerWide
             if (ShouldRaiseNotifications() == false)
                 return;
 
-            ThreadPool.QueueUserWorkItem(state => ((RavenTransaction)state).RaiseNotifications(), this);
+            ThreadPool.QueueUserWorkItem(state =>
+            {
+                try
+                {
+                    ((RavenTransaction)state).RaiseNotifications();
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Failed to raise notifications", e);
+                }
+            }, this);
         }
     }
 }
