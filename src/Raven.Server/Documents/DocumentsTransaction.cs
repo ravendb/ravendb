@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using Raven.Client.Documents.Changes;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
