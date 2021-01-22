@@ -86,8 +86,8 @@ namespace SlowTests.Issues
         [Fact]
         public void ThrowOnDatabaseRecordChanges()
         {
-            const int numberOfFields = 31;
-            const int numberOfProperties = 0;
+            const int numberOfFields = 33;
+            const int numberOfProperties = 1;
             var tasksList = new List<string>
             {
                 nameof(DatabaseRecord.PeriodicBackups),
