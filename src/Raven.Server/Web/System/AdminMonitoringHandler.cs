@@ -129,8 +129,8 @@ namespace Raven.Server.Web.System
             
             var cpuUsage = Server.MetricCacher.GetValue(MetricCacher.Keys.Server.CpuUsage, Server.CpuUsageCalculator.Calculate);
 
-            result.ProcessCpuUsage = cpuUsage.ProcessCpuUsage;
-            result.MachineCpuUsage = cpuUsage.MachineCpuUsage;
+            result.ProcessUsage = cpuUsage.ProcessCpuUsage;
+            result.MachineUsage = cpuUsage.MachineCpuUsage;
             result.MachineIoWait = cpuUsage.MachineIoWait;
             
             return result;
@@ -159,7 +159,6 @@ namespace Raven.Server.Web.System
             var result = new LicenseMetrics();
             var licenseStatus = Server.ServerStore.LicenseManager.LicenseStatus;
             result.Type = licenseStatus.Type;
-            result.Expiration = licenseStatus.Expiration;
             result.ExpirationLeftInSec = licenseStatus.Expiration.HasValue
                 ? Math.Max(0, (licenseStatus.Expiration.Value - SystemTime.UtcNow).TotalSeconds) 
                 : (double?) null;
@@ -199,7 +198,6 @@ namespace Raven.Server.Web.System
             if (certificateHolder?.Certificate != null)
             {
                 var notAfter = certificateHolder.Certificate.NotAfter.ToUniversalTime();
-                result.ServerCertificateExpiration = notAfter != DateTime.MinValue ? notAfter : (DateTime?)null;
                 var timeLeft = notAfter - SystemTime.UtcNow;
                 result.ServerCertificateExpirationLeftInSec = (timeLeft.TotalSeconds > 0 ? timeLeft : TimeSpan.Zero).TotalSeconds;
             }
@@ -308,7 +306,10 @@ namespace Raven.Server.Web.System
             
             result.DatabaseId = database.DocumentsStorage.Environment.DbId.ToString();
             result.UptimeInSec = (SystemTime.UtcNow - database.StartTime).TotalSeconds;
-            result.LastBackup = database.PeriodicBackupRunner?.GetBackupInfo()?.LastBackup;
+            var lastBackup = database.PeriodicBackupRunner?.GetBackupInfo()?.LastBackup;
+            result.TimeSinceLastBackupInSec = lastBackup.HasValue 
+                ? (SystemTime.UtcNow - lastBackup.Value).TotalSeconds 
+                : (double?)null;
             
             result.Counts = GetDatabaseCounts(database);
             result.Indexes = GetDatabaseIndexesMetrics(database);
@@ -350,24 +351,24 @@ namespace Raven.Server.Web.System
             
             var indexes = database.IndexStore.GetIndexes().ToList();
             
-            result.IndexCount = database.IndexStore.Count;
+            result.Count = database.IndexStore.Count;
             
             var indexErrorsCount = 0L;
             foreach (var index in indexes)
                 indexErrorsCount += index.GetErrorCount();
 
-            result.IndexErrorsCount = indexErrorsCount;
+            result.ErrorsCount = indexErrorsCount;
 
-            result.StaticIndexesCount = indexes.Count(x => x.Type.IsStatic());
-            result.AutoIndexesCount = indexes.Count(x => x.Type.IsAuto());
-            result.IdleIndexesCount = indexes.Count(x => x.State == IndexState.Idle);
-            result.DisabledIndexesCount = indexes.Count(x => x.State == IndexState.Disabled);
-            result.ErrorIndexesCount = indexes.Count(x => x.State == IndexState.Error);
+            result.StaticCount = indexes.Count(x => x.Type.IsStatic());
+            result.AutoCount = indexes.Count(x => x.Type.IsAuto());
+            result.IdleCount = indexes.Count(x => x.State == IndexState.Idle);
+            result.DisabledCount = indexes.Count(x => x.State == IndexState.Disabled);
+            result.ErrorCount = indexes.Count(x => x.State == IndexState.Error);
             
             using (var context = QueryOperationContext.Allocate(database, needsServerContext: true))
             using (context.OpenReadTransaction())
             {
-                result.StaleIndexesCount = indexes
+                result.StaleCount = indexes
                     .Count(x => x.IsStale(context));                
             }
             
@@ -484,14 +485,12 @@ namespace Raven.Server.Web.System
             if (stats.LastQueryingTime.HasValue)
             {
                 var lastQueryingTime = stats.LastQueryingTime.Value;
-                result.LastQueryingTime = lastQueryingTime;
                 result.TimeSinceLastQueryInSec = (SystemTime.UtcNow - lastQueryingTime).TotalSeconds;
             }
 
             if (stats.LastIndexingTime.HasValue)
             {
                 var lastIndexingType = stats.LastIndexingTime.Value;
-                result.LastIndexingTime = lastIndexingType;
                 result.TimeSinceLastIndexingInSec = (SystemTime.UtcNow - lastIndexingType).TotalSeconds;
             }
 

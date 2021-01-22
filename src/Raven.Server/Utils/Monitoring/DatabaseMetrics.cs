@@ -16,7 +16,7 @@ namespace Raven.Server.Utils.Monitoring
         public string Name { get; set; }
         public string DatabaseId { get; set; }
         public double UptimeInSec { get; set; }
-        public DateTime? LastBackup { get; set; }
+        public double? TimeSinceLastBackupInSec { get; set; }
         
         public DatabaseCounts Counts { get; set; }
         public DatabaseStatistics Statistics { get; set; } 
@@ -30,7 +30,7 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(Name)] = Name,
                 [nameof(DatabaseId)] = DatabaseId,
                 [nameof(UptimeInSec)] = UptimeInSec,
-                [nameof(LastBackup)] = LastBackup,
+                [nameof(TimeSinceLastBackupInSec)] = TimeSinceLastBackupInSec,
                 [nameof(Counts)] = Counts.ToJson(),
                 [nameof(Statistics)] = Statistics.ToJson(),
                 [nameof(Indexes)] = Indexes.ToJson(),
@@ -93,27 +93,27 @@ namespace Raven.Server.Utils.Monitoring
     
     public class DatabaseIndexesMetrics
     {
-        public long IndexCount { get; set; }
-        public int StaleIndexesCount { get; set; }
-        public long IndexErrorsCount { get; set; }
-        public int StaticIndexesCount { get; set; }
-        public int AutoIndexesCount { get; set; }
-        public int IdleIndexesCount { get; set; }
-        public int DisabledIndexesCount { get; set; }
-        public int ErrorIndexesCount { get; set; }
+        public long Count { get; set; }
+        public int StaleCount { get; set; }
+        public long ErrorsCount { get; set; }
+        public int StaticCount { get; set; }
+        public int AutoCount { get; set; }
+        public int IdleCount { get; set; }
+        public int DisabledCount { get; set; }
+        public int ErrorCount { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(IndexCount)] = IndexCount,
-                [nameof(StaleIndexesCount)] = StaleIndexesCount,
-                [nameof(IndexErrorsCount)] = IndexErrorsCount,
-                [nameof(StaticIndexesCount)] = StaticIndexesCount,
-                [nameof(AutoIndexesCount)] = AutoIndexesCount,
-                [nameof(IdleIndexesCount)] = IdleIndexesCount,
-                [nameof(DisabledIndexesCount)] = DisabledIndexesCount,
-                [nameof(ErrorIndexesCount)] = ErrorIndexesCount
+                [nameof(Count)] = Count,
+                [nameof(StaleCount)] = StaleCount,
+                [nameof(ErrorsCount)] = ErrorsCount,
+                [nameof(StaticCount)] = StaticCount,
+                [nameof(AutoCount)] = AutoCount,
+                [nameof(IdleCount)] = IdleCount,
+                [nameof(DisabledCount)] = DisabledCount,
+                [nameof(ErrorCount)] = ErrorCount
             };
         }
     }
