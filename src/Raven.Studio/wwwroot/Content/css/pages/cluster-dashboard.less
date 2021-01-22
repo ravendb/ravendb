@@ -1,0 +1,216 @@
+.cluster-dashboard-container {
+    padding: @gutter-sm + @gutter-xs/2;
+    width: 100%;
+    
+    @media (min-width: @screen-lg) {
+        display: flex;        
+    }
+    
+    .cluster-dashboard-column {
+        display: flex;
+        flex-direction: column;
+        @media (min-width: @screen-lg) {
+            width: 50%;
+        }
+    }
+
+    .cluster-dashboard-item {
+        margin: @gutter-xs/2;
+        padding: @gutter-sm;
+        background-color: @panel-bg;
+
+        h2 {
+            font-size: 24px;
+            font-weight: 800;            
+        }
+
+        h3 {
+            font-size: 13px;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: .12em;
+            margin-top: @gutter-xs;
+        }
+    }
+
+    .property-container {
+        margin-left: -@gutter-sm;
+        display: flex;
+
+        .collapse-arrow {
+            flex-shrink: 0;
+            border: none;
+            background-color: transparent;
+            align-self: flex-start;
+            width: @gutter-sm;
+            height: 25px;
+            line-height: 25px;
+            font-size: 12px;
+            padding: 0;
+            margin: @gutter-xs 0;
+            transition: transform .3s cubic-bezier(0, 0.5, 0.5, 1);
+            transform: rotate(90deg);
+        }
+
+        .property {
+            background-color: @well-bg;
+            width: 100%;
+            overflow-x: auto;
+            --node-color: @color-4;
+
+            .nodes-container {
+                display: flex;
+                padding: @gutter-xs/2 @gutter-sm/2 ;
+
+                transition: transform .2s cubic-bezier(0, 0.5, 0.5, 1);
+                transform-origin: left top;
+
+                .nodes-item {
+                    padding: @gutter-xs/2 @gutter-sm/2;
+                    flex-grow: 1;
+                    color: @text-muted;
+                    min-width: 160px;
+
+                    .nodes-item-header {
+                        display: flex;
+                        align-items: center;
+
+                        .node-label {
+                            background-color: var(--node-color);
+                            color: @well-bg;
+                            font-weight: 800;
+                            width: 25px;
+                            height: 25px;
+                            line-height: 25px;
+                            text-align: center;
+                            border-radius: 15px;
+                            margin-right: @gutter-xxs;
+                            flex-shrink: 0;
+                        }
+
+                        .node-value {
+                            color: var(--node-color);
+                            font-weight: 800;
+                            margin-right: @gutter-xxs;
+                            flex-grow: 1;
+                        }
+
+                        .supplementary-info {
+                            font-size: 11px;
+                        }
+                    }
+
+                    .details-list {
+                        overflow: hidden;                        
+
+                        .details-item {                            
+                            display: flex;
+                            font-size: 12px;
+
+                            margin-top: @gutter-xxs/2;
+                            padding-top: @gutter-xxs/2;
+                            border-top: 1px solid fadeout(@hr-border, 50%);
+                            
+                            .details-item-name {
+                                flex-grow: 1;
+                            }
+                            
+                            .details-item-value  {
+                                font-weight: 800;
+                                color: var(--node-color);
+                                margin-left: @gutter-xs;
+                            }
+                        }
+                    }
+
+                    &:nth-of-type(10n+1) {
+                        --node-color: @color-4;
+                    }
+                    &:nth-of-type(10n+2) {
+                        --node-color: @color-4-2;
+                    }
+                    &:nth-of-type(10n+3) {
+                        --node-color: @color-5;
+                    }
+                    &:nth-of-type(10n+4) {
+                        --node-color: @color-5-2;
+                    }
+                    &:nth-of-type(10n+5) {
+                        --node-color: @color-1;
+                    }
+                    &:nth-of-type(10n+6) {
+                        --node-color: @color-1-2;
+                    }
+                    &:nth-of-type(10n+7) {
+                        --node-color: @color-2;
+                    }
+                    &:nth-of-type(10n+8) {
+                        --node-color: @color-2-2;
+                    }
+                    &:nth-of-type(10n+9) {
+                        --node-color: @color-3;
+                    }
+                    &:nth-of-type(10n) {
+                        --node-color: @color-3-2;
+                    }
+                }
+            }                  
+            .graph-container {
+                position: sticky;
+                left: 0;
+            }
+        }
+
+        &.property-collapse {
+            .collapse-arrow {
+                transform: rotate(0);
+            }
+            .nodes-container {
+                transform: scale(.8);  
+                .nodes-item {
+                    min-width: 0;
+                    flex-shrink: 0;
+                }
+                
+                .node-value {
+                    flex-grow: 0 !important;
+                }
+            }
+            .details-list {
+                display: none;
+            }
+        }
+    }
+
+    .topology-container {
+        font-size: 11px;
+
+        display: grid;
+        grid-gap: @gutter-sm;
+        grid-template: 
+            "graph graph graph" auto
+            "type node connection" auto / 1fr 1fr 1fr;
+
+            @media (min-width: @screen-lg) {
+                grid-template: 
+                "graph type" auto
+                "graph node" auto
+                "graph connection" auto / 1fr auto;
+            }
+
+        .topology-graph {
+            grid-area: graph;
+        }
+
+        .topology-type {
+            grid-area: type;
+        }
+
+        .topology-area {
+            grid-area: node;
+        }
+        .topology-connection {
+            grid-area: connection;
+        }
+    }
+}
