@@ -74,8 +74,8 @@ namespace Raven.Server.Utils.Monitoring
 
     public class CpuMetrics
     {
-        public double ProcessCpuUsage { get; set; }
-        public double MachineCpuUsage { get; set; }
+        public double ProcessUsage { get; set; }
+        public double MachineUsage { get; set; }
         public double? MachineIoWait { get; set; }
         public int ProcessorCount { get; set; }
         public int AssignedProcessorCount { get; set; }
@@ -86,8 +86,8 @@ namespace Raven.Server.Utils.Monitoring
         {
             return new DynamicJsonValue
             {
-                [nameof(ProcessCpuUsage)] = ProcessCpuUsage,
-                [nameof(MachineCpuUsage)] = MachineCpuUsage,
+                [nameof(ProcessUsage)] = ProcessUsage,
+                [nameof(MachineUsage)] = MachineUsage,
                 [nameof(MachineIoWait)] = MachineIoWait,
                 [nameof(ProcessorCount)] = ProcessorCount,
                 [nameof(AssignedProcessorCount)] = AssignedProcessorCount,
@@ -142,7 +142,6 @@ namespace Raven.Server.Utils.Monitoring
     public class LicenseMetrics
     {
         public LicenseType Type { get; set; }
-        public DateTime? Expiration { get; set; }
         public double? ExpirationLeftInSec { get; set; }
         public int UtilizedCpuCores { get; set; }
         public int MaxCores { get; set; }
@@ -152,7 +151,6 @@ namespace Raven.Server.Utils.Monitoring
             return new DynamicJsonValue
             {
                 [nameof(Type)] = Type,
-                [nameof(Expiration)] = Expiration,
                 [nameof(ExpirationLeftInSec)] = ExpirationLeftInSec,
                 [nameof(UtilizedCpuCores)] = UtilizedCpuCores,
                 [nameof(MaxCores)] = MaxCores
@@ -185,7 +183,6 @@ namespace Raven.Server.Utils.Monitoring
 
     public class CertificateMetrics
     {
-        public DateTime? ServerCertificateExpiration { get; set; }
         public double ServerCertificateExpirationLeftInSec { get; set; }
         public string[] WellKnownAdminCertificates { get; set; }
 
@@ -193,7 +190,6 @@ namespace Raven.Server.Utils.Monitoring
         {
             return new DynamicJsonValue
             {
-                [nameof(ServerCertificateExpiration)] = ServerCertificateExpiration,
                 [nameof(ServerCertificateExpirationLeftInSec)] = ServerCertificateExpirationLeftInSec,
                 [nameof(WellKnownAdminCertificates)] = WellKnownAdminCertificates
             };

@@ -18,9 +18,7 @@ namespace Raven.Server.Utils.Monitoring
         public IndexPriority Priority { get; set; }
         public IndexState State { get; set; }
         public int Errors { get; set; }
-        public DateTime LastQueryingTime { get; set; }
         public double TimeSinceLastQueryInSec { get; set; }
-        public DateTime LastIndexingTime { get; set; }
         public double TimeSinceLastIndexingInSec { get; set; }
         public IndexLockMode LockMode { get; set; }
         public bool IsInvalid { get; set; }
@@ -39,9 +37,7 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(Priority)] = Priority,
                 [nameof(State)] = State,
                 [nameof(Errors)] = Errors,
-                [nameof(LastQueryingTime)] = LastQueryingTime,
                 [nameof(TimeSinceLastQueryInSec)] = TimeSinceLastQueryInSec,
-                [nameof(LastIndexingTime)] = LastIndexingTime,
                 [nameof(TimeSinceLastIndexingInSec)] = TimeSinceLastIndexingInSec,
                 [nameof(LockMode)] = LockMode,
                 [nameof(IsInvalid)] = IsInvalid,
