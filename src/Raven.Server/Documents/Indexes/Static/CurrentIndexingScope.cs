@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         [ThreadStatic]
         public static CurrentIndexingScope Current;
-        
+
         public int CreatedFieldsCount;
 
         static CurrentIndexingScope()
@@ -182,6 +182,12 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (document == null)
                 {
                     return DynamicNullObject.Null;
+                }
+
+                if (document.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out string collection))
+                {
+                    if (string.Equals(collection, collectionName, StringComparison.OrdinalIgnoreCase) == false)
+                        throw new InvalidOperationException($"Cannot load document '{keySlice}', because it's collection '{collection}' does not match the requested collection name '{collectionName}'.");
                 }
 
                 // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
