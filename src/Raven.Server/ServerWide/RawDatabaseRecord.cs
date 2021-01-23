@@ -106,6 +106,17 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public IEnumerable<(string Name, DatabaseTopology Topology)> Topologies
+        {
+            get
+            {
+                if (IsSharded())
+                    return GetShardedDatabaseRecords().Select(x => (x.DatabaseName, x.Topology));
+
+                return new[] {(DatabaseName, Topology)};
+            }
+        }
+
         private DatabaseTopology _topology;
 
         public DatabaseTopology Topology

@@ -26,23 +26,25 @@ class statistics extends viewModelBase {
         super();
         
         this.bindToCurrentInstance("showStaleReasons");
-    }
-    
-    attached() {
-        super.attached();
-        this.statsSubscription = this.refreshStatsObservable.throttle(3000).subscribe((e) => this.fetchStats());
-        this.fetchStats();
-        this.updateHelpLink('H6GYYL');
 
         this.rawJsonUrl = ko.pureComputed(() => {
             return appUrl.forStatsRawData(this.activeDatabase());
         });
     }
+
+    activate() {
+        return this.fetchStats();
+    }
+    
+    attached() {
+        super.attached();
+        this.statsSubscription = this.refreshStatsObservable.throttle(3000).subscribe((e) => this.fetchStats());
+        this.updateHelpLink('H6GYYL');
+    }
     
     compositionComplete() {
         super.compositionComplete();
 
-        const self = this;
         $('.stats .js-size-tooltip').tooltip({
             container: "body",
             html: true,
@@ -50,11 +52,18 @@ class statistics extends viewModelBase {
             title: () => {
                 return `Data: <strong>${this.stats().dataSizeOnDisk}</strong><br />
                 Temp: <strong>${this.stats().tempBuffersSizeOnDisk}</strong><br />
-                Total: <strong>${this.stats().totalSizeOnDisk}</strong>
-                `
+                Total: <strong>${this.stats().totalSizeOnDisk}</strong>`
             }
         });
 
+        const cvTooltip = this.stats().databaseChangeVector.map(cv => `<small>${cv.fullFormat}</small>`)
+            .join("<br>");
+
+        popoverUtils.longWithHover($(".js-cv-tooltip"),
+            {
+                content: `<div>${cvTooltip}</div>`
+            });
+        
         popoverUtils.longWithHover($(".js-identities-header"),
             {
                 content: "<div>Identities allow you to have consecutive IDs across the cluster.</div>"

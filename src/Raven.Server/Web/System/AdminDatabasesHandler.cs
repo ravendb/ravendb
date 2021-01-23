@@ -494,7 +494,7 @@ namespace Raven.Server.Web.System
                         throw new ArgumentException($"Failed to add node {member}, because we don't have it in the cluster.");
                 }
 
-                topology.ReplicationFactor = topology.Members.Count;
+                topology.ReplicationFactor = Math.Min(topology.Count, clusterTopology.AllNodes.Count);
             }
             else
             {

@@ -2,51 +2,19 @@
     display: flex;
     .absolute-fill;
 
-    .value-editor {
+    .content-editor {
         flex-grow: 1;
     }
 
-    .documentId {
+    .cmp-xchg-label {
         font-size: 25px;
-        margin-bottom: 8px;
-
-        @obj-name-placeholder-color: darken(@gray,10%);
-
-        input.obj-name {
-            display: block;
-            width: 100%;
-            line-height: @line-height-computed;
-            background-color: transparent;
-            padding: 4px;
-            border: 1px solid @input-border;
-
-            &::-webkit-input-placeholder {
-                color: @obj-name-placeholder-color;
-            }
-
-            &:-moz-placeholder {
-                color: @obj-name-placeholder-color;
-            }
-
-            &::-moz-placeholder {
-                color: @obj-name-placeholder-color;
-            }
-
-            &:-ms-input-placeholder {
-                color: @obj-name-placeholder-color;
-            }
-
-            &::placeholder {
-                color: @obj-name-placeholder-color;
-            }
-        }
-
-        .span.obj-name {
-            display: inline-block;
-            padding: 3px;
-        }
-
+        font-weight: 500;
     }
-
+    
+    .cmp-xchg-info {
+        position: relative;
+        top: -2px;
+        left: 2px;
+        font-size: 95%;
+    }
 }
-

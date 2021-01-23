@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client;
@@ -23,7 +23,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -105,7 +104,7 @@ namespace SlowTests.Cluster
             }))
             {
                 var count = 0;
-                var parallelism = Environment.ProcessorCount * 5;
+                var parallelism = RavenTestHelper.DefaultParallelOptions.MaxDegreeOfParallelism;
 
                 for (var i = 0; i < 10; i++)
                 {
@@ -114,13 +113,13 @@ namespace SlowTests.Cluster
                     {
                         tasks.Add(Task.Run(async () =>
                         {
-                            using (var session = leaderStore.OpenSession(new SessionOptions
+                            using (var session = leaderStore.OpenAsyncSession(new SessionOptions
                             {
                                 TransactionMode = TransactionMode.ClusterWide
                             }))
                             {
                                 session.Advanced.ClusterTransaction.CreateCompareExchangeValue($"usernames/{Interlocked.Increment(ref count)}", new User());
-                                session.SaveChanges();
+                                await session.SaveChangesAsync();
                             }
 
                             await ActionWithLeader((l) =>
@@ -132,14 +131,14 @@ namespace SlowTests.Cluster
                     }
 
                     await Task.WhenAll(tasks.ToArray());
-                    using (var session = leaderStore.OpenSession(new SessionOptions
+                    using (var session = leaderStore.OpenAsyncSession(new SessionOptions
                     {
                         TransactionMode = TransactionMode.ClusterWide
                     }))
                     {
-                        var results = session.Advanced.ClusterTransaction.GetCompareExchangeValues<User>(
+                        var results = await session.Advanced.ClusterTransaction.GetCompareExchangeValuesAsync<User>(
                             Enumerable.Range(i * parallelism, parallelism).Select(x =>
-                                $"usernames/{Interlocked.Increment(ref count)}").ToArray<string>());
+                                $"usernames/{Interlocked.Increment(ref count)}").ToArray());
                         Assert.Equal(parallelism, results.Count);
                     }
                 }
@@ -369,7 +368,8 @@ namespace SlowTests.Cluster
                     await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(store.Database, record.Topology.Members));
                     await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode
                     {
-                        Url = store.Urls[0], Database = store.Database
+                        Url = store.Urls[0],
+                        Database = store.Database
                     }));
 
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));

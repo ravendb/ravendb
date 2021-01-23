@@ -156,133 +156,136 @@ namespace Raven.Server.ServerWide.Maintenance
         private Dictionary<string, DatabaseStatusReport> CollectDatabaseInformation(TransactionOperationContext ctx, Dictionary<string, DatabaseStatusReport> prevReport)
         {
             var result = new Dictionary<string, DatabaseStatusReport>();
-            foreach (var dbName in _server.Cluster.GetDatabaseNames(ctx))
+            foreach (var databaseName in _server.Cluster.GetDatabaseNames(ctx))
             {
                 if (_token.IsCancellationRequested)
                     return result;
 
-                var report = new DatabaseStatusReport
+                using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, databaseName))
                 {
-                    Name = dbName,
-                    NodeName = _server.NodeTag
-                };
-
-                if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask) == false)
-                {
-                    DatabaseTopology topology;
-                    using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, dbName))
+                    if (rawRecord == null)
                     {
-                        if (rawRecord == null)
+                        continue; // Database does not exists in this server
+                    }
+
+                    foreach (var tuple in rawRecord.Topologies)
+                    {
+                        var dbName = tuple.Name;
+                        var topology = tuple.Topology;
+
+                        var report = new DatabaseStatusReport
                         {
-                            continue; // Database does not exists in this server
+                            Name = dbName, 
+                            NodeName = _server.NodeTag
+                        };
+                        
+                        if (topology == null)
+                        {
+                            continue;
                         }
 
-                        topology = rawRecord.Topology;
-                    }
-
-                    if (topology == null)
-                    {
-                        continue;
-                    }
-
-                    if (topology.RelevantFor(_server.NodeTag) == false)
-                    {
-                        continue;
-                    }
-
-                    report.Status = DatabaseStatus.Unloaded;
-                    result[dbName] = report;
-                    continue;
-                }
-
-                if (dbTask.IsFaulted)
-                {
-                    var extractSingleInnerException = dbTask.Exception.ExtractSingleInnerException();
-                    if (Equals(extractSingleInnerException.Data[DatabasesLandlord.DoNotRemove], true))
-                    {
-                        report.Status = DatabaseStatus.Unloaded;
-                        result[dbName] = report;
-                        continue;
-                    }
-                }
-
-                if (dbTask.IsCanceled || dbTask.IsFaulted)
-                {
-                    report.Status = DatabaseStatus.Faulted;
-                    report.Error = dbTask.Exception.ToString();
-                    result[dbName] = report;
-                    continue;
-                }
-
-                if (dbTask.IsCompleted == false)
-                {
-                    report.Status = DatabaseStatus.Loading;
-                    result[dbName] = report;
-                    continue;
-                }
-
-                var dbInstance = dbTask.Result;
-                var currentHash = dbInstance.GetEnvironmentsHash();
-                report.EnvironmentsHash = currentHash;
-
-                var documentsStorage = dbInstance.DocumentsStorage;
-                var indexStorage = dbInstance.IndexStore;
-
-                if (dbInstance.DatabaseShutdown.IsCancellationRequested)
-                {
-                    report.Status = DatabaseStatus.Shutdown;
-                    result[dbName] = report;
-                    continue;
-                }
-
-                report.Status = DatabaseStatus.Loaded;
-                try
-                {
-                    var now = dbInstance.Time.GetUtcNow();
-                    report.UpTime = now - dbInstance.StartTime;
-
-                    FillReplicationInfo(dbInstance, report);
-
-                    prevReport.TryGetValue(dbName, out var prevDatabaseReport);
-                    if (SupportedFeatures.Heartbeats.SendChangesOnly &&
-                        prevDatabaseReport != null && prevDatabaseReport.EnvironmentsHash == currentHash)
-                    {
-                        report.Status = DatabaseStatus.NoChange;
-                        result[dbName] = report;
-                        continue;
-                    }
-
-                    using (var context = QueryOperationContext.Allocate(dbInstance, needsServerContext: true))
-                    {
-                        FillDocumentsInfo(prevDatabaseReport, dbInstance, report, context.Documents, documentsStorage);
-                        FillClusterTransactionInfo(report, dbInstance);
-
-                        if (indexStorage != null)
+                        if (topology.RelevantFor(_server.NodeTag) == false)
                         {
-                            foreach (var index in indexStorage.GetIndexes())
-                            {
-                                DatabaseStatusReport.ObservedIndexStatus stat = null;
-                                if (prevDatabaseReport?.LastIndexStats.TryGetValue(index.Name, out stat) == true && stat?.LastTransactionId == index.LastTransactionId)
-                                {
-                                    report.LastIndexStats[index.Name] = stat;
-                                    continue;
-                                }
+                            continue;
+                        }
 
-                                using (context.OpenReadTransaction())
+                        if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask) == false)
+                        {
+                            report.Status = DatabaseStatus.Unloaded;
+                            result[dbName] = report;
+                            continue;
+                        }
+
+                        if (dbTask.IsFaulted)
+                        {
+                            var extractSingleInnerException = dbTask.Exception.ExtractSingleInnerException();
+                            if (Equals(extractSingleInnerException.Data[DatabasesLandlord.DoNotRemove], true))
+                            {
+                                report.Status = DatabaseStatus.Unloaded;
+                                result[dbName] = report;
+                                continue;
+                            }
+                        }
+
+                        if (dbTask.IsCanceled || dbTask.IsFaulted)
+                        {
+                            report.Status = DatabaseStatus.Faulted;
+                            report.Error = dbTask.Exception.ToString();
+                            result[dbName] = report;
+                            continue;
+                        }
+
+                        if (dbTask.IsCompleted == false)
+                        {
+                            report.Status = DatabaseStatus.Loading;
+                            result[dbName] = report;
+                            continue;
+                        }
+
+                        var dbInstance = dbTask.Result;
+                        var currentHash = dbInstance.GetEnvironmentsHash();
+                        report.EnvironmentsHash = currentHash;
+
+                        var documentsStorage = dbInstance.DocumentsStorage;
+                        var indexStorage = dbInstance.IndexStore;
+
+                        if (dbInstance.DatabaseShutdown.IsCancellationRequested)
+                        {
+                            report.Status = DatabaseStatus.Shutdown;
+                            result[dbName] = report;
+                            continue;
+                        }
+
+                        report.Status = DatabaseStatus.Loaded;
+                        try
+                        {
+                            var now = dbInstance.Time.GetUtcNow();
+                            report.UpTime = now - dbInstance.StartTime;
+
+                            FillReplicationInfo(dbInstance, report);
+
+                            prevReport.TryGetValue(dbName, out var prevDatabaseReport);
+                            if (SupportedFeatures.Heartbeats.SendChangesOnly &&
+                                prevDatabaseReport != null && prevDatabaseReport.EnvironmentsHash == currentHash)
+                            {
+                                report.Status = DatabaseStatus.NoChange;
+                                result[dbName] = report;
+                                continue;
+                            }
+
+                            using (var context = QueryOperationContext.Allocate(dbInstance, needsServerContext: true))
+                            {
+                                FillDocumentsInfo(prevDatabaseReport, dbInstance, report, context.Documents, documentsStorage);
+                                FillClusterTransactionInfo(report, dbInstance);
+
+                                if (indexStorage != null)
                                 {
-                                    FillIndexInfo(index, context, now, report);
+                                    foreach (var index in indexStorage.GetIndexes())
+                                    {
+                                        DatabaseStatusReport.ObservedIndexStatus stat = null;
+                                        if (prevDatabaseReport?.LastIndexStats.TryGetValue(index.Name, out stat) == true &&
+                                            stat?.LastTransactionId == index.LastTransactionId)
+                                        {
+                                            report.LastIndexStats[index.Name] = stat;
+                                            continue;
+                                        }
+
+                                        using (context.OpenReadTransaction())
+                                        {
+                                            FillIndexInfo(index, context, now, report);
+                                        }
+                                    }
                                 }
                             }
                         }
+                        catch (Exception e)
+                        {
+                            report.EnvironmentsHash = 0; // on error we should do the complete report collaction path
+                            report.Error = e.ToString();
+                        }
+                        result[dbName] = report;
                     }
                 }
-                catch (Exception e)
-                {
-                    report.EnvironmentsHash = 0; // on error we should do the complete report collaction path
-                    report.Error = e.ToString();
-                }
-
-                result[dbName] = report;
             }
 
             return result;

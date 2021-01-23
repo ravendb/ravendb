@@ -592,6 +592,8 @@ namespace Tests.Infrastructure
                 }
             }
 
+            await WaitForClusterTopologyOnAllNodes(clusterNodes);
+
             // ReSharper disable once PossibleNullReferenceException
             var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs * 5);
             var states = string.Empty;
@@ -601,6 +603,15 @@ namespace Tests.Infrastructure
             }
             Assert.True(condition, "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
             return (clusterNodes, leader);
+        }
+
+        private async Task WaitForClusterTopologyOnAllNodes(List<RavenServer> clusterNodes)
+        {
+            foreach (var node in clusterNodes)
+            {
+                var nodesInTopology = await WaitForValueAsync(async () => await Task.FromResult(node.ServerStore.GetClusterTopology().AllNodes.Count), clusterNodes.Count, interval: 444);
+                Assert.Equal(clusterNodes.Count, nodesInTopology);
+            }
         }
 
         protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool? shouldRunInMemory = null, int? leaderIndex = null, bool useSsl = false,

@@ -347,6 +347,20 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
+        public bool ShouldVersionOldDocument(DocumentFlags flags, BlittableJsonReaderObject oldDoc)
+        {
+            if (oldDoc == null)
+                return false; // no document to version
+
+            if (flags.Contain(DocumentFlags.HasRevisions))
+                return false; // version already exists
+
+            if (flags.Contain(DocumentFlags.Resolved))
+                return false; // we already versioned it with the a conflicted flag
+
+            return true;
+        }
+
         public unsafe bool Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
             DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, string changeVector, long lastModifiedTicks,
             RevisionsCollectionConfiguration configuration = null, CollectionName collectionName = null)

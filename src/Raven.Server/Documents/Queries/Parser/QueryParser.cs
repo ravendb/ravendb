@@ -2244,13 +2244,14 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
                 }
 
                 var maybeExpression = false;
+                var position = Scanner.Position;
                 if (Value(out var argVal))
                 {
                     if (Scanner.TryPeek(',') == false && Scanner.TryPeek(')') == false)
                     {
                         // this is not a simple field ref, let's parse as full expression
 
-                        Scanner.Reset(argVal.Token.Offset - 1); // if this was a value then it had to be in ''
+                        Scanner.Reset(position); // if this was a value then it had to be in ''
                         maybeExpression = true;
                     }
                     else

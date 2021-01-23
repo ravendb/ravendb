@@ -9,7 +9,6 @@
                             <span>New item</span>
                         </button>
                     </div>
-    
                     <div class="btn-group-label" data-bind="css: { active: selectedItemsCount }" data-label="Selection"
                          role="group">
                         <button type="button" class="btn btn-danger"
@@ -18,12 +17,10 @@
                         </button>
                     </div>
                 </div>
-               
                 <div>
-                    <input class="form-control" placeholder="Filter keys that start with..." data-bind="textInput: filter">
+                    <input class="form-control" placeholder="Filter keys that start with..." data-bind="textInput: filter" />
                 </div>
             </div>
-
         </div>
         <div class="flex-window-scroll">
             <div class="scroll-stretch">
@@ -37,9 +34,12 @@
 </div>
 
 <script type="text/html" id="empty-cmp-xchg-template">
-    <div data-bind="text: $root.filter() ? 'No matching items found.' : 'No Compare Exchange items found.'">
+    <div class="text-center text-muted">
+        <i class="icon-lg icon-empty-set"></i>
+        <h2 class="margin-top margin-top-sm" data-bind="text: $root.filter() ? 'No matching items' : 'No Compare Exchange items defined'"></h2>
     </div>
 </script>
+
 <div class="tooltip json-preview js-cmp-xchg-tooltip" style="opacity: 0">
     <pre><code></code></pre>
 </div>

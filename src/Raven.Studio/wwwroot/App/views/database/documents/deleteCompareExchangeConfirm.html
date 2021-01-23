@@ -4,24 +4,15 @@
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
                 <i class="icon-cancel"></i>
             </button>
-            <h4 class="modal-title">Are you sure?</h4>
+            <h4 class="modal-title" data-bind="text: title"></h4>
         </div>
-        <div class="modal-body">
-            <p data-bind="visible: itemIds().length === 1">
-                <span>You are deleting</span>
-                <strong data-bind="with: itemIds()[0]">
-                    <span data-bind="text: $data"></span>
-                </strong>
-            </p>
-            <div data-bind="visible: itemIds().length > 1">
-                <span>You're deleting</span>
-                <strong data-bind="text: itemIds().length"></strong>
-                <span> Compare Exchange Values:</span>
-                <br />
-                <ul data-bind="foreach: itemIds" style="max-height: 100px; overflow-y: auto;">
-                    <li data-bind="text: $data"></li>
-                </ul>
-            </div>
+        <div class="modal-body force-text-wrap">
+            <p data-bind="html: subTitleHtml"></p>
+            <ul data-bind="foreach: itemKeys" style="max-height: 200px; overflow-y: auto;"> 
+                <li class="padding padding-xs">
+                    <strong data-bind="text: $data"></strong>
+                </li>
+            </ul>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>

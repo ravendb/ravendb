@@ -138,8 +138,8 @@ class editTimeSeries extends viewModelBase {
         }
     }
     
-    private getValuesNamesToUse(possibleValuesCount: number): string[] {
-        const definedNamedValues = this.getDefinedNamedValues();
+    private getValuesNamesToUse(possibleValuesCount: number, timeSeriesName?: string): string[] {
+        const definedNamedValues = this.getDefinedNamedValues(timeSeriesName);
             
         const valuesNamesToUse = _.range(0, possibleValuesCount).map(idx => "Value #" + idx);
 
@@ -152,11 +152,11 @@ class editTimeSeries extends viewModelBase {
         return valuesNamesToUse;
     }
     
-    private getDefinedNamedValues(): string[] {
+    private getDefinedNamedValues(timeSeriesName?: string): string[] {
         const collection = this.documentCollection();
-        const sourceTimeSeriesName = this.getSourceTimeSeriesName();
+        const sourceTimeSeriesName = timeSeriesName || this.getSourceTimeSeriesName();
 
-        let namedValues: string[];
+        let namedValues: string[] = [];
         if (collection && sourceTimeSeriesName) {
             const matchingCollection = Object.keys(this.namedValuesCache)
                 .find(x => x.toLocaleLowerCase() === collection.toLocaleLowerCase());
@@ -242,14 +242,9 @@ class editTimeSeries extends viewModelBase {
         const possibleValuesCount = this.isRollupTimeSeries() ? 
             timeSeriesEntryModel.numberOfPossibleRollupValues : 
             timeSeriesEntryModel.numberOfPossibleValues;
-        
-        const editTimeSeriesEntryDialog = new editTimeSeriesEntry(
-            this.documentId(),
-            this.activeDatabase(),
-            this.timeSeriesName(),
-            this.getValuesNamesToUse(possibleValuesCount),
-            item
-        );
+
+        const editTimeSeriesEntryDialog = new editTimeSeriesEntry(this.documentId(),
+            this.activeDatabase(), this.timeSeriesName(), tsName => this.getValuesNamesToUse(possibleValuesCount, tsName), item);
         
         app.showBootstrapDialog(editTimeSeriesEntryDialog)
             .done((seriesName) => {
@@ -421,9 +416,9 @@ class editTimeSeries extends viewModelBase {
     
     createTimeSeries(createNew: boolean) {
         const tsNameToUse = createNew ? null : this.timeSeriesName();
-        const valuesNamesToUse = createNew ? [] : this.getValuesNamesToUse(timeSeriesEntryModel.numberOfPossibleValues);
         
-        const createTimeSeriesDialog = new editTimeSeriesEntry(this.documentId(), this.activeDatabase(), tsNameToUse, valuesNamesToUse);
+        const createTimeSeriesDialog = new editTimeSeriesEntry(this.documentId(),
+            this.activeDatabase(), tsNameToUse, tsName => this.getValuesNamesToUse(timeSeriesEntryModel.numberOfPossibleValues, tsName));
         
         app.showBootstrapDialog(createTimeSeriesDialog)
             .done((seriesName) => {
@@ -432,7 +427,6 @@ class editTimeSeries extends viewModelBase {
                 } else if (!this.timeSeriesName()) {
                     // user didn't create new entry, but we requested creation 
                     // redirect back to document
-                 
                     router.navigate(this.urlForDocument());
                 }
             });

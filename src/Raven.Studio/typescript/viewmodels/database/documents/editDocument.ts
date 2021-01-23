@@ -37,7 +37,7 @@ import database = require("models/resources/database");
 import aceDiff = require("common/helpers/text/aceDiff");
 import getDocumentRevisionsCommand = require("commands/database/documents/getDocumentRevisionsCommand");
 import getDocumentRevisionsCountCommand = require("commands/database/documents/getDocumentRevisionsCountCommand");
-import documentWarningsConfirm = require("viewmodels/database/documents/documentWarningsConfirm");
+import editorWarningsConfirm = require("viewmodels/database/documents/editorWarningsConfirm");
 import forceRevisionCreationCommand = require("commands/database/documents/forceRevisionCreationCommand");
 import getTimeSeriesStatsCommand = require("commands/database/documents/timeSeries/getTimeSeriesStatsCommand");
 import studioSettings = require("common/settings/studioSettings");
@@ -50,7 +50,7 @@ interface revisionToCompare {
 
 class editDocument extends viewModelBase {
 
-    static editDocSelector = ".editDocument";
+    static editDocSelector = ".edit-document";
     static documentNameSelector = "#documentName";
     static docEditorSelector = "#docEditor";
     static docEditorSelectorRight = "#docEditorRight";
@@ -751,14 +751,16 @@ class editDocument extends viewModelBase {
     }
     
     private maybeConfirmWarnings(): JQueryPromise<boolean> | boolean {
-        const warnings = this.docEditor.getSession().getAnnotations()
+        const documentWarnings = this.docEditor.getSession().getAnnotations()
             .filter((x: AceAjax.Annotation) => x.type === "warning");
         
-        if (warnings.length) {
-            const viewModel = new documentWarningsConfirm(warnings, warning => {
-                // please note go to line is not zero based so we add 1
-                this.docEditor.gotoLine(warning.row + 1, warning.column, true);
-                this.docEditor.focus();
+        if (documentWarnings.length) {
+            const viewModel = new editorWarningsConfirm("Document",
+                [{ source: "Document", warnings: documentWarnings }],
+                (warning) => {
+                    // please note go to line is not zero based so we add 1
+                    this.docEditor.gotoLine(warning.row + 1, warning.column, true);
+                    this.docEditor.focus();
             });
             return app.showBootstrapDialog(viewModel);
         }

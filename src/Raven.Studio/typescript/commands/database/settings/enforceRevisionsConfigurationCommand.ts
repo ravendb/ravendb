@@ -9,14 +9,11 @@ class enforceRevisionsConfigurationCommand extends commandBase {
     }
 
     execute(): JQueryPromise<operationIdDto> {
-        const url = endpoints.databases.revisions.adminRevisionsConfigEnforce;       
+        const url = endpoints.databases.revisions.adminRevisionsConfigEnforce;
 
         return this.post<void>(url, null, this.db)
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to enforce revisions configuration", response.responseText, response.statusText); 
-            })
-            .done(() => {
-                this.reportSuccess("Revisions configuration enforced successfully");
             });
     }
 }

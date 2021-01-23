@@ -10,6 +10,7 @@ import generalUtils = require("common/generalUtils");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import discoveryUrl = require("models/database/settings/discoveryUrl");
 
 class editServerWideExternalReplication extends viewModelBase {
     
@@ -18,6 +19,7 @@ class editServerWideExternalReplication extends viewModelBase {
 
     connectionStringForTest = ko.observable<connectionStringRavenEtlModel>();
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
+    
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
 
@@ -91,12 +93,9 @@ class editServerWideExternalReplication extends viewModelBase {
         this.connectionStringForTest(connectionStringRavenEtlModel.empty());
 
         this.possibleMentors(clusterTopologyManager.default.topology().nodes().map(x => x.tag()));
-        
-        this.editedTask().connectionString().topologyDiscoveryUrls.subscribe((urlList) => {
-           if (!urlList.length) {
-               this.testConnectionResult(null);
-           } 
-        });
+
+        this.editedTask().connectionString().topologyDiscoveryUrls.subscribe(() => this.testConnectionResult(null));
+        this.editedTask().connectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
         
         this.shortErrorText = ko.pureComputed(() => {
             const result = this.testConnectionResult();
@@ -139,10 +138,10 @@ class editServerWideExternalReplication extends viewModelBase {
         return this.isValid(this.editedTask().validationGroup);
     }
 
-    onTestConnection(urlToTest: string) {
+    onTestConnection(urlToTest: discoveryUrl) {
         eventsCollector.default.reportEvent("external-replication", "test-connection");
         this.spinners.test(true);
-        this.connectionStringForTest().selectedUrlToTest(urlToTest);
+        this.connectionStringForTest().selectedUrlToTest(urlToTest.discoveryUrlName());
         this.testConnectionResult(null);
 
         this.connectionStringForTest()
@@ -150,7 +149,7 @@ class editServerWideExternalReplication extends viewModelBase {
             .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);
-                this.connectionStringForTest().selectedUrlToTest(null);
+                this.fullErrorDetailsVisible(false);
             });
     }
 }

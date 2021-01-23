@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <RuntimeFrameworkVersion>5.0.1</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>5.0.2</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests</AssemblyName>
     <PackageId>SlowTests</PackageId>
@@ -37,6 +37,7 @@
     <None Remove="Data\RavenDB_15700\BewerberStatus.csv" />
     <None Remove="Data\RavenDB_15700\Bewerbung.csv" />
     <None Remove="Data\RavenDB_15700\Vakanz.csv" />
+    <None Remove="Data\RavenDB_15898\1.ravendbdump" />
     <None Remove="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
     <None Remove="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
   </ItemGroup>
@@ -97,6 +98,7 @@
     <EmbeddedResource Include="Data\RavenDB_15700\BewerberStatus.csv" />
     <EmbeddedResource Include="Data\RavenDB_15700\Bewerbung.csv" />
     <EmbeddedResource Include="Data\RavenDB_15700\Vakanz.csv" />
+    <EmbeddedResource Include="Data\RavenDB_15898\1.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />

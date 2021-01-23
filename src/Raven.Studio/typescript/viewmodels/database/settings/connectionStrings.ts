@@ -6,6 +6,7 @@ import getConnectionStringsCommand = require("commands/database/settings/getConn
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
 import deleteConnectionStringCommand = require("commands/database/settings/deleteConnectionStringCommand");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
+import discoveryUrl = require("models/database/settings/discoveryUrl");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 import appUrl = require("common/appUrl");
@@ -35,6 +36,7 @@ class connectionStrings extends viewModelBase {
 
         this.initObservables();
         this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "confirmDelete", "isConnectionStringInUse", "onTestConnectionRaven");
+        
         const currentlyEditedObjectIsDirty = ko.pureComputed(() => {
             const ravenEtl = this.editedRavenEtlConnectionString();
             if (ravenEtl) {
@@ -48,7 +50,8 @@ class connectionStrings extends viewModelBase {
             
             return false;
         });
-        this.dirtyFlag = new ko.DirtyFlag([currentlyEditedObjectIsDirty], false); 
+        
+        this.dirtyFlag = new ko.DirtyFlag([currentlyEditedObjectIsDirty], false);
     }
     
     private initObservables() {
@@ -193,7 +196,7 @@ class connectionStrings extends viewModelBase {
         eventsCollector.default.reportEvent("connection-strings", "add-raven-etl");
         this.editedRavenEtlConnectionString(connectionStringRavenEtlModel.empty());
         this.editedRavenEtlConnectionString().topologyDiscoveryUrls.subscribe(() => this.clearTestResult());
-        this.editedRavenEtlConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
+        this.editedRavenEtlConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.clearTestResult());
 
         this.editedSqlEtlConnectionString(null);
         this.clearTestResult();
@@ -216,7 +219,7 @@ class connectionStrings extends viewModelBase {
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 this.editedRavenEtlConnectionString(new connectionStringRavenEtlModel(result.RavenConnectionStrings[connectionStringName], false, this.getTasksThatUseThisString(connectionStringName, "Raven")));
                 this.editedRavenEtlConnectionString().topologyDiscoveryUrls.subscribe(() => this.clearTestResult());
-                this.editedRavenEtlConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
+                this.editedRavenEtlConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.clearTestResult());
                 this.editedSqlEtlConnectionString(null);
             });
     }
@@ -256,7 +259,7 @@ class connectionStrings extends viewModelBase {
     }
 
     onTestConnectionSql() {
-        this.testConnectionResult(null);
+        this.clearTestResult();
         const sqlConnectionString = this.editedSqlEtlConnectionString();
 
         if (sqlConnectionString) {
@@ -271,21 +274,21 @@ class connectionStrings extends viewModelBase {
                     });
             }
         }
-    }  
+    }
     
-    onTestConnectionRaven(urlToTest: string) {
-        this.testConnectionResult(null);
+    onTestConnectionRaven(urlToTest: discoveryUrl) {
+        this.clearTestResult();
         const ravenConnectionString = this.editedRavenEtlConnectionString();
         eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
         
         this.spinners.test(true);
-        ravenConnectionString.selectedUrlToTest(urlToTest);
+        ravenConnectionString.selectedUrlToTest(urlToTest.discoveryUrlName());
 
         ravenConnectionString.testConnection(urlToTest)
-            .done((testResult) => this.testConnectionResult(testResult))
-            .always(() => { 
+            .done(result => this.testConnectionResult(result))
+            .always(() => {
                 this.spinners.test(false);
-                ravenConnectionString.selectedUrlToTest(null); 
+                this.fullErrorDetailsVisible(false);
             });
     }
     

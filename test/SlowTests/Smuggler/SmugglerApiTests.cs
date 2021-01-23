@@ -21,9 +21,9 @@ using SlowTests.Issues;
 using Sparrow;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 using Company = Raven.Tests.Core.Utils.Entities.Company;
 using Employee = Raven.Tests.Core.Utils.Entities.Employee;
-using Xunit.Abstractions;
 
 namespace SlowTests.Smuggler
 {
@@ -170,7 +170,7 @@ namespace SlowTests.Smuggler
 
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
                     {
-                       EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
+                        EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
                     }, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
@@ -410,7 +410,7 @@ namespace SlowTests.Smuggler
 
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
                     {
-                        Collections = new List<string>(){ "Companies" }
+                        Collections = new List<string>() { "Companies" }
                     }, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
@@ -473,7 +473,6 @@ namespace SlowTests.Smuggler
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
                     {
                         OperateOnTypes = DatabaseItemType.CounterGroups | DatabaseItemType.DatabaseRecord
-
                     }, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
@@ -483,7 +482,6 @@ namespace SlowTests.Smuggler
                     stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(0, stats.CountOfDocuments);
                     Assert.Equal(0, stats.CountOfCounterEntries);
-
                 }
             }
             finally
@@ -491,7 +489,6 @@ namespace SlowTests.Smuggler
                 File.Delete(file);
             }
         }
-
 
         [Fact]
         public async Task ImportRevisionDocumentsWithoutDocuments()
@@ -537,8 +534,7 @@ namespace SlowTests.Smuggler
                     }
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
                     {
-                        OperateOnTypes =  DatabaseItemType.RevisionDocuments | DatabaseItemType.DatabaseRecord
-
+                        OperateOnTypes = DatabaseItemType.RevisionDocuments | DatabaseItemType.DatabaseRecord
                     }, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
@@ -890,7 +886,7 @@ namespace SlowTests.Smuggler
                         {
                             ["users"] = new TimeSeriesCollectionConfiguration
                             {
-                                Policies = new List<TimeSeriesPolicy> {new TimeSeriesPolicy("EveryMinute", TimeValue.FromMinutes(1))}
+                                Policies = new List<TimeSeriesPolicy> { new TimeSeriesPolicy("EveryMinute", TimeValue.FromMinutes(1)) }
                             }
                         }
                     };
@@ -913,8 +909,16 @@ namespace SlowTests.Smuggler
                         await session.SaveChangesAsync();
                     }
 
+                    var explanations = new List<string>();
                     var db = await GetDocumentDatabaseInstanceFor(store1);
-                    var total = await db.TimeSeriesPolicyRunner.RunRollups();
+                    var total = await db.TimeSeriesPolicyRunner.RunRollups(explanations: explanations);
+
+                    foreach (var explanation in explanations)
+                    {
+                        Output.WriteLine(explanation);
+                        Console.WriteLine(explanation);
+                    }
+
                     Assert.True(1 == total, $"actual {total}, baseline:{baseline} ({baseline.Ticks}, {baseline.Kind}), now:{db.Time.GetUtcNow()} ({db.Time.GetUtcNow().Ticks})");
 
                     using (var session = store1.OpenAsyncSession())
@@ -993,8 +997,8 @@ namespace SlowTests.Smuggler
                         for (int i = 0; i < 360; i++)
                         {
                             session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
-                            session.TimeSeriesFor("users/2", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d, i % 60d + 5}, "watches/2");
-                            session.TimeSeriesFor("users/1", "Heartrate2").Append(baseline.AddSeconds(i * 10), new[] { i % 60d, i % 60d + 5, i % 60d + 10}, "watches/3");
+                            session.TimeSeriesFor("users/2", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d, i % 60d + 5 }, "watches/2");
+                            session.TimeSeriesFor("users/1", "Heartrate2").Append(baseline.AddSeconds(i * 10), new[] { i % 60d, i % 60d + 5, i % 60d + 10 }, "watches/3");
                         }
 
                         await session.SaveChangesAsync();
@@ -1029,7 +1033,6 @@ namespace SlowTests.Smuggler
                         }
 
                         Assert.Equal(360, count);
-
 
                         values = await session.TimeSeriesFor("users/2", "Heartrate").GetAsync(DateTime.MinValue, DateTime.MaxValue);
 
@@ -1066,7 +1069,6 @@ namespace SlowTests.Smuggler
             }
         }
 
-
         [Fact]
         public async Task CanExportAndImportTimeSeriesWithMultipleSegments()
         {
@@ -1097,7 +1099,6 @@ namespace SlowTests.Smuggler
                         {
                             session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddMonths(3).AddSeconds(i * 10), new[] { i % 60d }, "watches/2");
                         }
-
 
                         for (int i = 0; i < 360; i++)
                         {
@@ -1138,7 +1139,6 @@ namespace SlowTests.Smuggler
                                 Assert.Equal(i % 60, val.Values[0]);
                             }
                         }
-
                     }
                 }
             }
@@ -1220,16 +1220,13 @@ namespace SlowTests.Smuggler
 
                         Assert.Null(values);
                     }
-
                 }
-
             }
             finally
             {
                 File.Delete(file);
             }
         }
-
 
         [Fact]
         public async Task CanSkipTimeSeriesOnImport()
@@ -1301,9 +1298,7 @@ namespace SlowTests.Smuggler
 
                         Assert.Null(values);
                     }
-
                 }
-
             }
             finally
             {
@@ -1449,7 +1444,6 @@ namespace SlowTests.Smuggler
                         Assert.Equal(67d, values[0].Values[1]);
                         Assert.Equal(baseline, values[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         Assert.Equal("watches/2", values[0].Tag);
-
                     }
                 }
             }
@@ -1458,6 +1452,7 @@ namespace SlowTests.Smuggler
                 File.Delete(file);
             }
         }
+
         private async Task SetupExpiration(DocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
@@ -1511,7 +1506,6 @@ namespace SlowTests.Smuggler
                     var operation = await store.Smuggler.ForDatabase("SrcDatabase").ExportAsync(exportOptions, destination);
                     await operation.WaitForCompletionAsync();
 
-
                     var stats = await store.Maintenance.ForDatabase("DestDatabase").SendAsync(new GetStatisticsOperation());
                     Assert.True(stats.CountOfDocuments >= documentCount);
 
@@ -1544,7 +1538,7 @@ namespace SlowTests.Smuggler
                     const string userId = "Users/1-A";
                     using (var session = store.OpenSession())
                     {
-                        var user = new User {Name = "Grisha"};
+                        var user = new User { Name = "Grisha" };
                         session.Store(user, userId);
                         session.CountersFor(user).Increment("Likes", 1);
                         session.SaveChanges();
@@ -1583,14 +1577,14 @@ namespace SlowTests.Smuggler
         {
             using var src = GetDocumentStore();
             using var dest = GetDocumentStore();
-            
+
             var user = new User();
 
             using (var session = src.OpenAsyncSession())
             {
                 await session.StoreAsync(user);
                 await session.SaveChangesAsync();
-                
+
                 session.Advanced.Revisions.ForceRevisionCreationFor(user.Id);
                 await session.SaveChangesAsync();
             }
@@ -1605,7 +1599,7 @@ namespace SlowTests.Smuggler
                 Assert.NotEmpty(revision);
             }
         }
-        
+
         private static Stream GetDump(string name)
         {
             var assembly = typeof(RavenDB_9912).Assembly;

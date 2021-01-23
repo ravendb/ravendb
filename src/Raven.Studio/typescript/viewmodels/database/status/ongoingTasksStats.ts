@@ -1371,18 +1371,18 @@ class ongoingTasksStats extends viewModelBase {
                     case "IncomingPull": {
                         const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.IncomingReplicationPerformanceStats;
                         tooltipHtml += `Received last Etag: ${elementWithData.ReceivedLastEtag}<br/>`;
-                        tooltipHtml += `Network input count: ${elementWithData.Network.InputCount}<br/>`;
-                        tooltipHtml += `Documents read count: ${elementWithData.Network.DocumentReadCount}<br/>`;
-                        tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentReadCount}<br/>`;
+                        tooltipHtml += `Network input count: ${elementWithData.Network.InputCount.toLocaleString()}<br/>`;
+                        tooltipHtml += `Documents read count: ${elementWithData.Network.DocumentReadCount.toLocaleString()}<br/>`;
+                        tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentReadCount.toLocaleString()}<br/>`;
                     }
                         break;
                     case "OutgoingPush":
                     case "OutgoingPull": {
                         const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.OutgoingReplicationPerformanceStats;
                         tooltipHtml += `Sent last Etag: ${elementWithData.SendLastEtag}<br/>`;
-                        tooltipHtml += `Storage input count: ${elementWithData.Storage.InputCount}<br/>`;
-                        tooltipHtml += `Documents output count: ${elementWithData.Network.DocumentOutputCount}<br/>`;
-                        tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentOutputCount}<br/>`;
+                        tooltipHtml += `Storage input count: ${elementWithData.Storage.InputCount.toLocaleString()}<br/>`;
+                        tooltipHtml += `Documents output count: ${elementWithData.Network.DocumentOutputCount.toLocaleString()}<br/>`;
+                        tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentOutputCount.toLocaleString()}<br/>`;
                     }
                         break;
                     case "Raven":
