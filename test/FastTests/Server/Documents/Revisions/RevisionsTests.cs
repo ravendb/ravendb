@@ -1242,7 +1242,12 @@ namespace FastTests.Server.Documents.Revisions
                     }
                 }
 
-                var revisionsResult = await store.Operations.SendAsync(new GetRevisionsOperation<Company>(id, start: 10));
+                var parameters = new GetRevisionsOperation<Company>.Parameters
+                {
+                    Id = id,
+                    Start = 10
+                };
+                var revisionsResult = await store.Operations.SendAsync(new GetRevisionsOperation<Company>(parameters));
                 Assert.Equal(13, revisionsResult.TotalResults);
 
                 var companiesRevisions = revisionsResult.Results;
