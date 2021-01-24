@@ -66,7 +66,7 @@ namespace Raven.Server.Documents
                 }
 
                 BlittableJsonReaderObject oldDoc = null;
-                string oldChangeVector = null;
+                string oldChangeVector = "";
                 if (oldValue.Pointer == null)
                 {
                     // expectedChangeVector being null means we don't care, 
