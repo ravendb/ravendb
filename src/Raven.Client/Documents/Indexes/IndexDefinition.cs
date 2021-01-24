@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -110,10 +111,19 @@ namespace Raven.Client.Documents.Indexes
                 return result;
 
             if (Maps.SetEquals(other.Maps) == false)
-                result |= IndexDefinitionCompareDifferences.Maps;
+            {
+                var maps = new HashSet<string>(Maps, NewLineInsensitiveStringComparer.Instance);
+                var otherMaps = new HashSet<string>(other.Maps, NewLineInsensitiveStringComparer.Instance);
+
+                if (maps.SetEquals(otherMaps) == false)
+                    result |= IndexDefinitionCompareDifferences.Maps;
+            }
 
             if (Equals(Reduce, other.Reduce) == false)
-                result |= IndexDefinitionCompareDifferences.Reduce;
+            {
+                if (NewLineInsensitiveStringComparer.Instance.Equals(Reduce, other.Reduce) == false)
+                    result |= IndexDefinitionCompareDifferences.Reduce;
+            }
 
             if (DictionaryExtensions.ContentEquals(other.Fields, Fields) == false)
                 result |= IndexDefinitionCompareDifferences.Fields;
