@@ -891,8 +891,6 @@ namespace SlowTests.Smuggler
                         }
                     };
 
-                    await store1.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-
                     using (var session = store1.OpenAsyncSession())
                     {
                         await session.StoreAsync(new User { Name = "Name1" }, "users/1");
@@ -908,18 +906,8 @@ namespace SlowTests.Smuggler
 
                         await session.SaveChangesAsync();
                     }
-
-                    var explanations = new List<string>();
                     var db = await GetDocumentDatabaseInstanceFor(store1);
-                    var total = await db.TimeSeriesPolicyRunner.RunRollups(explanations: explanations);
-
-                    foreach (var explanation in explanations)
-                    {
-                        Output.WriteLine(explanation);
-                        Console.WriteLine(explanation);
-                    }
-
-                    Assert.True(1 == total, $"actual {total}, baseline:{baseline} ({baseline.Ticks}, {baseline.Kind}), now:{db.Time.GetUtcNow()} ({db.Time.GetUtcNow().Ticks})");
+                    await store1.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
                     using (var session = store1.OpenAsyncSession())
                     {
@@ -930,6 +918,10 @@ namespace SlowTests.Smuggler
 
                         await session.SaveChangesAsync();
                     }
+
+                    await db.TimeSeriesPolicyRunner.HandleChanges();
+                    var total = await db.TimeSeriesPolicyRunner.RunRollups();
+                    Assert.True(1 == total, $"actual {total}, baseline:{baseline} ({baseline.Ticks}, {baseline.Kind}), now:{db.Time.GetUtcNow()} ({db.Time.GetUtcNow().Ticks})");
 
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                     var exportResult = await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)) as SmugglerResult;
