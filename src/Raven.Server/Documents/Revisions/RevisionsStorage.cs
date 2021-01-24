@@ -331,7 +331,7 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
-        public bool ShouldVersionOldDocument(DocumentsOperationContext context, DocumentFlags flags, BlittableJsonReaderObject oldDoc,  string id, string changeVector, CollectionName collectionName = null)
+        public bool ShouldVersionOldDocument(DocumentsOperationContext context, DocumentFlags flags, BlittableJsonReaderObject oldDoc, string changeVector, CollectionName collectionName = null)
         {
             if (oldDoc == null)
                 return false; // no document to version
@@ -341,15 +341,13 @@ namespace Raven.Server.Documents.Revisions
 
             if (flags.Contain(DocumentFlags.Resolved))
             {
-                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
                 using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))
                 {
                     var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
                     // True if we already versioned it with the a conflicted flag
                     // False if we didn't resolved the conflict locally
-                    var revisionExists = table.ReadByKey(changeVectorSlice, out var tvr);
 
-                    return (revisionExists == false);
+                    return (table.ReadByKey(changeVectorSlice, out var tvr) == false);
                 }
             }
 

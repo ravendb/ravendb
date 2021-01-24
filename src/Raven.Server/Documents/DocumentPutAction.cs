@@ -156,7 +156,7 @@ namespace Raven.Server.Documents
                     
                     if (shouldVersion)
                     {
-                        if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, oldDoc, id, oldChangeVector, collectionName))
+                        if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, oldDoc, oldChangeVector, collectionName))
                         {
                             oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
                             var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
