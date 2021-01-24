@@ -4,29 +4,50 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
     public class GetRevisionsOperation<T> : IOperation<RevisionsResult<T>>
     {
-        private readonly GetRevisionsResultCommand _command;
+        private readonly string _id;
+        private readonly int? _start;
+        private readonly int? _pageSize;
 
-        public GetRevisionsOperation(string id, int? start = 0, int? pageSize = int.MaxValue, bool metadataOnly = false)
+        public GetRevisionsOperation(string id, int? start = 0, int? pageSize = int.MaxValue)
         {
-            _command = new GetRevisionsResultCommand(id, start, pageSize, metadataOnly);
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentException(nameof(id));
+
+            _id = id;
+            _start = start;
+            _pageSize = pageSize;
+        }
+
+        public GetRevisionsOperation(Parameters parameters): this(parameters?.Id, parameters?.Start, parameters?.PageSize)
+        {
         }
 
         public RavenCommand<RevisionsResult<T>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return _command;
+            return new GetRevisionsResultCommand(_id, _start, _pageSize, serialization: store.Conventions.Serialization);
+        }
+
+        public class Parameters
+        {
+            public string Id { get; set; }
+
+            public int? Start { get; set; }
+            
+            public int? PageSize { get; set; }
         }
 
 
@@ -34,13 +55,14 @@ namespace Raven.Client.Documents.Operations.Revisions
         {
             public override bool IsReadRequest => true;
 
-            private static readonly BlittableJsonConverter Converter = new BlittableJsonConverter(DocumentConventions.Default.Serialization);
+            private readonly ISerializationConventions _serialization;
 
             private readonly GetRevisionsCommand _cmd;
 
-            public GetRevisionsResultCommand(string id, int? start, int? pageSize, bool metadataOnly = false)
+            public GetRevisionsResultCommand(string id, int? start, int? pageSize, ISerializationConventions serialization)
             {
-                _cmd = new GetRevisionsCommand(id, start, pageSize, metadataOnly);
+                _serialization = serialization;
+                _cmd = new GetRevisionsCommand(id, start, pageSize);
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -61,11 +83,11 @@ namespace Raven.Client.Documents.Operations.Revisions
                     if (revision == null)
                         continue;
                     
-                    revision.TryGetId(out var id);
-                    var entity = Converter.FromBlittable<T>(revision, id);
+                    var entity = _serialization.DeserializeEntityFromBlittable<T>(revision);
                     results.Add(entity);
                 }
 
+                
                 Result = new RevisionsResult<T>
                 {
                     Results = results,
