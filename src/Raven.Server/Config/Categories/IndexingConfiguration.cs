@@ -265,6 +265,24 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.History.NumberOfRevisions", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int HistoryRevisionsNumber { get; set; }
 
+        [Description("TODO")]
+        [DefaultValue("LowerCaseKeywordAnalyzer")]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Analyzers.Default", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public string DefaultAnalyzer { get; set; }
+
+        [Description("TODO")]
+        [DefaultValue("KeywordAnalyzer")]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Analyzers.Exact.Default", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public string DefaultExactAnalyzer { get; set; }
+
+        [Description("TODO")]
+        [DefaultValue("RavenStandardAnalyzer")]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Analyzers.Search.Default", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public string DefaultSearchAnalyzer { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

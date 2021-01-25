@@ -22,6 +22,7 @@ using Sparrow.Logging;
 using Voron;
 using Xunit;
 using Index = Raven.Server.Documents.Indexes.Index;
+using Raven.Server.Config;
 
 namespace FastTests.Server.Documents.Indexing
 {
@@ -92,13 +93,17 @@ namespace FastTests.Server.Documents.Indexing
 
         private class TestOperation : IndexOperationBase
         {
+            private readonly RavenConfiguration _configuration;
+
             public TestOperation(string indexName, Logger logger) : base(new TestIndex(), logger)
             {
+                _configuration = RavenConfiguration.CreateForTesting(indexName, Raven.Server.ServerWide.ResourceType.Server);
+                _configuration.Initialize();
             }
 
             public RavenPerFieldAnalyzerWrapper GetAnalyzer(Dictionary<string, IndexField> fields, bool forQuerying)
             {
-                return CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), new TestIndexDefinitions
+                return CreateAnalyzer(_configuration.Indexing, new TestIndexDefinitions
                 {
                     IndexFields = fields
                 }, forQuerying);
