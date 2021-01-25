@@ -156,6 +156,14 @@ namespace Raven.Server.ServerWide
             return new RawDatabaseRecord(_context, _context.ReadObject(_record, shardName));
         }
 
+        public IEnumerable<RawDatabaseRecord> AsShardsOrNormal()
+        {
+            if (IsSharded() == false)
+                return new[] {this};
+
+            return GetShardedDatabaseRecords();
+        }
+
         public IEnumerable<RawDatabaseRecord> GetShardedDatabaseRecords()
         {
             if(_record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array) == false 

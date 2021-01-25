@@ -2922,6 +2922,26 @@ namespace Raven.Server.ServerWide
             return records;
         }
 
+        public IEnumerable<RawDatabaseRecord> GetAllRawDatabases<TTransaction>(TransactionOperationContext<TTransaction> context, long skip = 0, long take = long.MaxValue)
+            where TTransaction : RavenTransaction
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            using (Slice.From(context.Allocator, Constants.Documents.Prefix, out Slice loweredPrefix))
+            {
+                foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, skip))
+                {
+                    if (take-- <= 0)
+                        break;
+
+                    var doc = Read(context, GetCurrentItemKey(result.Value));
+                    if (doc == null)
+                        continue;
+
+                    yield return new RawDatabaseRecord(context, doc);
+                }
+            }
+        }
+
         public static unsafe string GetCurrentItemKey(Table.TableValueHolder result)
         {
             return Encoding.UTF8.GetString(result.Reader.Read(1, out int size), size);
