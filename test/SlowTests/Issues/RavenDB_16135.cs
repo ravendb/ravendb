@@ -6,7 +6,6 @@ using FastTests.Utils;
 using Orders;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents.Revisions;
@@ -102,7 +101,7 @@ namespace SlowTests.Issues
                     return new HttpRequestMessage
                     {
                         Method = HttpMethod.Post,
-                        Content = new BlittableJsonContent(stream => ctx.Write(stream, EntityToBlittable.ConvertCommandToBlittable(_request, ctx)))
+                        Content = new BlittableJsonContent(stream => ctx.Write(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_request, ctx)))
                     };
                 }
 
@@ -111,7 +110,7 @@ namespace SlowTests.Issues
                     if (response == null)
                         ThrowInvalidResponse();
 
-                    Result = (OperationIdResult)EntityToBlittable.ConvertToEntity(typeof(OperationIdResult), "", response, DocumentConventions.Default);
+                    Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<OperationIdResult>(response);
                 }
             }
         }
