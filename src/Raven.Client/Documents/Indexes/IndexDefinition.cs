@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Indexes
     /// </summary>
     public class IndexDefinition
     {
-        private static readonly Regex _regex = new Regex("\r*\n", RegexOptions.Compiled);
+        private static readonly Regex _newLineCharacters = new Regex("\r?\n", RegexOptions.Compiled);
 
         public IndexDefinition()
         {
@@ -203,7 +203,7 @@ namespace Raven.Client.Documents.Indexes
                 if (string.IsNullOrEmpty(toNormalize))
                     return toNormalize;
 
-                return _regex.Replace(toNormalize, Environment.NewLine);
+                return _newLineCharacters.Replace(toNormalize, Environment.NewLine);
             }
         }
 
