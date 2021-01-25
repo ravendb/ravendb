@@ -305,7 +305,7 @@ namespace Raven.Server.Web.System
             result.Name = database.Name;
             
             result.DatabaseId = database.DocumentsStorage.Environment.DbId.ToString();
-            result.UptimeInSec = (SystemTime.UtcNow - database.StartTime).TotalSeconds;
+            result.UptimeInSec = (int)(SystemTime.UtcNow - database.StartTime).TotalSeconds;
             var lastBackup = database.PeriodicBackupRunner?.GetBackupInfo()?.LastBackup;
             result.TimeSinceLastBackupInSec = lastBackup.HasValue 
                 ? (SystemTime.UtcNow - lastBackup.Value).TotalSeconds 
