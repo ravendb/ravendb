@@ -7,9 +7,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.Extensions;
-using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -18,6 +18,8 @@ namespace Raven.Client.Documents.Indexes
     /// </summary>
     public class IndexDefinition
     {
+        private static readonly Regex _regex = new Regex("\r*\n", RegexOptions.Compiled);
+
         public IndexDefinition()
         {
             _configuration = new IndexConfiguration();
@@ -112,8 +114,13 @@ namespace Raven.Client.Documents.Indexes
 
             if (Maps.SetEquals(other.Maps) == false)
             {
-                var maps = new HashSet<string>(Maps, NewLineInsensitiveStringComparer.Instance);
-                var otherMaps = new HashSet<string>(other.Maps, NewLineInsensitiveStringComparer.Instance);
+                var maps = new HashSet<string>();
+                foreach (var map in Maps)
+                    maps.Add(Normalize(map));
+
+                var otherMaps = new HashSet<string>();
+                foreach (var map in other.Maps)
+                    otherMaps.Add(Normalize(map));
 
                 if (maps.SetEquals(otherMaps) == false)
                     result |= IndexDefinitionCompareDifferences.Maps;
@@ -121,7 +128,10 @@ namespace Raven.Client.Documents.Indexes
 
             if (Equals(Reduce, other.Reduce) == false)
             {
-                if (NewLineInsensitiveStringComparer.Instance.Equals(Reduce, other.Reduce) == false)
+                var reduce = Normalize(Reduce);
+                var otherReduce = Normalize(other.Reduce);
+
+                if (Equals(reduce, otherReduce) == false)
                     result |= IndexDefinitionCompareDifferences.Reduce;
             }
 
@@ -187,6 +197,14 @@ namespace Raven.Client.Documents.Indexes
                 result |= IndexDefinitionCompareDifferences.AdditionalAssemblies;
 
             return result;
+
+            static string Normalize(string toNormalize)
+            {
+                if (string.IsNullOrEmpty(toNormalize))
+                    return toNormalize;
+
+                return _regex.Replace(toNormalize, Environment.NewLine);
+            }
         }
 
         /// <summary>
