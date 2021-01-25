@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     switch (value.Indexing)
                     {
                         case FieldIndexing.Exact:
-                            defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields, IndexingExtensions.GetAnalyzerType(Constants.Documents.Indexing.Fields.AllFields, configuration.DefaultExactAnalyzer), CreateKeywordAnalyzer);
+                            defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields, configuration.DefaultExactAnalyzerType, CreateKeywordAnalyzer);
                             break;
 
                         case FieldIndexing.Search:
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                 defaultAnalyzerToUse = GetAnalyzer(Constants.Documents.Indexing.Fields.AllFields, value.Analyzer, analyzers, forQuerying);
 
                             if (defaultAnalyzerToUse == null)
-                                defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields, IndexingExtensions.GetAnalyzerType(Constants.Documents.Indexing.Fields.AllFields, configuration.DefaultSearchAnalyzer), CreateStandardAnalyzer);
+                                defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields, configuration.DefaultSearchAnalyzerType, CreateStandardAnalyzer);
                             break;
 
                         default:
@@ -76,15 +76,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (defaultAnalyzerToUse == null)
             {
-                defaultAnalyzerToUse = defaultAnalyzer = CreateDefaultAnalyzer(Constants.Documents.Indexing.Fields.AllFields, IndexingExtensions.GetAnalyzerType(Constants.Documents.Indexing.Fields.AllFields, configuration.DefaultAnalyzer));
+                defaultAnalyzerToUse = defaultAnalyzer = CreateDefaultAnalyzer(Constants.Documents.Indexing.Fields.AllFields, configuration.DefaultAnalyzerType);
                 analyzers.Add(defaultAnalyzerToUse.GetType(), defaultAnalyzerToUse);
             }
 
             var perFieldAnalyzerWrapper = forQuerying == false && indexDefinition.HasDynamicFields
                 ? new RavenPerFieldAnalyzerWrapper(
                         defaultAnalyzerToUse,
-                        fieldName => GetOrCreateAnalyzer(fieldName, IndexingExtensions.GetAnalyzerType(fieldName, configuration.DefaultSearchAnalyzer), CreateStandardAnalyzer),
-                        fieldName => GetOrCreateAnalyzer(fieldName, IndexingExtensions.GetAnalyzerType(fieldName, configuration.DefaultExactAnalyzer), CreateKeywordAnalyzer))
+                        fieldName => GetOrCreateAnalyzer(fieldName, configuration.DefaultSearchAnalyzerType, CreateStandardAnalyzer),
+                        fieldName => GetOrCreateAnalyzer(fieldName, configuration.DefaultExactAnalyzerType, CreateKeywordAnalyzer))
                 : new RavenPerFieldAnalyzerWrapper(defaultAnalyzerToUse);
 
             foreach (var field in indexDefinition.IndexFields)
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 switch (field.Value.Indexing)
                 {
                     case FieldIndexing.Exact:
-                        var keywordAnalyzer = GetOrCreateAnalyzer(fieldName, IndexingExtensions.GetAnalyzerType(fieldName, configuration.DefaultExactAnalyzer), CreateKeywordAnalyzer);
+                        var keywordAnalyzer = GetOrCreateAnalyzer(fieldName, configuration.DefaultExactAnalyzerType, CreateKeywordAnalyzer);
 
                         perFieldAnalyzerWrapper.AddAnalyzer(fieldName, keywordAnalyzer);
                         break;
@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             // if we have default field options then we need to take into account overrides for regular fields
 
                             if (defaultAnalyzer == null)
-                                defaultAnalyzer = CreateDefaultAnalyzer(fieldName, IndexingExtensions.GetAnalyzerType(fieldName, configuration.DefaultAnalyzer));
+                                defaultAnalyzer = CreateDefaultAnalyzer(fieldName, configuration.DefaultAnalyzerType);
 
                             perFieldAnalyzerWrapper.AddAnalyzer(fieldName, defaultAnalyzer);
                             continue;
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             void AddStandardAnalyzer(string fieldName)
             {
-                var standardAnalyzer = GetOrCreateAnalyzer(fieldName, IndexingExtensions.GetAnalyzerType(fieldName, configuration.DefaultSearchAnalyzer), CreateStandardAnalyzer);
+                var standardAnalyzer = GetOrCreateAnalyzer(fieldName, configuration.DefaultSearchAnalyzerType, CreateStandardAnalyzer);
 
                 perFieldAnalyzerWrapper.AddAnalyzer(fieldName, standardAnalyzer);
             }
