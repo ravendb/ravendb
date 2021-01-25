@@ -15,7 +15,7 @@ namespace Raven.Server.Utils.Monitoring
     {
         public string Name { get; set; }
         public string DatabaseId { get; set; }
-        public double UptimeInSec { get; set; }
+        public int UptimeInSec { get; set; }
         public double? TimeSinceLastBackupInSec { get; set; }
         
         public DatabaseCounts Counts { get; set; }
