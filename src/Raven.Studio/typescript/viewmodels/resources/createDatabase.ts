@@ -50,6 +50,7 @@ class createDatabase extends dialogViewModelBase {
 
     showDynamicDatabaseDistributionWarning: KnockoutComputed<boolean>;
     showReplicationFactorWarning: KnockoutComputed<boolean>;
+    showNumberOfShardsWarning: KnockoutComputed<boolean>;
     enforceManualNodeSelection: KnockoutComputed<boolean>;
     disableReplicationFactorInput: KnockoutComputed<boolean>;
     selectionState: KnockoutComputed<checkbox>;
@@ -81,6 +82,7 @@ class createDatabase extends dialogViewModelBase {
         restore: ko.pureComputed(() => this.currentAdvancedSection() === "restore"),
         encryption: ko.pureComputed(() => this.currentAdvancedSection() === "encryption"),
         replication: ko.pureComputed(() => this.currentAdvancedSection() === "replication"),
+        sharding: ko.pureComputed(() => this.currentAdvancedSection() === "sharding"),
         path: ko.pureComputed(() => this.currentAdvancedSection() === "path")
     };
 
@@ -249,6 +251,11 @@ class createDatabase extends dialogViewModelBase {
         this.showReplicationFactorWarning = ko.pureComputed(() => {
             const factor = this.databaseModel.replication.replicationFactor();
             return factor === 1;
+        });
+
+        this.showNumberOfShardsWarning = ko.pureComputed(() => {
+            const shards = this.databaseModel.sharding.numberOfShards();
+            return shards === 1;
         });
 
         this.enforceManualNodeSelection = ko.pureComputed(() => {
@@ -547,11 +554,17 @@ class createDatabase extends dialogViewModelBase {
             .then(() => {
                 return new createDatabaseCommand(databaseDocument, replicationFactor)
                     .execute()
+                    .done(result => {
+                        if (result.ShardsDefined) {
+                            dialog.close(this, true);
+                            this.spinners.create(false);
+                        }
+                    })
                     .always(() => {
                         dialog.close(this);
                         this.spinners.create(false);
                     });
-            });           
+            });
     }
 
     private createDatabaseFromLegacyDatafiles(): JQueryPromise<operationIdDto> {  

@@ -1,4 +1,4 @@
-Topl/// <reference path="../../typings/tsd.d.ts" />
+/// <reference path="../../typings/tsd.d.ts" />
 import changeSubscription = require("common/changeSubscription");
 import changesCallback = require("common/changesCallback");
 import endpoints = require("endpoints");

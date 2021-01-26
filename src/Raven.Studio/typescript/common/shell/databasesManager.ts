@@ -54,7 +54,7 @@ class databasesManager {
         this.databaseToActivate(databaseName);
     }
 
-    private refreshDatabases(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
+    refreshDatabases(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
         return new getDatabasesCommand()
             .execute()
             .done(result => {
