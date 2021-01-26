@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Exceptions.Documents.Revisions;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
@@ -61,7 +62,7 @@ namespace Raven.Server.Documents.Handlers
             }
             return Task.CompletedTask;
         }
-        
+
         [RavenAction("/databases/*/revisions/conflicts/config", "GET", AuthorizationStatus.ValidUser)]
         public Task GetConflictRevisionsConfig()
         {
@@ -103,11 +104,11 @@ namespace Raven.Server.Documents.Handlers
         {
             await DatabaseConfigurations(
                 ServerStore.ModifyDatabaseRevisions,
-                "read-revisions-config", 
+                "read-revisions-config",
                 GetRaftRequestIdFromQuery(),
                 beforeSetupConfiguration: (string name, ref BlittableJsonReaderObject configuration, JsonOperationContext context) =>
                 {
-                    if (configuration == null || 
+                    if (configuration == null ||
                         configuration.TryGet(nameof(RevisionsConfiguration.Collections), out BlittableJsonReaderObject collections) == false ||
                         collections?.Count > 0 == false)
                         return;
@@ -162,7 +163,7 @@ namespace Raven.Server.Documents.Handlers
                 return Task.CompletedTask;
             }
         }
-        
+
         [RavenAction("/databases/*/revisions", "GET", AuthorizationStatus.ValidUser)]
         public Task GetRevisionsFor()
         {
@@ -185,7 +186,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task Revert()
         {
             RevertRevisionsRequest configuration;
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "revisions/revert");
@@ -297,7 +298,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
-            var documentRevisionsDetails = new GetRevisionsCountCommand.DocumentRevisionsCount()
+            var documentRevisionsDetails = new GetRevisionsCountOperation.DocumentRevisionsCount()
             {
                 RevisionsCount = 0
             };
@@ -309,7 +310,7 @@ namespace Raven.Server.Documents.Handlers
                 documentContext.Write(writer, documentRevisionsDetails.ToJson());
             }
         }
-        
+
         private void GetRevisions(DocumentsOperationContext context, bool metadataOnly)
         {
             var sw = Stopwatch.StartNew();

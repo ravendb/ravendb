@@ -15,34 +15,35 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.Documents.Operations.Refresh;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Http;
-using Raven.Client.Util;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
-using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Dashboard;
@@ -61,12 +62,11 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
-using Raven.Server.Documents.Studio;
-using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Studio;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -81,16 +81,17 @@ using Raven.Server.SqlMigration.Schema;
 using Raven.Server.Utils;
 using Raven.Server.Utils.IoMetrics;
 using Raven.Server.Web.Studio;
-using LicenseConfiguration = Raven.Server.Config.Categories.LicenseConfiguration;
+using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Meters;
 using TypeScripter;
 using TypeScripter.TypeScript;
-using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 using Voron.Data.BTrees;
 using Voron.Debugging;
+using LicenseConfiguration = Raven.Server.Config.Categories.LicenseConfiguration;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 using Size = Sparrow.Size;
 
 namespace TypingsGenerator
@@ -98,6 +99,7 @@ namespace TypingsGenerator
     public class Program
     {
         public const string TargetDirectory = "../../src/Raven.Studio/typings/server/";
+
         public static void Main(string[] args)
         {
             Directory.CreateDirectory(TargetDirectory);
@@ -157,11 +159,11 @@ namespace TypingsGenerator
 
             scripter.UsingTypeFilter(type => ignoredTypes.Contains(type) == false);
             scripter.UsingTypeReader(new TypeReaderWithIgnoreMethods());
-            
+
             scripter.AddType(typeof(CollectionStatistics));
             scripter.AddType(typeof(BatchRequestParser.CommandData));
             scripter.AddType(typeof(TransactionMode));
-            
+
             // name validation
             scripter.AddType(typeof(StudioTasksHandler.ItemType));
             scripter.AddType(typeof(NameValidation));
@@ -171,15 +173,15 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseRecord));
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(DetailedDatabaseStatistics));
-            
+
             // database settings
             scripter.AddType(typeof(SettingsResult));
             scripter.AddType(typeof(ConfigurationEntryServerValue));
             scripter.AddType(typeof(ConfigurationEntryDatabaseValue));
-            
+
             // restore database from cloud backup
             scripter.AddType(typeof(S3Settings));
-            
+
             // footer
             scripter.AddType(typeof(FooterStatistics));
             scripter.AddType(typeof(IndexDefinition));
@@ -226,7 +228,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(NewVersionAvailableDetails));
             scripter.AddType(typeof(MessageDetails));
             scripter.AddType(typeof(ExceptionDetails));
-            
+
             // alerts
             scripter.AddType(typeof(EtlErrorsDetails));
             scripter.AddType(typeof(SlowSqlDetails));
@@ -246,12 +248,12 @@ namespace TypingsGenerator
             scripter.AddType(typeof(StudioTasksHandler.FormattedExpression));
             scripter.AddType(typeof(StudioIndexHandler.IndexTypeInfo));
 
-            // cluster 
+            // cluster
             scripter.AddType(typeof(ClusterTopology));
             scripter.AddType(typeof(ClusterObserverDecisions));
             scripter.AddType(typeof(NodeInfo));
 
-            // query 
+            // query
             scripter.AddType(typeof(QueryResult<,>));
             scripter.AddType(typeof(PutResult));
 
@@ -279,8 +281,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(RevertRevisionsRequest));
             scripter.AddType(typeof(RevertResult));
             scripter.AddType(typeof(EnforceConfigurationResult));
-            scripter.AddType(typeof(GetRevisionsCountCommand.DocumentRevisionsCount));
-            
+            scripter.AddType(typeof(GetRevisionsCountOperation.DocumentRevisionsCount));
+
             // server dashboard
             scripter.AddType(typeof(DashboardNotificationType));
             scripter.AddType(typeof(TrafficWatch));
@@ -289,12 +291,12 @@ namespace TypingsGenerator
             scripter.AddType(typeof(MachineResources));
             scripter.AddType(typeof(DrivesUsage));
 
-            // expiration 
+            // expiration
             scripter.AddType(typeof(ExpirationConfiguration));
-            
+
             // documents compression
             scripter.AddType(typeof(DocumentsCompressionConfiguration));
-            
+
             // refresh
             scripter.AddType(typeof(RefreshConfiguration));
 
@@ -305,7 +307,7 @@ namespace TypingsGenerator
             // map reduce visualizer
             scripter.AddType(typeof(ReduceTree));
 
-            // license 
+            // license
             scripter.AddType(typeof(License));
             scripter.AddType(typeof(UserRegistrationInfo));
             scripter.AddType(typeof(LicenseStatus));
@@ -313,7 +315,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LicenseSupportInfo));
             scripter.AddType(typeof(LicenseRenewalResult));
             scripter.AddType(typeof(LicenseConfiguration));
-            
+
             // feedback form
             scripter.AddType(typeof(FeedbackForm));
 
@@ -349,7 +351,7 @@ namespace TypingsGenerator
             // ongoing tasks - replication
             scripter.AddType(typeof(OngoingTaskReplication));
             scripter.AddType(typeof(ExternalReplication));
-            
+
             // ongoing tasks - pull replication
             scripter.AddType(typeof(PullReplicationDefinition));
             scripter.AddType(typeof(PullReplicationDefinitionAndCurrentConnections));
@@ -434,12 +436,12 @@ namespace TypingsGenerator
 
             // adminJs console
             scripter.AddType(typeof(AdminJsScript));
-            
+
             scripter.AddType(typeof(TrafficWatchChange));
 
             scripter.AddType(typeof(NodeConnectionTestResult));
             scripter.AddType(typeof(ClientCertificateGenerationResult));
-            
+
             // request with POST parameters
             scripter.AddType(typeof(DeleteDatabasesOperation.Parameters));
             scripter.AddType(typeof(ToggleDatabasesStateOperation.Parameters));
@@ -447,13 +449,13 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SetIndexesPriorityOperation.Parameters));
             scripter.AddType(typeof(AdminRevisionsHandler.Parameters));
             scripter.AddType(typeof(ReorderDatabaseMembersOperation.Parameters));
-            
+
             scripter.AddType(typeof(LicenseLimitException));
-            
+
             scripter.AddType(typeof(CompactSettings));
             scripter.AddType(typeof(CompactionResult));
             scripter.AddType(typeof(CompactionProgress));
-            
+
             // server setup
             scripter.AddType(typeof(UnsecuredSetupInfo));
             scripter.AddType(typeof(SetupInfo));
@@ -465,22 +467,22 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SetupMode));
             scripter.AddType(typeof(ConfigurationNodeInfo));
             scripter.AddType(typeof(SetupParameters));
-            
+
             // compare exchange
             scripter.AddType(typeof(CompareExchangeHandler.CompareExchangeListItem));
             scripter.AddType(typeof(CompareExchangeResult<object>));
             scripter.AddType(typeof(CompareExchangeValue<object>));
-            
+
             // debug
             scripter.AddType(typeof(ThreadsInfo));
             scripter.AddType(typeof(MemoryDebugHandler.MemoryInfo));
-            
+
             // counters
             scripter.AddType(typeof(CounterBatch));
             scripter.AddType(typeof(CountersDetail));
             scripter.AddType(typeof(CounterDetail));
             scripter.AddType(typeof(CounterOperationType));
-       
+
             // sql migration
             scripter.AddType(typeof(DatabaseSchema));
             scripter.AddType(typeof(MigrationProvider));
@@ -488,13 +490,13 @@ namespace TypingsGenerator
             scripter.AddType(typeof(MigrationResult));
             scripter.AddType(typeof(MigrationProgress));
             scripter.AddType(typeof(MigrationTestRequest));
-            
+
             // document size details
             scripter.AddType(typeof(DocumentSizeDetails));
-            
+
             // version info
             scripter.AddType(typeof(LatestVersionCheck.VersionInfo));
-            
+
             // time series
             scripter.AddType(typeof(TimeSeriesStatistics));
             scripter.AddType(typeof(TimeSeriesDetails));
@@ -502,7 +504,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TimeSeriesOperation.AppendOperation));
             scripter.AddType(typeof(TimeSeriesOperation.DeleteOperation));
             scripter.AddType(typeof(TimeSeriesConfiguration));
-            
+
             // studio configuration
             scripter.AddType(typeof(ServerWideStudioConfiguration));
             scripter.AddType(typeof(StudioConfiguration));
