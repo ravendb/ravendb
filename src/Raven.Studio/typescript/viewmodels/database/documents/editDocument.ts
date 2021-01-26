@@ -1442,7 +1442,7 @@ class normalCrudActions implements editDocumentCrudActions {
     fetchRevisionsCount(docId: string, db: database): void {
         new getDocumentRevisionsCountCommand(docId, db)
             .execute()
-            .done((result: Raven.Server.Documents.Handlers.DocumentRevisionsCount) => {
+            .done((result: Raven.Client.Documents.Session.Operations.GetRevisionsCountOperation.DocumentRevisionsCount) => {
                 this.revisionsCount(result.RevisionsCount);
             });
     }
