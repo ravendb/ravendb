@@ -16,8 +16,8 @@
                     <h2 class="text-warning">Creating database from legacy files is only supported on servers hosted on Microsoft Windows</h2>
                     <p class="margin-top margin-lg">
                         You can still import your data using 
-                        <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/GBX6MB/' +  $root.clientVersion() }">live import</a> or
-                        using <a data-bind="attr: { href: 'https://ravendb.net/l/CCZXCB/' +  $root.clientVersion() }" target="_blank">.ravendump</a> file 
+                        <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/GBX6MB/' + $root.clientVersion() }">live import</a> or
+                        using <a data-bind="attr: { href: 'https://ravendb.net/l/CCZXCB/' + $root.clientVersion() }" target="_blank">.ravendump</a> file 
                     </p>
                 </div>
                 <div class="modal-settings-panel" data-bind="visible: !operationNotSupported">
@@ -55,8 +55,8 @@
                         <div>
                             <div class="restore" data-bind="template: { name: 'create-db-restore' }, visible: advancedVisibility.restore()">
                             </div>
-                        </div>                      
-                        <div>                        
+                        </div>
+                        <div>
                            <div class="encryption" data-bind="template: { name: 'create-db-encryption' }, visible: advancedVisibility.encryption() && usingHttps">
                            </div>
                         </div>
@@ -66,6 +66,10 @@
                         </div>
                         <div>
                             <div class="replication" data-bind="template: { name: 'create-db-replication' }, visible: advancedVisibility.replication()">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="replication" data-bind="template: { name: 'create-db-sharding' }, visible: advancedVisibility.sharding()">
                             </div>
                         </div>
                         <div>
@@ -85,11 +89,11 @@
         <div class="bg-info margin-bottom">
             <div class="padding padding-sm flex-horizontal">
                 <div>
-                    <small><i class="icon-info"></i></small>    
+                    <small><i class="icon-info"></i></small>
                 </div>
                 <div>
                     <small>
-                        This database creation option is designed for importing database from RavenDB v3.x.    
+                        This database creation option is designed for importing database from RavenDB v3.x.
                     </small>
                 </div>
             </div>
@@ -583,7 +587,7 @@
                     <div class="col-md-8">
                         <input type="text" class="form-control" id="remoteFolderGoogleCloud" data-bind="textInput: remoteFolder"/>
                         <ul class="dropdown-menu" data-bind="foreach: $root.backupFolderPathOptions, autoComplete: '#remoteFolderGoogleCloud'">
-                            <li data-bind="click: _.partial($root.databaseModel.remoteFolderGoogleCloudChanged, $data)">    
+                            <li data-bind="click: _.partial($root.databaseModel.remoteFolderGoogleCloudChanged, $data)">
                                 <a href="#" data-bind="text: $data"></a>
                             </li>
                         </ul>
@@ -677,7 +681,7 @@
 <script type="text/html" id="create-db-path">
     <div data-bind="with: databaseModel.path">
         <h3>Path Configuration</h3>
-        <div class="form-group row" data-bind="validationElement: dataPath">
+        <div class="form-group row margin-top margin-top-lg" data-bind="validationElement: dataPath">
             <div class="col-md-4">
                 <label class="control-label">Path</label>
             </div>
@@ -744,15 +748,15 @@
 
 <script type="text/html" id="create-db-replication">
     <h3>Replication Configuration</h3>
-    <div data-bind="with: databaseModel.replication">
+    <div data-bind="with: databaseModel.replication" class="margin-top margin-top-lg">
         <div class="form-group" data-bind="style: { 'min-height': $root.databaseModel.isFromBackupOrFromOfflineMigration ? '' : '62px' }">
             <div class="input-group" title="Set the number of nodes that will contain the database" 
                  data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
                 <span class="input-group-addon">Replication factor</span>
-                <input class="form-control" type="number" min="1" title="Set the number of nodes that will contain the database" 
+                <input class="form-control" type="number" min="1" title="Set the number of nodes that will contain the database" placeholder="Enter number of nodes"
                        data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackupOrFromOfflineMigration || $root.disableReplicationFactorInput">
                 <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning">
-                    With the replication factor set to 1, the data won't be replicated!
+                    With replication factor set to 1, the data won't be replicated
                 </div>
             </div>
         </div>
@@ -807,6 +811,31 @@
     </div>
 </script>
 
+<script type="text/html" id="create-db-sharding">
+    <h3>Sharding Configuration</h3>
+    <div data-bind="with: databaseModel.sharding" class="margin-top margin-top-lg">
+        <div class="form-group" data-bind="style: { 'min-height': $root.databaseModel.isFromBackupOrFromOfflineMigration ? '' : '62px' }">
+            <div class="input-group" title="Set the number of shards for the the database"
+                 data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showNumberOfShardsWarning()) }, validationElement: numberOfShards">
+                <span class="input-group-addon">Number of Shards</span>
+                <input class="form-control" type="number" min="1" title="Set the number of shards for the database" placeholder="Enter number of shards"
+                       data-bind="numericInput: numberOfShards, disable: $root.databaseModel.isFromBackupOrFromOfflineMigration">
+                <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showNumberOfShardsWarning">
+                    With number of shards set to 1, the database won't be sharded
+                </div>
+            </div>
+        </div>
+        <div class="bg-info padding no-margin">
+            <small>Available nodes</small>
+            <div data-bind="foreach: $root.clusterNodes">
+                <label data-bind="attr: { for: 'cluster_node_' + $index() }">
+                    <i class="icon-cluster-node"></i><span data-bind="text: tag()"></span>&nbsp;<small data-bind="text: serverUrl()"></small>
+                </label>
+            </div>
+        </div>
+    </div>
+</script>
+
 <script type="text/html" id="create-db-encryption">
     <h3>Encryption Configuration</h3>
     <div data-bind="with: encryptionSection">
@@ -817,9 +846,9 @@
 <script type="text/html" id="authentication-is-off">
     <h2 class="text-warning"><i class="icon-unsecure"></i> Authentication is off</h2><br/>
     <div data-bind="with: encryptionSection">
-        <div class="text-info bg-info padding padding-sm">Database encryption is only possible when authentication is enabled and a server certificate has been defined.</div>          
+        <div class="text-info bg-info padding padding-sm">Database encryption is only possible when authentication is enabled and a server certificate has been defined.</div>
         <div class="padding padding-sm">For more information go to the 
             <button class="btn-link" type="button" data-bind="click: $root.redirectToCertificates" data-dismiss="modal">certificates page</button>
-        </div>      
+        </div>
     </div>
 </script>

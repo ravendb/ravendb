@@ -18,5 +18,7 @@ namespace Raven.Client.ServerWide.Operations
         public string Name { get; set; }
         public DatabaseTopology Topology { get; set; }
         public List<string> NodesAddedTo { get; set; }
+        
+        public bool ShardsDefined { get; set; }
     }
 }

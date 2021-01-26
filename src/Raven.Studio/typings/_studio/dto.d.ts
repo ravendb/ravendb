@@ -218,7 +218,7 @@ interface operationIdDto {
     OperationId: number;
 }
 
-type availableConfigurationSectionId = "restore" | "legacyMigration" | "encryption" | "replication" | "path";
+type availableConfigurationSectionId = "restore" | "legacyMigration" | "encryption" | "replication" | "sharding" | "path";
 
 type restoreSource = "local" | "cloud" | "amazonS3" | "azure" | "googleCloud";
 

@@ -47,6 +47,13 @@ class databaseCreationModel {
             enabled: ko.observable<boolean>(true)
         },
         {
+            name: "Sharding",
+            id: "sharding",
+            alwaysEnabled: true,
+            disableToggle: ko.observable<boolean>(false),
+            enabled: ko.observable<boolean>(true)
+        },
+        {
             name: "Path",
             id: "path",
             alwaysEnabled: true,
@@ -80,12 +87,12 @@ class databaseCreationModel {
         disableOngoingTasks: ko.observable<boolean>(false),
         skipIndexes: ko.observable<boolean>(false),
         requiresEncryption: undefined as KnockoutComputed<boolean>,
-        backupEncryptionKey: ko.observable<string>(),        
+        backupEncryptionKey: ko.observable<string>(),
         lastFailedFolderName: null as string,
 
         restorePoints: ko.observable<Array<{ databaseName: string, databaseNameTitle: string, restorePoints: restorePoint[] }>>([]),
         restorePointsCount: ko.observable<number>(0),
-        restorePointError: ko.observable<string>(),        
+        restorePointError: ko.observable<string>(),
         selectedRestorePoint: ko.observable<restorePoint>(),
         
         restorePointButtonText: ko.pureComputed<string>(() => {
@@ -101,7 +108,7 @@ class databaseCreationModel {
                 // case 3: Restore points found
                 const restorePoint = this.restore.selectedRestorePoint();
                 if (!restorePoint) {
-                    const text: string  = `Select restore point... (${count.toLocaleString()} ${count > 1 ? 'options' : 'option'})`;
+                    const text: string = `Select restore point... (${count.toLocaleString()} ${count > 1 ? 'options' : 'option'})`;
                     return text;
                 }
                 
@@ -154,10 +161,18 @@ class databaseCreationModel {
         dynamicMode: ko.observable<boolean>(true),
         nodes: ko.observableArray<clusterNode>([])
     };
+    
+    sharding = {
+        numberOfShards: ko.observable<number>(2), // ??? 1/2/3 ???
+    }
 
     replicationValidationGroup = ko.validatedObservable({
         replicationFactor: this.replication.replicationFactor,
         nodes: this.replication.nodes
+    });
+
+    shardingValidationGroup = ko.validatedObservable({
+        numbeOfShards: this.sharding.numberOfShards
     });
 
     path = {
@@ -210,6 +225,9 @@ class databaseCreationModel {
         const replicationConfig = this.configurationSections.find(x => x.id === "replication");
         replicationConfig.validationGroup = this.replicationValidationGroup;
 
+        const shardingConfig = this.configurationSections.find(x => x.id === "sharding");
+        shardingConfig.validationGroup = this.shardingValidationGroup;
+
         const pathConfig = this.configurationSections.find(x => x.id === "path");
         pathConfig.validationGroup = this.pathValidationGroup;
 
@@ -229,7 +247,7 @@ class databaseCreationModel {
             }
         });
 
-        this.restoreSourceObject.subscribe(() =>  {
+        this.restoreSourceObject.subscribe(() => {
             this.clearRestorePoints();
             this.restore.restorePointError(null);
             this.fetchRestorePoints(true);
@@ -281,7 +299,7 @@ class databaseCreationModel {
                     encryptionSection.disableToggle(false);
                 }
             } finally {
-                this.lockActiveTab(false);    
+                this.lockActiveTab(false);
             }
         });
         
@@ -294,7 +312,7 @@ class databaseCreationModel {
         
         new getCloudBackupCredentialsFromLinkCommand(link)
             .execute()
-            .fail(() =>  {
+            .fail(() => {
                 this.restore.ravenCloudCredentials().isBackupLinkValid(false);
                 this.clearRestorePoints();
             })
@@ -461,13 +479,14 @@ class databaseCreationModel {
         });
         
         this.setupReplicationValidation(maxReplicationFactor);
+        this.setupShardingValidation();
         this.setupEncryptionValidation();
         
         if (this.creationMode === "restore") {
             this.setupRestoreValidation();
         }
         if (this.creationMode === "legacyMigration") {
-            this.setupLegacyMigrationValidation();    
+            this.setupLegacyMigrationValidation();
         }
     }
     
@@ -492,6 +511,13 @@ class databaseCreationModel {
                     params: maxReplicationFactor
                 }
             ],
+            digit: true
+        });
+    }
+    
+    private setupShardingValidation() {
+        this.sharding.numberOfShards.extend({
+            required: true,
             digit: true
         });
     }
@@ -658,12 +684,21 @@ class databaseCreationModel {
             settings[configuration.core.dataDirectory] = dataDir;
         }
 
+        const shards: Raven.Client.ServerWide.DatabaseTopology[] = [];
+        const numberOfShards = this.sharding.numberOfShards();
+        if (numberOfShards > 1) {
+            for (let i = 0; i < numberOfShards; i++) {
+                shards.push({} as Raven.Client.ServerWide.DatabaseTopology);
+            }
+        }
+        
         return {
             DatabaseName: this.name(),
             Settings: settings,
             Disabled: false,
             Encrypted: this.getEncryptionConfigSection().enabled(),
-            Topology: this.topologyToDto()
+            Topology: numberOfShards > 1 ? null : this.topologyToDto(),
+            Shards: shards
         } as Raven.Client.ServerWide.DatabaseRecord;
     }
 
