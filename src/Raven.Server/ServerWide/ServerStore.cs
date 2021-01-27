@@ -1683,10 +1683,19 @@ namespace Raven.Server.ServerWide
             }
 
             pullReplicationAsSink = JsonDeserializationClient.PullReplicationAsSink(pullReplicationBlittable);
+
             var replicationAsSinkCommand = new UpdatePullReplicationAsSinkCommand(dbName, raftRequestId)
             {
-                PullReplicationAsSink = pullReplicationAsSink
+                PullReplicationAsSink = pullReplicationAsSink,
+                // JsonDeserializationClient assign null value for null value and for missing property.
+                // we need to know if we want to use server certificate or not to change the current one.
+                // null value for server certificate
+                // missing property for 'do not change'
+                useServerCertificate = (pullReplicationAsSink.CertificateWithPrivateKey == null) &&
+                    (pullReplicationBlittable.TryGet(nameof(PullReplicationAsSink.CertificateWithPrivateKey), out string _))
             };
+
+
             return SendToLeaderAsync(replicationAsSinkCommand);
         }
 
