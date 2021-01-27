@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
             ReleaseCachedValues();
 
             var aggressiveCacheOptions = _requestExecutor.AggressiveCaching.Value;
-            if (aggressiveCacheOptions?.Mode == AggressiveCacheMode.TrackChanges)
+            if (aggressiveCacheOptions != null)
             {
                 Result = new List<GetResponse>();
                 foreach (var command in _commands)
@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                     {
                         if (cached == null ||
                             cachedItem.Age > aggressiveCacheOptions.Duration ||
-                            cachedItem.MightHaveBeenModified)
+                            aggressiveCacheOptions.Mode == AggressiveCacheMode.TrackChanges && cachedItem.MightHaveBeenModified)
                             break;
 
                         Result.Add(new GetResponse
@@ -161,50 +161,49 @@ namespace Raven.Client.Documents.Commands.MultiGet
         private string GetCacheKey(GetRequest command, out string requestUrl)
         {
             requestUrl = $"{_baseUrl}{command.UrlAndQuery}";
-
-            return $"{command.Method}-{requestUrl}";
+            return command.Method != null ? $"{command.Method}-{requestUrl}" : requestUrl;
         }
 
         public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
             try
             {
-            var state = new JsonParserState();
-            using (var parser = new UnmanagedJsonParser(context, state, "multi_get/response"))
-            using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
-            using (var peepingTomStream = new PeepingTomStream(stream, context))
-            {
-                if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
-                    ThrowInvalidJsonResponse(peepingTomStream);
-
-                if (state.CurrentTokenType != JsonParserToken.StartObject)
-                    ThrowInvalidJsonResponse(peepingTomStream);
-
-                var property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
-                if (property != nameof(BlittableArrayResult.Results))
-                    ThrowInvalidJsonResponse(peepingTomStream);
-
-                var i = 0;
-                Result = new List<GetResponse>();
-                foreach (var getResponse in ReadResponses(context, peepingTomStream, parser, state, buffer))
+                var state = new JsonParserState();
+                using (var parser = new UnmanagedJsonParser(context, state, "multi_get/response"))
+                using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
+                using (var peepingTomStream = new PeepingTomStream(stream, context))
                 {
-                    var command = _commands[i];
+                    if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
+                        ThrowInvalidJsonResponse(peepingTomStream);
 
-                    MaybeSetCache(getResponse, command);
-                        MaybeReadFromCache(getResponse, i, command, context);
+                    if (state.CurrentTokenType != JsonParserToken.StartObject)
+                        ThrowInvalidJsonResponse(peepingTomStream);
 
-                    Result.Add(getResponse);
+                    var property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
+                    if (property != nameof(BlittableArrayResult.Results))
+                        ThrowInvalidJsonResponse(peepingTomStream);
 
-                    i++;
+                    var i = 0;
+                    Result = new List<GetResponse>();
+                    foreach (var getResponse in ReadResponses(context, peepingTomStream, parser, state, buffer))
+                    {
+                        var command = _commands[i];
+
+                        MaybeSetCache(getResponse, command);
+                            MaybeReadFromCache(getResponse, i, command, context);
+
+                        Result.Add(getResponse);
+
+                        i++;
+                    }
+
+                    if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
+                        ThrowInvalidJsonResponse(peepingTomStream);
+
+                    if (state.CurrentTokenType != JsonParserToken.EndObject)
+                        ThrowInvalidJsonResponse(peepingTomStream);
                 }
-
-                if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
-                    ThrowInvalidJsonResponse(peepingTomStream);
-
-                if (state.CurrentTokenType != JsonParserToken.EndObject)
-                    ThrowInvalidJsonResponse(peepingTomStream);
             }
-        }
             finally
             {
                 ReleaseCachedValues();
