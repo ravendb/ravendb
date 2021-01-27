@@ -818,10 +818,10 @@
             <div class="input-group" title="Set the number of shards for the the database"
                  data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showNumberOfShardsWarning()) }, validationElement: numberOfShards">
                 <span class="input-group-addon">Number of Shards</span>
-                <input class="form-control" type="number" min="1" title="Set the number of shards for the database" placeholder="Enter number of shards"
+                <input class="form-control" type="number" min="0" title="Set the number of shards for the database" placeholder="Enter number of shards"
                        data-bind="numericInput: numberOfShards, disable: $root.databaseModel.isFromBackupOrFromOfflineMigration">
                 <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showNumberOfShardsWarning">
-                    With number of shards set to 1, the database won't be sharded
+                    With number of shards set to 0, the database won't be sharded
                 </div>
             </div>
         </div>

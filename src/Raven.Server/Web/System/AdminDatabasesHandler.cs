@@ -343,7 +343,7 @@ namespace Raven.Server.Web.System
                         [nameof(DatabasePutResult.Name)] = databaseRecord.DatabaseName,
                         [nameof(DatabasePutResult.Topology)] = topology.ToJson(),
                         [nameof(DatabasePutResult.NodesAddedTo)] = nodeUrlsAddedTo,
-                        [nameof(DatabasePutResult.ShardsDefined)] = databaseRecord.Shards != null && databaseRecord.Shards.Length >= 2
+                        [nameof(DatabasePutResult.ShardsDefined)] = databaseRecord.IsSharded
                     });
                     writer.Flush();
                 }

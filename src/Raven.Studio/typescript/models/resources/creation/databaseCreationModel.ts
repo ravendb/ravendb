@@ -163,7 +163,7 @@ class databaseCreationModel {
     };
     
     sharding = {
-        numberOfShards: ko.observable<number>(2), // ??? 1/2/3 ???
+        numberOfShards: ko.observable<number>(0), // TODO what should be the default ? 0/1/2/3 ?
     }
 
     replicationValidationGroup = ko.validatedObservable({
@@ -686,7 +686,7 @@ class databaseCreationModel {
 
         const shards: Raven.Client.ServerWide.DatabaseTopology[] = [];
         const numberOfShards = this.sharding.numberOfShards();
-        if (numberOfShards > 1) {
+        if (numberOfShards) {
             for (let i = 0; i < numberOfShards; i++) {
                 shards.push({} as Raven.Client.ServerWide.DatabaseTopology);
             }
@@ -697,7 +697,7 @@ class databaseCreationModel {
             Settings: settings,
             Disabled: false,
             Encrypted: this.getEncryptionConfigSection().enabled(),
-            Topology: numberOfShards > 1 ? null : this.topologyToDto(),
+            Topology: numberOfShards ? null : this.topologyToDto(),
             Shards: shards
         } as Raven.Client.ServerWide.DatabaseRecord;
     }
