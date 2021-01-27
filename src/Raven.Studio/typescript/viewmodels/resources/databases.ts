@@ -654,18 +654,10 @@ class databases extends viewModelBase {
         const createDbView = new createDatabase("newDatabase");
         app.showBootstrapDialog(createDbView)
             .done(shardsDefined => {
-                // For now, if the new database is defined with shards need to do some refreshing for now
-                // Things to note:
-                // 1. the create ep returns the name of the 'parent' db, not the sharded variation
-                // 2. in the notiications ws we get notifications for both:  
-                //    DatabaseChanged/Load/AA$0 (the shard) 
-                //    DatabaseChanges/Put/AA (the parent, not the sharded variation) 
-                
                 if (shardsDefined) {
-                    // For now, call fetch, so that we see the sharded databases in the list 
+                    // For now, refresh data for this view
+                    // Can't rely on ws - see issue https://issues.hibernatingrhinos.com/issue/RavenDB-16177 // TODO
                     this.fetchDatabases();
-                    
-                    // For now, call refresh, otherwise the parent db 'AA' is added to databases manager as a not relevant db
                     this.databasesManager.refreshDatabases();
                 }
             });

@@ -255,7 +255,7 @@ class createDatabase extends dialogViewModelBase {
 
         this.showNumberOfShardsWarning = ko.pureComputed(() => {
             const shards = this.databaseModel.sharding.numberOfShards();
-            return shards === 1;
+            return shards === 0;
         });
 
         this.enforceManualNodeSelection = ko.pureComputed(() => {
@@ -555,12 +555,12 @@ class createDatabase extends dialogViewModelBase {
                 return new createDatabaseCommand(databaseDocument, replicationFactor)
                     .execute()
                     .done(result => {
-                        if (result.ShardsDefined) {
-                            dialog.close(this, true);
-                            this.spinners.create(false);
-                        }
+                        // Notify the calling databases view whether this databases is sharded
+                        // Can't rely on ws - see issue https://issues.hibernatingrhinos.com/issue/RavenDB-16177 // TODO
+                        dialog.close(this, result.ShardsDefined);
+                        this.spinners.create(false);
                     })
-                    .always(() => {
+                    .fail(() => {
                         dialog.close(this);
                         this.spinners.create(false);
                     });
