@@ -188,8 +188,6 @@ namespace Raven.Client.Documents.Session
             {
                 var sw = Stopwatch.StartNew();
 
-                IncrementRequestCount();
-
                 var responseTimeDuration = new ResponseTimeInformation();
 
                 while (ExecuteLazyOperationsSingleStep(responseTimeDuration, requests, sw))
@@ -221,6 +219,8 @@ namespace Raven.Client.Documents.Session
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
             RequestExecutor.Execute(multiGetCommand, Context, sessionInfo: _sessionInfo);
             var responses = multiGetCommand.Result;
+            if(multiGetCommand.AggressivelyCached == false)
+                IncrementRequestCount();
 
             for (var i = 0; i < PendingLazyOperations.Count; i++)
             {

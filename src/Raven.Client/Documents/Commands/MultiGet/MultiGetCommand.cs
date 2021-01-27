@@ -20,6 +20,8 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         private string _baseUrl;
 
+        internal bool AggressivelyCached;
+
         public MultiGetCommand(RequestExecutor requestExecutor, List<GetRequest> commands)
         {
             _requestExecutor = requestExecutor ?? throw new ArgumentNullException(nameof(requestExecutor));
@@ -65,6 +67,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
                 if (Result.Count == _commands.Count)
                 {
+                    AggressivelyCached = true;
                     return null;// aggressively cached
                 }
                 // not all of it is cached, might as well read it all

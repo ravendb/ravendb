@@ -43,9 +43,9 @@ namespace SlowTests.Bugs.Caching
         {
             using var store = GetDocumentStore();
 
-            var (expected, actual) = await AggressiveCacheOnLazilyLoadAsyncTest(store, testCaseHolder, AggressiveCacheMode.DoNotTrackChanges);
+            var numberOfRequest = await AggressiveCacheOnLazilyLoadAsyncTest(store, testCaseHolder, AggressiveCacheMode.DoNotTrackChanges);
 
-            Assert.Equal(expected, actual);
+            Assert.Equal(0, numberOfRequest);
         }
 
         [Fact]
@@ -53,9 +53,9 @@ namespace SlowTests.Bugs.Caching
         {
             using var store = GetDocumentStore();
 
-            var (expected, actual) = await AggressiveCacheOnLazilyLoadAsyncTest(store, LazilyLoadFuncAsync, AggressiveCacheMode.TrackChanges);
+            var numberOfRequest = await AggressiveCacheOnLazilyLoadAsyncTest(store, LazilyLoadFuncAsync, AggressiveCacheMode.TrackChanges);
 
-            Assert.True(expected < actual, $"{expected} < {actual}");
+            Assert.Equal(1, numberOfRequest);
         }
 
         [Fact]
@@ -63,12 +63,12 @@ namespace SlowTests.Bugs.Caching
         {
             using var store = GetDocumentStore();
 
-            var (expected, actual) = await AggressiveCacheOnLazilyLoadAsyncTest(store, LazilyLoadFuncAsync, AggressiveCacheMode.TrackChanges, false);
+            var numberOfRequest = await AggressiveCacheOnLazilyLoadAsyncTest(store, LazilyLoadFuncAsync, AggressiveCacheMode.TrackChanges, false);
 
-            Assert.Equal(expected, actual);
+            Assert.Equal(0, numberOfRequest);
         }
 
-        private async Task<(long expected, long actual)> AggressiveCacheOnLazilyLoadAsyncTest(
+        private async Task<long> AggressiveCacheOnLazilyLoadAsyncTest(
             IDocumentStore store, 
             AsyncTestCaseHolder testCaseHolder,
             AggressiveCacheMode aggressiveCacheMode,
@@ -77,7 +77,7 @@ namespace SlowTests.Bugs.Caching
             return await AggressiveCacheOnLazilyLoadAsyncTest(store, testCaseHolder.LoadFuncAsync, aggressiveCacheMode, createVersion2);
         }
 
-        private static async Task<(long expected, long actual)> AggressiveCacheOnLazilyLoadAsyncTest(
+        private static async Task<long> AggressiveCacheOnLazilyLoadAsyncTest(
             IDocumentStore store,
             Func<IAsyncDocumentSession, string, Task> loadFuncAsync,
             AggressiveCacheMode aggressiveCacheMode, 
@@ -114,9 +114,8 @@ namespace SlowTests.Bugs.Caching
             {
                 var loadAsync = session.Advanced.Lazily.LoadAsync<Doc>(docId);
                 _ = await loadAsync.Value;
+                return session.Advanced.NumberOfRequests;
             }
-
-            return (requests, requestExecutor.NumberOfServerRequests);
         }
 
 
@@ -143,19 +142,19 @@ namespace SlowTests.Bugs.Caching
         {
             using var store = GetDocumentStore();
 
-            var (expected, actual) = await AggressiveCacheOnLazilyLoadTest(store, testCaseHolder, AggressiveCacheMode.DoNotTrackChanges);
+            var numberOfRequest = await AggressiveCacheOnLazilyLoadTest(store, testCaseHolder, AggressiveCacheMode.DoNotTrackChanges);
             
-            Assert.Equal(expected, actual);
+            Assert.Equal(0, numberOfRequest);
         }
 
         [Fact]
         public async Task LazilyLoad_WhenTrackChangesAndChange_ShouldCreateExtraRequest()
         {
             using var store = GetDocumentStore();
-            
-            var (expected, actual) = await AggressiveCacheOnLazilyLoadTest(store, LazilyLoadFunc, AggressiveCacheMode.TrackChanges);
 
-            Assert.True(expected < actual, $"{expected} < {actual}");
+            var numberOfRequest = await AggressiveCacheOnLazilyLoadTest(store, LazilyLoadFunc, AggressiveCacheMode.TrackChanges);
+
+            Assert.Equal(1, numberOfRequest);
         }
 
 
@@ -164,12 +163,12 @@ namespace SlowTests.Bugs.Caching
         {
             using var store = GetDocumentStore();
 
-            var (expected, actual) = await AggressiveCacheOnLazilyLoadTest(store, LazilyLoadFunc, AggressiveCacheMode.TrackChanges, false);
+            var numberOfRequest = await AggressiveCacheOnLazilyLoadTest(store, LazilyLoadFunc, AggressiveCacheMode.TrackChanges, false);
 
-            Assert.Equal(expected, actual);
+            Assert.Equal(0, numberOfRequest);
         }
 
-        private async Task<(long expected, long actual)> AggressiveCacheOnLazilyLoadTest(
+        private async Task<long> AggressiveCacheOnLazilyLoadTest(
             IDocumentStore store, 
             TestCaseHolder testCaseHolder,
             AggressiveCacheMode doNotTrackChanges, 
@@ -178,7 +177,7 @@ namespace SlowTests.Bugs.Caching
             return await AggressiveCacheOnLazilyLoadTest(store, testCaseHolder.LoadFunc, doNotTrackChanges, createVersion2);
         }
 
-        private static async Task<(long expected, long actual)> AggressiveCacheOnLazilyLoadTest(
+        private static async Task<long> AggressiveCacheOnLazilyLoadTest(
             IDocumentStore store, 
             Action<IDocumentSession, string> loadFunc, 
             AggressiveCacheMode doNotTrackChanges, 
@@ -208,15 +207,12 @@ namespace SlowTests.Bugs.Caching
                 }
             }
 
-            var expected = requestExecutor.NumberOfServerRequests;
-
             using (var session = store.OpenSession())
             using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5), doNotTrackChanges))
             {
                 _ = session.Advanced.Lazily.Load<Doc>(docId).Value;
+                return session.Advanced.NumberOfRequests;
             }
-
-            return (expected, requestExecutor.NumberOfServerRequests);
         }
         
         public class Doc
