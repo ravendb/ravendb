@@ -50,19 +50,19 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
-                Assert.Equal(2,
-                    await AssertWaitForValueAsync(
-                        async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2));
-
+            
+                await WaitAndAssertForValueAsync(
+                        async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2);
+                
                 await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, nodeTags.First(n => n == firstNode)));
-                Assert.Equal(1,
-                    await AssertWaitForValueAsync(
-                        async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 1));
-                Assert.True(await AssertWaitForValueAsync(async () =>
+                
+                await WaitAndAssertForValueAsync(
+                        async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 1);
+                await WaitAndAssertForValueAsync(async () =>
                 {
                     var dbRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                     return dbRecord?.DeletionInProgress == null || dbRecord.DeletionInProgress.Count == 0;
-                }, true));
+                }, true);
 
                 await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = store.Urls.First(), Database = store.Database }));
 
@@ -101,7 +101,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 var result = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
-                await AssertWaitForValueAsync(async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2);
+                await WaitAndAssertForValueAsync(async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2);
 
                 await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = store.Urls.First(), Database = store.Database }));
 
@@ -149,7 +149,7 @@ namespace SlowTests.Server.Replication
                 await (await SendAsync(store, new StartBackupOperation(true, backupTaskId))).WaitForCompletionAsync();
 
                 await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, firstNodeTag));
-                await AssertWaitForValueAsync(async () =>
+                await WaitAndAssertForValueAsync(async () =>
                 {
                     var dbRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                     return dbRecord?.DeletionInProgress == null || dbRecord.DeletionInProgress.Count == 0;
@@ -187,7 +187,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 var result = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
-                await AssertWaitForValueAsync(async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2);
+                await WaitAndAssertForValueAsync(async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2);
 
                 await store.GetRequestExecutor().UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(new ServerNode { Url = store.Urls.First(), Database = store.Database }));
 

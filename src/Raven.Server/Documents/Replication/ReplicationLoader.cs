@@ -1146,9 +1146,10 @@ namespace Raven.Server.Documents.Replication
 
         public void CompleteDeletionIfNeeded(CancellationTokenSource cts)
         {
+            var dbName = Database.Name;
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
-            using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name))
+            using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, dbName))
             {
                 if (rawRecord == null)
                     return;
@@ -1169,7 +1170,7 @@ namespace Raven.Server.Documents.Replication
                 finally
                 {
                     var record = rawRecord.MaterializedRecord;
-                    ThreadPool.QueueUserWorkItem(_ => _server.DatabasesLandlord.DeleteDatabase(Database.Name, deletionInProgress[_server.NodeTag], record), null);
+                    ThreadPool.QueueUserWorkItem(_ => _server.DatabasesLandlord.DeleteDatabase(dbName, deletionInProgress[_server.NodeTag], record), null);
                 }
             }
         }

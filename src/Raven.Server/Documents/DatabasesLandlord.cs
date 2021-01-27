@@ -76,6 +76,8 @@ namespace Raven.Server.Documents
         internal class TestingStuff
         {
             internal Action<ServerStore> BeforeHandleClusterDatabaseChanged;
+            internal int? HoldDocumentDatabaseCreation = null;
+            internal bool PreventedRehabOfIdleDatabase = false;
         }
 
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object _)
@@ -627,9 +629,9 @@ namespace Raven.Server.Documents
                 var database = DatabasesCache.GetOrAdd(databaseName, task);
                 if (database == task)
                 {
-                    _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _);
                     DeleteIfNeeded(databaseName, task);
                     task.Start(); // the semaphore will be released here at the end of the task
+                    task.ContinueWith(__ => _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
                 }
                 else
                     _databaseSemaphore.Release();
@@ -742,6 +744,10 @@ namespace Raven.Server.Documents
 
                 var sp = Stopwatch.StartNew();
                 documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, AddToInitLog);
+
+                if (ForTestingPurposes?.HoldDocumentDatabaseCreation != null)
+                    Thread.Sleep(ForTestingPurposes.HoldDocumentDatabaseCreation.Value);
+
                 documentDatabase.Initialize(InitializeOptions.None, wakeup);
 
                 AddToInitLog("Finish database initialization");

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using Raven.Client.Util;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -82,7 +83,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             return new TimeSeriesDeletedRangeItem
             {
-                Collection = Collection,
+                Collection = Collection.Clone(context),
                 From = From,
                 To = To
             };
@@ -178,14 +179,24 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             Debug.Assert(Name != null);
         }
 
+
         protected override ReplicationBatchItem CloneInternal(JsonOperationContext context)
         {
-            return new TimeSeriesReplicationItem
+            var item = new TimeSeriesReplicationItem
             {
-                Collection = Collection,
-                Segment = Segment,
-                Key = Key
+                Collection = Collection.Clone(context)
             };
+
+            var mem = Segment.Clone(context, out item.Segment);
+            var keyMem = Key.CloneToJsonContext(context, out item.Key);
+
+            item.ToDispose(new DisposableAction(() =>
+            {
+                context.ReturnMemory(keyMem);
+                context.ReturnMemory(mem);
+            }));
+            
+            return item;
         }
 
         public override void InnerDispose()

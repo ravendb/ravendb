@@ -1175,6 +1175,129 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
+        [Fact]
+        public async Task CanGetAllRevisionsForDocument_UsingStoreOperation()
+        {
+            var company = new Company { Name = "Company Name" };
+            using (var store = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company3 = await session.LoadAsync<Company>(company.Id);
+                    company3.Name = "Hibernating Rhinos";
+                    await session.SaveChangesAsync();
+                }
+
+                var revisionsResult = await store.Operations.SendAsync(new GetRevisionsOperation<Company>(company.Id));
+
+                Assert.Equal(2, revisionsResult.TotalResults);
+
+                var companiesRevisions = revisionsResult.Results;
+                Assert.Equal(2, companiesRevisions.Count);
+                Assert.Equal("Hibernating Rhinos", companiesRevisions[0].Name);
+                Assert.Equal("Company Name", companiesRevisions[1].Name);
+            }
+        }
+
+        [Fact]
+        public async Task CanGetRevisionsWithPaging_UsingStoreOperation()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, minRevisionToKeep: 100);
+                var id = "companies/1";
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company(), id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company2 = await session.LoadAsync<Company>(id);
+                    company2.Name = "Hibernating";
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company3 = await session.LoadAsync<Company>(id);
+                    company3.Name = "Hibernating Rhinos";
+                    await session.SaveChangesAsync();
+                }
+
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var company = await session.LoadAsync<Company>(id);
+                        company.Name = "HR" + i;
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                var parameters = new GetRevisionsOperation<Company>.Parameters
+                {
+                    Id = id,
+                    Start = 10
+                };
+                var revisionsResult = await store.Operations.SendAsync(new GetRevisionsOperation<Company>(parameters));
+                Assert.Equal(13, revisionsResult.TotalResults);
+
+                var companiesRevisions = revisionsResult.Results;
+                Assert.Equal(3, companiesRevisions.Count);
+
+                Assert.Equal("Hibernating Rhinos", companiesRevisions[0].Name);
+                Assert.Equal("Hibernating", companiesRevisions[1].Name);
+                Assert.Null(companiesRevisions[2].Name);
+
+            }
+        }
+
+        [Fact]
+        public async Task CanGetRevisionsWithPaging2_UsingStoreOperation()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, minRevisionToKeep: 100);
+                var id = "companies/1";
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company(), id);
+                    await session.SaveChangesAsync();
+                }
+
+                for (int i = 0; i < 99; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var company = await session.LoadAsync<Company>(id);
+                        company.Name = "HR" + i;
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                var revisionsResult = await store.Operations.SendAsync(new GetRevisionsOperation<Company>(id, start: 50, pageSize: 10));
+                Assert.Equal(100, revisionsResult.TotalResults);
+
+                var companiesRevisions = revisionsResult.Results;
+                Assert.Equal(10, companiesRevisions.Count);
+
+                var count = 0;
+                for (int i = 48; i > 38; i--)
+                {
+                    Assert.Equal("HR" + i, companiesRevisions[count++].Name);
+                }
+            }
+        }
+
         public class DeleteRevisionsOperation : IMaintenanceOperation
         {
             private readonly AdminRevisionsHandler.Parameters _parameters;

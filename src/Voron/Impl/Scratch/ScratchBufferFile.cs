@@ -110,6 +110,8 @@ namespace Voron.Impl.Scratch
 
         public PagerState PagerState => _scratchPager.PagerState;
 
+        internal AbstractPager Pager => _scratchPager;
+
         public int Number => _scratchNumber;
 
         public int NumberOfAllocations => _allocatedPages.Count;

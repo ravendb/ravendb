@@ -274,8 +274,7 @@ namespace Voron.Impl.Journal
 
                     Array.Sort(sortedPages);
 
-                    long minPageChecked = -1;
-                    long minPageOverlappedByAnotherPage = -1;
+                    var overflowDetector = new RecoveryOverflowDetector();
 
                     addToInitLog?.Invoke($"Validate checksum on {modifiedPages.Count} pages");
 
@@ -296,27 +295,16 @@ namespace Voron.Impl.Journal
                             var ptr = (PageHeader*)_dataPager.AcquirePagePointerWithOverflowHandling(tempTx, modifiedPage, null);
 
                             int numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfPages(ptr);
-                            var maxPageRange = modifiedPage + numberOfPages - 1;
 
-                            if (minPageChecked != -1 && maxPageRange >= minPageChecked)
+                            if (overflowDetector.IsOverlappingAnotherPage(modifiedPage, numberOfPages))
                             {
-                                // this page is not in use, there is a valid page having higher number which overlaps this one
-
-                                minPageOverlappedByAnotherPage = modifiedPage;
-                                continue;
-                            }
-
-                            if (minPageOverlappedByAnotherPage != -1 && maxPageRange >= minPageOverlappedByAnotherPage)
-                            {
-                                // this page is not in use, there is a page having higher number which overlaps this one and was modified in later transaction
-
-                                minPageOverlappedByAnotherPage = modifiedPage;
+                                // if page is overlapping an already validated page it means this one was freed, we must not check it
                                 continue;
                             }
 
                             _env.ValidatePageChecksum(modifiedPage, ptr);
 
-                            minPageChecked = modifiedPage;
+                            overflowDetector.SetPageChecked(modifiedPage);
                         }
                     }
 
