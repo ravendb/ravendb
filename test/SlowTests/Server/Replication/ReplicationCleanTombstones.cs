@@ -591,6 +591,68 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
+        public async Task CanReplicateTombstonesFromDifferentCollections2()
+        {
+            var id = "my-great-id";
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                var storage1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, id);
+                    session.SaveChanges();
+                }
+                using (var session = store1.OpenSession())
+                {
+                    session.Delete(id);
+                    session.SaveChanges();
+                }
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new Company { Name = "Karmel" }, id);
+                    session.SaveChanges();
+                }
+                using (var session = store1.OpenSession())
+                {
+                    session.Delete(id);
+                    session.SaveChanges();
+                }
+                await SetupReplicationAsync(store1, store2);
+                await EnsureReplicatingAsync(store1,store2);
+
+                using (storage1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(2, storage1.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+
+                using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(2, storage2.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+
+                await storage1.TombstoneCleaner.ExecuteCleanup();
+                await storage2.TombstoneCleaner.ExecuteCleanup();
+
+                using (storage1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(0, storage1.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+
+                using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(0, storage2.DocumentsStorage.GetNumberOfTombstones(ctx));
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanDeleteFromDifferentCollections()
         {
             using (var store = GetDocumentStore())
