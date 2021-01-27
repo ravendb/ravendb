@@ -50,6 +50,7 @@ namespace Raven.Client.Documents.Linq
         private readonly LinqQueryHighlightings _highlightings;
         private bool _chainedWhere;
         private int _insideWhere;
+        private bool _insideNegate;
         private bool _insideExact;
         private SpecialQueryType _queryType = SpecialQueryType.None;
         private Type _newExpressionType;
@@ -187,7 +188,9 @@ namespace Raven.Client.Documents.Linq
                                 DocumentQuery.WhereTrue();
                                 DocumentQuery.AndAlso();
                                 DocumentQuery.NegateNext();
+                                _insideNegate = true;
                                 VisitExpression(unaryExpressionOp);
+                                _insideNegate = false;
                                 DocumentQuery.CloseSubclause();
                                 break;
                         }
@@ -226,6 +229,15 @@ namespace Raven.Client.Documents.Linq
                 VerifyLegalBinaryExpression(expression);
             }
 
+            var subclause = false;
+            if (_insideNegate)
+            { 
+                _insideNegate = false;
+                subclause = true;
+
+                DocumentQuery.OpenSubclause();
+            }
+
             switch (expression.NodeType)
             {
                 case ExpressionType.OrElse:
@@ -254,6 +266,8 @@ namespace Raven.Client.Documents.Linq
                     break;
             }
 
+            if (subclause)
+                DocumentQuery.CloseSubclause();
         }
 
         private void VerifyLegalBinaryExpression(BinaryExpression expression)
@@ -420,7 +434,6 @@ namespace Raven.Client.Documents.Linq
                 return;
             }
 
-
             if (constantExpression != null && false.Equals(constantExpression.Value) &&
                 expression.Left.NodeType != ExpressionType.MemberAccess)
             {
@@ -428,7 +441,13 @@ namespace Raven.Client.Documents.Linq
                 DocumentQuery.WhereTrue();
                 DocumentQuery.AndAlso();
                 DocumentQuery.NegateNext();
+                
+                _insideNegate = true;
+
                 VisitExpression(expression.Left);
+
+                _insideNegate = false;
+
                 DocumentQuery.CloseSubclause();
                 return;
             }

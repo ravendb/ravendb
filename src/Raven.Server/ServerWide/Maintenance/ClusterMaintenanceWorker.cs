@@ -217,6 +217,10 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (dbTask.IsCompleted == false)
                 {
                     report.Status = DatabaseStatus.Loading;
+
+                    if (_server.IdleDatabases.ContainsKey(dbName))
+                        report.UpTime = TimeSpan.MinValue;
+
                     result[dbName] = report;
                     continue;
                 }

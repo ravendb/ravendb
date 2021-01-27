@@ -96,6 +96,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
                 store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
                 PeriodicBackupStatus status = null;
                 var value = WaitForValue(() =>
                 {
@@ -105,11 +106,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 Assert.True(4 == value, $"4 == value, Got status: {status != null}, exception: {status?.Error?.Exception}");
                 Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
 
-                var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(status.LastOperationId.Value));
+                OperationState backupOperation = null;
+                var operationStatus = WaitForValue(() =>
+                {
+                    backupOperation = store.Maintenance.Send(new GetOperationStateOperation(status.LastOperationId.Value));
+                    return backupOperation.Status;
+                }, OperationStatus.Completed);
+                Assert.Equal(OperationStatus.Completed, operationStatus);
 
                 var backupResult = backupOperation.Result as BackupResult;
-                Assert.True(backupResult != null && backupResult.Counters.Processed, "backupResult != null && backupResult.Counters.Processed");
-                Assert.True(1 == backupResult.Counters.ReadCount, "1 == backupResult.Counters.ReadCount");
+                Assert.NotNull(backupResult);
+                Assert.True(backupResult.Counters.Processed, "backupResult.Counters.Processed");
+                Assert.Equal(1, backupResult.Counters.ReadCount);
 
                 using (var session = store.OpenSession())
                 {

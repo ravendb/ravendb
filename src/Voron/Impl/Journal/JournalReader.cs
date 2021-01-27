@@ -611,9 +611,43 @@ namespace Voron.Impl.Journal
         public void Dispose()
         {
             if (_encryptionBuffers != null) // Encryption enabled
-            { 
+            {
                 foreach (var buffer in _encryptionBuffers)
                     PlatformSpecific.NativeMemory.Free4KbAlignedMemory(buffer.Pointer, buffer.Size, buffer.AllocatingThread);
+
+                var cryptoPagerTransactionState = ((IPagerLevelTransactionState)this).CryptoPagerTransactionState;
+
+                if (cryptoPagerTransactionState != null && cryptoPagerTransactionState.TryGetValue(_dataPager, out var state))
+                {
+                    // we need to iterate from the end in order to filter out pages that was overwritten by later transaction
+                    var sortedState = state.OrderByDescending(x => x.Key);
+
+                    var overflowDetector = new RecoveryOverflowDetector();
+
+                    foreach (var buffer in sortedState)
+                    {
+                        if (buffer.Value.SkipOnTxCommit)
+                            continue;
+
+                        if (buffer.Value.Modified == false)
+                            continue; // No modification
+
+                        var pageHeader = (PageHeader*)buffer.Value.Pointer;
+                        var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfPages(pageHeader);
+
+                        long modifiedPage = buffer.Key;
+
+                        if (overflowDetector.IsOverlappingAnotherPage(modifiedPage, numberOfPages))
+                        {
+                            // if page is overlapping an already seen page it means this one was freed, we must skip it on tx commit
+                            state[modifiedPage].SkipOnTxCommit = true;
+                            continue;
+                        }
+
+                        overflowDetector.SetPageChecked(modifiedPage);
+                    }
+                }
+
                 BeforeCommitFinalization?.Invoke(this);
             }
             OnDispose?.Invoke(this);

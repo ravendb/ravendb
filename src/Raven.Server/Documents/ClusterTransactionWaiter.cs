@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Extensions;
 
 namespace Raven.Server.Documents
 {
