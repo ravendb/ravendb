@@ -24,6 +24,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.LowMemory;
 using Sparrow.Server.Extensions;
+using Sparrow.Server.LowMemory;
 using Sparrow.Server.Utils;
 using Voron;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -43,12 +44,12 @@ namespace Raven.Server.Web.System
             result.ServerVersion = ServerWide.ServerVersion.Version;
             result.ServerFullVersion = ServerWide.ServerVersion.FullVersion;
             result.UpTimeInSec = (int)Server.Statistics.UpTime.TotalSeconds;
-            result.CurrentNumberOfRunningBackups = ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups;
-            
+
             using (var currentProcess = Process.GetCurrentProcess())
                 result.ServerProcessId = currentProcess.Id;
 
             result.Config = GetConfigMetrics();
+            result.Backup = GetBackupMetrics();
             result.Cpu = GetCpuMetrics();
             result.Memory = GetMemoryMetrics();
             result.Network = GetNetworkMetrics();
@@ -71,18 +72,25 @@ namespace Raven.Server.Web.System
             var configuration = Server.Configuration;
             
             var result = new ConfigurationMetrics();
-            result.Urls = configuration.Core.ServerUrls;
-            result.PublicUrl = configuration.Core.PublicServerUrl?.UriValue;
-            result.TcpUrls = configuration.Core.TcpServerUrls?.Length > 0
+            result.ServerUrls = configuration.Core.ServerUrls;
+            result.PublicServerUrl = configuration.Core.PublicServerUrl?.UriValue;
+            result.TcpServerUrls = configuration.Core.TcpServerUrls?.Length > 0
                 ? configuration.Core.TcpServerUrls
                 : null;
             
             if (configuration.Core.PublicTcpServerUrl.HasValue)
-                result.PublicTcpUrls = new [] { configuration.Core.PublicTcpServerUrl.Value.UriValue };
+                result.PublicTcpServerUrls = new [] { configuration.Core.PublicTcpServerUrl.Value.UriValue };
             else if (configuration.Core.ExternalPublicTcpServerUrl != null && configuration.Core.ExternalPublicTcpServerUrl.Length > 0)
-                result.PublicTcpUrls = configuration.Core.ExternalPublicTcpServerUrl.Select(x => x.UriValue).ToArray();
-            
+                result.PublicTcpServerUrls = configuration.Core.ExternalPublicTcpServerUrl.Select(x => x.UriValue).ToArray();
+            return result;
+        }
+
+        private BackupMetrics GetBackupMetrics()
+        {
+            var result = new BackupMetrics();
             result.MaxNumberOfConcurrentBackups = ServerStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups;
+            result.CurrentNumberOfRunningBackups = ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups;
+
             return result;
         }
 
@@ -101,7 +109,7 @@ namespace Raven.Server.Web.System
 
             result.ConcurrentRequestsCount = Server.Metrics.Requests.ConcurrentRequestsCount;
             result.TotalRequests = Server.Metrics.Requests.RequestsPerSec.Count;
-            result.RequestsPerSecond = Server.Metrics.Requests.RequestsPerSec.OneMinuteRate;
+            result.RequestsPerSec = Server.Metrics.Requests.RequestsPerSec.OneMinuteRate;
 
             result.LastRequestTimeInSec = Server.Statistics.LastRequestTime.HasValue 
                 ? (SystemTime.UtcNow - Server.Statistics.LastRequestTime.Value).TotalSeconds
@@ -140,9 +148,11 @@ namespace Raven.Server.Web.System
         {
             var result = new MemoryMetrics();
             var memoryInfoResult = Server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
+            
             result.TotalMemoryInMb = memoryInfoResult.WorkingSet.GetValue(SizeUnit.Megabytes);
-
-            result.LowState = LowMemoryNotification.Instance.LowMemoryState;
+            
+            result.LowMemorySeverity = LowMemoryNotification.Instance.IsLowMemory(memoryInfoResult, 
+                new LowMemoryMonitor(), out _); 
 
             result.TotalSwapSizeInMb = memoryInfoResult.TotalSwapSize.GetValue(SizeUnit.Megabytes);
             result.TotalSwapUsageInMb = memoryInfoResult.TotalSwapUsage.GetValue(SizeUnit.Megabytes);
@@ -201,6 +211,10 @@ namespace Raven.Server.Web.System
                 var timeLeft = notAfter - SystemTime.UtcNow;
                 result.ServerCertificateExpirationLeftInSec = (timeLeft.TotalSeconds > 0 ? timeLeft : TimeSpan.Zero).TotalSeconds;
             }
+            else
+            {
+                result.ServerCertificateExpirationLeftInSec = -1;
+            }
             
             result.WellKnownAdminCertificates = ServerStore.Configuration.Security.WellKnownAdminCertificates;
             return result;
@@ -250,6 +264,8 @@ namespace Raven.Server.Web.System
             var databases = GetDatabases();
             
             var result = new DatabasesMetrics();
+
+            result.PublicServerUrl = Server.Configuration.Core.PublicServerUrl?.UriValue;
             
             foreach (DocumentDatabase documentDatabase in databases)
             {
@@ -302,7 +318,7 @@ namespace Raven.Server.Web.System
         {
             var result = new DatabaseMetrics();
 
-            result.Name = database.Name;
+            result.DatabaseName = database.Name;
             
             result.DatabaseId = database.DocumentsStorage.Environment.DbId.ToString();
             result.UptimeInSec = (int)(SystemTime.UtcNow - database.StartTime).TotalSeconds;
@@ -363,7 +379,7 @@ namespace Raven.Server.Web.System
             result.AutoCount = indexes.Count(x => x.Type.IsAuto());
             result.IdleCount = indexes.Count(x => x.State == IndexState.Idle);
             result.DisabledCount = indexes.Count(x => x.State == IndexState.Disabled);
-            result.ErrorCount = indexes.Count(x => x.State == IndexState.Error);
+            result.ErroredCount = indexes.Count(x => x.State == IndexState.Error);
             
             using (var context = QueryOperationContext.Allocate(database, needsServerContext: true))
             using (context.OpenReadTransaction())
@@ -428,13 +444,13 @@ namespace Raven.Server.Web.System
         private DatabaseStatistics GetDatabaseStatistics(DocumentDatabase database)
         {
             var result = new DatabaseStatistics();
-            result.DocPutsPerSecond = (int)database.Metrics.Docs.PutsPerSec.OneMinuteRate;
-            result.MapIndexIndexesPerSecond = (int)database.Metrics.MapIndexes.IndexedPerSec.OneMinuteRate;
-            result.MapReduceIndexMappedPerSecond = (int)database.Metrics.MapReduceIndexes.MappedPerSec.OneMinuteRate;
-            result.MapReduceIndexReducedPerSecond = (int)database.Metrics.MapReduceIndexes.ReducedPerSec.OneMinuteRate;
-            result.RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.OneMinuteRate;
+            result.DocPutsPerSec = database.Metrics.Docs.PutsPerSec.OneMinuteRate;
+            result.MapIndexIndexesPerSec = database.Metrics.MapIndexes.IndexedPerSec.OneMinuteRate;
+            result.MapReduceIndexMappedPerSec = database.Metrics.MapReduceIndexes.MappedPerSec.OneMinuteRate;
+            result.MapReduceIndexReducedPerSec = database.Metrics.MapReduceIndexes.ReducedPerSec.OneMinuteRate;
+            result.RequestsPerSec = database.Metrics.Requests.RequestsPerSec.OneMinuteRate;
             result.RequestsCount = (int)database.Metrics.Requests.RequestsPerSec.Count;
-            result.RequestAverageDuration = (int)database.Metrics.Requests.AverageDuration.GetRate();
+            result.RequestAverageDuration = database.Metrics.Requests.AverageDuration.GetRate();
             return result;
         }
 
@@ -446,6 +462,8 @@ namespace Raven.Server.Web.System
             var databases = GetDatabases();
 
             var result = new IndexesMetrics();
+            
+            result.PublicServerUrl = Server.Configuration.Core.PublicServerUrl?.UriValue;
             
             foreach (DocumentDatabase documentDatabase in databases)
             {
@@ -460,6 +478,9 @@ namespace Raven.Server.Web.System
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
+                writer.WritePropertyName(nameof(IndexesMetrics.PublicServerUrl));
+                writer.WriteString(result.PublicServerUrl);
+                writer.WriteComma();
                 writer.WriteArray(context, nameof(IndexesMetrics.Results), result.Results, (w, c, metrics) =>
                 {
                     context.Write(w, metrics.ToJson());
@@ -498,8 +519,8 @@ namespace Raven.Server.Web.System
             result.IsInvalid = stats.IsInvalidIndex;
             result.Status = index.Status;
 
-            result.MappedPerSecond = (int)(index.MapsPerSec?.OneMinuteRate ?? 0);
-            result.ReducedPerSecond = (int)(index.ReducesPerSec?.OneMinuteRate ?? 0);
+            result.MappedPerSec = index.MapsPerSec?.OneMinuteRate ?? 0;
+            result.ReducedPerSec = index.ReducesPerSec?.OneMinuteRate ?? 0;
 
             result.Type = index.Type;
             result.EntriesCount = stats.EntriesCount;
@@ -509,8 +530,8 @@ namespace Raven.Server.Web.System
 
         private void AssertMonitoring()
         {
-            /* TODO: 
-            if (ServerStore.LicenseManager.CanUseEndpointsMonitoring(withNotification: false) == false)
+            /* TODO:  uncomment + add section in studio
+            if (ServerStore.LicenseManager.CanUseMonitoringEndpoints(withNotification: false) == false)
                 throw new InvalidOperationException("Your license does not allow monitoring endpoints to be used.");
               */  
         }

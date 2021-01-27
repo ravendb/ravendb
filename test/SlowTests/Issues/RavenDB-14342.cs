@@ -45,11 +45,11 @@ namespace SlowTests.Issues
                     commands.RequestExecutor.Execute(command, commands.Context);
                     var metrics = command.Result;
                     
-                    Assert.Equal(string.Join(";", Server.Configuration.Core.ServerUrls), string.Join(";", metrics.Config.Urls));
+                    Assert.Equal(string.Join(";", Server.Configuration.Core.ServerUrls), string.Join(";", metrics.Config.ServerUrls));
                     Assert.Equal(ServerVersion.Version, metrics.ServerVersion);
                     Assert.Equal(ServerVersion.FullVersion, metrics.ServerFullVersion);
                     
-                    Assert.Equal(Server.ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups, metrics.CurrentNumberOfRunningBackups);
+                    Assert.Equal(Server.ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups, metrics.Backup.CurrentNumberOfRunningBackups);
 
                     using (var currentProcess = Process.GetCurrentProcess())
                     {
@@ -57,7 +57,7 @@ namespace SlowTests.Issues
                         Assert.Equal((int)Bits.NumberOfSetBits(currentProcess.ProcessorAffinity.ToInt64()), metrics.Cpu.AssignedProcessorCount);
                     }
                     
-                    Assert.Equal(Server.ServerStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups, metrics.Config.MaxNumberOfConcurrentBackups);
+                    Assert.Equal(Server.ServerStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups, metrics.Backup.MaxNumberOfConcurrentBackups);
                     Assert.Equal(Environment.ProcessorCount, metrics.Cpu.ProcessorCount);
 
                     Assert.True(metrics.Cpu.ThreadPoolAvailableWorkerThreads > 0);
@@ -114,11 +114,11 @@ namespace SlowTests.Issues
                     
                     Assert.True(metrics.Results.Count >= 1); // in case of parallel tests
 
-                    var dbMetrics = metrics.Results.First(x => x.Name == store.Database);
+                    var dbMetrics = metrics.Results.First(x => x.DatabaseName == store.Database);
                     
                     var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     
-                    Assert.Equal(store.Database, dbMetrics.Name);
+                    Assert.Equal(store.Database, dbMetrics.DatabaseName);
                     Assert.Equal(db.DocumentsStorage.Environment.DbId.ToString(), dbMetrics.DatabaseId);
                     
                     Assert.Equal(1059, dbMetrics.Counts.Documents);
@@ -138,7 +138,7 @@ namespace SlowTests.Issues
                     Assert.Equal(1, dbMetrics.Indexes.AutoCount);
                     Assert.Equal(0, dbMetrics.Indexes.IdleCount);
                     Assert.Equal(1, dbMetrics.Indexes.DisabledCount);
-                    Assert.Equal(0, dbMetrics.Indexes.ErrorCount);
+                    Assert.Equal(0, dbMetrics.Indexes.ErroredCount);
                     
                     Assert.True(dbMetrics.Storage.DocumentsAllocatedDataFileInMb > 0);
                     Assert.True(dbMetrics.Storage.DocumentsUsedDataFileInMb > 0);

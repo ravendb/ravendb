@@ -18,13 +18,13 @@ namespace Raven.Server.Utils.Monitoring
         public IndexPriority Priority { get; set; }
         public IndexState State { get; set; }
         public int Errors { get; set; }
-        public double TimeSinceLastQueryInSec { get; set; }
-        public double TimeSinceLastIndexingInSec { get; set; }
+        public double? TimeSinceLastQueryInSec { get; set; }
+        public double? TimeSinceLastIndexingInSec { get; set; }
         public IndexLockMode LockMode { get; set; }
         public bool IsInvalid { get; set; }
         public IndexRunningStatus Status { get; set; }
-        public int MappedPerSecond { get; set; }
-        public int ReducedPerSecond { get; set; }
+        public double MappedPerSec { get; set; }
+        public double ReducedPerSec { get; set; }
         public IndexType Type { get; set; }
         public int EntriesCount { get; set; }
 
@@ -42,8 +42,8 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(LockMode)] = LockMode,
                 [nameof(IsInvalid)] = IsInvalid,
                 [nameof(Status)] = Status,
-                [nameof(MappedPerSecond)] = MappedPerSecond,
-                [nameof(ReducedPerSecond)] = ReducedPerSecond,
+                [nameof(MappedPerSec)] = MappedPerSec,
+                [nameof(ReducedPerSec)] = ReducedPerSec,
                 [nameof(Type)] = Type
             };
         }
@@ -52,5 +52,7 @@ namespace Raven.Server.Utils.Monitoring
     public class IndexesMetrics
     {
         public List<IndexMetrics> Results { get; set; } = new List<IndexMetrics>();
+        
+        public string PublicServerUrl { get; set; }
     }
 }

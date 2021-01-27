@@ -1311,23 +1311,23 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.SqlEtl, message);
         }
         
-        public bool CanUseEndpointsMonitoring(bool withNotification)
+        public bool CanUseMonitoringEndpoints(bool withNotification)
         {
             if (IsValid(out _) == false)
                 return false;
 
-            var value = LicenseStatus.HasEndpointsMonitoring;
+            var value = LicenseStatus.HasMonitoringEndpoints;
             if (withNotification == false)
                 return value;
 
             if (value)
             {
-                DismissLicenseLimit(LimitType.EndpointsMonitoring);
+                DismissLicenseLimit(LimitType.MonitoringEndpoints);
                 return true;
             }
 
-            const string details = "Your current license doesn't include the endpoints monitoring feature";
-            GenerateLicenseLimit(LimitType.EndpointsMonitoring, details, addNotification: true);
+            const string details = "Your current license doesn't include the monitoring endpoints feature";
+            GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: true);
             return false;
         }
 
