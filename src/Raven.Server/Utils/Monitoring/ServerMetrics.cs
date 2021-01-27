@@ -8,6 +8,7 @@ using System;
 using Raven.Client.ServerWide;
 using Raven.Server.Commercial;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 
 namespace Raven.Server.Utils.Monitoring
 {
@@ -17,9 +18,8 @@ namespace Raven.Server.Utils.Monitoring
         public string ServerFullVersion { get; set; }
         public int UpTimeInSec { get; set; }
         public int ServerProcessId { get; set; }
-        public int CurrentNumberOfRunningBackups { get; set; }
-        
         public ConfigurationMetrics Config { get; set; }
+        public BackupMetrics Backup { get; set; }
         public CpuMetrics Cpu { get; set; }
         public MemoryMetrics Memory { get; set; }
         public DiskMetrics Disk { get; set; }
@@ -37,8 +37,8 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(ServerFullVersion)] = ServerFullVersion,
                 [nameof(UpTimeInSec)] = UpTimeInSec,
                 [nameof(ServerProcessId)] = ServerProcessId,
-                [nameof(CurrentNumberOfRunningBackups)] = CurrentNumberOfRunningBackups,
                 [nameof(Config)] = Config.ToJson(),
+                [nameof(Backup)] = Backup.ToJson(),
                 [nameof(Cpu)] = Cpu.ToJson(),
                 [nameof(Memory)] = Memory.ToJson(),
                 [nameof(Disk)] = Disk.ToJson(),
@@ -53,20 +53,35 @@ namespace Raven.Server.Utils.Monitoring
 
     public class ConfigurationMetrics
     {
-        public string[] Urls { get; set; }
-        public string PublicUrl { get; set; }
-        public string[] TcpUrls { get; set; }
-        public string[] PublicTcpUrls { get; set; }
-        public int MaxNumberOfConcurrentBackups { get; set; }
+        public string[] ServerUrls { get; set; }
+        public string PublicServerUrl { get; set; }
+        public string[] TcpServerUrls { get; set; }
+        public string[] PublicTcpServerUrls { get; set; }
+        
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Urls)] = Urls,
-                [nameof(PublicUrl)] = PublicUrl,
-                [nameof(TcpUrls)] = TcpUrls,
-                [nameof(PublicTcpUrls)] = PublicTcpUrls,
+                [nameof(ServerUrls)] = ServerUrls,
+                [nameof(PublicServerUrl)] = PublicServerUrl,
+                [nameof(TcpServerUrls)] = TcpServerUrls,
+                [nameof(PublicTcpServerUrls)] = PublicTcpServerUrls,
+            };
+        }
+    }
+
+    public class BackupMetrics
+    {
+        public int CurrentNumberOfRunningBackups { get; set; }
+        
+        public int MaxNumberOfConcurrentBackups { get; set; }
+        
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(CurrentNumberOfRunningBackups)] = CurrentNumberOfRunningBackups,
                 [nameof(MaxNumberOfConcurrentBackups)] = MaxNumberOfConcurrentBackups
             };
         }
@@ -100,7 +115,7 @@ namespace Raven.Server.Utils.Monitoring
     public class MemoryMetrics
     {
         public long TotalMemoryInMb { get; set; }
-        public bool LowState { get; set; }
+        public LowMemorySeverity LowMemorySeverity { get; set; }
         public long TotalSwapSizeInMb { get; set; }
         public long TotalSwapUsageInMb { get; set; }
         public long WorkingSetSwapUsageInMb { get; set; }
@@ -111,7 +126,7 @@ namespace Raven.Server.Utils.Monitoring
             return new DynamicJsonValue
             {
                 [nameof(TotalMemoryInMb)] = TotalMemoryInMb,
-                [nameof(LowState)] = LowState,
+                [nameof(LowMemorySeverity)] = LowMemorySeverity,
                 [nameof(TotalSwapSizeInMb)] = TotalSwapSizeInMb,
                 [nameof(TotalSwapUsageInMb)] = TotalSwapUsageInMb,
                 [nameof(WorkingSetSwapUsageInMb)] = WorkingSetSwapUsageInMb,
@@ -163,7 +178,7 @@ namespace Raven.Server.Utils.Monitoring
         public long TcpActiveConnections { get; set; }
         public long ConcurrentRequestsCount { get; set; }
         public long TotalRequests { get; set; }
-        public double RequestsPerSecond { get; set; }
+        public double RequestsPerSec { get; set; }
         public double? LastRequestTimeInSec { get; set; }
         public double? LastAuthorizedNonClusterAdminRequestTimeInSec { get; set; }
 
@@ -174,7 +189,7 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(TcpActiveConnections)] = TcpActiveConnections,
                 [nameof(ConcurrentRequestsCount)] = ConcurrentRequestsCount,
                 [nameof(TotalRequests)] = TotalRequests,
-                [nameof(RequestsPerSecond)] = RequestsPerSecond,
+                [nameof(RequestsPerSec)] = RequestsPerSec,
                 [nameof(LastRequestTimeInSec)] = LastRequestTimeInSec,
                 [nameof(LastAuthorizedNonClusterAdminRequestTimeInSec)] = LastAuthorizedNonClusterAdminRequestTimeInSec
             };
@@ -183,7 +198,7 @@ namespace Raven.Server.Utils.Monitoring
 
     public class CertificateMetrics
     {
-        public double ServerCertificateExpirationLeftInSec { get; set; }
+        public double? ServerCertificateExpirationLeftInSec { get; set; }
         public string[] WellKnownAdminCertificates { get; set; }
 
         public DynamicJsonValue ToJson()

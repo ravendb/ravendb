@@ -64,7 +64,7 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Additional Assemblies from NuGet")]
         AdditionalAssembliesFromNuGet,
         
-        [Description("Endpoints Monitoring")]
-        EndpointsMonitoring
+        [Description("Monitoring Endpoints")]
+        MonitoringEndpoints
     }
 }

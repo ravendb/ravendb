@@ -13,7 +13,7 @@ namespace Raven.Server.Utils.Monitoring
 {
     public class DatabaseMetrics
     {
-        public string Name { get; set; }
+        public string DatabaseName { get; set; }
         public string DatabaseId { get; set; }
         public int UptimeInSec { get; set; }
         public double? TimeSinceLastBackupInSec { get; set; }
@@ -27,7 +27,7 @@ namespace Raven.Server.Utils.Monitoring
         {
             return new DynamicJsonValue
             {
-                [nameof(Name)] = Name,
+                [nameof(DatabaseName)] = DatabaseName,
                 [nameof(DatabaseId)] = DatabaseId,
                 [nameof(UptimeInSec)] = UptimeInSec,
                 [nameof(TimeSinceLastBackupInSec)] = TimeSinceLastBackupInSec,
@@ -41,23 +41,23 @@ namespace Raven.Server.Utils.Monitoring
 
     public class DatabaseStatistics
     {
-        public int DocPutsPerSecond { get; set; }
-        public int MapIndexIndexesPerSecond { get; set; }
-        public int MapReduceIndexMappedPerSecond { get; set; }
-        public int MapReduceIndexReducedPerSecond { get; set; }
-        public int RequestsPerSecond { get; set; }
+        public double DocPutsPerSec { get; set; }
+        public double MapIndexIndexesPerSec { get; set; }
+        public double MapReduceIndexMappedPerSec { get; set; }
+        public double MapReduceIndexReducedPerSec { get; set; }
+        public double RequestsPerSec { get; set; }
         public int RequestsCount { get; set; }
-        public int RequestAverageDuration { get; set; }
+        public double RequestAverageDuration { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(DocPutsPerSecond)] = DocPutsPerSecond,
-                [nameof(MapIndexIndexesPerSecond)] = MapIndexIndexesPerSecond,
-                [nameof(MapReduceIndexMappedPerSecond)] = MapReduceIndexMappedPerSecond,
-                [nameof(MapReduceIndexReducedPerSecond)] = MapReduceIndexReducedPerSecond,
-                [nameof(RequestsPerSecond)] = RequestsPerSecond,
+                [nameof(DocPutsPerSec)] = DocPutsPerSec,
+                [nameof(MapIndexIndexesPerSec)] = MapIndexIndexesPerSec,
+                [nameof(MapReduceIndexMappedPerSec)] = MapReduceIndexMappedPerSec,
+                [nameof(MapReduceIndexReducedPerSec)] = MapReduceIndexReducedPerSec,
+                [nameof(RequestsPerSec)] = RequestsPerSec,
                 [nameof(RequestsCount)] = RequestsCount,
                 [nameof(RequestAverageDuration)] = RequestAverageDuration
             };
@@ -100,7 +100,7 @@ namespace Raven.Server.Utils.Monitoring
         public int AutoCount { get; set; }
         public int IdleCount { get; set; }
         public int DisabledCount { get; set; }
-        public int ErrorCount { get; set; }
+        public int ErroredCount { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -113,7 +113,7 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(AutoCount)] = AutoCount,
                 [nameof(IdleCount)] = IdleCount,
                 [nameof(DisabledCount)] = DisabledCount,
-                [nameof(ErrorCount)] = ErrorCount
+                [nameof(ErroredCount)] = ErroredCount
             };
         }
     }
@@ -144,11 +144,13 @@ namespace Raven.Server.Utils.Monitoring
     public class DatabasesMetrics
     {
         public List<DatabaseMetrics> Results { get; set; } = new List<DatabaseMetrics>();
+        public string PublicServerUrl { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
+                [nameof(PublicServerUrl)] = PublicServerUrl,
                 [nameof(Results)] = Results.Select(x => x.ToJson()).ToList()
             };
         }
