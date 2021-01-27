@@ -82,8 +82,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return new CounterReplicationItem
             {
                 Values = Values?.Clone(context),
-                Collection = Collection,
-                Id = Id
+                Collection = Collection.Clone(context),
+                Id = Id.Clone(context)
             };
         }
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -12,6 +13,7 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Server.Documents.PeriodicBackup;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -86,7 +88,7 @@ namespace StressTests.Issues
 
                     var backups1 = record1.PeriodicBackups;
                     _taskId = backups1.First().TaskId;
-
+                    Assert.Equal(_taskId, serverWideConfiguration.TaskId);
                     Assert.Equal(1, backups1.Count);
                     Assert.Equal(3, GetIdleCount());
 
@@ -94,9 +96,17 @@ namespace StressTests.Issues
                     idleCount = WaitForCount(_reasonableWaitTime, 2, GetIdleCount);
                     Assert.Equal(2, idleCount);
 
+                    var reasons = new Dictionary<string, string>();
                     // backup status should not wakeup dbs
-                    var count = WaitForCount(_reasonableWaitTime, 3, CountOfBackupStatus);
-                    Assert.Equal(3, count);
+                    var count = WaitForCount(_reasonableWaitTime, 3, () => CountOfBackupStatus(out reasons));
+                    
+                    var sb = new StringBuilder();
+                    foreach (var kvp in reasons)
+                    {
+                        sb.AppendLine($"Node {kvp.Key}, backup status:{Environment.NewLine}{kvp.Value}");
+                        sb.AppendLine();
+                    }
+                    Assert.True(3 == count, $"3 == count{Environment.NewLine}{sb.ToString()}");
                 }
             }
             finally
@@ -178,14 +188,18 @@ namespace StressTests.Issues
             return count;
         }
 
-        private int CountOfBackupStatus()
+        private int CountOfBackupStatus(out Dictionary<string, string> reasons)
         {
+            reasons = new Dictionary<string, string>();
             var count = 0;
+            Assert.Equal(3, _nodes.Count);
             foreach (var server in _nodes)
             {
                 using (var store = new DocumentStore { Urls = new[] { server.WebUrl }, Conventions = { DisableTopologyUpdates = true }, Database = _databaseName }.Initialize())
                 {
                     var status = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(_taskId)).Status;
+                    reasons.Add(server.ServerStore.NodeTag, PeriodicBackupTestsSlow.PrintBackupStatus(status));
+
                     if (status?.LastFullBackup != null)
                         count++;
                 }

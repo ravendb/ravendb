@@ -852,6 +852,17 @@ namespace Voron.Impl
                     _unusedScratchPages.Add(scratchPage);
 
                 _scratchPagesTable.Remove(pageNumber);
+
+                if (_env.Options.Encryption.IsEnabled)
+                {
+                    // need to mark buffers as invalid for commit
+
+                    var scratchFile = _env.ScratchBufferPool.GetScratchBufferFile(scratchPage.ScratchFileNumber);
+
+                    var encryptionBuffers = ((IPagerLevelTransactionState)this).CryptoPagerTransactionState[scratchFile.File.Pager];
+
+                    encryptionBuffers[scratchPage.PositionInScratchBuffer].SkipOnTxCommit = true;
+                }
             }
 
             _dirtyPages.Remove(pageNumber);
@@ -873,14 +884,6 @@ namespace Voron.Impl
 
                 _freeSpaceHandling.FreePage(this, pageNumber);
                 _freedPages.Add(pageNumber);
-
-                if (_scratchPagesTable.TryGetValue(pageNumber, out var scratchPage))
-                {
-                    if (_transactionPages.Remove(scratchPage))
-                        _unusedScratchPages.Add(scratchPage);
-
-                    _scratchPagesTable.Remove(pageNumber);
-                }
 
                 DiscardScratchModificationOn(pageNumber);
             }

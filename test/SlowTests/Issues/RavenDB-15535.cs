@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Nito.AsyncEx;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -15,13 +16,12 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_15535 : ClusterTestBase
+    public class RavenDB_15535 : ReplicationTestBase
     {
         public RavenDB_15535(ITestOutputHelper output) : base(output)
         {
@@ -160,7 +160,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task MissingRevisions3()
         {
-            var (node, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             using (var store = new DocumentStore
@@ -186,11 +186,11 @@ namespace SlowTests.Issues
                 }
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
 
+                var testServer = Servers.First(server => server.ServerStore.IsLeader() == false);
+
                 await StoreInTransactionMode(store, 1);
                 await StoreInRegularMode(store, 3);
                 await DeleteInTransactionMode(store, 1);
-
-                RavenServer testServer = Servers.FirstOrDefault(server => server.ServerStore.IsLeader() == false);
 
                 var result = await leader.ServerStore.SendToLeaderAsync(new DeleteDatabaseCommand(database, Guid.NewGuid().ToString())
                 {
@@ -207,22 +207,19 @@ namespace SlowTests.Issues
                 {
                     var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(database));
                     return record.DeletionInProgress.Count;
-                }, 0, 15000);
+                }, 0);
                 Assert.Equal(0, delCount);
 
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(database, testServer.ServerStore.NodeTag));
 
                 var documentDatabase = await testServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                {
-                    var res = WaitForValue(() =>
-                    {
-                        using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                        using (context.OpenReadTransaction())
-                            return documentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, "users/1");
-                    }, 5, 15000);
 
-                    Assert.Equal(5, res);
-                }
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                        return Task.FromResult(documentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, "users/1"));
+                }, 5);
             }
         }
 
@@ -428,74 +425,100 @@ namespace SlowTests.Issues
             }
         }
 
-        private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)
+        [Fact]
+        public async Task MissingRevisions7()
         {
-            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-            if (res == null)
-            {
-                return -1;
-            }
-            return res.Topology.Members.Count;
-        }
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var database = GetDatabaseName();
+            var dbCreation = await CreateDatabaseInClusterInner(new DatabaseRecord(database), 2, leader.WebUrl, null);
 
-        private async Task StoreInTransactionMode(IDocumentStore store, int n)
-        {
-            for (int i = 0; i < n; i++)
+            using (var storeB = new DocumentStore
             {
-                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                Database = database,
+                Urls = new[] { dbCreation.Servers[1].WebUrl },
+                Conventions = new DocumentConventions
                 {
-                    await session.StoreAsync(new User() { Name = "userT" + i }, "users/1");
-                    await session.SaveChangesAsync();
+                    DisableTopologyUpdates = true
                 }
-            }
-        }
+            }.Initialize())
+            using (var storeA = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { dbCreation.Servers[0].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
+            {
+                var configuration = new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false,
+                        PurgeOnDelete = false,
+                        MinimumRevisionsToKeep = 30
+                    }
+                };
+                long index;
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var configurationJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
+                    (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
+                }
+                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
 
-        private async Task DeleteInTransactionMode(IDocumentStore store, int n)
-        {
-            for (int i = 0; i < n; i++)
-            {
-                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
-                {
-                    session.Delete("users/1");
-                    await session.SaveChangesAsync();
-                }
-            }
-        }
+                await StoreInRegularMode(storeA, 3);
 
-        private async Task DeleteAndStoreInTransactionMode(IDocumentStore store, int n)
+                await WaitAndAssertForValueAsync(async () =>
         {
-            for (int i = 0; i < n; i++)
-            {
-                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
-                {
-                    session.Delete("users/1");
-                    await session.StoreAsync(new User() { Name = "userT" + i }, "users/2");
-                    await session.SaveChangesAsync();
-                }
-            }
-        }
+            var documentDatabase = await dbCreation.Servers[1].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+                return documentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, "users/1");
+        }, 3);
 
-        private async Task StoreInRegularMode(IDocumentStore store, int n)
-        {
-            for (int i = 0; i < n; i++)
-            {
-                using (var session = store.OpenAsyncSession())
+                var result = await leader.ServerStore.SendToLeaderAsync(new DeleteDatabaseCommand(database, Guid.NewGuid().ToString())
                 {
-                    await session.StoreAsync(new User() { Name = "userR" + i }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-            }
-        }
+                    HardDelete = true,
+                    FromNodes = new[] { dbCreation.Servers[0].ServerStore.NodeTag },
+                });
 
-        private async Task DeleteInRegularMode(IDocumentStore store, int n)
-        {
-            for (int i = 0; i < n; i++)
-            {
-                using (var session = store.OpenAsyncSession())
+                await WaitForRaftIndexToBeAppliedInCluster(result.Index, TimeSpan.FromSeconds(10));
+
+                await WaitAndAssertForValueAsync(() =>
                 {
-                    session.Delete("users/1");
-                    await session.SaveChangesAsync();
-                }
+                    var record = storeB.Maintenance.Server.Send(new GetDatabaseRecordOperation(database));
+                    return Task.FromResult(record.DeletionInProgress.Count);
+                }, 0);
+                var breakRepl = await BreakReplication(dbCreation.Servers[1].ServerStore, database);
+
+                // make member directly, so it can perform cluster tx
+                var record = storeB.Maintenance.Server.Send(new GetDatabaseRecordOperation(database));
+                record.Topology.Members.Add(dbCreation.Servers[0].ServerStore.NodeTag);
+                await storeB.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, record.Etag));
+
+                // have a doc written by cluster tx before we get any replication
+                await StoreInTransactionMode(storeB, 1);
+
+                breakRepl.Mend();
+
+                var val = await WaitForValueAsync(async () => await GetMembersCount(storeB, database), 2, 20000);
+                Assert.Equal(2, val);
+
+                await WaitAndAssertForValueAsync(() =>
+        {
+            var record = storeB.Maintenance.Server.Send(new GetDatabaseRecordOperation(database));
+            return Task.FromResult(record.DeletionInProgress.Count);
+        }, 0);
+
+                await WaitAndAssertForValueAsync(async () =>
+            {
+                var documentDatabase = await dbCreation.Servers[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                    return documentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, "users/1");
+            }, 4);
             }
         }
     }
