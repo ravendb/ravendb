@@ -645,7 +645,7 @@ namespace Raven.Server.Documents.Handlers
                 using (var writer = new StreamWriter(ResponseBodyStream()))
                 {
                     var codeGenerator = new JsonClassGenerator(lang);
-                    var code = codeGenerator.Execute(document);
+                    var code = codeGenerator.Execute(document.Data);
                     writer.Write(code);
                 }
 

@@ -1,41 +1,53 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Http;
+using Raven.Server.Documents.Sharding;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers
+namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
 {
-    internal class ShardedCommand : RavenCommand<BlittableJsonReaderObject>
+    public abstract class ShardedBaseCommand<T> : RavenCommand<T>
     {
-        public BlittableJsonReaderObject Content;
-        public Dictionary<string, string> Headers = new Dictionary<string, string>();
+        public readonly BlittableJsonReaderObject Content;
+        public readonly Dictionary<string, string> Headers = new Dictionary<string, string>();
         public string Url;
-        public HttpMethod Method;
+        public readonly HttpMethod Method;
 
         public HttpResponseMessage Response;
-        public IDisposable Disposable;
-        public List<int> PositionMatches;
+        
 
         public override bool IsReadRequest => false;
+
+        public ShardedBaseCommand(ShardedRequestHandler handler, Headers headers, BlittableJsonReaderObject content = null)
+        {
+            Method = handler.Method;
+            Url = handler.RelativeShardUrl;
+            Content = content;
+
+            handler.AddHeaders(this, headers);
+        }
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}{Url}";
             var message = new HttpRequestMessage
             {
-                Method = Method,
+                Method = Method, 
                 Content = Content == null ? null : new BlittableJsonContent(Content),
             };
             foreach ((string key, string value) in Headers)
             {
-                message.Headers.Add(key, value);
+                if (value == null) //TODO sharding: make sure it is okay to skip null
+                    continue;
+
+                message.Headers.TryAddWithoutValidation(key, value);
             }
+
             return message;
         }
-
 
         public override Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
@@ -43,10 +55,6 @@ namespace Raven.Server.Documents.Handlers
             return base.ProcessResponse(context, cache, response, url);
         }
 
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            Result = response;
-        }
         internal class BlittableJsonContent : HttpContent
         {
             private readonly BlittableJsonReaderObject _data;
@@ -54,7 +62,7 @@ namespace Raven.Server.Documents.Handlers
             public BlittableJsonContent(BlittableJsonReaderObject data)
             {
                 _data = data;
-                
+
             }
 
             protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
@@ -69,5 +77,12 @@ namespace Raven.Server.Documents.Handlers
                 return false;
             }
         }
+    }
+    
+    public enum Headers
+    {
+        None,
+        IfMatch,
+        IfNonMatch,
     }
 }

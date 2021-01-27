@@ -1,23 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
+using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.Handlers
+namespace Raven.Server.Documents.ShardedHandlers
 {
     public class ShardedDocumentHandler : ShardedRequestHandler
     {
@@ -25,22 +25,33 @@ namespace Raven.Server.Documents.Handlers
         public async Task Head()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            var changeVector = GetStringFromHeaders("If-None-Match");
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var index = ShardedContext.GetShardIndex(context, id);
 
-                var cmd = new ShardedHeadCommand
-                {
-                    Id = id,
-                    ChangeVector = changeVector
-                    
-                };
+                var cmd = new ShardedHeadCommand(this, Headers.IfNonMatch);
 
                 await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
                 HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Result;
+            }
+        }
+
+        [RavenShardedAction("/databases/*/docs/size", "GET")]
+        public async Task GetDocSize()
+        {
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var index = ShardedContext.GetShardIndex(context, id);
+
+                var cmd = new ShardedCommand(this, Headers.None);
+                await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                HttpContext.Response.StatusCode = (int)cmd.StatusCode;
+
+                cmd.Result?.WriteJsonTo(ResponseBodyStream());
             }
         }
 
@@ -58,20 +69,9 @@ namespace Raven.Server.Documents.Handlers
                     var (_, clusterId, _) = await ServerStore.GenerateClusterIdentityAsync(id, '/', ShardedContext.DatabaseName, GetRaftRequestIdFromQuery());
                     id = clusterId;
                 }
-                var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
-
+                
                 var index = ShardedContext.GetShardIndex(context, id);
-
-                var cmd = new ShardedCommand
-                {
-                    Method = HttpMethod.Put,
-                    Url = $"/docs?id={Uri.EscapeUriString(id)}",
-                    Content = doc,
-                    Headers =
-                    {
-                        ["If-Match"] = changeVector
-                    }
-                };
+                var cmd = new ShardedCommand(this, Headers.None, content: doc);
                 await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
 
@@ -91,22 +91,11 @@ namespace Raven.Server.Documents.Handlers
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
-
                 var patch = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
 
                 var index = ShardedContext.GetShardIndex(context, id);
 
-                var cmd = new ShardedCommand
-                {
-                    Method = HttpMethod.Patch,
-                    Url = $"/docs{HttpContext.Request.QueryString.ToString()}",
-                    Content = patch,
-                    Headers =
-                    {
-                        ["If-Match"] = changeVector
-                    }
-                };
+                var cmd = new ShardedCommand(this, Headers.IfMatch, content: patch);
 
                 await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
@@ -124,7 +113,91 @@ namespace Raven.Server.Documents.Handlers
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
+                if (TrafficWatchManager.HasRegisteredClients) //TODO - sharding: do we need that here?
+                    AddStringToHttpContext(ids.ToString(), TrafficWatchChangeType.Documents);
+
                 await GetDocumentsAsync(ids, includePaths, etag, metadataOnly, context);
+            }
+        }
+
+        [RavenShardedAction("/databases/*/docs", "POST")]
+        public async Task PostGet()
+        {
+            var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
+            var includePaths = GetStringValuesQueryString("include", required: false);
+            var etag = GetStringFromHeaders("If-None-Match");
+
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var docs = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
+                if (docs.TryGet("Ids", out BlittableJsonReaderArray array) == false)
+                    ThrowRequiredPropertyNameInRequest("Ids");
+
+                var ids = new string[array.Length];
+                for (int i = 0; i < array.Length; i++)
+                {
+                    ids[i] = array.GetStringByIndex(i);
+                }
+
+                var idsStringValues = new StringValues(ids);
+
+                if (TrafficWatchManager.HasRegisteredClients) //TODO - sharding: do we need that here?
+                    AddStringToHttpContext(idsStringValues.ToString(), TrafficWatchChangeType.Documents);
+
+                await GetDocumentsAsync(ids, includePaths, etag, metadataOnly, context);
+            }
+        }
+
+        [RavenShardedAction("/databases/*/docs", "DELETE")]
+        public async Task Delete()
+        {
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+            
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var index = ShardedContext.GetShardIndex(context, id);
+
+                var cmd = new ShardedCommand(this, Headers.IfMatch);
+                await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+            }
+
+            NoContentStatus();
+        }
+
+        [RavenShardedAction("/databases/*/docs/class", "GET")]
+        public async Task GenerateClassFromDocument()
+        {
+            var id = GetStringQueryString("id");
+            var lang = (GetStringQueryString("lang", required: false) ?? "csharp")
+                .Trim().ToLowerInvariant();
+
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var index = ShardedContext.GetShardIndex(context, id);
+
+                var cmd = new ShardedCommand(this, Headers.None);
+                await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                var document = cmd.Result;
+                if (document == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
+                }
+
+                switch (lang)
+                {
+                    case "csharp":
+                        break;
+                    default:
+                        throw new NotImplementedException($"Document code generator isn't implemented for {lang}");
+                }
+
+                await using (var writer = new StreamWriter(ResponseBodyStream()))
+                {
+                    var codeGenerator = new JsonClassGenerator(lang);
+                    var code = codeGenerator.Execute(document);
+                    await writer.WriteAsync(code);
+                }
             }
         }
 
@@ -132,8 +205,8 @@ namespace Raven.Server.Documents.Handlers
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
             var sb = new StringBuilder();
-            var cmds = new List<ShardedCommand>();
-            List<ShardedCommand> oldCmds = null;
+            var cmds = new List<FetchDocumentsFromShardsCommand>();
+            List<FetchDocumentsFromShardsCommand> oldCmds = null;
 
             var tasks = new List<Task>();
             try
@@ -148,7 +221,7 @@ namespace Raven.Server.Documents.Handlers
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                         return;
                     }
-                    //TODO: verify all headers are taken care of
+                    //TODO - sharding: verify all headers are taken care of
                     HttpContext.Response.StatusCode = (int)cmds[0].StatusCode;
                     HttpContext.Response.Headers[Constants.Headers.Etag] = singleEtag;
                     cmds[0].Result?.WriteJsonTo(ResponseBodyStream());
@@ -222,7 +295,7 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WriteEndObject();
                     await writer.OuterFlushAsync();
-                    //TODO: Add performance hints
+                    //TODO - sharding: Add performance hints
                 }
             
             }
@@ -230,46 +303,19 @@ namespace Raven.Server.Documents.Handlers
             {
                 if (oldCmds != null)
                 {
-                    foreach (ShardedCommand cmd in oldCmds)
+                    foreach (FetchDocumentsFromShardsCommand cmd in oldCmds)
                     {
-                        cmd.Disposable.Dispose();
+                        cmd.Dispose();
                     }
                 }
 
-                foreach (ShardedCommand cmd in cmds)
+                foreach (FetchDocumentsFromShardsCommand cmd in cmds)
                 {
-                    cmd.Disposable.Dispose();
+                    cmd.Dispose();
                 }
             }
         }
 
-        [RavenShardedAction("/databases/*/docs", "POST")]
-        public async Task PostGet()
-        {
-            var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
-            var includePaths = GetStringValuesQueryString("include", required: false);
-            var etag = GetStringFromHeaders("If-None-Match");
-
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var docs = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
-                if (docs.TryGet("Ids", out BlittableJsonReaderArray array) == false)
-                    ThrowRequiredPropertyNameInRequest("Ids");
-
-                var ids = new string[array.Length];
-                for (int i = 0; i < array.Length; i++)
-                {
-                    ids[i] = array.GetStringByIndex(i);
-                }
-
-                var idsStringValues = new Microsoft.Extensions.Primitives.StringValues(ids);
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                    HttpContext.Items["TrafficWatch"] = (idsStringValues.ToString(), TrafficWatchChangeType.Documents);
-
-                await GetDocumentsAsync(ids, includePaths, etag, metadataOnly, context);
-            }
-        }
         private async Task WriteIncludesAsync(Dictionary<string, BlittableJsonReaderObject> includesMap, AsyncBlittableJsonTextWriter writer)
         {
             writer.WritePropertyName(nameof(GetDocumentsResult.Includes));
@@ -295,10 +341,10 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndObject();
         }
 
-        private async Task FetchMissingIncludes(List<ShardedCommand> cmds, List<Task> tasks, HashSet<string> missingIncludes, TransactionOperationContext context, StringBuilder sb, StringValues includePaths,
+        private async Task FetchMissingIncludes(List<FetchDocumentsFromShardsCommand> cmds, List<Task> tasks, HashSet<string> missingIncludes, TransactionOperationContext context, StringBuilder sb, StringValues includePaths,
             Dictionary<string, BlittableJsonReaderObject> includesMap, bool metadataOnly)
         {
-            cmds = new List<ShardedCommand>();
+            cmds = new List<FetchDocumentsFromShardsCommand>();
             tasks.Clear();
             var missingList = missingIncludes.ToList();
             await FetchDocumentsFromShards(missingList, metadataOnly, context, sb.Clear(), includePaths, cmds, tasks, ignoreIncludes: true);
@@ -317,7 +363,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         private async Task FetchDocumentsFromShards(IList<string> ids,bool metadataOnly, TransactionOperationContext context, StringBuilder sb, StringValues includePaths,
-            List<ShardedCommand> cmds, List<Task> tasks, bool ignoreIncludes = false)
+            List<FetchDocumentsFromShardsCommand> cmds, List<Task> tasks, bool ignoreIncludes = false)
         {
             var shards = ShardLocator.GetDocumentIdsShards(ids, ShardedContext, context);
             foreach (var shard in shards)
@@ -344,22 +390,21 @@ namespace Raven.Server.Documents.Handlers
                     matches.Add(idIdx);
                 }
 
-                var cmd = new ShardedCommand
+                var cmd = new FetchDocumentsFromShardsCommand(this)
                 {
-                    Method = HttpMethod.Get,
-                    Url = sb.ToString(),
-                    PositionMatches = matches,
-                    Disposable = ContextPool.AllocateOperationContext(out TransactionOperationContext ctx)
+                    PositionMatches = matches, 
+                    Url = sb.ToString()
                 };
+
                 cmds.Add(cmd);
-                var task = ShardedContext.RequestExecutors[shard.Key].ExecuteAsync(cmd, ctx);
+                var task = ShardedContext.RequestExecutors[shard.Key].ExecuteAsync(cmd, cmd.Context);
                 tasks.Add(task);
             }
 
             await Task.WhenAll(tasks); // if any failed, we explicitly let it throw here
         }
 
-        private IEnumerable<string> EnumerateEtags(List<ShardedCommand> cmds)
+        private IEnumerable<string> EnumerateEtags(IEnumerable<ShardedCommand> cmds)
         {
             foreach (var cmd in cmds)
             {

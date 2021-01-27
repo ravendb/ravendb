@@ -1,50 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Server.Documents.Sharding;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers
+namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
 {
-    internal class ShardedHeadCommand : RavenCommand<string>
+    internal class ShardedHeadCommand : ShardedBaseCommand<string>
     {
-        public string ChangeVector;
-        public string Id;
-
-        public HttpResponseMessage Response;
-        public IDisposable Disposable;
-        public List<int> PositionMatches;
-
-        public override bool IsReadRequest => false;
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-        {
-            url = $"{node.Url}/databases/{node.Database}/docs?id={Uri.EscapeUriString(Id)}";
-            var message = new HttpRequestMessage
-            {
-                Method = HttpMethod.Head,
-                Content = null,
-            };
-            if (ChangeVector != null)
-            {
-                message.Headers.Add("If-None-Match", ChangeVector);
-            }
-            
-            return message;
-        }
-
-
         public override Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
             if (response.StatusCode == HttpStatusCode.NotModified)
             {
-                Result = ChangeVector;
+                Result = Headers["If-None-Match"];
                 return Task.FromResult(ResponseDisposeHandling.Automatic);
-                ;
             }
 
             if (response.StatusCode == HttpStatusCode.NotFound)
@@ -65,6 +37,10 @@ namespace Raven.Server.Documents.Handlers
                 ThrowInvalidResponse();
 
             Result = null;
+        }
+
+        public ShardedHeadCommand(ShardedRequestHandler handler, Headers headers, BlittableJsonReaderObject content = null) : base(handler, headers, content)
+        {
         }
     }
 }

@@ -2,7 +2,10 @@
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Server.Documents.Replication;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -66,12 +69,49 @@ namespace FastTests.Sharding
         }
 
         [Fact]
+        public void CanPutAndDeleteItem()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                PutEntity(store, new DynamicJsonValue {["Name"] = "Oren",}, "users/1");
+                string changeVector;
+
+                using (var s = store.OpenSession())
+                {
+                    var u = s.Load<User>("users/1");
+                    Assert.NotNull(u);
+                    Assert.Equal("Oren", u.Name);
+                    changeVector = s.Advanced.GetChangeVectorFor(u);
+                }
+
+                // test delete not existing doc
+                DeleteEntity(store, "users/2", changeVector: null);
+
+                Assert.Throws<ConcurrencyException>(() => DeleteEntity(store, "users/2", changeVector));
+
+                // test delete with concurrency exception
+                var cv = changeVector.ToChangeVector();
+                cv[0].Etag = 100;
+                var notExpected  = cv.SerializeVector();
+                Assert.Throws<ConcurrencyException>(() => DeleteEntity(store, "users/1", notExpected));
+
+                // now really delete it
+                DeleteEntity(store, "users/1", changeVector);
+
+                using (var s = store.OpenSession())
+                {
+                    var u = s.Load<User>("users/1");
+                    Assert.Null(u);
+                }
+            }
+        }
+
+        [Fact]
         public void CanPutAndCheckIfExists()
         {
             using (var store = GetShardedDocumentStore())
             {
                 PutEntity(store, new DynamicJsonValue { ["Name"] = "Oren", }, "users/1");
-
                 using (var s = store.OpenSession())
                 {
                     Assert.True(s.Advanced.Exists("users/1"));
@@ -86,6 +126,15 @@ namespace FastTests.Sharding
             {
                 var blittableJsonReaderObject = context.ReadObject( user, id);
                 requestExecutor.Execute(new PutDocumentCommand(id, null, blittableJsonReaderObject), context);
+            }
+        }
+
+        private static void DeleteEntity(IDocumentStore store, string id, string changeVector)
+        {
+            RequestExecutor requestExecutor = store.GetRequestExecutor();
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+            {
+                requestExecutor.Execute(new DeleteDocumentCommand(id, changeVector), context);
             }
         }
 

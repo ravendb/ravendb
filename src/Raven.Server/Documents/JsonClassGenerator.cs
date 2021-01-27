@@ -199,12 +199,12 @@ namespace Raven.Server.Documents
                 throw new ArgumentNullException("language");
         }
 
-        public string Execute(Document document)
+        public string Execute(BlittableJsonReaderObject document)
         {
             if (document == null)
                 throw new ArgumentNullException("document");
 
-            document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
+            document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
 
             var @class = "Class";
             var @namespace = "Unknown";
@@ -272,13 +272,13 @@ namespace Raven.Server.Documents
             return codeBuilder.ToString();
         }
 
-        internal List<ClassType> GenerateClassesTypesFromObject(string name, Document document)
+        internal List<ClassType> GenerateClassesTypesFromObject(string name, BlittableJsonReaderObject document)
         {
             // we need to clear the generated types;
             _generatedTypes.Clear();
 
             // repopulate the generated types after working on the object.
-            var root = GenerateClassTypesFromObject(name, document.Data);
+            var root = GenerateClassTypesFromObject(name, document);
 
             foreach (var pair in _generatedTypes.ToList())
             {
