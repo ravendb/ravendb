@@ -128,6 +128,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public static void AssertDestinationAndRegionAreAllowed(BackupConfiguration configuration, ServerStore serverStore)
         {
+            if (configuration.HasBackup() == false)
+                throw new InvalidOperationException("The backup configuration contains no destination");
+
             foreach (var backupDestination in configuration.GetDestinations())
             {
                 serverStore.Configuration.Backup.AssertDestinationAllowed(backupDestination);

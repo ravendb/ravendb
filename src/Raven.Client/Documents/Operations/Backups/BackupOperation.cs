@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Operations.Backups
             _backupConfiguration = backupConfiguration ?? throw new ArgumentNullException(nameof(backupConfiguration));
 
             if (_backupConfiguration.HasBackup() == false)
-                throw new InvalidOperationException("Cannot start one time backup using the provided configuration.");
+                throw new InvalidOperationException("Cannot start the one-time backup using the provided configuration since the backup configuration contains no destination.");
         }
 
         public BackupOperation(BackupConfiguration backupConfiguration, string nodeTag) : this(backupConfiguration)
