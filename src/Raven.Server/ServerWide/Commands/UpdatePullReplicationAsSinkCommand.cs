@@ -8,7 +8,7 @@ namespace Raven.Server.ServerWide.Commands
     public class UpdatePullReplicationAsSinkCommand : UpdateDatabaseCommand
     {
         public PullReplicationAsSink PullReplicationAsSink;
-
+        public bool? useServerCertificate;
         public UpdatePullReplicationAsSinkCommand()
         {
 
@@ -31,15 +31,22 @@ namespace Raven.Server.ServerWide.Commands
             else
             {
                 // if new definition doesn't have certificate but there is old one with cert 
-                // it means we want to use existing cert
+                // it means we want to use existing cert or the server certificate
                 if (PullReplicationAsSink.CertificateWithPrivateKey == null)
                 {
-                    var existingDefinition = record.SinkPullReplications.Find(x => x.TaskId == PullReplicationAsSink.TaskId);
-                    if (existingDefinition?.CertificateWithPrivateKey != null)
+                    if ((useServerCertificate != null) && (useServerCertificate == true))
                     {
-                        // retain existing certificate
-                        PullReplicationAsSink.CertificateWithPrivateKey = existingDefinition.CertificateWithPrivateKey;
-                        PullReplicationAsSink.CertificatePassword = existingDefinition.CertificatePassword;
+                        PullReplicationAsSink.CertificateWithPrivateKey = null;
+                    }
+                    else
+                    {
+                        var existingDefinition = record.SinkPullReplications.Find(x => x.TaskId == PullReplicationAsSink.TaskId);
+                        if (existingDefinition?.CertificateWithPrivateKey != null)
+                        {
+                            // retain existing certificate
+                            PullReplicationAsSink.CertificateWithPrivateKey = existingDefinition.CertificateWithPrivateKey;
+                            PullReplicationAsSink.CertificatePassword = existingDefinition.CertificatePassword;
+                        }
                     }
                 }
                 
@@ -61,6 +68,7 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(PullReplicationAsSink)] = PullReplicationAsSink.ToJson();
+            json[nameof(useServerCertificate)] = useServerCertificate;
         }
     }
 }
