@@ -1440,6 +1440,11 @@ namespace Raven.Server.Documents
                 {
                     collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
                 }
+                else if (local.Tombstone.Collection.Equals(collectionName.Name) == false)
+                {
+                    // ensure the table for the tombstones is created
+                    ExtractCollectionName(context, collectionName.Name);
+                }
 
                 var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                     collectionName.GetTableName(CollectionTableType.Tombstones));
