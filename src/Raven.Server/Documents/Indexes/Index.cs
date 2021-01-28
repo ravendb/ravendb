@@ -1114,7 +1114,8 @@ namespace Raven.Server.Documents.Indexes
                                 }
                                 catch (IndexWriteException iwe)
                                 {
-                                    HandleWriteErrors(scope, iwe);
+                                    if(DocumentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+                                        HandleWriteErrors(scope, iwe);
                                 }
                                 catch (IndexAnalyzerException iae)
                                 {
