@@ -1691,7 +1691,7 @@ namespace Raven.Server.ServerWide
                 // we need to know if we want to use server certificate or not to change the current one.
                 // null value for server certificate
                 // missing property for 'do not change'
-                useServerCertificate = (pullReplicationAsSink.CertificateWithPrivateKey == null) &&
+                UseServerCertificate = (pullReplicationAsSink.CertificateWithPrivateKey == null) &&
                     (pullReplicationBlittable.TryGet(nameof(PullReplicationAsSink.CertificateWithPrivateKey), out string _))
             };
 
