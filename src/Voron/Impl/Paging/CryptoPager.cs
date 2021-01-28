@@ -63,9 +63,9 @@ namespace Voron.Impl.Paging
 
     public unsafe class EncryptionBuffer
     {
-        public EncryptionBuffer()
+        public EncryptionBuffer(EncryptionBuffersPool pool)
         {
-            Generation = EncryptionBuffersPool.Instance.Generation;
+            Generation = pool.Generation;
         }
 
         public static readonly UIntPtr HashSize = Sodium.crypto_generichash_bytes();
@@ -86,6 +86,7 @@ namespace Voron.Impl.Paging
         public AbstractPager Inner { get; }
         private readonly byte[] _masterKey;
         private const ulong MacLen = 16;
+        private readonly EncryptionBuffersPool _encryptionBuffersPool;
 
         public override long TotalAllocationSize => Inner.TotalAllocationSize;
 
@@ -98,6 +99,7 @@ namespace Voron.Impl.Paging
 
             Inner = inner;
             _masterKey = inner.Options.Encryption.MasterKey;
+            _encryptionBuffersPool = inner.Options.Encryption.EncryptionBuffersPool;
 
             UniquePhysicalDriveId = Inner.UniquePhysicalDriveId;
             FileName = inner.FileName;
@@ -237,7 +239,7 @@ namespace Voron.Impl.Paging
 
             for (int i = 1; i < encBuffer.Size / Constants.Storage.PageSize; i++)
             {
-                var buffer = new EncryptionBuffer
+                var buffer = new EncryptionBuffer(_encryptionBuffersPool)
                 {
                     Pointer = encBuffer.Pointer + i * Constants.Storage.PageSize,
                     Size = Constants.Storage.PageSize,
@@ -268,9 +270,9 @@ namespace Voron.Impl.Paging
 
         private EncryptionBuffer GetBufferAndAddToTxState(long pageNumber, CryptoTransactionState state, int numberOfPages)
         {
-            var ptr = EncryptionBuffersPool.Instance.Get(numberOfPages, out var size, out var thread);
+            var ptr = _encryptionBuffersPool.Get(numberOfPages, out var size, out var thread);
 
-            var buffer = new EncryptionBuffer
+            var buffer = new EncryptionBuffer(_encryptionBuffersPool)
             {
                 Size = size,
                 Pointer = ptr,
@@ -370,12 +372,12 @@ namespace Voron.Impl.Paging
             if (buffer.OriginalSize != null && buffer.OriginalSize != 0)
             {
                 // First page of a separated section, returned with its original size.
-                EncryptionBuffersPool.Instance.Return(buffer.Pointer, (long)buffer.OriginalSize, buffer.AllocatingThread, buffer.Generation);
+                _encryptionBuffersPool.Return(buffer.Pointer, (long)buffer.OriginalSize, buffer.AllocatingThread, buffer.Generation);
             }
             else
             {
                 // Normal buffers
-                EncryptionBuffersPool.Instance.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread, buffer.Generation);
+                _encryptionBuffersPool.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread, buffer.Generation);
             }
         }
 
