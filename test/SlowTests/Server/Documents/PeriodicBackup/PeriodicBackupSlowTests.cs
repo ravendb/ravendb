@@ -22,6 +22,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -2210,6 +2211,27 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Equal(name, usr.Name);
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public async Task ManualBackup_WhenDefinesNoDestinations_ShouldThrowsOnServerAsWell()
+        {
+            using var store = GetDocumentStore();
+
+            var config = new BackupConfiguration { BackupType = BackupType.Backup };
+
+            using (var requestExecutor = store.GetRequestExecutor())
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+            {
+                var command = new BackupOperation.BackupCommand(config);
+                var request = command.CreateRequest(context, new ServerNode { Url = store.Urls.First(), Database = store.Database }, out var url);
+                request.RequestUri = new Uri(url);
+                var client = store.GetRequestExecutor(store.Database).HttpClient;
+                var response = await client.SendAsync(request);
+
+                var exception = await Assert.ThrowsAnyAsync<Exception>(async () => await ExceptionDispatcher.Throw(context, response));
+                Assert.Contains("The backup configuration defines no destinations", exception.Message);
             }
         }
 
