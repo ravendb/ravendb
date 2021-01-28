@@ -225,14 +225,14 @@ namespace Voron.Impl.Paging
             }
         }
 
-        public override void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, long pageNumber)
+        public override void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, long valuePositionInScratchBuffer, long actualNumberOfAllocatedScratchPages)
         {
             if (tx == null)
                 throw new NotSupportedException("Cannot use crypto pager without a transaction");
 
             var state = GetTransactionState(tx);
 
-            if (state.TryGetValue(pageNumber, out var encBuffer) == false)
+            if (state.TryGetValue(valuePositionInScratchBuffer, out var encBuffer) == false)
                 throw new InvalidOperationException("Tried to break buffer that wasn't allocated in this tx");
 
             for (int i = 1; i < encBuffer.Size / Constants.Storage.PageSize; i++)
@@ -245,11 +245,17 @@ namespace Voron.Impl.Paging
                     AllocatingThread = encBuffer.AllocatingThread
                 };
 
-                // when we commit
-                // the tx, the pager will realize that we need to write this page
-                buffer.Modified = true;
+                if (i < actualNumberOfAllocatedScratchPages) 
+                {
+                    // when we commit the tx, the pager will realize that we need to write this page
 
-                state[pageNumber + i] = buffer;
+                    // we do this only for the encryption buffers are are going to be in use - we might allocate more under the covers because we're adjusting the size to the power of 2
+                    // we must not encrypt such extra allocated memory because we might have garbage there resulting in segmentation fault on attempt to encrypt that
+                    
+                    buffer.Modified = true;
+                }
+
+                state[valuePositionInScratchBuffer + i] = buffer;
             }
 
             encBuffer.OriginalSize = encBuffer.Size;
