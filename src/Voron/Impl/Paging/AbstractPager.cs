@@ -324,7 +324,7 @@ namespace Voron.Impl.Paging
             return AcquirePagePointerInternal(tx, pageNumber, pagerState);
         }
 
-        public virtual void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, long pageNumber)
+        public virtual void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, long valuePositionInScratchBuffer, long actualNumberOfAllocatedScratchPages)
         {
             // This method is implemented only in Crypto Pager
         }

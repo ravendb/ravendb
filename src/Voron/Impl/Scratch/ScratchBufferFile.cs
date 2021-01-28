@@ -338,7 +338,7 @@ namespace Voron.Impl.Scratch
                     new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer + i, 1, 1));
             }
 
-            _scratchPager.BreakLargeAllocationToSeparatePages(tx, value.PositionInScratchBuffer);
+            _scratchPager.BreakLargeAllocationToSeparatePages(tx, value.PositionInScratchBuffer, value.NumberOfPages);
         }
 
         private static void InvalidAttemptToBreakupPageThatWasntAllocated(PageFromScratchBuffer value)
