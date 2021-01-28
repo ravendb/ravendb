@@ -8,7 +8,7 @@ namespace Raven.Server.ServerWide.Commands
     public class UpdatePullReplicationAsSinkCommand : UpdateDatabaseCommand
     {
         public PullReplicationAsSink PullReplicationAsSink;
-        public bool? useServerCertificate;
+        public bool? UseServerCertificate;
         public UpdatePullReplicationAsSinkCommand()
         {
 
@@ -34,7 +34,7 @@ namespace Raven.Server.ServerWide.Commands
                 // it means we want to use existing cert or the server certificate
                 if (PullReplicationAsSink.CertificateWithPrivateKey == null)
                 {
-                    if ((useServerCertificate != null) && (useServerCertificate == true))
+                    if (UseServerCertificate == true)
                     {
                         PullReplicationAsSink.CertificateWithPrivateKey = null;
                     }
@@ -68,7 +68,7 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(PullReplicationAsSink)] = PullReplicationAsSink.ToJson();
-            json[nameof(useServerCertificate)] = useServerCertificate;
+            json[nameof(UseServerCertificate)] = UseServerCertificate;
         }
     }
 }
