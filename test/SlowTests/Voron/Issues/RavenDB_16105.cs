@@ -23,6 +23,7 @@ namespace SlowTests.Voron.Issues
         {
             options.ManualFlushing = true;
             options.Encryption.MasterKey = _masterKey.ToArray();
+            options.Encryption.EncryptionBuffersPool = new EncryptionBuffersPool();
         }
 
         [Fact]
