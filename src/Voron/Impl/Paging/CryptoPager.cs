@@ -63,9 +63,9 @@ namespace Voron.Impl.Paging
 
     public unsafe class EncryptionBuffer
     {
-        public EncryptionBuffer()
+        public EncryptionBuffer(EncryptionBuffersPool pool)
         {
-            Generation = EncryptionBuffersPool.Instance.Generation;
+            Generation = pool.Generation;
         }
 
         public static readonly UIntPtr HashSize = Sodium.crypto_generichash_bytes();
@@ -86,6 +86,7 @@ namespace Voron.Impl.Paging
         public AbstractPager Inner { get; }
         private readonly byte[] _masterKey;
         private const ulong MacLen = 16;
+        private readonly EncryptionBuffersPool _encryptionBuffersPool;
 
         public override long TotalAllocationSize => Inner.TotalAllocationSize;
 
@@ -98,6 +99,7 @@ namespace Voron.Impl.Paging
 
             Inner = inner;
             _masterKey = inner.Options.Encryption.MasterKey;
+            _encryptionBuffersPool = inner.Options.Encryption.EncryptionBuffersPool;
 
             UniquePhysicalDriveId = Inner.UniquePhysicalDriveId;
             FileName = inner.FileName;
@@ -225,19 +227,19 @@ namespace Voron.Impl.Paging
             }
         }
 
-        public override void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, long pageNumber)
+        public override void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, long valuePositionInScratchBuffer, long actualNumberOfAllocatedScratchPages)
         {
             if (tx == null)
                 throw new NotSupportedException("Cannot use crypto pager without a transaction");
 
             var state = GetTransactionState(tx);
 
-            if (state.TryGetValue(pageNumber, out var encBuffer) == false)
+            if (state.TryGetValue(valuePositionInScratchBuffer, out var encBuffer) == false)
                 throw new InvalidOperationException("Tried to break buffer that wasn't allocated in this tx");
 
             for (int i = 1; i < encBuffer.Size / Constants.Storage.PageSize; i++)
             {
-                var buffer = new EncryptionBuffer
+                var buffer = new EncryptionBuffer(_encryptionBuffersPool)
                 {
                     Pointer = encBuffer.Pointer + i * Constants.Storage.PageSize,
                     Size = Constants.Storage.PageSize,
@@ -245,11 +247,17 @@ namespace Voron.Impl.Paging
                     AllocatingThread = encBuffer.AllocatingThread
                 };
 
-                // when we commit
-                // the tx, the pager will realize that we need to write this page
-                buffer.Modified = true;
+                if (i < actualNumberOfAllocatedScratchPages) 
+                {
+                    // when we commit the tx, the pager will realize that we need to write this page
 
-                state[pageNumber + i] = buffer;
+                    // we do this only for the encryption buffers are are going to be in use - we might allocate more under the covers because we're adjusting the size to the power of 2
+                    // we must not encrypt such extra allocated memory because we might have garbage there resulting in segmentation fault on attempt to encrypt that
+                    
+                    buffer.Modified = true;
+                }
+
+                state[valuePositionInScratchBuffer + i] = buffer;
             }
 
             encBuffer.OriginalSize = encBuffer.Size;
@@ -262,9 +270,9 @@ namespace Voron.Impl.Paging
 
         private EncryptionBuffer GetBufferAndAddToTxState(long pageNumber, CryptoTransactionState state, int numberOfPages)
         {
-            var ptr = EncryptionBuffersPool.Instance.Get(numberOfPages, out var size, out var thread);
+            var ptr = _encryptionBuffersPool.Get(numberOfPages, out var size, out var thread);
 
-            var buffer = new EncryptionBuffer
+            var buffer = new EncryptionBuffer(_encryptionBuffersPool)
             {
                 Size = size,
                 Pointer = ptr,
@@ -364,12 +372,12 @@ namespace Voron.Impl.Paging
             if (buffer.OriginalSize != null && buffer.OriginalSize != 0)
             {
                 // First page of a separated section, returned with its original size.
-                EncryptionBuffersPool.Instance.Return(buffer.Pointer, (long)buffer.OriginalSize, buffer.AllocatingThread, buffer.Generation);
+                _encryptionBuffersPool.Return(buffer.Pointer, (long)buffer.OriginalSize, buffer.AllocatingThread, buffer.Generation);
             }
             else
             {
                 // Normal buffers
-                EncryptionBuffersPool.Instance.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread, buffer.Generation);
+                _encryptionBuffersPool.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread, buffer.Generation);
             }
         }
 

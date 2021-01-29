@@ -382,7 +382,7 @@ namespace Voron.Impl.Journal
                 var size = (4 * Constants.Size.Kilobyte) * GetNumberOf4KbFor(sizeof(TransactionHeader) + pagesSize);
 
                 var ptr = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out var thread);
-                var buffer = new EncryptionBuffer
+                var buffer = new EncryptionBuffer(options.Encryption.EncryptionBuffersPool)
                 {
                     Pointer = ptr,
                     Size = size,

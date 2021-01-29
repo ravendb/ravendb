@@ -19,6 +19,7 @@ using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron.Exceptions;
+using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
@@ -1356,6 +1357,8 @@ namespace Voron
             public byte[] MasterKey;
 
             public bool IsEnabled => MasterKey != null;
+
+            public EncryptionBuffersPool EncryptionBuffersPool = EncryptionBuffersPool.Instance;
 
             public bool HasExternalJournalCompressionBufferHandlerRegistration { get; private set; }
 
