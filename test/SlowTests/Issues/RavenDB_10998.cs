@@ -81,6 +81,12 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
                 WaitForUserToContinueTheTest(store);
 
+                Assert.True(WaitForValue(() =>
+                {
+                    var op = new GetIndexStatisticsOperation(nameof(TheIndex));
+                    return store.Maintenance.Send(op).ReduceErrors != null;
+                }, true));
+
                 var op = new GetIndexStatisticsOperation(nameof(TheIndex));
                 var result = store.Maintenance.Send(op);
 
