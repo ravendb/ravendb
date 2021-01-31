@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.Formatting;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -22,6 +23,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Util.Settings;
@@ -261,6 +263,84 @@ namespace Raven.Server.Web.Studio
         {
             public bool IsValid { get; set; }
             public string ErrorMessage { get; set; }
+        }
+
+        [RavenAction("/studio-tasks/periodic-backup/test-credentials", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task TestPeriodicBackupCredentials()
+        {
+            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            if (Enum.TryParse(type, out PeriodicBackupConnectionType connectionType) == false)
+                throw new ArgumentException($"Unknown backup connection: {type}");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                DynamicJsonValue result;
+                try
+                {
+                    var connectionInfo = await context.ReadForMemoryAsync(RequestBodyStream(), "test-connection");
+                    switch (connectionType)
+                    {
+                        case PeriodicBackupConnectionType.S3:
+                            var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
+                            using (var awsClient = new RavenAwsS3Client(s3Settings, cancellationToken: ServerStore.ServerShutdown))
+                            {
+                                awsClient.TestConnection();
+                            }
+                            break;
+                        case PeriodicBackupConnectionType.Glacier:
+                            var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
+                            using (var glacierClient = new RavenAwsGlacierClient(glacierSettings, cancellationToken: ServerStore.ServerShutdown))
+                            {
+                                glacierClient.TestConnection();
+                            }
+                            break;
+                        case PeriodicBackupConnectionType.Azure:
+                            var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
+                            using (var azureClient = new RavenAzureClient(azureSettings, cancellationToken: ServerStore.ServerShutdown))
+                            {
+                                azureClient.TestConnection();
+                            }
+                            break;
+                        case PeriodicBackupConnectionType.GoogleCloud:
+                            var googleCloudSettings = JsonDeserializationClient.GoogleCloudSettings(connectionInfo);
+                            using (var googleCloudClient = new RavenGoogleCloudClient(googleCloudSettings, cancellationToken: ServerStore.ServerShutdown))
+                            {
+                                await googleCloudClient.TestConnection();
+                            }
+                            break;
+                        case PeriodicBackupConnectionType.FTP:
+                            var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
+                            using (var ftpClient = new RavenFtpClient(ftpSettings))
+                            {
+                                ftpClient.TestConnection();
+                            }
+                            break;
+                        case PeriodicBackupConnectionType.Local:
+                        case PeriodicBackupConnectionType.None:
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    result = new DynamicJsonValue
+                    {
+                        [nameof(NodeConnectionTestResult.Success)] = true,
+                    };
+                }
+                catch (Exception e)
+                {
+                    result = new DynamicJsonValue
+                    {
+                        [nameof(NodeConnectionTestResult.Success)] = false,
+                        [nameof(NodeConnectionTestResult.Error)] = e.ToString()
+                    };
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result);
+                }
+            }
         }
 
         [RavenAction("/studio-tasks/is-valid-name", "GET", AuthorizationStatus.ValidUser)]

@@ -185,7 +185,7 @@ class editPeriodicBackupTask extends viewModelBase {
         bs.isTestingCredentials(true);
         bs.testConnectionResult(null);
         
-        new testPeriodicBackupCredentialsCommand(this.activeDatabase(), bs.connectionType, bs.toDto())
+        new testPeriodicBackupCredentialsCommand(bs.connectionType, bs.toDto())
             .execute()
             .done((result: Raven.Server.Web.System.NodeConnectionTestResult) => {
                 bs.testConnectionResult(result);        
