@@ -78,6 +78,8 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
 
             var rowGroups = GetOrAdd(tableName, key);
             rowGroups.Add(s3Item);
+
+            _stats.IncrementBatchSize(result.Size);
         }
 
         protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)

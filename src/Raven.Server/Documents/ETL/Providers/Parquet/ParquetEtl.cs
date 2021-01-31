@@ -142,52 +142,12 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
                 {
                     using (var parquetWriter = new ParquetWriter(new Schema(fields), fileStream))
                     {
-                        foreach (var rowGroup in rowGroups.Groups)
+                        foreach (var group in rowGroups.Groups)
                         {
-                            // create a new row group in the file
-                            using (ParquetRowGroupWriter groupWriter = parquetWriter.CreateRowGroup())
-                            {
-                                foreach (var kvp in rowGroup.Data)
-                                {
-                                    if (rowGroups.Fields.TryGetValue(kvp.Key, out var field) == false)
-                                        continue;
+                            WriteGroup(parquetWriter, group, rowGroups);
+                            LogStats(group, rowGroups.TableName, rowGroups.PartitionKey);
+                            count += group.Count;
 
-                                    var data = kvp.Value;
-                                    Array array = default;
-
-                                    // todo handle more types
-                                    switch (field.DataType)
-                                    {
-                                        case DataType.Unspecified:
-                                            // todo
-                                            break;
-                                        case DataType.Boolean:
-                                            array = ((List<bool>)data).ToArray();
-                                            break;
-                                        case DataType.Int32:
-                                        case DataType.Int64:
-                                            array = ((List<long>)data).ToArray();
-                                            break;
-                                        case DataType.String:
-                                            array = ((List<string>)data).ToArray();
-                                            break;
-                                        case DataType.Float:
-                                        case DataType.Double:
-                                        case DataType.Decimal:
-                                            array = ((List<double>)data).ToArray();
-                                            break;
-                                        default:
-                                            throw new ArgumentOutOfRangeException();
-                                    }
-
-                                    groupWriter.WriteColumn(new DataColumn(field, array));
-
-                                }
-
-                                // todo log stats
-
-                                count += rowGroup.Count;
-                            }
                         }
                     }
 
@@ -201,6 +161,48 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
             return count;
         }
 
+        private void WriteGroup(ParquetWriter parquetWriter, RowGroup group, RowGroups rowGroups)
+        {
+            using (ParquetRowGroupWriter groupWriter = parquetWriter.CreateRowGroup())
+            {
+                foreach (var kvp in group.Data)
+                {
+                    if (rowGroups.Fields.TryGetValue(kvp.Key, out var field) == false)
+                        continue;
+
+                    var data = kvp.Value;
+                    Array array = default;
+
+                    // todo handle more types
+                    switch (field.DataType)
+                    {
+                        case DataType.Unspecified:
+                            // todo
+                            break;
+                        case DataType.Boolean:
+                            array = ((List<bool>)data).ToArray();
+                            break;
+                        case DataType.Int32:
+                        case DataType.Int64:
+                            array = ((List<long>)data).ToArray();
+                            break;
+                        case DataType.String:
+                            array = ((List<string>)data).ToArray();
+                            break;
+                        case DataType.Float:
+                        case DataType.Double:
+                        case DataType.Decimal:
+                            array = ((List<double>)data).ToArray();
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    groupWriter.WriteColumn(new DataColumn(field, array));
+                }
+            }
+        }
+
         private void UploadToDestination(Stream stream, string path)
         {
             var connection = _configuration.Connection;
@@ -210,6 +212,7 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
                     var s3Settings = BackupTask.GetBackupConfigurationFromScript(connection.S3Settings, x => JsonDeserializationServer.S3Settings(x), 
                         Database, updateServerWideSettingsFunc: null, serverWide: false);
 
+                    // todo
                     //UploadToS3(s3Settings, stream, path);
                     break;
                 default:
@@ -235,6 +238,14 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
             }
         }
 
+        private void LogStats(RowGroup group, string name, string key)
+        {
+            if (Logger.IsInfoEnabled)
+            {
+                Logger.Info($"[{Name}] Inserted {group.Count} records to '{name}/{key}' table " +
+                            $"from the following documents: {string.Join(", ", group.Ids)}");
+            }
+        }
 
         private string GetPath(RowGroups group, out string remotePath)
         {
