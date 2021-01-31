@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Parquet.Data;
+using Raven.Server.Documents.ETL.Providers.SQL;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Parquet
@@ -49,8 +50,9 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
         public void Add(ToParquetItem item)
         {
             var group = GetCurrentGroup();
-
+            group.Ids.Add(item.DocumentId);
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            
             foreach (var prop in item.Properties)
             {
                 var propName = prop.Id;
@@ -71,7 +73,7 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
                         break;
                     case BlittableJsonToken.Null:
                         if (newField)
-                            AddOrUpdateField(propType, propName, data, group);
+                            UpdateField(propType, propName, data, group);
                         else
                             AddDefaultData(data, dataType, 1);
                         continue;
@@ -98,7 +100,7 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
 
                 if (newField)
                 {
-                    AddOrUpdateField(dataType = propType, propName, data, group);
+                    UpdateField(dataType = propType, propName, data, group);
                 }
 
                 else if (data != null && dataType == DataType.Unspecified)
@@ -108,29 +110,10 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
                     
                     Debug.Assert(data.Count == 0, "Invalid data. Data type is 'Unspecified', but data.Count = " + data.Count);
 
-                    AddOrUpdateField(dataType = propType, propName, data, @group);
+                    UpdateField(dataType = propType, propName, data, group);
                 }
 
-                // add new value
-                switch (dataType)
-                {
-                    case DataType.Unspecified:
-                        break;
-                    case DataType.Boolean:
-                        data?.Add((bool)prop.Value);
-                        break;
-                    case DataType.Int64:
-                        data?.Add((long)prop.Value);
-                        break;
-                    case DataType.String:
-                        data?.Add(prop.Value.ToString());
-                        break;
-                    case DataType.Double:
-                        data?.Add((double)prop.Value);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
+                AddNewValue(data, dataType, prop.Value);
             }
 
 
@@ -146,10 +129,34 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
             group.Count++;
         }
 
-        private void AddOrUpdateField(DataType dataType, string propName, IList data, RowGroup group)
+        private static void AddNewValue(IList data, DataType dataType, object value)
+        {
+            switch (dataType)
+            {
+                case DataType.Unspecified:
+                    break;
+                case DataType.Boolean:
+                    data?.Add((bool)value);
+                    break;
+                case DataType.Int64:
+                    data?.Add((long)value);
+                    break;
+                case DataType.String:
+                    data?.Add(value.ToString());
+                    break;
+                case DataType.Double:
+                    data?.Add((double)value);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private void UpdateField(DataType dataType, string propName, IList data, RowGroup group)
         {
             _dataFields[propName] = dataType;
             group.Data[propName] = data;
+
             AddDefaultData(data, dataType, group.Count);
         }
 
@@ -238,8 +245,11 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
         public RowGroup()
         {
             Data = new Dictionary<string, IList>();
+            Ids = new List<string>();
         }
         public Dictionary<string, IList> Data { get; set; }
+
+        public List<string> Ids { get; }
 
         public int Count { get; internal set; }
     }
