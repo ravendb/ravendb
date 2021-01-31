@@ -6,11 +6,16 @@ using System.Threading;
 using Parquet;
 using Parquet.Data;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.S3;
+using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -26,11 +31,15 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
         private Timer _timer;
         private const long MinTimeToWait = 1000;
 
+        private readonly ParquetEtlConfiguration _configuration;
+
         public ParquetEtl(Transformation transformation, ParquetEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, ParquetEtlTag)
         {
             Metrics = S3Metrics;
-            var etlFrequency = configuration.ETLFrequency;
+            _configuration = configuration;
+
+            var etlFrequency = _configuration.ETLFrequency;
             var dueTime = GetDueTime(etlFrequency);
 
             _timer = new Timer(_ => _waitForChanges.Set(), null, dueTime, etlFrequency);
@@ -126,10 +135,10 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
             foreach (var rowGroups in records)
             {
                 var fields = rowGroups.Fields.Values;
-                var path = GetTempPath();
+                var localPath = GetPath(rowGroups, out var remotePath);
 
                 // todo split to multiple files if needed
-                using (Stream fileStream = File.OpenWrite(path))
+                using (Stream fileStream = File.OpenWrite(localPath))
                 {
                     using (var parquetWriter = new ParquetWriter(new Schema(fields), fileStream))
                     {
@@ -140,8 +149,10 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
                             {
                                 foreach (var kvp in rowGroup.Data)
                                 {
+                                    if (rowGroups.Fields.TryGetValue(kvp.Key, out var field) == false)
+                                        continue;
+
                                     var data = kvp.Value;
-                                    var field = rowGroups.Fields[kvp.Key];
                                     Array array = default;
 
                                     // todo handle more types
@@ -171,25 +182,66 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
 
                                     groupWriter.WriteColumn(new DataColumn(field, array));
 
-                                    count += data.Count;
-
-                                    // todo log stats
                                 }
+
+                                // todo log stats
+
+                                count += rowGroup.Count;
                             }
                         }
                     }
+
+                    UploadToDestination(fileStream, remotePath);
                 }
 
-                // todo upload parquet file to s3/bucketName/TableName/PartitionKey/ and delete file from disc 
+
+                // todo delete file from disc 
             }
 
             return count;
         }
 
-        private string GetTempPath()
+        private void UploadToDestination(Stream stream, string path)
+        {
+            var connection = _configuration.Connection;
+            switch (connection.Destination)
+            {
+                case ParquetEtlDestination.S3:
+                    var s3Settings = BackupTask.GetBackupConfigurationFromScript(connection.S3Settings, x => JsonDeserializationServer.S3Settings(x), 
+                        Database, updateServerWideSettingsFunc: null, serverWide: false);
+
+                    //UploadToS3(s3Settings, stream, path);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private void UploadToS3(S3Settings s3Settings, Stream stream, string path)
+        {
+            var progress = new Progress();
+            using (var client = new RavenAwsS3Client(s3Settings, progress, logger: null, CancellationToken))
+            {
+                var prefix = string.IsNullOrWhiteSpace(s3Settings.RemoteFolderName)
+                    ? string.Empty
+                    : $"{s3Settings.RemoteFolderName}/";
+
+                var key = Path.Combine(prefix, path);
+
+                client.PutObject(key, stream, new Dictionary<string, string>
+                {
+                    {"Description", $"Parquet ETL to S3 for db {Database.Name} at {SystemTime.UtcNow}"}
+                });
+            }
+        }
+
+
+        private string GetPath(RowGroups group, out string remotePath)
         {
             var dir = Configuration.TempDirectoryPath ?? Path.GetTempPath();
-            var fileName = $"{Database.Name}_{Guid.NewGuid()}.parquet"; 
+            var fileName = $"{Database.Name}_{Guid.NewGuid()}.parquet";
+
+            remotePath = Path.Combine(group.TableName, group.PartitionKey, fileName);
 
             return Path.Combine(dir, fileName);
         }
