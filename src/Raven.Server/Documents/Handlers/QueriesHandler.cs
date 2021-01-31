@@ -268,9 +268,10 @@ namespace Raven.Server.Documents.Handlers
                         ["Value"] = val
                     });
                 }
-
+                var added = new HashSet<(string, string, object)>();
                 foreach (var edge in results.Edges)
                 {
+                    added.Clear();
                     var array = new DynamicJsonArray();
                     var djv = new DynamicJsonValue
                     {
@@ -284,6 +285,8 @@ namespace Raven.Server.Documents.Handlers
                         {
                             edgeVal = d.Id?.ToString() ?? "anonymous/" + Guid.NewGuid();
                         }
+                        if(added.Add((item.Source, item.Destination, edgeVal)) == false)
+                            continue;
                         array.Add(new DynamicJsonValue
                         {
                             ["From"] = item.Source,
