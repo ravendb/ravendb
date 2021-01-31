@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
@@ -22,7 +23,7 @@ namespace SlowTests.Server.Documents.ETL
         {
         }
 
-
+        
         [Fact]
         public async Task SimpleTransformation()
         {
@@ -91,7 +92,7 @@ loadToOrders(key,
                         using (var parquetReader = new ParquetReader(fs))
                         {
                             Assert.Equal(1, parquetReader.RowGroupCount);
-                            Assert.Equal(3, parquetReader.Schema.Fields.Count);
+                            Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
 
                             using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
                             foreach (var field in parquetReader.Schema.Fields)
@@ -190,7 +191,6 @@ loadToOrders(key, o);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-
                     var files = Directory.GetFiles(path);
                     Assert.Equal(1, files.Length);
 
@@ -200,7 +200,7 @@ loadToOrders(key, o);
                     using (var parquetReader = new ParquetReader(fs))
                     {
                         Assert.Equal(1, parquetReader.RowGroupCount);
-                        Assert.Equal(3, parquetReader.Schema.Fields.Count);
+                        Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
 
                         using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
                         foreach (var field in  parquetReader.Schema.Fields)
@@ -304,7 +304,7 @@ loadToOrders(key, o);
                     using (var parquetReader = new ParquetReader(fs))
                     {
                         Assert.Equal(1, parquetReader.RowGroupCount);
-                        Assert.Equal(2, parquetReader.Schema.Fields.Count);
+                        Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
 
                         using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
                         foreach (var field in parquetReader.Schema.Fields)
@@ -361,7 +361,7 @@ loadToOrders(key, o);
                     var timeWaited = sw.Elapsed.TotalMilliseconds;
                     sw.Stop();
 
-                    Assert.True(timeWaited >= TimeSpan.FromSeconds(57).TotalMilliseconds, "time is " + timeWaited);
+                    Assert.True(timeWaited >= TimeSpan.FromSeconds(57).TotalMilliseconds);
 
                     files = Directory.GetFiles(path);
                     Assert.Equal(2, files.Length);
@@ -380,10 +380,113 @@ loadToOrders(key, o);
             }
         }
 
-        private static string GetTempPath(string name)
+        [Fact]
+        public async Task SimpleTransformation4()
+        {
+            var path = GetTempPath("Orders");
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    var baseline = new DateTime(2020, 1, 1);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 1; i <= 10; i++)
+                        {
+                            var o = new Query.Order
+                            {
+                                Id = $"orders/{i}",
+                                OrderedAt = baseline.AddDays(i),
+                            };
+
+                            if (i % 2 == 0)
+                                o.Company = "companies/" + i;
+
+                            await session.StoreAsync(o);
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+
+                    var script = @"
+var o = {
+    OrderId: id(this),
+    Company : this.Company
+};
+
+var orderDate = new Date(this.OrderedAt);
+var year = orderDate.getFullYear();
+var month = orderDate.getMonth();
+var key = new Date(year, month);
+
+loadToOrders(key, o);
+";
+
+                    SetupS3Etl(store, script, path, TimeSpan.FromMinutes(10));
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    var files = Directory.GetFiles(path);
+                    Assert.Equal(1, files.Length);
+
+                    var expectedFields = new[] { "OrderId", "Company" };
+
+                    using (var fs = File.OpenRead(files[0]))
+                    using (var parquetReader = new ParquetReader(fs))
+                    {
+                        Assert.Equal(1, parquetReader.RowGroupCount);
+                        Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
+
+                        using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
+                        foreach (var field in parquetReader.Schema.Fields)
+                        {
+                            Assert.True(field.Name.In(expectedFields));
+
+                            var data = rowGroupReader.ReadColumn((DataField)field).Data;
+                            Assert.True(data.Length == 10);
+
+                            var count = 1;
+                            foreach (var val in data)
+                            {
+                                switch (field.Name)
+                                {
+                                    case "OrderId":
+                                        Assert.Equal($"orders/{count}", val);
+                                        break;
+                                    case "Company":
+                                        string expected = count % 2 == 0 ? $"companies/{count}" : null;
+                                        Assert.Equal(expected, val);
+                                        break;
+                                }
+
+                                count++;
+
+                            }
+                        }
+                    }
+                }
+
+            }
+            finally
+            {
+                var di = new DirectoryInfo(path);
+                foreach (var file in di.EnumerateFiles())
+                {
+                    file.Delete();
+                }
+
+                di.Delete();
+            }
+        }
+
+        private static string GetTempPath(string collection, [CallerMemberName] string caller = null)
         {
             var tmpPath = Path.GetTempPath();
-            return Directory.CreateDirectory(Path.Combine(tmpPath, name)).FullName;
+            return Directory.CreateDirectory(Path.Combine(tmpPath, caller, collection)).FullName;
         }
 
         protected void SetupS3Etl(DocumentStore store, string script, string path, TimeSpan frequency)

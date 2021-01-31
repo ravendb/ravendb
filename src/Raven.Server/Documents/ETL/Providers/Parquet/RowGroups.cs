@@ -14,36 +14,51 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
             TableName = name;
             PartitionKey = key;
             Groups = new List<RowGroup>();
-            Fields = new Dictionary<string, DataField>();
+            _dataFields = new Dictionary<string, DataType>();
         }
 
         public string TableName { get; set; }
 
         public string PartitionKey { get; set; }
 
-        public Dictionary<string, DataField> Fields { get; private set; }
+        public Dictionary<string, DataField> Fields => _fields ??= GenerateDataFields();
 
         public List<RowGroup> Groups { get; }
 
+        private readonly Dictionary<string, DataType> _dataFields;
+
+        private Dictionary<string, DataField> _fields;
+
         private const int MaxItemsPerGroup = 50_000;
+
+        private Dictionary<string, DataField> GenerateDataFields()
+        {
+            var fields = new Dictionary<string, DataField>(_dataFields.Count);
+
+            foreach (var kvp in _dataFields)
+            {
+                if (kvp.Value == DataType.Unspecified)
+                    continue;
+
+                fields[kvp.Key] = new DataField(kvp.Key, kvp.Value);
+            }
+
+            return fields;
+        }
 
         public void Add(ToParquetItem item)
         {
             var group = GetCurrentGroup();
 
-            //Debug.Assert(Fields.Length == propCount, "Invalid Fields info");
-            //Debug.Assert(group.Data?.Count == propCount, "Invalid group data");
-
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i < item.Properties.Count; i++)
+            foreach (var prop in item.Properties)
             {
-                var prop = item.Properties[i];
                 var propName = prop.Id;
                 names.Add(propName);
 
-                DataType type = DataType.Unspecified;
+                DataType propType = DataType.Unspecified;
 
-                var newField = Fields.TryGetValue(propName, out var df) == false;
+                var newField = _dataFields.TryGetValue(propName, out var dataType) == false;
                 group.Data.TryGetValue(propName, out var data);
 
                 switch (prop.Type)
@@ -55,23 +70,26 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
                         // todo
                         break;
                     case BlittableJsonToken.Null:
-                        data?.Add(default);
-                        break;
+                        if (newField)
+                            AddOrUpdateField(propType, propName, data, group);
+                        else
+                            AddDefaultData(data, dataType, 1);
+                        continue;
                     case BlittableJsonToken.Integer:
-                        type = DataType.Int64;
+                        propType = DataType.Int64;
                         data ??= new List<long>();
                         break;
                     case BlittableJsonToken.LazyNumber:
                         // todo
-                        type = DataType.Double;
+                        propType = DataType.Double;
                         data ??= new List<double>();
                         break;
                     case BlittableJsonToken.String:
-                        type = DataType.String;
+                        propType = DataType.String;
                         data ??= new List<string>();
                         break;
                     case BlittableJsonToken.Boolean:
-                        type = DataType.Boolean;
+                        propType = DataType.Boolean;
                         data ??= new List<bool>();
                         break;
                     default:
@@ -80,29 +98,20 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
 
                 if (newField)
                 {
-                    df = new DataField(propName, type);
-                    Fields.Add(propName, df);
-
-                    AddDefaultData(data, type, group.Count);
-                    group.Data.Add(propName, data);
+                    AddOrUpdateField(dataType = propType, propName, data, group);
                 }
 
-                var dataType = df.DataType;
-                if (prop.Type == BlittableJsonToken.Null)
-                {
-                    AddDefaultData(data, dataType, 1);
-                    continue;
-                }
-
-                if (data != null && dataType == DataType.Unspecified)
+                else if (data != null && dataType == DataType.Unspecified)
                 {
                     // existing field that had no values, until now
-                    // need to change the field type and add default values to field data
+                    // need to change the field type and add default values to fields' data
+                    
+                    Debug.Assert(data.Count == 0, "Invalid data. Data type is 'Unspecified', but data.Count = " + data.Count);
 
-                    Fields[propName] = new DataField(propName, dataType = type);
-                    AddDefaultData(data, dataType, group.Count);
+                    AddOrUpdateField(dataType = propType, propName, data, @group);
                 }
 
+                // add new value
                 switch (dataType)
                 {
                     case DataType.Unspecified:
@@ -119,22 +128,29 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
                     case DataType.Double:
                         data?.Add((double)prop.Value);
                         break;
-
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
             }
 
-            foreach (var kvp in Fields)
+
+            foreach (var kvp in _dataFields)
             {
                 if (names.Contains(kvp.Key)) 
                     continue;
 
-                // handle doc with missing prop
-                AddDefaultData(group.Data[kvp.Key], kvp.Value.DataType, 1);
+                // handle item with missing field
+                AddDefaultData(group.Data[kvp.Key], kvp.Value, 1);
             }
 
             group.Count++;
+        }
+
+        private void AddOrUpdateField(DataType dataType, string propName, IList data, RowGroup group)
+        {
+            _dataFields[propName] = dataType;
+            group.Data[propName] = data;
+            AddDefaultData(data, dataType, group.Count);
         }
 
         private void AddDefaultData(IList data, DataType type, long count)
@@ -176,10 +192,10 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
         {
             var group = new RowGroup();
 
-            foreach (var kvp in Fields)
+            foreach (var kvp in _dataFields)
             {
                 IList data = null;
-                switch (kvp.Value.DataType)
+                switch (kvp.Value)
                 {
                     case DataType.Unspecified:
                         break;
@@ -225,6 +241,6 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
         }
         public Dictionary<string, IList> Data { get; set; }
 
-        public long Count { get; internal set; }
+        public int Count { get; internal set; }
     }
 }
