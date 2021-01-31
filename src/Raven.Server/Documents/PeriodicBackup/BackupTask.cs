@@ -270,6 +270,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             Action<T> updateServerWideSettingsFunc)
             where T : BackupSettings
         {
+            return GetBackupConfigurationFromScript(backupSettings, deserializeSettingsFunc, _database, updateServerWideSettingsFunc, _isServerWide);
+        }
+
+        internal static T GetBackupConfigurationFromScript<T>(T backupSettings, Func<BlittableJsonReaderObject, T> deserializeSettingsFunc, DocumentDatabase documentDatabase,
+            Action<T> updateServerWideSettingsFunc, bool serverWide)
+            where T : BackupSettings
+        {
             if (backupSettings == null)
                 return null;
 
@@ -343,12 +350,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                     throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
                 }
 
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     ms.Position = 0;
                     var configuration = context.Sync.ReadForMemory(ms, "backup-configuration-from-script");
                     var result = deserializeSettingsFunc(configuration);
-                    if (_isServerWide)
+                    if (serverWide)
                         updateServerWideSettingsFunc?.Invoke(result);
 
                     return result;
