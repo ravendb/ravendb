@@ -102,6 +102,7 @@ namespace Raven.Client.Documents.Indexes
                         var definition = x.CreateIndexDefinition();
                         definition.Name = x.IndexName;
                         definition.Priority = x.Priority ?? IndexPriority.Normal;
+                        definition.State = x.State ?? IndexState.Normal;
                         return definition;
                     }
                     finally

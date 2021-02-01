@@ -27,6 +27,8 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexPriority Priority { get; set; }
 
+        public IndexState State { get; set; }
+
         public virtual bool HasDynamicFields => false;
 
         public virtual bool HasCompareExchange => false;
@@ -93,6 +95,10 @@ namespace Raven.Server.Documents.Indexes
             writer.WriteInteger((int)Priority);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(State));
+            writer.WriteInteger((int)State);
+            writer.WriteComma();
+
             PersistFields(context, writer);
 
             writer.WriteEndObject();
@@ -138,7 +144,7 @@ namespace Raven.Server.Documents.Indexes
         private long _indexVersion;
         private int? _cachedHashCode;
 
-        protected IndexDefinitionBase(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, T[] mapFields, long indexVersion)
+        protected IndexDefinitionBase(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexState state, T[] mapFields, long indexVersion)
         {
             Name = name;
             Collections = new HashSet<string>(collections, StringComparer.OrdinalIgnoreCase);
@@ -163,6 +169,7 @@ namespace Raven.Server.Documents.Indexes
 
             LockMode = lockMode;
             Priority = priority;
+            State = state;
             _indexVersion = indexVersion;
         }
 
@@ -447,6 +454,14 @@ namespace Raven.Server.Documents.Indexes
                 throw new InvalidOperationException("No persisted priority");
 
             return (IndexPriority)priorityAsInt;
+        }
+
+        protected static IndexState ReadState(BlittableJsonReaderObject reader)
+        {
+            if (reader.TryGet(nameof(State), out int StateAsInt) == false)
+                throw new InvalidOperationException("No persisted state");
+
+            return (IndexState)StateAsInt;
         }
 
         protected static long ReadVersion(BlittableJsonReaderObject reader)

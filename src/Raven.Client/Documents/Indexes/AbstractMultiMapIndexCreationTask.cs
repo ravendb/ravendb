@@ -92,7 +92,8 @@ namespace Raven.Client.Documents.Indexes
                 AdditionalSources = AdditionalSources,
                 Configuration = Configuration,
                 LockMode = LockMode,
-                Priority = Priority
+                Priority = Priority,
+                State = State
             }.ToIndexDefinition(Conventions, validateMap: false);
 
             foreach (var map in _maps.Select(generateMap => generateMap()))

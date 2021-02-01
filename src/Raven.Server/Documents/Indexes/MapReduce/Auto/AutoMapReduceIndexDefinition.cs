@@ -67,6 +67,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 Type = IndexType.AutoMapReduce,
                 LockMode = LockMode,
                 Priority = Priority,
+                State = State,
             };
 
             var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => x.Value.As<AutoIndexField>()).Select(x => $"<Name:{x.Name}#Operation:{x.Aggregation}>"))}]";
@@ -171,6 +172,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             var lockMode = ReadLockMode(reader);
             var priority = ReadPriority(reader);
+            var state = ReadState(reader);
             var version = ReadVersion(reader);
 
             if (reader.TryGet(nameof(Collections), out BlittableJsonReaderArray jsonArray) == false)
@@ -228,7 +230,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields, version)
             {
                 LockMode = lockMode,
-                Priority = priority
+                Priority = priority,
+                State = state
             };
         }
     }

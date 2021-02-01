@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public readonly IndexDefinition IndexDefinition;
 
         public MapIndexDefinition(IndexDefinition definition, IEnumerable<string> collections, string[] outputFields, bool hasDynamicFields, bool hasCompareExchange, long indexVersion)
-            : base(definition.Name, collections, definition.LockMode ?? IndexLockMode.Unlock, definition.Priority ?? IndexPriority.Normal, GetFields(definition, outputFields), indexVersion)
+            : base(definition.Name, collections, definition.LockMode ?? IndexLockMode.Unlock, definition.Priority ?? IndexPriority.Normal, definition.State ??IndexState.Normal, GetFields(definition, outputFields), indexVersion)
         {
             _hasDynamicFields = hasDynamicFields;
             _hasCompareExchange = hasCompareExchange;
@@ -92,6 +92,7 @@ namespace Raven.Server.Documents.Indexes.Static
             definition.Type = IndexDefinition.Type;
             definition.LockMode = LockMode;
             definition.Priority = Priority;
+            definition.State = State;
             return definition;
         }
 
@@ -122,9 +123,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     definition.Name = ReadName(reader);
                     definition.LockMode = ReadLockMode(reader);
                     definition.Priority = ReadPriority(reader);
-
                     version = ReadVersion(reader);
-
+                    definition.State = version < 50000 ? IndexState.Normal : ReadState(reader);
                     return definition;
                 }
             }
