@@ -145,12 +145,15 @@ namespace Raven.Server.Utils.Monitoring
     {
         public List<DatabaseMetrics> Results { get; set; } = new List<DatabaseMetrics>();
         public string PublicServerUrl { get; set; }
+        
+        public string NodeTag { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(PublicServerUrl)] = PublicServerUrl,
+                [nameof(NodeTag)] = NodeTag,
                 [nameof(Results)] = Results.Select(x => x.ToJson()).ToList()
             };
         }

@@ -266,6 +266,7 @@ namespace Raven.Server.Web.System
             var result = new DatabasesMetrics();
 
             result.PublicServerUrl = Server.Configuration.Core.PublicServerUrl?.UriValue;
+            result.NodeTag = ServerStore.NodeTag;
             
             foreach (DocumentDatabase documentDatabase in databases)
             {
@@ -464,6 +465,7 @@ namespace Raven.Server.Web.System
             var result = new IndexesMetrics();
             
             result.PublicServerUrl = Server.Configuration.Core.PublicServerUrl?.UriValue;
+            result.NodeTag = ServerStore.NodeTag;
             
             foreach (DocumentDatabase documentDatabase in databases)
             {
@@ -480,6 +482,9 @@ namespace Raven.Server.Web.System
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(IndexesMetrics.PublicServerUrl));
                 writer.WriteString(result.PublicServerUrl);
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(IndexesMetrics.NodeTag));
+                writer.WriteString(result.NodeTag);
                 writer.WriteComma();
                 writer.WriteArray(context, nameof(IndexesMetrics.Results), result.Results, (w, c, metrics) =>
                 {

@@ -54,5 +54,7 @@ namespace Raven.Server.Utils.Monitoring
         public List<IndexMetrics> Results { get; set; } = new List<IndexMetrics>();
         
         public string PublicServerUrl { get; set; }
+        
+        public string NodeTag { get; set; }
     }
 }
