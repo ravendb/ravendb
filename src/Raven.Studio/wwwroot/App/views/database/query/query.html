@@ -227,7 +227,7 @@
                 Results &nbsp; <span class="label" data-bind="text: totalResultsForUi().toLocaleString() + (hasMoreUnboundedResults() ? '+' : ''), css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }"></span>
             </button>
             <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToSpatialMapTab, css: { active: showMapView }, visible: isSpatialQuery">
-                <span>Spatial Map</span> &nbsp; <span class="label" data-bind="text: totalNumberOfMarkers, css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }"></span>
+                <i class="icon-spatial-map-view"></i><span>Spatial Map</span> &nbsp; <span class="label" data-bind="text: totalNumberOfMarkers, css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }"></span>
             </button>
             <!-- ko foreach: includesCache -->
             <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToIncludesTab, css: { active: $parent.currentTab() === $data }">
