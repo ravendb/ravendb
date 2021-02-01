@@ -789,7 +789,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         FolderPath = backupPath
                     },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
+                    FullBackupFrequency = "0 0 1 1 *" // at 00:00 on 1st January
                 };
 
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
