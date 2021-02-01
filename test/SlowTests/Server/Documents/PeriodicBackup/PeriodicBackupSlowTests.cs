@@ -2215,6 +2215,24 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
+        public async Task PeriodicBackup_WhenEnabledAndDefinesNoDestinations_ShouldThrows()
+        {
+            using var store = GetDocumentStore();
+
+            var config = new PeriodicBackupConfiguration
+            {
+                BackupType = BackupType.Backup,
+                FullBackupFrequency = "* * * * *"
+            };
+
+            var operation = new UpdatePeriodicBackupOperation(config);
+
+            Assert.False(config.ValidateDestinations(out var message));
+            var exception = await Assert.ThrowsAnyAsync<Exception>(async () => await store.Maintenance.SendAsync(operation));
+            Assert.Contains(message, exception.Message);
+        }
+
+        [Fact]
         public async Task ManualBackup_WhenDefinesNoDestinations_ShouldThrowsOnServerAsWell()
         {
             using var store = GetDocumentStore();
@@ -2230,8 +2248,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var client = store.GetRequestExecutor(store.Database).HttpClient;
                 var response = await client.SendAsync(request);
 
+                Assert.False(config.ValidateDestinations(out var message));
                 var exception = await Assert.ThrowsAnyAsync<Exception>(async () => await ExceptionDispatcher.Throw(context, response));
-                Assert.Contains("The backup configuration defines no destinations", exception.Message);
+                Assert.Contains(message, exception.Message);
             }
         }
 
