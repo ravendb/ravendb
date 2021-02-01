@@ -112,6 +112,8 @@ namespace SlowTests.Issues
                     await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
                     var metrics = command.Result;
                     
+                    Assert.Equal(Server.ServerStore.NodeTag, metrics.NodeTag);
+                    
                     Assert.True(metrics.Results.Count >= 1); // in case of parallel tests
 
                     var dbMetrics = metrics.Results.First(x => x.DatabaseName == store.Database);
@@ -176,6 +178,8 @@ namespace SlowTests.Issues
                     var command = new IndexesMonitoringCommand();
                     await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
                     var metrics = command.Result;
+                    
+                    Assert.Equal(Server.ServerStore.NodeTag, metrics.NodeTag);
 
                     var orderByCompanyMetrics = metrics.Results.First(x => x.DatabaseName == store.Database && x.IndexName == "Orders/ByCompany");
                     Assert.NotNull(orderByCompanyMetrics);
