@@ -115,6 +115,11 @@ namespace Raven.Client.Documents.Indexes
         public IndexLockMode? LockMode { get; set; }
 
         /// <summary>
+        /// Index state
+        /// </summary>
+        public IndexState? State { get; set; }
+
+        /// <summary>
         /// Provide a way to dynamically index values with runtime known values
         /// </summary>
         protected object CreateField(
@@ -190,6 +195,9 @@ namespace Raven.Client.Documents.Indexes
                 if (Priority.HasValue)
                     indexDefinition.Priority = Priority.Value;
 
+                if (State.HasValue)
+                    indexDefinition.State = State.Value;
+
                 return store.Maintenance.ForDatabase(database).SendAsync(new PutIndexesOperation(indexDefinition), token);
             }
             finally
@@ -204,6 +212,8 @@ namespace Raven.Client.Documents.Indexes
         string IndexName { get; }
 
         IndexPriority? Priority { get; }
+
+        IndexState? State { get; }
 
         DocumentConventions Conventions { get; set; }
 
@@ -257,6 +267,7 @@ namespace Raven.Client.Documents.Indexes
                 Configuration = Configuration,
                 LockMode = LockMode,
                 Priority = Priority,
+                State = State
             }.ToIndexDefinition(Conventions);
 
             return indexDefinition;

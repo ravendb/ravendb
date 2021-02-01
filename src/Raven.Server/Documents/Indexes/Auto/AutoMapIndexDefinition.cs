@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 Type = IndexType.AutoMap,
                 LockMode = LockMode,
                 Priority = Priority,
+                State = State,
             };
 
             void AddFields(IEnumerable<string> mapFields, IEnumerable<(string Name, IndexFieldOptions Options)> indexFields)

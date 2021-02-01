@@ -70,6 +70,7 @@ namespace Raven.Client.Documents.Indexes
             _definition.Configuration = Configuration;
             _definition.LockMode = LockMode;
             _definition.Priority = Priority;
+            _definition.State = State;
 
             return _definition.Clone();
         }
