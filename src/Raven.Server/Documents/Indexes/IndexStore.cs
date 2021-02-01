@@ -861,10 +861,18 @@ namespace Raven.Server.Documents.Indexes
                 existingIndex.SetPriority(definition.Priority.Value);
 
             if (definition.State.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.State) != 0)
-            {
                 existingIndex.SetState(definition.State.Value);
-            }
         }
+
+        private static void UpdateAutoIndexDefinition(AutoIndexDefinition definition, Index existingIndex, IndexDefinitionCompareDifferences indexDifferences)
+        {
+            if (definition.Priority.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.Priority) != 0)
+                existingIndex.SetPriority(definition.Priority.Value);
+
+            if (definition.State.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.State) != 0)
+                existingIndex.SetState(definition.State.Value);
+        }
+
 
         internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex, out IndexDefinitionCompareDifferences differences)
         {
@@ -1488,18 +1496,26 @@ namespace Raven.Server.Documents.Indexes
 
                     if (staticIndexDefinition.Priority != null && index.Definition.Priority != staticIndexDefinition.Priority)
                         differences |= IndexDefinitionCompareDifferences.Priority;
+
+                    if (staticIndexDefinition.State != null && index.Definition.State != staticIndexDefinition.State)
+                        differences |= IndexDefinitionCompareDifferences.State;
                 }
                 else if (autoIndexDefinition != null)
                 {
                     if (autoIndexDefinition.Priority != index.Definition.Priority)
                         differences |= IndexDefinitionCompareDifferences.Priority;
+
+                    if (autoIndexDefinition.State != index.Definition.State)
+                        differences |= IndexDefinitionCompareDifferences.State;
                 }
 
                 if (differences != IndexDefinitionCompareDifferences.None)
                 {
                     // database record has different lock mode / priority / state setting than persisted locally
-
-                    UpdateStaticIndexDefinition(staticIndexDefinition, index, differences);
+                    if (staticIndexDefinition != null)
+                        UpdateStaticIndexDefinition(staticIndexDefinition, index, differences);
+                    else
+                        UpdateAutoIndexDefinition(autoIndexDefinition, index, differences);
                 }
 
                 var startIndex = true;
@@ -1761,6 +1777,11 @@ namespace Raven.Server.Documents.Indexes
                             newIndexDefinition.Priority.HasValue == false &&
                             oldIndexDefinition.Priority.HasValue)
                             newIndex.SetPriority(oldIndexDefinition.Priority.Value);
+
+                        if (newIndex.Definition.State == IndexState.Normal &&
+                            newIndexDefinition.State.HasValue == false &&
+                            oldIndexDefinition.State.HasValue)
+                            newIndex.SetState(oldIndexDefinition.State.Value);
                     }
                 }
 
@@ -1968,6 +1989,26 @@ namespace Raven.Server.Documents.Indexes
             }
 
             var command = new SetIndexPriorityCommand(name, priority, _documentDatabase.Name, raftRequestId);
+
+            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
+
+            await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
+        }
+
+        public async Task SetState(string name, IndexState state, string raftRequestId)
+        {
+            var index = GetIndex(name);
+            if (index == null)
+                IndexDoesNotExistException.ThrowFor(name);
+
+            var faultyInMemoryIndex = index as FaultyInMemoryIndex;
+            if (faultyInMemoryIndex != null)
+            {
+                faultyInMemoryIndex.SetState(state); // this will throw proper exception
+                return;
+            }
+
+            var command = new SetIndexStateCommand(name, state, _documentDatabase.Name, raftRequestId);
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 

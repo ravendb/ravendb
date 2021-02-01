@@ -269,6 +269,25 @@ namespace Raven.Server.Documents.Handlers.Admin
             return NoContent();
         }
 
+        [RavenAction("/databases/*/admin/indexes/set-state", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task SetState()
+        {
+            var raftRequestId = GetRaftRequestIdFromQuery();
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/set-priority");
+                var parameters = JsonDeserializationServer.Parameters.SetIndexStateParameters(json);
+
+                for (var index = 0; index < parameters.IndexNames.Length; index++)
+                {
+                    var name = parameters.IndexNames[index];
+                    await Database.IndexStore.SetState(name, parameters.State, $"{raftRequestId}/{index}");
+                }
+
+                NoContentStatus();
+            }
+        }
+
         [RavenAction("/databases/*/admin/indexes/dump", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task Dump()
         {
