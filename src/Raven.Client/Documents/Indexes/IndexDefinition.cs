@@ -163,14 +163,7 @@ namespace Raven.Client.Documents.Indexes
 
             if (State != other.State)
             {
-                if ((State == null && other.State == IndexState.Normal) || (State == IndexState.Normal && other.State == null))
-                {
-                    // same
-                }
-                else
-                {
-                    result |= IndexDefinitionCompareDifferences.State;
-                }
+                result |= IndexDefinitionCompareDifferences.State;
             }
 
             if (DictionaryExtensions.ContentEquals(AdditionalSources, other.AdditionalSources) == false)
@@ -458,6 +451,7 @@ namespace Raven.Client.Documents.Indexes
                 Fields = fields,
                 Name = Name,
                 Priority = Priority,
+                State = State,
                 Reduce = Reduce,
                 Maps = new HashSet<string>(Maps),
                 Configuration = new IndexConfiguration(),

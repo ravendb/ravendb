@@ -2093,6 +2093,35 @@ namespace Raven.Server.Documents.Indexes
                 if (State == state)
                     return;
 
+                using (DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                using (var rawRecord = DocumentDatabase.ServerStore.Cluster.ReadRawDatabaseRecord(ctx, DocumentDatabase.Name))
+                {
+                    //If state is different then staticDef.State/autoDef.State this is not a cluster command.
+                    //In this case we can change the state only if the index state in the cluster is normal or idle
+                    if (TryFindIndexDefinition(Definition.Name, rawRecord, out IndexDefinition staticDef, out AutoIndexDefinition autoDef))
+                    {
+                        if (staticDef != null)
+                        {
+                            if ((state != staticDef.State) && ((staticDef.State == IndexState.Disabled) || (staticDef.State == IndexState.Error)))
+                            {
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Can't change state locally for index '{Name}'. Index state set to {staticDef.State} all over the cluster");
+                                return;
+                            }
+                        }
+                        else if (autoDef != null)
+                        {
+                            if ((state != autoDef.State) && ((autoDef.State == IndexState.Disabled) || (autoDef.State == IndexState.Error)))
+                            {
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Can't change state locally for index '{Name}'. Index state set to {autoDef.State} all over the cluster");
+                                return;
+                            }
+                        }
+                    }
+                }
+
                 var message = $"Changing state for '{Name}' from '{State}' to '{state}'.";
 
                 if (state != IndexState.Error)
