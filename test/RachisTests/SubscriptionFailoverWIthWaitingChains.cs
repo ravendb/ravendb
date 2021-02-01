@@ -638,7 +638,7 @@ namespace RachisTests
             }
         }
 
-        private static async Task<SubscriptionStorage.SubscriptionGeneralDataAndStats> GetSubscription(string name, string database, List<RavenServer> nodes, CancellationToken token)
+        internal static async Task<SubscriptionStorage.SubscriptionGeneralDataAndStats> GetSubscription(string name, string database, List<RavenServer> nodes, CancellationToken token = default)
         {
             foreach (var curNode in nodes)
             {
