@@ -129,8 +129,8 @@
         </div>
         <div data-bind="foreach: databases().sortedDatabases">
             <div data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(),
-                            attr: { class: 'panel panel-hover panel-state database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') + ' ' + ($root.isLocalDatabase(name)() ? 'relevant' : '') }">
-                <div data-bind="attr: { 'data-state-text': $root.isLocalDatabase(name)() ? badgeText : 'remote', class: 'state ' + ($root.isLocalDatabase(name)() ? badgeClass() : 'state-remote') }"></div>
+                            attr: { class: 'panel panel-hover panel-state database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') + ' ' + ($root.createIsLocalDatabaseObservable(name)() ? 'relevant' : '') }">
+                <div data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', class: 'state ' + ($root.createIsLocalDatabaseObservable(name)() ? badgeClass() : 'state-remote') }"></div>
                 <div class="padding">
                     <div class="database-header">
                         <div class="info-container flex-horizontal">
@@ -140,12 +140,12 @@
                             </div>
                             <div class="name">
                                 <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase()">
-                                    <small><i data-bind="attr: { class: $root.isLocalDatabase(name)() ? 'icon-database-home': 'icon-database' }"></i></small>
+                                    <small><i data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }"></i></small>
                                     <span data-bind="text: name"></span>
                                 </span>
-                                <a data-bind="attr: { title: name, href: $root.createAllDocumentsUrlObservable($data), target: $root.isLocalDatabase(name)() ? undefined : '_blank' },
+                                <a data-bind="attr: { title: name, href: $root.createAllDocumentsUrlObservable($data), target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' },
                                               css: { 'link-disabled': isBeingDeleted }, visible: canNavigateToDatabase()" href="#">
-                                    <small><i data-bind="attr: { class: $root.isLocalDatabase(name)() ? 'icon-database-home': 'icon-database' }"></i></small><span data-bind="text: name"></span>
+                                    <small><i data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }"></i></small><span data-bind="text: name"></span>
                                 </a>
                             </div>
                             <div class="member">
@@ -177,7 +177,7 @@
                             <div class="actions">
                                 <a class="btn btn-default" href="#" title="Manage the Database Group"
                                    data-bind="css: { 'disabled': !canNavigateToDatabase() || isBeingDeleted() }, 
-                                              attr: { href: $root.createManageDbGroupUrlObsevable($data), target: $root.isLocalDatabase(name)() ? undefined : '_blank' }">
+                                              attr: { href: $root.createManageDbGroupUrlObsevable($data), target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' }">
                                     <i class="icon-manage-dbgroup"></i>
                                     <span>Manage group</span>
                                 </a>
@@ -217,8 +217,8 @@
                                                 <i class="icon-play"></i> Enable indexing
                                             </a>
                                         </li>
-                                        <li class="divider" data-bind="visible: $root.isLocalDatabase(name)"></li>
-                                        <li data-bind="visible: $root.accessManager.canCompactDatabase() && $root.isLocalDatabase(name)()">
+                                        <li class="divider" data-bind="visible: $root.createIsLocalDatabaseObservable(name)"></li>
+                                        <li data-bind="visible: $root.accessManager.canCompactDatabase() && $root.createIsLocalDatabaseObservable(name)()">
                                             <a data-bind="visible: disabled" title="The database is disabled" class="has-disable-reason disabled" data-placement="top">
                                                 <i class="icon-compact"></i> Compact database
                                             </a>
@@ -239,7 +239,7 @@
                     </div>
                 </div>
                 <div class="panel-addon" 
-                     data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }, visible: $root.isLocalDatabase(name)">
+                     data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }, visible: $root.createIsLocalDatabaseObservable(name)">
                 </div>
             </div>
         </div>
