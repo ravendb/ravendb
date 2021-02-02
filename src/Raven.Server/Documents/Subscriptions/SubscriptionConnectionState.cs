@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -34,14 +32,10 @@ namespace Raven.Server.Documents.Subscriptions
 
         private SubscriptionConnection _currentConnection;
 
-
         private readonly ConcurrentQueue<SubscriptionConnection> _recentConnections = new ConcurrentQueue<SubscriptionConnection>();
         private readonly ConcurrentQueue<SubscriptionConnection> _rejectedConnections = new ConcurrentQueue<SubscriptionConnection>();
 
-
         public SubscriptionConnection Connection => _currentConnection;
-
-
 
         // we should have two locks: one lock for a connection and one lock for operations
         // remember to catch ArgumentOutOfRangeException for timeout problems

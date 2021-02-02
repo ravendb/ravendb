@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -177,6 +178,8 @@ namespace Raven.Server.Documents.Handlers
             var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
 
             await Database.SubscriptionStorage.DeleteSubscription(subscriptionName, GetRaftRequestIdFromQuery());
+            
+            Database.RaiseSubscriptionTaskRemovedNotification(subscriptionName);
 
             await NoContent();
         }
@@ -317,6 +320,33 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
         }
+        
+        [RavenAction("/databases/*/subscriptions/performance/live", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
+        public async Task PerformanceLive()
+        {
+            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            {
+                var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
+                var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
+
+                using (var ms = new MemoryStream())
+                using (var collector = new LiveSubscriptionPerformanceCollector(Database))
+                {
+                    // 1. Send data to webSocket without making UI wait upon opening webSocket
+                    await collector.SendStatsOrHeartbeatToWebSocket(receive, webSocket, ContextPool, ms, 100);
+
+                    // 2. Send data to webSocket when available
+                    while (Database.DatabaseShutdown.IsCancellationRequested == false)
+                    {
+                        if (await collector.SendStatsOrHeartbeatToWebSocket(receive, webSocket, ContextPool, ms, 4000) == false)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
 
         private static DynamicJsonValue GetSubscriptionConnectionJson(SubscriptionConnection x)
         {
