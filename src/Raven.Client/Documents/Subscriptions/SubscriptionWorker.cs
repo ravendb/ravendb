@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//  <copyright file="Subscription.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="SubscriptionWorker.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -50,8 +50,8 @@ namespace Raven.Client.Documents.Subscriptions
         private int _forcedTopologyUpdateAttempts = 0;
 
         /// <summary>
-        /// allows the user to define stuff that happens after the confirm was received from the server (this way we know we won't
-        /// get those documents again)
+        /// Allows the user to define stuff that happens after the confirm was received from the server
+        /// (this way we know we won't get those documents again)
         /// </summary>
         public event AfterAcknowledgmentAction AfterAcknowledgment;
 
@@ -428,11 +428,11 @@ namespace Raven.Client.Documents.Subscriptions
 
                     while (_processingCts.IsCancellationRequested == false)
                     {
-                        // start the read from the server
+                        // start reading the next batch from server (can be before client started processing) // on 1'st thread
                         var readFromServer = ReadSingleSubscriptionBatchFromServer(contextPool, tcpStreamCopy, buffer, batch);
                         try
                         {
-                            // and then wait for the subscriber to complete
+                            // wait for the subscriber to complete processing // on 2'nd thread
                             await notifiedSubscriber.ConfigureAwait(false);
                         }
                         catch (Exception)
@@ -451,13 +451,13 @@ namespace Raven.Client.Documents.Subscriptions
                             }
                             throw;
                         }
-                        var incomingBatch = await readFromServer.ConfigureAwait(false);
+                        var incomingBatch = await readFromServer.ConfigureAwait(false); // wait for batch reading to end
 
                         _processingCts.Token.ThrowIfCancellationRequested();
 
                         var lastReceivedChangeVector = batch.Initialize(incomingBatch);
 
-                        notifiedSubscriber = Task.Run(async () =>
+                        notifiedSubscriber = Task.Run(async () => // the 2'nd thread
                         {
                             // ReSharper disable once AccessToDisposedClosure
                             using (incomingBatch.ReturnContext)
@@ -503,9 +503,8 @@ namespace Raven.Client.Documents.Subscriptions
                 if (_disposed == false)
                     throw;
 
-                // otherwise this is thrown when shutting down, it
-                // isn't an error, so we don't need to treat
-                // it as such
+                // otherwise this is thrown when shutting down,
+                // it isn't an error, so we don't need to treat it as such
             }
         }
 
