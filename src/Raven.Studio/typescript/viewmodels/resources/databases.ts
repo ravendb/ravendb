@@ -116,7 +116,7 @@ class databases extends viewModelBase {
             for (const database of databases) {
                 if (database.hasLoadError()) {
                     result.errored++;
-                } else if (!this.isLocalDatabase(database.name)()) {
+                } else if (!this.isLocalDatabase(database.name)) {
                     result.remote++;
                 } else if (database.disabled()) {
                     result.disabled++;
@@ -399,10 +399,8 @@ class databases extends viewModelBase {
     }
 
     createManageDbGroupUrlObsevable(dbInfo: databaseInfo): KnockoutComputed<string> {
-        const isLocalObservable = this.isLocalDatabase(dbInfo.name);
-
         return ko.pureComputed(() => {
-            const isLocal = isLocalObservable();
+            const isLocal = this.isLocalDatabase(dbInfo.name);
             const link = appUrl.forManageDatabaseGroup(dbInfo);
             if (isLocal) {
                 return link;
@@ -413,10 +411,8 @@ class databases extends viewModelBase {
     }
 
     createAllDocumentsUrlObservable(dbInfo: databaseInfo): KnockoutComputed<string> {
-        const isLocalObservable = this.isLocalDatabase(dbInfo.name);
-
         return ko.pureComputed(() => {
-            const isLocal = isLocalObservable();
+            const isLocal = this.isLocalDatabase(dbInfo.name);
             const link = appUrl.forDocuments(null, dbInfo);
             if (isLocal) {
                 return link;
@@ -692,11 +688,15 @@ class databases extends viewModelBase {
         return true; // don't prevent default action as we have links inside links
     }
 
-    isLocalDatabase(dbName: string) {
+    createIsLocalDatabaseObservable(dbName: string) {
         return ko.pureComputed(() => {
-            const nodeTag = this.clusterManager.localNodeTag();
-            return this.databases().getByName(dbName).isLocal(nodeTag);
+            return this.isLocalDatabase(dbName);
         });
+    }
+    
+    private isLocalDatabase(dbName: string) {
+        const nodeTag = this.clusterManager.localNodeTag();
+        return this.databases().getByName(dbName).isLocal(nodeTag);
     }
     
     openNotificationCenter(dbInfo: databaseInfo) {
