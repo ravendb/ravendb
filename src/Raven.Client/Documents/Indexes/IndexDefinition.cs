@@ -163,7 +163,14 @@ namespace Raven.Client.Documents.Indexes
 
             if (State != other.State)
             {
-                result |= IndexDefinitionCompareDifferences.State;
+                if ((State == null && other.State == IndexState.Normal))
+                {
+                    // same
+                }
+                else
+                {
+                    result |= IndexDefinitionCompareDifferences.State;
+                }
             }
 
             if (DictionaryExtensions.ContentEquals(AdditionalSources, other.AdditionalSources) == false)

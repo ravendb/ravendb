@@ -880,7 +880,12 @@ namespace Raven.Server.Documents.Indexes
 
             var indexDef = indexDefinition as IndexDefinition;
             if (indexDef != null)
+            {
                 differences = existingIndex.Definition.Compare(indexDef);
+                //Index definition.state can be different from index state so we need to check both
+                if ((indexDef.State != null) && (existingIndex.State != indexDef.State))
+                    differences |= IndexDefinitionCompareDifferences.State;
+            }
 
             var indexDefBase = indexDefinition as IndexDefinitionBase;
             if (indexDefBase != null)
