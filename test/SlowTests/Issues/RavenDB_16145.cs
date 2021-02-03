@@ -2,6 +2,7 @@
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Indexing_Should_Throw_Error_If_LoadDocument_Collection_Does_Not_Match()
+        public void Indexing_Should_Not_Throw_Error_If_LoadDocument_Collection_Does_Not_Match_It_Should_Return_Null_Instead()
         {
             using (var store = GetDocumentStore())
             {
@@ -29,10 +30,16 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var errors = WaitForIndexingErrors(store);
-                Assert.Equal(1, errors.Length);
-                Assert.Equal(1, errors[0].Errors.Length);
-                Assert.Contains("Cannot load document 'employees/1-a', because it's collection 'Employees' does not match the requested collection name 'Addresses'.", errors[0].Errors[0].Error);
+                WaitForIndexing(store);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation(new Companies_ByName().IndexName, "Name", null));
+
+                Assert.Equal(1, terms.Length);
+                Assert.Equal("hr", terms[0]);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(new Companies_ByName().IndexName, "Employee", null));
+
+                Assert.Equal(0, terms.Length);
             }
         }
 
@@ -44,7 +51,8 @@ namespace SlowTests.Issues
                                    let employee = LoadDocument<Employee>(company.ExternalId, "Addresses")
                                    select new
                                    {
-                                       Name = company.Name
+                                       Name = company.Name,
+                                       Employee = employee.FirstName
                                    };
             }
         }
