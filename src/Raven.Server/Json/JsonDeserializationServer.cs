@@ -217,7 +217,7 @@ namespace Raven.Server.Json
 
             public static readonly Func<BlittableJsonReaderObject, SetIndexesPriorityOperation.Parameters> SetIndexPriorityParameters = GenerateJsonDeserializationRoutine<SetIndexesPriorityOperation.Parameters>();
 
-            public static readonly Func<BlittableJsonReaderObject, SetIndexesStateOperation.Parameters> SetIndexStateParameters = GenerateJsonDeserializationRoutine<SetIndexesStateOperation.Parameters>();
+            public static readonly Func<BlittableJsonReaderObject, DisableIndexOperation.Parameters> DisableIndexParameters = GenerateJsonDeserializationRoutine<DisableIndexOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, SetLogsConfigurationOperation.Parameters> SetLogsConfigurationParameters = GenerateJsonDeserializationRoutine<SetLogsConfigurationOperation.Parameters>();
 

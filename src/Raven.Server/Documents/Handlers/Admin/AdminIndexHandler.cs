@@ -257,33 +257,25 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         [RavenAction("/databases/*/admin/indexes/disable", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public Task Disable()
-        {
-            var name = GetStringQueryString("name");
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                IndexDoesNotExistException.ThrowFor(name);
-
-            index.Disable();
-
-            return NoContent();
-        }
-
-        [RavenAction("/databases/*/admin/indexes/set-state", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task SetState()
+        public async Task Disable()
         {
             var raftRequestId = GetRaftRequestIdFromQuery();
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/set-priority");
-                var parameters = JsonDeserializationServer.Parameters.SetIndexStateParameters(json);
-
-                for (var index = 0; index < parameters.IndexNames.Length; index++)
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/disable");
+                var parameters = JsonDeserializationServer.Parameters.DisableIndexParameters(json);
+                var name = parameters.IndexName;
+                var index = Database.IndexStore.GetIndex(name);
+                if (index == null)
+                    IndexDoesNotExistException.ThrowFor(name);
+                if (parameters.ClusterWide)
                 {
-                    var name = parameters.IndexNames[index];
-                    await Database.IndexStore.SetState(name, parameters.State, $"{raftRequestId}/{index}");
+                    await Database.IndexStore.SetState(name, IndexState.Disabled, $"{raftRequestId}/{index}");
                 }
-
+                else
+                {
+                    index.Disable();
+                }
                 NoContentStatus();
             }
         }

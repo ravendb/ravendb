@@ -459,7 +459,7 @@ namespace Raven.Server.Documents.Indexes
         protected static IndexState ReadState(BlittableJsonReaderObject reader)
         {
             if (reader.TryGet(nameof(State), out int StateAsInt) == false)
-                throw new InvalidOperationException("No persisted state");
+                return IndexState.Normal;
 
             return (IndexState)StateAsInt;
         }
