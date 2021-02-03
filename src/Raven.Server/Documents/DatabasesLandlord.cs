@@ -317,7 +317,7 @@ namespace Raven.Server.Documents
 
         public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord)
         {
-            var index = ClusterStateMachine.TryGetShardIndex(dbName);
+            var index = ShardHelper.TryGetShardIndex(dbName);
             var tag = index == -1 ? _serverStore.NodeTag : $"{_serverStore.NodeTag}${index}";
 
             var deletionInProgress = DeletionInProgressStatus.No;

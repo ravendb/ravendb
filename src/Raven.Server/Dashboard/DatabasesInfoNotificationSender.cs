@@ -17,6 +17,7 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -120,19 +121,19 @@ namespace Raven.Server.Dashboard
             using (context.OpenReadTransaction())
             {
                 // 1. Fetch databases info
-                foreach (var databaseTuple in serverStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, 0, long.MaxValue))
+                foreach (var rawDatabase in serverStore.Cluster.GetAllRawDatabases(context).SelectMany(r=>r.AsShardsOrNormal()))
                 {
-                    var databaseName = databaseTuple.ItemName.Substring(Constants.Documents.Prefix.Length);
+                    var databaseName = rawDatabase.DatabaseName;
                     if (cts.IsCancellationRequested)
                         yield break;
 
-                    if (isValidFor != null && isValidFor(databaseName) == false)
+                    if (isValidFor != null && isValidFor(ShardHelper.ToDatabaseName(databaseName)) == false)
                         continue;
 
                     if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out var databaseTask) == false)
                     {
                         // database does not exist on this server, is offline or disabled
-                        SetOfflineDatabaseInfo(serverStore, context, databaseName, databasesInfo, drivesUsage, disabled: DatabasesLandlord.IsDatabaseDisabled(databaseTuple.Value));
+                        SetOfflineDatabaseInfo(serverStore, context, databaseName, databasesInfo, drivesUsage, disabled: DatabasesLandlord.IsDatabaseDisabled(rawDatabase.Raw));
                         continue;
                     }
 
@@ -154,7 +155,7 @@ namespace Raven.Server.Dashboard
                         };
                         indexingSpeed.Items.Add(indexingSpeedItem);
 
-                        var replicationFactor = GetReplicationFactor(databaseTuple.Value);
+                        var replicationFactor = GetReplicationFactor(rawDatabase.Raw);
                         var documentsStorage = database.DocumentsStorage;
                         var indexStorage = database.IndexStore;
 

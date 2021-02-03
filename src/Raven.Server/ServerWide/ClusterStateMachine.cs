@@ -1273,7 +1273,7 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 remove = JsonDeserializationCluster.RemoveNodeFromDatabaseCommand(cmd);
                 var databaseName = remove.DatabaseName;
-                int shardIndex = TryGetShardIndexAndDatabaseName(ref databaseName);
+                int shardIndex = ShardHelper.TryGetShardIndexAndDatabaseName(ref databaseName);
                 var databaseNameLowered = databaseName.ToLowerInvariant();
                 using (Slice.From(context.Allocator, "db/" + databaseNameLowered, out Slice lowerKey))
                 using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
@@ -3028,7 +3028,7 @@ namespace Raven.Server.ServerWide
         public RawDatabaseRecord ReadRawDatabaseRecord<TTransaction>(TransactionOperationContext<TTransaction> context, string name, out long etag)
             where TTransaction : RavenTransaction
         {
-            int shardIndex = TryGetShardIndexAndDatabaseName(ref name);
+            int shardIndex = ShardHelper.TryGetShardIndexAndDatabaseName(ref name);
             var rawRecord = Read(context, "db/" + name.ToLowerInvariant(), out etag);
             if (rawRecord == null)
                 return null;
@@ -3057,39 +3057,12 @@ namespace Raven.Server.ServerWide
         {
             return ReadRawDatabaseRecord(context, name, out _);
         }
-        
-        
-        public static int TryGetShardIndexAndDatabaseName(ref string name)
-        {
-            int shardIndex = name.IndexOf('$');
-            if (shardIndex != -1)
-            {
-                var slice = name.AsSpan().Slice(shardIndex + 1);
-                name = name.Substring(0, shardIndex);
-                if (int.TryParse(slice, out shardIndex) == false)
-                    throw new ArgumentNullException(nameof(name), "Unable to parse sharded database name: " + name);
-            }
 
-            return shardIndex;
-        }
-
-        public static int TryGetShardIndex(string name)
-        {
-            int shardIndex = name.IndexOf('$');
-            if (shardIndex != -1)
-            {
-                var slice = name.AsSpan().Slice(shardIndex + 1);
-                if (int.TryParse(slice, out shardIndex) == false)
-                    throw new ArgumentNullException(nameof(name), "Unable to parse sharded database name: " + name);
-            }
-
-            return shardIndex;
-        }
 
         public bool DatabaseExists<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
             where TTransaction : RavenTransaction
         {
-            TryGetShardIndexAndDatabaseName(ref name);
+            ShardHelper.TryGetShardIndexAndDatabaseName(ref name);
 
             var dbKey = "db/" + name.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);

@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Sharding
 
         public ShardedContext(ServerStore server, DatabaseRecord record)
         {
+            //TODO: reduce the record to the needed fields
             _record = record;
             _lastClientConfigurationIndex = server.LastClientConfigurationIndex;
 
@@ -27,6 +28,7 @@ namespace Raven.Server.Documents.Sharding
             {
                 var allNodes = server.GetClusterTopology().AllNodes;
                 var urls = record.Shards[i].AllNodes.Select(tag => allNodes[tag]).ToArray();
+                // TODO: pool request executors?
                 RequestExecutors[i] = RequestExecutor.Create(
                     urls,
                     record.DatabaseName + "$" + i,

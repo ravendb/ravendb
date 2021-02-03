@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -14,8 +13,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Extensions;
@@ -24,7 +23,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -154,6 +152,17 @@ namespace Raven.Server.Web
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// puts the given string in TrafficWatch property of HttpContext.Items
+        /// puts the given type in TrafficWatchChangeType property of HttpContext.Items
+        /// </summary>
+        /// <param name="str"></param>
+        /// <param name="type"></param>
+        public void AddStringToHttpContext(string str, TrafficWatchChangeType type)
+        {
+            HttpContext.Items["TrafficWatch"] = (str, type);
         }
 
         protected async Task WaitForExecutionOnSpecificNode(TransactionOperationContext context, ClusterTopology clusterTopology, string node, long index)

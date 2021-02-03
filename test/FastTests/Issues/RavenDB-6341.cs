@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using Raven.Client.Http;
 using Raven.Server;
+using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -69,6 +70,7 @@ namespace FastTests.Issues
                 foreach (var commandType in assembly
                     .GetTypes()
                     .Where(x => IsSubclassOfGenericType(typeof(RavenCommand<>), x))
+                    .Where(x=> IsSubclassOfGenericType(typeof(ShardedBaseCommand<>), x) == false) // those are server-side commands
                     .Where(x => x.IsNotPublic == false))
                 {
                     yield return commandType;
