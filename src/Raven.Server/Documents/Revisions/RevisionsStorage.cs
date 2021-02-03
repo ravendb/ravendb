@@ -341,6 +341,16 @@ namespace Raven.Server.Documents.Revisions
 
             if (flags.Contain(DocumentFlags.Resolved))
             {
+                if (Configuration == null)
+                    return false;
+                var configuration = GetRevisionsConfiguration(collectionName.Name);
+
+                if (configuration.Disabled)
+                    return false;
+
+                if (configuration.MinimumRevisionsToKeep == 0)
+                    return false;
+
                 using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))
                 {
                     var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
