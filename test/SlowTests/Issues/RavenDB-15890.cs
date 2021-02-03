@@ -34,23 +34,50 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void SetStateEndPointTest()
+        public void NewDisableEndPointTest1()
         {
             using (var store = GetDocumentStore())
             {
                 new FakeIndex().Execute(store);
 
-                foreach (var expected in new[] { IndexState.Normal, IndexState.Disabled, IndexState.Idle, IndexState.Error })
-                {
-                    store.Maintenance.Send(new SetIndexesStateOperation("FakeIndex", expected));
+                store.Maintenance.Send(new DisableIndexOperation("FakeIndex", false));
 
-                    var db = GetDocumentDatabaseInstanceFor(store).Result;
-                    var indexInstance = db.IndexStore.GetIndex("FakeIndex");
+                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var indexInstance = db.IndexStore.GetIndex("FakeIndex");
 
-                    Assert.Equal(expected, indexInstance.Definition.State);
-                }
+                Assert.Equal(IndexState.Disabled, indexInstance.State);
             }
         }
+
+
+        [Fact]
+        public async Task NewDisableEndPointTest2()
+        {
+            var leader = await CreateRaftClusterAndGetLeader(3);
+            var database = GetDatabaseName();
+            await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
+            var indexName = "SimpleIndex";
+            DocumentDatabase documentDatabase = null;
+            using (var store = new DocumentStore {Database = database, Urls = new[] {leader.WebUrl}}.Initialize())
+            {
+                await new SimpleIndex().ExecuteAsync(store);
+
+                await store.Maintenance.SendAsync(new DisableIndexOperation(indexName, true));
+
+                foreach (var server in Servers)
+                {
+                    await WaitForValueAsync(async () =>
+                    {
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        return documentDatabase.IndexStore.GetIndex(indexName).State;
+                    }, IndexState.Disabled);
+                    Assert.Equal(IndexState.Disabled, documentDatabase.IndexStore.GetIndex(indexName).State);
+                }
+            }
+
+
+        }
+
 
         [Fact]
         public async Task ChangeStaticIndexStateToDisable()
@@ -435,7 +462,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task ClusterWideStateDisableOrErrorCannotChangedLocally()
+        public async Task LastSetStateDetemineTheState()
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
             var database = GetDatabaseName();
@@ -504,7 +531,7 @@ namespace SlowTests.Issues
                         count++;
                 }
 
-                Assert.Equal(0, count);
+                Assert.Equal(1, count);
             }
         }
 

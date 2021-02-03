@@ -123,8 +123,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     definition.Name = ReadName(reader);
                     definition.LockMode = ReadLockMode(reader);
                     definition.Priority = ReadPriority(reader);
+                    definition.State = ReadState(reader);
                     version = ReadVersion(reader);
-                    definition.State = version < 50000 ? IndexState.Normal : ReadState(reader);
                     return definition;
                 }
             }
