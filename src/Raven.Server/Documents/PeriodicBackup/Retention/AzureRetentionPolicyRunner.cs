@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         protected override GetFoldersResult GetSortedFolders()
         {
-            var prefix = $"{_client.RemoteFolderName}{Delimiter}";
+            var prefix = string.IsNullOrWhiteSpace(_client.RemoteFolderName) ? string.Empty : $"{_client.RemoteFolderName}{Delimiter}";
             var result = _client.ListBlobs(prefix, Delimiter, listFolders: true, marker: _nextMarker);
             _nextMarker = result.NextMarker;
 
