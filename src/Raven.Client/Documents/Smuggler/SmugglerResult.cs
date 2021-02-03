@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
@@ -10,14 +11,14 @@ namespace Raven.Client.Documents.Smuggler
 {
     public class SmugglerResult : SmugglerProgressBase, IOperationResult
     {
-        private readonly List<string> _messages;
+        private readonly ConcurrentQueue<string> _messages;
         protected SmugglerProgress _progress;
         private readonly Stopwatch _sw;
 
         public SmugglerResult()
         {
             _sw = Stopwatch.StartNew();
-            _messages = new List<string>();
+            _messages = new ConcurrentQueue<string>();
 
             /*
             *  NOTE:
@@ -47,7 +48,7 @@ namespace Raven.Client.Documents.Smuggler
 
         public IOperationProgress Progress => _progress;
 
-        public IReadOnlyList<string> Messages => _messages;
+        public IReadOnlyCollection<string> Messages => _messages;
 
         public void AddWarning(string message)
         {
@@ -67,13 +68,13 @@ namespace Raven.Client.Documents.Smuggler
         internal void AddMessage(string message)
         {
             Message = message;
-            _messages.Add(Message);
+            _messages.Enqueue(Message);
         }
 
         private void AddMessage(string type, string message)
         {
             Message = $"[{SystemTime.UtcNow:T} {type}] {message}";
-            _messages.Add(Message);
+            _messages.Enqueue(Message);
         }
 
         public override DynamicJsonValue ToJson()
