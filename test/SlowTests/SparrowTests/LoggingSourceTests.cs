@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -300,7 +301,7 @@ namespace SlowTests.SparrowTests
         public async Task LoggingSource_WhileRetentionBySizeOn_ShouldKeepRetentionPolicy(bool compressing)
         {
             const int fileSize = Constants.Size.Kilobyte;
-            const int retentionSize = 5 * Constants.Size.Kilobyte;
+            const int retentionSize = 10 * Constants.Size.Kilobyte;
 
             var name = GetTestName();
 
@@ -328,26 +329,45 @@ namespace SlowTests.SparrowTests
                 Thread.Sleep(10);
             }
 
-            const int threshold = 2 * fileSize;
+            const int threshold = 3 * fileSize;
             long size = 0;
-            string[] afterEndFiles = null;
+            FileInfo[] afterEndFiles = null;
+            var logDirectory = new DirectoryInfo(path);
             var isRetentionPolicyApplied = WaitForValue(() =>
             {
-                Task.Delay(TimeSpan.FromSeconds(1));
-
-                afterEndFiles = Directory.GetFiles(path);
-                AssertNoFileMissing(afterEndFiles);
-                size = afterEndFiles.Select(f => new FileInfo(f)).Sum(f => f.Length);
+                logDirectory.Refresh();
+                afterEndFiles = logDirectory.GetFiles();
+                AssertNoFileMissing(afterEndFiles.Select(f => f.Name).ToArray());
+                size = afterEndFiles.Sum(f => f.Length);
 
                 return Math.Abs(size - retentionSize) <= threshold;
             }, true, 10_000, 1_000);
 
             Assert.True(isRetentionPolicyApplied,
-                $"ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})" +
+                $"{TempInfoToInvestigate(loggingSource)}. ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})" +
                 Environment.NewLine +
-                JustFileNamesAsString(afterEndFiles));
+                FileNamesWithSize(afterEndFiles));
 
             loggingSource.EndLogging();
+        }
+
+        private static string FileNamesWithSize(FileInfo[] files)
+        {
+            var filesInfo = files.Select(f => $"{f.Name}({f.Length})");
+            var logsAroundError = string.Join(',', filesInfo);
+            return logsAroundError;
+        }
+
+        private static string TempInfoToInvestigate(LoggingSource loggingSource)
+        {
+            if (loggingSource.Compressing)
+            {
+                var compressLoggingThread = loggingSource.GetType().GetField("_compressLoggingThread", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(loggingSource) as Thread;
+                if(compressLoggingThread != null)
+                    return $"compressLoggingThread.IsAlive {compressLoggingThread.IsAlive}";
+            }
+
+            return "";
         }
 
         [Theory]
