@@ -69,5 +69,10 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="id"></param>
         void ForceRevisionCreationFor(string id, ForceRevisionStrategy strategy = ForceRevisionStrategy.Before);
+
+        /// <summary>
+        /// Returns the number of revisions for specified document.
+        /// </summary>
+        long GetCountFor(string id);
     }
 }

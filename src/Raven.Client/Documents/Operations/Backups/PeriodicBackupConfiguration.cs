@@ -86,5 +86,17 @@ namespace Raven.Client.Documents.Operations.Backups
             json[nameof(RetentionPolicy)] = RetentionPolicy?.ToJson();
             return json;
         }
+
+        public override bool ValidateDestinations(out string message)
+        {
+            if (HasBackup() || Disabled)
+            {
+                message = null;
+                return true;
+            }
+
+            message = "The backup configuration is enabled without target any destinations";
+            return false;
+        }
     }
 }

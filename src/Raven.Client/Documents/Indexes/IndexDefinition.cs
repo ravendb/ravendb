@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.Extensions;
 
@@ -17,6 +18,8 @@ namespace Raven.Client.Documents.Indexes
     /// </summary>
     public class IndexDefinition
     {
+        private static readonly Regex _newLineCharacters = new Regex("\r?\n", RegexOptions.Compiled);
+
         public IndexDefinition()
         {
             _configuration = new IndexConfiguration();
@@ -110,10 +113,27 @@ namespace Raven.Client.Documents.Indexes
                 return result;
 
             if (Maps.SetEquals(other.Maps) == false)
-                result |= IndexDefinitionCompareDifferences.Maps;
+            {
+                var maps = new HashSet<string>();
+                foreach (var map in Maps)
+                    maps.Add(Normalize(map));
+
+                var otherMaps = new HashSet<string>();
+                foreach (var map in other.Maps)
+                    otherMaps.Add(Normalize(map));
+
+                if (maps.SetEquals(otherMaps) == false)
+                    result |= IndexDefinitionCompareDifferences.Maps;
+            }
 
             if (Equals(Reduce, other.Reduce) == false)
-                result |= IndexDefinitionCompareDifferences.Reduce;
+            {
+                var reduce = Normalize(Reduce);
+                var otherReduce = Normalize(other.Reduce);
+
+                if (Equals(reduce, otherReduce) == false)
+                    result |= IndexDefinitionCompareDifferences.Reduce;
+            }
 
             if (DictionaryExtensions.ContentEquals(other.Fields, Fields) == false)
                 result |= IndexDefinitionCompareDifferences.Fields;
@@ -177,6 +197,14 @@ namespace Raven.Client.Documents.Indexes
                 result |= IndexDefinitionCompareDifferences.AdditionalAssemblies;
 
             return result;
+
+            static string Normalize(string toNormalize)
+            {
+                if (string.IsNullOrEmpty(toNormalize))
+                    return toNormalize;
+
+                return _newLineCharacters.Replace(toNormalize, Environment.NewLine);
+            }
         }
 
         /// <summary>

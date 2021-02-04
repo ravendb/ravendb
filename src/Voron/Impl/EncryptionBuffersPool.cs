@@ -24,8 +24,6 @@ namespace Voron.Impl
 
         public static EncryptionBuffersPool Instance = new EncryptionBuffersPool();
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<EncryptionBuffersPool>("Memory");
-
-        private readonly long _maxBufferSizeToKeepInBytes = new Size(8, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
         private const int MaxNumberOfPagesToCache = 128; // 128 * 8K = 1 MB, beyond that, we'll not both
         private readonly MultipleUseFlag _isLowMemory = new MultipleUseFlag();
         private readonly MultipleUseFlag _isExtremelyLowMemory = new MultipleUseFlag();
@@ -127,17 +125,15 @@ namespace Voron.Impl
 
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
-            if (Disabled || size / Constants.Storage.PageSize > MaxNumberOfPagesToCache ||
-                (_isLowMemory.IsRaised() && generation < Generation))
+            var numberOfPages = size / Constants.Storage.PageSize;
+
+            if (Disabled || numberOfPages > MaxNumberOfPagesToCache || (_isLowMemory.IsRaised() && generation < Generation))
             {
                 // - don't want to pool large buffers
                 // - release all the buffers that were created before we got the low memory event
                 PlatformSpecific.NativeMemory.Free4KbAlignedMemory(ptr, size, allocatingThread);
                 return;
             }
-
-            // updating the thread allocations since we released the memory back to the pool
-            NativeMemory.UpdateMemoryStatsForThread(allocatingThread, size);
 
             var index = Bits.MostSignificantBit(size);
             var allocation = new NativeAllocation
@@ -147,14 +143,23 @@ namespace Voron.Impl
                 InPoolSince = DateTime.UtcNow
             };
 
-            var success = _items[index].TryPush(allocation);
+            var addToPerCorePool = ForTestingPurposes == null || ForTestingPurposes.CanAddToPerCorePool;
+            var success = addToPerCorePool ? _items[index].TryPush(allocation) : false;
 
             if (success)
+            {
+                // updating the thread allocations since we released the memory back to the pool
+                NativeMemory.UpdateMemoryStatsForThread(allocatingThread, size);
                 return;
+            }
+
+            var addToGlobalPool = ForTestingPurposes == null || ForTestingPurposes.CanAddToGlobalPool;
 
             var currentGlobalStack = _globalStacks[index];
-            if (currentGlobalStack.Count < _maxNumberOfAllocationsToKeepInGlobalStackPerSlot)
+            if (addToGlobalPool && currentGlobalStack.Count < _maxNumberOfAllocationsToKeepInGlobalStackPerSlot)
             {
+                // updating the thread allocations since we released the memory back to the pool
+                NativeMemory.UpdateMemoryStatsForThread(allocatingThread, size);
                 currentGlobalStack.Push(allocation);
                 return;
             }
@@ -374,6 +379,23 @@ namespace Voron.Impl
             {
                 PlatformSpecific.NativeMemory.Free4KbAlignedMemory(Ptr, Size, null);
             }
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public bool CanAddToPerCorePool = true;
+
+            public bool CanAddToGlobalPool = true;
         }
     }
 

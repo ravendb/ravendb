@@ -5,10 +5,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -18,6 +21,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -289,7 +293,7 @@ namespace RachisTests
                 {
                     subscription = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)
                     {
-                        MaxErroneousPeriod = TimeSpan.FromSeconds(5),
+                        MaxErroneousPeriod = nodesAmount == 5 ? TimeSpan.FromSeconds(15) : TimeSpan.FromSeconds(5),
                         MaxDocsPerBatch = 1,
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(100)
                     });
@@ -355,7 +359,10 @@ namespace RachisTests
 
                 expectedRevisionsCount = (int)Math.Pow(nodesAmount, 2);
                 if (nodesAmount == 5)
-                    await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
+                {
+                    var secondDisposedTag = await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName).ConfigureAwait(false);
+                    await WaitForResponsibleNodeToChange(defaultDatabase, subscription.SubscriptionName, secondDisposedTag);
+                }
 
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (3rd assert)");
             }
@@ -868,6 +875,117 @@ namespace RachisTests
                     Assert.True(await batchProccessed.WaitAsync(TimeSpan.FromSeconds(60)));
                     Assert.True(await batchedAcked.WaitAsync(TimeSpan.FromSeconds(60)));
                 }
+            }
+        }
+
+        [Fact]
+        public async Task SubscriptionWorkerShouldNotFailoverToErroredNodes()
+        {
+            var cluster = await CreateRaftCluster(numberOfNodes: 3);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                ReplicationFactor = 3,
+                Server = cluster.Leader,
+                DeleteDatabaseOnDispose = false
+            }))
+            {
+                var mre = new AsyncManualResetEvent();
+                using (var subscriptionManager = new DocumentSubscriptions(store))
+                {
+                    var reqEx = store.GetRequestExecutor();
+                    var name = subscriptionManager.Create(new SubscriptionCreationOptions<User>());
+
+                    var subs = await SubscriptionFailoverWithWaitingChains.GetSubscription(name, store.Database, cluster.Nodes);
+                    Assert.NotNull(subs);
+                    await WaitForRaftIndexToBeAppliedOnClusterNodes(subs.SubscriptionId, cluster.Nodes);
+
+                    await ActionWithLeader(async l => await WaitForResponsibleNode(l.ServerStore, store.Database, name, toBecomeNull: false));
+
+                    Assert.True(WaitForValue(() => reqEx.Topology != null, true));
+                    var topology = reqEx.Topology;
+                    var serverNode1 = topology.Nodes[0];
+                    await reqEx.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(serverNode1) { TimeoutInMs = 10_000 });
+                    var node1 = Servers.First(x => x.WebUrl.Equals(serverNode1.Url, StringComparison.InvariantCultureIgnoreCase));
+                    var (_, __, disposedTag) = await DisposeServerAndWaitForFinishOfDisposalAsync(node1);
+                    var serverNode2 = topology.Nodes[1];
+                    var node2 = Servers.First(x => x.WebUrl.Equals(serverNode2.Url, StringComparison.InvariantCultureIgnoreCase));
+                    var (_, ___, disposedTag2) = await DisposeServerAndWaitForFinishOfDisposalAsync(node2);
+                    var onlineServer = cluster.Nodes.Single(x => x.ServerStore.NodeTag != disposedTag && x.ServerStore.NodeTag != disposedTag2).ServerStore;
+                    await WaitForResponsibleNode(onlineServer, store.Database, name, toBecomeNull: true);
+
+                    using (reqEx.ContextPool.AllocateOperationContext(out var context))
+                    {
+                        var command = new KillOperationCommand(-int.MaxValue);
+                        await Assert.ThrowsAsync<RavenException>(async () => await reqEx.ExecuteAsync(command, context));
+                    }
+                    var redirects = new Dictionary<string, string>();
+                    var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(name)
+                    {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16),
+                        MaxErroneousPeriod = TimeSpan.FromMinutes(5)
+                    });
+                    subscription.OnSubscriptionConnectionRetry += ex =>
+                    {
+                        if (string.IsNullOrEmpty(subscription.CurrentNodeTag))
+                            return;
+
+                        redirects[subscription.CurrentNodeTag] = ex.ToString();
+                        mre.Set();
+                    };
+                    var expectedTag = onlineServer.NodeTag;
+                    _ = subscription.Run(x => { });
+                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)), $"Could not redirect to alive node in time{Environment.NewLine}Redirects:{Environment.NewLine}{string.Join(Environment.NewLine, redirects.Select(x => $"Tag: {x.Key}, Exception: {x.Value}").ToList())}");
+
+                    Assert.True(redirects.Keys.Contains(expectedTag), $"Could not find '{expectedTag}' in Redirects:{Environment.NewLine}{string.Join(Environment.NewLine, redirects.Select(x => $"Tag: {x.Key}, Exception: {x.Value}").ToList())}");
+                    Assert.False(redirects.Keys.Contains(disposedTag), $"Found disposed '{disposedTag}' in Redirects:{Environment.NewLine}{string.Join(Environment.NewLine, redirects.Select(x => $"Tag: {x.Key}, Exception: {x.Value}").ToList())}");
+                    Assert.False(redirects.Keys.Contains(disposedTag2), $"Found disposed '{disposedTag2}' in Redirects:{Environment.NewLine}{string.Join(Environment.NewLine, redirects.Select(x => $"Tag: {x.Key}, Exception: {x.Value}").ToList())}");
+                    Assert.Equal(1, redirects.Count);
+                }
+            }
+        }
+
+        private async Task WaitForResponsibleNode(ServerStore online, string dbName, string subscriptionName, bool toBecomeNull = false)
+        {
+            var sp = Stopwatch.StartNew();
+            try
+            {
+                while (sp.ElapsedMilliseconds < 60_000)
+                {
+                    string tag;
+                    using (online.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var databaseRecord = online.Cluster.ReadDatabase(context, dbName);
+                        var db = await online.DatabasesLandlord.TryGetOrCreateResourceStore(dbName).ConfigureAwait(false);
+                        var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
+                        tag = databaseRecord.Topology.WhoseTaskIsIt(online.Engine.CurrentState, subscriptionState, null);
+                    }
+
+                    if (toBecomeNull)
+                    {
+                        if (tag != null)
+                        {
+                            await Task.Delay(333);
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        if (tag == null)
+                        {
+                            await Task.Delay(333);
+                            continue;
+                        }
+                    }
+
+                    return;
+                }
+            }
+            finally
+            {
+                sp.Stop();
+                Assert.True(sp.ElapsedMilliseconds < _reasonableWaitTime.TotalMilliseconds);
             }
         }
 

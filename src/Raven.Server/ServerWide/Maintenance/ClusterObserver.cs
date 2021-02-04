@@ -1087,6 +1087,14 @@ namespace Raven.Server.ServerWide.Maintenance
                 return grace < StartTime;
             }
 
+            if (databaseUpTime == TimeSpan.MinValue)  // idle database loading
+            {
+                if (_server.DatabasesLandlord.ForTestingPurposes?.HoldDocumentDatabaseCreation != null)
+                    _server.DatabasesLandlord.ForTestingPurposes.PreventedRehabOfIdleDatabase = true;
+
+                return true;
+            }
+
             return grace < lastSuccessfulUpdate;
         }
 

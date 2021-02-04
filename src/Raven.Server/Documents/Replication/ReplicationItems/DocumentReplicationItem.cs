@@ -185,9 +185,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             return new DocumentReplicationItem
             {
-                Id = Id,
+                Id = Id.Clone(context),
                 Data = Data?.Clone(context),
-                Collection = Collection,
+                Collection = Collection?.Clone(context),
                 Flags = Flags
             };
         }

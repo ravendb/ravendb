@@ -110,6 +110,8 @@ namespace Voron.Impl.Scratch
 
         public PagerState PagerState => _scratchPager.PagerState;
 
+        internal AbstractPager Pager => _scratchPager;
+
         public int Number => _scratchNumber;
 
         public int NumberOfAllocations => _allocatedPages.Count;
@@ -336,7 +338,7 @@ namespace Voron.Impl.Scratch
                     new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer + i, 1, 1));
             }
 
-            _scratchPager.BreakLargeAllocationToSeparatePages(tx, value.PositionInScratchBuffer);
+            _scratchPager.BreakLargeAllocationToSeparatePages(tx, value.PositionInScratchBuffer, value.NumberOfPages);
         }
 
         private static void InvalidAttemptToBreakupPageThatWasntAllocated(PageFromScratchBuffer value)

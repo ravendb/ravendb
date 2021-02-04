@@ -7,7 +7,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Server;
 using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
@@ -22,7 +21,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         protected Reader Reader;
 
-        private List<ByteStringContext.InternalScope> _garbage;
+        private List<IDisposable> _garbage;
 
         public abstract long AssertChangeVectorSize();
 
@@ -149,10 +148,10 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             DeletedTimeSeriesRange = 11
         }
 
-        public void ToDispose(ByteStringContext.InternalScope obj)
+        public void ToDispose(IDisposable obj)
         {
             if (_garbage == null)
-                _garbage = new List<ByteStringContext.InternalScope>();
+                _garbage = new List<IDisposable>();
 
             _garbage.Add(obj);
         }

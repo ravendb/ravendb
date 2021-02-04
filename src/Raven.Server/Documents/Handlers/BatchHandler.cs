@@ -17,6 +17,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json;
 using Raven.Server.Documents.Indexes;
@@ -189,6 +190,9 @@ namespace Raven.Server.Documents.Handlers
         {
             var raftRequestId = GetRaftRequestIdFromQuery();
             var topology = ServerStore.LoadDatabaseTopology(Database.Name);
+
+            if (topology.Promotables.Contains(ServerStore.NodeTag))
+                throw new DatabaseNotRelevantException("Cluster transaction can't be handled by a promotable node.");
 
             var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology.DatabaseTopologyIdBase64, command.ParsedCommands, options, raftRequestId);
             var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);

@@ -374,7 +374,7 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ScratchBufferItem GetScratchBufferFile(int scratchNumber)
+        internal ScratchBufferItem GetScratchBufferFile(int scratchNumber)
         {
             var currentScratchFile = _current;
             if (scratchNumber == currentScratchFile.Number)

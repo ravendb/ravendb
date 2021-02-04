@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Operations.Backups
             _backupConfiguration = backupConfiguration ?? throw new ArgumentNullException(nameof(backupConfiguration));
 
             if (_backupConfiguration.HasBackup() == false)
-                throw new InvalidOperationException("Cannot start one time backup using the provided configuration.");
+                throw new InvalidOperationException("Cannot start the one-time backup using the provided configuration since the backup configuration defines no destinations.");
         }
 
         public BackupOperation(BackupConfiguration backupConfiguration, string nodeTag) : this(backupConfiguration)
@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return new BackupCommand(_backupConfiguration, _nodeTag);
         }
 
-        private class BackupCommand : RavenCommand<OperationIdResult<StartBackupOperationResult>>
+        internal class BackupCommand : RavenCommand<OperationIdResult<StartBackupOperationResult>>
         {
             public override bool IsReadRequest => false;
             private readonly BackupConfiguration _backupConfiguration;
