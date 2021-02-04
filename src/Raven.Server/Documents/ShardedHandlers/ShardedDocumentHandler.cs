@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             {
                 var index = ShardedContext.GetShardIndex(context, id);
 
-                var cmd = new ShardedHeadCommand(this, Headers.IfNonMatch);
+                var cmd = new ShardedHeadCommand(this, Headers.IfNoneMatch);
 
                 await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 }
                 
                 var index = ShardedContext.GetShardIndex(context, id);
-                var cmd = new ShardedCommand(this, Headers.None, content: doc);
+                var cmd = new ShardedCommand(this, Headers.IfMatch, content: doc);
                 await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
 

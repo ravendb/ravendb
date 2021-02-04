@@ -102,7 +102,7 @@ namespace Raven.Server.Web
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected Stream GetBodyStream(MultipartSection section)
+        public Stream GetBodyStream(MultipartSection section)
         {
             Stream stream = new StreamWithTimeout(GetDecompressedStream(section.Body, section.Headers));
             _context.HttpContext.Response.RegisterForDispose(stream);
