@@ -34,7 +34,10 @@ namespace Raven.Server.Dashboard
                 if (compareByCpu != 0)
                     return compareByCpu;
 
-                return y.TotalProcessorTime.CompareTo(x.TotalProcessorTime);
+                int compareTo = y.TotalProcessorTime.CompareTo(x.TotalProcessorTime);
+                if (compareTo != 0)
+                    return compareTo;
+                return y.Id.CompareTo(x.Id);
             }
         }
 
