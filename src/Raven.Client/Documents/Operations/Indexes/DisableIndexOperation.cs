@@ -3,6 +3,7 @@ using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
@@ -11,7 +12,19 @@ namespace Raven.Client.Documents.Operations.Indexes
     {
         private readonly Parameters _parameters;
 
-        public DisableIndexOperation(string indexName, bool clusterWide = false)
+        public DisableIndexOperation(string indexName)
+        {
+            if (indexName == null)
+                throw new ArgumentNullException(nameof(indexName));
+
+            _parameters = new Parameters
+            {
+                IndexName = indexName,
+                ClusterWide = false
+            };
+        }
+
+        public DisableIndexOperation(string indexName, bool clusterWide)
         {
             if (indexName == null)
                 throw new ArgumentNullException(nameof(indexName));
@@ -28,7 +41,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new DisableIndexCommand(conventions, context, _parameters);
         }
 
-        private class DisableIndexCommand : RavenCommand
+        private class DisableIndexCommand : RavenCommand, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _parameters;
 
@@ -57,9 +70,11 @@ namespace Raven.Client.Documents.Operations.Indexes
                     })
                 };
             }
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
-        public class Parameters
+        internal class Parameters
         {
             public string IndexName { get; set; }
             public bool ClusterWide { get; set; }
