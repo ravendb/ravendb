@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -38,6 +39,8 @@ namespace Raven.Server.Documents.Sharding
         }
 
         public string DatabaseName => _record.DatabaseName;
+
+        public char IdentitySeparator => _record.Client?.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator;
 
         /// <summary>
         /// The shard id is a hash of the document id, lower case, reduced to

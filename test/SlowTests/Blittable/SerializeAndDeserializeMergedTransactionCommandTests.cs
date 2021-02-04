@@ -237,7 +237,7 @@ namespace SlowTests.Blittable
                     false,
                     (patchRequest, arg),
                     (null, null),
-                    database,
+                    database.IdentityPartsSeparator,
                     false, false, false, false);
 
                 //Action
