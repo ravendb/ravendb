@@ -20,14 +20,23 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                new DocsIndex().Execute(store);
+                var docsIndex = new DocsIndex();
+                await docsIndex.ExecuteAsync(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Doc());
+                    await session.SaveChangesAsync();
+                }
+                WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
                     var query = session.Query<Doc, DocsIndex>();
 
                     var lazyCount = await query.Statistics(out var stats).CountLazilyAsync().Value;
-                    Assert.NotEqual(default(string), stats.IndexName);
+                    Assert.Equal(1, lazyCount);
+                    Assert.Equal(docsIndex.IndexName, stats.IndexName);
                     Assert.NotEqual(default(DateTime), stats.Timestamp);
                 }
 
@@ -36,7 +45,8 @@ namespace SlowTests.Issues
                     var query = session.Query<Doc, DocsIndex>();
 
                     var lazyCount = query.Statistics(out var stats).CountLazily().Value;
-                    Assert.NotEqual(default(string), stats.IndexName);
+                    Assert.Equal(1, lazyCount);
+                    Assert.Equal(docsIndex.IndexName, stats.IndexName);
                     Assert.NotEqual(default(DateTime), stats.Timestamp);
                 }
             }
