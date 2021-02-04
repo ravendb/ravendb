@@ -360,5 +360,10 @@ namespace Raven.Server.Documents.Indexes
         {
             _stats.DocumentsSize += size;
         }
+
+        public void RecordEntriesCountAfterTxCommit(int entriesCount)
+        {
+            _stats.EntriesCount = entriesCount;
+        }
     }
 }

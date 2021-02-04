@@ -169,6 +169,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
+        public int EntriesCount()
+        {
+            return _writer.EntriesCount(_state);
+        }
+
         public (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations()
         {
             var usedMemory = _writer.RamSizeInBytes();

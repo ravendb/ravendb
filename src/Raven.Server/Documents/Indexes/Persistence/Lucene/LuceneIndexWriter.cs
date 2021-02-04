@@ -62,6 +62,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexWriter.DeleteDocuments(term, state);
         }
 
+        public int EntriesCount(IState state)
+        {
+            return _indexWriter.NumDocs(state);
+        }
+
         public void Commit(IState state)
         {
             try
