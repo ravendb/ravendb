@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -374,6 +375,7 @@ namespace Raven.Server.Documents
                         }
                     }
                 }, DatabaseShutdown);
+                _serverStore.LicenseManager.LicenseChanged += LoadTimeSeriesPolicyRunnerConfigurations;
             }
             catch (Exception)
             {
@@ -747,6 +749,11 @@ namespace Raven.Server.Documents
             exceptionAggregator.Execute(() =>
             {
                 _databaseShutdown.Dispose();
+            });
+            
+            exceptionAggregator.Execute(() =>
+            {
+                _serverStore.LicenseManager.LicenseChanged -= LoadTimeSeriesPolicyRunnerConfigurations;
             });
 
             exceptionAggregator.Execute(() =>
@@ -1310,6 +1317,18 @@ namespace Raven.Server.Documents
             ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
             TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
             PeriodicBackupRunner.UpdateConfigurations(record);
+        }
+
+        private void LoadTimeSeriesPolicyRunnerConfigurations()
+        {
+            LicenseLimitWarning.DismissLicenseLimitNotification(_serverStore.NotificationCenter, LimitType.TimeSeriesRollupsAndRetention);
+
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var record = _serverStore.Cluster.ReadDatabase(context, Name, out _);
+                TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
+            }
         }
 
         public string WhoseTaskIsIt(

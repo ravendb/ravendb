@@ -54,6 +54,14 @@ namespace Voron
             }
         }
 
+        public AllocatedMemoryData CloneToJsonContext(JsonOperationContext context, out Slice slice)
+        {
+            var mem = context.GetMemory(Size);
+            Memory.Copy(mem.Address, Content._pointer, Size);
+            slice = new Slice(new ByteString((ByteStringStorage*)mem.Address));
+            return mem;
+        }
+
         public Slice Clone(ByteStringContext context, ByteStringType type = ByteStringType.Mutable)
         {
             return new Slice(context.Clone(this.Content, type));

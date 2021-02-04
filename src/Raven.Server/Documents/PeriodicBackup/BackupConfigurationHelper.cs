@@ -128,6 +128,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public static void AssertDestinationAndRegionAreAllowed(BackupConfiguration configuration, ServerStore serverStore)
         {
+            if (configuration.ValidateDestinations(out var errorMassage) == false)
+                throw new InvalidOperationException(errorMassage);
+
             foreach (var backupDestination in configuration.GetDestinations())
             {
                 serverStore.Configuration.Backup.AssertDestinationAllowed(backupDestination);

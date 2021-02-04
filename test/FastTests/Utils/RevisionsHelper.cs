@@ -26,14 +26,14 @@ namespace FastTests.Utils
             await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, serverStore.Engine.OperationTimeout);
         }
 
-        public static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database, Action<RevisionsConfiguration> modifyConfiguration = null)
+        public static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database, Action<RevisionsConfiguration> modifyConfiguration = null, int minRevisionToKeep = 5)
         {
             var configuration = new RevisionsConfiguration
             {
                 Default = new RevisionsCollectionConfiguration
                 {
                     Disabled = false,
-                    MinimumRevisionsToKeep = 5
+                    MinimumRevisionsToKeep = minRevisionToKeep
                 },
                 Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                 {

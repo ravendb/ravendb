@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public void RegisterBytesSent(long bytesAmount)
         {
-            _bytesSentMetric.Mark(bytesAmount);
+            _bytesSentMetric?.Mark(bytesAmount);
         }
 
         public void RegisterBytesReceived(long bytesAmount)

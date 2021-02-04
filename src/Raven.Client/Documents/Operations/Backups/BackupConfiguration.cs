@@ -111,5 +111,16 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(FtpSettings)] = FtpSettings?.ToJson()
             };
         }
+
+        public virtual bool ValidateDestinations(out string message)
+        {
+            if (HasBackup() == false)
+            {
+                message = "The backup configuration target no destinations";
+                return false;
+            }
+            message = null;
+            return true;
+        }
     }
 }

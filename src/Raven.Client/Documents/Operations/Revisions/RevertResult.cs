@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         public virtual DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
+            return new DynamicJsonValue(GetType())
             {
                 [nameof(Message)] = Message,
                 [nameof(ScannedRevisions)] = ScannedRevisions,
@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Operations.Revisions
     public class RevertResult : OperationResult
     {
         public int RevertedDocuments { get; set; }
-  
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();

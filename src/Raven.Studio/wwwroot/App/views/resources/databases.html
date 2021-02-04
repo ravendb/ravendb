@@ -123,6 +123,9 @@
             <span data-bind="visible: $root.databasesByState().offline">
                 <strong class="text-muted" data-bind="text: $root.databasesByState().offline"></strong> Offline
             </span>
+            <span data-bind="visible: $root.databasesByState().remote">
+                <strong class="text-muted" data-bind="text: $root.databasesByState().remote"></strong> Remote
+            </span>
         </div>
         <div data-bind="foreach: databases().sortedDatabases">
             <div data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(),
@@ -147,7 +150,8 @@
                             </div>
                             <div class="member">
                                 <!-- ko foreach: _.slice(nodes(), 0, 5) -->
-                                <a data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.localNodeTag() ? undefined : '_blank', title: type() },
+                                <a data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.localNodeTag() ? undefined : '_blank',
+                                                      title: 'Click to navigate to this database on node ' + tag() },
                                               css: { 'link-disabled': $parent.isBeingDeleted }">
                                     <small><i data-bind="attr: { class: cssIcon }"></i><span data-bind="text: 'Node ' + tag()"></span></small>
                                 </a>
@@ -213,8 +217,8 @@
                                                 <i class="icon-play"></i> Enable indexing
                                             </a>
                                         </li>
-                                        <li class="divider"></li>
-                                        <li data-bind="visible: $root.accessManager.canCompactDatabase">
+                                        <li class="divider" data-bind="visible: $root.createIsLocalDatabaseObservable(name)"></li>
+                                        <li data-bind="visible: $root.accessManager.canCompactDatabase() && $root.createIsLocalDatabaseObservable(name)()">
                                             <a data-bind="visible: disabled" title="The database is disabled" class="has-disable-reason disabled" data-placement="top">
                                                 <i class="icon-compact"></i> Compact database
                                             </a>
@@ -234,7 +238,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="panel-addon" data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }">
+                <div class="panel-addon" 
+                     data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }, visible: $root.createIsLocalDatabaseObservable(name)">
                 </div>
             </div>
         </div>

@@ -29,7 +29,7 @@ import storageKeyProvider = require("common/storage/storageKeyProvider");
 import compactDatabaseDialog = require("viewmodels/resources/compactDatabaseDialog");
 import notificationCenter = require("common/notifications/notificationCenter");
 
-type databaseState = "errored" | "disabled" | "online" | "offline";
+type databaseState = "errored" | "disabled" | "online" | "offline" | "remote";
 
 class databases extends viewModelBase {
     
@@ -110,12 +110,15 @@ class databases extends viewModelBase {
                 errored: 0,
                 disabled: 0,
                 offline: 0,
-                online: 0
+                online: 0,
+                remote: 0
             };
 
             for (const database of databases) {
                 if (database.hasLoadError()) {
                     result.errored++;
+                } else if (!this.isLocalDatabase(database.name)) {
+                    result.remote++;
                 } else if (database.disabled()) {
                     result.disabled++;
                 } else if (database.online()) {
@@ -397,10 +400,8 @@ class databases extends viewModelBase {
     }
 
     createManageDbGroupUrlObsevable(dbInfo: databaseInfo): KnockoutComputed<string> {
-        const isLocalObservable = this.createIsLocalDatabaseObservable(dbInfo.name);
-
         return ko.pureComputed(() => {
-            const isLocal = isLocalObservable();
+            const isLocal = this.isLocalDatabase(dbInfo.name);
             const link = appUrl.forManageDatabaseGroup(dbInfo);
             if (isLocal) {
                 return link;
@@ -411,10 +412,8 @@ class databases extends viewModelBase {
     }
 
     createAllDocumentsUrlObservable(dbInfo: databaseInfo): KnockoutComputed<string> {
-        const isLocalObservable = this.createIsLocalDatabaseObservable(dbInfo.name);
-
         return ko.pureComputed(() => {
-            const isLocal = isLocalObservable();
+            const isLocal = this.isLocalDatabase(dbInfo.name);
             const link = appUrl.forDocuments(null, dbInfo);
             if (isLocal) {
                 return link;
@@ -700,9 +699,13 @@ class databases extends viewModelBase {
 
     createIsLocalDatabaseObservable(dbName: string) {
         return ko.pureComputed(() => {
-            const nodeTag = this.clusterManager.localNodeTag();
-            return this.databases().getByName(dbName).isLocal(nodeTag);
+            return this.isLocalDatabase(dbName);
         });
+    }
+    
+    private isLocalDatabase(dbName: string) {
+        const nodeTag = this.clusterManager.localNodeTag();
+        return this.databases().getByName(dbName).isLocal(nodeTag);
     }
     
     openNotificationCenter(dbInfo: databaseInfo) {

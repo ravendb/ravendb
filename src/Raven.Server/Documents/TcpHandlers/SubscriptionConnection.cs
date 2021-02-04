@@ -414,6 +414,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
                         {
                             [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode,
+                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)] = connection.TcpConnection.DocumentDatabase.ServerStore.NodeTag,
                             [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] =
                                 new DynamicJsonArray(subscriptionDoesNotBelongException.Reasons.Select(item => new DynamicJsonValue
                                 {
