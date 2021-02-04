@@ -88,7 +88,7 @@ namespace SlowTests.Issues
                     {
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                         return documentDatabase.IndexStore.GetIndex(indexName).State;
-                    }, IndexState.Disabled);
+                    }, IndexState.Normal);
                     Assert.Equal(IndexState.Normal, documentDatabase.IndexStore.GetIndex(indexName).State);
                 }
             }
