@@ -30,16 +30,24 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
 
         private Timer _timer;
         private const long MinTimeToWait = 1000;
-
-        private readonly ParquetEtlConfiguration _configuration;
+        private readonly string _tmpParquetPath;
 
         public ParquetEtl(Transformation transformation, ParquetEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, ParquetEtlTag)
         {
             Metrics = S3Metrics;
-            _configuration = configuration;
 
-            var etlFrequency = _configuration.ETLFrequency;
+            var connection = configuration.Connection;
+
+            connection.LocalSettings = BackupTask.GetBackupConfigurationFromScript(connection.LocalSettings, x => JsonDeserializationServer.ParquetEtlLocalSettings(x),
+                Database, updateServerWideSettingsFunc: null, serverWide: false);
+            connection.S3Settings = BackupTask.GetBackupConfigurationFromScript(connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
+                    Database, updateServerWideSettingsFunc: null, serverWide: false);
+
+            _tmpParquetPath = connection.LocalSettings?.FolderPath ?? 
+                              (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).FullPath;
+
+            var etlFrequency = configuration.ETLFrequency;
             var dueTime = GetDueTime(etlFrequency);
 
             _timer = new Timer(_ => _waitForChanges.Set(), null, dueTime, etlFrequency);
@@ -75,8 +83,7 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
 
         protected override IEnumerator<ToParquetItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
         {
-            return EmptyEnumerator; // todo
-            throw new NotSupportedException("Tombstones aren't supported by S3 ETL");
+            return EmptyEnumerator;
         }
 
         protected override IEnumerator<ToParquetItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
@@ -137,7 +144,6 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
                 var fields = rowGroups.Fields.Values;
                 var localPath = GetPath(rowGroups, out var remotePath);
 
-                // todo split to multiple files if needed
                 using (Stream fileStream = File.OpenWrite(localPath))
                 {
                     using (var parquetWriter = new ParquetWriter(new Schema(fields), fileStream))
@@ -147,21 +153,26 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
                             WriteGroup(parquetWriter, group, rowGroups);
                             LogStats(group, rowGroups.TableName, rowGroups.PartitionKey);
                             count += group.Count;
-
                         }
                     }
+                }
 
+                using (Stream fileStream = File.OpenRead(localPath))
+                {
                     UploadToDestination(fileStream, remotePath);
                 }
 
+                if (Configuration.Connection.LocalSettings?.KeepFilesOnDisc ?? false)
+                    continue;
+                
+                File.Delete(localPath);
 
-                // todo delete file from disc 
             }
 
             return count;
         }
 
-        private void WriteGroup(ParquetWriter parquetWriter, RowGroup group, RowGroups rowGroups)
+        private static void WriteGroup(ParquetWriter parquetWriter, RowGroup group, RowGroups rowGroups)
         {
             using (ParquetRowGroupWriter groupWriter = parquetWriter.CreateRowGroup())
             {
@@ -205,37 +216,33 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
 
         private void UploadToDestination(Stream stream, string path)
         {
-            var connection = _configuration.Connection;
-            switch (connection.Destination)
+            var s3Settings = Configuration.Connection.S3Settings;
+            if (s3Settings != null)
             {
-                case ParquetEtlDestination.S3:
-                    var s3Settings = BackupTask.GetBackupConfigurationFromScript(connection.S3Settings, x => JsonDeserializationServer.S3Settings(x), 
-                        Database, updateServerWideSettingsFunc: null, serverWide: false);
-
-                    // todo
-                    //UploadToS3(s3Settings, stream, path);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
+                var key = GetKey(s3Settings, path);
+                UploadToS3(s3Settings, stream, key);
             }
         }
 
-        private void UploadToS3(S3Settings s3Settings, Stream stream, string path)
+
+        private void UploadToS3(S3Settings s3Settings, Stream stream, string key)
         {
-            var progress = new Progress();
-            using (var client = new RavenAwsS3Client(s3Settings, progress, logger: null, CancellationToken))
+            using (var client = new RavenAwsS3Client(s3Settings, progress: null, Logger, CancellationToken))
             {
-                var prefix = string.IsNullOrWhiteSpace(s3Settings.RemoteFolderName)
-                    ? string.Empty
-                    : $"{s3Settings.RemoteFolderName}/";
-
-                var key = Path.Combine(prefix, path);
-
                 client.PutObject(key, stream, new Dictionary<string, string>
                 {
                     {"Description", $"Parquet ETL to S3 for db {Database.Name} at {SystemTime.UtcNow}"}
                 });
             }
+        }
+
+        private static string GetKey(S3Settings s3Settings, string path)
+        {
+            var prefix = string.IsNullOrWhiteSpace(s3Settings.RemoteFolderName)
+                ? string.Empty
+                : $"{s3Settings.RemoteFolderName}";
+
+            return $"{prefix}/{path}";
         }
 
         private void LogStats(RowGroup group, string name, string key)
@@ -249,12 +256,10 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
 
         private string GetPath(RowGroups group, out string remotePath)
         {
-            var dir = Configuration.TempDirectoryPath ?? Path.GetTempPath();
             var fileName = $"{Database.Name}_{Guid.NewGuid()}.parquet";
+            remotePath = $"{group.PartitionKey}/{fileName}";
 
-            remotePath = Path.Combine(group.TableName, group.PartitionKey, fileName);
-
-            return Path.Combine(dir, fileName);
+            return Path.Combine(_tmpParquetPath, fileName);
         }
     }
 }
