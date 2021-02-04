@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -148,9 +149,10 @@ namespace Raven.Server.Web.System
         {
             var result = new MemoryMetrics();
             var memoryInfoResult = Server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
-            
-            result.TotalMemoryInMb = memoryInfoResult.WorkingSet.GetValue(SizeUnit.Megabytes);
-            
+
+            result.InstalledMemoryInMb = memoryInfoResult.InstalledMemory.GetValue(SizeUnit.Megabytes);
+            result.PhysicalMemoryInMb = memoryInfoResult.TotalPhysicalMemory.GetValue(SizeUnit.Megabytes);
+            result.AllocatedMemoryInMb = memoryInfoResult.WorkingSet.GetValue(SizeUnit.Megabytes);
             result.LowMemorySeverity = LowMemoryNotification.Instance.IsLowMemory(memoryInfoResult, 
                 new LowMemoryMonitor(), out _); 
 
@@ -181,10 +183,10 @@ namespace Raven.Server.Web.System
         {
             var result = new DiskMetrics();
             var environmentStats = Server.ServerStore._env.Stats();
-            result.UsedDataFileSizeInMb = environmentStats.UsedDataFileSizeInBytes / 1024L / 1024L;
-            result.TotalDataFileSizeInMb = environmentStats.AllocatedDataFileSizeInBytes / 1024L / 1024L;
-
-            if (!ServerStore.Configuration.Core.RunInMemory)
+            result.SystemStoreUsedDataFileSizeInMb = environmentStats.UsedDataFileSizeInBytes / 1024L / 1024L;
+            result.SystemStoreTotalDataFileSizeInMb = environmentStats.AllocatedDataFileSizeInBytes / 1024L / 1024L;
+            
+            if (ServerStore.Configuration.Core.RunInMemory == false)
             {
                 var diskSpaceResult = Server.MetricCacher.GetValue<DiskSpaceResult>(MetricCacher.Keys.Server.DiskSpaceInfo);
                 if (diskSpaceResult != null)
@@ -192,7 +194,7 @@ namespace Raven.Server.Web.System
                     var total = Convert.ToDecimal(diskSpaceResult.TotalSize.GetValue(SizeUnit.Megabytes));
                     var totalFreeMb = diskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Megabytes);
                     var totalFree = Convert.ToDecimal(totalFreeMb);
-                    var percentage = Convert.ToInt32(Math.Round((totalFree / total) * 100, 0, MidpointRounding.ToEven));
+                    var percentage = Convert.ToInt32(Math.Round(totalFree / total * 100, 0, MidpointRounding.ToEven));
                     result.TotalFreeSpaceInMb = totalFreeMb;
                     result.RemainingStorageSpacePercentage = percentage;
                 }

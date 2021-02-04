@@ -114,7 +114,9 @@ namespace Raven.Server.Utils.Monitoring
 
     public class MemoryMetrics
     {
-        public long TotalMemoryInMb { get; set; }
+        public long InstalledMemoryInMb { get; set; }
+        public long PhysicalMemoryInMb { get; set; }
+        public long AllocatedMemoryInMb { get; set; }
         public LowMemorySeverity LowMemorySeverity { get; set; }
         public long TotalSwapSizeInMb { get; set; }
         public long TotalSwapUsageInMb { get; set; }
@@ -125,8 +127,10 @@ namespace Raven.Server.Utils.Monitoring
         {
             return new DynamicJsonValue
             {
-                [nameof(TotalMemoryInMb)] = TotalMemoryInMb,
+                [nameof(AllocatedMemoryInMb)] = AllocatedMemoryInMb,
                 [nameof(LowMemorySeverity)] = LowMemorySeverity,
+                [nameof(PhysicalMemoryInMb)] = PhysicalMemoryInMb,
+                [nameof(InstalledMemoryInMb)] = InstalledMemoryInMb,
                 [nameof(TotalSwapSizeInMb)] = TotalSwapSizeInMb,
                 [nameof(TotalSwapUsageInMb)] = TotalSwapUsageInMb,
                 [nameof(WorkingSetSwapUsageInMb)] = WorkingSetSwapUsageInMb,
@@ -137,8 +141,8 @@ namespace Raven.Server.Utils.Monitoring
 
     public class DiskMetrics
     {
-        public long UsedDataFileSizeInMb { get; set; }
-        public long TotalDataFileSizeInMb { get; set; }
+        public long SystemStoreUsedDataFileSizeInMb { get; set; }
+        public long SystemStoreTotalDataFileSizeInMb { get; set; }
         public long TotalFreeSpaceInMb { get; set; }
         public int RemainingStorageSpacePercentage { get; set; }
 
@@ -146,8 +150,8 @@ namespace Raven.Server.Utils.Monitoring
         {
             return new DynamicJsonValue
             {
-                [nameof(UsedDataFileSizeInMb)] = UsedDataFileSizeInMb,
-                [nameof(TotalDataFileSizeInMb)] = TotalDataFileSizeInMb,
+                [nameof(SystemStoreUsedDataFileSizeInMb)] = SystemStoreUsedDataFileSizeInMb,
+                [nameof(SystemStoreTotalDataFileSizeInMb)] = SystemStoreTotalDataFileSizeInMb,
                 [nameof(TotalFreeSpaceInMb)] = TotalFreeSpaceInMb,
                 [nameof(RemainingStorageSpacePercentage)] = RemainingStorageSpacePercentage
             };
