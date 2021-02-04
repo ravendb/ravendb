@@ -34,7 +34,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void NewDisableEndPointTest1()
+        public void NewDisableAndEnableEndPointTest1()
         {
             using (var store = GetDocumentStore())
             {
@@ -46,12 +46,18 @@ namespace SlowTests.Issues
                 var indexInstance = db.IndexStore.GetIndex("FakeIndex");
 
                 Assert.Equal(IndexState.Disabled, indexInstance.State);
+
+                store.Maintenance.Send(new EnableIndexOperation("FakeIndex", false));
+
+                indexInstance = db.IndexStore.GetIndex("FakeIndex");
+
+                Assert.Equal(IndexState.Normal, indexInstance.State);
             }
         }
 
 
         [Fact]
-        public async Task NewDisableEndPointTest2()
+        public async Task NewDisableAndEnableEndPointTest2()
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
             var database = GetDatabaseName();
@@ -73,9 +79,19 @@ namespace SlowTests.Issues
                     }, IndexState.Disabled);
                     Assert.Equal(IndexState.Disabled, documentDatabase.IndexStore.GetIndex(indexName).State);
                 }
+
+                await store.Maintenance.SendAsync(new EnableIndexOperation(indexName, true));
+
+                foreach (var server in Servers)
+                {
+                    await WaitForValueAsync(async () =>
+                    {
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        return documentDatabase.IndexStore.GetIndex(indexName).State;
+                    }, IndexState.Disabled);
+                    Assert.Equal(IndexState.Normal, documentDatabase.IndexStore.GetIndex(indexName).State);
+                }
             }
-
-
         }
 
 

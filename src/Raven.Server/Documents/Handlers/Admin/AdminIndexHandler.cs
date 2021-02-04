@@ -244,16 +244,27 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         [RavenAction("/databases/*/admin/indexes/enable", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public Task Enable()
+        public async Task Enable()
         {
-            var name = GetStringQueryString("name");
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                IndexDoesNotExistException.ThrowFor(name);
-
-            index.Enable();
-
-            return NoContent();
+            var raftRequestId = GetRaftRequestIdFromQuery();
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/enable");
+                var parameters = JsonDeserializationServer.Parameters.EnableIndexParameters(json);
+                var name = parameters.IndexName;
+                var index = Database.IndexStore.GetIndex(name);
+                if (index == null)
+                    IndexDoesNotExistException.ThrowFor(name);
+                if (parameters.ClusterWide)
+                {
+                    await Database.IndexStore.SetState(name, IndexState.Normal, $"{raftRequestId}/{index}");
+                }
+                else
+                {
+                    index.Enable();
+                }
+                NoContentStatus();
+            }
         }
 
         [RavenAction("/databases/*/admin/indexes/disable", "POST", AuthorizationStatus.DatabaseAdmin)]
