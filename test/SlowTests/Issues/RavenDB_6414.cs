@@ -44,7 +44,7 @@ namespace SlowTests.Issues
                         database.GetAllStoragesEnvironment().First().Environment.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                     }
 
-                    var ex = Assert.Throws<Exception>(() =>
+                    var ex = Assert.ThrowsAny<Exception>(() =>
                     {
                         using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                         {
