@@ -123,10 +123,12 @@ namespace Raven.Server.Documents.Indexes
 
             public const long TimeTicks = 50_000;
 
+            public const long Analyzers = 52_000;
+
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = TimeTicks;
+            public const long CurrentVersion = Analyzers;
         }
     }
 
