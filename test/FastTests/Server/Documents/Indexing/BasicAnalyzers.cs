@@ -2,11 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using Xunit.Abstractions;
-
 using Lucene.Net.Analysis;
+using Lucene.Net.Analysis.Standard;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
@@ -21,8 +22,8 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
-using Raven.Server.Config;
 
 namespace FastTests.Server.Documents.Indexing
 {
@@ -35,7 +36,10 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CheckAnalyzers()
         {
-            var operation = new TestOperation("test", null);
+            var configuration = RavenConfiguration.CreateForTesting("test", Raven.Server.ServerWide.ResourceType.Server);
+            configuration.Initialize();
+
+            var operation = new TestOperation(configuration.Indexing, null);
 
             var fields = new Dictionary<string, IndexField>();
             fields.Add(Constants.Documents.Indexing.Fields.AllFields, new IndexField());
@@ -91,19 +95,84 @@ namespace FastTests.Server.Documents.Indexing
             Assert.IsType<KeywordAnalyzer>(analyzer.GetAnalyzer("Field2"));
         }
 
+        [Fact]
+        public void OverrideAnalyzers()
+        {
+            var configuration = RavenConfiguration.CreateForTesting("test", Raven.Server.ServerWide.ResourceType.Server);
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.DefaultAnalyzer), "WhitespaceAnalyzer");
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.DefaultExactAnalyzer), "StandardAnalyzer");
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer), "KeywordAnalyzer");
+
+            configuration.Initialize();
+
+            var operation = new TestOperation(configuration.Indexing, null);
+
+            var fields = new Dictionary<string, IndexField>();
+            fields.Add(Constants.Documents.Indexing.Fields.AllFields, new IndexField());
+
+            Assert.Throws<InvalidOperationException>(() => operation.GetAnalyzer(fields, forQuerying: false));
+
+            fields.Clear();
+            fields.Add(Constants.Documents.Indexing.Fields.AllFields, new IndexField { Analyzer = "StandardAnalyzer" });
+            Assert.Throws<InvalidOperationException>(() => operation.GetAnalyzer(fields, forQuerying: false));
+
+            fields.Clear();
+            fields.Add("Field1", new IndexField { Analyzer = "StandardAnalyzer" }); // field must be 'NotAnalyzed' or 'Analyzed'
+            var analyzer = operation.GetAnalyzer(fields, forQuerying: false);
+
+            Assert.IsType<WhitespaceAnalyzer>(analyzer.GetAnalyzer(string.Empty));
+            Assert.IsType<WhitespaceAnalyzer>(analyzer.GetAnalyzer("Field1"));
+
+            fields.Clear();
+            fields.Add("Field1", new IndexField { Name = "Field1", Analyzer = "StandardAnalyzer", Indexing = FieldIndexing.Exact }); // 'NotAnalyzed' => 'StandardAnalyzer'
+            analyzer = operation.GetAnalyzer(fields, forQuerying: false);
+
+            Assert.IsType<WhitespaceAnalyzer>(analyzer.GetAnalyzer(string.Empty));
+            Assert.IsType<StandardAnalyzer>(analyzer.GetAnalyzer("Field1"));
+
+            fields.Clear();
+            fields.Add("Field1", new IndexField { Name = "Field1", Analyzer = null, Indexing = FieldIndexing.Search }); // 'Analyzed = null' => 'KeywordAnalyzer'
+            analyzer = operation.GetAnalyzer(fields, forQuerying: false);
+
+            Assert.IsType<WhitespaceAnalyzer>(analyzer.GetAnalyzer(string.Empty));
+            Assert.IsType<KeywordAnalyzer>(analyzer.GetAnalyzer("Field1"));
+
+            fields.Clear();
+            fields.Add("Field1", new IndexField { Name = "Field1", Analyzer = typeof(NotForQueryingAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Search });
+            analyzer = operation.GetAnalyzer(fields, forQuerying: false);
+
+            Assert.IsType<WhitespaceAnalyzer>(analyzer.GetAnalyzer(string.Empty));
+            Assert.IsType<NotForQueryingAnalyzer>(analyzer.GetAnalyzer("Field1"));
+
+            fields.Clear();
+            fields.Add("Field1", new IndexField { Name = "Field1", Analyzer = typeof(NotForQueryingAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Search });
+            analyzer = operation.GetAnalyzer(fields, forQuerying: true);
+
+            Assert.IsType<WhitespaceAnalyzer>(analyzer.GetAnalyzer(string.Empty));
+            Assert.IsType<KeywordAnalyzer>(analyzer.GetAnalyzer("Field1"));
+
+            fields.Clear();
+            fields.Add("Field1", new IndexField { Name = "Field1", Analyzer = typeof(NotForQueryingAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Search });
+            fields.Add("Field2", new IndexField { Name = "Field2", Analyzer = "KeywordAnalyzer", Indexing = FieldIndexing.Search });
+            analyzer = operation.GetAnalyzer(fields, forQuerying: false);
+
+            Assert.IsType<WhitespaceAnalyzer>(analyzer.GetAnalyzer(string.Empty));
+            Assert.IsType<NotForQueryingAnalyzer>(analyzer.GetAnalyzer("Field1"));
+            Assert.IsType<KeywordAnalyzer>(analyzer.GetAnalyzer("Field2"));
+        }
+
         private class TestOperation : IndexOperationBase
         {
-            private readonly RavenConfiguration _configuration;
+            private readonly IndexingConfiguration _configuration;
 
-            public TestOperation(string indexName, Logger logger) : base(new TestIndex(), logger)
+            public TestOperation(IndexingConfiguration configuration, Logger logger) : base(new TestIndex(), logger)
             {
-                _configuration = RavenConfiguration.CreateForTesting(indexName, Raven.Server.ServerWide.ResourceType.Server);
-                _configuration.Initialize();
+                _configuration = configuration;
             }
 
             public RavenPerFieldAnalyzerWrapper GetAnalyzer(Dictionary<string, IndexField> fields, bool forQuerying)
             {
-                return CreateAnalyzer(_configuration.Indexing, new TestIndexDefinitions
+                return CreateAnalyzer(_configuration, new TestIndexDefinitions
                 {
                     IndexFields = fields
                 }, forQuerying);
@@ -175,6 +244,7 @@ namespace FastTests.Server.Documents.Indexing
         {
             Collections = new HashSet<string> { Constants.Documents.Collections.AllDocumentsCollection };
         }
+
         public override void Persist(TransactionOperationContext context, StorageEnvironmentOptions options)
         {
             throw new NotImplementedException();
