@@ -55,7 +55,7 @@ update {
 ", QueryType.Update)]
         public void FailToParseInvalidJavascript(string q, QueryType type)
         {
-            Assert.Throws<InvalidQueryException>(() => new QueryMetadata(q, null, 1, type));
+            Assert.Throws<InvalidQueryException>(() => new QueryMetadata(q, null, 1, queryType: type));
         }
 
         [Theory]

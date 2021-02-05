@@ -61,11 +61,14 @@ namespace Raven.Server.Documents.Queries
 
         public void RegisterSpatialProperties(IndexQueryServerSide query)
         {
-            if (query.AddSpatialProperties == false || query.Metadata.SpatialProperties == null)
+            if (query.AddSpatialProperties == false)
                 return;
 
-            SpatialProperties = query.Metadata.SpatialProperties.ToArray();
-            SpatialShapes = query.Metadata.SpatialShapes.ToArray();
+            if (query.Metadata.SpatialProperties != null)
+                SpatialProperties = query.Metadata.SpatialProperties.ToArray();
+
+            if (query.Metadata.SpatialShapes != null)
+                SpatialShapes = query.Metadata.SpatialShapes.ToArray();
         }
 
         public abstract void AddResult(T result);
