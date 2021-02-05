@@ -4,7 +4,7 @@ class spatialPolygonModel {
     
     vertices: Array<[number, number]>;
     
-    constructor(polygon: Raven.Client.Documents.Indexes.Spatial.Polygon) {
+    constructor(polygon: Raven.Server.Documents.Indexes.Spatial.Polygon) {
        this.vertices = polygon.Vertices.map(v => [v.Latitude, v.Longitude]);
     }
 }

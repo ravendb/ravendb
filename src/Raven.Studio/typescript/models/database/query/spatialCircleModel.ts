@@ -8,7 +8,7 @@ class spatialCircleModel {
     longitude: number;
     radius: number;
     
-    constructor(circle: Raven.Client.Documents.Indexes.Spatial.Circle) {
+    constructor(circle: Raven.Server.Documents.Indexes.Spatial.Circle) {
         
         this.latitude = circle.Center.Latitude;
         this.longitude = circle.Center.Longitude;
