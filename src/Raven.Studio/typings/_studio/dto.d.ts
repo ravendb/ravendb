@@ -743,6 +743,6 @@ interface sampleCode {
 
 type OnlyStrings<T> = { [ P in keyof T]: T[P] extends string ? P : never }[keyof T & string];
 
-interface geoPointInfo extends Raven.Client.Documents.Indexes.Spatial.LatLong {
+interface geoPointInfo extends Raven.Server.Documents.Indexes.Spatial.Coordinates {
     PopupContent: document;
 }

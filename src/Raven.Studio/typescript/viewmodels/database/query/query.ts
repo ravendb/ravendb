@@ -1240,12 +1240,12 @@ class query extends viewModelBase {
                 const shape = spatialShapes[i];
                 switch (shape.ShapeType) {
                     case "Circle": {
-                        const circle = new spatialCircleModel(shape as Raven.Client.Documents.Indexes.Spatial.Circle);
+                        const circle = new spatialCircleModel(shape as Raven.Server.Documents.Indexes.Spatial.Circle);
                         spatialCirclesLayer.push(circle);
                     }
                         break;
                     case "Polygon": {
-                        const polygon = new spatialPolygonModel(shape as Raven.Client.Documents.Indexes.Spatial.Polygon);
+                        const polygon = new spatialPolygonModel(shape as Raven.Server.Documents.Indexes.Spatial.Polygon);
                         spatialPolygonsLayer.push(polygon);
                     }
                         break;
