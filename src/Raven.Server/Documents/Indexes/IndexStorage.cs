@@ -299,6 +299,20 @@ namespace Raven.Server.Documents.Indexes
             return stats;
         }
 
+        public int ReadMaxNumberOfOutputsPerDocument(RavenTransaction tx)
+        {
+            var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
+
+            var lastIndexingTime = statsTree.Read(IndexSchema.LastIndexingTimeSlice);
+
+            if (lastIndexingTime != null)
+            {
+                return statsTree.Read(IndexSchema.MaxNumberOfOutputsPerDocument).Reader.ReadLittleEndianInt32();
+            }
+
+            return 0;
+        }
+
         public long ReadLastProcessedTombstoneEtag(RavenTransaction tx, string collection)
         {
             var txi = tx.InnerTransaction;

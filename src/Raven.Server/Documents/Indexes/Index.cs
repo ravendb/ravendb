@@ -631,7 +631,7 @@ namespace Raven.Server.Documents.Indexes
                 State = _indexStorage.ReadState(tx);
                 _lastQueryingTime = DocumentDatabase.Time.GetUtcNow();
                 LastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
-                MaxNumberOfOutputsPerDocument = _indexStorage.ReadStats(tx).MaxNumberOfOutputsPerDocument;
+                MaxNumberOfOutputsPerDocument = _indexStorage.ReadMaxNumberOfOutputsPerDocument(tx);
             }
         }
 
