@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Queries.Explanation;
 using Sparrow.Json;
 
@@ -46,19 +46,19 @@ namespace Raven.Server.Documents.Queries
                 }
             }
         }
-        
+
         /// <summary>
         /// If the query returned spatial properties results, this field will contain
         /// the list of longitude & latitude document properties names from the spatial query
         /// </summary>
         public SpatialProperty[] SpatialProperties { get; set; }
-        
+
         /// <summary>
         /// If the query returned spatial shapes results,
-        /// this field will contain the shapes info from the spatial query 
+        /// this field will contain the shapes info from the spatial query
         /// </summary>
         public SpatialShapeBase[] SpatialShapes { get; set; }
-        
+
         public void RegisterSpatialProperties(IndexQueryServerSide query)
         {
             if (query.AddSpatialProperties == false || query.Metadata.SpatialProperties == null)

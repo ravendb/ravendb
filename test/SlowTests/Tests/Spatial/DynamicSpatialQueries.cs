@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
@@ -42,10 +43,10 @@ namespace SlowTests.Tests.Spatial
 
                     Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
                     Assert.Equal(3, results);
-                    
+
                     Assert.True(json.TryGet(nameof(DocumentQueryResult.SpatialProperties), out BlittableJsonReaderArray spatialProperties));
                     Assert.Equal(1, spatialProperties.Length);
-                    
+
                     (spatialProperties[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LatitudeProperty), out string lat);
                     Assert.Equal(lat, "Location1.Latitude");
                     (spatialProperties[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LongitudeProperty), out string lng);
@@ -77,7 +78,7 @@ namespace SlowTests.Tests.Spatial
 
                 var boundingPolygon =
                     "POLYGON((12.556675672531128 55.675285554217,12.56213665008545 55.675285554217,12.56213665008545 55.67261750095371,12.556675672531128 55.67261750095371,12.556675672531128 55.675285554217))";
-                
+
                 using (var commands = store.Commands())
                 {
                     var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs " +
@@ -88,21 +89,21 @@ namespace SlowTests.Tests.Spatial
 
                     Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
                     Assert.Equal(4, results);
-                    
+
                     Assert.True(json.TryGet(nameof(DocumentQueryResult.SpatialProperties), out BlittableJsonReaderArray spatialProperties));
                     Assert.Equal(3, spatialProperties.Length);
 
                     for (var i = 0; i < spatialProperties.Length; i++)
                     {
                         Assert.True((spatialProperties[i] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LatitudeProperty), out string lat));
-                        Assert.Equal(lat, $"Location{i+1}.Latitude");
+                        Assert.Equal(lat, $"Location{i + 1}.Latitude");
                         Assert.True((spatialProperties[i] as BlittableJsonReaderObject).TryGet(nameof(SpatialProperty.LongitudeProperty), out string lng));
-                        Assert.Equal(lng, $"Location{i+1}.Longitude");
-                    } 
+                        Assert.Equal(lng, $"Location{i + 1}.Longitude");
+                    }
                 }
             }
         }
-        
+
         [Fact]
         public void VerifySelectedSpatialPropertiesWithAliasInResults()
         {
@@ -133,7 +134,7 @@ namespace SlowTests.Tests.Spatial
 
                     Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
                     Assert.Equal(3, results);
-                    
+
                     Assert.True(json.TryGet(nameof(DocumentQueryResult.SpatialProperties), out BlittableJsonReaderArray spatialProperties));
                     Assert.Equal(1, spatialProperties.Length);
 
@@ -175,7 +176,7 @@ namespace SlowTests.Tests.Spatial
 
                     Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
                     Assert.Equal(3, results);
-                    
+
                     Assert.True(json.TryGet(nameof(DocumentQueryResult.SpatialProperties), out BlittableJsonReaderArray spatialProperties));
                     Assert.Equal(1, spatialProperties.Length);
 
@@ -186,7 +187,7 @@ namespace SlowTests.Tests.Spatial
                 }
             }
         }
-        
+
         [Fact]
         public void VerifyNoSpatialPropertiesInResultsWhenSelectingOnlyLatitudeProperty()
         {
@@ -217,12 +218,12 @@ namespace SlowTests.Tests.Spatial
 
                     Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
                     Assert.Equal(3, results);
-                    
+
                     Assert.False(json.TryGet(nameof(DocumentQueryResult.SpatialProperties), out BlittableJsonReaderArray spatialProperties));
                 }
             }
         }
-        
+
         [Fact]
         public void VerifyNoSpatialPropertiesInResultsWhenSelectingNonSpatialField()
         {
@@ -253,12 +254,12 @@ namespace SlowTests.Tests.Spatial
 
                     Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
                     Assert.Equal(3, results);
-                    
+
                     Assert.False(json.TryGet(nameof(DocumentQueryResult.SpatialProperties), out BlittableJsonReaderArray spatialProperties));
                 }
             }
         }
-        
+
         [Fact]
         public void VerifyPolygonInResults()
         {
@@ -289,24 +290,24 @@ namespace SlowTests.Tests.Spatial
 
                     Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
                     Assert.Equal(4, results);
-                    
+
                     Assert.True(json.TryGet(nameof(DocumentQueryResult.SpatialShapes), out BlittableJsonReaderArray spatialShapes));
                     Assert.Equal(1, spatialShapes.Length);
-                    
+
                     (spatialShapes[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialShapeBase.ShapeType), out string shape);
                     Assert.Equal(shape, "Polygon");
-                    
+
                     Assert.True((spatialShapes[0] as BlittableJsonReaderObject).TryGet(nameof(Polygon.Vertices), out BlittableJsonReaderArray vertices));
                     Assert.Equal(4, vertices.Length);
-                    
-                    (vertices[0] as BlittableJsonReaderObject).TryGet(nameof(LatLong.Latitude), out double latitude);
+
+                    (vertices[0] as BlittableJsonReaderObject).TryGet(nameof(Coordinates.Latitude), out double latitude);
                     Assert.Equal(50, latitude);
-                    (vertices[0] as BlittableJsonReaderObject).TryGet(nameof(LatLong.Longitude), out double longitude);
+                    (vertices[0] as BlittableJsonReaderObject).TryGet(nameof(Coordinates.Longitude), out double longitude);
                     Assert.Equal(-90, longitude);
                 }
             }
         }
-        
+
         [Fact]
         public void VerifyCirclesInResults()
         {
@@ -339,49 +340,48 @@ namespace SlowTests.Tests.Spatial
 
                     Assert.True(json.TryGet(nameof(QueryResult.TotalResults), out int results));
                     Assert.Equal(3, results);
-                    
+
                     Assert.True(json.TryGet(nameof(DocumentQueryResult.SpatialShapes), out BlittableJsonReaderArray spatialShapes));
                     Assert.Equal(2, spatialShapes.Length);
 
                     var firstShape = spatialShapes[0] as BlittableJsonReaderObject;
                     firstShape.TryGet(nameof(SpatialShapeBase.ShapeType), out string shape);
                     Assert.Equal(shape, "Circle");
-                    
+
                     Assert.True(firstShape.TryGet(nameof(Circle.Center), out BlittableJsonReaderObject center));
-                    center.TryGet(nameof(LatLong.Latitude), out double latitude);
+                    center.TryGet(nameof(Coordinates.Latitude), out double latitude);
                     Assert.Equal(44.75, latitude);
-                    center.TryGet(nameof(LatLong.Longitude), out double longitude);
+                    center.TryGet(nameof(Coordinates.Longitude), out double longitude);
                     Assert.Equal(-93.35, longitude);
-                    
+
                     firstShape.TryGet(nameof(Circle.Radius), out double radius);
                     Assert.Equal(50, radius);
-                    
+
                     firstShape.TryGet(nameof(Circle.Units), out SpatialUnits units);
                     Assert.Equal(SpatialUnits.Miles, units);
-                    
+
                     var secondShape = spatialShapes[1] as BlittableJsonReaderObject;
                     secondShape.TryGet(nameof(SpatialShapeBase.ShapeType), out shape);
                     Assert.Equal(shape, "Circle");
-                    
+
                     Assert.True(secondShape.TryGet(nameof(Circle.Center), out center));
-                    center.TryGet(nameof(LatLong.Latitude), out latitude);
+                    center.TryGet(nameof(Coordinates.Latitude), out latitude);
                     Assert.Equal(40, latitude);
-                    center.TryGet(nameof(LatLong.Longitude), out longitude);
+                    center.TryGet(nameof(Coordinates.Longitude), out longitude);
                     Assert.Equal(-90, longitude);
-                    
-                    secondShape.TryGet(nameof(Circle.Radius), out  radius);
+
+                    secondShape.TryGet(nameof(Circle.Radius), out radius);
                     Assert.Equal(20, radius);
-                    
+
                     secondShape.TryGet(nameof(Circle.Units), out units);
                     Assert.Equal(SpatialUnits.Kilometers, units);
                 }
             }
         }
-        
+
         [Fact]
         public void VerifyWKTCircleHasDistance()
         {
-
             using (var store = GetDocumentStore())
             {
                 store.Initialize();
@@ -392,12 +392,12 @@ namespace SlowTests.Tests.Spatial
                                                                                                  "where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), " +
                                                                                                  "spatial.wkt('CIRCLE(-90 40)'))" +
                                                                                                  "&addSpatialProperties=true"));
-                    
+
                     Assert.Contains("WKT CIRCLE should contain 3 params. i.e. CIRCLE(longitude latitude d=radiusDistance)", e.Message);
                 }
             }
         }
-        
+
         [Fact]
         public void VerifyWKTCircleDistanceFormat()
         {
@@ -411,7 +411,7 @@ namespace SlowTests.Tests.Spatial
                                                                                                                          "where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), " +
                                                                                                                          "spatial.wkt('CIRCLE(-90 40 d2)'))" +
                                                                                                                          "&addSpatialProperties=true"));
-                    
+
                     Assert.Contains("Invalid radius distance param", e.Message);
                 }
             }
@@ -421,7 +421,7 @@ namespace SlowTests.Tests.Spatial
         {
             public double Latitude { get; set; }
             public double Longitude { get; set; }
-            
+
             public GeoPoint(double lat, double lng)
             {
                 Latitude = lat;
