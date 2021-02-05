@@ -2118,7 +2118,15 @@ namespace Raven.Server.Documents
 
         public CollectionDetails GetCollectionDetails(DocumentsOperationContext context, string collection)
         {
-            CollectionDetails collectionDetails = new CollectionDetails { Name = collection, CountOfDocuments = 0, Size = new Client.Util.Size() };
+            CollectionDetails collectionDetails = new CollectionDetails
+            {
+                Name = collection, 
+                CountOfDocuments = 0, 
+                Size = new Client.Util.Size(), 
+                DocumentsSize = new Client.Util.Size(),
+                RevisionsSize = new Client.Util.Size(),
+                TombstonesSize = new Client.Util.Size()
+            };
             CollectionName collectionName = GetCollection(collection, throwIfDoesNotExist: false);
 
             if (collectionName != null)
@@ -2127,9 +2135,16 @@ namespace Raven.Server.Documents
 
                 collectionDetails.CountOfDocuments = collectionTableReport.NumberOfEntries;
 
-                collectionDetails.Size.SizeInBytes = collectionTableReport.DataSizeInBytes
-                    + GetReportForTable(context, RevisionsStorage.RevisionsSchema, collectionName.GetTableName(CollectionTableType.Revisions)).DataSizeInBytes
-                    + GetReportForTable(context, TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones)).DataSizeInBytes;
+                var documentsSize = collectionTableReport.DataSizeInBytes;
+                var revisionsSize = GetReportForTable(context, RevisionsStorage.RevisionsSchema, collectionName.GetTableName(CollectionTableType.Revisions))
+                    .DataSizeInBytes;
+                var tombstonesSize = GetReportForTable(context, TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones)).DataSizeInBytes;
+                
+                collectionDetails.DocumentsSize.SizeInBytes = documentsSize;
+                collectionDetails.RevisionsSize.SizeInBytes = revisionsSize;
+                collectionDetails.TombstonesSize.SizeInBytes = tombstonesSize;
+
+                collectionDetails.Size.SizeInBytes = documentsSize + revisionsSize + tombstonesSize;
             }
 
             return collectionDetails;

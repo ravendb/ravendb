@@ -496,7 +496,6 @@ namespace Raven.Server.Web.System
                 
             }
             return Task.CompletedTask;
-            
         }
 
         private IndexMetrics GetIndexMetrics(DocumentDatabase documentDatabase, Index index)
@@ -505,6 +504,7 @@ namespace Raven.Server.Web.System
 
             result.DatabaseName = documentDatabase.Name;
             result.IndexName = index.Name;
+            
             result.Priority = index.Definition.Priority;
             result.State = index.State;
             result.Errors = (int)index.GetErrorCount();
@@ -535,6 +535,51 @@ namespace Raven.Server.Web.System
             return result;
         }
 
+        [RavenAction("/admin/monitoring/v1/collections", "GET", AuthorizationStatus.Operator)]
+        public Task MonitoringCollections()
+        {
+            AssertMonitoring();
+
+            var databases = GetDatabases();
+
+            var result = new CollectionsMetrics();
+            
+            result.PublicServerUrl = Server.Configuration.Core.PublicServerUrl?.UriValue;
+            result.NodeTag = ServerStore.NodeTag;
+
+            foreach (DocumentDatabase documentDatabase in databases)
+            {
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    foreach (var collection in documentDatabase.DocumentsStorage.GetCollections(context))
+                    {
+                        var details = documentDatabase.DocumentsStorage.GetCollectionDetails(context, collection.Name);
+                        result.Results.Add(new CollectionMetrics(documentDatabase.Name, details));
+                    }
+                }
+            }
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(CollectionsMetrics.PublicServerUrl));
+                writer.WriteString(result.PublicServerUrl);
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(CollectionsMetrics.NodeTag));
+                writer.WriteString(result.NodeTag);
+                writer.WriteComma();
+                writer.WriteArray(context, nameof(CollectionsMetrics.Results), result.Results, (w, c, metrics) =>
+                {
+                    context.Write(w, metrics.ToJson());
+                });
+                writer.WriteEndObject();
+            }
+          
+            return Task.CompletedTask;
+        }
+        
         private void AssertMonitoring()
         {
             /* TODO:  uncomment + add section in studio

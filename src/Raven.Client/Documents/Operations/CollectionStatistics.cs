@@ -35,6 +35,9 @@ namespace Raven.Client.Documents.Operations
         public string Name { get; set; }
         public long CountOfDocuments { get; set; }
         public Size Size { get; set; }
+        public Size DocumentsSize { get; set; }
+        public Size TombstonesSize { get; set; }
+        public Size RevisionsSize { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -46,6 +49,21 @@ namespace Raven.Client.Documents.Operations
                 {
                     [nameof(Size.HumaneSize)] = Size.HumaneSize,
                     [nameof(Size.SizeInBytes)] = Size.SizeInBytes
+                },
+                [nameof(DocumentsSize)] = new DynamicJsonValue
+                {
+                    [nameof(DocumentsSize.HumaneSize)] = DocumentsSize.HumaneSize,
+                    [nameof(DocumentsSize.SizeInBytes)] = DocumentsSize.SizeInBytes
+                },
+                [nameof(TombstonesSize)] = new DynamicJsonValue
+                {
+                    [nameof(TombstonesSize.HumaneSize)] = TombstonesSize.HumaneSize,
+                    [nameof(TombstonesSize.SizeInBytes)] = TombstonesSize.SizeInBytes
+                },
+                [nameof(RevisionsSize)] = new DynamicJsonValue
+                {
+                    [nameof(RevisionsSize.HumaneSize)] = RevisionsSize.HumaneSize,
+                    [nameof(RevisionsSize.SizeInBytes)] = RevisionsSize.SizeInBytes
                 }
             };
         }
