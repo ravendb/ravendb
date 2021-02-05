@@ -665,6 +665,8 @@ namespace Raven.Server.Documents.Indexes
             IndexingConfiguration configuration,
             PerformanceHintsConfiguration performanceHints)
         {
+            configuration.InitializeAnalyzers();
+
             if (_disposeOne.Disposed)
                 throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
 
@@ -2546,7 +2548,7 @@ namespace Raven.Server.Documents.Indexes
         public bool NoQueryInLast10Minutes()
         {
             var last = _lastQueryingTime;
-            return last.HasValue == false || 
+            return last.HasValue == false ||
                    DocumentDatabase.Time.GetUtcNow() - last.Value > TimeSpan.FromMinutes(10);
         }
 

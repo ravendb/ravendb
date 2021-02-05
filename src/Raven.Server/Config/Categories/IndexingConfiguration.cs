@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
+using Raven.Client;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Configuration;
@@ -269,19 +270,19 @@ namespace Raven.Server.Config.Categories
         public int HistoryRevisionsNumber { get; set; }
 
         [Description("TODO")]
-        [DefaultValue("LowerCaseKeywordAnalyzer")]
+        [DefaultValue(Constants.Documents.Indexing.Analyzers.Default)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Analyzers.Default", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public string DefaultAnalyzer { get; set; }
 
         [Description("TODO")]
-        [DefaultValue("KeywordAnalyzer")]
+        [DefaultValue(Constants.Documents.Indexing.Analyzers.DefaultExact)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Analyzers.Exact.Default", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public string DefaultExactAnalyzer { get; set; }
 
         [Description("TODO")]
-        [DefaultValue("RavenStandardAnalyzer")]
+        [DefaultValue(Constants.Documents.Indexing.Analyzers.DefaultSearch)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Analyzers.Search.Default", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public string DefaultSearchAnalyzer { get; set; }
@@ -305,6 +306,11 @@ namespace Raven.Server.Config.Categories
         {
             base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
 
+            InitializeAnalyzers();
+        }
+
+        public void InitializeAnalyzers()
+        {
             DefaultAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultAnalyzer);
             DefaultExactAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultExactAnalyzer);
             DefaultSearchAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultSearchAnalyzer);
