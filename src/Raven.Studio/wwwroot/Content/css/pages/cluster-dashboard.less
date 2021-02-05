@@ -1,59 +1,197 @@
 .cluster-dashboard-container {
-    padding: @gutter-sm + @gutter-xs/2;
+    //padding: @gutter-sm + @gutter-xs/2;
     width: 100%;
-    
-    @media (min-width: @screen-lg) {
-        display: flex;        
+    .gutter-sizer {
+        width: @gutter-sm;
     }
-    
-    .cluster-dashboard-column {
-        display: flex;
-        flex-direction: column;
+
+    .grid-sizer, .cluster-dashboard-item {    
+        width: 100%;
+
         @media (min-width: @screen-lg) {
-            width: 50%;
+            width: calc(50% - (@gutter-sm/2));
+        }
+
+        @media (min-width: 1920px) {
+            width: calc(33.3% - (@gutter-sm *2/3));
         }
     }
 
-    .cluster-dashboard-item {
-        margin: @gutter-xs/2;
-        padding: @gutter-sm;
+    .property-control {
+        cursor: pointer;
+
+        &:hover {
+            color: @text-emphasis;
+        }
+    }    
+
+    .cluster-dashboard-item {           
+        transition: all .3s cubic-bezier(1, 0, 0, 1);
         background-color: @panel-bg;
+        border-radius: 2px;
+        //box-shadow: 0 0 0 1px @gray-700 inset, 0 0 10px -3px rgba(#000, .4);
+        
+        .cluster-dashboard-item-header {
+            padding: @gutter-xxs;
+            display: flex;
+            align-items: center;            
+            cursor: grab;
+            
+
+            h3 {
+                flex-grow: 1;
+                margin-left: @gutter-xs;
+            }
+
+            button {
+                opacity: 0;
+                transition: opacity .2s;
+                margin-left: 2px;
+            }
+
+            &:hover {
+                button {
+                    opacity: 1;
+                }
+            }
+        }
 
         h2 {
-            font-size: 24px;
-            font-weight: 800;            
+            font-size: 20px;
+            font-weight: 800;       
+            margin: 0;
         }
 
         h3 {
             font-size: 13px;
             text-transform: uppercase;
             font-weight: bold;
-            letter-spacing: .12em;
-            margin-top: @gutter-xs;
+            letter-spacing: .12em;            
+            margin: 0;
+        }
+
+        &.fullscreen {
+            width: 100%;
+
+            @media (min-width: 1920px) {
+                width: calc(66.6% - (@gutter-sm *2/3));
+            }
+        }
+
+        &.is-dragging {
+            opacity: .5;
+            transition: none !important;
+            z-index: 10;
+
+            .cluster-dashboard-item-header {
+                cursor: grabbing;
+            }
         }
     }
 
+    .packery-drop-placeholder {
+        outline: 1px dashed @hr-border;
+        outline-offset: -1px;
+        /* transition position changing */
+        -webkit-transition: -webkit-transform 0.2s;
+                transition: transform 0.2s;
+      }
+
+    .license-information {
+        padding: @gutter-sm;
+
+        .license-item {
+            display: flex;
+            margin-top: @gutter-sm;
+
+            &> i {
+                font-size: 32px;
+                margin-right: @gutter-xs;
+                flex-shrink: 0;
+            }
+            
+            h4 {
+                font-size: 11px;
+                margin: 0;
+            }
+
+            .license-item-value {
+                font-size: 18px;
+                font-weight: bold;
+                color: @gray-100;
+
+                &.license-community {
+                    color: @color-3-1;
+                }
+
+                &.license-professional {
+                    color: @color-3-3;
+                }
+
+                &.license-enterprise {
+                    color: @color-4-1;
+                }
+
+                &.license-cloud {
+                    color: @color-3-2;
+                }
+            }
+        }
+    }
+
+
     .property-container {
-        margin-left: -@gutter-sm;
-        display: flex;
+        margin: @gutter-xxs;
+        margin-top: 0;      
+        background-color: @well-bg;  
+
+        h4 {
+            margin: 0;
+            padding: @gutter-xxs;
+            padding-bottom: 0;
+            font-size: 11px;
+            color: @text-muted;
+        }
 
         .collapse-arrow {
             flex-shrink: 0;
             border: none;
             background-color: transparent;
             align-self: flex-start;
-            width: @gutter-sm;
-            height: 25px;
-            line-height: 25px;
-            font-size: 12px;
+            width: @gutter;
+            height: @gutter;            
+            border-radius: @gutter;
+            font-size: 10px;
             padding: 0;
-            margin: @gutter-xs 0;
-            transition: transform .3s cubic-bezier(0, 0.5, 0.5, 1);
-            transform: rotate(90deg);
+            margin-top: 4px;
+            margin-left: 4px;
+            position: sticky;
+            left: 0;
+            transition: transform .3s cubic-bezier(0, 0.5, 0.5, 1);            
+            flex-shrink: 0;
+            mix-blend-mode: screen;
+            z-index: 1;
+            
+            i {
+                left: 0;
+                position: absolute;
+                transition: all .3s cubic-bezier(0, 0.5, 0.5, 1);
+                line-height: @gutter;
+                width: @gutter;
+                text-align: center;
+            }
+
+            .icon-arrow-down {
+                opacity: 0;
+                transform: translateY(@gutter-xs);
+            }
+
+            &:hover {
+                background-color: @panel-bg;
+            }
         }
 
-        .property {
-            background-color: @well-bg;
+        .property {            
             width: 100%;
             overflow-x: auto;
             --node-color: @color-4;
@@ -61,6 +199,8 @@
             .nodes-container {
                 display: flex;
                 padding: @gutter-xs/2 @gutter-sm/2 ;
+                padding-left: 0;
+                flex-grow: 1;
 
                 transition: transform .2s cubic-bezier(0, 0.5, 0.5, 1);
                 transform-origin: left top;
@@ -97,6 +237,8 @@
 
                         .supplementary-info {
                             font-size: 11px;
+                            line-height: 1em;
+                            text-align: right;
                         }
                     }
 
@@ -105,7 +247,8 @@
 
                         .details-item {                            
                             display: flex;
-                            font-size: 12px;
+                            align-self: center;
+                            font-size: 12px;                            
 
                             margin-top: @gutter-xxs/2;
                             padding-top: @gutter-xxs/2;
@@ -113,6 +256,7 @@
                             
                             .details-item-name {
                                 flex-grow: 1;
+                                line-height: 1em;
                             }
                             
                             .details-item-value  {
@@ -121,6 +265,11 @@
                                 margin-left: @gutter-xs;
                             }
                         }
+                    }
+
+                    .details-item-graph {
+                        margin: @gutter-xxs auto 0;
+                        width: 80px;
                     }
 
                     &:nth-of-type(10n+1) {
@@ -162,8 +311,16 @@
         }
 
         &.property-collapse {
-            .collapse-arrow {
-                transform: rotate(0);
+            .collapse-arrow {  
+                .icon-arrow-up {
+                    opacity: 0;
+                    transform: translateY(-@gutter-xs);
+                }
+
+                .icon-arrow-down {
+                    opacity: 1;
+                    transform: translateY(0);
+                }         
             }
             .nodes-container {
                 transform: scale(.8);  
@@ -182,35 +339,177 @@
         }
     }
 
+    .databases-list {
+        min-height: 300px;
+        display: flex;
+        flex-direction: column;
+        padding: @gutter-xxs;
+
+        .databases-summary {
+            display: flex;
+            margin-bottom: @gutter-xs;
+            padding-left: @gutter-xs;
+            padding-right: @gutter-xs;
+        }
+
+        .virtual-grid, .static-grid {
+            padding: 0;
+        }
+
+        .list-container {
+            position: relative;
+            flex-grow: 1;
+        }
+    }
+
     .topology-container {
+        padding: @gutter-xxs;
         font-size: 11px;
 
         display: grid;
         grid-gap: @gutter-sm;
         grid-template: 
             "graph graph graph" auto
-            "type node connection" auto / 1fr 1fr 1fr;
+            "task node connection" auto / 1fr 1fr 1fr;
 
-            @media (min-width: @screen-lg) {
-                grid-template: 
-                "graph type" auto
-                "graph node" auto
-                "graph connection" auto / 1fr auto;
-            }
+        @media (min-width: @screen-xl) {
+            grid-template: 
+            "graph task" auto
+            "graph node" auto
+            "graph connection" 1fr /  1fr auto;
+        }
 
-        .topology-graph {
+        .topology-graph {            
+            background-color: @well-bg;
             grid-area: graph;
         }
 
-        .topology-type {
-            grid-area: type;
+        .topology-task, .topology-node, .topology-connection {
+            h3 {
+                margin-bottom: @gutter-xs;
+            }
+            padding-left: @gutter-xs;
+            padding-bottom: @gutter-xs;
         }
 
-        .topology-area {
+        .topology-task {
+            grid-area: task;
+        }
+
+        .topology-node{
             grid-area: node;
         }
+
         .topology-connection {
             grid-area: connection;
         }
     }
+
+    .count-dot {
+        padding: 3px;
+        min-width: 1em;
+        line-height: 1em;
+        height: 1em;
+        display: inline-block;
+        border-radius: .5em;
+        border-radius: 20px;
+        box-sizing: content-box;
+        text-align: center;
+        font-weight: bold;
+        color: @gray-900;
+
+        &.count-dot-success {
+            background-color: @brand-success;
+        }
+
+        &.count-dot-warning {
+            background-color: @brand-warning;
+        }
+
+        &.count-dot-danger {
+            background-color: @brand-danger;
+        }
+    }
+
+    .virtual-grid {
+        .node-label {
+            background-color: @gray-300;
+            color: #22252b;
+            font-weight: 800;
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            line-height: 15px;
+            text-align: center;
+            border-radius: 15px;
+            margin-right: 7.0820917px;
+            flex-shrink: 0;
+
+            &.node-a {
+                background-color: @color-4;
+            }
+            &.node-b {
+                background-color: @color-4-2;
+            }
+            &.node-c {
+                background-color: @color-5;
+            }
+            &.node-d {
+                background-color: @color-5-2;
+            }
+            &.node-e {
+                background-color: @color-1;
+            }
+            &.node-f {
+                background-color: @color-1-2;
+            }
+            &.node-g {
+                background-color: @color-2;
+            }
+            &.node-h {
+                background-color: @color-2-2;
+            }
+            &.node-i {
+                background-color: @color-3;
+            }
+            &.node-j {
+                background-color: @color-3-2;
+            }
+        }
+
+        // DELETE THIS!!!
+        .virtual-row {
+            position: static !important;
+        }
+        // /DELETE THIS!!!
+    }
+}
+
+.add-widget {
+    position: fixed;
+    bottom: 50px;
+    right: @gutter;
+    background-color: @brand-primary;
+    border-radius: 100px;
+    width: @gutter-md;
+    height: @gutter-md;
+    line-height: @gutter-md;
+    padding: 0;
+
+}
+
+.cluster-widgets-list {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -@gutter-sm/2;
+
+    .widget-item {
+        background-color: @panel-bg;        
+        margin: @gutter-sm/2;
+        width: 25%;
+    }
+}
+
+.neo-modal {
+    display: none;
 }
