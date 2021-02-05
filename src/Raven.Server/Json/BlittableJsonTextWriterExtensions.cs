@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
@@ -18,6 +17,7 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Debugging;
+using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Facets;
@@ -238,24 +238,24 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(result.LatitudeProperty));
             writer.WriteString(result.LatitudeProperty);
             writer.WriteComma();
-            
+
             writer.WritePropertyName(nameof(result.LongitudeProperty));
             writer.WriteString(result.LongitudeProperty);
-            
+
             writer.WriteEndObject();
         }
 
         private static void WriteSpatialShapeResult(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, SpatialShapeBase result)
         {
             writer.WriteStartObject();
-            
+
             writer.WritePropertyName(nameof(result.ShapeType));
             writer.WriteString(result.ShapeType.ToString());
             writer.WriteComma();
 
             if (result.ShapeType == SpatialShape.Circle)
             {
-                var circle  = result as Circle;
+                var circle = result as Circle;
                 writer.WritePropertyName(nameof(circle.Center));
                 writer.WriteStartObject();
                 writer.WritePoint(context, circle.Center);
@@ -265,41 +265,41 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(nameof(circle.Radius));
                 writer.WriteDouble(circle.Radius);
                 writer.WriteComma();
-                 
+
                 writer.WritePropertyName(nameof(circle.Units));
                 writer.WriteString(circle.Units.ToString());
             }
             else if (result.ShapeType == SpatialShape.Polygon)
             {
                 var polygon = result as Polygon;
-                writer.WriteArray(context, nameof(polygon.Vertices), polygon.Vertices, 
+                writer.WriteArray(context, nameof(polygon.Vertices), polygon.Vertices,
                     (w, c, point) => w.WriteSpatialPointResult(c, point));
             }
             else
             {
                 throw new NotSupportedException($"Shape type: {result.ShapeType} is not supported.");
             }
-            
+
             writer.WriteEndObject();
         }
 
-        private static void WriteSpatialPointResult(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, LatLong result)
+        private static void WriteSpatialPointResult(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Coordinates result)
         {
             writer.WriteStartObject();
             writer.WritePoint(context, result);
             writer.WriteEndObject();
         }
 
-        private static void WritePoint(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, LatLong result)
+        private static void WritePoint(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Coordinates result)
         {
             writer.WritePropertyName(nameof(result.Latitude));
             writer.WriteDouble(result.Latitude);
             writer.WriteComma();
-            
+
             writer.WritePropertyName(nameof(result.Longitude));
             writer.WriteDouble(result.Longitude);
         }
-        
+
         public static void WriteSuggestionResult(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, SuggestionResult result)
         {
             writer.WriteStartObject();
@@ -547,20 +547,20 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(nameof(result.CompareExchangeValueIncludes));
                 await writer.WriteCompareExchangeValues(compareExchangeValues);
             }
-           
+
             var spatialProperties = result.SpatialProperties;
             if (spatialProperties != null)
             {
                 writer.WriteComma();
-                writer.WriteArray(context, nameof(result.SpatialProperties), spatialProperties, 
+                writer.WriteArray(context, nameof(result.SpatialProperties), spatialProperties,
                     (w, c, spatialProperty) => w.WriteSpatialPropertyResult(c, spatialProperty));
             }
-            
+
             var spatialShapes = result.SpatialShapes;
             if (spatialShapes != null)
             {
                 writer.WriteComma();
-                writer.WriteArray(context, nameof(result.SpatialShapes), spatialShapes, 
+                writer.WriteArray(context, nameof(result.SpatialShapes), spatialShapes,
                     (w, c, spatialShape) => w.WriteSpatialShapeResult(c, spatialShape));
             }
 

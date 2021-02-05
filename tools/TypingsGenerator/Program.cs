@@ -57,6 +57,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes.Debugging;
+using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
@@ -257,7 +258,7 @@ namespace TypingsGenerator
             // query
             scripter.AddType(typeof(QueryResult<,>));
             scripter.AddType(typeof(PutResult));
-            
+
             // spatial query
             scripter.AddType(typeof(SpatialUnits));
             scripter.AddType(typeof(SpatialShape));
