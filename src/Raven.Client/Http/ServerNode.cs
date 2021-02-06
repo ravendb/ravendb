@@ -1,4 +1,5 @@
 ﻿using System;
+using static Sparrow.Hashing;
 
 namespace Raven.Client.Http
 {
@@ -13,15 +14,17 @@ namespace Raven.Client.Http
             Rehab = 4
         }
 
+        private static int _emptyStringHash = string.Empty.GetHashCode();
+
         public string Url;
         public string Database;
+
         public string ClusterTag;
         public Role ServerRole;
 
         private bool Equals(ServerNode other)
         {
-            return string.Equals(Url, other.Url) &&
-                string.Equals(Database, other.Database);
+            return string.Equals(Url, other.Url) && string.Equals(Database, other.Database);
         }
 
         public override bool Equals(object obj)
@@ -36,10 +39,35 @@ namespace Raven.Client.Http
         {
             unchecked
             {
-                var hashCode = Url?.GetHashCode() ?? 0;
-                hashCode = (hashCode * 397) ^ (Database?.GetHashCode() ?? 0);
-                return hashCode;
+                return HashCombiner.CombineInline(Url?.GetHashCode() ?? _emptyStringHash, Database?.GetHashCode() ?? _emptyStringHash);
             }
         }
+
+        private int _lastServerVersionCheck = 0;
+        
+        public string LastServerVersion { get; private set; }
+        
+        public bool ShouldUpdateServerVersion()
+        {            
+            if (LastServerVersion == null || _lastServerVersionCheck > 100)
+                return true;
+
+            _lastServerVersionCheck++;
+            return false;
+        }
+
+        public void UpdateServerVersion (string serverVersion)
+        {
+            LastServerVersion = serverVersion;
+            _lastServerVersionCheck = 0;            
+        }
+
+        public void DiscardServerVersion()
+        {
+            LastServerVersion = null;
+            _lastServerVersionCheck = 0;
+        }
+
+        
     }
 }
