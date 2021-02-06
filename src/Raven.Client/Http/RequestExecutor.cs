@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -82,6 +82,8 @@ namespace Raven.Client.Http
 
         private ServerNode _topologyTakenFromNode;
 
+        internal string LastServerVersion { get; private set; }
+
         private HttpClient _httpClient;
 
         public HttpClient HttpClient
@@ -131,8 +133,6 @@ namespace Raven.Client.Http
         protected bool _disableTopologyUpdates;
 
         protected bool _disableClientConfigurationUpdates;
-
-        internal string LastServerVersion;
 
         public TimeSpan? DefaultTimeout
         {
@@ -1051,8 +1051,18 @@ namespace Raven.Client.Http
 
             var response = await preferredTask.ConfigureAwait(false);
 
-            if (TryGetServerVersion(response, out var serverVersion))
-                LastServerVersion = serverVersion;
+            // PERF: The reason to avoid rechecking every time is that servers wont change so rapidly
+            //       and therefore we dimish its cost by orders of magnitude just doing it
+            //       once in a while. We dont care also about the potential race conditions that may happen
+            //       here mainly because the idea is to have a lax mechanism to recheck that is at least
+            //       orders of magnitude faster than currently. 
+            if (chosenNode.ShouldUpdateServerVersion())
+            {
+                if (TryGetServerVersion(response, out var serverVersion))
+                    chosenNode.UpdateServerVersion(serverVersion);                    
+            }
+
+            LastServerVersion = chosenNode.LastServerVersion;
 
             if (sessionInfo?.LastClusterTransactionIndex != null)
             {
@@ -1060,7 +1070,7 @@ namespace Raven.Client.Http
                 // Since the current executed command can be dependent on that, we have to wait for the cluster transaction.
                 // But we can't do that if the server is an old one.
 
-                if (serverVersion == null || string.Compare(serverVersion, "4.1", StringComparison.Ordinal) < 0)
+                if (LastServerVersion == null || string.Compare(LastServerVersion, "4.1", StringComparison.Ordinal) < 0)
                 {
                     using (response)
                     {
@@ -1475,6 +1485,9 @@ namespace Raven.Client.Http
                 SpawnHealthChecks(chosenNode, nodeIndex.Value);
                 return false;
             }
+
+            // As the server is down, we discard the server version to ensure we update when it goes up. 
+            chosenNode.DiscardServerVersion();
 
             _nodeSelector.OnFailedRequest(nodeIndex.Value);
 
