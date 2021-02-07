@@ -203,6 +203,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
         private async Task GetDocumentsAsync(StringValues ids, StringValues includePaths, string etag, bool metadataOnly, TransactionOperationContext context)
         {
+            //TODO - sharding: make sure we maintain the order of returned results
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
             var sb = new StringBuilder();
             var cmds = new List<FetchDocumentsFromShardsCommand>();

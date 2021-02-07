@@ -42,6 +42,8 @@ namespace Raven.Server.Documents.Sharding
 
         public char IdentitySeparator => _record.Client?.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator;
 
+        public bool Encrypted => _record.Encrypted;
+
         /// <summary>
         /// The shard id is a hash of the document id, lower case, reduced to
         /// 20 bits. This gives us 0 .. 1M range of shard ids and means that assuming

@@ -68,6 +68,12 @@ namespace Raven.Server.Web
             return feature?.Certificate;
         }
 
+        public CancellationToken AbortRequestToken
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _context.HttpContext.RequestAborted; }
+        }
+
         public virtual void Init(RequestHandlerContext context)
         {
             _context = context;

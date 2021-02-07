@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.ShardedHandlers
         [RavenShardedAction("/databases/*/bulk_docs", "POST")]
         public async Task BulkDocs()
         {
-            var commandBuilder = new ShardedBatchCommandBuilder(this, ShardedContext.DatabaseName, ShardedContext.IdentitySeparator);
+            var commandBuilder = new ShardedBatchCommandBuilder(this);
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var contentType = HttpContext.Request.ContentType;
@@ -61,39 +61,47 @@ namespace Raven.Server.Documents.ShardedHandlers
                         throw new NotSupportedException("Cluster transactions are currently not supported in a sharded database.");
                     }
 
-                    var shardedBatchCommands = new Dictionary<int, SingleNodeShardedBatchCommand>();
+                    var shardedBatchCommands = new Dictionary<int, SingleNodeShardedBatchCommand>(); // TODO sharding : consider cache those
                     foreach (var command in batch)
                     {
                         var id = command.Id;
                         var shardIndex = ShardedContext.GetShardIndex(context, id);
                         var requestExecutor = ShardedContext.RequestExecutors[shardIndex];
 
-                        if (shardedBatchCommands.ContainsKey(shardIndex) == false)
+                        if (shardedBatchCommands.TryGetValue(shardIndex, out var shardedBatchCommand) == false)
                         {
-                            shardedBatchCommands.Add(shardIndex, new SingleNodeShardedBatchCommand(this, requestExecutor.ContextPool));
+                            shardedBatchCommand = new SingleNodeShardedBatchCommand(this, requestExecutor.ContextPool);
+                            shardedBatchCommands.Add(shardIndex, shardedBatchCommand);
                         }
 
-                        var shardedBatchCommand = shardedBatchCommands[shardIndex];
                         shardedBatchCommand.AddCommand(command);
                     }
 
-                    var tasks = shardedBatchCommands.Select(x => ShardedContext.RequestExecutors[x.Key].ExecuteAsync(x.Value, x.Value.Context));
+                    var tasks = new List<Task>();
+                    foreach (var command in shardedBatchCommands)
+                    {
+                        tasks.Add(ShardedContext.RequestExecutors[command.Key].ExecuteAsync(command.Value, command.Value.Context));
+                    }
+
                     await Task.WhenAll(tasks);
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        var reply = new DynamicJsonArray();
+                        var reply = new object[batch.ParsedCommands.Count];
+
                         foreach (var command in shardedBatchCommands.Values)
                         {
+                            var count = 0;
                             var result = command.Result;
                             result.TryGet(nameof(BatchCommandResult.Results), out BlittableJsonReaderArray partialResult);
                             foreach (var o in partialResult.Items)
                             {
-                                reply.Add(o);
+                                var positionInResult = command.PositionInResponse[count++];
+                                reply[positionInResult] = o;
                             }
                         }
-                        context.Write(writer, new DynamicJsonValue {[nameof(BatchCommandResult.Results)] = reply});
+                        context.Write(writer, new DynamicJsonValue {[nameof(BatchCommandResult.Results)] = new DynamicJsonArray(reply)});
                     }
                 }
             }
@@ -104,11 +112,12 @@ namespace Raven.Server.Documents.ShardedHandlers
     {
         private readonly JsonOperationContext _context;
         private readonly List<Stream> _commands = new List<Stream>();
+        public List<int> PositionInResponse = new List<int>();
+
         private List<Stream> _attachmentStreams;
         private HashSet<Stream> _uniqueAttachmentStreams;
         private readonly TransactionMode _mode = TransactionMode.SingleNode;
         private readonly IDisposable _returnCtx;
-
         public JsonOperationContext Context => _context;
 
         public SingleNodeShardedBatchCommand(ShardedRequestHandler handler, JsonContextPool pool) :
@@ -120,6 +129,7 @@ namespace Raven.Server.Documents.ShardedHandlers
         public void AddCommand(SingleShardedCommand command)
         {
             _commands.Add(command.BufferedCommand);
+            PositionInResponse.Add(command.PositionInResponse);
 
             if (command.AttachmentStream != null)
             {
@@ -198,6 +208,7 @@ namespace Raven.Server.Documents.ShardedHandlers
         public string Id;
         public Stream AttachmentStream;
         public MemoryStream BufferedCommand;
+        public int PositionInResponse;
     }
 
     public class ShardedBatchCommand : IEnumerator<SingleShardedCommand>, IEnumerable<SingleShardedCommand>
@@ -222,7 +233,8 @@ namespace Raven.Server.Documents.ShardedHandlers
             {
                 Id = cmd.Id,
                 AttachmentStream = stream,
-                BufferedCommand = BufferedCommands[_commandPosition]
+                BufferedCommand = BufferedCommands[_commandPosition],
+                PositionInResponse = _commandPosition
             };
             _commandPosition++;
             return true;
@@ -254,28 +266,42 @@ namespace Raven.Server.Documents.ShardedHandlers
         }
     }
 
-    
-
     public class ShardedBatchCommandBuilder : BatchRequestParser.BatchCommandBuilder
     {
         public List<Stream> Streams;
         public List<BufferedCommand> BufferedCommands = new List<BufferedCommand>();
 
-        public ShardedBatchCommandBuilder(RequestHandler handler, string database, char identityPartsSeparator) :
-            base(handler, database, identityPartsSeparator)
+        private readonly bool _encrypted;
+
+        public ShardedBatchCommandBuilder(ShardedRequestHandler handler) :
+            base(handler, handler.ShardedContext.DatabaseName, handler.ShardedContext.IdentitySeparator)
         {
+            _encrypted = handler.ShardedContext.Encrypted;
         }
 
         public override async Task SaveStream(JsonOperationContext context, Stream input)
         {
             Streams ??= new List<Stream>();
-
-            var ms = new MemoryStream();
-            await input.CopyToAsync(ms, CancellationToken.None); // TODO sharding: pass cancellation token
-            Streams.Add(ms);
+            var attachment = GetServerTempFile("sharded").StartNewStream();
+            await input.CopyToAsync(attachment, Handler.AbortRequestToken);
+            await attachment.FlushAsync(Handler.AbortRequestToken);
+            Streams.Add(attachment);
         }
 
-        public override async Task<BatchRequestParser.CommandData> ReadCommand(JsonOperationContext ctx, Stream stream, JsonParserState state, UnmanagedJsonParser parser, JsonOperationContext.MemoryBuffer buffer, BlittableMetadataModifier modifier,
+        public StreamsTempFile GetServerTempFile(string prefix)
+        {
+            var name = $"attachment.{Guid.NewGuid():N}.{prefix}";
+            var tempPath = ServerStore._env.Options.DataPager.Options.TempPath.Combine(name);
+            
+            return new StreamsTempFile(tempPath.FullPath, _encrypted);
+        }
+
+        public override async Task<BatchRequestParser.CommandData> ReadCommand(
+            JsonOperationContext ctx, 
+            Stream stream, JsonParserState state, 
+            UnmanagedJsonParser parser, 
+            JsonOperationContext.MemoryBuffer buffer, 
+            BlittableMetadataModifier modifier,
             CancellationToken token)
         {
             var ms = new MemoryStream();
@@ -326,29 +352,124 @@ namespace Raven.Server.Documents.ShardedHandlers
         {
             public MemoryStream CommandStream;
 
-            public long IdStartPosition; // id should be replace for identities
-            public long ChangeVectorPosition; // change vector must be null for identity request and string.Empty after generation
-
+            // for identities we should replace the id and change vector
+            public int IdStartPosition; 
+            public int ChangeVectorPosition; 
             public int IdLength;
 
             public MemoryStream ModifyIdentityStream(string newId)
             {
-                // we need to replace here the piped id with the actual one
-
                 CommandStream.Position = 0;
 
-                var ms = new MemoryStream();
-
-                var source = CommandStream.GetBuffer();
-                
-                // TODO: re-write the change vector to use string.Empty
-                ms.Write(source, 0, (int)IdStartPosition);
-                ms.Write(Encoding.UTF8.GetBytes(newId));
-                
-                CommandStream.Position = IdStartPosition + IdLength;
-                CommandStream.CopyTo(ms);
+                var newStream = new MemoryStream();
+                var modifier = new BufferedCommandModifier
+                {
+                    ChangeVectorPosition = ChangeVectorPosition, 
+                    IdStartPosition = IdStartPosition, 
+                    IdLength = IdLength
+                };
+                modifier.Initialize();
+                modifier.Rewrite(CommandStream, newStream, newId);
+               
                 CommandStream.Dispose();
-                return ms;
+                return newStream;
+            }
+
+            private struct BufferedCommandModifier
+            {
+                public int IdStartPosition;
+                public int ChangeVectorPosition;
+                public int IdLength;
+
+                private Item[] _order;
+                private enum Item
+                {
+                    None,
+                    Id,
+                    ChangeVector
+                }
+
+                public void Initialize()
+                {
+                    if (IdStartPosition <= 0)
+                        ThrowInvalidArgument("Id position");
+
+                    if (IdLength <= 0)
+                        ThrowInvalidArgument("Id length");
+
+                    if (ChangeVectorPosition <= 0)
+                        ThrowInvalidArgument("Change vector position");
+
+                    _order = new Item[2];
+
+                    if (ChangeVectorPosition < IdStartPosition)
+                    {
+                        _order[0] = Item.ChangeVector;
+                        _order[1] = Item.Id;
+                    }
+                    else
+                    {
+                        _order[1] = Item.ChangeVector;
+                        _order[0] = Item.Id;
+                    }
+                }
+
+                public void Rewrite(MemoryStream source, MemoryStream dest, string newId)
+                {
+                    var sourceBuffer = source.GetBuffer();
+                    var offset = 0;
+
+                    foreach (var item in _order)
+                    {
+                        switch (item)
+                        {
+                            case Item.Id:
+                                offset = WriteRemaining(IdStartPosition);
+
+                                // we need to replace here the piped id with the actual one
+                                dest.Write(Encoding.UTF8.GetBytes(newId));
+                                offset += IdLength;
+
+                                break;
+                            case Item.ChangeVector:
+                                offset = WriteRemaining(ChangeVectorPosition);
+                                
+                                // change vector must be null for identity request and string.Empty after generation
+                                dest.Write(Empty);
+                                offset += 4; // null
+
+                                break;
+                            default:
+                                throw new ArgumentException(item.ToString());
+                        }
+
+                        int WriteRemaining(int upto)
+                        {
+                            var remaining = upto - offset;
+                            if (remaining < 0)
+                                throw new InvalidOperationException();
+
+                            if (remaining > 0)
+                            {
+                                dest.Write(sourceBuffer, offset, remaining);
+                                offset += remaining;
+                            }
+
+                            return offset;
+                        }
+                    }
+                
+                    // copy the rest
+                    source.Position = offset;
+                    source.CopyTo(dest);
+                }
+
+                private static byte[] Empty = Encoding.UTF8.GetBytes("\"\"");
+
+                private static void ThrowInvalidArgument(string name)
+                {
+                    throw new ArgumentException($"{name} must be positive");
+                }
             }
         }
     }

@@ -170,8 +170,8 @@ namespace Raven.Server.Documents.Handlers
         {
             private readonly char _identityPartsSeparator;
             protected readonly RequestHandler Handler;
-            private readonly ServerStore _serverStore;
             private readonly string _database;
+            protected ServerStore ServerStore => Handler.ServerStore;
 
             private int _index = -1;
             private CommandData[] _commands = Empty;
@@ -186,7 +186,6 @@ namespace Raven.Server.Documents.Handlers
             protected BatchCommandBuilder(RequestHandler handler, string database, char identityPartsSeparator)
             {
                 Handler = handler;
-                _serverStore = handler.ServerStore;
                 _database = database;
                 _identityPartsSeparator = identityPartsSeparator;
             }
@@ -207,7 +206,7 @@ namespace Raven.Server.Documents.Handlers
                 if (HasIdentities == false)
                     return;
 
-                var newIds = await _serverStore.GenerateClusterIdentitiesBatchAsync(_database, _identities, RaftIdGenerator.NewId());
+                var newIds = await ServerStore.GenerateClusterIdentitiesBatchAsync(_database, _identities, RaftIdGenerator.NewId());
                 Debug.Assert(newIds.Count == _identities.Count);
 
                 for (var index = 0; index < _identityPositions.Count; index++)
@@ -283,7 +282,7 @@ namespace Raven.Server.Documents.Handlers
                             _commands = IncreaseSizeOfCommandsBuffer(_index, _commands);
                         }
 
-                        var commandData = await ReadCommand(context, stream, state, parser, buffer, modifier, default);
+                        var commandData = await ReadCommand(context, stream, state, parser, buffer, modifier, Handler.AbortRequestToken);
 
                         if (commandData.Type == CommandType.PATCH)
                         {
@@ -491,7 +490,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 while (parser.Read() == false)
                 {
-                    parser.CopyTo(commandCopy, position);
+                    parser.CopyParsedChunk(commandCopy, position);
                     position = 0;
                     await RefillParserBuffer(stream, buffer, parser, token);
                 }
@@ -506,7 +505,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     if (depth == 0)
                     {
-                        parser.CopyTo(commandCopy, position);
+                        parser.CopyParsedChunk(commandCopy, position);
                         break;
                     }
 
@@ -521,7 +520,7 @@ namespace Raven.Server.Documents.Handlers
                     case CommandPropertyName.Type:
                         while (parser.Read() == false)
                         {
-                            parser.CopyTo(commandCopy, position);
+                            parser.CopyParsedChunk(commandCopy, position);
                             position = 0;
                             await RefillParserBuffer(stream, buffer, parser, token);
                         }
@@ -535,7 +534,7 @@ namespace Raven.Server.Documents.Handlers
                     case CommandPropertyName.Id:
                         while (parser.Read() == false)
                         {
-                            parser.CopyTo(commandCopy, position);
+                            parser.CopyParsedChunk(commandCopy, position);
                             position = 0;
                             await RefillParserBuffer(stream, buffer, parser, token);
                         }
@@ -546,7 +545,7 @@ namespace Raven.Server.Documents.Handlers
                                 commandData.Id = null;
                                 break;
                             case JsonParserToken.String:
-                                bufferedCommand.IdStartPosition = commandCopy.Position + parser.BufferOffset - position - state.StringSize - 1;
+                                bufferedCommand.IdStartPosition = checked((int)(commandCopy.Position + parser.BufferOffset - position - state.StringSize - 1));
                                 bufferedCommand.IdLength = state.StringSize;
                                 commandData.Id = GetStringPropertyValue(state);
                                 break;
@@ -562,7 +561,18 @@ namespace Raven.Server.Documents.Handlers
                         break;
 
                     case CommandPropertyName.ChangeVector:
-                        bufferedCommand.ChangeVectorPosition = commandCopy.Position + parser.BufferOffset - position;
+                        while (parser.Read() == false)
+                        {
+                            parser.CopyParsedChunk(commandCopy, position);
+                            position = 0;
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        }
+
+                        if (state.CurrentTokenType == JsonParserToken.Null)
+                        {
+                            // we need this only for identities and we expect to have always null
+                            bufferedCommand.ChangeVectorPosition = checked((int)(commandCopy.Position + parser.BufferOffset - position - 4));
+                        }
                         break;
                 }
             }

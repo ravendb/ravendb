@@ -132,9 +132,9 @@ namespace Sparrow.Json.Parsing
             _unmanagedWriteBuffer = _ctx.GetStream(previous);
         }
 
-        public void CopyTo(Stream dest, int from)
+        public void CopyParsedChunk(Stream dest, int from)
         {
-            var amountToCopy = checked((int)(_bufSize - from));
+            var amountToCopy = checked((int)(_pos - from));
             dest.Write(new ReadOnlySpan<byte>(_inputBuffer + from, amountToCopy));
         }
 
