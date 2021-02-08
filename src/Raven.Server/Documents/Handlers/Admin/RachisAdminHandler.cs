@@ -672,5 +672,15 @@ namespace Raven.Server.Documents.Handlers.Admin
                 NoContentStatus();
             }
         }
+
+        [RavenAction("/admin/cluster/remove-entry-from-log", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
+        public Task RemoveEntryFromLog()
+        {
+            var index = GetLongQueryString("index");
+
+            ServerStore.Engine.RemoveEntryFromRaftLog(index);
+
+            return NoContent();
+        }
     }
 }
