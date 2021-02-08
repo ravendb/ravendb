@@ -35,7 +35,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task SkipEntryFromRaftLogTest()
+        public async Task RemoveEntryFromRaftLogTest()
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
             var database = GetDatabaseName();
@@ -64,26 +64,35 @@ namespace SlowTests.Issues
                         {
                             Members = new List<string> { "A", "B", "C" },
                             Rehabs = new List<string> { },
-                            ReplicationFactor =3
+                            ReplicationFactor = 3
                         }
                     },
                     Name = "Toli"
 
                 });
 
-                Assert.False(leader.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"));
                 foreach (var server in Servers)
                 {
-                    using (documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-
-                        server.ServerStore.Engine.GetLastCommitIndex(context, out long index, out long term);
-                        server.ServerStore.Engine.SkipEntryFromRaftLog(index + 1);
-                    }
+                    Assert.False(leader.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"));
                 }
-                var val = WaitForValueAsync(() => leader.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"), true);
-                Assert.True(val.Result);
+
+                foreach (var server in Servers)
+                {
+                    long index = 0;
+                    documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                    using (documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        server.ServerStore.Engine.GetLastCommitIndex(context, out index, out long term);
+                    }
+
+                    server.ServerStore.Engine.RemoveEntryFromRaftLog(index + 1);
+                }
+                foreach (var server in Servers)
+                {
+                    var val = WaitForValueAsync(() => server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"), true);
+                    Assert.True(val.Result);
+                }
             }
         }
         internal class TestCommandWithRaftId : CommandBase
