@@ -247,48 +247,44 @@ namespace Raven.Server.Documents.Handlers.Admin
         public async Task Enable()
         {
             var raftRequestId = GetRaftRequestIdFromQuery();
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            var name = GetStringQueryString("name");
+            var clusterWide = GetBoolValueQueryString("clusterWide") ?? false;
+            var index = Database.IndexStore.GetIndex(name);
+            if (index == null)
+                IndexDoesNotExistException.ThrowFor(name);
+
+            if (clusterWide)
             {
-                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/enable");
-                var parameters = JsonDeserializationServer.Parameters.EnableIndexParameters(json);
-                var name = parameters.IndexName;
-                var index = Database.IndexStore.GetIndex(name);
-                if (index == null)
-                    IndexDoesNotExistException.ThrowFor(name);
-                if (parameters.ClusterWide)
-                {
-                    await Database.IndexStore.SetState(name, IndexState.Normal, $"{raftRequestId}/{index}");
-                }
-                else
-                {
-                    index.Enable();
-                }
-                NoContentStatus();
+                await Database.IndexStore.SetState(name, IndexState.Normal, $"{raftRequestId}/{index}");
             }
+            else
+            {
+                index.Enable();
+            }
+
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/admin/indexes/disable", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task Disable()
         {
             var raftRequestId = GetRaftRequestIdFromQuery();
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            var name = GetStringQueryString("name");
+            var clusterWide = GetBoolValueQueryString("clusterWide") ?? false;
+            var index = Database.IndexStore.GetIndex(name);
+            if (index == null)
+                IndexDoesNotExistException.ThrowFor(name);
+
+            if (clusterWide)
             {
-                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/disable");
-                var parameters = JsonDeserializationServer.Parameters.DisableIndexParameters(json);
-                var name = parameters.IndexName;
-                var index = Database.IndexStore.GetIndex(name);
-                if (index == null)
-                    IndexDoesNotExistException.ThrowFor(name);
-                if (parameters.ClusterWide)
-                {
-                    await Database.IndexStore.SetState(name, IndexState.Disabled, $"{raftRequestId}/{index}");
-                }
-                else
-                {
-                    index.Disable();
-                }
-                NoContentStatus();
+                await Database.IndexStore.SetState(name, IndexState.Disabled, $"{raftRequestId}/{index}");
             }
+            else
+            {
+                index.Disable();
+            }
+
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/admin/indexes/dump", "POST", AuthorizationStatus.DatabaseAdmin)]

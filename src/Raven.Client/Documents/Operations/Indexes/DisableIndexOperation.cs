@@ -10,18 +10,17 @@ namespace Raven.Client.Documents.Operations.Indexes
 {
     public class DisableIndexOperation : IMaintenanceOperation
     {
-        private readonly Parameters _parameters;
+        private readonly string _indexName;
+
+        private readonly bool _clusterWide;
 
         public DisableIndexOperation(string indexName)
         {
             if (indexName == null)
                 throw new ArgumentNullException(nameof(indexName));
 
-            _parameters = new Parameters
-            {
-                IndexName = indexName,
-                ClusterWide = false
-            };
+            _indexName = indexName;
+            _clusterWide = false;
         }
 
         public DisableIndexOperation(string indexName, bool clusterWide)
@@ -29,55 +28,39 @@ namespace Raven.Client.Documents.Operations.Indexes
             if (indexName == null)
                 throw new ArgumentNullException(nameof(indexName));
 
-            _parameters = new Parameters
-            {
-                IndexName = indexName,
-                ClusterWide = clusterWide
-            };
+            _indexName = indexName;
+            _clusterWide = clusterWide;
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DisableIndexCommand(conventions, context, _parameters);
+            return new DisableIndexCommand(_indexName, _clusterWide);
         }
 
         private class DisableIndexCommand : RavenCommand, IRaftCommand
         {
-            private readonly BlittableJsonReaderObject _parameters;
+            private readonly string _indexName;
+            private readonly bool _clusterWide;
 
-            public DisableIndexCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters)
+            public DisableIndexCommand(string indexName, bool clusterWide)
             {
-                if (conventions == null)
-                    throw new ArgumentNullException(nameof(conventions));
-                if (context == null)
-                    throw new ArgumentNullException(nameof(context));
-                if (parameters == null)
-                    throw new ArgumentNullException(nameof(parameters));
-
-                _parameters = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(parameters, context);
+                _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
+                _clusterWide = clusterWide;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/indexes/disable";
+                url = $"{node.Url}/databases/{node.Database}/admin/indexes/disable?name={Uri.EscapeDataString(_indexName)}&clusterWide={_clusterWide}";
 
-                return new HttpRequestMessage
+                var request = new HttpRequestMessage
                 {
-                    Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
-                    {
-                        ctx.Write(stream, _parameters);
-                    })
+                    Method = HttpMethod.Post
                 };
+
+                return request;
             }
 
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
-        }
-
-        internal class Parameters
-        {
-            public string IndexName { get; set; }
-            public bool ClusterWide { get; set; }
         }
     }
 }
