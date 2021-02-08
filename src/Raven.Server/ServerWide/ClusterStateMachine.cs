@@ -2735,6 +2735,8 @@ namespace Raven.Server.ServerWide
                         continue;
 
                     var topology = rawRecord.Topology;
+                    if (topology == null)
+                        continue;
                     if (topology.RelevantFor(oldTag) == false)
                     {
                         var record = rawRecord.MaterializedRecord;

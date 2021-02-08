@@ -397,6 +397,9 @@ namespace Sparrow.Json
         private static Dictionary<string, T> ToDictionaryOfPrimitive<T>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
             where T : struct
         {
+            if (json == null)
+                return default;
+
             var dic = new Dictionary<string, T>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
@@ -416,6 +419,9 @@ namespace Sparrow.Json
 
         private static Dictionary<TK, TV> ToDictionary<TK, TV>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, TV> converter)
         {
+            if (json == null)
+                return default;
+
             var isStringKey = typeof(TK) == typeof(string);
             IEqualityComparer<TK> comparer = default;
 
@@ -480,6 +486,9 @@ namespace Sparrow.Json
 
         private static T CreateFromBlittableJson<T>(BlittableJsonReaderObject json, string name, MethodInfo methodToCall)
         {
+            if (json == null)
+                return default;
+
             if (json.TryGet(name, out BlittableJsonReaderObject obj) == false || obj == null)
                 return default;
 
@@ -488,6 +497,8 @@ namespace Sparrow.Json
 
         private static Dictionary<string, TEnum> ToDictionaryOfEnum<TEnum>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
+            if (json == null)
+                return default;
             var dic = new Dictionary<string, TEnum>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
@@ -508,6 +519,9 @@ namespace Sparrow.Json
 
         private static Dictionary<TEnum, string> ToDictionaryOfEnumKeys<TEnum>(BlittableJsonReaderObject json, string name)
         {
+            if (json == null)
+                return default;
+
             var dic = new Dictionary<TEnum, string>();
 
             BlittableJsonReaderObject obj;
@@ -528,6 +542,9 @@ namespace Sparrow.Json
 
         private static Dictionary<string, string> ToDictionaryOfString(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
+            if (json == null)
+                return default;
+
             var dic = new Dictionary<string, string>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
@@ -548,6 +565,9 @@ namespace Sparrow.Json
 
         private static Dictionary<string, List<T>> ToDictionaryOfList<T>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, T> converter)
         {
+            if (json == null)
+                return default;
+
             var dic = new Dictionary<string, List<T>>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
@@ -573,6 +593,9 @@ namespace Sparrow.Json
 
         private static Dictionary<string, List<string>> ToDictionaryOfStringList(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
+            if (json == null)
+                return default;
+
             var dic = new Dictionary<string, List<string>>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
@@ -598,6 +621,9 @@ namespace Sparrow.Json
 
         private static Dictionary<string, string[]> ToDictionaryOfStringArray(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
+            if (json == null)
+                return default;
+
             var dic = new Dictionary<string, string[]>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
@@ -647,6 +673,9 @@ namespace Sparrow.Json
 
         private static Dictionary<string, Dictionary<string, string[]>> ToDictionaryOfDictionaryOfStringArray(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
+            if (json == null)
+                return default;
+
             var dic = new Dictionary<string, Dictionary<string, string[]>>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
@@ -716,6 +745,9 @@ namespace Sparrow.Json
         private static TCollection ToCollectionOfString<TCollection>(BlittableJsonReaderObject json, string name)
             where TCollection : ICollection<string>, new()
         {
+            if (json == null)
+                return default;
+
             var collection = new TCollection();
 
             BlittableJsonReaderArray jsonArray;
@@ -730,6 +762,9 @@ namespace Sparrow.Json
 
         private static string[] ToArrayOfString(BlittableJsonReaderObject json, string name)
         {
+            if (json == null)
+                return default;
+
             var collection = new List<string>();
 
             BlittableJsonReaderArray jsonArray;
@@ -758,6 +793,9 @@ namespace Sparrow.Json
 
         private static T GetPrimitiveProperty<T>(BlittableJsonReaderObject json, string prop)
         {
+            if (json == null)
+                return default;
+
             if (json.TryGet(prop, out T val) == false)
                 ThrowInvalidPrimitiveCastException(prop, typeof(T).Name, json);
 
@@ -771,6 +809,9 @@ namespace Sparrow.Json
 
         private static T ToObject<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter) where T : new()
         {
+            if (json == null)
+                return default;
+
             if (json.TryGet(name, out BlittableJsonReaderObject obj) == false || obj == null)
             {
                 return default(T);
@@ -781,6 +822,9 @@ namespace Sparrow.Json
 
         private static HashSet<T> ToHashSet<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
         {
+            if (json == null)
+                return default;
+
             var hashset = new HashSet<T>();
 
             if (json.TryGet(name, out BlittableJsonReaderArray array) == false || array == null)
@@ -802,6 +846,9 @@ namespace Sparrow.Json
 
         private static List<T> ToList<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
         {
+            if (json == null)
+                return default;
+
             var list = new List<T>();
 
             if (json.TryGet(name, out BlittableJsonReaderArray array) == false || array == null)
@@ -836,6 +883,9 @@ namespace Sparrow.Json
 
         private static T[] ToArray<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
         {
+            if (json == null)
+                return default;
+
             var list = new List<T>();
 
             if (json.TryGet(name, out BlittableJsonReaderArray array) == false || array == null)
@@ -899,7 +949,7 @@ namespace Sparrow.Json
 
         private static bool TryGetNullableTimeSpan(BlittableJsonReaderObject json, string propertyName, out TimeSpan? timeSpan)
         {
-            if (json.TryGetMember(propertyName, out var value) == false || value == null)
+            if (json == null || json.TryGetMember(propertyName, out var value) == false || value == null)
             {
                 timeSpan = null;
                 return false;
@@ -943,7 +993,7 @@ namespace Sparrow.Json
 
         private static bool TryGetNullableSize(BlittableJsonReaderObject json, string propertyName, out Size? size)
         {
-            if (json.TryGetMember(propertyName, out var value) == false || value == null)
+            if (json == null || json.TryGetMember(propertyName, out var value) == false || value == null)
             {
                 size = null;
                 return false;
