@@ -897,6 +897,8 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(Type.IsStatic());
 
+            configuration.InitializeAnalyzers();
+
             using (DrainRunningQueries())
             {
                 var status = Status;
