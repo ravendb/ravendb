@@ -4,6 +4,7 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -13,6 +14,8 @@ namespace Raven.Server.Documents.Sharding
     public unsafe class ShardedContext
     {
         public const int NumberOfShards = 1024 * 1024;
+
+        public QueryMetadataCache QueryMetadataCache = new QueryMetadataCache();
 
         private readonly DatabaseRecord _record;
         public RequestExecutor[] RequestExecutors;
@@ -40,6 +43,8 @@ namespace Raven.Server.Documents.Sharding
 
         public string DatabaseName => _record.DatabaseName;
 
+        public int NumberOfShardNodes => _record.Shards.Length;
+        
         public char IdentitySeparator => _record.Client?.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator;
 
         public bool Encrypted => _record.Encrypted;
@@ -90,7 +95,7 @@ namespace Raven.Server.Documents.Sharding
 
             return _record.ShardAllocations[^1].Shard;
         }
-
+        
         public int GetShardIndex(TransactionOperationContext context, string key)
         {
             var shardId = GetShardId(context, key);

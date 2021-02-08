@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Queries
 
                         if (where.Right is MethodExpression rme)
                         {
-                            right = EvaluateMethod(query, metadata, serverContext, documentsContext, rme, ref parameters);
+                            right = EvaluateMethod(query, metadata, serverContext, documentsContext.DocumentDatabase.Name,  documentsContext.DocumentDatabase.ServerStore, rme, ref parameters);
                         }
 
                         var fieldName = ExtractIndexFieldName(query, parameters, where.Left, metadata);
@@ -589,11 +589,13 @@ namespace Raven.Server.Documents.Queries
             return false;
         }
 
-        public static QueryExpression EvaluateMethod(Query query, QueryMetadata metadata, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, MethodExpression method, ref BlittableJsonReaderObject parameters)
+        public static QueryExpression EvaluateMethod(Query query, QueryMetadata metadata, TransactionOperationContext serverContext,
+            string databaseName,
+            ServerStore serverStore, MethodExpression method, ref BlittableJsonReaderObject parameters)
         {
             var methodType = QueryMethod.GetMethodType(method.Name.Value);
 
-            var server = documentsContext.DocumentDatabase.ServerStore;
+            
             switch (methodType)
             {
                 case MethodType.CompareExchange:
@@ -601,9 +603,9 @@ namespace Raven.Server.Documents.Queries
                     if (v.Type != ValueTokenType.String)
                         throw new InvalidQueryException("Expected value of type string, but got: " + v.Type, query.QueryText, parameters);
 
-                    var prefix = CompareExchangeKey.GetStorageKey(documentsContext.DocumentDatabase.Name, v.Value.ToString());
+                    var prefix = CompareExchangeKey.GetStorageKey(databaseName, v.Value.ToString());
                     object value = null;
-                    server.Cluster.GetCompareExchangeValue(serverContext, prefix).Value?.TryGetMember(Constants.CompareExchange.ObjectFieldName, out value);
+                    serverStore.Cluster.GetCompareExchangeValue(serverContext, prefix).Value?.TryGetMember(Constants.CompareExchange.ObjectFieldName, out value);
 
                     if (value == null)
                         return new ValueExpression(string.Empty, ValueTokenType.Null);
