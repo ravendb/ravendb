@@ -269,19 +269,19 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.History.NumberOfRevisions", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int HistoryRevisionsNumber { get; set; }
 
-        [Description("TODO")]
+        [Description("Default analyzer that will be used for fields.")]
         [DefaultValue(Constants.Documents.Indexing.Analyzers.Default)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Analyzers.Default", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public string DefaultAnalyzer { get; set; }
 
-        [Description("TODO")]
+        [Description("Default analyzer that will be used for exact fields.")]
         [DefaultValue(Constants.Documents.Indexing.Analyzers.DefaultExact)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Analyzers.Exact.Default", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public string DefaultExactAnalyzer { get; set; }
 
-        [Description("TODO")]
+        [Description("Default analyzer that will be used for search fields.")]
         [DefaultValue(Constants.Documents.Indexing.Analyzers.DefaultSearch)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Analyzers.Search.Default", ConfigurationEntryScope.ServerWideOrPerDatabase)]
