@@ -14,6 +14,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.ServerWide.Operations;
 using Sparrow.Extensions;
 using Sparrow.Platform;
 using Xunit;
@@ -743,6 +744,123 @@ loadToOrders(key, o);
             }
         }
 
+        [Fact]
+        public async Task AfterDatabaseRestartEtlShouldRespectFrequency()
+        {
+            var path = GetTempPath("Orders");
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    var baseline = new DateTime(2020, 1, 1);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 1; i <= 10; i++)
+                        {
+                            var o = new Query.Order
+                            {
+                                Id = $"orders/{i}",
+                                OrderedAt = baseline.AddDays(i),
+                                Company = $"companies/{i}"
+                            };
+
+                            await session.StoreAsync(o);
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+
+                    var script = @"
+var o = {
+    OrderId: id(this),
+    Company : this.Company
+};
+
+var orderDate = new Date(this.OrderedAt);
+var year = orderDate.getFullYear();
+var month = orderDate.getMonth();
+var key = new Date(year, month);
+
+loadToOrders(key, o);
+";
+
+                    SetupLocalParquetEtl(store, script, path, TimeSpan.FromMinutes(1));
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    var files = Directory.GetFiles(path);
+                    Assert.Equal(1, files.Length);
+
+                    // disable an re enable the database
+
+                    var result = store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, disable: true));
+                    Assert.True(result.Success);
+                    Assert.True(result.Disabled);
+
+                    result = store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, disable: false));
+                    Assert.True(result.Success);
+                    Assert.False(result.Disabled);
+
+                    baseline = new DateTime(2021, 1, 1);
+
+                    // add more data
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 20; i <= 30; i++)
+                        {
+                            var o = new Query.Order
+                            {
+                                Id = $"orders/{i}",
+                                OrderedAt = baseline.AddDays(i),
+                                Company = $"companies/{i}"
+                            };
+
+                            await session.StoreAsync(o);
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    // assert
+
+                    var sw = new Stopwatch();
+                    sw.Start();
+                    etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    Assert.False(etlDone.Wait(TimeSpan.FromSeconds(10)));
+                    files = Directory.GetFiles(path);
+                    Assert.Equal(1, files.Length);
+
+                    Assert.True(etlDone.Wait(TimeSpan.FromSeconds(60)));
+
+                    var timeWaited = sw.Elapsed.TotalMilliseconds;
+                    sw.Stop();
+
+                    var tolerance = TimeSpan.FromSeconds(2).TotalMilliseconds;
+                    var expected = TimeSpan.FromSeconds(60).TotalMilliseconds;
+
+                    Assert.True(timeWaited >= expected - tolerance);
+
+                    files = Directory.GetFiles(path);
+                    Assert.Equal(2, files.Length);
+                }
+
+            }
+            finally
+            {
+                var di = new DirectoryInfo(path);
+                foreach (var file in di.EnumerateFiles())
+                {
+                    file.Delete();
+                }
+
+                di.Delete();
+            }
+        }
 
         private static string GenerateConfigurationScript(string path, out string command)
         {
