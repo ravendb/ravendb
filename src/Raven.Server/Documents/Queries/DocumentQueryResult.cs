@@ -48,10 +48,6 @@ namespace Raven.Server.Documents.Queries
 
         public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes() => _compareExchangeValueIncludes;
 
-        public override void AddResult(Document result)
-        {
-            Results.Add(result);
-        }
 
         public override void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings)
         {

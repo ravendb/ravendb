@@ -8,6 +8,25 @@ namespace Raven.Server.Documents.Sharding
 {
     public static class ShardLocator
     {
+        public static Dictionary<int, List<string>> GroupIdsByShardIndex(List<string> ids,
+            ShardedContext shardedContext, TransactionOperationContext context)
+        {
+            var result  = new Dictionary<int, List<string>>();
+
+            foreach (var id in ids)
+            {
+                var shardIndex = shardedContext.GetShardIndex(context, id);
+
+                if (result.TryGetValue(shardIndex, out var idsInShard) == false)
+                {
+                    result[shardIndex] = idsInShard = new List<string>();
+                }
+
+                idsInShard.Add(id);
+            }
+
+            return result;
+        }
         public static Dictionary<int, List<int>> GetDocumentIdsShards(IList<string> ids,
             ShardedContext shardedContext, TransactionOperationContext context)
         {

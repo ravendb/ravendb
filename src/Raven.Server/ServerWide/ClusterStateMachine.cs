@@ -2377,6 +2377,8 @@ namespace Raven.Server.ServerWide
                 using (var rawRecord = ReadRawDatabaseRecord(context, name))
                 {
                     var topology = rawRecord.Topology;
+                    if (topology == null)
+                        continue;
                     if (topology.RelevantFor(oldTag) == false)
                     {
                         toDelete.Add(name);

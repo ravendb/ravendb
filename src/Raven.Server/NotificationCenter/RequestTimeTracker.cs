@@ -40,6 +40,8 @@ namespace Raven.Server.NotificationCenter
 
         public void Dispose()
         {
+            if (_database == null)
+                return;// TODO: Sharding - fix this for queries
             if (_sw.Elapsed <= _database.Configuration.PerformanceHints.TooLongRequestThreshold.AsTimeSpan)
                 return;
 
