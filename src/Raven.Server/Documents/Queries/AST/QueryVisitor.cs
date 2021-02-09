@@ -62,6 +62,16 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 VisitInclude(q.Include);
             }
+
+            if (q.Limit != null)
+            {
+                VisitLimit(q.Limit);
+            }
+
+            if (q.Offset != null)
+            {
+                VisitOffset(q.Offset);
+            }
         }
 
         public virtual void VisitMatchExpression(QueryExpression expr)
@@ -116,6 +126,16 @@ namespace Raven.Server.Documents.Queries.AST
 
         public virtual void VisitPatternMatchElementExpression(PatternMatchElementExpression elementExpression)
         {
+        }
+
+        public virtual void VisitLimit(ValueExpression limit)
+        {
+            
+        }
+
+        public virtual void VisitOffset(ValueExpression offset)
+        {
+            
         }
 
         public virtual void VisitInclude(List<QueryExpression> includes)

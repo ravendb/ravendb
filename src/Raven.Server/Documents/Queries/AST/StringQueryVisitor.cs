@@ -14,8 +14,21 @@ namespace Raven.Server.Documents.Queries.AST
         {
             _sb = sb;
         }
-        
-        
+
+        public override void VisitLimit(ValueExpression limit)
+        {
+            EnsureLine();
+            _sb.Append("LIMIT ");
+            VisitValue(limit);
+        }
+
+        public override void VisitOffset(ValueExpression offset)
+        {
+            EnsureLine();
+            _sb.Append("OFFSET ");
+            VisitValue(offset);
+        }
+
         public override void VisitInclude(List<QueryExpression> includes)
         {
             EnsureLine();
