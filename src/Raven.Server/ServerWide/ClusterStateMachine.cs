@@ -2474,9 +2474,20 @@ namespace Raven.Server.ServerWide
 
                     if (databaseRecordJson == null)
                     {
-                        if (updateCommand.ErrorOnDatabaseDoesNotExists)
-                            throw DatabaseDoesNotExistException.CreateWithMessage(databaseName, $"Could not execute update command of type '{type}'.");
-                        return;
+                        var shardIndex = valueNameLowered.AsSpan().LastIndexOf((byte)'$');
+                        if (shardIndex != -1) // try loading the sharded version, instead
+                        {
+                            valueNameLowered.Content.Truncate(shardIndex);
+                            valueName.Content.Truncate(valueName.AsSpan().LastIndexOf((byte)'$'));
+                            databaseRecordJson = ReadInternal(context, out etag, valueNameLowered);
+                        }
+
+                        if(databaseRecordJson == null)
+                        {
+                            if (updateCommand.ErrorOnDatabaseDoesNotExists)
+                                throw DatabaseDoesNotExistException.CreateWithMessage(databaseName, $"Could not execute update command of type '{type}'.");
+                            return;
+                        }
                     }
 
                     if (updateCommand.RaftCommandIndex != null && etag != updateCommand.RaftCommandIndex.Value)
