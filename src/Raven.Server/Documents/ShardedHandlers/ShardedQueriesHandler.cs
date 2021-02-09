@@ -11,6 +11,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.LuceneIntegration;
+using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
@@ -153,7 +154,7 @@ namespace Raven.Server.Documents.ShardedHandlers
         /// A struct that we use to hold state and break the process
         /// of handling a sharded query into distinct steps
         /// </summary>
-        private readonly struct ShardedQueryProcessor
+        private class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>
         {
             private readonly TransactionOperationContext _context;
             private readonly ShardedQueriesHandler _parent;
@@ -236,6 +237,8 @@ namespace Raven.Server.Documents.ShardedHandlers
                     }
                 }
 
+                //TODO: Make sure that if using projection, the order by fields are returned
+
                 // * For collection queries that specify startsWith by id(), we need to send to all shards
                 // * For collection queries without any where clause, we need to send to all shards
                 // * For indexes, we sent to all shards
@@ -264,7 +267,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             {
                 foreach (var (_, cmd) in _commands)
                 {
-                    if (cmd.Result.Includes == null)
+                    if (cmd.Result.Includes == null || cmd.Result.Includes.Count == 0)
                         continue;
                     _result.Includes ??= new List<BlittableJsonReaderObject>();
                     foreach (var id in cmd.Result.Includes.GetPropertyNames())
@@ -273,6 +276,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                             _result.Includes.Add(include);
                     }
                 }
+                //TODO: Need to now fetch the data from the other shards
                 return ValueTask.CompletedTask;
             }
 
@@ -289,6 +293,84 @@ namespace Raven.Server.Documents.ShardedHandlers
                     }
                 }
                 _result.ResultEtag = etag;
+
+                if(_query.Metadata.OrderBy?.Length > 0)
+                {
+                    _result.Results.Sort(this);
+                }
+            }
+
+            [ThreadStatic]
+            private static Random _random;
+
+            public int Compare(BlittableJsonReaderObject x, BlittableJsonReaderObject y)
+            {
+                foreach (var order in _query.Metadata.OrderBy)
+                {
+                    var cmp = CompareField(order, x, y);
+                    if (cmp != 0)
+                        return order.Ascending ? cmp : -cmp;
+                }
+                return 0;
+            }
+
+            private int CompareField(OrderByField order, BlittableJsonReaderObject x, BlittableJsonReaderObject y)
+            {
+                switch (order.OrderingType)
+                {
+                    case Queries.AST.OrderByFieldType.Implicit:
+                    case Queries.AST.OrderByFieldType.String:
+                        {
+                            x.TryGet(order.Name, out string xVal);
+                            y.TryGet(order.Name, out string yVal);
+                            return string.Compare(xVal, yVal, StringComparison.OrdinalIgnoreCase);
+                        }
+                    case Queries.AST.OrderByFieldType.Long:
+                        {
+                            var hasX = x.TryGetWithoutThrowingOnError(order.Name, out long xLng);
+                            var hasY = y.TryGetWithoutThrowingOnError(order.Name, out long yLng);
+                            if (hasX == false && hasY == false)
+                                return 0;
+                            if (hasX == false)
+                                return 1;
+                            if (hasY == false)
+                                return -1;
+                            return xLng.CompareTo(yLng);
+                        }
+                    case Queries.AST.OrderByFieldType.Double:
+                        {
+                            var hasX = x.TryGetWithoutThrowingOnError(order.Name, out double xDbl);
+                            var hasY = y.TryGetWithoutThrowingOnError(order.Name, out double yDbl);
+                            if (hasX == false && hasY == false)
+                                return 0;
+                            if (hasX == false)
+                                return 1;
+                            if (hasY == false)
+                                return -1;
+                            return xDbl.CompareTo(yDbl);
+                        }
+                    case Queries.AST.OrderByFieldType.AlphaNumeric:
+                        {
+                            x.TryGet(order.Name, out string xVal);
+                            y.TryGet(order.Name, out string yVal);
+                            if(xVal == null && yVal == null)
+                                return 0;
+                            if (xVal== null)
+                                return 1;
+                            if (yVal== null)
+                                return -1;
+                            return AlphaNumericFieldComparator.StringAlphanumComparer.Instance.Compare(xVal, yVal);
+                        }
+                    case Queries.AST.OrderByFieldType.Random:
+                        return (_random ??= new Random()).Next(0, int.MaxValue);
+                 
+                    case Queries.AST.OrderByFieldType.Custom:
+                        throw new NotSupportedException("Custom sorting is not supported in sharding as of yet");
+                    case Queries.AST.OrderByFieldType.Score:
+                    case Queries.AST.OrderByFieldType.Distance:
+                    default:
+                        throw new ArgumentException("Unknown OrderingType: " + order.OrderingType);
+                }
             }
 
             public void ReduceResults()
