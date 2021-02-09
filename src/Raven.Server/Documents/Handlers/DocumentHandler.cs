@@ -245,7 +245,7 @@ namespace Raven.Server.Documents.Handlers
                     includeCompareExchangeValues?.Gather(document);
                 }
 
-                includeDocs.Fill(includes);
+                includeDocs.Fill(includes, GetBoolFromHeaders("Missing-Includes") ?? false);
                 includeCompareExchangeValues?.Materialize();
 
                 var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters, includeTimeSeries, includeCompareExchangeValues);

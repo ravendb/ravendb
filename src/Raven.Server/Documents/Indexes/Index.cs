@@ -2806,7 +2806,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 using (fillScope?.Start())
                                 {
-                                    includeDocumentsCommand.Fill(resultToFill.Includes);
+                                    includeDocumentsCommand.Fill(resultToFill.Includes, query.ReturnMissingIncludeAsNull);
                                     includeCompareExchangeValuesCommand?.Materialize();
                                 }
 
@@ -3026,7 +3026,7 @@ namespace Raven.Server.Documents.Indexes
                                     var cmd = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, queryContext.Documents, query.Metadata.Includes, isProjection: true);
                                     cmd.Gather(result.Results);
 
-                                    cmd.Fill(result.Includes);
+                                    cmd.Fill(result.Includes, query.ReturnMissingIncludeAsNull);
                                 }
 
                                 result.TotalResults = result.Results.Count;
