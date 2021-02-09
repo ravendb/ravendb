@@ -13,11 +13,6 @@ namespace Raven.Server.Documents.Queries
     {
         public static readonly IndexEntriesQueryResult NotModifiedResult = new IndexEntriesQueryResult { NotModified = true };
 
-        public override void AddResult(BlittableJsonReaderObject result)
-        {
-            Results.Add(result);
-        }
-
         public override void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings)
         {
             throw new NotSupportedException();

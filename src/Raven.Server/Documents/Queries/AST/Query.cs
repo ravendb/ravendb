@@ -32,6 +32,11 @@ namespace Raven.Server.Documents.Queries.AST
         public ValueExpression Offset;
         public ValueExpression Limit;
 
+        public Query ShallowCopy()
+        {
+            return (Query)MemberwiseClone();
+        }
+        
         public bool TryAddFunction(DeclaredFunction func)
         {
             if (DeclaredFunctions == null)

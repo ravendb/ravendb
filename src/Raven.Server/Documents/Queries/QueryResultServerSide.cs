@@ -46,7 +46,10 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public abstract void AddResult(T result);
+        public virtual void AddResult(T result)
+        {
+            Results.Add(result);
+        }
 
         public abstract void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings);
 
@@ -75,5 +78,57 @@ namespace Raven.Server.Documents.Queries
         public abstract void AddCompareExchangeValueIncludes(IncludeCompareExchangeValuesCommand command);
 
         public abstract Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes();
+    }
+
+    public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
+    {
+        public override void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void AddExplanation(ExplanationResult explanationResult)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void HandleException(Exception e)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool SupportsExceptionHandling => true;
+        public override bool SupportsInclude  => true;
+        public override bool SupportsHighlighting  => true;
+        public override bool SupportsExplanations  => true;
+        public override void AddCounterIncludes(IncludeCountersCommand command)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Dictionary<string, List<CounterDetail>> GetCounterIncludes()
+        {
+            return null;
+        }
+
+        public override void AddTimeSeriesIncludes(IncludeTimeSeriesCommand command)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> GetTimeSeriesIncludes()
+        {
+            return null;
+        }
+
+        public override void AddCompareExchangeValueIncludes(IncludeCompareExchangeValuesCommand command)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes()
+        {
+            return null;
+        }
     }
 }

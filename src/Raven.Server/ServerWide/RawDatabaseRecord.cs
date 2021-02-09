@@ -126,7 +126,7 @@ namespace Raven.Server.ServerWide
                 if (_materializedRecord != null)
                     return _materializedRecord.Topology;
 
-                if (_topology == null && _record.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topologyJson))
+                if (_topology == null && _record.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topologyJson) && topologyJson != null)
                     _topology = JsonDeserializationCluster.DatabaseTopology(topologyJson);
 
                 return _topology;

@@ -804,7 +804,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                             writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
                             var includes = new List<Document>();
-                            includeDocumentsCommand.Fill(includes);
+                            includeDocumentsCommand.Fill(includes, false);
                             writer.WriteIncludes(docsContext, includes);
 
                             writer.WriteEndObject();

@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
@@ -113,7 +114,8 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task Query(QueryOperationContext queryContext, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method, bool diagnostics)
         {
-            var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
+            var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(), Database.QueryMetadataCache, Database);
+            var indexQuery = await indexQueryReader.GetIndexQueryAsync(queryContext.Documents, method, tracker);
             indexQuery.Diagnostics = diagnostics ? new List<string>() : null;
             indexQuery.AddTimeSeriesNames = GetBoolValueQueryString("addTimeSeriesNames", false) ?? false;
 
@@ -192,14 +194,47 @@ namespace Raven.Server.Documents.Handlers
             };
         }
 
-        private async Task<IndexQueryServerSide> GetIndexQuery(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker)
+        public struct IndexQueryReader
         {
-            if (method == HttpMethod.Get)
-                return IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context, tracker);
+            public int Start, PageSize;
+            public HttpContext HttpContext;
+            public Stream Stream;
+            public QueryMetadataCache QueryMetadataCache;
+            public DocumentDatabase Database;
 
-            var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
+            public IndexQueryReader(int start, int pageSize, HttpContext httpContext, Stream stream, QueryMetadataCache queryMetadataCache, DocumentDatabase database)
+            {
+                Start = start;
+                PageSize = pageSize;
+                HttpContext = httpContext;
+                Stream = stream;
+                QueryMetadataCache = queryMetadataCache;
+                Database = database;
+            }
 
-            return IndexQueryServerSide.Create(HttpContext, json, Database.QueryMetadataCache, tracker, Database);
+            public ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker)
+            {
+                if (method == HttpMethod.Get)
+                {
+                    var result = IndexQueryServerSide.Create(HttpContext, Start, PageSize, context, tracker);
+                    return ValueTask.FromResult(result);
+                }
+
+                var read = context.ReadForMemoryAsync(Stream, "index/query");
+                if (read.IsCompleted)
+                {
+                    var result = IndexQueryServerSide.Create(HttpContext, read.Result, QueryMetadataCache, tracker, Database);
+                    return ValueTask.FromResult(result);
+                }
+
+                return AwaitAndReturn(read, tracker);
+            }
+
+            private async ValueTask<IndexQueryServerSide> AwaitAndReturn(ValueTask<BlittableJsonReaderObject> read, RequestTimeTracker tracker)
+            {
+                var json = await read;
+                return IndexQueryServerSide.Create(HttpContext, json, QueryMetadataCache, tracker, Database);
+            }
         }
 
         private async Task SuggestQuery(IndexQueryServerSide indexQuery, QueryOperationContext queryContext, OperationCancelToken token)
@@ -226,7 +261,9 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task DetailedGraphResult(QueryOperationContext queryContext, RequestTimeTracker tracker, HttpMethod method)
         {
-            var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
+            var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(), Database.QueryMetadataCache, Database);
+            var indexQuery = await indexQueryReader.GetIndexQueryAsync(queryContext.Documents, method, tracker);
+
             var queryRunner = Database.QueryRunner.GetRunner(indexQuery);
             if (!(queryRunner is GraphQueryRunner gqr))
                 throw new InvalidOperationException("The specified query is not a graph query.");
@@ -239,7 +276,9 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task Graph(QueryOperationContext queryContext, RequestTimeTracker tracker, HttpMethod method)
         {
-            var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
+            var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(), Database.QueryMetadataCache, Database);
+            var indexQuery = await indexQueryReader.GetIndexQueryAsync(queryContext.Documents, method, tracker);
+
             var queryRunner = Database.QueryRunner.GetRunner(indexQuery);
             if (!(queryRunner is GraphQueryRunner gqr))
                 throw new InvalidOperationException("The specified query is not a graph query.");
@@ -308,7 +347,9 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task Explain(QueryOperationContext queryContext, RequestTimeTracker tracker, HttpMethod method)
         {
-            var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
+            var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(), Database.QueryMetadataCache, Database);
+            var indexQuery = await indexQueryReader.GetIndexQueryAsync(queryContext.Documents, method, tracker);
+
 
             var explanations = Database.QueryRunner.ExplainDynamicIndexSelection(indexQuery, out string indexName);
 
@@ -330,7 +371,9 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task ServerSideQuery(QueryOperationContext queryContext, RequestTimeTracker tracker, HttpMethod method)
         {
-            var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
+            var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(), Database.QueryMetadataCache, Database);
+            var indexQuery = await indexQueryReader.GetIndexQueryAsync(queryContext.Documents, method, tracker);
+
             using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream(), Database.DatabaseShutdown))
             {
                 writer.WriteStartObject();
@@ -589,7 +632,9 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task IndexEntries(QueryOperationContext queryContext, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
         {
-            var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
+            var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(), Database.QueryMetadataCache, Database);
+            var indexQuery = await indexQueryReader.GetIndexQueryAsync(queryContext.Documents, method, tracker);
+
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
             var result = await Database.QueryRunner.ExecuteIndexEntriesQuery(indexQuery, queryContext, existingResultEtag, token);

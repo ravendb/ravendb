@@ -114,7 +114,7 @@ namespace Raven.Server.Routing
                         if (routes.TryGetValue(routeKey, out RouteInformation routeInfo) == false)
                         {
                             throw new InvalidOperationException(
-                                $"Sharded action {shardedAction.Name} on {shardedAction.DeclaringType} was specified, but there is matching normal action");
+                                $"Sharded action {shardedAction.Name} on {shardedAction.DeclaringType} was specified, but there is no matching normal action");
                         }
 
                         routeInfo.BuildSharded(shardedAction);

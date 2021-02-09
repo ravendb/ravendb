@@ -326,11 +326,30 @@ namespace Raven.Server.Web
             if (headers.Count == 0)
                 return null;
 
-            string raw = headers[0][0] == '\"'
-                ? headers[0].Substring(1, headers[0].Length - 2)
-                : headers[0];
+            var raw = headers[0][0] == '\"'
+                ? headers[0].AsSpan().Slice(1,  headers[0].Length - 2)
+                : headers[0].AsSpan();
 
             var success = long.TryParse(raw, out var result);
+
+            if (success)
+                return result;
+
+            return null;
+        }
+        
+        protected bool? GetBoolFromHeaders(string name)
+        {
+            var headers = HttpContext.Request.Headers[name];
+            if (headers.Count == 0)
+                return null;
+
+           
+            var raw = headers[0][0] == '\"'
+                ? headers[0].AsSpan().Slice(1,  headers[0].Length - 2)
+                : headers[0].AsSpan();
+            
+            var success = bool.TryParse(raw, out var result);
 
             if (success)
                 return result;

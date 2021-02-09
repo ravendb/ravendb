@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 using (fillScope?.Start())
                 {
-                    includeDocumentsCommand.Fill(resultToFill.Includes);
+                    includeDocumentsCommand.Fill(resultToFill.Includes, query.ReturnMissingIncludeAsNull);
 
                     includeCompareExchangeValuesCommand.Materialize();
                 }

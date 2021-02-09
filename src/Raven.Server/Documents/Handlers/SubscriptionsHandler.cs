@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
                     writer.WritePropertyName("Includes");
                     var includes = new List<Document>();
-                    includeCmd.Fill(includes);
+                    includeCmd.Fill(includes, false);
                     writer.WriteIncludes(context, includes);
                     writer.WriteEndObject();
                 }

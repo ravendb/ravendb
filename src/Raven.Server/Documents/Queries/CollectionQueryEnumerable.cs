@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Queries
             private long _start;
             private IEnumerator<Document> _inner;
             private int _innerCount;
-            private readonly List<Slice> _ids;
+            private readonly List<string> _ids;
             private readonly MapQueryResultRetriever _resultsRetriever;
             private readonly string _startsWith;
 
@@ -107,43 +107,10 @@ namespace Raven.Server.Documents.Queries
 
                 _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand);
 
-                (_ids, _startsWith) = ExtractIdsFromQuery(query, context);
+                (_ids, _startsWith) = query.ExtractIdsFromQuery(database.ServerStore, database.Name);
             }
 
-            private (List<Slice>, string) ExtractIdsFromQuery(IndexQueryServerSide query, DocumentsOperationContext context)
-            {
-                if (query.Metadata.Query.Where == null)
-                    return (null, null);
-
-                if (query.Metadata.IndexFieldNames.Contains(QueryFieldName.DocumentId) == false)
-                    return (null, null);
-
-                IDisposable releaseServerContext = null;
-                IDisposable closeServerTransaction = null;
-                TransactionOperationContext serverContext = null;
-
-                try
-                {
-                    if (query.Metadata.HasCmpXchg)
-                    {
-                        releaseServerContext = context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out serverContext);
-                        closeServerTransaction = serverContext.OpenReadTransaction();
-                    }
-
-                    using (closeServerTransaction)
-                    {
-                        var idsRetriever = new RetrieveDocumentIdsVisitor(serverContext, context, query.Metadata, _context.Allocator);
-
-                        idsRetriever.Visit(query.Metadata.Query.Where, query.QueryParameters);
-
-                        return (idsRetriever.Ids?.OrderBy(x => x, SliceComparer.Instance).ToList(), idsRetriever.StartsWith);
-                    }
-                }
-                finally
-                {
-                    releaseServerContext?.Dispose();
-                }
-            }
+          
 
             public bool MoveNext()
             {
@@ -313,155 +280,9 @@ namespace Raven.Server.Documents.Queries
 
             public void Dispose()
             {
-                if (_ids != null)
-                {
-                    foreach (var id in _ids)
-                    {
-                        id.Release(_context.Allocator);
-                    }
-                }
+               
             }
 
-            private class RetrieveDocumentIdsVisitor : WhereExpressionVisitor
-            {
-                private readonly Query _query;
-                private readonly TransactionOperationContext _serverContext;
-                private readonly DocumentsOperationContext _context;
-                private readonly QueryMetadata _metadata;
-                private readonly ByteStringContext _allocator;
-                public string StartsWith;
-
-                public HashSet<Slice> Ids { get; private set; }
-
-                public RetrieveDocumentIdsVisitor(TransactionOperationContext serverContext, DocumentsOperationContext context, QueryMetadata metadata, ByteStringContext allocator) : base(metadata.Query.QueryText)
-                {
-                    _query = metadata.Query;
-                    _serverContext = serverContext;
-                    _context = context;
-                    _metadata = metadata;
-                    _allocator = allocator;
-                }
-
-                public override void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters)
-                {
-                    VisitFieldToken(leftSide, rightSide, parameters, operatorType);
-                }
-
-                public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters, OperatorType? operatorType)
-                {
-                    if (fieldName is MethodExpression me)
-                    {
-                        var methodType = QueryMethod.GetMethodType(me.Name.Value);
-                        switch (methodType)
-                        {
-                            case MethodType.Id:
-                                if (value is ValueExpression ve)
-                                {
-                                    var id = QueryBuilder.GetValue(_query, _metadata, parameters, ve);
-
-                                    Debug.Assert(id.Type == ValueTokenType.String || id.Type == ValueTokenType.Null);
-
-                                    AddId(id.Value?.ToString());
-                                }
-                                if (value is MethodExpression right)
-                                {
-                                    var id = QueryBuilder.EvaluateMethod(_query, _metadata, _serverContext, _context, right, ref parameters);
-                                    if (id is ValueExpression v)
-                                        AddId(v.Token.Value);
-                                }
-                                break;
-                        }
-                    }
-                }
-
-                public override void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters)
-                {
-                    if (fieldName is MethodExpression me && string.Equals("id", me.Name.Value, StringComparison.OrdinalIgnoreCase) && firstValue is ValueExpression fv && secondValue is ValueExpression sv)
-                    {
-                        throw new InvalidQueryException("Collection query does not support filtering by id() using Between operator. Supported operators are: =, IN",
-                            QueryText, parameters);
-                    }
-                }
-
-                public override void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters)
-                {
-                    if (Ids == null)
-                        Ids = new HashSet<Slice>(SliceComparer.Instance); // this handles a case where IN is used with empty list
-
-                    if (fieldName is MethodExpression me && string.Equals("id", me.Name.Value, StringComparison.OrdinalIgnoreCase))
-                    {
-                        foreach (var item in values)
-                        {
-                            if (item is ValueExpression iv)
-                            {
-                                foreach (var id in QueryBuilder.GetValues(_query, _metadata, parameters, iv))
-                                {
-                                    AddId(id.Value?.ToString());
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        throw new InvalidQueryException("Collection query does not support filtering by id() using Between operator. Supported operators are: =, IN",
-                            QueryText, parameters);
-                    }
-                }
-
-                public override void VisitMethodTokens(StringSegment name, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
-                {
-                    var expression = arguments[arguments.Count - 1];
-                    if (expression is BinaryExpression be && be.Operator == OperatorType.Equal)
-                    {
-                        VisitFieldToken(new MethodExpression("id", new List<QueryExpression>()), be.Right, parameters, be.Operator);
-                    }
-                    else if (expression is InExpression ie)
-                    {
-                        VisitIn(new MethodExpression("id", new List<QueryExpression>()), ie.Values, parameters);
-                    }
-                    else if (string.Equals(name.Value, "startsWith", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (expression is ValueExpression iv)
-                        {
-                            var prefix = QueryBuilder.GetValue(_query, _metadata, parameters, iv);
-                            StartsWith = prefix.Value?.ToString();
-                        }
-                    }
-                    else
-                    {
-                        ThrowNotSupportedCollectionQueryOperator(expression.Type.ToString(), parameters);
-                    }
-                }
-
-                private void AddId(string id)
-                {
-                    Slice key;
-                    if (string.IsNullOrEmpty(id) == false)
-                    {
-                        Slice.From(_allocator, id, out key);
-                        _allocator.ToLowerCase(ref key.Content);
-                    }
-                    else
-                    {
-                        // this is a rare case
-                        // we are allocating here, because we are releasing all of the ids later on
-                        // if we will use Slices.Empty, then we will release that on a different context
-                        Slice.From(_allocator, string.Empty, out key);
-                    }
-
-                    if (Ids == null)
-                        Ids = new HashSet<Slice>(SliceComparer.Instance);
-
-                    Ids.Add(key);
-                }
-
-                private void ThrowNotSupportedCollectionQueryOperator(string @operator, BlittableJsonReaderObject parameters)
-                {
-                    throw new InvalidQueryException(
-                        $"Collection query does not support filtering by {Constants.Documents.Indexing.Fields.DocumentIdFieldName} using {@operator} operator. Supported operators are: =, IN",
-                        QueryText, parameters);
-                }
-            }
         }
     }
 }
