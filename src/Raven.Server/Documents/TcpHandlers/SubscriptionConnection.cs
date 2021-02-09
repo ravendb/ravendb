@@ -932,7 +932,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
                                 var includedDocuments = new List<Document>();
-                                includeDocumentsCommand.Fill(includedDocuments);
+                                includeDocumentsCommand.Fill(includedDocuments, false);
                                 await writer.WriteIncludesAsync(docsContext, includedDocuments);
                                 
                                 batchScope.RecordIncludedDocumentsInfo(includedDocuments.Count, includedDocuments.Select(x => x.Data.Size).Sum());
