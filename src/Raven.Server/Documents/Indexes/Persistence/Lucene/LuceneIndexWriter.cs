@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             finally
             {
                 _indexWriter.SetCommitStats(null);
-                RecreateIndexWriter(state);
+                //RecreateIndexWriter(state);
             }
         }
 
