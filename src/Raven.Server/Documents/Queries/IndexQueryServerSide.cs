@@ -29,6 +29,9 @@ namespace Raven.Server.Documents.Queries
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
         [JsonDeserializationIgnore]
+        public bool ReturnMissingIncludeAsNull;
+
+        [JsonDeserializationIgnore]
         public int? Offset;
 
         [JsonDeserializationIgnore]
