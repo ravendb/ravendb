@@ -5,11 +5,14 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Jint.Runtime;
+using Microsoft.Extensions.DependencyInjection;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
@@ -198,6 +201,12 @@ namespace Raven.Server.Documents.ShardedHandlers
                     // * Graph queries - not supported for sharding
                     throw new NotSupportedException("Graph queries aren't supported for sharding");
                 }
+
+                int? actualLimit = _query.Limit; 
+                if (actualLimit != null)
+                {
+                    actualLimit *= _parent.ShardedContext.NumberOfShardNodes;
+                }
                 
                 // now we have the index query, we need to process that and decide how to handle this.
                 // There are a few different modes to handle:
@@ -218,7 +227,10 @@ namespace Raven.Server.Documents.ShardedHandlers
                         if (_query.Metadata.Includes?.Length > 0)
                         {
                             sb.Append("include ").AppendJoin(", ", _query.Metadata.Includes).AppendLine();
-                            
+                        }
+                        if (actualLimit != null)
+                        {
+                            sb.AppendLine("limit $limit");
                         }
                         
                         foreach (var( shardId, list) in shards)
@@ -228,7 +240,12 @@ namespace Raven.Server.Documents.ShardedHandlers
                             //TODO: have a way to turn the _query into a json file and then we'll modify that, instead of building it manually
                             var q = new DynamicJsonValue(queryTemplate)
                             {
-                                [nameof(IndexQuery.QueryParameters)] = new DynamicJsonValue {["list"] = list}, [nameof(IndexQuery.Query)] = sb.ToString(),
+                                [nameof(IndexQuery.QueryParameters)] = new DynamicJsonValue
+                                {
+                                    ["list"] = list,
+                                    ["limit"] = actualLimit
+                                },
+                                [nameof(IndexQuery.Query)] = sb.ToString(),
                             };
                             queryTemplate.Modifications = q;
                             _commands[shardId] = new ShardedQueryCommand(_parent, _context.ReadObject(queryTemplate, "query"));
@@ -236,6 +253,32 @@ namespace Raven.Server.Documents.ShardedHandlers
                         return;
                     }
                 }
+
+                if (_query.Metadata.Query.Limit != null || _query.Metadata.Query.Offset != null)
+                {
+                    var clone = _query.Metadata.Query.ShallowCopy();
+                    clone.Offset = null; // sharded queries has to start from 0 on all nodes
+                    clone.Limit = new ValueExpression("__raven_limit", ValueTokenType.Parameter);
+                    queryTemplate.Modifications = new DynamicJsonValue(queryTemplate)
+                    {
+                        [nameof(IndexQuery.Query)] = clone.ToString()
+                    };
+                    DynamicJsonValue modifiedArgs;
+                    if (queryTemplate.TryGet(nameof(IndexQuery.QueryParameters), out BlittableJsonReaderObject args))
+                    {
+                        modifiedArgs = new DynamicJsonValue(args);
+                        args.Modifications = modifiedArgs;
+                    }
+                    else
+                    {
+                        queryTemplate.Modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
+                    }
+
+                    modifiedArgs["__raven_limit"] = actualLimit;
+
+                    queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
+                }
+
 
                 //TODO: Make sure that if using projection, the order by fields are returned
 
@@ -283,20 +326,37 @@ namespace Raven.Server.Documents.ShardedHandlers
             public void OrderResults()
             {
                 _result.Results = new List<BlittableJsonReaderObject>();
-                long etag = _commands.Count;
                 foreach (var (_, cmd) in _commands)
                 {
-                    etag = Hashing.HashCombiner.Combine(etag, cmd.Result.ResultEtag);
+                    _result.TotalResults += cmd.Result.TotalResults;
+                    _result.IsStale |= cmd.Result.IsStale;
+                    _result.SkippedResults += cmd.Result.SkippedResults;
+                    _result.IndexName = cmd.Result.IndexName;
+                    _result.IncludedPaths = cmd.Result.IncludedPaths;
+                    if (_result.IndexTimestamp < cmd.Result.IndexTimestamp)
+                    {
+                        _result.IndexTimestamp = cmd.Result.IndexTimestamp;
+                    }
+                    if (_result.LastQueryTime < cmd.Result.LastQueryTime)
+                    {
+                        _result.LastQueryTime = cmd.Result.LastQueryTime;
+                    }
+                    _result.ResultEtag = Hashing.HashCombiner.Combine(_result.ResultEtag, cmd.Result.ResultEtag);
                     foreach (BlittableJsonReaderObject item in cmd.Result.Results)
                     {
                         _result.Results.Add(item);
                     }
                 }
-                _result.ResultEtag = etag;
 
                 if(_query.Metadata.OrderBy?.Length > 0)
                 {
                     _result.Results.Sort(this);
+                }
+
+                if (_query.Offset != null  && _query.Offset.Value != 0 ||
+                    _query.Limit != null && _query.Limit.Value != int.MaxValue)
+                {
+                    _result.Results = _result.Results.Skip(_query.Offset ?? 0).Take(_query.Limit ?? int.MaxValue).ToList();
                 }
             }
 
