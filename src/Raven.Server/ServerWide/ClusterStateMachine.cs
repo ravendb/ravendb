@@ -2134,9 +2134,20 @@ namespace Raven.Server.ServerWide
 
                     if (databaseRecordJson == null)
                     {
-                        if (updateCommand.ErrorOnDatabaseDoesNotExists)
-                            throw DatabaseDoesNotExistException.CreateWithMessage(databaseName, $"Could not execute update command of type '{type}'.");
-                        return;
+                        var shardIndex = valueNameLowered.AsSpan().LastIndexOf((byte)'$');
+                        if (shardIndex != -1) // try loading the sharded version, instead
+                        {
+                            valueNameLowered.Content.Truncate(shardIndex);
+                            valueName.Content.Truncate(valueName.AsSpan().LastIndexOf((byte)'$'));
+                            databaseRecordJson = ReadInternal(context, out etag, valueNameLowered);
+                        }
+
+                        if(databaseRecordJson == null)
+                        {
+                            if (updateCommand.ErrorOnDatabaseDoesNotExists)
+                                throw DatabaseDoesNotExistException.CreateWithMessage(databaseName, $"Could not execute update command of type '{type}'.");
+                            return;
+                        }
                     }
 
                     if (updateCommand.RaftCommandIndex != null && etag != updateCommand.RaftCommandIndex.Value)
@@ -2160,7 +2171,8 @@ namespace Raven.Server.ServerWide
 
                     updateCommand.AfterDatabaseRecordUpdate(context, items, _clusterAuditLog);
 
-                    if (databaseRecord.Topology.Count == 0 && databaseRecord.DeletionInProgress.Count == 0)
+                    if (databaseRecord.IsSharded == false && 
+                        (databaseRecord.Topology?.Count ?? 0) == 0 && databaseRecord.DeletionInProgress.Count == 0)
                     {
                         DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName, serverStore);
                         return;
