@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
     {
         public  ShardedQueryCommand(ShardedRequestHandler handler, BlittableJsonReaderObject content) : base(handler, ShardedCommands.Headers.None, content)
         {
+            Headers["Missing-Includes"] = "true";
         }
 
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
