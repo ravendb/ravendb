@@ -74,65 +74,74 @@ namespace SlowTests.MailingList
         [Fact]
         public async Task AggresiveCacheWithLazyTestAsync_Partly()
         {
+            const string loadedDocId = "doc-1";
+            const string unloadedDocId = "doc-2";
+
             using var store = GetDocumentStore();
 
-            var requestExecutor = store.GetRequestExecutor();
             using (var session = store.OpenSession())
             {
-                session.Store(new Doc { Id = "doc-1" });
+                session.Store(new Doc { Id = loadedDocId });
                 session.SaveChanges();
             }
 
             using (var session = store.OpenAsyncSession())
             using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
             {
-                var docLazy = session.Advanced.Lazily.LoadAsync<Doc>("doc-1");
-                var doc = await docLazy.Value;
+                var docLazy = session.Advanced.Lazily.LoadAsync<Doc>(loadedDocId);
+                _ = await docLazy.Value;
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
             }
-
-            var requests = requestExecutor.NumberOfServerRequests;
 
             using (var session = store.OpenAsyncSession())
             using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
             {
-                var cachedDocLazy = session.Advanced.Lazily.LoadAsync<Doc>("doc-1");
-                session.Advanced.Lazily.LoadAsync<Doc>("doc-2"); // not used
-                var cachedDoc = await cachedDocLazy.Value;
+                var docLazy = session.Advanced.Lazily.LoadAsync<Doc>(loadedDocId);
+                _ = await docLazy.Value;
+                Assert.Equal(0, session.Advanced.NumberOfRequests);
             }
-            // should force a call here
-            Assert.Equal(requests +1 , requestExecutor.NumberOfServerRequests);
+
+            using (var session = store.OpenAsyncSession())
+            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+            {
+                var cachedDocLazy = session.Advanced.Lazily.LoadAsync<Doc>(loadedDocId);
+                session.Advanced.Lazily.LoadAsync<Doc>(unloadedDocId); // not used
+                _ = await cachedDocLazy.Value;
+
+                // should force a call here
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
+            }
         }
 
 
         [Fact]
         public void AggresiveCacheWithLazyTest()
         {
+            const string docId = "doc-1";
+
             using var store = GetDocumentStore();
 
-            var requestExecutor = store.GetRequestExecutor();
             using (var session = store.OpenSession())
             {
-                session.Store(new Doc { Id = "doc-1" });
+                session.Store(new Doc { Id = docId });
                 session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
             {
-                var docLazy = session.Advanced.Lazily.Load<Doc>("doc-1");
-                var doc = docLazy.Value;
+                var docLazy = session.Advanced.Lazily.Load<Doc>(docId);
+                _ = docLazy.Value;
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
             }
-
-            var requests = requestExecutor.NumberOfServerRequests;
 
             using (var session = store.OpenSession())
             using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
             {
-                var cachedDocLazy = session.Advanced.Lazily.Load<Doc>("doc-1");
-                var cachedDoc = cachedDocLazy.Value;
+                var cachedDocLazy = session.Advanced.Lazily.Load<Doc>(docId);
+                _ = cachedDocLazy.Value;
+                Assert.Equal(0, session.Advanced.NumberOfRequests);
             }
-
-            Assert.Equal(requests, requestExecutor.NumberOfServerRequests);
         }
 
         private class Doc
