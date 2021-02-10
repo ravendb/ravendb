@@ -1,0 +1,6 @@
+ravendb ($PACKAGEVERSION) stable; urgency=medium
+
+  [Full changelog available]
+  * https://ravendb.net/docs/article-page/$RAVENDB_VERSION_MINOR/csharp/start/whats-new
+
+ -- $DEBFULLNAME <$DEBEMAIL>  $DEBCHANGELOGDATE
