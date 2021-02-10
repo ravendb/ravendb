@@ -116,6 +116,8 @@ namespace Raven.Server.Documents
                                     break;
                                 }
 
+                                context.Transaction.ForgetAbout(document);
+
                                 ids.Enqueue(document.Id);
                             }
                         }
