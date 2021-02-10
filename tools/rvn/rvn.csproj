@@ -116,7 +116,7 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
-    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.0.0" />
+    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.1.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="5.0.0" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.9" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="5.0.0" />
