@@ -47,7 +47,7 @@ namespace Raven.Server.Utils.Monitoring
         public double MapReduceIndexReducedPerSec { get; set; }
         public double RequestsPerSec { get; set; }
         public int RequestsCount { get; set; }
-        public double RequestAverageDuration { get; set; }
+        public double RequestAverageDurationInMs { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -59,7 +59,7 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(MapReduceIndexReducedPerSec)] = MapReduceIndexReducedPerSec,
                 [nameof(RequestsPerSec)] = RequestsPerSec,
                 [nameof(RequestsCount)] = RequestsCount,
-                [nameof(RequestAverageDuration)] = RequestAverageDuration
+                [nameof(RequestAverageDurationInMs)] = RequestAverageDurationInMs
             };
         }
     }
