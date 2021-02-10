@@ -297,50 +297,25 @@ namespace Raven.Server.Web.System
         private void WriteDatabaseInfo(string databaseName, BlittableJsonReaderObject dbRecordBlittable,
             TransactionOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
+            var nodesTopology = new NodesTopology();
+
             try
             {
                 var online = ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> dbTask) &&
                              dbTask != null &&
                              dbTask.IsCompleted;
 
-                // Check for exceptions
-                if (dbTask != null && dbTask.IsFaulted)
-                {
-                    var exception = dbTask.Exception.ExtractSingleInnerException();
-                    WriteFaultedDatabaseInfo(databaseName, exception, context, writer);
-                    return;
-                }
-
                 var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbRecordBlittable);
-                var db = online ? dbTask.Result : null;
-
-                var indexingStatus = db?.IndexStore?.Status;
-                if (indexingStatus == null)
-                {
-                    // Looking for disabled indexing flag inside the database settings for offline database status
-                    if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out var val) && 
-                        bool.TryParse(val, out var indexingDisabled) && indexingDisabled)
-                        indexingStatus = IndexRunningStatus.Disabled;
-                }
-
-                var disabled = dbRecord.Disabled;
                 var topology = dbRecord.Topology;
-                var clusterTopology = ServerStore.GetClusterTopology(context);
-                clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
-
-                var studioEnvironment = StudioConfiguration.StudioEnvironment.None;
-                if (dbRecord.Studio != null && !dbRecord.Studio.Disabled)
-                {
-                    studioEnvironment = dbRecord.Studio.Environment;
-                }
-                
-                var nodesTopology = new NodesTopology();
 
                 var statuses = ServerStore.GetNodesStatuses();
                 if (topology != null)
                 {
                     nodesTopology.PriorityOrder = topology.PriorityOrder;
-                    
+
+                    var clusterTopology = ServerStore.GetClusterTopology(context);
+                    clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
+
                     foreach (var member in topology.Members)
                     {
                         if (dbRecord.DeletionInProgress != null && dbRecord.DeletionInProgress.ContainsKey(member))
@@ -379,6 +354,33 @@ namespace Raven.Server.Web.System
                         nodesTopology.Rehabs.Add(GetNodeId(node, mentor));
                         SetNodeStatus(topology, rehab, nodesTopology, statuses);
                     }
+                }
+
+                // Check for exceptions
+                if (dbTask != null && dbTask.IsFaulted)
+                {
+                    var exception = dbTask.Exception.ExtractSingleInnerException();
+                    WriteFaultedDatabaseInfo(databaseName, nodesTopology, exception, context, writer);
+                    return;
+                }
+                
+                var db = online ? dbTask.Result : null;
+
+                var indexingStatus = db?.IndexStore?.Status;
+                if (indexingStatus == null)
+                {
+                    // Looking for disabled indexing flag inside the database settings for offline database status
+                    if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out var val) && 
+                        bool.TryParse(val, out var indexingDisabled) && indexingDisabled)
+                        indexingStatus = IndexRunningStatus.Disabled;
+                }
+
+                var disabled = dbRecord.Disabled;
+
+                var studioEnvironment = StudioConfiguration.StudioEnvironment.None;
+                if (dbRecord.Studio != null && !dbRecord.Studio.Disabled)
+                {
+                    studioEnvironment = dbRecord.Studio.Environment;
                 }
 
                 if (online == false)
@@ -447,7 +449,7 @@ namespace Raven.Server.Web.System
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to get database info for: {databaseName}", e);
 
-                WriteFaultedDatabaseInfo(databaseName, e, context, writer);
+                WriteFaultedDatabaseInfo(databaseName, nodesTopology, e, context, writer);
             }
         }
 
@@ -494,15 +496,16 @@ namespace Raven.Server.Web.System
             return node;
         }
 
-        private void WriteFaultedDatabaseInfo(
-            string databaseName,
+        private void WriteFaultedDatabaseInfo(string databaseName,
+            NodesTopology nodesTopology,
             Exception exception,
-            JsonOperationContext context, 
+            JsonOperationContext context,
             AbstractBlittableJsonTextWriter writer)
         {
             var doc = new DynamicJsonValue
             {
                 [nameof(DatabaseInfo.Name)] = databaseName,
+                [nameof(DatabaseInfo.NodesTopology)] = nodesTopology,
                 [nameof(DatabaseInfo.LoadError)] = exception.Message
             };
 
