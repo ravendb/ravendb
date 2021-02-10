@@ -600,21 +600,32 @@
                                     </div>
 
                                     <div class="license-item">
+                                        <i class="icon-calendar"></i>
                                         <div>
-                                        <h4>Expires</h4>
-                                        <div class="license-item-value">2021 November 17th<br/>
-                                            <small>(in 9 months 17 days )</small></div>
+                                            <h4>License Expiration</h4>
+                                            <div class="license-item-value">
+                                                2021 November 17th<br/>
+                                                <small>in 9 months 17 days</small>
+                                            </div>
                                         </div>
                                     </div>
 
                                     <div class="license-item">
-                                        <h4>Support type</h4>
-                                        <div class="license-item-value">Community</div>
+                                        <i class="icon-support"></i>
+                                        <div>
+                                            <h4>Support type</h4>
+                                            <div class="license-item-value">Community</div>
+                                        </div>
                                     </div>
 
                                     <div class="license-item">
-                                        <h4>Server Certificate</h4>
-                                        <div class="license-item-value">Server Certificate expiration 02-02-2021</div>
+                                        <i class="icon-certificate"></i>
+                                        <div>
+                                            <h4>Server Certificate Expiration</h4>
+                                            <div class="license-item-value">2021 February 27th<br/>
+                                                <small class="text-warning">11 days</small>
+                                            </div>
+                                        </div>
                                     </div>
 
                                 </div>
@@ -750,14 +761,17 @@
                                             </button>
 
                                             <div class="nodes-container">
-                                                <div class="nodes-item">
+                                                <div class="nodes-item node-warning">
                                                     <div class="nodes-item-header">
                                                         <div class="node-label">A</div>
                                                         <div class="node-value">
-                                                            <span>10%</span>
-                                                            <span class="supplementary-info">0.8 / 1.91 GB</span>
+                                                            <span>240</span>
+                                                            <span class="supplementary-info">MB</span>
                                                         </div>
                                                     </div>
+                                                    
+                                                    <div class="memory-mode text-warning">low-mem mode</div>
+                                                    
                                                     <div class="details-list">
                                                         <div class="details-item">
                                                             <div class="details-item-name">Managed Allocations</div>
@@ -778,14 +792,17 @@
                                                     </div>
                                                 </div>
 
-                                                <div class="nodes-item">
+                                                <div class="nodes-item node-danger">
                                                     <div class="nodes-item-header">
                                                         <div class="node-label">B</div>
                                                         <div class="node-value">
-                                                            <span>10%</span>
-                                                            <span class="supplementary-info">4/8 GB</span>
+                                                            <span>1.2</span>
+                                                            <span class="supplementary-info">GB</span>
                                                         </div>
                                                     </div>
+
+                                                    <div class="memory-mode text-danger">extremely low-mem mode</div>
+
                                                     <div class="details-list">
                                                         <div class="details-item">
                                                             <div class="details-item-name">Managed Allocations</div>
@@ -810,10 +827,75 @@
                                                     <div class="nodes-item-header">
                                                         <div class="node-label">C</div>
                                                         <div class="node-value">
-                                                            <span>10%</span>
-                                                            <span class="supplementary-info">2/8 GB</span>
+                                                            <span>512</span>
+                                                            <span class="supplementary-info">MB</span>
                                                         </div>
                                                     </div>
+
+                                                    <div class="memory-mode"></div>
+
+                                                    <div class="details-list">
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Managed Allocations</div>
+                                                            <div class="details-item-value">0.5</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Unmanaged Allocations</div>
+                                                            <div class="details-item-value">0.3</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Encryption Buffers</div>
+                                                            <div class="details-item-value">0.4</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Memory Mapped</div>
+                                                            <div class="details-item-value">0.4</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="nodes-item">
+                                                    <div class="nodes-item-header">
+                                                        <div class="node-label">D</div>
+                                                        <div class="node-value">
+                                                            <span>512</span>
+                                                            <span class="supplementary-info">MB</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="memory-mode"></div>
+
+                                                    <div class="details-list">
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Managed Allocations</div>
+                                                            <div class="details-item-value">0.5</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Unmanaged Allocations</div>
+                                                            <div class="details-item-value">0.3</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Encryption Buffers</div>
+                                                            <div class="details-item-value">0.4</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Memory Mapped</div>
+                                                            <div class="details-item-value">0.4</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="nodes-item">
+                                                    <div class="nodes-item-header">
+                                                        <div class="node-label">E</div>
+                                                        <div class="node-value">
+                                                            <span>512</span>
+                                                            <span class="supplementary-info">MB</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="memory-mode"></div>
+
                                                     <div class="details-list">
                                                         <div class="details-item">
                                                             <div class="details-item-name">Managed Allocations</div>
@@ -848,14 +930,34 @@
                                     <h4>Machine Memory usage</h4>
                                     <div class="property">
                                         <div class="flex-horizontal">
+                                            <button class="collapse-arrow property-control" data-toggle="collapse"
+                                                data-targetid="#machineMemoryStats">
+                                                <i class="icon-arrow-down"></i>
+                                                <i class="icon-arrow-up"></i>
+                                            </button>
 
                                             <div class="nodes-container">
                                                 <div class="nodes-item">
                                                     <div class="nodes-item-header">
                                                         <div class="node-label">A</div>
                                                         <div class="node-value">
-                                                            <span>10%</span>
-                                                            <span class="supplementary-info">0.8 / 1.91 GB</span>
+                                                            <span>30%</span>
+                                                            <span class="supplementary-info">3 / 10GB</span>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="details-list">
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Swap</div>
+                                                            <div class="details-item-value">1GB</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Available</div>
+                                                            <div class="details-item-value">2GB</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Available for processing</div>
+                                                            <div class="details-item-value">3GB</div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -864,8 +966,23 @@
                                                     <div class="nodes-item-header">
                                                         <div class="node-label">B</div>
                                                         <div class="node-value">
-                                                            <span>10%</span>
-                                                            <span class="supplementary-info">4/8 GB</span>
+                                                            <span>60%</span>
+                                                            <span class="supplementary-info">24 / 40 GB</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="details-list">
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Swap</div>
+                                                            <div class="details-item-value">1GB</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Available</div>
+                                                            <div class="details-item-value">2GB</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Available for processing</div>
+                                                            <div class="details-item-value">3GB</div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -874,8 +991,73 @@
                                                     <div class="nodes-item-header">
                                                         <div class="node-label">C</div>
                                                         <div class="node-value">
-                                                            <span>10%</span>
-                                                            <span class="supplementary-info">2/8 GB</span>
+                                                            <span>20%</span>
+                                                            <span class="supplementary-info">2 / 10GB</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="details-list">
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Swap</div>
+                                                            <div class="details-item-value">1GB</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Available</div>
+                                                            <div class="details-item-value">2GB</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Available for processing</div>
+                                                            <div class="details-item-value">3GB</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="nodes-item">
+                                                    <div class="nodes-item-header">
+                                                        <div class="node-label">D</div>
+                                                        <div class="node-value">
+                                                            <span>20%</span>
+                                                            <span class="supplementary-info">2 / 10GB</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="details-list">
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Swap</div>
+                                                            <div class="details-item-value">1GB</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Available</div>
+                                                            <div class="details-item-value">2GB</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Available for processing</div>
+                                                            <div class="details-item-value">3GB</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="nodes-item">
+                                                    <div class="nodes-item-header">
+                                                        <div class="node-label">E</div>
+                                                        <div class="node-value">
+                                                            <span>20%</span>
+                                                            <span class="supplementary-info">2 / 10GB</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="details-list">
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Swap</div>
+                                                            <div class="details-item-value">1GB</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Available</div>
+                                                            <div class="details-item-value">2GB</div>
+                                                        </div>
+                                                        <div class="details-item">
+                                                            <div class="details-item-name">Available for processing</div>
+                                                            <div class="details-item-value">3GB</div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -908,17 +1090,11 @@
                                     </button>
                                 </div>
 
-                                <div class="property-container property-collapse" id="storageStats">
-                                    <h4>Storage Used</h4>
+                                <div class="property-container" id="storageStats">                                    
                                     <div class="property">
                                         <div class="flex-horizontal">
-                                            <button class="collapse-arrow property-control" data-toggle="collapse"
-                                                data-targetid="#storageStats">
-                                                <i class="icon-arrow-down"></i>
-                                                <i class="icon-arrow-up"></i>
-                                            </button>
 
-                                            <div class="nodes-container">
+                                            <div class="nodes-container nodes-storage">
                                                 <div class="nodes-item">
                                                     <div class="nodes-item-header">
                                                         <div class="node-label">A</div>
@@ -927,22 +1103,13 @@
                                                             <span class="supplementary-info">40/80 Gb</span>
                                                         </div>
                                                     </div>
-                                                    <div class="details-list">
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">RavenDB</div>
-                                                            <div class="details-item-value">25%</div>
+                                                    <div class="storage-chart">
+                                                        <div class="storage-ravendb" style="width: 10%" >
+                                                            10%  
                                                         </div>
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">Other</div>
-                                                            <div class="details-item-value">25%</div>
+                                                        <div class="storage-used" style="width: 15%">
+                                                            25%
                                                         </div>
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">Free</div>
-                                                            <div class="details-item-value">50%</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="details-item-graph">
-                                                        <img src="./piechart.svg">
                                                     </div>
                                                 </div>
 
@@ -954,22 +1121,13 @@
                                                             <span class="supplementary-info">30/90 Gb</span>
                                                         </div>
                                                     </div>
-                                                    <div class="details-list">
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">RavenDB</div>
-                                                            <div class="details-item-value">25%</div>
+                                                    <div class="storage-chart">                                                
+                                                        <div class="storage-ravendb" style="width: 50%" >
+                                                            50%  
                                                         </div>
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">Other</div>
-                                                            <div class="details-item-value">25%</div>
+                                                        <div class="storage-used" style="width: 15%">
+                                                            75%
                                                         </div>
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">Free</div>
-                                                            <div class="details-item-value">50%</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="details-item-graph">
-                                                        <img src="./piechart.svg">
                                                     </div>
                                                 </div>
 
@@ -981,80 +1139,52 @@
                                                             <span class="supplementary-info">200/400 GB</span>
                                                         </div>
                                                     </div>
-                                                    <div class="details-list">
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">RavenDB</div>
-                                                            <div class="details-item-value">25%</div>
+                                                    <div class="storage-chart">
+                                                        <div class="storage-ravendb" style="width: 10%" >
+                                                            10%  
                                                         </div>
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">Other</div>
-                                                            <div class="details-item-value">25%</div>
+                                                        <div class="storage-used" style="width: 15%">
+                                                            25%
                                                         </div>
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">Free</div>
-                                                            <div class="details-item-value">50%</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="details-item-graph">
-                                                        <img src="./piechart.svg">
                                                     </div>
                                                 </div>
 
                                                 <div class="nodes-item">
                                                     <div class="nodes-item-header">
-                                                        <div class="node-label">C</div>
+                                                        <div class="node-label">D</div>
                                                         <div class="node-value">
                                                             <span>70%</span>
                                                             <span class="supplementary-info">0.7/1 TB</span>
                                                         </div>
                                                     </div>
-                                                    <div class="details-list">
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">RavenDB</div>
-                                                            <div class="details-item-value">25%</div>
+                                                    <div class="storage-chart">
+                                                        <div class="storage-ravendb" style="width: 20%" >
+                                                            20%  
                                                         </div>
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">Other</div>
-                                                            <div class="details-item-value">25%</div>
+                                                        <div class="storage-used" style="width: 25%">
+                                                            45%
                                                         </div>
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">Free</div>
-                                                            <div class="details-item-value">50%</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="details-item-graph">
-                                                        <img src="./piechart.svg">
                                                     </div>
                                                 </div>
 
                                                 <div class="nodes-item">
                                                     <div class="nodes-item-header">
-                                                        <div class="node-label">C</div>
+                                                        <div class="node-label">E</div>
                                                         <div class="node-value">
                                                             <span>10%</span>
                                                             <span class="supplementary-info">3/4 Cores</span>
                                                         </div>
                                                     </div>
-                                                    <div class="details-list">
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">RavenDB</div>
-                                                            <div class="details-item-value">25%</div>
+                                                    <div class="storage-chart">
+                                                        <div class="storage-ravendb" style="width: 10%" >
+                                                            10%  
                                                         </div>
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">Other</div>
-                                                            <div class="details-item-value">25%</div>
+                                                        <div class="storage-used" style="width: 15%">
+                                                            25%
                                                         </div>
-                                                        <div class="details-item">
-                                                            <div class="details-item-name">Free</div>
-                                                            <div class="details-item-value">50%</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="details-item-graph">
-                                                        <img src="./piechart.svg">
                                                     </div>
                                                 </div>
-
-                                            </div>
+                                            </div>                                            
                                         </div>
                                     </div>
 
@@ -1114,7 +1244,7 @@
 
                                                 <div class="nodes-item">
                                                     <div class="nodes-item-header">
-                                                        <div class="node-label">C</div>
+                                                        <div class="node-label">D</div>
                                                         <div class="node-value">
                                                             <span>3458</span>
                                                             <span class="supplementary-info">Bytes/s</span>
@@ -1124,7 +1254,7 @@
 
                                                 <div class="nodes-item">
                                                     <div class="nodes-item-header">
-                                                        <div class="node-label">C</div>
+                                                        <div class="node-label">E</div>
                                                         <div class="node-value">
                                                             <span>3048</span>
                                                             <span class="supplementary-info">Bytes/s</span>
