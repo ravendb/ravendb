@@ -183,8 +183,8 @@ namespace Raven.Server.Web.System
         {
             var result = new DiskMetrics();
             var environmentStats = Server.ServerStore._env.Stats();
-            result.SystemStoreUsedDataFileSizeInMb = environmentStats.UsedDataFileSizeInBytes / 1024L / 1024L;
-            result.SystemStoreTotalDataFileSizeInMb = environmentStats.AllocatedDataFileSizeInBytes / 1024L / 1024L;
+            result.SystemStoreUsedDataFileSizeInMb = new Size(environmentStats.UsedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+            result.SystemStoreTotalDataFileSizeInMb = new Size(environmentStats.AllocatedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
             
             if (ServerStore.Configuration.Core.RunInMemory == false)
             {
@@ -424,11 +424,11 @@ namespace Raven.Server.Web.System
                 }
             }
 
-            result.DocumentsAllocatedDataFileInMb = documentsAllocatedDataFileSizeInBytes / 1024L / 1024L;
-            result.DocumentsUsedDataFileInMb = documentsUsedDataFileSizeInBytes / 1024L / 1024L;
-            result.IndexesAllocatedDataFileInMb = indexesAllocatedDataFileSizeInBytes / 1024L / 1024L;
-            result.IndexesUsedDataFileInMb = indexesUsedDataFileSizeInBytes / 1024L / 1024L;
-            result.TotalAllocatedStorageFileInMb = totalAllocatedDataFileSizeInBytes / 1024L / 1024L;
+            result.DocumentsAllocatedDataFileInMb = new Size(documentsAllocatedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+            result.DocumentsUsedDataFileInMb = new Size(documentsUsedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+            result.IndexesAllocatedDataFileInMb = new Size(indexesAllocatedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+            result.IndexesUsedDataFileInMb = new Size(indexesUsedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+            result.TotalAllocatedStorageFileInMb = new Size(totalAllocatedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
             
             result.TotalFreeSpaceInMb = -1;
 
@@ -453,7 +453,7 @@ namespace Raven.Server.Web.System
             result.MapReduceIndexReducedPerSec = database.Metrics.MapReduceIndexes.ReducedPerSec.OneMinuteRate;
             result.RequestsPerSec = database.Metrics.Requests.RequestsPerSec.OneMinuteRate;
             result.RequestsCount = (int)database.Metrics.Requests.RequestsPerSec.Count;
-            result.RequestAverageDuration = database.Metrics.Requests.AverageDuration.GetRate();
+            result.RequestAverageDurationInMs = database.Metrics.Requests.AverageDuration.GetRate();
             return result;
         }
 
