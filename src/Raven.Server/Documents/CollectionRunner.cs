@@ -116,9 +116,9 @@ namespace Raven.Server.Documents
                                     break;
                                 }
 
-                                context.Transaction.ForgetAbout(document);
-
                                 ids.Enqueue(document.Id);
+
+                                context.Transaction.ForgetAbout(document);
                             }
                         }
                     }
@@ -141,7 +141,6 @@ namespace Raven.Server.Documents
                         if (command.NeedWait)
                             rateGate?.WaitToProceed();
                         token.Delay();
-
                     } while (ids.Count > 0);
 
                     if (end)
