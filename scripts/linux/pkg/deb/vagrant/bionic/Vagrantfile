@@ -1,0 +1,74 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+pkgOutputDir = ENV["PKG_OUTPUT_DIR"]
+ravendbVersion = ENV["RAVENDB_VERSION"]
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/ubuntu1804"
+
+  config.ssh.shell = "bash -c 'BASH_ENV=/etc/profile exec bash'"
+
+  config.vm.provision "shell", inline: <<-SHELL
+    echo "vagrant ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+    cat /etc/sudoers
+  SHELL
+
+  if not pkgOutputDir.nil? then
+    output = Dir.entries(pkgOutputDir)
+    deb = output.select { |a| a.start_with?("ravendb_#{ravendbVersion}") && a.end_with?(".deb") }.first
+    if deb.nil? then
+      raise "DEB not found for #{ravendbVersion}"
+    end
+
+    packagePath = File.join(pkgOutputDir, deb)
+    
+    if packagePath.nil?
+      raise RuntimeError, "RavenDB server package does not exist in the artifacts directory."
+    end
+
+    config.vm.provision "file", run: "always", source: packagePath, destination: "/tmp/ravendb.deb"
+  end 
+
+  config.vm.provision "file", run: "always", source: "../../assets/test.sh", destination: "/tmp/test.sh"
+
+  config.vm.provision "shell", run: "always", inline: <<-SHELL
+
+    set -e
+    
+    if [ ! -f "packages-microsoft-prod.deb" ]; then
+      apt update 
+      apt install -y wget 
+      wget https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+      dpkg -i ./packages-microsoft-prod.deb 
+    fi
+    
+    if ! dpkg -l | grep apt-transport-https; then
+      apt update 
+      apt install -y apt-transport-https 
+    fi
+
+    if ! dpkg -l | grep dotnet-runtime-deps-5.0; then
+      apt update 
+      apt install -y dotnet-runtime-deps-5.0
+    fi
+
+  SHELL
+
+  config.vm.provision "shell", run: "always", inline: <<-SHELL
+    set -e
+
+    source /tmp/test.sh
+
+    export _DEB_DEBUG=debug
+
+    test_package_systemd /tmp/ravendb.deb || exit 1
+
+  SHELL
+
+  # config.vm.provision "shell", run: "always", inline: <<-SHELL
+  #   export _DEB_DEBUG=debug
+  #   dpkg -r ravendb
+  # SHELL
+
+end

@@ -1,0 +1,78 @@
+#!/usr/bin/make -f
+
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+#export DH_VERBOSE = 1
+
+# do not strip SOs
+export DONTSTRIP=1
+
+# see FEATURE AREAS in dpkg-buildflags(1)
+#export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+# see ENVIRONMENT in dpkg-buildflags(1)
+# package maintainers to append CFLAGS
+#export DEB_CFLAGS_MAINT_APPEND  = -Wall -pedantic
+# package maintainers to append LDFLAGS
+#export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
+
+DOWNLOAD_URL=https://daily-builds.s3.amazonaws.com/RavenDB-${RAVENDB_VERSION}-linux-${RAVEN_SO_ARCH_SUFFIX}.tar.bz2 
+TARBALL=ravendb-${RAVENDB_VERSION}.tar.bz2
+export RAVENDB_VERSION_MINOR=$( egrep -o -e '^[0-9]+.[0-9]+' <<< "${RAVENDB_VERSION}" )
+
+VERSION=${RAVENDB_VERSION}
+PACKAGE_REVISION=${PACKAGE_REVISION:-0}
+PACKAGEVERSION="${VERSION}-${PACKAGE_REVISION}~${DISTRIBUTION}0"
+DISTRIBUTION=${DISTRO_VERSION_NAME}
+CACHED_TARBALL=${TARBALL_CACHE_DIR}/${TARBALL}
+TARBALL_UNPACK_DIR=/tmp
+TARBALL_UNPACK_RAVENDB_DIR=${TARBALL_UNPACK_DIR}/RavenDB
+TARBALL_UNPACK_SERVER_DIR=${TARBALL_UNPACK_RAVENDB_DIR}/Server
+ETC_ASSETS_DIR=$(BUILD_DIR)/ravendb/etc
+
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+
+%:
+	dh $@ --with systemd
+
+override_dh_shlibdeps:
+override_dh_auto_clean:
+override_dh_auto_test:
+override_dh_auto_build:
+override_dh_auto_install: prepare_from_tarball 
+	mkdir -p debian/ravendb/usr/lib
+	mv -v ${TARBALL_UNPACK_RAVENDB_DIR} debian/ravendb/usr/lib/ravendb
+	$(MAKE) -f $(mkfile_path) -C debian/ravendb make_etc_layout
+
+make_etc_layout:
+	mkdir -p etc/ld.so.conf.d
+	cp -rv $(ETC_ASSETS_DIR)/ld.so.conf.d/ravendb.conf etc/ld.so.conf.d/ravendb.conf
+
+adjust_tarball_ravendb_dir:
+	mv Server server
+	rm -v *.sh
+
+adjust_tarball_server_dir:
+	rm -v librvnpal.arm*
+	rm -v libsodium.arm*
+	cp -v librvnpal.linux.${RAVEN_SO_ARCH_SUFFIX}.so librvnpal.so
+	cp -v libsodium.linux.${RAVEN_SO_ARCH_SUFFIX}.so libsodium.so
+	cp -rv $(ETC_ASSETS_DIR)/ravendb/settings.json settings.default.json
+	mkdir -p libmscordaccore
+
+prepare_from_tarball:
+	test -f "${CACHED_TARBALL}" || wget -O ${CACHED_TARBALL} -N --progress=dot:mega ${DOWNLOAD_URL}
+	tar -C ${TARBALL_UNPACK_DIR} -xf ${CACHED_TARBALL}
+	$(MAKE) -f $(mkfile_path) -C ${TARBALL_UNPACK_SERVER_DIR} adjust_tarball_server_dir	
+	$(MAKE) -f $(mkfile_path) -C ${TARBALL_UNPACK_RAVENDB_DIR} adjust_tarball_ravendb_dir	
+
+override_dh_fixperms:
+	dh_fixperms	
+
+	find debian/ravendb/usr/lib/ravendb -type f -exec chmod 644 {} +
+
+	chmod 755 debian/ravendb/usr/lib/ravendb/server/Raven.Server
+	chmod 755 debian/ravendb/usr/lib/ravendb/server/rvn
+	chmod 750 debian/ravendb/usr/lib/ravendb/server/Raven.Debug
+	chmod 750 debian/ravendb/usr/lib/ravendb/server/createdump
+

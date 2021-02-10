@@ -1,0 +1,15 @@
+Source: ravendb
+Build-Depends: dh-systemd (>=1.5)
+Vcs-Browser: https://github.com/ravendb/ravendb
+Vcs-Git: https://github.com/ravendb/ravendb.git
+Maintainer: $DEBFULLNAME 
+
+Package: ravendb
+Section: database
+Priority: optional
+Depends: $DEB_DEPS 
+Architecture: $DEB_ARCHITECTURE 
+Homepage: https://ravendb.net
+Description: RavenDB NoSQL Database
+ A NoSQL Database that's fully transactional. 
+ Allows 1 million reads and 150000 writes per second.
