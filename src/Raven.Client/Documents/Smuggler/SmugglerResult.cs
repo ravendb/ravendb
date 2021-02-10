@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
@@ -69,13 +70,21 @@ namespace Raven.Client.Documents.Smuggler
         internal void AddMessage(string message)
         {
             Message = message;
-            _messages.Add(Message);
+
+            lock (this)
+            {
+                _messages.Add(Message);
+            }
         }
 
         private void AddMessage(string type, string message)
         {
             Message = $"[{SystemTime.UtcNow:T} {type}] {message}";
-            _messages.Add(Message);
+
+            lock (this)
+            {
+                _messages.Add(Message);
+            }
         }
 
         public override DynamicJsonValue ToJson()
@@ -83,7 +92,12 @@ namespace Raven.Client.Documents.Smuggler
             _sw.Stop();
 
             var json = base.ToJson();
-            json[nameof(Messages)] = Messages;
+
+            lock (this)
+            {
+                json[nameof(Messages)] = Messages.ToList();
+            }
+
             json[nameof(Elapsed)] = Elapsed;
 
             return json;
@@ -247,7 +261,7 @@ namespace Raven.Client.Documents.Smuggler
             public bool SqlConnectionStringsUpdated { get; set; }
 
             public bool ClientConfigurationUpdated { get; set; }
-            
+
             public bool UnusedDatabaseIdsUpdated { get; set; }
 
             public override DynamicJsonValue ToJson()
@@ -280,7 +294,7 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (ConflictSolverConfigUpdated)
                     json[nameof(ConflictSolverConfigUpdated)] = ConflictSolverConfigUpdated;
-                
+
                 if (PeriodicBackupsUpdated)
                     json[nameof(PeriodicBackupsUpdated)] = PeriodicBackupsUpdated;
 
@@ -301,7 +315,7 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (HubPullReplicationsUpdated)
                     json[nameof(HubPullReplicationsUpdated)] = HubPullReplicationsUpdated;
-                
+
                 if (UnusedDatabaseIdsUpdated)
                     json[nameof(UnusedDatabaseIdsUpdated)] = UnusedDatabaseIdsUpdated;
 
@@ -352,7 +366,7 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (ClientConfigurationUpdated)
                     sb.AppendLine("- Client");
-                
+
                 if (UnusedDatabaseIdsUpdated)
                     sb.AppendLine("- Unused Database IDs");
 
