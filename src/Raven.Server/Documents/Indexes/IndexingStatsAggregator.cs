@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Indexes
     public class IndexingStatsScope : StatsScope<IndexingRunStats, IndexingStatsScope>
     {
         private readonly IndexingRunStats _stats;
-        
+
         public IndexingStatsScope(IndexingRunStats stats, bool start = true) : base(stats, start)
         {
             _stats = stats;
@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Indexes
         {
             _stats.AddMapError(key, message);
         }
-        
+
         public void AddMapReferenceError(string key, string message)
         {
             _stats.AddMapReferenceError(key, message);
@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Indexes
         {
             _stats.MapAttempts++;
         }
-        
+
         public void RecordMapReferenceAttempt()
         {
             _stats.MapReferenceAttempts++;
@@ -204,7 +204,7 @@ namespace Raven.Server.Documents.Indexes
         {
             _stats.MapErrors++;
         }
-        
+
         public void RecordMapReferenceError()
         {
             _stats.MapReferenceErrors++;
@@ -363,6 +363,11 @@ namespace Raven.Server.Documents.Indexes
         public void RecordDocumentSize(int size)
         {
             _stats.DocumentsSize += size;
+        }
+
+        public void RecordEntriesCountAfterTxCommit(int entriesCount)
+        {
+            _stats.EntriesCount = entriesCount;
         }
 
         public void RecordPendingMergesCount(int pendingMergesCount)

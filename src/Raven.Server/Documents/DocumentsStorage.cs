@@ -1629,7 +1629,7 @@ namespace Raven.Server.Documents
 
                     if (shouldVersion)
                     {
-                        if (DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(flags, local.Document.Data))
+                        if (DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, local.Document.Data, local.Document.ChangeVector, collectionName))
                         {
                             DocumentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, local.Document.Data, flags | DocumentFlags.HasRevisions, NonPersistentDocumentFlags.None,
                                 local.Document.ChangeVector, local.Document.LastModified.Ticks, configuration, collectionName);
