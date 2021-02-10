@@ -1,6 +1,7 @@
 .cluster-dashboard-container {
-    //padding: @gutter-sm + @gutter-xs/2;
+    
     width: 100%;
+
     .gutter-sizer {
         width: @gutter-sm;
     }
@@ -98,27 +99,40 @@
       }
 
     .license-information {
-        padding: @gutter-sm;
+        padding: 0 @gutter-sm @gutter-sm;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        margin: 0 -@gutter-sm/2;
 
         .license-item {
             display: flex;
-            margin-top: @gutter-sm;
+            min-width: 50%;
+            padding: @gutter-sm/2;            
 
             &> i {
-                font-size: 32px;
+                font-size: 22px;
                 margin-right: @gutter-xs;
                 flex-shrink: 0;
+                margin-top: 15px;
             }
             
             h4 {
                 font-size: 11px;
-                margin: 0;
+                margin-top: 0;
+                margin-bottom: @gutter-xxs;
             }
 
             .license-item-value {
-                font-size: 18px;
+                font-size: 16px;
                 font-weight: bold;
+                line-height: 1.2em;
                 color: @gray-100;
+
+                small {
+                    font-size: 13px;
+                    color: @text-muted;
+                }
 
                 &.license-community {
                     color: @color-3-1;
@@ -203,14 +217,27 @@
                 padding-left: 0;
                 flex-grow: 1;
 
-                transition: transform .2s cubic-bezier(0, 0.5, 0.5, 1);
-                transform-origin: left top;
+                
 
                 .nodes-item {
+                    transition: transform .3s cubic-bezier(0, 2, 0.5, 1);
+                    transform-origin: left top;
                     padding: @gutter-xs/2 @gutter-sm/2;
                     flex-grow: 1;
                     color: @text-muted;
                     width: 20%;
+
+                    &.node-warning {
+                        .node-label {                        
+                            box-shadow: 0 0 0 1px @well-bg inset, 0 0 0 3px @brand-warning;
+                        }
+                    }
+
+                    &.node-danger {
+                        .node-label {
+                            box-shadow: 0 0 0 1px @well-bg inset, 0 0 0 3px @brand-danger;
+                        }
+                    }
 
                     .nodes-item-header {
                         display: flex;
@@ -245,29 +272,47 @@
                         }                        
                     }
 
+                    .memory-mode {
+                        font-size: 9px;
+                        text-transform: uppercase;
+                        display: flex;
+                        text-align: center;
+                        line-height: 1em;
+                        margin: @gutter-xs 0;
+                        height: 1em;
+                        font-weight: 800;
+                    }
+
                     .details-list {
-                        overflow: hidden;                        
+                        overflow: hidden;    
+                        
+                        -webkit-animation: @slidein-properties;
+                        -moz-animation: @slidein-properties;
+                        -ms-animation: @slidein-properties;
+                        animation: @slidein-properties;
 
                         .details-item {                            
                             display: flex;
                             flex-wrap: wrap;
-                            align-self: center;
+                            align-items: center;
                             font-size: 12px;                            
                             margin: 0 -@gutter-xs/2;
                             margin-top: @gutter-xxs/2;
                             padding-top: @gutter-xxs/2;
-                            border-top: 1px solid fadeout(@hr-border, 50%);
+                            border-top: 1px solid fadeout(@hr-border, 50%);                            
                             
-                            .details-item-name {
-                                flex-grow: 1;
+                            .details-item-name {                                
                                 line-height: 1em;
                                 margin: 0 @gutter-xs/2;
+                                order: 2;
                             }
                             
-                            .details-item-value  {
+                            .details-item-value  {                                
                                 font-weight: 800;
+                                flex-grow: 1;
                                 color: var(--node-color);
                                 margin: 0 @gutter-xs/2;
+                                order: 1;
                             }
                         }
                     }
@@ -275,6 +320,35 @@
                     .details-item-graph {
                         margin: @gutter-xxs auto 0;
                         width: 80px;
+                    }
+
+                    
+                    .storage-chart {
+                        display: flex;
+                        width: 100%;
+                        height: @gutter-sm;
+                        box-shadow: 0 0 0 1px @hr-border inset;
+                        font-size: 11px;
+    
+                        &+.storage-chart {
+                            margin-top: @gutter-xs;
+                        }
+                        
+                        &>div {
+                            flex-shrink: 0;                        
+                            padding: 0 @gutter-xxs;
+                            line-height: @gutter-sm;
+                            font-weight: bold;
+                        }
+    
+                        .storage-ravendb {
+                            background-color: @brand-primary;
+                            color: @black;
+                        }   
+    
+                        .storage-used {
+                            background-color: @panel-bg;
+                        }
                     }
 
                     &:nth-of-type(10n+1) {
@@ -308,10 +382,24 @@
                         --node-color: @color-3-2;
                     }
                 }
+
+                &.nodes-storage {
+                    flex-direction: column;
+
+                    .nodes-item {
+                        display: flex;
+                        align-items: center;
+                        width: 100%;
+
+                        .nodes-item-header {
+                            width: 200px;
+                        }
+                    }
+                }
             }                  
             .graph-container {
-                position: sticky;
-                left: 0;
+                //position: sticky;
+                //left: 0;
             }
         }
 
@@ -327,11 +415,11 @@
                     transform: translateY(0);
                 }         
             }
-            .nodes-container {
-                transform: scale(.8);  
+            .nodes-container {                
                 .nodes-item {
                     min-width: 0;
                     flex-shrink: 0;
+                    transform: scale(.9);
                 }
                 
                 .node-value {
