@@ -251,11 +251,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void AddInfo(string message)
         {
-            lock (this)
-            {
-                _backupResult.AddInfo(message);
-                _onProgress.Invoke(_backupResult.Progress);
-            }
+            _backupResult.AddInfo(message);
+            _onProgress.Invoke(_backupResult.Progress);
         }
 
         private string GetArchiveDescription()

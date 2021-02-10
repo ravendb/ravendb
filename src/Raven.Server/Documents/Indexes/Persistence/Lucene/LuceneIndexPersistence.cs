@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private bool _initialized;
         private readonly Dictionary<string, IndexField> _fields;
-        private IndexReader _lastReader;
+        internal IndexReader _lastReader;
         private readonly Logger _logger;
 
         internal LuceneVoronDirectory LuceneDirectory => _directory;

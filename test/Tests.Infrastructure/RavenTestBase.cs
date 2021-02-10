@@ -651,6 +651,33 @@ namespace FastTests
             throw new TimeoutException(msg);
         }
 
+        public static int WaitForEntriesCount(IDocumentStore store, string indexName, int minEntriesCount, string databaseName = null, TimeSpan? timeout = null, bool throwOnTimeout = true)
+        {
+            timeout ??= (Debugger.IsAttached
+                ? TimeSpan.FromMinutes(15)
+                : TimeSpan.FromMinutes(1));
+
+            var sp = Stopwatch.StartNew();
+            var entriesCount = -1;
+
+            while (sp.Elapsed < timeout.Value)
+            {
+                MaintenanceOperationExecutor operations = string.IsNullOrEmpty(databaseName) == false ? store.Maintenance.ForDatabase(databaseName) : store.Maintenance;
+
+                entriesCount = operations.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount;
+
+                if (entriesCount >= minEntriesCount)
+                    return entriesCount;
+
+                Thread.Sleep(32);
+            }
+
+            if (throwOnTimeout)
+                throw new TimeoutException($"It didn't get min entries count {minEntriesCount} for index {indexName}. The index has {entriesCount} entries.");
+
+            return entriesCount;
+        }
+
         protected async Task<T> AssertWaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class
         {
             var ret = await WaitForNotNullAsync(act, timeout, interval);
