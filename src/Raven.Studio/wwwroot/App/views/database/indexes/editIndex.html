@@ -3,12 +3,16 @@
         <form class="flex-form" autocomplete="off" data-bind="submit: save">
             <div class="toolbar">
                 <div class="flex-horizontal">
-                    <div class="btn-group flex-grow">
+                    <div>
                         <button class="btn btn-primary" data-bind="enable: isSaveEnabled(), css: { 'btn-spinner': saveInProgress }"><i class="icon-save"></i><span>Save</span></button>
-                        <a data-bind="attr: { href: indexesUrl }" class="btn btn-default"><i class="icon-cancel"></i> <span>Cancel</span></a>
-                        <button class="btn btn-default" data-bind="click: cloneIndex, visible: isEditingExistingIndex"><i class="icon-clone"></i><span>Clone</span></button>
+                        <a data-bind="attr: { href: indexesUrl }" class="btn btn-default" title="Return to list of indexes"><i class="icon-cancel"></i><span>Cancel</span></a>
+                        <button class="btn btn-default" data-bind="click: cloneIndex, visible: isEditingExistingIndex" title="Clone this index"><i class="icon-clone"></i><span>Clone</span></button>
                     </div>
-                    <div class="btn-group">
+                    <div data-bind="if: showIndexHistory" style="margin: unset">
+                        <div class="dropdown dropdown-menu-left loadpatch margin-left margin-left-xs" data-bind="template: { name: 'index-history-dialog' }"></div>
+                    </div>
+                    <div class="flex-separator"></div>
+                    <div>
                         <a data-bind="click: getCSharpCode, visible: isEditingExistingIndex" class="btn" title="Copy the index c# code"><i class="icon-code"></i><span>Copy C#</span></a>
                         <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i><span>Query</span></a>
                         <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i><span>Terms</span></a>
@@ -38,7 +42,7 @@
                 <div class="col-sm-10">
                     <div data-bind="foreach: editedIndex().maps">
                         <div class="clearfix">
-                            <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
+                            <div class="btn-group-sm pull-right" role="group" aria-label="...">
                                 <button type="button" class="btn btn-default" data-bind="click: _.partial($root.formatIndex, $index())"><i class="icon-indent"></i><span>Format</span></button>
                                 <button type="button" class="btn btn-danger" data-bind="click: _.partial($root.removeMap, $index()), enable: $root.editedIndex().maps().length > 1"
                                         title="Remove this map from the index">
@@ -73,7 +77,7 @@
                 <div class="col-sm-10" data-bind="with: editedIndex()">
                     <div data-bind="if: hasReduce">
                         <div class="clearfix">
-                            <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
+                            <div class="btn-group-sm pull-right" role="group" aria-label="...">
                                 <button type="button" class="btn btn-default" data-bind="click: $root.formatReduce"><i class="icon-indent"></i><span>Format</span></button>
                                 <button type="button" class="btn btn-danger" data-bind="click: $root.removeReduce" title="Remove the Reduce function from the index">
                                     <i class="icon-trash"></i> <span>Delete</span>
@@ -103,7 +107,7 @@
                                 <div class="toggle margin-left">
                                     <input id="toggleOutputToCollection" type="checkbox" data-bind="checked: outputReduceToCollection" />
                                     <label for="toggleOutputToCollection" class="control-label"><strong>Output Reduce Results to Collection </strong>
-                                        <small><i id="reduce-output-info" class="icon-info text-info"></i></small>
+                                        <small class="margin-left margin-left-xs"><i id="reduce-output-info" class="icon-info text-info"></i></small>
                                     </label>
                                 </div>
                             </div>
@@ -119,7 +123,7 @@
                                 <div class="toggle margin-top margin-top-sm margin-left margin-left-lg">
                                     <input id="togglePatternForReferences" type="checkbox" data-bind="checked: createReferencesToResultsCollection" />
                                     <label class="control-label"><strong>Create References to Results Collection </strong>
-                                        <small><i id="reference-docs-info" class="icon-info text-info"></i></small>
+                                        <small class="margin-left margin-left-xs"><i id="reference-docs-info" class="icon-info text-info"></i></small>
                                     </label>
                                 </div>
                             </div>
@@ -127,8 +131,8 @@
                         <div data-bind="collapse: createReferencesToResultsCollection() && outputReduceToCollection()">
                             <div class="row" data-bind="validationElement: patternForReferencesToReduceOutputCollection">
                                 <div class="col-lg-offset-1 col-lg-3 no-padding-right no-padding-left">
-                                    <label for="referencePattern" class="control-label margin-top margin-top-sm">Reference Documents ID Pattern <i class="required"></i>
-                                        <small><i id="reference-docs-pattern-info" class="icon-info text-info"></i></small>
+                                    <label for="referencePattern" class="control-label margin-top margin-top-sm">Reference Documents ID Pattern<i class="required"></i>
+                                        <small class="margin-left margin-left-xs"><i id="reference-docs-pattern-info" class="icon-info text-info"></i></small>
                                     </label>
                                 </div>
                                 <div class="col-lg-7 margin-left">
@@ -139,7 +143,7 @@
                             <div class="row" data-bind="validationElement: collectionNameForReferenceDocuments">
                                 <div class="col-lg-offset-1 col-lg-3 no-padding-right no-padding-left">
                                     <label for="referenceCollectionName" class="control-label margin-top margin-top-sm">Reference Documents Collection Name
-                                        <small><i id="reference-docs-collection-name-info" class="icon-info text-info"></i></small>
+                                        <small class="margin-left margin-left-xs"><i id="reference-docs-collection-name-info" class="icon-info text-info"></i></small>
                                     </label>
                                 </div>
                                 <div class="col-lg-7 margin-left">
@@ -390,7 +394,7 @@
                 </div>
                 <div class="col-lg-4 col-xl-4 flex-horizontal">
                     <div class="flex-separator"></div>
-                    <div class="btn-group">
+                    <div>
                         <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i><span>Query</span></a>
                         <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i><span>Terms</span></a>
                         <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex" title="Delete this index"><i class="icon-trash"></i><span>Delete</span></button>
@@ -708,5 +712,60 @@
                 </div>
             </div>
         </div>
+    </div>
+</script>
+
+<script type="text/html" id="index-history-dialog">
+    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownIndexHistory" data-toggle="dropdown"
+            data-bind="click: indexHistoryButtonHandler, attr: { title: isEditingExistingIndex() ? 'View this index history' : 'View the history of the index you cloned from' }">
+        <!-- todo replace with new icon (icon-index-history) -->
+        <i class="icon-index-history"></i><span>Index History</span>
+        <span class="caret"></span>
+    </button>
+    <div class="dropdown-menu slidein-style history-dropdown-container" aria-labelledby="dropdownIndexHistory" data-bind="dropdownPanel: true">
+            <div class="history-dropdown row">
+                <div class="col-md-3 no-padding-right">
+                    <h3 class="margin-left margin-top margin-top-lg margin-bottom margin-bottom-lg">Index Creation Time</h3>
+                    <div class="history-list-container margin-left">
+                        <ul class="history-list" data-bind="foreach: indexHistory">
+                            <li data-bind="css: { selected: $data === $parent.previewItem() }, event: { mouseenter: $parent.previewIndex }, attr: { 'data-original-title': $parent.creationTimeTooltip($data) }"
+                                data-placement="right" data-toggle="tooltip" data-animation="true">
+                                <a href="#" class="history-link close-panel" data-bind="click: $parent.useIndexRevisionItem.bind($parent, $data)">
+                                    <span class="created-at" data-bind="text: $parent.createdAtFormatted($data)"></span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-9 no-padding-right">
+                    <div class="row">
+                        <div class="margin-right margin-top pull-right">
+                            <div class="btn-group margin-top margin-top-sm">
+                                <button class="btn btn-success close-panel" data-bind="click: loadIndexDefinitionFromHistory" title="Load the full definition of this index revision">
+                                    <i class="icon-load-index"></i>
+                                    <span>Load Index</span>
+                                </button>
+                                <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <span class="caret"></span>
+                                    <span class="sr-only">Toggle Dropdown</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-right">
+                                    <li title="Load the Map & Reduce methods only" class="close-panel margin-top margin-top-xs margin-bottom margin-bottom-xs">
+                                        <a href="#" data-bind="click: $root.loadMapReduceFromHistory">
+                                            <i class="icon-load-map-reduce"></i><span>Load Map & Reduce Only</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="margin-left margin-top margin-top-lg margin-bottom margin-bottom-lg">Index Definition Preview</h3>
+                        </div>
+                    </div>
+                    <div>
+                        <pre id="previewEditor" class="form-control history-preview-area" data-bind="aceEditor: { code: previewDefinition, lang: 'ace/mode/json_newline_friendly', readOnly: true }"></pre>
+                    </div>
+                </div>
+            </div>
     </div>
 </script>

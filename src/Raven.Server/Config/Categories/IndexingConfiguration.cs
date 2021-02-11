@@ -258,6 +258,12 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.NuGetPackageSourceUrl", ConfigurationEntryScope.ServerWideOnly)]
         public string NuGetPackageSourceUrl { get; set; }
+        
+        [Description("Number of index history revisions to keep per index")]
+        [DefaultValue(10)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.History.NumberOfRevisions", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int HistoryRevisionsNumber { get; set; }
 
         protected override void ValidateProperty(PropertyInfo property)
         {

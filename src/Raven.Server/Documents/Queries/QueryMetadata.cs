@@ -15,6 +15,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
+using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Counters;
 using Raven.Server.Documents.Queries.Explanation;
@@ -39,8 +40,8 @@ namespace Raven.Server.Documents.Queries
 
         public readonly Dictionary<StringSegment, (string PropertyPath, bool Array, bool Parameter, bool Quoted, string LoadFromAlias)> RootAliasPaths = new Dictionary<StringSegment, (string, bool, bool, bool, string)>();
 
-        public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, QueryType queryType = QueryType.Select, DocumentDatabase database = null)
-            : this(ParseQuery(query, queryType, database), parameters, cacheKey)
+        public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, bool addSpatialProperties = false, QueryType queryType = QueryType.Select, DocumentDatabase database = null)
+            : this(ParseQuery(query, queryType, database), parameters, cacheKey, addSpatialProperties)
         {
         }
 
@@ -51,9 +52,10 @@ namespace Raven.Server.Documents.Queries
             return qp.Parse(queryType);
         }
 
-        public QueryMetadata(Query query, BlittableJsonReaderObject parameters, ulong cacheKey)
+        public QueryMetadata(Query query, BlittableJsonReaderObject parameters, ulong cacheKey, bool addSpatialProperties)
         {
             CacheKey = cacheKey;
+            AddSpatialProperties = addSpatialProperties;
 
             Query = query;
 
@@ -93,6 +95,8 @@ namespace Raven.Server.Documents.Queries
             CreatedAt = DateTime.UtcNow;
             LastQueriedAt = CreatedAt;
         }
+
+        public readonly bool AddSpatialProperties;
 
         public readonly bool IsDistinct;
 
@@ -176,6 +180,10 @@ namespace Raven.Server.Documents.Queries
         public DateTime CreatedAt;
 
         public DateTime LastQueriedAt;
+
+        public List<SpatialProperty> SpatialProperties;
+
+        public List<SpatialShapeBase> SpatialShapes;
 
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
@@ -461,11 +469,13 @@ namespace Raven.Server.Documents.Queries
 
                         AddInclude(include, fe.FieldValue, ref includes);
                         break;
+
                     case ValueExpression ve:
                         HasIncludeOrLoad = true;
 
                         AddInclude(include, ve.Token.Value, ref includes);
                         break;
+
                     case MethodExpression me:
                         var methodType = QueryMethod.GetMethodType(me.Name.Value);
                         switch (methodType)
@@ -483,6 +493,7 @@ namespace Raven.Server.Documents.Queries
 
                                 highlightings.Add(CreateHighlightingField(me, parameters));
                                 break;
+
                             case MethodType.Explanation:
                                 if (IsCollectionQuery)
                                     throw new InvalidQueryException("Collection queries cannot return explanations.", QueryText, parameters);
@@ -495,10 +506,12 @@ namespace Raven.Server.Documents.Queries
                                 Explanation = CreateExplanationField(me);
                                 HasExplanations = true;
                                 break;
+
                             case MethodType.Timings:
                                 QueryValidator.ValidateTimings(me.Arguments, QueryText, parameters);
                                 HasTimings = true;
                                 break;
+
                             case MethodType.Counters:
                                 QueryValidator.ValidateIncludeCounter(me.Arguments, QueryText, parameters);
 
@@ -509,6 +522,7 @@ namespace Raven.Server.Documents.Queries
 
                                 AddToCounterIncludes(CounterIncludes, me, parameters);
                                 break;
+
                             case MethodType.TimeSeries:
                                 QueryValidator.ValidateIncludeTimeseries(me.Arguments, QueryText, parameters);
 
@@ -519,6 +533,7 @@ namespace Raven.Server.Documents.Queries
 
                                 AddToTimeSeriesIncludes(TimeSeriesIncludes, me, parameters);
                                 break;
+
                             case MethodType.CompareExchange:
                                 QueryValidator.ValidateIncludeCompareExchangeValue(me.Arguments, QueryText, parameters);
 
@@ -528,10 +543,12 @@ namespace Raven.Server.Documents.Queries
 
                                 AddInclude(include, fieldName.Value, ref compareExchangeValueIncludes);
                                 break;
+
                             default:
                                 throw new InvalidQueryException($"Unable to figure out how to deal with include method '{methodType}'", QueryText, parameters);
                         }
                         break;
+
                     default:
                         throw new InvalidQueryException("Unable to figure out how to deal with include of type " + include.Type, QueryText, parameters);
                 }
@@ -575,9 +592,11 @@ namespace Raven.Server.Documents.Queries
                     case 1:
                         result.AddFragmentLength(ve.Token.Value, ve.Value);
                         break;
+
                     case 2:
                         result.AddFragmentCount(ve.Token.Value, ve.Value);
                         break;
+
                     case 3:
                         result.AddOptions(ve.Token.Value, ve.Value);
                         break;
@@ -744,7 +763,6 @@ namespace Raven.Server.Documents.Queries
                     {
                         alias = value.PropertyPath;
                     }
-
                     else if (fe.FieldValue != null)
                     {
                         if (Query.From.Alias?.Value == null)
@@ -773,43 +791,45 @@ namespace Raven.Server.Documents.Queries
             switch (expression.Arguments.Count - start)
             {
                 case 3:
-                {
-                    var args = new string[3];
-
-                    for (var index = start; index < expression.Arguments.Count; index++)
                     {
-                        if (!(expression.Arguments[index] is ValueExpression vt))
-                            continue;
-                        var argIndex = index - start;
-                        var arg = QueryBuilder.GetValue(Query, this, parameters, vt);
+                        var args = new string[3];
 
-                        // name arg
-                        if (argIndex == 0)
+                        for (var index = start; index < expression.Arguments.Count; index++)
                         {
-                            if (arg.Type != ValueTokenType.String)
-                                throw new InvalidQueryException("Name parameters of method `timeseries` must be of type `string``, " +
-                                                                $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters);
-                            args[argIndex] = arg.Value.ToString();
-                            continue;
-                        }
+                            if (!(expression.Arguments[index] is ValueExpression vt))
+                                continue;
+                            var argIndex = index - start;
+                            var arg = QueryBuilder.GetValue(Query, this, parameters, vt);
 
-                        // from/to args
-                        switch (arg.Type)
-                        {
-                            case ValueTokenType.String:
+                            // name arg
+                            if (argIndex == 0)
+                            {
+                                if (arg.Type != ValueTokenType.String)
+                                    throw new InvalidQueryException("Name parameters of method `timeseries` must be of type `string``, " +
+                                                                    $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters);
                                 args[argIndex] = arg.Value.ToString();
-                                break;
-                            case ValueTokenType.Null:
-                                args[argIndex] = null;
-                                break;
-                            default:
-                                throw new InvalidQueryException("From/To parameters of method of `timeseries` must be of type `string` or `null`, " +
-                                                                $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters);
+                                continue;
+                            }
+
+                            // from/to args
+                            switch (arg.Type)
+                            {
+                                case ValueTokenType.String:
+                                    args[argIndex] = arg.Value.ToString();
+                                    break;
+
+                                case ValueTokenType.Null:
+                                    args[argIndex] = null;
+                                    break;
+
+                                default:
+                                    throw new InvalidQueryException("From/To parameters of method of `timeseries` must be of type `string` or `null`, " +
+                                                                    $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters);
+                            }
                         }
+                        timeSeriesIncludes.AddTimeSeries(args[0], args[1], args[2], alias);
+                        break;
                     }
-                    timeSeriesIncludes.AddTimeSeries(args[0], args[1], args[2], alias);
-                    break;
-                }
                 case 2:
                     {
                         string name = TimeseriesIncludesHelper.ExtractValueFromExpression(expression.Arguments[0]);
@@ -981,6 +1001,7 @@ namespace Raven.Server.Documents.Queries
                     case OrderByFieldType.AlphaNumeric:
                     case OrderByFieldType.String:
                         return new OrderByField(new QueryFieldName(Constants.Documents.Indexing.Fields.DocumentIdFieldName, false), orderingType, asc, MethodType.Id);
+
                     default:
                         throw new InvalidQueryException("Invalid ORDER BY 'id()' call, this field can only be sorted as a string or alphanumeric value, but got " + orderingType, QueryText, parameters);
                 }
@@ -1079,12 +1100,15 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Spatial_Circle:
                         QueryValidator.ValidateCircle(expression.Arguments, QueryText, parameters);
                         break;
+
                     case MethodType.Spatial_Wkt:
                         QueryValidator.ValidateWkt(expression.Arguments, QueryText, parameters);
                         break;
+
                     case MethodType.Spatial_Point:
                         QueryValidator.ValidatePoint(expression.Arguments, QueryText, parameters);
                         break;
+
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
                         break;
@@ -1261,7 +1285,6 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (Query.DeclaredFunctions != null && Query.DeclaredFunctions.TryGetValue(methodName, out var tuple))
                     {
-
                         CheckIfProjectionHasSpecialMethod(tuple.JavaScript);
 
                         if (HasFacet)
@@ -1398,6 +1421,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         case "key":
                             return SelectField.CreateGroupByKeyField(alias, GroupBy);
+
                         default:
                             ThrowUnknownAggregationMethodInSelectOfGroupByQuery(methodName, QueryText, parameters);
                             return null; // never hit
@@ -1419,6 +1443,7 @@ namespace Raven.Server.Documents.Queries
                             ThrowInvalidAggregationMethod(parameters, methodName);
                         fieldName = QueryFieldName.Count;
                         break;
+
                     case AggregationOperation.Sum:
                         if (IsGroupBy == false)
                             ThrowInvalidAggregationMethod(parameters, methodName);
@@ -1531,18 +1556,23 @@ namespace Raven.Server.Documents.Queries
 
                             result.FacetSetupDocumentId = ExtractFieldNameFromArgument(me.Arguments[0], withoutAlias: false, me.Name.Value, parameters, QueryText);
                             break;
+
                         case MethodType.Average:
                             AddFacetAggregation(me, result, FacetAggregation.Average, parameters);
                             break;
+
                         case MethodType.Sum:
                             AddFacetAggregation(me, result, FacetAggregation.Sum, parameters);
                             break;
+
                         case MethodType.Min:
                             AddFacetAggregation(me, result, FacetAggregation.Min, parameters);
                             break;
+
                         case MethodType.Max:
                             AddFacetAggregation(me, result, FacetAggregation.Max, parameters);
                             break;
+
                         default:
                             ThrowInvalidAggregationMethod(parameters, me.Name.Value);
                             break;
@@ -1969,10 +1999,12 @@ namespace Raven.Server.Documents.Queries
                                 _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0, operatorType: operatorType);
                             }
                             break;
+
                         case MethodType.Sum:
                         case MethodType.Count:
                             VisitFieldToken(leftSide, rightSide, parameters, null);
                             break;
+
                         default:
                             throw new ArgumentException($"The method {methodType} on the left side inside the WHERE clause is not supported.");
                     }
@@ -2008,9 +2040,11 @@ namespace Raven.Server.Documents.Queries
                         case MethodType.Id:
                             _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0, operatorType: operatorType);
                             break;
+
                         case MethodType.Count:
                             _metadata.AddWhereField(QueryFieldName.Count, parameters, exact: _insideExact > 0);
                             break;
+
                         case MethodType.Sum:
                             if (me.Arguments != null && me.Arguments[0] is FieldExpression f)
                                 VisitFieldToken(f, value, parameters, operatorType);
@@ -2130,6 +2164,7 @@ namespace Raven.Server.Documents.Queries
 
                         _metadata.AddWhereField(QueryFieldName.DocumentId, parameters);
                         break;
+
                     case MethodType.StartsWith:
                     case MethodType.EndsWith:
                     case MethodType.Search:
@@ -2149,10 +2184,12 @@ namespace Raven.Server.Documents.Queries
                         else
                             _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0, methodName: methodName.Value);
                         break;
+
                     case MethodType.Exists:
                         fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName.Value, parameters);
                         _metadata.AddExistField(fieldName, parameters);
                         break;
+
                     case MethodType.Boost:
                         _metadata.HasBoost = true;
                         var firstArg = arguments.Count == 0 ? null : arguments[0];
@@ -2162,6 +2199,7 @@ namespace Raven.Server.Documents.Queries
 
                         Visit(firstArg, parameters);
                         break;
+
                     case MethodType.Intersect:
                         _metadata.HasIntersect = true;
 
@@ -2171,6 +2209,7 @@ namespace Raven.Server.Documents.Queries
                             Visit(expressionArgument, parameters);
                         }
                         return;
+
                     case MethodType.Exact:
                         if (arguments.Count != 1)
                             throw new InvalidQueryException($"Method {methodName}() expects one argument, got " + arguments.Count, QueryText, parameters);
@@ -2181,27 +2220,34 @@ namespace Raven.Server.Documents.Queries
                             Visit(expressionArgument, parameters);
                         }
                         return;
+
                     case MethodType.Count:
                         // nothing needs to be done here
                         return;
+
                     case MethodType.Sum:
                         HandleSum(arguments, parameters);
                         return;
+
                     case MethodType.Spatial_Within:
                     case MethodType.Spatial_Contains:
                     case MethodType.Spatial_Disjoint:
                     case MethodType.Spatial_Intersects:
                         HandleSpatial(methodName.Value, arguments, withoutAlias: false, parameters);
                         return;
+
                     case MethodType.MoreLikeThis:
                         HandleMoreLikeThis(methodName.Value, arguments, parameters);
                         return;
+
                     case MethodType.Fuzzy:
                         HandleFuzzy(methodName.Value, arguments, parameters);
                         return;
+
                     case MethodType.Proximity:
                         HandleProximity(methodName.Value, arguments, parameters);
                         return;
+
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
                         break;
@@ -2313,19 +2359,38 @@ namespace Raven.Server.Documents.Queries
                                 wkt
                             });
                             break;
+
                         case MethodType.Spatial_Point:
                             if (spatialExpression.Arguments.Count != 2)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 arguments", QueryText, parameters);
 
-                            var latitude = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[0], withoutAlias, "point", parameters, QueryText).Value;
-                            var longitude = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[1], withoutAlias, "point", parameters, QueryText).Value;
+                            var latitudePropertyPath = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[0], withoutAlias, "point", parameters, QueryText).Value;
+                            var longitudePropertyPath = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[1], withoutAlias, "point", parameters, QueryText).Value;
 
                             fieldOptions = new AutoSpatialOptions(AutoSpatialOptions.AutoSpatialMethodType.Point, new List<string>
                             {
-                                latitude,
-                                longitude
+                                latitudePropertyPath,
+                                longitudePropertyPath
                             });
+
+                            if (_metadata.AddSpatialProperties)
+                            {
+                                if (_metadata.SelectFields != null)
+                                {
+                                    var latitudePropertySelectedFieldPath = GetSelectedFieldPath(latitudePropertyPath);
+                                    var longitudePropertySelectedFieldPath = GetSelectedFieldPath(longitudePropertyPath);
+                                    if (latitudePropertySelectedFieldPath != null && longitudePropertySelectedFieldPath != null)
+                                    {
+                                        AddSpatialPropertiesToMetadata(latitudePropertySelectedFieldPath, longitudePropertySelectedFieldPath);
+                                    }
+                                }
+                                else
+                                {
+                                    AddSpatialPropertiesToMetadata(latitudePropertyPath, longitudePropertyPath);
+                                }
+                            }
                             break;
+
                         default:
                             throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() or wkt() method", QueryText, parameters);
                     }
@@ -2351,18 +2416,53 @@ namespace Raven.Server.Documents.Queries
 
                 methodName = shapeExpression.Name.Value;
 
+                var args = shapeExpression.Arguments;
                 var methodType = QueryMethod.GetMethodType(methodName);
+
                 switch (methodType)
                 {
                     case MethodType.Spatial_Circle:
-                        QueryValidator.ValidateCircle(shapeExpression.Arguments, QueryText, parameters);
+                        QueryValidator.ValidateCircle(args, QueryText, parameters);
+
+                        if (_metadata.AddSpatialProperties && _metadata.IsDynamic)
+                        {
+                            var unitsStr = args.Count == 4 ? (args[3] as ValueExpression).Token.ToString() : null;
+                            var circleShape = new Circle(
+                                (args[0] as ValueExpression).Token.ToString(),
+                                (args[1] as ValueExpression).Token.ToString(),
+                                (args[2] as ValueExpression).Token.ToString(),
+                                unitsStr);
+
+                            AddSpatialShapeToMetadata(circleShape);
+                        }
                         break;
+
                     case MethodType.Spatial_Wkt:
-                        QueryValidator.ValidateWkt(shapeExpression.Arguments, QueryText, parameters);
+                        QueryValidator.ValidateWkt(args, QueryText, parameters);
+
+                        if (_metadata.AddSpatialProperties && _metadata.IsDynamic)
+                        {
+                            SpatialShape? shapeType = GetShapeString(args[0]);
+                            switch (shapeType)
+                            {
+                                case SpatialShape.Circle:
+                                    var unitsStrWkt = args.Count == 2 ? (args[1] as ValueExpression).Token.ToString() : null;
+                                    var circleShapeWkt = new Circle((args[0] as ValueExpression).Token.ToString(), unitsStrWkt);
+                                    AddSpatialShapeToMetadata(circleShapeWkt);
+                                    break;
+
+                                case SpatialShape.Polygon:
+                                    var polygonShape = new Polygon((args[0] as ValueExpression).Token.ToString());
+                                    AddSpatialShapeToMetadata(polygonShape);
+                                    break;
+                            }
+                        }
                         break;
+
                     case MethodType.Spatial_Point:
-                        QueryValidator.ValidatePoint(shapeExpression.Arguments, QueryText, parameters);
+                        QueryValidator.ValidatePoint(args, QueryText, parameters);
                         break;
+
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
                         break;
@@ -2380,6 +2480,70 @@ namespace Raven.Server.Documents.Queries
                     throw new InvalidQueryException($"Method sum() expects first argument to be field token, got {arguments[0]}", QueryText, parameters);
 
                 _metadata.AddWhereField(new QueryFieldName(f.FieldValue, f.IsQuoted), parameters);
+            }
+
+            private string GetSelectedFieldPath(string propertyPath)
+            {
+                foreach (var selectField in _metadata.SelectFields)
+                {
+                    var selectedName = selectField.Name.ToString();
+                    var selectedNameLength = selectedName.Length;
+
+                    if (propertyPath.StartsWith(selectedName) && (propertyPath.Length == selectedNameLength || propertyPath[selectedNameLength] == '.'))
+                    {
+                        if (selectField.Alias != null)
+                        {
+                            return selectField.Alias + propertyPath.Substring(selectedNameLength);
+                        }
+
+                        return propertyPath;
+                    }
+                }
+
+                return null;
+            }
+
+            private void AddSpatialPropertiesToMetadata(string latitudePropertyPath, string longitudePropertyPath)
+            {
+                if (_metadata.AddSpatialProperties == false)
+                    return;
+
+                _metadata.SpatialProperties ??= new List<SpatialProperty>();
+
+                var spatialProperty = new SpatialProperty(latitudePropertyPath, longitudePropertyPath);
+                if (_metadata.SpatialProperties.Exists(x => x.LatitudeProperty == spatialProperty.LatitudeProperty && x.LongitudeProperty == spatialProperty.LongitudeProperty) == false)
+                {
+                    _metadata.SpatialProperties.Add(spatialProperty);
+                }
+            }
+
+            private SpatialShape? GetShapeString(QueryExpression expression)
+            {
+                var expresionString = (expression as ValueExpression).Token.ToString();
+                var tokens = expresionString.Split('(');
+                if (tokens.Length == 0)
+                {
+                    throw new ArgumentException("Invalid WKT string format");
+                }
+
+                var firstToken = tokens[0].ToUpper().Trim();
+                if (firstToken == "POLYGON")
+                {
+                    return SpatialShape.Polygon;
+                }
+
+                if (firstToken == "CIRCLE")
+                {
+                    return SpatialShape.Circle;
+                }
+
+                return null;
+            }
+
+            private void AddSpatialShapeToMetadata(SpatialShapeBase spatialShape)
+            {
+                _metadata.SpatialShapes ??= new List<SpatialShapeBase>();
+                _metadata.SpatialShapes.Add(spatialShape);
             }
         }
 
@@ -2475,17 +2639,21 @@ namespace Raven.Server.Documents.Queries
                     case Identifier identifier when currentProp == null:
                         currentProp = identifier;
                         break;
+
                     case ArrowFunctionExpression arrowFunction:
                         RemoveFromUnknowns(arrowFunction.Params);
                         break;
+
                     case FunctionExpression functionExpression:
                         RemoveFromUnknowns(functionExpression.Params);
                         break;
+
                     case Property prop when prop.Key == currentProp:
                         if (maybeUnknowns?.Count > 0)
                             ThrowUnknownAlias(maybeUnknowns.First(), parameters);
                         currentProp = null;
                         break;
+
                     case StaticMemberExpression sme when sme.Object is Identifier id &&
                                                          UnknownIdentifier(id.Name):
                         maybeUnknowns = maybeUnknowns ?? new HashSet<string>();

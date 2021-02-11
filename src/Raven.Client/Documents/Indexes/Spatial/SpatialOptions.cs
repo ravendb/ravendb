@@ -66,6 +66,7 @@ namespace Raven.Client.Documents.Indexes.Spatial
     {
         // about 4.78 meters at equator, should be good enough (see: http://unterbahn.com/2009/11/metric-dimensions-of-geohash-partitions-at-the-equator/)
         public const int DefaultGeohashLevel = 9;
+
         // about 4.78 meters at equator, should be good enough
         public const int DefaultQuadTreeLevel = 23;
 
@@ -102,7 +103,7 @@ namespace Raven.Client.Documents.Indexes.Spatial
         public double MaxY { get; set; }
 
         /// <summary>
-        /// Circle radius units, only used for geography  indexes
+        /// Circle radius units, only used for geography indexes
         /// </summary>
         public SpatialUnits Units { get; set; }
 

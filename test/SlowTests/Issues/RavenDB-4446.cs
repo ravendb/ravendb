@@ -38,8 +38,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
-                Assert.Equal(40000, stats.EntriesCount);
+                Assert.Equal(40000, WaitForEntriesCount(store, index.IndexName, 40000));
             }
         }
 
@@ -59,8 +58,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
-                Assert.Equal(30000, stats.EntriesCount);
+                Assert.Equal(30000, WaitForEntriesCount(store, index.IndexName, 30000));
             }
         }
 

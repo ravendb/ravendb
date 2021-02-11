@@ -742,3 +742,12 @@ interface sampleCode {
 }
 
 type OnlyStrings<T> = { [ P in keyof T]: T[P] extends string ? P : never }[keyof T & string];
+
+interface geoPointInfo extends Raven.Server.Documents.Indexes.Spatial.Coordinates {
+    PopupContent: document;
+}
+
+interface indexHistoryCommandResult {
+    Index: string;
+    History: Raven.Client.ServerWide.IndexHistoryEntry[];
+}

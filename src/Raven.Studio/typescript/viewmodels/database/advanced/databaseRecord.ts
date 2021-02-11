@@ -8,6 +8,7 @@ import messagePublisher = require("common/messagePublisher");
 import accessManager = require("common/shell/accessManager");
 import eventsCollector = require("common/eventsCollector");
 import saveDatabaseRecordCommand = require("commands/resources/saveDatabaseRecordCommand");
+import genUtils = require("common/generalUtils");
 
 class databaseRecord extends viewModelBase {
     isDocumentCollapsed = ko.observable<boolean>(false);
@@ -150,7 +151,7 @@ class databaseRecord extends viewModelBase {
             .then(result => {
                 if (result.can) {
                     let dto = JSON.parse(this.documentText());
-                    dto.Settings = this.flattenSettings(dto.Settings, "");
+                    dto.Settings = genUtils.flattenObj(dto.Settings, "");
                     
                     new saveDatabaseRecordCommand(this.activeDatabase(), dto, dto.Etag)
                         .execute()
@@ -162,20 +163,6 @@ class databaseRecord extends viewModelBase {
             });
     }
 
-    private flattenSettings(obj: any, parentKey: string, res = {}) {
-        for (let key in obj){
-            const propName = parentKey ? parentKey + "." + key : key;
-            const value = obj[key];
-            
-            if (typeof value === "object"){
-                this.flattenSettings(value, propName, res);
-            } else {
-                (<any>res)[propName] = value;
-            }
-        }
-        return res;
-    }
-
     private fetchDatabaseRecord(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
         return new getDatabaseRecordCommand(db, reportFetchProgress)
             .execute()
@@ -183,7 +170,7 @@ class databaseRecord extends viewModelBase {
     }
     
     private setVisibleDocumentText() {
-        const docText = this.stringify(this.document().toDto(), this.hideEmptyValues());
+        const docText = genUtils.stringify(this.document().toDto(), this.hideEmptyValues());
         this.documentText(docText);
 
         // must keep the collapse state because although user didn't actively changed it, 
@@ -192,23 +179,6 @@ class databaseRecord extends viewModelBase {
             this.collapseDocument()
         } else {
             this.unfoldDocument();
-        }
-    }
-
-    private stringify(obj: any, stripNullAndEmptyValues: boolean = false) {
-        const prettifySpacing = 4;
-        
-        if (stripNullAndEmptyValues) {
-            return JSON.stringify(obj, (key, val) => {
-                const isNull = _.isNull(val);
-                const isEmptyObj = _.isEqual(val, {});
-                const isEmptyArray = _.isEqual(val, []);
-                
-                return isNull || isEmptyObj || isEmptyArray ? undefined : val;
-                
-            }, prettifySpacing);
-        } else {
-            return JSON.stringify(obj, null, prettifySpacing);
         }
     }
 }

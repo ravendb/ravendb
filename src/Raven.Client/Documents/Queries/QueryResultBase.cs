@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries.Timings;
 using Sparrow.Json;
 
@@ -27,7 +28,6 @@ namespace Raven.Client.Documents.Queries
         /// was asked to include in the result, by document id.
         /// </summary>
         public Dictionary<string, string[]> IncludedCounterNames { get; set; }
-
 
         /// <summary>
         /// Gets or sets the TimeSeries included in the result.

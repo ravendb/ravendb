@@ -5,7 +5,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries.Spatial;
 using Spatial4n.Core.Context.Nts;
-using Spatial4n.Core.Io;
+using Spatial4n.Core.IO.Nts;
 using Spatial4n.Core.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Static.Spatial
@@ -16,27 +16,19 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
     public class ShapeStringReadWriter
     {
         private static readonly WktSanitizer WktSanitizer = new WktSanitizer();
-        private static NtsShapeReadWriter _geoShapeReadWriter;
 
         private readonly SpatialOptions _options;
-        private readonly NtsShapeReadWriter _ntsShapeReadWriter;
+        private readonly NtsSpatialContext _context;
         private readonly ShapeStringConverter _shapeStringConverter;
 
         public ShapeStringReadWriter(SpatialOptions options, NtsSpatialContext context)
         {
             _options = options;
-            _ntsShapeReadWriter = CreateNtsShapeReadWriter(options, context);
+            _context = context;
             _shapeStringConverter = new ShapeStringConverter(options);
         }
 
-        private static NtsShapeReadWriter CreateNtsShapeReadWriter(SpatialOptions opt, NtsSpatialContext ntsContext)
-        {
-            if (opt.Type == SpatialFieldType.Cartesian)
-                return new NtsShapeReadWriter(ntsContext, false);
-            return _geoShapeReadWriter ?? (_geoShapeReadWriter = new NtsShapeReadWriter(ntsContext, false));
-        }
-
-        public Shape ReadShape(string shape, SpatialUnits? unitOverride = null)
+        public IShape ReadShape(string shape, SpatialUnits? unitOverride = null)
         {
             shape = _shapeStringConverter.ConvertToWKT(shape);
             shape = WktSanitizer.Sanitize(shape);
@@ -45,12 +37,12 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             if (_options.Type == SpatialFieldType.Geography)
                 shape = TranslateCircleRadius(shape, unitOverride ?? _options.Units);
 
-            return _ntsShapeReadWriter.ReadShape(shape);
+            return _context.ReadShape(shape);
         }
 
-        public string WriteShape(Shape shape)
+        public string WriteShape(IShape shape)
         {
-            return _ntsShapeReadWriter.WriteShape(shape);
+            return _context.ToString(shape);
         }
 
         public static double TranslateCircleRadius(double radius, SpatialUnits units)

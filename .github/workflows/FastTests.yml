@@ -3,11 +3,11 @@ name: tests/fast
 on:
   push:
     branches:
-        - v5.1
+        - v5.2
 
   pull_request:
     branches:
-        - v5.1
+        - v5.2
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -21,7 +21,7 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 5.0.102
+        dotnet-version: 5.0.103
 
     - name: Install dependencies
       run: dotnet restore

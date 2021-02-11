@@ -248,7 +248,7 @@ namespace Raven.Server
                                     $"1) Change the ServerUrl property in setting.json file.{Environment.NewLine}" +
                                     $"2) Run the server from the command line with --ServerUrl option.{Environment.NewLine}" +
                                     $"3) Add RAVEN_ServerUrl to the Environment Variables.{Environment.NewLine}" +
-                                    "For more information go to https://ravendb.net/l/EJS81M/5.1";
+                                    "For more information go to https://ravendb.net/l/EJS81M/5.2";
                             }
                             else if (e is SocketException && PlatformDetails.RunningOnPosix)
                             {

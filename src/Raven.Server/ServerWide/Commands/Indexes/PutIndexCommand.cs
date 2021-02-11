@@ -18,17 +18,20 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             // for deserialization
         }
 
-        public PutIndexCommand(IndexDefinition definition, string databaseName, string source, DateTime createdAt, string uniqueRequestId)
+        public PutIndexCommand(IndexDefinition definition, string databaseName, string source, DateTime createdAt, string uniqueRequestId, int revisionsToKeep)
             : base(databaseName, uniqueRequestId)
         {
             Definition = definition;
             Source = source;
             CreatedAt = createdAt;
+            RevisionsToKeep = revisionsToKeep;
         }
 
         public DateTime CreatedAt { get; set; }
 
         public string Source { get; set; }
+        
+        public int RevisionsToKeep { get; set; }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
@@ -40,13 +43,12 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 {
                     throw new InvalidOperationException($"Can not add index: {Definition.Name} because an index with the same name but different casing already exist");
                 }
-                record.AddIndex(Definition, Source, CreatedAt, etag);
+                record.AddIndex(Definition, Source, CreatedAt, etag, RevisionsToKeep);
             }
             catch (Exception e)
             {
                 throw new RachisApplyException("Failed to update index", e);
             }
-            
         }
 
         public override void FillJson(DynamicJsonValue json)
@@ -54,6 +56,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(Definition)] = TypeConverter.ToBlittableSupportedType(Definition);
             json[nameof(Source)] = Source;
             json[nameof(CreatedAt)] = CreatedAt;
+            json[nameof(RevisionsToKeep)] = RevisionsToKeep;
         }
     }
 }

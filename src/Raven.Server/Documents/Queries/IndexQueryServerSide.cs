@@ -82,13 +82,15 @@ namespace Raven.Server.Documents.Queries
 
         public bool AddTimeSeriesNames;
 
+        public bool AddSpatialProperties;
+
         public bool IsStream;
 
         public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
         {
             Query = Uri.UnescapeDataString(query);
             QueryParameters = queryParameters;
-            Metadata = new QueryMetadata(Query, queryParameters, 0);
+            Metadata = new QueryMetadata(Query, queryParameters, 0, AddSpatialProperties);
         }
 
         public static IndexQueryServerSide Create(HttpContext httpContext,
@@ -116,7 +118,7 @@ namespace Raven.Server.Documents.Queries
                     return result;
                 }
 
-                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, queryType, database);
+                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, addSpatialProperties: false, queryType, database);
                 if (result.Metadata.HasTimings)
                     result.Timings = new QueryTimingsScope(start: false);
 
@@ -210,6 +212,9 @@ namespace Raven.Server.Documents.Queries
                             case "projectionBehavior":
                                 result.ProjectionBehavior = Enum.Parse<ProjectionBehavior>(item.Value[0], ignoreCase: true);
                                 break;
+                            case "addSpatialProperties":
+                                result.AddSpatialProperties = bool.Parse(item.Value[0]);
+                                break;
                         }
                     }
                     catch (Exception e)
@@ -218,7 +223,7 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
 
-                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, 0);
+                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, 0, result.AddSpatialProperties);
                 if (result.Metadata.HasTimings)
                     result.Timings = new QueryTimingsScope(start: false);
 
