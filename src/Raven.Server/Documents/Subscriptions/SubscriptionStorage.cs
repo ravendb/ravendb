@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                 var whoseTaskIsIt = _db.WhoseTaskIsIt(topology, subscription, subscription);
                 if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(_serverStore.NodeTag))
-                    throw new DatabaseDoesNotExistException($"Stopping subscription {name} on node {_serverStore.NodeTag}, because database '{_db.Name}' is being deleted.");
+                    throw new DatabaseDoesNotExistException($"Stopping subscription '{name}' on node {_serverStore.NodeTag}, because database '{_db.Name}' is being deleted.");
 
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {

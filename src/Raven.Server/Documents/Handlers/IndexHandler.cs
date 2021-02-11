@@ -104,6 +104,12 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
+        public class IndexHistoryResult
+        {
+            public string Index { get; set; }
+            public IndexHistoryEntry[] History { get; set; }
+        }
+
         [RavenAction("/databases/*/indexes/history", "GET", AuthorizationStatus.ValidUser)]
         public Task GetIndexHistory()
         {
@@ -126,7 +132,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WritePropertyName("Index");
+                writer.WritePropertyName(nameof(IndexHistoryResult.Index));
                 writer.WriteString(name);
                 writer.WriteComma();
 
@@ -138,7 +144,7 @@ namespace Raven.Server.Documents.Handlers
                     return Task.CompletedTask;
                 }
 
-                writer.WriteArray(context, "History", history, (w, c, entry) =>
+                writer.WriteArray(context, nameof(IndexHistoryResult.History), history, (w, c, entry) =>
                 {
                     w.WriteStartObject();
 

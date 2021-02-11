@@ -1805,7 +1805,7 @@ namespace Raven.Server
                         $"1) Change the ServerUrl.Tcp property in setting.json file.{Environment.NewLine}" +
                         $"2) Run the server from the command line with --ServerUrl.Tcp option.{Environment.NewLine}" +
                         $"3) Add RAVEN_ServerUrl_Tcp to the Environment Variables.{Environment.NewLine}" +
-                        "For more information go to https://ravendb.net/l/EJS81M/5.1";
+                        "For more information go to https://ravendb.net/l/EJS81M/5.2";
 
                         errors.Add(new IOException(msg, ex));
                         if (Logger.IsOperationsEnabled)

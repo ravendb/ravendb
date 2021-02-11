@@ -36,14 +36,14 @@ function GetUbuntuImageTags($repo, $version, $arch) {
         "x64" { 
             return @(
                 "$($repo):$($version)-ubuntu.20.04-x64",
-                "$($repo):5.1-ubuntu-latest"
+                "$($repo):5.2-ubuntu-latest"
             )
             break;
         }
         "arm32v7" {
             return @(
                 "$($repo):$($version)-ubuntu.20.04-arm32v7",
-                "$($repo):5.1-ubuntu-arm32v7-latest"
+                "$($repo):5.2-ubuntu-arm32v7-latest"
             )
             break;
         }

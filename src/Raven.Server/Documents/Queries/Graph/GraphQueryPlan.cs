@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Queries.Graph
             }
             // TODO: we can tell at this point if it is a collection query or not,
             // TODO: in the future, we want to build a diffrent step for collection queries in the future.        
-            var queryMetadata = new QueryMetadata(query.withQuery, _query.QueryParameters, 0);
+            var queryMetadata = new QueryMetadata(query.withQuery, _query.QueryParameters, 0, addSpatialProperties: false);
             var qqs = new QueryQueryStep(_database.QueryRunner, alias, query.withQuery, queryMetadata, _query.QueryParameters, _context, _resultEtag, this, _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults

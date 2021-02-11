@@ -408,7 +408,7 @@ class editDocument extends viewModelBase {
                     documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave);
                 }
 
-                const docText = this.stringify(docDto);
+                const docText = genUtils.stringify(docDto);
                 this.documentText(docText);
             }
         });
@@ -714,7 +714,7 @@ class editDocument extends viewModelBase {
 
         if (metaDto) {
             documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave, true);
-            const docText = this.stringify(docDto);
+            const docText = genUtils.stringify(docDto);
             this.documentText(docText);
 
             // Suggest initial document Id 
@@ -908,11 +908,6 @@ class editDocument extends viewModelBase {
         target['@collection'] = target['@collection'] || document.getCollectionFromId(id, this.collectionTracker.getCollectionNames());
     }
 
-    stringify(obj: any) {
-        const prettifySpacing = 4;
-        return JSON.stringify(obj, null, prettifySpacing);
-    }
-
     private loadDocument(id: string): JQueryPromise<document> {
         this.isBusy(true);
 
@@ -977,11 +972,11 @@ class editDocument extends viewModelBase {
                 
                 const leftDoc = this.document();
                 const leftDocDto = leftDoc.toDiffDto();
-                this.documentText(this.stringify(leftDocDto));
+                this.documentText(genUtils.stringify(leftDocDto));
                 
                 if (rightDoc) {
                     const rightDocDto = rightDoc.toDiffDto();
-                    this.documentTextRight(this.stringify(rightDocDto));
+                    this.documentTextRight(genUtils.stringify(rightDocDto));
                 }
                 
                 if (!wasDirty) {
@@ -1085,7 +1080,7 @@ class editDocument extends viewModelBase {
         try {
             const docEditorText = this.docEditor.getSession().getValue();
             const tempDoc = JSON.parse(docEditorText);
-            const formatted = this.stringify(tempDoc);
+            const formatted = genUtils.stringify(tempDoc);
             this.documentText(formatted);
         } catch (e) {
             messagePublisher.reportError("Could not format json", undefined, undefined, false);

@@ -483,27 +483,22 @@ class genUtils {
                 return `${items.slice(0, items.length-1).join(', ')} & ${items[items.length-1]}`;
         }
     }
+    
+    static stringify(obj: any, stripNullAndEmptyValues: boolean = false) {
+        const prettifySpacing = 4;
 
+        if (stripNullAndEmptyValues) {
+            return JSON.stringify(obj, (key, val) => {
+                const isNull = _.isNull(val);
+                const isEmptyObj = _.isEqual(val, {});
+                const isEmptyArray = _.isEqual(val, []);
 
-    // Trim the specified properties for the object param passed. Return the trimmed object.
-    static trimProperties<T extends object>(obj: T, propsToTrim: (OnlyStrings<T>)[]): T {
-        if (!obj) {
-            return null;
+                return isNull || isEmptyObj || isEmptyArray ? undefined : val;
+
+            }, prettifySpacing);
+        } else {
+            return JSON.stringify(obj, null, prettifySpacing);
         }
-
-        const result = {} as T;
-
-        for (const key of Object.keys(obj)) {
-            const value = (obj as any)[key];
-
-            if (_.includes(propsToTrim, key)) {
-                (result as any)[key] = value?.toString().trim();
-            } else {
-                (result as any)[key] = value;
-            }
-        }
-
-        return result;
     }
 
     /***  File Methods ***/
@@ -512,6 +507,13 @@ class genUtils {
         const fileParts = _.split(filePath, ".");
         
         return fileParts.length > 1 ? fileParts.pop() : null;
+    }
+
+    /***  Distance Methods ***/
+
+    // input: Miles/KM, output: Meters 
+    static getMeters(distance: number, units: Raven.Client.Documents.Indexes.Spatial.SpatialUnits) {
+        return units === "Miles" ? distance * 1609.344 : distance * 1000;
     }
     
     /***  Other Methods ***/
@@ -641,6 +643,41 @@ class genUtils {
         ko.cleanNode(div[0]);
         div.remove();
         return html;
+    }
+    
+    static flattenObj(obj: any, parentKey: string, res = {}) {
+        for (let key in obj) {
+            const propName = parentKey ? parentKey + "." + key : key;
+            const value = obj[key];
+
+            if (typeof value === "object") {
+                genUtils.flattenObj(value, propName, res);
+            } else {
+                (<any>res)[propName] = value;
+            }
+        }
+        return res;
+    }
+
+    // Trim the specified properties for the object param passed. Return the trimmed object.
+    static trimProperties<T extends object>(obj: T, propsToTrim: (OnlyStrings<T>)[]): T {
+        if (!obj) {
+            return null;
+        }
+
+        const result = {} as T;
+
+        for (const key of Object.keys(obj)) {
+            const value = (obj as any)[key];
+
+            if (_.includes(propsToTrim, key)) {
+                (result as any)[key] = value?.toString().trim();
+            } else {
+                (result as any)[key] = value;
+            }
+        }
+
+        return result;
     }
 } 
 

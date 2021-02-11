@@ -33,7 +33,11 @@ class documentHelpers {
     static unescapeNewlinesAndTabsInTextFields(str: string): string {
         var AceDocumentClass = ace.require("ace/document").Document;
         var AceEditSessionClass = ace.require("ace/edit_session").EditSession;
-        var AceJSONMode = (ace.require("ace/mode/json") || ace.require("ace/mode/raven_document")).Mode;
+        
+        var AceJSONMode = (ace.require("ace/mode/json") || 
+                           ace.require("ace/mode/raven_document") ||
+                           ace.require("ace/mode/json_newline_friendly")).Mode;
+        
         var documentTextAceDocument = new AceDocumentClass(str);
         var jsonMode = new AceJSONMode();
         var documentTextAceEditSession = new AceEditSessionClass(documentTextAceDocument, jsonMode);

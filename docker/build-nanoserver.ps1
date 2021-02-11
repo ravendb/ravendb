@@ -27,11 +27,11 @@ function BuildWindowsDockerImage ($version) {
 
 
     write-host "Build docker image: $version"
-    write-host "Tags: $($repo):$version-windows-nanoserver $($repo):5.1-windows-nanoserver-latest"
+    write-host "Tags: $($repo):$version-windows-nanoserver $($repo):5.2-windows-nanoserver-latest"
 
     docker build $DockerfileDir `
         -t "$($repo):$version-windows-nanoserver" `
-        -t "$($repo):5.1-windows-nanoserver-latest"
+        -t "$($repo):5.2-windows-nanoserver-latest"
         #-t "$($repo):windows-nanoserver-latest" 
 
     Remove-Item -Path $dockerPackagePath

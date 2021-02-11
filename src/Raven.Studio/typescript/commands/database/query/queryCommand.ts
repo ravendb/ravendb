@@ -115,6 +115,7 @@ f();
             debug: criteria.indexEntries() ? "entries" : undefined,
             disableCache: this.disableCache ? Date.now() : undefined,
             addTimeSeriesNames: true,
+            addSpatialProperties: true,
             metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined,
         });
         return url + urlArgs;

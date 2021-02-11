@@ -840,7 +840,7 @@ namespace Raven.Server.Documents.Patch
                         return SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.CartesianDistance(lat1, lng1, lat2, lng2);
 
                     if (Enum.TryParse(args[4].AsString(), ignoreCase: true, out units) == false)
-                        throw new ArgumentException("Unable to parse units " + args[5] + ", expected: 'kilomoters' or 'miles'");
+                        throw new ArgumentException("Unable to parse units " + args[5] + ", expected: 'kilometers' or 'miles'");
                 }
 
                 var result = SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.HaverstineDistanceInMiles(lat1, lng1, lat2, lng2);

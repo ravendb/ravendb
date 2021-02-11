@@ -1109,7 +1109,7 @@ namespace Raven.Server.Documents.Queries
             var methodName = shapeExpression.Name;
             var methodType = QueryMethod.GetMethodType(methodName.Value);
 
-            Shape shape = null;
+            IShape shape = null;
             switch (methodType)
             {
                 case MethodType.Spatial_Circle:
@@ -1155,7 +1155,7 @@ namespace Raven.Server.Documents.Queries
             return spatialField.Strategy.MakeQuery(args);
         }
 
-        private static Shape HandleWkt(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
+        private static IShape HandleWkt(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
             SpatialField spatialField)
         {
             var wktValue = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
@@ -1168,7 +1168,7 @@ namespace Raven.Server.Documents.Queries
             return spatialField.ReadShape(GetValueAsString(wktValue.Value), spatialUnits);
         }
 
-        private static Shape HandleCircle(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
+        private static IShape HandleCircle(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
             SpatialField spatialField)
         {
             var radius = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);

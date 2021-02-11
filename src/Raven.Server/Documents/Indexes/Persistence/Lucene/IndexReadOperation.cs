@@ -528,14 +528,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var spatialField = getSpatialField(field.Name);
 
                     int lastArgument;
-                    Point point;
+                    IPoint point;
                     switch (field.Method)
                     {
                         case MethodType.Spatial_Circle:
                             var cLatitude = field.Arguments[1].GetDouble(query.QueryParameters);
                             var cLongitude = field.Arguments[2].GetDouble(query.QueryParameters);
                             lastArgument = 2;
-                            point = spatialField.ReadPoint(cLatitude, cLongitude).GetCenter();
+                            point = spatialField.ReadPoint(cLatitude, cLongitude).Center;
                             break;
                         case MethodType.Spatial_Wkt:
                             var wkt = field.Arguments[0].GetString(query.QueryParameters);
@@ -547,13 +547,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                 lastArgument = 2;
                             }
 
-                            point = spatialField.ReadShape(wkt, spatialUnits).GetCenter();
+                            point = spatialField.ReadShape(wkt, spatialUnits).Center;
                             break;
                         case MethodType.Spatial_Point:
                             var pLatitude = field.Arguments[0].GetDouble(query.QueryParameters);
                             var pLongitude = field.Arguments[1].GetDouble(query.QueryParameters);
                             lastArgument = 2;
-                            point = spatialField.ReadPoint(pLatitude, pLongitude).GetCenter();
+                            point = spatialField.ReadPoint(pLatitude, pLongitude).Center;
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();

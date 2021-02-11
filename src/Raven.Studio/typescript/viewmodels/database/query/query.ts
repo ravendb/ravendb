@@ -37,7 +37,11 @@ import generalUtils = require("common/generalUtils");
 import timeSeriesColumn = require("widgets/virtualGrid/columns/timeSeriesColumn");
 import timeSeriesPlotDetails = require("viewmodels/common/timeSeriesPlotDetails");
 import timeSeriesQueryResult = require("models/database/timeSeries/timeSeriesQueryResult");
+import spatialMarkersLayerModel = require("models/database/query/spatialMarkersLayerModel");
+import spatialQueryMap = require("viewmodels/database/query/spatialQueryMap");
 import popoverUtils = require("common/popoverUtils");
+import spatialCircleModel = require("models/database/query/spatialCircleModel");
+import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph";
 
@@ -162,7 +166,7 @@ class query extends viewModelBase {
     fromCache = ko.observable<boolean>(false);
     originalRequestTime = ko.observable<number>();
     dirtyResult = ko.observable<boolean>();
-    currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes | timeSeriesPlotDetails | timeSeriesTableDetails>("results");
+    currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes | timeSeriesPlotDetails | timeSeriesTableDetails | spatialQueryMap>("results");
     totalResultsForUi = ko.observable<number>(0);
     hasMoreUnboundedResults = ko.observable<boolean>(false);
     graphTabIsDirty = ko.observable<boolean>(true);
@@ -187,6 +191,11 @@ class query extends viewModelBase {
     showTimeSeriesGraph: KnockoutComputed<boolean>;
     showPlotButton: KnockoutComputed<boolean>;
     
+    isSpatialQuery = ko.observable<boolean>();
+    spatialMap = ko.observable<spatialQueryMap>();
+    showMapView: KnockoutComputed<boolean>;
+    totalNumberOfMarkers = ko.observable<number>(0);
+        
     timeSeriesGraphs = ko.observableArray<timeSeriesPlotDetails>([]);
     timeSeriesTables = ko.observableArray<timeSeriesTableDetails>([]);
 
@@ -255,7 +264,7 @@ class query extends viewModelBase {
 
         this.bindToCurrentInstance("runRecentQuery", "previewQuery", "removeQuery", "useQuery", "useQueryItem", 
             "goToHighlightsTab", "goToIncludesTab", "goToGraphTab", "toggleResults", "goToTimeSeriesTab", "plotTimeSeries",
-            "closeTimeSeriesTab");
+            "closeTimeSeriesTab", "goToSpatialMapTab");
     }
 
     private initObservables() {
@@ -462,11 +471,13 @@ class query extends viewModelBase {
             }
         });
 
+        this.showMapView = ko.pureComputed(() => this.currentTab() instanceof spatialQueryMap);
+        
         this.showTimeSeriesGraph = ko.pureComputed(() => this.currentTab() instanceof timeSeriesPlotDetails);
         
         this.showVirtualTable = ko.pureComputed(() => {
             const currentTab = this.currentTab();
-            return currentTab !== 'timings' && currentTab !== 'graph' && !this.showTimeSeriesGraph();
+            return currentTab !== 'timings' && currentTab !== 'graph' && !this.showTimeSeriesGraph() && !this.showMapView();
         });
     }
 
@@ -930,8 +941,8 @@ class query extends viewModelBase {
                             this.fromCache(false);
                         }
                         
-                        const emptyFieldsResult = queryForAllFields 
-                            && queryResults.totalResultCount > 0 
+                        const emptyFieldsResult = queryForAllFields
+                            && queryResults.totalResultCount > 0
                             && _.every(queryResults.items, x => x.getDocumentPropertyNames().length === 0);
                         
                         if (emptyFieldsResult) {
@@ -950,6 +961,7 @@ class query extends viewModelBase {
                             this.onHighlightingsLoaded(queryResults.highlightings);
                             this.onExplanationsLoaded(queryResults.explanations);
                             this.onTimingsLoaded(queryResults.timings);
+                            this.onSpatialLoaded(queryResults);
                         }
                         this.saveLastQuery("");
                         this.saveRecentQuery(criteriaDto, optionalSavedQueryName);
@@ -1185,6 +1197,66 @@ class query extends viewModelBase {
         });
     }
     
+    private onSpatialLoaded(queryResults: pagedResultExtended<document>) {
+        this.isSpatialQuery(false);
+        let markersCount = 0;
+        
+        const spatialProperties = queryResults.additionalResultInfo.SpatialProperties;
+        if (spatialProperties && queryResults.items.length) {
+            this.isSpatialQuery(true);
+
+            // Each spatial markers model will contain the layer of markers per spatial properties pair
+            const spatialMarkersLayers: spatialMarkersLayerModel[] = [];
+            const spatialCirclesLayer: spatialCircleModel[] = [];
+            const spatialPolygonsLayer: spatialPolygonModel[] = [];
+
+            for (let i = 0; i < spatialProperties.length; i++) {
+                const latitudeProperty = spatialProperties[i].LatitudeProperty;
+                const longitudeProperty = spatialProperties[i].LongitudeProperty;
+
+                let pointsArray: geoPointInfo[] = [];
+                for (let i = 0; i < queryResults.items.length; i++) {
+                    const item = queryResults.items[i];
+                    const flatItem = generalUtils.flattenObj(item, "");
+                    
+                    const latitudeValue = _.get(flatItem, latitudeProperty) as number;
+                    const longitudeValue = _.get(flatItem, longitudeProperty) as number;
+                    
+                    if (latitudeValue != null && longitudeValue != null) {
+                        const point: geoPointInfo = { Latitude: latitudeValue, Longitude: longitudeValue, PopupContent: item };
+                        pointsArray.push(point);
+                        markersCount++;
+                    }
+                }
+
+                const layer = new spatialMarkersLayerModel(latitudeProperty, longitudeProperty, pointsArray);
+                spatialMarkersLayers.push(layer);
+            }
+
+            this.totalNumberOfMarkers(markersCount);
+
+            const spatialShapes = queryResults.additionalResultInfo.SpatialShapes;
+            for (let i = 0; i < spatialShapes.length; i++) {
+                const shape = spatialShapes[i];
+                switch (shape.ShapeType) {
+                    case "Circle": {
+                        const circle = new spatialCircleModel(shape as Raven.Server.Documents.Indexes.Spatial.Circle);
+                        spatialCirclesLayer.push(circle);
+                    }
+                        break;
+                    case "Polygon": {
+                        const polygon = new spatialPolygonModel(shape as Raven.Server.Documents.Indexes.Spatial.Polygon);
+                        spatialPolygonsLayer.push(polygon);
+                    }
+                        break;
+                }
+            }
+            
+            const spatialMapView = new spatialQueryMap(spatialMarkersLayers, spatialCirclesLayer, spatialPolygonsLayer);
+            this.spatialMap(spatialMapView);
+        }
+    }
+    
     plotTimeSeries() {
         const selection = this.gridController().getSelectedItems();
         
@@ -1365,8 +1437,12 @@ class query extends viewModelBase {
                 .done((result) => {
                     this.graphTabIsDirty(false);
                     this.graphQueryResults.draw(result);
-                });    
+                });
         }
+    }
+
+    goToSpatialMapTab() {
+        this.currentTab(this.spatialMap());
     }
 
     goToTimeSeriesTab(tab: timeSeriesPlotDetails | timeSeriesTableDetails) {

@@ -82,8 +82,6 @@ namespace Raven.Client.Documents.Session
                 {
                     var sw = Stopwatch.StartNew();
 
-                    IncrementRequestCount();
-
                     var responseTimeDuration = new ResponseTimeInformation();
 
                     while (await ExecuteLazyOperationsSingleStep(responseTimeDuration, requests, sw, token).ConfigureAwait(false))
@@ -118,6 +116,8 @@ namespace Raven.Client.Documents.Session
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
             await RequestExecutor.ExecuteAsync(multiGetCommand, Context, sessionInfo: _sessionInfo, token: token).ConfigureAwait(false);
             var responses = multiGetCommand.Result;
+            if(multiGetCommand.AggressivelyCached == false)
+                IncrementRequestCount();
 
             for (var i = 0; i < PendingLazyOperations.Count; i++)
             {

@@ -14,12 +14,12 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
         {
         }
 
-        private static Rectangle GetRectangle(Shape shape)
+        private static IRectangle GetRectangle(IShape shape)
         {
-            return shape as Rectangle ?? shape.GetBoundingBox();
+            return shape as IRectangle ?? shape.BoundingBox;
         }
 
-        public override AbstractField[] CreateIndexableFields(Shape shape)
+        public override AbstractField[] CreateIndexableFields(IShape shape)
         {
             return CreateIndexableFields(GetRectangle(shape));
         }

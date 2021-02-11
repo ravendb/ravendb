@@ -43,7 +43,7 @@ function PushImages($imageTags) {
 function GetImageTags($repo, $version) {
         return @(
             #"$($repo):windows-nanoserver-latest",
-            "$($repo):5.1-windows-nanoserver-latest",
+            "$($repo):5.2-windows-nanoserver-latest",
             "$($repo):$($version)-windows-nanoserver"
         )
 }

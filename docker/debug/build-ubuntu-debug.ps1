@@ -28,7 +28,7 @@ $dockerDir = [io.path]::combine($projectDir, "docker")
 $debugDockerDir = [io.path]::combine($projectDir, "docker", "debug")
 $debugDockerfileDir = [io.path]::combine($projectDir, "docker", "debug", "ravendb-linux-debug")
 
-$pkgFile = [io.path]::combine($projectDir, "artifacts", "RavenDB-5.1.0-custom-51-linux-x64.tar.bz2")
+$pkgFile = [io.path]::combine($projectDir, "artifacts", "RavenDB-5.2.0-custom-52-linux-x64.tar.bz2")
 
 if ($(Test-Path $pkgFile) -eq $False) {
 

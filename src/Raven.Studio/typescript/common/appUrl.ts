@@ -77,6 +77,7 @@ class appUrl {
         visualizer: ko.pureComputed(() => appUrl.forVisualizer(appUrl.currentDatabase())),
         databaseSettings: ko.pureComputed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
         databaseRecord: ko.pureComputed(() => appUrl.forDatabaseRecord(appUrl.currentDatabase())),
+        databaseIDs: ko.pureComputed(() => appUrl.forDatabaseIDs(appUrl.currentDatabase())),
         revisions: ko.pureComputed(() => appUrl.forRevisions(appUrl.currentDatabase())),
         revertRevisions: ko.pureComputed(() => appUrl.forRevertRevisions(appUrl.currentDatabase())),
         expiration: ko.pureComputed(() => appUrl.forExpiration(appUrl.currentDatabase())),
@@ -311,6 +312,10 @@ class appUrl {
     
     static forDatabaseRecord(db: database | databaseInfo): string {
         return "#databases/advanced/databaseRecord?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forDatabaseIDs(db: database | databaseInfo): string {
+        return "#databases/advanced/databaseIDs?" + appUrl.getEncodedDbPart(db);
     }
 
     static forRevisions(db: database | databaseInfo): string {

@@ -17,16 +17,19 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public string Source { get; set; }
 
+        public int RevisionsToKeep { get; set; }
+
         public PutIndexesCommand()
         {
             // for deserialization
         }
 
-        public PutIndexesCommand(string databaseName, string source, DateTime createdAt, string uniqueRequestId)
+        public PutIndexesCommand(string databaseName, string source, DateTime createdAt, string uniqueRequestId, int revisionsToKeep)
             : base(databaseName, uniqueRequestId)
         {
             Source = source;
             CreatedAt = createdAt;
+            RevisionsToKeep = revisionsToKeep;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
@@ -34,7 +37,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             if (Static != null)
             {
                 foreach (var definition in Static)
-                    record.AddIndex(definition, Source, CreatedAt, etag);
+                    record.AddIndex(definition, Source, CreatedAt, etag, RevisionsToKeep);
             }
 
             if (Auto != null)
@@ -51,6 +54,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(Auto)] = TypeConverter.ToBlittableSupportedType(Auto);
             json[nameof(Source)] = Source;
             json[nameof(CreatedAt)] = CreatedAt;
+            json[nameof(RevisionsToKeep)] = RevisionsToKeep;
         }
     }
 }
