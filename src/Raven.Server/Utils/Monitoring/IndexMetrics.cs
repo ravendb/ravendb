@@ -4,8 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Sparrow.Json.Parsing;
 
@@ -13,7 +13,6 @@ namespace Raven.Server.Utils.Monitoring
 {
     public class IndexMetrics
     {
-        public string DatabaseName { get; set; }
         public string IndexName { get; set; }
         public IndexPriority Priority { get; set; }
         public IndexState State { get; set; }
@@ -32,7 +31,6 @@ namespace Raven.Server.Utils.Monitoring
         {
             return new DynamicJsonValue
             {
-                [nameof(DatabaseName)] = DatabaseName,
                 [nameof(IndexName)] = IndexName,
                 [nameof(Priority)] = Priority,
                 [nameof(State)] = State,
@@ -51,10 +49,35 @@ namespace Raven.Server.Utils.Monitoring
     
     public class IndexesMetrics
     {
-        public List<IndexMetrics> Results { get; set; } = new List<IndexMetrics>();
+        public List<PerDatabaseIndexMetrics> Results { get; set; } = new List<PerDatabaseIndexMetrics>();
         
         public string PublicServerUrl { get; set; }
         
         public string NodeTag { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(PublicServerUrl)] = PublicServerUrl,
+                [nameof(NodeTag)] = NodeTag,
+                [nameof(Results)] = Results.Select(x => x.ToJson()).ToList()
+            };
+        }
+    }
+
+    public class PerDatabaseIndexMetrics
+    {
+        public string DatabaseName { get; set; }
+        public List<IndexMetrics> Indexes { get; set; } = new List<IndexMetrics>();
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(DatabaseName)] = DatabaseName,
+                [nameof(Indexes)] = Indexes.Select(x => x.ToJson()).ToList()
+            };
+        }
     }
 }

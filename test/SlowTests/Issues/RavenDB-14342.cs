@@ -86,7 +86,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public async Task DatabasesMonitoringTest()
         {
             using (var store = GetDocumentStore())
@@ -152,7 +152,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public async Task IndexesMonitoringTest()
         {
             using (var store = GetDocumentStore())
@@ -181,10 +181,13 @@ namespace SlowTests.Issues
                     
                     Assert.Equal(Server.ServerStore.NodeTag, metrics.NodeTag);
 
-                    var orderByCompanyMetrics = metrics.Results.First(x => x.DatabaseName == store.Database && x.IndexName == "Orders/ByCompany");
+                    var perDbMetrics = metrics.Results.First(x => x.DatabaseName == store.Database);
+                    Assert.NotNull(perDbMetrics);
+                    Assert.Equal(store.Database, perDbMetrics.DatabaseName);
+                    
+                    var orderByCompanyMetrics = perDbMetrics.Indexes.First(x => x.IndexName == "Orders/ByCompany");
                     Assert.NotNull(orderByCompanyMetrics);
                     
-                    Assert.Equal(store.Database, orderByCompanyMetrics.DatabaseName);
                     Assert.Equal("Orders/ByCompany", orderByCompanyMetrics.IndexName);
                     Assert.Equal(IndexPriority.Normal, orderByCompanyMetrics.Priority);
                     Assert.Equal(IndexState.Disabled, orderByCompanyMetrics.State);
@@ -197,15 +200,54 @@ namespace SlowTests.Issues
                     Assert.Equal(IndexType.MapReduce, orderByCompanyMetrics.Type);
                 }
             }
-        } 
-        
-        private class ServerMonitoringCommand : RavenCommand<ServerMetrics>
+        }
+
+        [LicenseRequiredFact]
+        public async Task CollectionsMonitoringTest()
         {
+            using (var store = GetDocumentStore())
+            {
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments));
+
+                using (var commands = store.Commands())
+                {
+                    var command = new CollectionsMonitoringCommand();
+                    await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
+                    var metrics = command.Result;
+                    
+                    Assert.Equal(Server.ServerStore.NodeTag, metrics.NodeTag);
+
+                    var perDbMetrics = metrics.Results.First(x => x.DatabaseName == store.Database);
+                    Assert.NotNull(perDbMetrics);
+                    Assert.Equal(store.Database, perDbMetrics.DatabaseName);
+                    
+                    var ordersMetrics = perDbMetrics.Collections.First(x => x.CollectionName == "Orders");
+                    Assert.NotNull(ordersMetrics);
+                    
+                    Assert.Equal("Orders", ordersMetrics.CollectionName);
+                    Assert.Equal(830, ordersMetrics.DocumentsCount);
+                    Assert.True(ordersMetrics.DocumentsSizeInBytes > 0);
+                    Assert.True(ordersMetrics.RevisionsSizeInBytes > 0);
+                    Assert.True(ordersMetrics.TombstonesSizeInBytes > 0);
+                    Assert.True(ordersMetrics.TotalSizeInBytes > 0);
+                }
+            }
+        }
+        
+        private abstract class AbstractMonitoringCommand<T> : RavenCommand<T>
+        {
+            private readonly string _url;
+            
             public override bool IsReadRequest => true;
 
+            protected AbstractMonitoringCommand(string url)
+            {
+                _url = url;
+            }
+            
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = node.Url + "/admin/monitoring/v1/server";
+                url = node.Url + _url;
 
                 return new HttpRequestMessage
                 {
@@ -215,51 +257,36 @@ namespace SlowTests.Issues
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
-                Result = JsonConvert.DeserializeObject<ServerMetrics>(response.ToString());    
+                Result = JsonConvert.DeserializeObject<T>(response.ToString());    
             }
         }
         
-        private class DatabasesMonitoringCommand : RavenCommand<DatabasesMetrics>
+        private class ServerMonitoringCommand : AbstractMonitoringCommand<ServerMetrics>
         {
-            public override bool IsReadRequest => true;
-
-            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            public ServerMonitoringCommand() : base("/admin/monitoring/v1/server")
             {
-                url = node.Url + "/admin/monitoring/v1/databases";
-
-                return new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get
-                };
-            }
-
-            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-            {
-                Result = JsonConvert.DeserializeObject<DatabasesMetrics>(response.ToString());    
             }
         }
         
-        private class IndexesMonitoringCommand : RavenCommand<IndexesMetrics>
+        private class DatabasesMonitoringCommand : AbstractMonitoringCommand<DatabasesMetrics>
         {
-            public override bool IsReadRequest => true;
-
-            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            public DatabasesMonitoringCommand() : base("/admin/monitoring/v1/databases")
             {
-                url = node.Url + "/admin/monitoring/v1/indexes";
-
-                return new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get
-                };
-            }
-
-            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-            {
-                Result = JsonConvert.DeserializeObject<IndexesMetrics>(response.ToString());    
             }
         }
         
+        private class IndexesMonitoringCommand : AbstractMonitoringCommand<IndexesMetrics>
+        {
+            public IndexesMonitoringCommand() : base("/admin/monitoring/v1/indexes")
+            {
+            }
+        }
+        
+        private class CollectionsMonitoringCommand : AbstractMonitoringCommand<CollectionsMetrics>
+        {
+            public CollectionsMonitoringCommand() : base("/admin/monitoring/v1/collections")
+            {
+            }
+        }
     }
-
-  
 }
