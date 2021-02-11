@@ -1259,7 +1259,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe void RemoveEntryFromRaftLog(long index)
+        public unsafe bool RemoveEntryFromRaftLog(long index)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
@@ -1278,7 +1278,7 @@ namespace Raven.Server.Rachis
                     }
                     else
                     {
-                        return;
+                        return false;
                     }
                 }
 
@@ -1299,6 +1299,8 @@ namespace Raven.Server.Rachis
 
                 tx.Commit();
             }
+
+            return true;
         }
 
         public unsafe long InsertToLeaderLog(TransactionOperationContext context, long term, BlittableJsonReaderObject cmd,

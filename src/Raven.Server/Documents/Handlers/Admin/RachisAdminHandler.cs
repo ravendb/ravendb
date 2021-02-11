@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
@@ -24,11 +23,8 @@ using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.LowMemory;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -674,13 +670,91 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         [RavenAction("/admin/cluster/remove-entry-from-log", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
-        public Task RemoveEntryFromLog()
+        public async Task RemoveEntryFromLog()
         {
             var index = GetLongQueryString("index");
+            var first = GetBoolValueQueryString("first", false) ?? true;
+            var nodeList = new List<string>();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                if (first)
+                {
+                    foreach (var node in ServerStore.GetClusterTopology(context).AllNodes)
+                    {
+                        if (node.Value == Server.WebUrl)
+                        {
+                            ServerStore.Engine.RemoveEntryFromRaftLog(index);
+                            nodeList.Add(node.Key);
+                            continue;
+                        }
 
-            ServerStore.Engine.RemoveEntryFromRaftLog(index);
+                        var cmd = new RemoveEntryFromRaftLogCommand(index);
+                        var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(node.Value, Server.Certificate.Certificate);
+                        await requestExecutor.ExecuteAsync(cmd, context);
+                        nodeList.AddRange(cmd.Result);
+                    }
+                }
+                else
+                {
+                    var removed = ServerStore.Engine.RemoveEntryFromRaftLog(index);
+                    if (removed)
+                        nodeList.Add(ServerStore.NodeTag);
+                }
 
-            return NoContent();
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName("Nodes");
+                    writer.WriteStartArray();
+                    var firstNode = true;
+                    foreach (var nodeTag in nodeList)
+                    {
+                        if (firstNode)
+                        {
+                            writer.WriteString(nodeTag);
+                            firstNode = false;
+                            continue;
+                        }
+                        writer.WriteComma();
+                        writer.WriteString(nodeTag);
+                    }
+                    writer.WriteEndArray();
+                    writer.WriteEndObject();
+                }
+            }
+        }
+
+        private class RemoveEntryFromRaftLogCommand : RavenCommand<List<string>>
+        {
+            private readonly long _index;
+            public RemoveEntryFromRaftLogCommand(long index)
+            {
+                _index = index;
+            }
+
+            public override bool IsReadRequest { get; }
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/admin/cluster/remove-entry-from-log?index={_index}&first=false";
+
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post
+                };
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                Result = new List<string>();
+
+                response.TryGet("Nodes", out BlittableJsonReaderArray array);
+
+                foreach (var item in array)
+                    Result.Add(item.ToString());
+            }
         }
     }
 }
