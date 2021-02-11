@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -19,7 +18,7 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Web;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -64,8 +63,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                     var shardedBatchCommands = new Dictionary<int, SingleNodeShardedBatchCommand>(); // TODO sharding : consider cache those
                     foreach (var command in batch)
                     {
-                        var id = command.Id;
-                        var shardIndex = ShardedContext.GetShardIndex(context, id);
+                        var shardIndex = command.Shard;
                         var requestExecutor = ShardedContext.RequestExecutors[shardIndex];
 
                         if (shardedBatchCommands.TryGetValue(shardIndex, out var shardedBatchCommand) == false)
@@ -89,17 +87,9 @@ namespace Raven.Server.Documents.ShardedHandlers
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         var reply = new object[batch.ParsedCommands.Count];
-
                         foreach (var command in shardedBatchCommands.Values)
                         {
-                            var count = 0;
-                            var result = command.Result;
-                            result.TryGet(nameof(BatchCommandResult.Results), out BlittableJsonReaderArray partialResult);
-                            foreach (var o in partialResult.Items)
-                            {
-                                var positionInResult = command.PositionInResponse[count++];
-                                reply[positionInResult] = o;
-                            }
+                            command.AssembleShardedReply(reply);
                         }
                         context.Write(writer, new DynamicJsonValue {[nameof(BatchCommandResult.Results)] = new DynamicJsonArray(reply)});
                     }
@@ -112,7 +102,7 @@ namespace Raven.Server.Documents.ShardedHandlers
     {
         private readonly JsonOperationContext _context;
         private readonly List<Stream> _commands = new List<Stream>();
-        public List<int> PositionInResponse = new List<int>();
+        private readonly List<int> _positionInResponse = new List<int>();
 
         private List<Stream> _attachmentStreams;
         private HashSet<Stream> _uniqueAttachmentStreams;
@@ -128,8 +118,8 @@ namespace Raven.Server.Documents.ShardedHandlers
 
         public void AddCommand(SingleShardedCommand command)
         {
-            _commands.Add(command.BufferedCommand);
-            PositionInResponse.Add(command.PositionInResponse);
+            _commands.Add(command.CommandStream);
+            _positionInResponse.Add(command.PositionInResponse);
 
             if (command.AttachmentStream != null)
             {
@@ -140,10 +130,20 @@ namespace Raven.Server.Documents.ShardedHandlers
                     _uniqueAttachmentStreams = new HashSet<Stream>();
                 }
 
-                PutAttachmentCommandHelper.ValidateStream(stream);
                 if (_uniqueAttachmentStreams.Add(stream) == false)
                     PutAttachmentCommandHelper.ThrowStreamWasAlreadyUsed();
                 _attachmentStreams.Add(stream);
+            }
+        }
+
+        public void AssembleShardedReply(object[] reply)
+        {
+            Result.TryGet(nameof(BatchCommandResult.Results), out BlittableJsonReaderArray partialResult);
+            var count = 0;
+            foreach (var o in partialResult.Items)
+            {
+                var positionInResult = _positionInResponse[count++];
+                reply[positionInResult] = o;
             }
         }
 
@@ -205,64 +205,100 @@ namespace Raven.Server.Documents.ShardedHandlers
 
     public class SingleShardedCommand
     {
-        public string Id;
+        public int Shard;
         public Stream AttachmentStream;
-        public MemoryStream BufferedCommand;
+        public Stream CommandStream;
         public int PositionInResponse;
     }
 
-    public class ShardedBatchCommand : IEnumerator<SingleShardedCommand>, IEnumerable<SingleShardedCommand>
+    public class ShardedBatchCommand : IEnumerable<SingleShardedCommand>, IDisposable
     {
-        public List<MemoryStream> BufferedCommands;
+        private readonly TransactionOperationContext _context;
+        private readonly ShardedContext _shardedContext;
+
+        public List<ShardedBatchCommandBuilder.BufferedCommand> BufferedCommands;
         public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
         public List<Stream> AttachmentStreams;
         public bool IsClusterTransaction;
 
-        private int _commandPosition;
-        private int _streamPosition;
 
-        public bool MoveNext()
+        internal ShardedBatchCommand(TransactionOperationContext context, ShardedContext shardedContext)
         {
-            if (_commandPosition == ParsedCommands.Count)
-                return false;
-
-            var cmd = ParsedCommands[_commandPosition];
-            var stream = cmd.Type == CommandType.AttachmentPUT ? AttachmentStreams[_streamPosition++] : null;
-
-            _current = new SingleShardedCommand
-            {
-                Id = cmd.Id,
-                AttachmentStream = stream,
-                BufferedCommand = BufferedCommands[_commandPosition],
-                PositionInResponse = _commandPosition
-            };
-            _commandPosition++;
-            return true;
-        }
-
-        public void Reset()
-        {
-            throw new NotSupportedException();
-        }
-
-        private SingleShardedCommand _current;
-
-        public SingleShardedCommand Current => _current;
-
-        object IEnumerator.Current => _current;
-
-        public void Dispose()
-        {
+            _context = context;
+            _shardedContext = shardedContext;
         }
 
         public IEnumerator<SingleShardedCommand> GetEnumerator()
         {
-            return this;
+            var streamPosition = 0;
+            var positionInResponse = 0;
+            for (var index = 0; index < ParsedCommands.Count; index++)
+            {
+                var cmd = ParsedCommands[index];
+                var bufferedCommand = BufferedCommands[index];
+
+                if (cmd.Type == CommandType.BatchPATCH)
+                {
+                    var idsByShard = new Dictionary<int, List<(string Id,string ChangeVector)>>();
+                    foreach (var cmdId in cmd.Ids)
+                    {
+                        if (!(cmdId is BlittableJsonReaderObject bjro))
+                            throw new InvalidOperationException();
+
+                        if (bjro.TryGet(nameof(ICommandData.Id), out string id) == false)
+                            throw new InvalidOperationException();
+
+                        bjro.TryGet(nameof(ICommandData.ChangeVector), out string expectedChangeVector);
+
+                        var shardId = _shardedContext.GetShardIndex(_context, id);
+                        if (idsByShard.TryGetValue(shardId, out var list) == false)
+                        {
+                            list = new List<(string Id,string ChangeVector)>();
+                            idsByShard.Add(shardId, list);
+                        }
+                        list.Add((id,expectedChangeVector));
+                    }
+
+                    foreach (var kvp in idsByShard)
+                    {
+                        yield return new SingleShardedCommand
+                        {
+                            Shard = kvp.Key,
+                            CommandStream = bufferedCommand.ModifyBatchPatchStream(kvp.Value),
+                            PositionInResponse = positionInResponse
+                        };
+                    }
+
+                    positionInResponse++;
+                    continue;
+                }
+
+                var shard = _shardedContext.GetShardIndex(_context, cmd.Id);
+                var commandStream = bufferedCommand.CommandStream;
+                var stream = cmd.Type == CommandType.AttachmentPUT ? AttachmentStreams[streamPosition++] : null;
+
+                if (bufferedCommand.IsIdentity)
+                {
+                    commandStream = bufferedCommand.ModifyIdentityStream(cmd.Id);
+                }
+
+                yield return new SingleShardedCommand
+                {
+                    Shard = shard,
+                    AttachmentStream = stream,
+                    CommandStream = commandStream,
+                    PositionInResponse = positionInResponse++
+                };
+            }
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        public void Dispose()
+        {
         }
     }
 
@@ -272,10 +308,12 @@ namespace Raven.Server.Documents.ShardedHandlers
         public List<BufferedCommand> BufferedCommands = new List<BufferedCommand>();
 
         private readonly bool _encrypted;
+        private readonly ShardedContext _shardedContext;
 
         public ShardedBatchCommandBuilder(ShardedRequestHandler handler) :
             base(handler, handler.ShardedContext.DatabaseName, handler.ShardedContext.IdentitySeparator)
         {
+            _shardedContext = handler.ShardedContext;
             _encrypted = handler.ShardedContext.Encrypted;
         }
 
@@ -290,7 +328,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
         public StreamsTempFile GetServerTempFile(string prefix)
         {
-            var name = $"attachment.{Guid.NewGuid():N}.{prefix}";
+            var name = $"{_shardedContext.DatabaseName}.attachment.{Guid.NewGuid():N}.{prefix}";
             var tempPath = ServerStore._env.Options.DataPager.Options.TempPath.Combine(name);
             
             return new StreamsTempFile(tempPath.FullPath, _encrypted);
@@ -309,6 +347,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             {
                 var bufferedCommand = new BufferedCommand {CommandStream = ms};
                 var result = await BatchRequestParser.ReadAndCopySingleCommand(ctx, stream, state, parser, buffer, bufferedCommand, token);
+                bufferedCommand.IsIdentity = IsIdentityCommand(ref result);
                 BufferedCommands.Add(bufferedCommand);
                 return result;
             }
@@ -319,30 +358,13 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        private IEnumerable<MemoryStream> GetStreams()
-        {
-            var orderedList = _identityPositions?.OrderBy(x => x).ToList();
-
-            for (var index = 0; index < BufferedCommands.Count; index++)
-            {
-                var bufferedCommand = BufferedCommands[index];
-                if (orderedList?.Contains(index) != true)
-                {
-                    yield return bufferedCommand.CommandStream;
-                    continue;
-                }
-
-                yield return bufferedCommand.ModifyIdentityStream(Commands[index].Id);
-            }
-        }
-
-        public async Task<ShardedBatchCommand> GetCommand(JsonOperationContext ctx)
+        public async Task<ShardedBatchCommand> GetCommand(TransactionOperationContext ctx)
         {
             await ExecuteGetIdentities();
-            return new ShardedBatchCommand
+            return new ShardedBatchCommand(ctx, _shardedContext)
             {
                 ParsedCommands = Commands, 
-                BufferedCommands = GetStreams().ToList(),
+                BufferedCommands = BufferedCommands,
                 AttachmentStreams = Streams, 
                 IsClusterTransaction = IsClusterTransactionRequest
             };
@@ -351,97 +373,208 @@ namespace Raven.Server.Documents.ShardedHandlers
         public class BufferedCommand
         {
             public MemoryStream CommandStream;
+            public bool IsIdentity;
+            public bool IsBatchPatch;
 
-            // for identities we should replace the id and change vector
+            // for identities we should replace the id and the change vector
             public int IdStartPosition; 
             public int ChangeVectorPosition; 
             public int IdLength;
 
+            // for batch patch command we need to replace on to the relevant ids
+            public int IdsStartPosition; 
+            public int IdsEndPosition;
+
             public MemoryStream ModifyIdentityStream(string newId)
             {
-                CommandStream.Position = 0;
+                if (IsIdentity == false)
+                    throw new InvalidOperationException("Must be an identity");
 
-                var newStream = new MemoryStream();
-                var modifier = new BufferedCommandModifier
+                using (CommandStream)
                 {
-                    ChangeVectorPosition = ChangeVectorPosition, 
-                    IdStartPosition = IdStartPosition, 
-                    IdLength = IdLength
-                };
-                modifier.Initialize();
-                modifier.Rewrite(CommandStream, newStream, newId);
-               
-                CommandStream.Dispose();
-                return newStream;
+                    var modifier = new IdentityCommandModifier(IdStartPosition, IdLength, ChangeVectorPosition, newId);
+                    return modifier.Rewrite(CommandStream);
+                }
             }
 
-            private struct BufferedCommandModifier
+            public MemoryStream ModifyBatchPatchStream(List<(string Id,string ChangeVector)> list)
             {
-                public int IdStartPosition;
-                public int ChangeVectorPosition;
-                public int IdLength;
+                if (IsBatchPatch == false)
+                    throw new InvalidOperationException("Must be batch patch");
 
-                private Item[] _order;
-                private enum Item
+                var modifier = new PatchCommandModifier(IdsStartPosition, IdsEndPosition - IdsStartPosition, list);
+                return modifier.Rewrite(CommandStream);
+            }
+
+            public interface IItemModifier
+            {
+                public void Validate();
+                public int GetPosition();
+                public int GetLength();
+                public byte[] NewValue();
+            }
+
+            public class PatchModifier : IItemModifier
+            {
+                public List<(string Id,string ChangeVector)> List;
+                public int IdsStartPosition;
+                public int IdsLength;
+
+                public void Validate()
                 {
-                    None,
-                    Id,
-                    ChangeVector
+                    if(List == null || List.Count == 0)
+                        BufferedCommandModifier.ThrowArgumentMustBePositive("Ids");
+
+                    if(IdsStartPosition <= 0)
+                        BufferedCommandModifier.ThrowArgumentMustBePositive("Ids position");
+
+                    if(IdsLength <= 0)
+                        BufferedCommandModifier.ThrowArgumentMustBePositive("Ids length");
                 }
 
-                public void Initialize()
+                public int GetPosition() => IdsStartPosition;
+
+                public int GetLength() => IdsLength;
+
+                public byte[] NewValue()
+                {
+                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                    using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(ctx))
+                    {
+                        builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+                        builder.StartArrayDocument();
+
+                        builder.StartWriteArray();
+                        foreach (var item in List)
+                        {
+                            builder.StartWriteObject();
+                            builder.WritePropertyName(nameof(ICommandData.Id));
+                            builder.WriteValue(item.Id);
+                            if (item.ChangeVector != null)
+                            {
+                                builder.WritePropertyName(nameof(ICommandData.ChangeVector));
+                                builder.WriteValue(item.ChangeVector);
+                            }
+                            builder.WriteObjectEnd();
+                        }
+                        builder.WriteArrayEnd();
+                        builder.FinalizeDocument();
+
+                        var reader = builder.CreateArrayReader();
+                        return Encoding.UTF8.GetBytes(reader.ToString());
+                    }
+                }
+            }
+
+            public class ChangeVectorModifier : IItemModifier
+            {
+                public int ChangeVectorPosition;
+
+                public void Validate()
+                {
+                    if (ChangeVectorPosition <= 0)
+                        BufferedCommandModifier.ThrowArgumentMustBePositive("Change vector position");
+                }
+
+                public int GetPosition() => ChangeVectorPosition;
+                public int GetLength() => 4; // null
+                public byte[] NewValue() => Empty;
+
+                private static readonly byte[] Empty = Encoding.UTF8.GetBytes("\"\"");
+            }
+
+            public class IdModifier : IItemModifier
+            {
+                public int IdStartPosition;
+                public int IdLength;
+
+                public string NewId;
+
+                public void Validate()
                 {
                     if (IdStartPosition <= 0)
-                        ThrowInvalidArgument("Id position");
+                        BufferedCommandModifier.ThrowArgumentMustBePositive("Id position");
 
                     if (IdLength <= 0)
-                        ThrowInvalidArgument("Id length");
+                        BufferedCommandModifier.ThrowArgumentMustBePositive("Id length");
+                }
 
-                    if (ChangeVectorPosition <= 0)
-                        ThrowInvalidArgument("Change vector position");
+                public int GetPosition() => IdStartPosition;
+                public int GetLength() => IdLength;
+                public byte[] NewValue() => Encoding.UTF8.GetBytes(NewId);
+            }
 
-                    _order = new Item[2];
-
-                    if (ChangeVectorPosition < IdStartPosition)
+            public class PatchCommandModifier : BufferedCommandModifier
+            {
+                public PatchCommandModifier(int idsStartPosition, int idsLength, List<(string Id,string ChangeVector)> list)
+                {
+                    Items = new IItemModifier[1];
+                    Items[0] = new PatchModifier
                     {
-                        _order[0] = Item.ChangeVector;
-                        _order[1] = Item.Id;
+                        List = list,
+                        IdsLength = idsLength,
+                        IdsStartPosition = idsStartPosition
+                    };
+                }
+            }
+
+            public class IdentityCommandModifier : BufferedCommandModifier
+            {
+                public IdentityCommandModifier(int idStartPosition, int idLength, int changeVectorPosition, string newId)
+                {
+                    Items = new IItemModifier[2];
+
+                    var idModifier = new IdModifier
+                    {
+                        IdLength = idLength,
+                        IdStartPosition = idStartPosition,
+                        NewId = newId
+                    };
+                    var cvModifier = new ChangeVectorModifier
+                    {
+                        ChangeVectorPosition = changeVectorPosition
+                    };
+
+                    if (changeVectorPosition < idStartPosition)
+                    {
+                        Items[0] = cvModifier;
+                        Items[1] = idModifier;
                     }
                     else
                     {
-                        _order[1] = Item.ChangeVector;
-                        _order[0] = Item.Id;
+                        Items[1] = cvModifier;
+                        Items[0] = idModifier;
                     }
                 }
+            }
 
-                public void Rewrite(MemoryStream source, MemoryStream dest, string newId)
+            public abstract class BufferedCommandModifier
+            {
+                protected IItemModifier[] Items;
+               
+
+                public MemoryStream Rewrite(MemoryStream source)
                 {
-                    var sourceBuffer = source.GetBuffer();
+                    EnsureInitialized();
+                    
                     var offset = 0;
-
-                    foreach (var item in _order)
+                    var dest = new MemoryStream();
+                    try
                     {
-                        switch (item)
+                        source.Position = 0;
+
+                        var sourceBuffer = source.GetBuffer();
+
+                        foreach (var item in Items)
                         {
-                            case Item.Id:
-                                offset = WriteRemaining(IdStartPosition);
-
-                                // we need to replace here the piped id with the actual one
-                                dest.Write(Encoding.UTF8.GetBytes(newId));
-                                offset += IdLength;
-
-                                break;
-                            case Item.ChangeVector:
-                                offset = WriteRemaining(ChangeVectorPosition);
-                                
-                                // change vector must be null for identity request and string.Empty after generation
-                                dest.Write(Empty);
-                                offset += 4; // null
-
-                                break;
-                            default:
-                                throw new ArgumentException(item.ToString());
+                            offset = WriteRemaining(item.GetPosition());
+                            dest.Write(item.NewValue());
+                            offset += item.GetLength();
                         }
+                
+                        // copy the rest
+                        source.Position = offset;
+                        source.CopyTo(dest);
 
                         int WriteRemaining(int upto)
                         {
@@ -458,15 +591,27 @@ namespace Raven.Server.Documents.ShardedHandlers
                             return offset;
                         }
                     }
-                
-                    // copy the rest
-                    source.Position = offset;
-                    source.CopyTo(dest);
+                    catch
+                    {
+                        dest.Dispose();
+                        throw;
+                    }
+
+                    return dest;
                 }
 
-                private static byte[] Empty = Encoding.UTF8.GetBytes("\"\"");
+                private void EnsureInitialized()
+                {
+                    if (Items == null || Items.Length == 0)
+                        throw new InvalidOperationException();
 
-                private static void ThrowInvalidArgument(string name)
+                    foreach (var item in Items)
+                    {
+                        item.Validate();
+                    }
+                }
+
+                public static void ThrowArgumentMustBePositive(string name)
                 {
                     throw new ArgumentException($"{name} must be positive");
                 }

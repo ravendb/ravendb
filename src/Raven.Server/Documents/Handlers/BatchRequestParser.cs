@@ -319,7 +319,7 @@ namespace Raven.Server.Documents.Handlers
                                 );
                         }
 
-                        if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '|')
+                        if (IsIdentityCommand(ref commandData))
                         {
                             // queue identities requests in order to send them at once to the leader (using List for simplicity)
                             AddIdentity(context, ref commandData, _index);
@@ -331,6 +331,11 @@ namespace Raven.Server.Documents.Handlers
                     if (await IsClusterTransaction(stream, parser, buffer, state))
                         IsClusterTransactionRequest = true;
                 }
+            }
+
+            public static bool IsIdentityCommand(ref CommandData commandData)
+            {
+                return commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[^1] == '|';
             }
 
             public async Task ParseMultipart(JsonOperationContext context, Stream stream, string contentType)
@@ -528,7 +533,7 @@ namespace Raven.Server.Documents.Handlers
                         {
                             ThrowUnexpectedToken(JsonParserToken.String, state);
                         }
-
+                        
                         commandData.Type = GetCommandType(state, ctx);
                         break;
                     case CommandPropertyName.Id:
@@ -556,8 +561,10 @@ namespace Raven.Server.Documents.Handlers
 
                         break;
                     case CommandPropertyName.Ids:
-                        throw new NotSupportedException("TODO");
-                        //commandData.Ids = await ReadJsonArray(ctx, stream, parser, state, buffer, token);
+                        bufferedCommand.IsBatchPatch = true;
+                        bufferedCommand.IdsStartPosition = checked((int)(commandCopy.Position + parser.BufferOffset - position));
+                        commandData.Ids = await ReadJsonArray(ctx, stream, parser, state, buffer, token);
+                        bufferedCommand.IdsEndPosition = checked((int)(commandCopy.Position + parser.BufferOffset - position));
                         break;
 
                     case CommandPropertyName.ChangeVector:
