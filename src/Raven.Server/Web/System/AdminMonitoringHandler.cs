@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -471,38 +470,32 @@ namespace Raven.Server.Web.System
             
             foreach (DocumentDatabase documentDatabase in databases)
             {
+                var perDatabaseMetrics = new PerDatabaseIndexMetrics
+                {
+                    DatabaseName = documentDatabase.Name
+                };
+
                 foreach (var index in documentDatabase.IndexStore.GetIndexes())
                 {
-                    var indexMetrics = GetIndexMetrics(documentDatabase, index);
-                    result.Results.Add(indexMetrics);
+                    var indexMetrics = GetIndexMetrics(index);
+                    perDatabaseMetrics.Indexes.Add(indexMetrics);
                 }
+                
+                result.Results.Add(perDatabaseMetrics);
             }
             
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteStartObject();
-                writer.WritePropertyName(nameof(IndexesMetrics.PublicServerUrl));
-                writer.WriteString(result.PublicServerUrl);
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(IndexesMetrics.NodeTag));
-                writer.WriteString(result.NodeTag);
-                writer.WriteComma();
-                writer.WriteArray(context, nameof(IndexesMetrics.Results), result.Results, (w, c, metrics) =>
-                {
-                    context.Write(w, metrics.ToJson());
-                });
-                writer.WriteEndObject();
-                
+                context.Write(writer, result.ToJson());
             }
             return Task.CompletedTask;
         }
 
-        private IndexMetrics GetIndexMetrics(DocumentDatabase documentDatabase, Index index)
+        private IndexMetrics GetIndexMetrics(Index index)
         {
             var result = new IndexMetrics();
 
-            result.DatabaseName = documentDatabase.Name;
             result.IndexName = index.Name;
             
             result.Priority = index.Definition.Priority;
@@ -549,32 +542,28 @@ namespace Raven.Server.Web.System
 
             foreach (DocumentDatabase documentDatabase in databases)
             {
+                var perDatabaseMetrics = new PerDatabaseCollectionMetrics
+                {
+                    DatabaseName = documentDatabase.Name
+                };
+                
                 using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     foreach (var collection in documentDatabase.DocumentsStorage.GetCollections(context))
                     {
                         var details = documentDatabase.DocumentsStorage.GetCollectionDetails(context, collection.Name);
-                        result.Results.Add(new CollectionMetrics(documentDatabase.Name, details));
+                        perDatabaseMetrics.Collections.Add(new CollectionMetrics(details));
                     }
                 }
+                
+                result.Results.Add(perDatabaseMetrics);
             }
             
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteStartObject();
-                writer.WritePropertyName(nameof(CollectionsMetrics.PublicServerUrl));
-                writer.WriteString(result.PublicServerUrl);
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(CollectionsMetrics.NodeTag));
-                writer.WriteString(result.NodeTag);
-                writer.WriteComma();
-                writer.WriteArray(context, nameof(CollectionsMetrics.Results), result.Results, (w, c, metrics) =>
-                {
-                    context.Write(w, metrics.ToJson());
-                });
-                writer.WriteEndObject();
+               context.Write(writer, result.ToJson());
             }
           
             return Task.CompletedTask;
