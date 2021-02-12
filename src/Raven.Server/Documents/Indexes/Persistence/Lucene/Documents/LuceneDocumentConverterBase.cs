@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected readonly ConversionScope Scope;
 
-        private static readonly int MaximumNumberOfItemsInFieldsCacheForMultipleItemsSameField = PlatformDetails.Is32Bits == false ? 8 * 1024 : 2 * 1024;
+        internal static readonly int MaximumNumberOfItemsInFieldsCacheForMultipleItemsSameField = PlatformDetails.Is32Bits == false ? 8 * 1024 : 2 * 1024;
 
         private int _numberOfItemsInFieldsCacheForMultipleItemsSameField;
 
@@ -799,11 +799,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (addToCache == false)
             {
-                newItem.Dispose();
+                Scope.AddToDispose(newItem);
                 return;
             }
 
-            oldItem?.Dispose();
+            Scope.AddToDispose(oldItem);
 
             _fieldsCache[cacheKey] = newItem;
 
@@ -817,11 +817,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (addToCache == false)
             {
-                newItem.Dispose();
+                Scope.AddToDispose(newItem);
                 return;
             }
 
-            oldItem?.Dispose();
+            Scope.AddToDispose(oldItem);
 
             _numericFieldsCache[cacheKey] = newItem;
 
@@ -925,7 +925,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected class ConversionScope : IDisposable
         {
-            private readonly LinkedList<BlittableJsonReaderObject> _jsons = new LinkedList<BlittableJsonReaderObject>();
+            private readonly LinkedList<IDisposable> _toDispose = new LinkedList<IDisposable>();
             private readonly LinkedList<BlittableObjectReader> _readers = new LinkedList<BlittableObjectReader>();
             private readonly LuceneDocumentConverterBase _parent;
 
@@ -940,9 +940,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 var result = context.ReadObject(djv, "lucene field as json");
 
-                _jsons.AddFirst(result);
+                _toDispose.AddFirst(result);
 
                 return result;
+            }
+
+            public void AddToDispose(IDisposable toDispose)
+            {
+                if (toDispose == null)
+                    return;
+
+                _toDispose.AddFirst(toDispose);
             }
 
             public void Dispose()
@@ -950,12 +958,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 if (_parent._storeValue)
                     _parent._storeValueField.SetValue(EmptyBuffer);
 
-                if (_jsons.Count > 0)
+                if (_toDispose.Count > 0)
                 {
-                    foreach (var json in _jsons)
-                        json.Dispose();
+                    foreach (var toDispose in _toDispose)
+                        toDispose.Dispose();
 
-                    _jsons.Clear();
+                    _toDispose.Clear();
                 }
 
                 if (_readers.Count > 0)
