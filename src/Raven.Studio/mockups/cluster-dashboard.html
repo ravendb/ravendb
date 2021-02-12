@@ -595,7 +595,7 @@
                                         <i class="icon-license"></i>
                                         <div>
                                             <h4>License type</h4>
-                                            <div class="license-item-value license-enterprise">Enterprise</div>
+                                            <div class="license-item-value">Enterprise</div>
                                         </div>
                                     </div>
 
@@ -1099,16 +1099,19 @@
                                                     <div class="nodes-item-header">
                                                         <div class="node-label">A</div>
                                                         <div class="node-value">
-                                                            <span>50%</span>
+                                                            <span>15%</span>
                                                             <span class="supplementary-info">40/80 Gb</span>
                                                         </div>
                                                     </div>
                                                     <div class="storage-chart">
-                                                        <div class="storage-ravendb" style="width: 10%" >
-                                                            10%  
+                                                        <div class="storage-ravendb" style="min-width: 10%" >
+                                                            <span>250MB</span>
                                                         </div>
-                                                        <div class="storage-used" style="width: 15%">
-                                                            25%
+                                                        <div class="storage-used" style="min-width: 15%">
+                                                            <span>300MB</span>
+                                                        </div>
+                                                        <div class="storage-free">
+                                                            <span>79GB</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1117,16 +1120,19 @@
                                                     <div class="nodes-item-header">
                                                         <div class="node-label">B</div>
                                                         <div class="node-value">
-                                                            <span>33%</span>
-                                                            <span class="supplementary-info">30/90 Gb</span>
+                                                            <span>62%</span>
+                                                            <span class="supplementary-info">25/40 Gb</span>
                                                         </div>
                                                     </div>
                                                     <div class="storage-chart">                                                
-                                                        <div class="storage-ravendb" style="width: 50%" >
-                                                            50%  
+                                                        <div class="storage-ravendb" style="min-width: 50%" >
+                                                            <span>20GB</span>
                                                         </div>
-                                                        <div class="storage-used" style="width: 15%">
-                                                            75%
+                                                        <div class="storage-used" style="min-width: 17%">
+                                                            <span>5GB</span>
+                                                        </div>
+                                                        <div class="storage-free">
+                                                            <span>15GB</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1135,34 +1141,41 @@
                                                     <div class="nodes-item-header">
                                                         <div class="node-label">C</div>
                                                         <div class="node-value">
-                                                            <span>50%</span>
-                                                            <span class="supplementary-info">200/400 GB</span>
+                                                            <span>20%</span>
+                                                            <span class="supplementary-info">50GB / 400 GB</span>
                                                         </div>
                                                     </div>
                                                     <div class="storage-chart">
-                                                        <div class="storage-ravendb" style="width: 10%" >
-                                                            10%  
+                                                        <div class="storage-ravendb" style="min-width: 10%" >
+                                                            <span>20GB</span>
                                                         </div>
-                                                        <div class="storage-used" style="width: 15%">
-                                                            25%
+                                                        <div class="storage-used" style="min-width: 15%">
+                                                            <span>30GB</span>
                                                         </div>
+                                                        <div class="storage-free">
+                                                            <span>350GB</span>
+                                                        </div>
+
                                                     </div>
                                                 </div>
 
-                                                <div class="nodes-item">
+                                                <div class="nodes-item node-danger">
                                                     <div class="nodes-item-header">
                                                         <div class="node-label">D</div>
                                                         <div class="node-value">
-                                                            <span>70%</span>
-                                                            <span class="supplementary-info">0.7/1 TB</span>
+                                                            <span>100%</span>
+                                                            <span class="supplementary-info">1TB / 1 TB</span>
                                                         </div>
                                                     </div>
                                                     <div class="storage-chart">
-                                                        <div class="storage-ravendb" style="width: 20%" >
-                                                            20%  
+                                                        <div class="storage-ravendb" style="min-width: 100%" >
+                                                            <span>1TB</span>
                                                         </div>
-                                                        <div class="storage-used" style="width: 25%">
-                                                            45%
+                                                        <div class="storage-used" style="min-width: 0%">
+                                                            <span>30MB</span>
+                                                        </div>
+                                                        <div class="storage-free">
+                                                            <span>0</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1172,22 +1185,29 @@
                                                         <div class="node-label">E</div>
                                                         <div class="node-value">
                                                             <span>10%</span>
-                                                            <span class="supplementary-info">3/4 Cores</span>
+                                                            <span class="supplementary-info">18GB / 20GB</span>
                                                         </div>
                                                     </div>
                                                     <div class="storage-chart">
-                                                        <div class="storage-ravendb" style="width: 10%" >
-                                                            10%  
+                                                        <div class="storage-ravendb" style="min-width: 10%" >
+                                                            <span>2GB</span>
                                                         </div>
-                                                        <div class="storage-used" style="width: 15%">
-                                                            25%
+                                                        <div class="storage-used" style="min-width: 70%">
+                                                            <span>16GB</span>
+                                                        </div>
+                                                        <div class="storage-free">
+                                                            <span>2GB</span>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>                                            
                                         </div>
                                     </div>
-
+                                    <div class="legend">
+                                        <div class="ravendb"></div>
+                                        <div class="used"></div>
+                                        
+                                    </div>
                                 </div>
                             </div>
 
@@ -2645,15 +2665,43 @@
                     <div class="cluster-widgets-list">
                         <div class="widget-item">
                             <img src="./text-icon.svg">
-                            License info
+                            <div class="widget-name">License info</div>
                         </div>
                         <div class="widget-item">
                             <img src="./topology-icon.svg">
-                            Topology
+                            <div class="widget-name">Topology</div>
                         </div>
                         <div class="widget-item">
                             <img src="./graph-icon.svg">
-                            CPU stats
+                            <div class="widget-name">CPU</div>
+                        </div>
+                        <div class="widget-item">
+                            <img src="./graph-icon.svg">
+                            <div class="widget-name">Memory</div>
+                        </div>
+                        <div class="widget-item">
+                            <img src="./graph-icon.svg">
+                            <div class="widget-name">Traffic</div>
+                        </div>
+                        <div class="widget-item">
+                            <img src="./chart-icon.svg">
+                            <div class="widget-name">Traffic</div>
+                        </div>
+                        <div class="widget-item">
+                            <img src="./list-icon.svg">
+                            <div class="widget-name">Databases overview</div>
+                        </div>
+                        <div class="widget-item">
+                            <img src="./list-icon.svg">
+                            <div class="widget-name">Indexing per database</div>
+                        </div>
+                        <div class="widget-item">
+                            <img src="./list-icon.svg">
+                            <div class="widget-name">Storage per database</div>
+                        </div>
+                        <div class="widget-item">
+                            <img src="./list-icon.svg">
+                            <div class="widget-name">Traffic per database</div>
                         </div>
                     </div>
                 </div>
