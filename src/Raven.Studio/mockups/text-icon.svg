@@ -3,18 +3,18 @@
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 viewBox="0 0 100 100" style="enable-background:new 0 0 100 100;" xml:space="preserve">
 <style type="text/css">
-	.st0{fill:#3B4654;}
+	.st0{fill:#262A30;}
 	.st1{fill:#F0F4F6;}
 	.st2{fill:#637085;}
 	.st3{fill:#98A7B7;}
 </style>
 <title>Artboard 5</title>
 <g>
-	<rect x="6.2" y="7.2" class="st0" width="87.6" height="85.7"/>
+	<rect x="0" class="st0" width="100" height="100.1"/>
 </g>
-<rect x="15.7" y="48.4" class="st1" width="40.1" height="10.8"/>
-<rect x="15.7" y="16.1" class="st2" width="53.7" height="16.3"/>
-<rect x="67.3" y="48.4" class="st3" width="14" height="10.8"/>
-<rect x="67.3" y="71.7" class="st3" width="14" height="10.8"/>
-<rect x="15.7" y="71.7" class="st1" width="32.6" height="10.8"/>
+<rect x="10.8" y="49.7" class="st1" width="45.8" height="12.3"/>
+<rect x="10.8" y="11.3" class="st2" width="61.3" height="18.6"/>
+<rect x="69.7" y="49.7" class="st3" width="16" height="12.3"/>
+<rect x="69.7" y="76.3" class="st3" width="16" height="12.3"/>
+<rect x="10.8" y="76.3" class="st1" width="37.2" height="12.3"/>
 </svg>
