@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public OlapEtlFileFormat Format { get; set; }
 
-        public bool KeepFilesOnDisc { get; set; }
+        public bool KeepFilesOnDisk { get; set; }
 
         public string CustomPrefix { get; set; }
 

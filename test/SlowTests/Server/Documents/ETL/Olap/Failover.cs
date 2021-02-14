@@ -95,13 +95,19 @@ loadToOrders(key,
                         Name = connectionStringName,
                         ConnectionStringName = connectionStringName,
                         RunFrequency = TimeSpan.FromSeconds(10),
-                        Transforms = {new Transformation {Name = "MonthlyOrders", Collections = new List<string> {"Orders"}, Script = script}},
+                        Transforms = {new Transformation
+                        {
+                            Name = "MonthlyOrders", 
+                            Collections = new List<string> {"Orders"}, 
+                            Script = script
+                        }},
                         MentorNode = server.ServerStore.NodeTag,
-                        KeepFilesOnDisc = true
+                        KeepFilesOnDisk = true
                     },
                     new OlapConnectionString
                     {
-                        Name = connectionStringName, LocalSettings = new LocalSettings
+                        Name = connectionStringName, 
+                        LocalSettings = new LocalSettings
                         {
                             FolderPath = path
                         }

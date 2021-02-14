@@ -11,24 +11,6 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-
-    public abstract class OlapTransformedItems
-    {
-        protected OlapTransformedItems(OlapEtlFileFormat format)
-        {
-            Format = format;
-        }
-
-        public OlapEtlFileFormat Format { get; }
-
-        public abstract void AddItem(ToOlapItem item);
-
-        public abstract int GenerateFileFromItems(string path);
-
-        public abstract string Prefix { get; }
-
-    }
-
     public class ParquetTransformedItems : OlapTransformedItems
     {
         public ParquetTransformedItems(string name, string key) : base(OlapEtlFileFormat.Parquet)
@@ -71,7 +53,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return fields;
         }
 
-        public override int GenerateFileFromItems(string path)
+        public override int GenerateFileFromItems(string path, Logger logger = null)
         {
             var count = 0;
 
@@ -82,12 +64,60 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     foreach (var group in Groups)
                     {
                         WriteGroup(parquetWriter, group);
+                        LogStats(group, logger);
                         count += group.Count;
                     }
                 }
             }
 
             return count;
+        }
+
+        private void WriteGroup(ParquetWriter parquetWriter, RowGroup group)
+        {
+            using (ParquetRowGroupWriter groupWriter = parquetWriter.CreateRowGroup())
+            {
+                foreach (var kvp in group.Data)
+                {
+                    if (Fields.TryGetValue(kvp.Key, out var field) == false)
+                        continue;
+
+                    var data = kvp.Value;
+                    Array array = default;
+
+                    switch (field.DataType)
+                    {
+                        case DataType.Unspecified:
+                            break;
+                        case DataType.Boolean:
+                            array = ((List<bool>)data).ToArray();
+                            break;
+                        case DataType.Int32:
+                        case DataType.Int64:
+                            array = ((List<long>)data).ToArray();
+                            break;
+                        case DataType.String:
+                            array = ((List<string>)data).ToArray();
+                            break;
+                        case DataType.Float:
+                        case DataType.Double:
+                        case DataType.Decimal:
+                            array = ((List<double>)data).ToArray();
+                            break;
+                        case DataType.DateTimeOffset:
+                            array = ((List<DateTimeOffset>)data).ToArray();
+                            break;
+                        case DataType.TimeSpan:
+                            array = ((List<TimeSpan>)data).ToArray();
+                            break;
+                        default:
+                            ThrowUnsupportedDataType(field.DataType);
+                            return;
+                    }
+
+                    groupWriter.WriteColumn(new DataColumn(field, array));
+                }
+            }
         }
 
         public override void AddItem(ToOlapItem item)
@@ -130,6 +160,24 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                         data ??= new List<double>();
                         break;
                     case BlittableJsonToken.String:
+                        var str = prop.Value.ToString();
+
+                        if (TryParseDate(str, out var dto))
+                        {
+                            propType = DataType.DateTimeOffset;
+                            data ??= new List<DateTimeOffset>();
+                            prop.Value = dto;
+                            break;
+                        }
+
+                        if (TryParseTimeSpan(str, out var ts))
+                        {
+                            propType = DataType.TimeSpan;
+                            data ??= new List<TimeSpan>();
+                            prop.Value = ts;
+                            break;
+                        }
+
                         propType = DataType.String;
                         data ??= new List<string>();
                         break;
@@ -138,7 +186,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                         data ??= new List<bool>();
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new NotSupportedException($"Unsupported {nameof(BlittableJsonToken)} '{prop.Type}'. " +
+                                                        $"On document '{item.DocumentId}', property '{prop.Id}'");
                 }
 
                 if (newField)
@@ -156,7 +205,16 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     UpdateField(dataType = propType, propName, data, group);
                 }
 
-                AddNewValue(data, dataType, prop.Value);
+                try
+                {
+                    AddNewValue(data, dataType, prop.Value);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Failed to add value '{prop.Value}' to DataField of type '{dataType}'. " +
+                                                        $"On document '{item.DocumentId}', property '{prop.Id}'", e);
+                }
+
             }
 
 
@@ -190,9 +248,21 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 case DataType.Double:
                     data?.Add((double)value);
                     break;
+                case DataType.DateTimeOffset:
+                    data?.Add((DateTimeOffset)value);
+                    break;
+                case DataType.TimeSpan:
+                    data?.Add((TimeSpan)value);
+                    break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    ThrowUnsupportedDataType(dataType);
+                    break;
             }
+        }
+
+        private static void ThrowUnsupportedDataType(DataType dataType)
+        {
+            throw new NotSupportedException($"Unsupported {nameof(DataType)} '{dataType}'");
         }
 
         private void UpdateField(DataType dataType, string propName, IList data, RowGroup group)
@@ -224,9 +294,15 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 case DataType.Double:
                     AddDefaultData<double>(data, count);
                     break;
-
+                case DataType.DateTimeOffset:
+                    AddDefaultData<DateTimeOffset>(data, count);
+                    break;
+                case DataType.TimeSpan:
+                    AddDefaultData<TimeSpan>(data, count);
+                    break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    ThrowUnsupportedDataType(type);
+                    break;
             }
         }
 
@@ -261,9 +337,15 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     case DataType.Double:
                         data = new List<double>();
                         break;
-
+                    case DataType.DateTimeOffset:
+                        data = new List<DateTimeOffset>();
+                        break;
+                    case DataType.TimeSpan:
+                        data = new List<TimeSpan>();
+                        break;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        ThrowUnsupportedDataType(kvp.Value);
+                        return null;
                 }
 
                 group.Data.Add(kvp.Key, data);
@@ -282,45 +364,42 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
         }
 
-        private void WriteGroup(ParquetWriter parquetWriter, RowGroup group)
+        private void LogStats(RowGroup group, Logger logger)
         {
-            using (ParquetRowGroupWriter groupWriter = parquetWriter.CreateRowGroup())
+            if (logger?.IsInfoEnabled ?? false)
             {
-                foreach (var kvp in group.Data)
+                logger.Info($"Inserted {group.Count} records to '{CollectionName}/{PartitionKey}' table " +
+                            $"from the following documents: {string.Join(", ", group.Ids)}");
+            }
+        }
+
+        private static unsafe bool TryParseDate(string str, out DateTimeOffset dto)
+        {
+            fixed (char* c = str)
+            {
+                var result = LazyStringParser.TryParseDateTime(c, str.Length, out var dt, out dto);
+                switch (result)
                 {
-                    if (Fields.TryGetValue(kvp.Key, out var field) == false)
-                        continue;
-
-                    var data = kvp.Value;
-                    Array array = default;
-
-                    // todo handle more types
-                    switch (field.DataType)
-                    {
-                        case DataType.Unspecified:
-                            // todo
-                            break;
-                        case DataType.Boolean:
-                            array = ((List<bool>)data).ToArray();
-                            break;
-                        case DataType.Int32:
-                        case DataType.Int64:
-                            array = ((List<long>)data).ToArray();
-                            break;
-                        case DataType.String:
-                            array = ((List<string>)data).ToArray();
-                            break;
-                        case DataType.Float:
-                        case DataType.Double:
-                        case DataType.Decimal:
-                            array = ((List<double>)data).ToArray();
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-
-                    groupWriter.WriteColumn(new DataColumn(field, array));
+                    case LazyStringParser.Result.DateTime:
+                        dto = dt;
+                        break;
+                    case LazyStringParser.Result.DateTimeOffset:
+                        break;
+                    case LazyStringParser.Result.Failed:
+                        return false;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(LazyStringParser.Result), result, "Unknown result type");
                 }
+
+                return true;
+            }
+        }
+
+        private static unsafe bool TryParseTimeSpan(string str, out TimeSpan ts)
+        {
+            fixed (char* c = str)
+            {
+                return LazyStringParser.TryParseTimeSpan(c, str.Length, out ts);
             }
         }
     }
