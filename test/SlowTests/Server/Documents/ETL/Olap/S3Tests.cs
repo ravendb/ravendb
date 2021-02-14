@@ -9,6 +9,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Tests.Infrastructure;
 using Xunit;
@@ -81,8 +82,7 @@ loadToOrders(key,
 
                 using (var s3Client = new RavenAwsS3Client(settings))
                 {
-                    var cloudObjects = s3Client.ListObjectsAsync(settings.RemoteFolderName, string.Empty, false)
-                        .GetAwaiter().GetResult();
+                    var cloudObjects = await s3Client.ListObjectsAsync(settings.RemoteFolderName, string.Empty, false);
 
                     Assert.Equal(2, cloudObjects.FileInfoDetails.Count);
                     Assert.Contains("2020-01-01", cloudObjects.FileInfoDetails[0].FullPath);
@@ -138,12 +138,11 @@ loadToOrders(key,
 
                 using (var s3Client = new RavenAwsS3Client(settings))
                 {
-                    var cloudObjects = s3Client.ListObjectsAsync(settings.RemoteFolderName, string.Empty, false)
-                        .GetAwaiter().GetResult();
+                    var cloudObjects = await s3Client.ListObjectsAsync(settings.RemoteFolderName, string.Empty, false);
 
                     Assert.Equal(1, cloudObjects.FileInfoDetails.Count);
 
-                    var blob = s3Client.GetObjectAsync(cloudObjects.FileInfoDetails[0].FullPath).GetAwaiter().GetResult();
+                    var blob = await s3Client.GetObjectAsync(cloudObjects.FileInfoDetails[0].FullPath);
 
                     await using var ms = new MemoryStream();
                     blob.Data.CopyTo(ms);
@@ -194,7 +193,7 @@ loadToOrders(key,
             {
                 Name = connectionStringName,
                 ConnectionStringName = connectionStringName,
-                ETLFrequency = frequency,
+                RunFrequency = frequency,
                 Transforms =
                 {
                     new Transformation

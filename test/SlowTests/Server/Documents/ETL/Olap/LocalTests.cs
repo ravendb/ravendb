@@ -14,6 +14,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Extensions;
 using Sparrow.Platform;
@@ -83,8 +84,6 @@ loadToOrders(key,
                     SetupLocalParquetEtl(store, script, path, TimeSpan.FromMinutes(10));
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                    Thread.Sleep(20000);
 
                     var files = Directory.GetFiles(path);
                     Assert.Equal(2, files.Length);
@@ -678,7 +677,7 @@ loadToOrders(key, o);
                     var connectionString = new OlapEtlConnectionString
                     {
                         Name = connectionStringName,
-                        LocalSettings = new OlapEtlLocalSettings
+                        LocalSettings = new LocalSettings
                         {
                             GetBackupConfigurationScript = new GetBackupConfigurationScript
                             {
@@ -692,7 +691,7 @@ loadToOrders(key, o);
                     {
                         Name = connectionStringName,
                         ConnectionStringName = connectionStringName,
-                        ETLFrequency = TimeSpan.FromMinutes(5),
+                        RunFrequency = TimeSpan.FromMinutes(5),
                         Transforms =
                         {
                             new Transformation
@@ -721,7 +720,8 @@ var key = new Date(year, month);
 loadToOrders(key, o);
 "
                             }
-                        }
+                        },
+                        KeepFilesOnDisc = true
                     };
 
                     AddEtl(store, configuration, connectionString);
@@ -865,10 +865,9 @@ loadToOrders(key, o);
         private static string GenerateConfigurationScript(string path, out string command)
         {
             var scriptPath = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
-            var localSetting = new OlapEtlLocalSettings
+            var localSetting = new LocalSettings
             {
-                FolderPath = path, 
-                KeepFilesOnDisc = true
+                FolderPath = path
             };
 
             var localSettingsString = JsonConvert.SerializeObject(localSetting);
@@ -901,12 +900,11 @@ loadToOrders(key, o);
         protected void SetupLocalParquetEtl(DocumentStore store, string script, string path, TimeSpan frequency)
         {
             var connectionStringName = $"{store.Database} to S3";
-
-            AddEtl(store, new OlapEtlConfiguration
+            var configuration = new OlapEtlConfiguration
             {
                 Name = connectionStringName,
                 ConnectionStringName = connectionStringName,
-                ETLFrequency = frequency,
+                RunFrequency = frequency,
                 Transforms =
                 {
                     new Transformation
@@ -915,16 +913,20 @@ loadToOrders(key, o);
                         Collections = new List<string> {"Orders"},
                         Script = script
                     }
-                }
-            }, new OlapEtlConnectionString
+                },
+                KeepFilesOnDisc = true
+            };
+
+            var connectionString = new OlapEtlConnectionString
             {
                 Name = connectionStringName,
-                LocalSettings = new OlapEtlLocalSettings
+                LocalSettings = new LocalSettings
                 {
-                    FolderPath = path,
-                    KeepFilesOnDisc = true
+                    FolderPath = path
                 }
-            });
+            };
+
+            AddEtl(store, configuration, connectionString);
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using Jint.Native;
 using Jint.Runtime.Interop;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
@@ -13,20 +14,20 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    internal class OlapDocumentTransformer : EtlTransformer<ToOlapItem, RowGroups>
+    internal class OlapDocumentTransformer : EtlTransformer<ToOlapItem, OlapTransformedItems>
     {
         private readonly OlapEtlConfiguration _config;
-        private readonly Dictionary<string, RowGroups> _tables;
+        private readonly Dictionary<string, OlapTransformedItems> _tables;
 
         private EtlStatsScope _stats;
 
         private const string DateFormat = "yyyy-MM-dd-HH-mm";
 
         public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config)
-            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl), null) //todo
+            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.OlapEtl), null)
         {
             _config = config;
-            _tables = new Dictionary<string, RowGroups>();
+            _tables = new Dictionary<string, OlapTransformedItems>();
             LoadToDestinations = transformation.GetCollectionsFromScript();
         }
 
@@ -71,13 +72,13 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 });
             }
 
-            var s3Item = new ToOlapItem(Current)
+            var olapItem = new ToOlapItem(Current)
             {
                 Properties = props
             };
 
-            var rowGroups = GetOrAdd(tableName, key);
-            rowGroups.Add(s3Item);
+            var transformed = GetOrAdd(tableName, key);
+            transformed.AddItem(olapItem);
 
             _stats.IncrementBatchSize(result.Size);
         }
@@ -88,21 +89,25 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         protected override void AddLoadedCounter(JsValue reference, string name, long value)
         {
-            throw new NotSupportedException("Counters aren't supported by SQL ETL");
+            throw new NotSupportedException("Counters aren't supported by OLAP ETL");
         }
 
         protected override void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> entries)
         {
-            throw new NotSupportedException("Time series aren't supported by SQL ETL");
+            throw new NotSupportedException("Time series aren't supported by OLAP ETL");
         }
 
-        private RowGroups GetOrAdd(string tableName, string key)
+        private OlapTransformedItems GetOrAdd(string tableName, string key)
         {
             var name = tableName + "_" + key;
 
             if (_tables.TryGetValue(name, out var table) == false)
             {
-                _tables[name] = table = new RowGroups(tableName, key);
+                _tables[name] = _config.Format switch
+                {
+                    OlapEtlFileFormat.Parquet => table = new ParquetTransformedItems(tableName, key),
+                    _ => throw new ArgumentOutOfRangeException(nameof(OlapEtlConfiguration.Format))
+                };
             }
 
             return table;
@@ -128,7 +133,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         }
 
 
-        public override List<RowGroups> GetTransformedResults()  
+        public override List<OlapTransformedItems> GetTransformedResults()  
         {
             return _tables.Values.ToList();
         }

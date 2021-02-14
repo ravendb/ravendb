@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using Parquet;
-using Parquet.Data;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
@@ -21,7 +20,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    public class OlaptEtl : EtlProcess<ToOlapItem, RowGroups, OlapEtlConfiguration, OlapEtlConnectionString>
+    public class OlaptEtl : EtlProcess<ToOlapItem, OlapTransformedItems, OlapEtlConfiguration, OlapEtlConnectionString>
     {
         public const string OlaptEtlTag = "OLAP ETL";
 
@@ -38,7 +37,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             var connection = configuration.Connection;
 
-            connection.LocalSettings = BackupTask.GetBackupConfigurationFromScript(connection.LocalSettings, x => JsonDeserializationServer.OlapEtlLocalSettings(x),
+            connection.LocalSettings = BackupTask.GetBackupConfigurationFromScript(connection.LocalSettings, x => JsonDeserializationServer.LocalSettings(x),
                 Database, updateServerWideSettingsFunc: null, serverWide: false);
             connection.S3Settings = BackupTask.GetBackupConfigurationFromScript(connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
                     Database, updateServerWideSettingsFunc: null, serverWide: false);
@@ -46,7 +45,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _tmpFilePath = connection.LocalSettings?.FolderPath ?? 
                               (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).FullPath;
 
-            var etlFrequency = configuration.ETLFrequency;
+            var etlFrequency = configuration.RunFrequency;
             var dueTime = GetDueTime(etlFrequency);
 
             _timer = new Timer(_ => _waitForChanges.Set(), null, dueTime, etlFrequency);
@@ -58,8 +57,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             if (state.LastBatchTime <= 0) 
                 return TimeSpan.Zero;
             
-            // todo test this
-
             var nowMs = Database.Time.GetUtcNow().EnsureMilliseconds().Ticks / 10_000;
             var timeSinceLastBatch = nowMs - state.LastBatchTime;
 
@@ -129,39 +126,26 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         public override bool ShouldTrackTimeSeries() => false;
 
-        protected override EtlTransformer<ToOlapItem, RowGroups> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<ToOlapItem, OlapTransformedItems> GetTransformer(DocumentsOperationContext context)
         {
             return new OlapDocumentTransformer(Transformation, Database, context, Configuration);
         }
 
-        protected override int LoadInternal(IEnumerable<RowGroups> records, DocumentsOperationContext context)
+        protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context)
         {
             var count = 0;
 
-            foreach (var rowGroups in records)
+            foreach (var transformed in records)
             {
-                var fields = rowGroups.Fields.Values;
-                var localPath = GetPath(rowGroups, out var remotePath);
-
-                using (Stream fileStream = File.OpenWrite(localPath))
-                {
-                    using (var parquetWriter = new ParquetWriter(new Schema(fields), fileStream))
-                    {
-                        foreach (var group in rowGroups.Groups)
-                        {
-                            WriteGroup(parquetWriter, group, rowGroups);
-                            LogStats(group, rowGroups.TableName, rowGroups.PartitionKey);
-                            count += group.Count;
-                        }
-                    }
-                }
+                var localPath = GetPath(transformed, out var remotePath);
+                transformed.GenerateFileFromItems(localPath);
 
                 using (Stream fileStream = File.OpenRead(localPath))
                 {
                     UploadToDestination(fileStream, remotePath);
                 }
 
-                if (Configuration.Connection.LocalSettings?.KeepFilesOnDisc ?? false)
+                if (Configuration.KeepFilesOnDisc)
                     continue;
                 
                 File.Delete(localPath);
@@ -169,48 +153,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
 
             return count;
-        }
-
-        private static void WriteGroup(ParquetWriter parquetWriter, RowGroup group, RowGroups rowGroups)
-        {
-            using (ParquetRowGroupWriter groupWriter = parquetWriter.CreateRowGroup())
-            {
-                foreach (var kvp in group.Data)
-                {
-                    if (rowGroups.Fields.TryGetValue(kvp.Key, out var field) == false)
-                        continue;
-
-                    var data = kvp.Value;
-                    Array array = default;
-
-                    // todo handle more types
-                    switch (field.DataType)
-                    {
-                        case DataType.Unspecified:
-                            // todo
-                            break;
-                        case DataType.Boolean:
-                            array = ((List<bool>)data).ToArray();
-                            break;
-                        case DataType.Int32:
-                        case DataType.Int64:
-                            array = ((List<long>)data).ToArray();
-                            break;
-                        case DataType.String:
-                            array = ((List<string>)data).ToArray();
-                            break;
-                        case DataType.Float:
-                        case DataType.Double:
-                        case DataType.Decimal:
-                            array = ((List<double>)data).ToArray();
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-
-                    groupWriter.WriteColumn(new DataColumn(field, array));
-                }
-            }
         }
 
         private void UploadToDestination(Stream stream, string path)
@@ -230,7 +172,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             {
                 client.PutObject(key, stream, new Dictionary<string, string>
                 {
-                    {"Description", $"Parquet ETL to S3 for db {Database.Name} at {SystemTime.UtcNow}"}
+                    {"Description", $"OLAP ETL to S3 for db {Database.Name} at {SystemTime.UtcNow}"}
                 });
             }
         }
@@ -244,21 +186,22 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return $"{prefix}/{path}";
         }
 
+
+        private string GetPath(OlapTransformedItems transformed, out string remotePath)
+        {
+            var fileName = $"{Database.Name}_{Guid.NewGuid()}.{transformed.Format}";
+            remotePath = $"{transformed.Prefix}/{fileName}";
+
+            return Path.Combine(_tmpFilePath, fileName);
+        }
+
         private void LogStats(RowGroup group, string name, string key)
         {
             if (Logger.IsInfoEnabled)
             {
-                Logger.Info($"[{Name}] Inserted {group.Count} records to '{name}/{key}' table " +
+                Logger.Info($"Inserted {group.Count} records to '{name}/{key}' table " +
                             $"from the following documents: {string.Join(", ", group.Ids)}");
             }
-        }
-
-        private string GetPath(RowGroups group, out string remotePath)
-        {
-            var fileName = $"{Database.Name}_{Guid.NewGuid()}.parquet";
-            remotePath = $"{group.PartitionKey}/{fileName}";
-
-            return Path.Combine(_tmpFilePath, fileName);
         }
     }
 }

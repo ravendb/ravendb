@@ -768,7 +768,7 @@ namespace Raven.Server.Web.System
                     ServerStore.LicenseManager.AssertCanAddSqlEtl();
                     break;
                 case EtlType.Olap:
-                    ServerStore.LicenseManager.AssertCanAddParquetEtl();
+                    ServerStore.LicenseManager.AssertCanAddOlapEtl();
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
