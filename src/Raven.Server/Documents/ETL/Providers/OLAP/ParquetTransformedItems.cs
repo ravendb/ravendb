@@ -2,22 +2,47 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using Parquet;
 using Parquet.Data;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    public class RowGroups
+
+    public abstract class OlapTransformedItems
     {
-        public RowGroups(string name, string key)
+        protected OlapTransformedItems(OlapEtlFileFormat format)
         {
-            TableName = name;
+            Format = format;
+        }
+
+        public OlapEtlFileFormat Format { get; }
+
+        public abstract void AddItem(ToOlapItem item);
+
+        public abstract int GenerateFileFromItems(string path);
+
+        public abstract string Prefix { get; }
+
+    }
+
+    public class ParquetTransformedItems : OlapTransformedItems
+    {
+        public ParquetTransformedItems(string name, string key) : base(OlapEtlFileFormat.Parquet)
+        {
+            CollectionName = name;
             PartitionKey = key;
             Groups = new List<RowGroup>();
+
             _dataFields = new Dictionary<string, DataType>();
         }
 
-        public string TableName { get; set; }
+        public override string Prefix => PartitionKey;
+
+        public string CollectionName { get; set; }
 
         public string PartitionKey { get; set; }
 
@@ -46,7 +71,26 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return fields;
         }
 
-        public void Add(ToOlapItem item)
+        public override int GenerateFileFromItems(string path)
+        {
+            var count = 0;
+
+            using (Stream fileStream = File.OpenWrite(path))
+            {
+                using (var parquetWriter = new ParquetWriter(new Schema(Fields.Values), fileStream))
+                {
+                    foreach (var group in Groups)
+                    {
+                        WriteGroup(parquetWriter, group);
+                        count += group.Count;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        public override void AddItem(ToOlapItem item)
         {
             var group = GetCurrentGroup();
             group.Ids.Add(item.DocumentId);
@@ -159,7 +203,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             AddDefaultData(data, dataType, group.Count);
         }
 
-        private void AddDefaultData(IList data, DataType type, long count)
+        private static void AddDefaultData(IList data, DataType type, long count)
         {
             if (count == 0 || data == null)
                 return;
@@ -230,26 +274,54 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return group;
         }
 
-        private void AddDefaultData<T>(IList data, long count)
+        private static void AddDefaultData<T>(IList data, long count)
         {
             for (int j = 0; j < count; j++)
             {
                 data.Add(default(T));
             }
         }
-    }
 
-    public class RowGroup
-    {
-        public RowGroup()
+        private void WriteGroup(ParquetWriter parquetWriter, RowGroup group)
         {
-            Data = new Dictionary<string, IList>();
-            Ids = new List<string>();
+            using (ParquetRowGroupWriter groupWriter = parquetWriter.CreateRowGroup())
+            {
+                foreach (var kvp in group.Data)
+                {
+                    if (Fields.TryGetValue(kvp.Key, out var field) == false)
+                        continue;
+
+                    var data = kvp.Value;
+                    Array array = default;
+
+                    // todo handle more types
+                    switch (field.DataType)
+                    {
+                        case DataType.Unspecified:
+                            // todo
+                            break;
+                        case DataType.Boolean:
+                            array = ((List<bool>)data).ToArray();
+                            break;
+                        case DataType.Int32:
+                        case DataType.Int64:
+                            array = ((List<long>)data).ToArray();
+                            break;
+                        case DataType.String:
+                            array = ((List<string>)data).ToArray();
+                            break;
+                        case DataType.Float:
+                        case DataType.Double:
+                        case DataType.Decimal:
+                            array = ((List<double>)data).ToArray();
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    groupWriter.WriteColumn(new DataColumn(field, array));
+                }
+            }
         }
-        public Dictionary<string, IList> Data { get; set; }
-
-        public List<string> Ids { get; }
-
-        public int Count { get; internal set; }
     }
 }

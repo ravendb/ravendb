@@ -8,8 +8,10 @@ using System.Threading.Tasks;
 using FastTests.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server;
 using Raven.Server.Documents.ETL;
 using Tests.Infrastructure;
@@ -92,13 +94,17 @@ loadToOrders(key,
                     {
                         Name = connectionStringName,
                         ConnectionStringName = connectionStringName,
-                        ETLFrequency = TimeSpan.FromSeconds(10),
+                        RunFrequency = TimeSpan.FromSeconds(10),
                         Transforms = {new Transformation {Name = "MonthlyOrders", Collections = new List<string> {"Orders"}, Script = script}},
-                        MentorNode = server.ServerStore.NodeTag
+                        MentorNode = server.ServerStore.NodeTag,
+                        KeepFilesOnDisc = true
                     },
                     new OlapEtlConnectionString
                     {
-                        Name = connectionStringName, LocalSettings = new OlapEtlLocalSettings {FolderPath = path, KeepFilesOnDisc = true}
+                        Name = connectionStringName, LocalSettings = new LocalSettings
+                        {
+                            FolderPath = path
+                        }
                     });
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));

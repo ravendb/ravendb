@@ -3,13 +3,13 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Documents.Operations.ETL
+namespace Raven.Client.Documents.Operations.ETL.OLAP
 {
     public class OlapEtlConnectionString : ConnectionString
     {
         public override ConnectionStringType Type => ConnectionStringType.Olap;
 
-        public OlapEtlLocalSettings LocalSettings { get; set; }
+        public LocalSettings LocalSettings { get; set; }
 
         public S3Settings S3Settings { get; set; }
 
@@ -38,18 +38,6 @@ namespace Raven.Client.Documents.Operations.ETL
             var json = base.ToJson();
             json[nameof(LocalSettings)] = LocalSettings?.ToJson();
             json[nameof(S3Settings)] = S3Settings?.ToJson();
-            return json;
-        }
-    }
-
-    public class OlapEtlLocalSettings : LocalSettings
-    {
-        public bool KeepFilesOnDisc { get; set; }
-
-        public override DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(KeepFilesOnDisc)] = KeepFilesOnDisc;
             return json;
         }
     }
