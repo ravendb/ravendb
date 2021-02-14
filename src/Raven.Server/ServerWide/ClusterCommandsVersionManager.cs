@@ -128,7 +128,7 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteAnalyzerCommand)] = 52_000,
             [nameof(AddOlapEtlCommand)] = 52_000,
             [nameof(UpdateOlapEtlCommand)] = 52_000,
-            [nameof(PutOlapEtlConnectionStringCommand)] = 52_000,
+            [nameof(PutOlapConnectionStringCommand)] = 52_000,
             [nameof(RemoveOlapConnectionStringCommand)] = 52_000
 
             [nameof(PutServerWideAnalyzerCommand)] = 52_000,

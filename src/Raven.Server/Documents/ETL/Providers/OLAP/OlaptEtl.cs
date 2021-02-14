@@ -20,7 +20,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    public class OlaptEtl : EtlProcess<ToOlapItem, OlapTransformedItems, OlapEtlConfiguration, OlapEtlConnectionString>
+    public class OlaptEtl : EtlProcess<ToOlapItem, OlapTransformedItems, OlapEtlConfiguration, OlapConnectionString>
     {
         public const string OlaptEtlTag = "OLAP ETL";
 
@@ -29,20 +29,21 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private Timer _timer;
         private const long MinTimeToWait = 1000;
         private readonly string _tmpFilePath;
-
+        private S3Settings _s3Settings;
         public OlaptEtl(Transformation transformation, OlapEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, OlaptEtlTag)
         {
-            Metrics = OlapMetrics;
+            //Metrics = OlapMetrics;
 
             var connection = configuration.Connection;
 
-            connection.LocalSettings = BackupTask.GetBackupConfigurationFromScript(connection.LocalSettings, x => JsonDeserializationServer.LocalSettings(x),
+            var localSettings = BackupTask.GetBackupConfigurationFromScript(connection.LocalSettings, x => JsonDeserializationServer.LocalSettings(x),
                 Database, updateServerWideSettingsFunc: null, serverWide: false);
-            connection.S3Settings = BackupTask.GetBackupConfigurationFromScript(connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
+
+            _s3Settings = BackupTask.GetBackupConfigurationFromScript(connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
                     Database, updateServerWideSettingsFunc: null, serverWide: false);
 
-            _tmpFilePath = connection.LocalSettings?.FolderPath ?? 
+            _tmpFilePath = localSettings?.FolderPath ?? 
                               (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).FullPath;
 
             var etlFrequency = configuration.RunFrequency;
@@ -138,7 +139,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             foreach (var transformed in records)
             {
                 var localPath = GetPath(transformed, out var remotePath);
-                transformed.GenerateFileFromItems(localPath);
+                transformed.GenerateFileFromItems(localPath, Logger);
 
                 using (Stream fileStream = File.OpenRead(localPath))
                 {
@@ -157,11 +158,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private void UploadToDestination(Stream stream, string path)
         {
-            var s3Settings = Configuration.Connection.S3Settings;
-            if (s3Settings != null)
+            if (_s3Settings != null)
             {
-                var key = GetKey(s3Settings, path);
-                UploadToS3(s3Settings, stream, key);
+                var key = GetKey(_s3Settings, path);
+                UploadToS3(_s3Settings, stream, key);
             }
         }
 
@@ -172,16 +172,19 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             {
                 client.PutObject(key, stream, new Dictionary<string, string>
                 {
-                    {"Description", $"OLAP ETL to S3 for db {Database.Name} at {SystemTime.UtcNow}"}
+                    {"Description", $"OLAP ETL {Name} to S3 for db {Database.Name} at {SystemTime.UtcNow}"}
                 });
             }
         }
 
-        private static string GetKey(S3Settings s3Settings, string path)
+        private string GetKey(S3Settings s3Settings, string path)
         {
             var prefix = string.IsNullOrWhiteSpace(s3Settings.RemoteFolderName)
                 ? string.Empty
                 : $"{s3Settings.RemoteFolderName}";
+
+            if (string.IsNullOrWhiteSpace(Configuration.CustomPrefix) == false)
+                prefix = $"{prefix}/{Configuration.CustomPrefix}";
 
             return $"{prefix}/{path}";
         }
@@ -189,19 +192,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private string GetPath(OlapTransformedItems transformed, out string remotePath)
         {
-            var fileName = $"{Database.Name}_{Guid.NewGuid()}.{transformed.Format}";
+            var fileName = $"{Name}__{Database.Name}__{Guid.NewGuid()}.{transformed.Format}";
             remotePath = $"{transformed.Prefix}/{fileName}";
 
             return Path.Combine(_tmpFilePath, fileName);
-        }
-
-        private void LogStats(RowGroup group, string name, string key)
-        {
-            if (Logger.IsInfoEnabled)
-            {
-                Logger.Info($"Inserted {group.Count} records to '{name}/{key}' table " +
-                            $"from the following documents: {string.Join(", ", group.Ids)}");
-            }
         }
     }
 }

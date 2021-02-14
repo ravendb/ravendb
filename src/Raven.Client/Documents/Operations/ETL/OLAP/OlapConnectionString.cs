@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.OLAP
 {
-    public class OlapEtlConnectionString : ConnectionString
+    public class OlapConnectionString : ConnectionString
     {
         public override ConnectionStringType Type => ConnectionStringType.Olap;
 
@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public S3Settings S3Settings { get; set; }
 
-        public override void ValidateImpl(ref List<string> errors)
+        protected override void ValidateImpl(ref List<string> errors)
         {
             if (S3Settings != null)
             {

@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.ETL
                     newProcesses.AddRange(GetRelevantProcesses<SqlEtlConfiguration, SqlConnectionString>(newSqlDestinations, ensureUniqueConfigurationNames));
 
                 if (newOlapDestinations != null && newOlapDestinations.Count > 0)
-                    newProcesses.AddRange(GetRelevantProcesses<OlapEtlConfiguration, OlapEtlConnectionString>(newOlapDestinations, ensureUniqueConfigurationNames));
+                    newProcesses.AddRange(GetRelevantProcesses<OlapEtlConfiguration, OlapConnectionString>(newOlapDestinations, ensureUniqueConfigurationNames));
 
                 processes.AddRange(newProcesses);
                 _processes = processes.ToArray();
@@ -224,7 +224,7 @@ namespace Raven.Server.Documents.ETL
                         break;
                     case EtlType.Olap:
                         olapConfig = config as OlapEtlConfiguration;
-                        if (_databaseRecord.OlapEtlConnectionStrings.TryGetValue(config.ConnectionStringName, out var olapConnection))
+                        if (_databaseRecord.OlapConnectionStrings.TryGetValue(config.ConnectionStringName, out var olapConnection))
                             olapConfig.Initialize(olapConnection);
                         else
                             connectionStringNotFound = true;
@@ -440,7 +440,7 @@ namespace Raven.Server.Documents.ETL
 
             foreach (var config in record.OlapEtls)
             {
-                if (IsMyEtlTask<OlapEtlConfiguration, OlapEtlConnectionString>(record, config, ref responsibleNodes))
+                if (IsMyEtlTask<OlapEtlConfiguration, OlapConnectionString>(record, config, ref responsibleNodes))
                 {
                     myOlapEtl.Add(config);
                 }

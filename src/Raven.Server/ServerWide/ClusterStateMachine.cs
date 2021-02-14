@@ -409,7 +409,7 @@ namespace Raven.Server.ServerWide
                     case nameof(DeleteOngoingTaskCommand):
                     case nameof(PutRavenConnectionStringCommand):
                     case nameof(PutSqlConnectionStringCommand):
-                    case nameof(PutOlapEtlConnectionStringCommand):
+                    case nameof(PutOlapConnectionStringCommand):
                     case nameof(RemoveRavenConnectionStringCommand):
                     case nameof(RemoveSqlConnectionStringCommand):
                     case nameof(RemoveOlapConnectionStringCommand): 
@@ -2284,7 +2284,7 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteOngoingTaskCommand):
                 case nameof(PutRavenConnectionStringCommand):
                 case nameof(PutSqlConnectionStringCommand):
-                case nameof(PutOlapEtlConnectionStringCommand):
+                case nameof(PutOlapConnectionStringCommand):
                 case nameof(RemoveRavenConnectionStringCommand):
                 case nameof(RemoveSqlConnectionStringCommand):
                 case nameof(RemoveOlapConnectionStringCommand):
