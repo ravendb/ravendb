@@ -234,7 +234,7 @@ loadToOrders(key, o);
                                         Assert.Equal($"orders/{count}", val);
                                         break;
                                     case "RequireAt":
-                                        var expected = baseline.AddDays(count).AddDays(7).GetDefaultRavenFormat(isUtc: true);
+                                        var expected = new DateTimeOffset(DateTime.SpecifyKind(baseline.AddDays(count).AddDays(7), DateTimeKind.Utc));
                                         Assert.Equal(expected, val);
                                         break;
                                     case "Total":
@@ -698,30 +698,10 @@ loadToOrders(key, o);
                             {
                                 Name = "MonthlyOrders",
                                 Collections = new List<string> {"Orders"},
-                                Script = @"
-var o = {
-    OrderId: id(this),
-    RequireAt : new Date(this.RequireAt)
-    Total : 0
-};
-
-for (var j = 0; j < this.Lines.length; j++)
-{
-    var line = this.Lines[j];
-    var p = line.Quantity * line.PricePerUnit;
-    o.Total += p;
-}
-
-var orderDate = new Date(this.OrderedAt);
-var year = orderDate.getFullYear();
-var month = orderDate.getMonth();
-var key = new Date(year, month);
-
-loadToOrders(key, o);
-"
+                                Script = transformationScript
                             }
                         },
-                        KeepFilesOnDisc = true
+                        KeepFilesOnDisk = true
                     };
 
                     AddEtl(store, configuration, connectionString);
@@ -914,7 +894,7 @@ loadToOrders(key, o);
                         Script = script
                     }
                 },
-                KeepFilesOnDisc = true
+                KeepFilesOnDisk = true
             };
 
             var connectionString = new OlapConnectionString

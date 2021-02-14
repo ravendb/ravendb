@@ -30,10 +30,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private const long MinTimeToWait = 1000;
         private readonly string _tmpFilePath;
         private S3Settings _s3Settings;
+
         public OlaptEtl(Transformation transformation, OlapEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, OlaptEtlTag)
         {
-            //Metrics = OlapMetrics;
+            Metrics = OlapMetrics;
 
             var connection = configuration.Connection;
 
@@ -44,12 +45,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     Database, updateServerWideSettingsFunc: null, serverWide: false);
 
             _tmpFilePath = localSettings?.FolderPath ?? 
-                              (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).FullPath;
+                           (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).FullPath;
 
-            var etlFrequency = configuration.RunFrequency;
-            var dueTime = GetDueTime(etlFrequency);
+            var dueTime = GetDueTime(configuration.RunFrequency);
 
-            _timer = new Timer(_ => _waitForChanges.Set(), null, dueTime, etlFrequency);
+            _timer = new Timer(_ => _waitForChanges.Set(), null, dueTime, configuration.RunFrequency);
         }
 
         private TimeSpan GetDueTime(TimeSpan etlFrequency)
@@ -146,11 +146,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     UploadToDestination(fileStream, remotePath);
                 }
 
-                if (Configuration.KeepFilesOnDisc)
+                if (Configuration.KeepFilesOnDisk)
                     continue;
                 
                 File.Delete(localPath);
-
             }
 
             return count;
@@ -164,7 +163,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 UploadToS3(_s3Settings, stream, key);
             }
         }
-
 
         private void UploadToS3(S3Settings s3Settings, Stream stream, string key)
         {
@@ -192,7 +190,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private string GetPath(OlapTransformedItems transformed, out string remotePath)
         {
-            var fileName = $"{Name}__{Database.Name}__{Guid.NewGuid()}.{transformed.Format}";
+            var fileName = $"{Database.Name}__{Guid.NewGuid()}.{transformed.Format}";
             remotePath = $"{transformed.Prefix}/{fileName}";
 
             return Path.Combine(_tmpFilePath, fileName);
