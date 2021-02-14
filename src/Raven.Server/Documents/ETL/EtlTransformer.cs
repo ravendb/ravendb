@@ -378,7 +378,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract void LoadToFunction(string tableName, ScriptRunnerResult colsAsObject);
 
-        public abstract List<TTransformed> GetTransformedResults();
+        public abstract IEnumerable<TTransformed> GetTransformedResults();
 
         public abstract void Transform(TExtracted item, EtlStatsScope stats, EtlProcessState state);
 
