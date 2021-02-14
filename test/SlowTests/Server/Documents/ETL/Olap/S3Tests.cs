@@ -203,7 +203,7 @@ loadToOrders(key,
                         Script = script
                     }
                 }
-            }, new OlapEtlConnectionString
+            }, new OlapConnectionString
             {
                 Name = connectionStringName,
                 S3Settings = settings

@@ -95,7 +95,7 @@ namespace Raven.Client.ServerWide
 
         public Dictionary<string, SqlConnectionString> SqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
 
-        public Dictionary<string, OlapEtlConnectionString> OlapEtlConnectionStrings = new Dictionary<string, OlapEtlConnectionString>();
+        public Dictionary<string, OlapConnectionString> OlapConnectionStrings = new Dictionary<string, OlapConnectionString>();
 
         public List<RavenEtlConfiguration> RavenEtls = new List<RavenEtlConfiguration>();
 

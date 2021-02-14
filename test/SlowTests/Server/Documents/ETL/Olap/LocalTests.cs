@@ -674,7 +674,7 @@ loadToOrders(key, o);
                     var connectionStringName = $"{store.Database} to S3";
 
                     var scriptPath = GenerateConfigurationScript(path, out string command);
-                    var connectionString = new OlapEtlConnectionString
+                    var connectionString = new OlapConnectionString
                     {
                         Name = connectionStringName,
                         LocalSettings = new LocalSettings
@@ -917,7 +917,7 @@ loadToOrders(key, o);
                 KeepFilesOnDisc = true
             };
 
-            var connectionString = new OlapEtlConnectionString
+            var connectionString = new OlapConnectionString
             {
                 Name = connectionStringName,
                 LocalSettings = new LocalSettings

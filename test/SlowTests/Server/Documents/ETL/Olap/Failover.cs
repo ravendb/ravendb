@@ -99,7 +99,7 @@ loadToOrders(key,
                         MentorNode = server.ServerStore.NodeTag,
                         KeepFilesOnDisc = true
                     },
-                    new OlapEtlConnectionString
+                    new OlapConnectionString
                     {
                         Name = connectionStringName, LocalSettings = new LocalSettings
                         {
@@ -183,12 +183,12 @@ loadToOrders(key,
             return mre;
         }
 
-        private static AddEtlOperationResult AddEtl(IDocumentStore src, OlapEtlConfiguration configuration, OlapEtlConnectionString connectionString)
+        private static AddEtlOperationResult AddEtl(IDocumentStore src, OlapEtlConfiguration configuration, OlapConnectionString connectionString)
         {
-            var putResult = src.Maintenance.Send(new PutConnectionStringOperation<OlapEtlConnectionString>(connectionString));
+            var putResult = src.Maintenance.Send(new PutConnectionStringOperation<OlapConnectionString>(connectionString));
             Assert.NotNull(putResult.RaftCommandIndex);
 
-            var addResult = src.Maintenance.Send(new AddEtlOperation<OlapEtlConnectionString>(configuration));
+            var addResult = src.Maintenance.Send(new AddEtlOperation<OlapConnectionString>(configuration));
             return addResult;
         }
 

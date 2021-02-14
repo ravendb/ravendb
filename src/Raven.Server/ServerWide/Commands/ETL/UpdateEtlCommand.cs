@@ -77,7 +77,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class UpdateOlapEtlCommand : UpdateEtlCommand<OlapEtlConfiguration, OlapEtlConnectionString>
+    public class UpdateOlapEtlCommand : UpdateEtlCommand<OlapEtlConfiguration, OlapConnectionString>
     {
         public UpdateOlapEtlCommand()
         {

@@ -82,7 +82,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class AddOlapEtlCommand : AddEtlCommand<OlapEtlConfiguration, OlapEtlConnectionString>
+    public class AddOlapEtlCommand : AddEtlCommand<OlapEtlConfiguration, OlapConnectionString>
     {
         public AddOlapEtlCommand()
         {

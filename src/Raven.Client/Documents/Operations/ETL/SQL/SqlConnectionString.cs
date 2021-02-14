@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
         public override ConnectionStringType Type => ConnectionStringType.Sql;
 
-        public override void ValidateImpl(ref List<string> errors)
+        protected override void ValidateImpl(ref List<string> errors)
         {
             if (string.IsNullOrEmpty(ConnectionString))
                 errors.Add($"{nameof(ConnectionString)} cannot be empty");

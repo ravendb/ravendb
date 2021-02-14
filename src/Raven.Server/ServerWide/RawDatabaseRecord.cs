@@ -787,19 +787,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private Dictionary<string, OlapEtlConnectionString> _olapEtlConnectionStrings;
+        private Dictionary<string, OlapConnectionString> _olapEtlConnectionStrings;
 
-        public Dictionary<string, OlapEtlConnectionString> OlapEtlConnectionString
+        public Dictionary<string, OlapConnectionString> OlapEtlConnectionString
         {
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.OlapEtlConnectionStrings;
+                    return _materializedRecord.OlapConnectionStrings;
 
                 if (_olapEtlConnectionStrings == null)
                 {
-                    _olapEtlConnectionStrings = new Dictionary<string, OlapEtlConnectionString>();
-                    if (_record.TryGet(nameof(DatabaseRecord.OlapEtlConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
+                    _olapEtlConnectionStrings = new Dictionary<string, OlapConnectionString>();
+                    if (_record.TryGet(nameof(DatabaseRecord.OlapConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
                     {
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
                         for (var i = 0; i < obj.Count; i++)
@@ -810,7 +810,7 @@ namespace Raven.Server.ServerWide
                                 continue;
 
                             if (propertyDetails.Value is BlittableJsonReaderObject bjro)
-                                _olapEtlConnectionStrings[propertyDetails.Name] = JsonDeserializationCluster.OlapEtlConnectionString(bjro);
+                                _olapEtlConnectionStrings[propertyDetails.Name] = JsonDeserializationCluster.OlapConnectionString(bjro);
                         }
                     }
                 }

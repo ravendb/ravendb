@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
 
         public abstract ConnectionStringType Type { get; }
 
-        public abstract void ValidateImpl(ref List<string> errors);
+        protected abstract void ValidateImpl(ref List<string> errors);
 
         public virtual DynamicJsonValue ToJson()
         {

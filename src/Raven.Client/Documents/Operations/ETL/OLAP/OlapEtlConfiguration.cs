@@ -2,13 +2,15 @@
 
 namespace Raven.Client.Documents.Operations.ETL.OLAP
 {
-    public class OlapEtlConfiguration : EtlConfiguration<OlapEtlConnectionString>
+    public class OlapEtlConfiguration : EtlConfiguration<OlapConnectionString>
     {
         public TimeSpan RunFrequency { get; set; }
 
         public OlapEtlFileFormat Format { get; set; }
 
         public bool KeepFilesOnDisc { get; set; }
+
+        public string CustomPrefix { get; set; }
 
         public override string GetDestination() => ConnectionStringName;
 
@@ -23,10 +25,5 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
         {
             return $"OLAP ETL to {ConnectionStringName}";
         }
-    }
-
-    public enum OlapEtlFileFormat
-    {
-        Parquet
     }
 }

@@ -2050,7 +2050,7 @@ namespace Raven.Server.ServerWide
                     command = new PutSqlConnectionStringCommand(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName, raftRequestId);
                     break;
                 case ConnectionStringType.Olap:
-                    command = new PutOlapEtlConnectionStringCommand(JsonDeserializationCluster.OlapEtlConnectionString(connectionString), databaseName, raftRequestId);
+                    command = new PutOlapConnectionStringCommand(JsonDeserializationCluster.OlapConnectionString(connectionString), databaseName, raftRequestId);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
