@@ -230,9 +230,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return $"{documentId}/{_script.IdPrefixForCollection[loadCollectionName]}/";
         }
 
-        public override List<ICommandData> GetTransformedResults()
+        public override IEnumerable<ICommandData> GetTransformedResults()
         {
-            return _currentRun?.GetCommands() ?? Enumerable.Empty<ICommandData>().ToList();
+            return _currentRun?.GetCommands() ?? Enumerable.Empty<ICommandData>();
         }
 
         public override void Transform(RavenEtlItem item, EtlStatsScope stats, EtlProcessState state)

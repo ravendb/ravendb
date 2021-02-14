@@ -133,9 +133,9 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         }
 
 
-        public override List<OlapTransformedItems> GetTransformedResults()  
+        public override IEnumerable<OlapTransformedItems> GetTransformedResults()  
         {
-            return _tables.Values.ToList();
+            return _tables.Values;
         }
 
         public override void Transform(ToOlapItem item, EtlStatsScope stats, EtlProcessState state)
