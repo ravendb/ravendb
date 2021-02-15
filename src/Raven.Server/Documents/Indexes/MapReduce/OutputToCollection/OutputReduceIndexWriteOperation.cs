@@ -43,6 +43,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                     enqueue.GetAwaiter().GetResult();
                 }
             }
+            catch (TaskCanceledException)
+            {
+                throw;
+            }
+            catch (ObjectDisposedException e) when (DocumentDatabase.DatabaseShutdown.IsCancellationRequested)
+            {
+                throw new TaskCanceledException("The operation of writing output reduce documents was cancelled because of database shutdown", e);
+            }
             catch (Exception e)
             {
                 throw new IndexWriteException("Failed to save output reduce documents to disk", e);
