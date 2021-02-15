@@ -1290,6 +1290,8 @@ namespace Raven.Server.Documents.Indexes
                                 }
                                 catch (OperationCanceledException)
                                 {
+                                    Debug.Assert(_indexingProcessCancellationTokenSource.IsCancellationRequested, $"Got {nameof(OperationCanceledException)} while the index was not canceled");
+
                                     // We are here only in the case of indexing process cancellation.
                                     scope.RecordMapCompletedReason("Operation canceled.");
                                     return;

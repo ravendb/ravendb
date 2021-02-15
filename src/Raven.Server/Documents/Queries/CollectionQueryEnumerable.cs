@@ -49,12 +49,15 @@ namespace Raven.Server.Documents.Queries
             _totalResults = totalResults;
         }
 
-        public long? InternalQueryOperationStart { get; set; }
+        public string StartAfterId { get; set; }
+
+        public Reference<long> AlreadySeenIdsCount { get; set; }
+
         public DocumentFields Fields { get; set; } = DocumentFields.All;
 
         public IEnumerator<Document> GetEnumerator()
         {
-            return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _queryTimings, _context, _includeDocumentsCommand, _includeCompareExchangeValuesCommand, _totalResults, InternalQueryOperationStart, Fields);
+            return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _queryTimings, _context, _includeDocumentsCommand, _includeCompareExchangeValuesCommand, _totalResults, StartAfterId, AlreadySeenIdsCount, Fields);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -71,7 +74,8 @@ namespace Raven.Server.Documents.Queries
             private readonly string _collection;
             private readonly bool _isAllDocsCollection;
             private readonly IndexQueryServerSide _query;
-            private readonly long? _queryOperationInternalStart;
+            private readonly string _startAfterId;
+            private readonly Reference<long> _alreadySeenIdsCount;
             private readonly DocumentFields _fields;
 
             private bool _initialized;
@@ -88,8 +92,8 @@ namespace Raven.Server.Documents.Queries
 
             public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
                 IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
-                IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults, long? queryOperationInternalStart,
-                DocumentFields fields)
+                IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults, 
+                string startAfterId, Reference<long> alreadySeenIdsCount, DocumentFields fields)
             {
                 _documents = documents;
                 _fieldsToFetch = fieldsToFetch;
@@ -99,7 +103,8 @@ namespace Raven.Server.Documents.Queries
                 _context = context;
                 _totalResults = totalResults;
                 _totalResults.Value = 0;
-                _queryOperationInternalStart = queryOperationInternalStart;
+                _startAfterId = startAfterId;
+                _alreadySeenIdsCount = alreadySeenIdsCount;
                 _fields = fields;
 
                 if (_fieldsToFetch.IsDistinct)
@@ -201,6 +206,7 @@ namespace Raven.Server.Documents.Queries
             private IEnumerable<Document> GetDocuments()
             {
                 IEnumerable<Document> documents;
+
                 if (_startsWith != null)
                 {
                     var countQuery = false;
@@ -211,14 +217,9 @@ namespace Raven.Server.Documents.Queries
                         _query.PageSize = int.MaxValue;
                     }
 
-                    if (_isAllDocsCollection)
-                    {
-                        documents = _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, null, _start, _query.PageSize, fields: _fields);
-                    }
-                    else
-                    {
-                        documents = _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, null, _start, _query.PageSize, _collection, _fields);
-                    }
+                    documents = _isAllDocsCollection
+                        ? _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, _startAfterId, _start, _query.PageSize, fields: _fields) 
+                        : _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, _startAfterId, _start, _query.PageSize, _collection, _fields);
 
                     if (countQuery)
                     {
@@ -236,7 +237,27 @@ namespace Raven.Server.Documents.Queries
                 else if (_ids != null)
                 {
                     if (_ids.Count == 0)
+                    {
                         documents = Enumerable.Empty<Document>();
+                    }
+                    else if (_alreadySeenIdsCount != null)
+                    {
+                        var idsLeft = _ids.Count - _alreadySeenIdsCount.Value;
+                        if (idsLeft == 0)
+                        {
+                            documents = Enumerable.Empty<Document>();
+                        }
+                        else
+                        {
+                            var count = idsLeft >= _query.PageSize ? _query.PageSize : idsLeft;
+                            var ids = _ids.Skip((int)_alreadySeenIdsCount.Value).Take((int)count);
+                            _alreadySeenIdsCount.Value += count;
+
+                            documents = _isAllDocsCollection
+                                ? _documents.GetDocuments(_context, ids, 0, _query.PageSize, _totalResults)
+                                : _documents.GetDocuments(_context, ids, _collection, 0, _query.PageSize, _totalResults);
+                        }
+                    }
                     else
                     {
                         documents = _isAllDocsCollection
@@ -263,7 +284,7 @@ namespace Raven.Server.Documents.Queries
                 _initialized = true;
 
                 if (_query.Start == 0)
-                    return _queryOperationInternalStart ?? 0;
+                    return 0;
 
                 if (_query.SkipDuplicateChecking)
                     return _query.Start;
