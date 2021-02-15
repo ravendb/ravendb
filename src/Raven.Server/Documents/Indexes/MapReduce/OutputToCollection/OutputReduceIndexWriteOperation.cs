@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             }
             catch (ObjectDisposedException e) when (DocumentDatabase.DatabaseShutdown.IsCancellationRequested)
             {
-                throw new TaskCanceledException("A task was canceled", e);
+                throw new TaskCanceledException("The operation of writing output reduce documents was cancelled because of database shutdown", e);
             }
             catch (Exception e)
             {
