@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Utils.Stats;
 
 namespace Raven.Server.Documents.Subscriptions.Stats
@@ -22,12 +23,12 @@ namespace Raven.Server.Documents.Subscriptions.Stats
             return new SubscriptionConnectionStatsScope(stats, start);
         }
 
-        public void RecordConnectionInfo(long taskId, string taskName, string clientUri, string script)
+        public void RecordConnectionInfo(SubscriptionState subscriptionState, string clientUri)
         {
-            _stats.TaskId = taskId;
-            _stats.TaskName = taskName;
+            _stats.TaskId = subscriptionState.SubscriptionId;
+            _stats.TaskName = subscriptionState.SubscriptionName;
+            _stats.Script = subscriptionState.Query;
             _stats.ClientUri = clientUri;
-            _stats.Script = script;
         }
         
         public void RecordException(string exception)
@@ -35,7 +36,7 @@ namespace Raven.Server.Documents.Subscriptions.Stats
             _stats.Exception = exception;
         }
 
-        public void RecordBatchCount()
+        public void RecordBatchCompleted()
         {
             _stats.BatchCount++;
         }

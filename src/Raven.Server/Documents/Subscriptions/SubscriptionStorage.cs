@@ -1,4 +1,10 @@
-﻿using System;
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SubscriptionStorage.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// ----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +28,6 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-
     public class SubscriptionStorage : IDisposable, ILowMemoryHandler
     {
         private readonly DocumentDatabase _db;
@@ -30,6 +35,11 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly ConcurrentDictionary<long, SubscriptionConnectionState> _subscriptionConnectionStates = new ConcurrentDictionary<long, SubscriptionConnectionState>();
         private readonly Logger _logger;
         private readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
+
+        public event Action<string> OnTaskAddedEvent;
+        public event Action<string> OnTaskRemovedEvent;
+        public event Action<SubscriptionConnection> OnEndConnectionEvent;
+        public event Action<string, SubscriptionBatchStatsAggregator> OnEndBatchEvent;
 
         public SubscriptionStorage(DocumentDatabase db, ServerStore serverStore)
         {
@@ -80,7 +90,7 @@ namespace Raven.Server.Documents.Subscriptions
                 return subscriptionId.Value;
             }
             
-            _db.RaiseSubscriptionTaskAddedNotification(options.Name);
+            _db.SubscriptionStorage.RaiseNotificationForTaskAdded(options.Name);
 
             return etag;
         }
@@ -596,6 +606,26 @@ namespace Raven.Server.Documents.Subscriptions
         public void LowMemoryOver()
         {
             // nothing to do here
+        }
+        
+        public void RaiseNotificationForTaskAdded(string subscriptionName)
+        {
+            OnTaskAddedEvent?.Invoke(subscriptionName);
+        }
+        
+        public void RaiseNotificationForTaskRemoved(string subscriptionName)
+        {
+            OnTaskRemovedEvent?.Invoke(subscriptionName);
+        }
+        
+        public void RaiseNotificationForConnectionEnded(SubscriptionConnection connection)
+        {
+            OnEndConnectionEvent?.Invoke(connection);
+        }
+        
+        public void RaiseNotificationForBatchEnded(string subscriptionName, SubscriptionBatchStatsAggregator batchAggregator)
+        {
+            OnEndBatchEvent?.Invoke(subscriptionName, batchAggregator);
         }
     }
 }

@@ -428,11 +428,11 @@ namespace Raven.Client.Documents.Subscriptions
 
                     while (_processingCts.IsCancellationRequested == false)
                     {
-                        // start reading the next batch from server (can be before client started processing) // on 1'st thread
+                        // start reading next batch from server on 1'st thread (can be before client started processing)
                         var readFromServer = ReadSingleSubscriptionBatchFromServer(contextPool, tcpStreamCopy, buffer, batch);
                         try
                         {
-                            // wait for the subscriber to complete processing // on 2'nd thread
+                            // wait for the subscriber to complete processing on 2'nd thread
                             await notifiedSubscriber.ConfigureAwait(false);
                         }
                         catch (Exception)

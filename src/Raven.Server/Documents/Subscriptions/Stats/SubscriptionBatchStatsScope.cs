@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using Raven.Client.Util;
 using Raven.Server.Utils.Stats;
 
 namespace Raven.Server.Documents.Subscriptions.Stats
@@ -38,9 +39,9 @@ namespace Raven.Server.Documents.Subscriptions.Stats
             _stats.SizeOfDocuments = documentsSize;
         }
         
-        public void RecordStartWaitingForClientAck(DateTime startWaitingForClientAck)
+        public void RecordStartWaitingForClientAck()
         {
-            _stats.StartWaitingForClientAck = startWaitingForClientAck;
+            _stats.StartWaitingForClientAck = SystemTime.UtcNow;
         }
         
         public void RecordClientAckTime(DateTime clientAckTime)

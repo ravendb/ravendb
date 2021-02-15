@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Handlers
 
             await Database.SubscriptionStorage.DeleteSubscription(subscriptionName, GetRaftRequestIdFromQuery());
             
-            Database.RaiseSubscriptionTaskRemovedNotification(subscriptionName);
+            Database.SubscriptionStorage.RaiseNotificationForTaskRemoved(subscriptionName);
 
             await NoContent();
         }
