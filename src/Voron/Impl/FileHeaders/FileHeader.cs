@@ -76,5 +76,13 @@ namespace Voron.Impl.FileHeaders
         /// </summary>
         [FieldOffset(154)]
         public ulong Hash;
+
+        public override string ToString()
+        {
+            return
+                $"{nameof(Version)}: {Version}, {nameof(HeaderRevision)}: {HeaderRevision}, {nameof(TransactionId)}: {TransactionId}, {nameof(LastPageNumber)}: {LastPageNumber}, " +
+                $"{nameof(Root.RootPageNumber)}: {Root.RootPageNumber}, " +
+                $"{nameof(Journal.CurrentJournal)}: {Journal.CurrentJournal},  {nameof(Journal.LastSyncedJournal)}: {Journal.LastSyncedJournal},  {nameof(Journal.LastSyncedTransactionId)}: {Journal.LastSyncedJournal}, {nameof(Journal.Flags)}: {Journal.Flags}";
+        }
     }
 }

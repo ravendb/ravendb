@@ -12,6 +12,7 @@ using Voron.Exceptions;
 using Voron.Impl.Paging;
 using Constants = Voron.Global.Constants;
 using System.Linq;
+using Voron.Impl.FileHeaders;
 
 namespace Voron.Impl.Journal
 {
@@ -22,6 +23,7 @@ namespace Voron.Impl.Journal
         private readonly AbstractPager _recoveryPager;
         private readonly HashSet<long> _modifiedPages;
         private readonly JournalInfo _journalInfo;
+        private readonly FileHeader _currentFileHeader;
         private long _readAt4Kb;
         private readonly DiffApplier _diffApplier = new DiffApplier();
         private readonly long _journalPagerNumberOfAllocated4Kb;
@@ -33,7 +35,7 @@ namespace Voron.Impl.Journal
 
         public long Next4Kb => _readAt4Kb;
 
-        public JournalReader(AbstractPager journalPager, AbstractPager dataPager, AbstractPager recoveryPager, HashSet<long> modifiedPages, JournalInfo journalInfo, TransactionHeader* previous)
+        public JournalReader(AbstractPager journalPager, AbstractPager dataPager, AbstractPager recoveryPager, HashSet<long> modifiedPages, JournalInfo journalInfo, FileHeader currentFileHeader, TransactionHeader* previous)
         {
             RequireHeaderUpdate = false;
             _journalPager = journalPager;
@@ -41,6 +43,7 @@ namespace Voron.Impl.Journal
             _recoveryPager = recoveryPager;
             _modifiedPages = modifiedPages;
             _journalInfo = journalInfo;
+            _currentFileHeader = currentFileHeader;
             _readAt4Kb = 0;
             LastTransactionHeader = previous;
             _journalPagerNumberOfAllocated4Kb = 
@@ -460,7 +463,7 @@ namespace Voron.Impl.Journal
                     if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
                     {
                         options.InvokeIntegrityErrorOfAlreadySyncedData(this,
-                            $"Encountered integrity error of transaction data which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
+                            $"Encountered integrity error of transaction data which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). Negative tx id diff: {txIdDiff}. " +
                             "Safely continuing the startup recovery process.", null);
 
                         return true;
@@ -481,8 +484,8 @@ namespace Voron.Impl.Journal
                             // so it's expected in this case that txIdDiff > 1, let it continue to work then
 
                             options.InvokeIntegrityErrorOfAlreadySyncedData(this,
-                                $"Encountered integrity error of transaction data which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
-                                "Safely continuing the startup recovery process.", null);
+                                $"Encountered integrity error of transaction data which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). Tx diff is: {txIdDiff}. " +
+                                $"Safely continuing the startup recovery process. Debug details - file header {_currentFileHeader}", null);
 
                             return true;
                         }
@@ -490,13 +493,13 @@ namespace Voron.Impl.Journal
                         if (LastTransactionHeader != null)
                         {
                             throw new InvalidJournalException(
-                                $"Transaction has valid(!) hash with invalid transaction id {current->TransactionId}, the last valid transaction id is {LastTransactionHeader->TransactionId}." +
-                                $" Journal file {_journalPager.FileName} might be corrupted", _journalInfo);
+                                $"Transaction has valid(!) hash with invalid transaction id {current->TransactionId}, the last valid transaction id is {LastTransactionHeader->TransactionId}. Tx diff is: {txIdDiff}." +
+                                $" Journal file {_journalPager.FileName} might be corrupted. Debug details - file header {_currentFileHeader}", _journalInfo);
                         }
 
                         throw new InvalidJournalException(
-                            $"The last synced transaction id was {_journalInfo.LastSyncedTransactionId} (in journal: {_journalInfo.LastSyncedJournal}) but the first transaction being read in the recovery process is {current->TransactionId} (transaction has valid hash). " +
-                            $"Some journals are missing. Current journal file {_journalPager.FileName}.", _journalInfo);
+                            $"The last synced transaction id was {_journalInfo.LastSyncedTransactionId} (in journal: {_journalInfo.LastSyncedJournal}) but the first transaction being read in the recovery process is {current->TransactionId} (transaction has valid hash). Tx diff is: {txIdDiff}. " +
+                            $"Some journals are missing. Current journal file {_journalPager.FileName}. Debug details - file header {_currentFileHeader}", _journalInfo);
                     }
                 }
 
@@ -507,12 +510,12 @@ namespace Voron.Impl.Journal
                     {
                         options.InvokeIntegrityErrorOfAlreadySyncedData(this,
                             $"Invalid last page number ({current->LastPageNumber}) in the header of transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
-                            "Safely continuing the startup recovery process.", null);
+                            $"Safely continuing the startup recovery process. Debug details - file header {_currentFileHeader}", null);
 
                         return true;
                     }
 
-                    throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
+                    throw new InvalidDataException("Last page number after committed transaction must be greater than 0. Debug details - file header {_currentFileHeader}");
                 }
             }
 
