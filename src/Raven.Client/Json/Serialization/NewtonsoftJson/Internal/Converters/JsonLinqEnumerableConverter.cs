@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using Newtonsoft.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
@@ -13,6 +14,8 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
     internal sealed class JsonLinqEnumerableConverter : JsonConverter
     {
         public static readonly JsonLinqEnumerableConverter Instance = new JsonLinqEnumerableConverter();
+
+        private Dictionary<Type, bool> _canConvertCache = new ();
 
         private JsonLinqEnumerableConverter()
         {
@@ -73,17 +76,28 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
             if (objectType.Namespace == null || objectType == typeof(string) || objectType.IsClass == false)
                 return false;
 
-            foreach (var interfaceType in objectType.GetInterfaces())
+            if (!_canConvertCache.TryGetValue(objectType, out bool canConvert))
             {
-                if (interfaceType.IsGenericType == false)
-                    continue;
+                canConvert = false;
+                foreach (var interfaceType in objectType.GetInterfaces())
+                {
+                    if (interfaceType.IsGenericType == false)
+                        continue;
 
-                var genericInterfaceType = interfaceType.GetGenericTypeDefinition();
-                if (typeof(IEnumerable<>) == genericInterfaceType && objectType.Namespace.StartsWith("System.Linq"))
-                    return true;
+                    var genericInterfaceType = interfaceType.GetGenericTypeDefinition();
+                    if (typeof(IEnumerable<>) == genericInterfaceType && objectType.Namespace.StartsWith("System.Linq"))
+                    {
+                        canConvert = true;
+                        break;
+                    }
+                }
+
+                // PERF: We are expecting a race condition here, this is an optimistic switch-on-change scheme.
+                //       It mostly works because the frequency of this call is very low. 
+                _canConvertCache = new Dictionary<Type, bool>(_canConvertCache) { [objectType] = canConvert };
             }
 
-            return false;
+            return canConvert;
         }
     }
 }
