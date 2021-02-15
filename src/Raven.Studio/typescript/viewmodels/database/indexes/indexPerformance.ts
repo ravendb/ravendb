@@ -282,7 +282,8 @@ class indexPerformance extends viewModelBase {
             "Storage/Commit": undefined as string,
             "Lucene/RecreateSearcher": undefined as string,
             "SaveOutputDocuments": undefined as string,
-            "DeleteOutputDocuments": undefined as string
+            "DeleteOutputDocuments": undefined as string,
+            "LoadCompareExchangeValue": undefined as string
         }
     };
     
