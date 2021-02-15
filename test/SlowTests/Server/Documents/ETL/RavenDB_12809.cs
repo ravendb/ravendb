@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Raven.Client.Documents.Operations.ETL;
@@ -76,7 +77,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 var db = GetDatabase(src.Database).Result;
 
-                Assert.Equal(1, db.EtlLoader.Processes.Length);
+                Assert.Equal(1, db.EtlLoader.Processes.Count());
             }
         }
     }

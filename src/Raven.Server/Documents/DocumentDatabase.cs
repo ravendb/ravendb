@@ -1354,19 +1354,22 @@ namespace Raven.Server.Documents
                 {
                     if (taken)
                     {
+                        Monitor.Exit(_clusterLocker);
+                    }
+
+                    if (taken && _logger.IsInfoEnabled)
+                    {
                         if (sp?.Elapsed > TimeSpan.FromSeconds(5))
                         {
                             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                             using (ctx.OpenReadTransaction())
                             {
                                 var logs = ServerStore.Engine.LogHistory.GetLogByIndex(ctx, index).Select(djv => ctx.ReadObject(djv, "djv").ToString());
-                                Console.WriteLine(
-                                    $"Lock held for very long time {sp.Elapsed} in database {Name} for command {index} ({string.Join(", ", logs)})");
+                                var msg =
+                                    $"Lock held for very long time {sp.Elapsed} in database {Name} for command {index} ({string.Join(", ", logs)})";
+                                _logger.Info(msg);
                             }
-
-
                         }
-                        Monitor.Exit(_clusterLocker);
                     }
                 }
             }

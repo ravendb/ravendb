@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
@@ -46,7 +47,7 @@ namespace SlowTests.Server.Documents.ETL
                     Database = "test",
                 });
 
-                var process = GetDatabase(src.Database).Result.EtlLoader.Processes[0];
+                var process = GetDatabase(src.Database).Result.EtlLoader.Processes.First();
 
                 Assert.True(SpinWait.SpinUntil(() =>
                 {

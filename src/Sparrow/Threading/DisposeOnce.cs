@@ -38,6 +38,22 @@ namespace Sparrow.Threading
         }
     }
 
+    /// <summary>
+    /// Runs the dispose action. Ensures any threads that are running it	
+    /// concurrently wait for the dispose to finish if it is in progress.	    
+    /// 	
+    /// If the dispose has already happened, the <see cref="TOperationMode"/> defines	
+    /// how Dispose will react. The two approaches differ only in error	
+    /// handling.	
+    /// 	
+    /// When behavior is <see cref="ExceptionRetry"/>, we will retry the	
+    /// Dispose until it succeeds. Retry, however, happens on successive	
+    /// calls to Dispose, rather than in a single attempt.	
+    /// 	
+    /// When behavior is <see cref="SingleAttempt"/> or <see cref="SingleAttemptWithWaitForDisposeToFinish"/>, a failure means all	
+    /// subsequent calls will fail by throwing the same exception that	
+    /// was thrown by the action.	
+    /// </summary>
     public sealed class DisposeOnce<TOperationMode> : DisposeOnceAbstract<TOperationMode>
         where TOperationMode : struct, IDisposeOnceOperationMode
     {

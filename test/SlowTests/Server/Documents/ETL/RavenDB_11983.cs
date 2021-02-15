@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ETL;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
@@ -49,7 +50,7 @@ namespace SlowTests.Server.Documents.ETL
                         Database = "Northwind",
                     });
 
-                    Assert.Equal(2, database.EtlLoader.Processes.Length);
+                    Assert.Equal(2, database.EtlLoader.Processes.Count());
 
                     AddEtl(store, new RavenEtlConfiguration()
                     {
@@ -77,7 +78,7 @@ namespace SlowTests.Server.Documents.ETL
                         Database = "Northwind",
                     });
 
-                    Assert.Equal(4, database.EtlLoader.Processes.Length);
+                    Assert.Equal(4, database.EtlLoader.Processes.Count());
                 }
             }
         }

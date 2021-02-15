@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.ETL
     {
         private const string AlertTitle = "ETL loader";
 
-        private ConcurrentSet<EtlProcess> _processes = new ConcurrentSet<EtlProcess>();
+        private readonly ConcurrentSet<EtlProcess> _processes = new ConcurrentSet<EtlProcess>();
         private readonly ConcurrentSet<string> _uniqueConfigurationNames = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase); // read and modified under a lock.
 
         private DatabaseRecord _databaseRecord;
@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.ETL
             database.TombstoneCleaner.Subscribe(this);
         }
 
-        public EtlProcess[] Processes => _processes.ToArray();
+        public IEnumerable<EtlProcess> Processes => _processes;
 
         public List<RavenEtlConfiguration> RavenDestinations;
 
