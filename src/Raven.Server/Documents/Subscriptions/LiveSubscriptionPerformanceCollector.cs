@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using NuGet.Packaging;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
@@ -36,7 +37,6 @@ namespace Raven.Server.Documents.Subscriptions
             Start();
         }
 
-        // Upon collector init only: get history stats + in progress stats (to be sent to ws)
         protected IEnumerable<SubscriptionTaskPerformanceStats> PrepareInitialPerformanceStats()
         {
             var results = new List<SubscriptionTaskPerformanceStats>();
@@ -44,8 +44,8 @@ namespace Raven.Server.Documents.Subscriptions
             using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var allSubscriptions = Database.SubscriptionStorage.GetAllSubscriptions(context, false, 0, int.MaxValue);
-                foreach (var subscription in allSubscriptions)
+                var subscriptions = Database.SubscriptionStorage.GetAllSubscriptions(context, false, 0, int.MaxValue);
+                foreach (var subscription in subscriptions)
                 {
                     var subscriptionName = subscription.SubscriptionName;
                     var subscriptionId = subscription.SubscriptionId;
@@ -62,8 +62,6 @@ namespace Raven.Server.Documents.Subscriptions
 
                 foreach (var kvp in _perSubscriptionConnectionStats)
                 {
-                    var connectionPerformance = new List<SubscriptionConnectionPerformanceStats>();
-                    
                     var connectionState = Database.SubscriptionStorage.GetSubscriptionConnection(context, kvp.Value.Handler.SubscriptionName);
                     if (connectionState != null)
                     {
@@ -81,16 +79,17 @@ namespace Raven.Server.Documents.Subscriptions
                         connectionAggregators.AddRange(connectionState.RecentRejectedConnections.Select(x => x.GetPerformanceStats()));
 
                         // add connection stats to results 
-                        connectionPerformance.AddRange(connectionAggregators.Select(x => x.ToConnectionPerformanceLiveStatsWithDetails()));
-                        var subscriptionItem = results.Find(x => x.TaskName == kvp.Key);
-                        subscriptionItem.ConnectionPerformance = connectionPerformance.ToArray();
+                        var subscriptionItem = results.Find(x => x.TaskId == kvp.Value.Handler.Connection.SubscriptionId);
+                        if (subscriptionItem != null)
+                        {
+                            var connectionPerformance = connectionAggregators.Select(x => x.ToConnectionPerformanceLiveStatsWithDetails());
+                            subscriptionItem.ConnectionPerformance.AddRange(connectionPerformance);
+                        }
                     }
                 }
 
                 foreach (var kvp in _perSubscriptionBatchStats)
-                { 
-                    var batchPerformance = new List<SubscriptionBatchPerformanceStats>();
-                    
+                {
                     var connectionState = Database.SubscriptionStorage.GetSubscriptionConnection(context, kvp.Value.Handler.SubscriptionName);
                     if (connectionState != null)
                     {
@@ -113,12 +112,12 @@ namespace Raven.Server.Documents.Subscriptions
                             batchesAggregators.AddRange(recentRejectedConnection.GetBatchesPerformanceStats());
                         }
                        
-                        // add batch stats to results 
-                        batchPerformance.AddRange(batchesAggregators.Select(x => x.ToBatchPerformanceLiveStatsWithDetails()));
-                        var subscriptionItem = results.Find(x => x.TaskName == kvp.Key);
+                        // add batch stats to results
+                        var subscriptionItem = results.Find(x => x.TaskId == kvp.Value.Handler.Connection.SubscriptionId);
                         if (subscriptionItem != null)
                         {
-                            subscriptionItem.BatchPerformance = batchPerformance.ToArray();
+                            var batchPerformance = batchesAggregators.Select(x => x.ToBatchPerformanceLiveStatsWithDetails());
+                            subscriptionItem.BatchPerformance = batchesAggregators.Select(x => x.ToBatchPerformanceLiveStatsWithDetails()).ToArray();
                         }
                     }
                 }
@@ -129,10 +128,10 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected override async Task StartCollectingStats()
         {
-            Database.OnSubscriptionEndConnectionEvent += OnEndConnection;
-            Database.OnSubscriptionEndBatchEvent += OnEndBatch;
-            Database.OnSubscriptionTaskAddedEvent += OnSubscriptionTaskAdded;
-            Database.OnSubscriptionTaskRemovedEvent += OnSubscriptionTaskRemoved;
+            Database.SubscriptionStorage.OnEndConnectionEvent += OnEndConnection;
+            Database.SubscriptionStorage.OnEndBatchEvent += OnEndBatch;
+            Database.SubscriptionStorage.OnTaskAddedEvent += OnSubscriptionTaskAdded;
+            Database.SubscriptionStorage.OnTaskRemovedEvent += OnSubscriptionTaskRemoved;
 
             try
             {
@@ -140,10 +139,10 @@ namespace Raven.Server.Documents.Subscriptions
             }
             finally
             {
-                Database.OnSubscriptionEndConnectionEvent -= OnEndConnection;
-                Database.OnSubscriptionEndBatchEvent -= OnEndBatch;
-                Database.OnSubscriptionTaskAddedEvent -= OnSubscriptionTaskAdded;
-                Database.OnSubscriptionTaskRemovedEvent -= OnSubscriptionTaskRemoved;
+                Database.SubscriptionStorage.OnEndConnectionEvent -= OnEndConnection;
+                Database.SubscriptionStorage.OnEndBatchEvent -= OnEndBatch;
+                Database.SubscriptionStorage.OnTaskAddedEvent -= OnSubscriptionTaskAdded;
+                Database.SubscriptionStorage.OnTaskRemovedEvent -= OnSubscriptionTaskRemoved;
             }
         }
         
@@ -251,14 +250,13 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
         
-        private void OnEndConnection(SubscriptionConnection connectionThatEnded)
+        private void OnEndConnection(SubscriptionConnection connection)
         {
-            var subscriptionName = connectionThatEnded.SubscriptionState.SubscriptionName;
+            var subscriptionName = connection.SubscriptionState.SubscriptionName;
 
             if (_perSubscriptionConnectionStats.TryGetValue(subscriptionName, out var subscriptionAndStats))
             {
-                // add the 'ended connection' to the performance collection
-                var aggregatorToAdd = connectionThatEnded.GetPerformanceStats();
+                var aggregatorToAdd = connection.GetPerformanceStats();
                 subscriptionAndStats.Performance.TryAdd(aggregatorToAdd);
             }
         }
@@ -287,12 +285,11 @@ namespace Raven.Server.Documents.Subscriptions
             _perSubscriptionBatchStats.Remove(subscriptionName, out _);
         }
         
-        private void OnEndBatch(string subscriptionName, SubscriptionBatchStatsAggregator endedBatchAggregator) // TODO - check this
+        private void OnEndBatch(string subscriptionName, SubscriptionBatchStatsAggregator batchAggregator)
         {
             if (_perSubscriptionBatchStats.TryGetValue(subscriptionName, out var subscriptionAndStats))
             {
-                // add the 'ended batch' to the performance collection
-                subscriptionAndStats.Performance.TryAdd(endedBatchAggregator);
+                subscriptionAndStats.Performance.TryAdd(batchAggregator);
             }
         }
 

@@ -27,7 +27,6 @@ using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
-using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
@@ -70,11 +69,6 @@ namespace Raven.Server.Documents
         private readonly Logger _logger;
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
         internal TestingStuff ForTestingPurposes;
-
-        public event Action<string> OnSubscriptionTaskAddedEvent;
-        public event Action<string> OnSubscriptionTaskRemovedEvent;
-        public event Action<SubscriptionConnection> OnSubscriptionEndConnectionEvent;
-        public event Action<string, SubscriptionBatchStatsAggregator> OnSubscriptionEndBatchEvent;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
 
@@ -1634,26 +1628,6 @@ namespace Raven.Server.Documents
 
                 return new DisposableAction(() => ActionToCallDuringDocumentDatabaseInternalDispose = null);
             }
-        }
-
-        public void RaiseSubscriptionTaskAddedNotification(string subscriptionToAdd)
-        {
-            OnSubscriptionTaskAddedEvent?.Invoke(subscriptionToAdd);
-        }
-        
-        public void RaiseSubscriptionTaskRemovedNotification(string subscriptionToRemove)
-        {
-            OnSubscriptionTaskRemovedEvent?.Invoke(subscriptionToRemove);
-        }
-        
-        public void RaiseEndConnectionNotification(SubscriptionConnection connection)
-        {
-            OnSubscriptionEndConnectionEvent?.Invoke(connection);
-        }
-        
-        public void RaiseEndBatchNotification(string subscriptionName, SubscriptionBatchStatsAggregator endedBatchAggregator) // todo ? what params ?
-        {
-            OnSubscriptionEndBatchEvent?.Invoke(subscriptionName, endedBatchAggregator); // todo
         }
     }
 
