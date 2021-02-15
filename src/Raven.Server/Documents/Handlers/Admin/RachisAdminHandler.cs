@@ -690,9 +690,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
 
                         var cmd = new RemoveEntryFromRaftLogCommand(index);
-                        var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(node.Value, Server.Certificate.Certificate);
-                        await requestExecutor.ExecuteAsync(cmd, context);
-                        nodeList.AddRange(cmd.Result);
+                        using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(node.Value, Server.Certificate.Certificate))
+                        {
+                            await requestExecutor.ExecuteAsync(cmd, context);
+                            nodeList.AddRange(cmd.Result);
+                        }
                     }
                 }
                 else
