@@ -866,10 +866,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void RunIdleOperations(CleanupMode mode = CleanupMode.Regular)
+        public void RunIdleOperations(DatabaseCleanupMode mode = DatabaseCleanupMode.Regular)
         {
-            Debug.Assert(mode != CleanupMode.None, "mode != CleanupMode.None");
-            if (mode == CleanupMode.None)
+            Debug.Assert(mode != DatabaseCleanupMode.None, "mode != CleanupMode.None");
+            if (mode == DatabaseCleanupMode.None)
                 return;
 
             if (Monitor.TryEnter(_idleLocker) == false)
@@ -1630,7 +1630,7 @@ namespace Raven.Server.Documents
         }
     }
 
-    public enum CleanupMode
+    public enum DatabaseCleanupMode
     {
         None,
         Regular,
