@@ -1607,7 +1607,8 @@ namespace Raven.Server.Documents.Replication
             {
                 if (internalUrls.Contains(destination.Destination.Url) == false)
                     continue;
-
+                //We need to avoid the case that we removed database from DB group and CV updated only in the destination
+                Database.DocumentsStorage.TryRemoveUnusedIds(ref changeVector);
                 var conflictStatus = Database.DocumentsStorage.GetConflictStatus(changeVector, destination.LastAcceptedChangeVector);
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                     count++;
