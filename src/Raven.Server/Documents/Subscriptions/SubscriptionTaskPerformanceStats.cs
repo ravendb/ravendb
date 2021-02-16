@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using Raven.Server.Documents.Subscriptions.Stats;
 
 namespace Raven.Server.Documents.Subscriptions
@@ -16,11 +15,5 @@ namespace Raven.Server.Documents.Subscriptions
 
         public SubscriptionConnectionPerformanceStats[] ConnectionPerformance { get; set; }
         public SubscriptionBatchPerformanceStats[] BatchPerformance { get; set; }
-
-        public SubscriptionTaskPerformanceStats()
-        {
-            ConnectionPerformance = Array.Empty<SubscriptionConnectionPerformanceStats>();
-            BatchPerformance = Array.Empty<SubscriptionBatchPerformanceStats>();
-        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -111,6 +112,22 @@ namespace Raven.Server.Json
             writer.WriteInteger(batchStats.DocumentsSize);
             writer.WriteComma();
             
+            writer.WritePropertyName(nameof(batchStats.IncludedDocumentsCount));
+            writer.WriteInteger(batchStats.IncludedDocumentsCount);
+            writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(batchStats.IncludedDocumentsSize));
+            writer.WriteInteger(batchStats.IncludedDocumentsSize);
+            writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(batchStats.IncludedCountersCount));
+            writer.WriteInteger(batchStats.IncludedCountersCount);
+            writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(batchStats.IncludedTimeSeriesEntriesCount));
+            writer.WriteInteger(batchStats.IncludedTimeSeriesEntriesCount);
+            writer.WriteComma();
+            
             writer.WritePropertyName(nameof(batchStats.Started));
             writer.WriteDateTime(batchStats.Started, true);
             
@@ -154,19 +171,24 @@ namespace Raven.Server.Json
 
                 w.WritePropertyName(nameof(taskStats.TaskName));
                 w.WriteString(taskStats.TaskName);
-                w.WriteComma();
 
-                w.WriteArray(c, nameof(taskStats.ConnectionPerformance), taskStats.ConnectionPerformance, (wp, cp, connectionStats) =>
+                if (taskStats.ConnectionPerformance != null && taskStats.ConnectionPerformance.Any())
                 {
-                    wp.WriteSubscriptionTaskConnectionPerformanceStats(cp, connectionStats);
-                });
-                
-                w.WriteComma();
-                
-                w.WriteArray(c, nameof(taskStats.BatchPerformance), taskStats.BatchPerformance, (wp, cp, batchStats) =>
+                    w.WriteComma();
+                    w.WriteArray(c, nameof(taskStats.ConnectionPerformance), taskStats.ConnectionPerformance, (wp, cp, connectionStats) =>
+                    {
+                        wp.WriteSubscriptionTaskConnectionPerformanceStats(cp, connectionStats);
+                    });
+                }
+
+                if (taskStats.BatchPerformance != null && taskStats.BatchPerformance.Any())
                 {
-                    wp.WriteSubscriptionTaskBatchPerformanceStats(cp, batchStats);
-                });
+                    w.WriteComma();
+                    w.WriteArray(c, nameof(taskStats.BatchPerformance), taskStats.BatchPerformance, (wp, cp, batchStats) =>
+                    {
+                        wp.WriteSubscriptionTaskBatchPerformanceStats(cp, batchStats);
+                    });
+                }
 
                 w.WriteEndObject();
             });

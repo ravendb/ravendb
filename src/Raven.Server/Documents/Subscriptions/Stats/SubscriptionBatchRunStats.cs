@@ -19,6 +19,12 @@ namespace Raven.Server.Documents.Subscriptions.Stats
         public long NumberOfDocuments { get; set; }
         public long SizeOfDocuments { get; set; }
         
+        public long NumberOfIncludedDocuments { get; set; }
+        public long SizeOfIncludedDocuments { get; set; }
+                
+        public long NumberOfIncludedCounters { get; set; }
+        public long NumberOfIncludedTimeSeriesEntries { get; set; }
+        
         public DateTime? StartWaitingForClientAck  { get; set; }
         public DateTime? ClientAckTime { get; set; }
         

@@ -346,7 +346,6 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
         }
-        
 
         private static DynamicJsonValue GetSubscriptionConnectionJson(SubscriptionConnection x)
         {

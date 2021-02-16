@@ -8,7 +8,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using NuGet.Packaging;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
@@ -79,11 +78,11 @@ namespace Raven.Server.Documents.Subscriptions
                         connectionAggregators.AddRange(connectionState.RecentRejectedConnections.Select(x => x.GetPerformanceStats()));
 
                         // add connection stats to results 
-                        var subscriptionItem = results.Find(x => x.TaskId == kvp.Value.Handler.Connection.SubscriptionId);
+                        var subscriptionItem = results.Find(x => x.TaskId == kvp.Value.Handler.Connection?.SubscriptionId);
                         if (subscriptionItem != null)
                         {
                             var connectionPerformance = connectionAggregators.Select(x => x.ToConnectionPerformanceLiveStatsWithDetails());
-                            subscriptionItem.ConnectionPerformance.AddRange(connectionPerformance);
+                            subscriptionItem.ConnectionPerformance = connectionPerformance.ToArray();
                         }
                     }
                 }
@@ -113,7 +112,7 @@ namespace Raven.Server.Documents.Subscriptions
                         }
                        
                         // add batch stats to results
-                        var subscriptionItem = results.Find(x => x.TaskId == kvp.Value.Handler.Connection.SubscriptionId);
+                        var subscriptionItem = results.Find(x => x.TaskId == kvp.Value.Handler.Connection?.SubscriptionId);
                         if (subscriptionItem != null)
                         {
                             var batchPerformance = batchesAggregators.Select(x => x.ToBatchPerformanceLiveStatsWithDetails());
