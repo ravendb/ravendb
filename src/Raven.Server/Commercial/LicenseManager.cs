@@ -1312,6 +1312,18 @@ namespace Raven.Server.Commercial
             const string message = "Your current license doesn't include the SQL ETL feature";
             throw GenerateLicenseLimit(LimitType.SqlEtl, message);
         }
+        public void AssertCanAddOlapEtl()
+        {
+            // todo
+            // RavenDB-16242
+
+
+
+
+
+
+
+        }
 
         public void AssertCanUseMonitoringEndpoints()
         {
