@@ -33,10 +33,18 @@ namespace Raven.Server.Documents.Subscriptions.Stats
             _stats.BatchId = batchId;
         }
         
-        public void RecordDocumentsInfo(long documentsCount, long documentsSize)
+        public void RecordDocumentsInfo(long documentsCount, long documentsSize,
+                                        long includedDocumentsCount, long includedDocumentsSize,
+                                        long includedCountersCount, long includedTimeSeriesEntriesCount)
         {
             _stats.NumberOfDocuments = documentsCount;
             _stats.SizeOfDocuments = documentsSize;
+            
+            _stats.NumberOfIncludedDocuments = includedDocumentsCount;
+            _stats.SizeOfIncludedDocuments = includedDocumentsSize;
+            
+            _stats.NumberOfIncludedCounters = includedCountersCount;
+            _stats.NumberOfIncludedTimeSeriesEntries = includedTimeSeriesEntriesCount;
         }
         
         public void RecordStartWaitingForClientAck()

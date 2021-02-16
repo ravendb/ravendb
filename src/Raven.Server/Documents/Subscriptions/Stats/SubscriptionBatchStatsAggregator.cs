@@ -51,6 +51,12 @@ namespace Raven.Server.Documents.Subscriptions.Stats
                 DocumentsCount = Stats.NumberOfDocuments,
                 DocumentsSize = Stats.SizeOfDocuments,
                 
+                IncludedDocumentsCount = Stats.NumberOfIncludedDocuments,
+                IncludedDocumentsSize = Stats.SizeOfIncludedDocuments,
+                
+                IncludedCountersCount = Stats.NumberOfIncludedCounters,
+                IncludedTimeSeriesEntriesCount = Stats.NumberOfIncludedTimeSeriesEntries,
+                
                 StartWaitingForClientAck = Stats.StartWaitingForClientAck,
                 ClientAckTime = Stats.ClientAckTime,
                 

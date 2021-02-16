@@ -792,7 +792,12 @@ namespace Raven.Server.Documents.TcpHandlers
                 batchParentScope.RecordBatchInfo(_connectionState.Connection.SubscriptionId, _connectionState.SubscriptionName, _connectionState.Connection._connectionStatsIdForConnection, batchStatsAggregator.Id);
             
                 int docsToFlush = 0;
+                int numberOfIncludedDocuments = 0;
+                long numberOfIncludedCounters = 0;
+                long numberOfIncludedTimeSeriesEntries = 0;
+                
                 long sizeOfDocsInBatch = 0;
+                long sizeOfIncludedDocuments = 0;
                 
                 await using (var writer = new AsyncBlittableJsonTextWriter(docsContext, _buffer))
                 {
@@ -890,11 +895,13 @@ namespace Raven.Server.Documents.TcpHandlers
                                 writer.WriteComma();
 
                                 writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
-                                var includes = new List<Document>();
-                                includeDocumentsCommand.Fill(includes);
-                                writer.WriteIncludes(docsContext, includes);
+                                var includedDocuments = new List<Document>();
+                                includeDocumentsCommand.Fill(includedDocuments);
+                                await writer.WriteIncludesAsync(docsContext, includes);
 
-                            await writer.WriteIncludesAsync(docsContext, includes);
+                                numberOfIncludedDocuments = includedDocuments.Count;
+                                sizeOfIncludedDocuments = includedDocuments.Select(x => x.Data.Size).Sum();
+                                
                                 writer.WriteEndObject();
                             }
 
@@ -913,6 +920,8 @@ namespace Raven.Server.Documents.TcpHandlers
                                 writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludedCounterNamesSegment));
                                 writer.WriteIncludedCounterNames(includeCountersCommand.CountersToGetByDocId);
 
+                                numberOfIncludedCounters = includeCountersCommand.Results.Sum(x => x.Value.Count);
+                                
                                 writer.WriteEndObject();
                             }
 
@@ -927,6 +936,9 @@ namespace Raven.Server.Documents.TcpHandlers
                                 writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
                                 writer.WriteTimeSeries(includeTimeSeriesCommand.Results);
 
+                                numberOfIncludedTimeSeriesEntries = includeTimeSeriesCommand.Results.Sum(x => 
+                                    x.Value.Sum(y => y.Value.Sum(z => z.Entries.Length)));
+                                
                                 writer.WriteEndObject();
                             }
 
@@ -942,7 +954,9 @@ namespace Raven.Server.Documents.TcpHandlers
                                 _logger.Info($"Finished sending a batch with {docsToFlush} documents for subscription {Options.SubscriptionName}");
                             }
                             
-                            batchParentScope.RecordDocumentsInfo(docsToFlush, sizeOfDocsInBatch);
+                            batchParentScope.RecordDocumentsInfo(docsToFlush, sizeOfDocsInBatch,
+                                numberOfIncludedDocuments, sizeOfIncludedDocuments,
+                                numberOfIncludedCounters, numberOfIncludedTimeSeriesEntries);
                         }
                     }
                 }
