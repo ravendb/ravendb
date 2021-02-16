@@ -678,14 +678,16 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
+                var removed = ServerStore.Engine.RemoveEntryFromRaftLog(index);
+                if (removed)
+                    nodeList.Add(ServerStore.NodeTag);
+
                 if (first)
                 {
                     foreach (var node in ServerStore.GetClusterTopology(context).AllNodes)
                     {
                         if (node.Value == Server.WebUrl)
                         {
-                            ServerStore.Engine.RemoveEntryFromRaftLog(index);
-                            nodeList.Add(node.Key);
                             continue;
                         }
 
@@ -697,32 +699,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
                     }
                 }
-                else
-                {
-                    var removed = ServerStore.Engine.RemoveEntryFromRaftLog(index);
-                    if (removed)
-                        nodeList.Add(ServerStore.NodeTag);
-                }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-
-                    writer.WritePropertyName("Nodes");
-                    writer.WriteStartArray();
-                    var firstNode = true;
-                    foreach (var nodeTag in nodeList)
-                    {
-                        if (firstNode)
-                        {
-                            writer.WriteString(nodeTag);
-                            firstNode = false;
-                            continue;
-                        }
-                        writer.WriteComma();
-                        writer.WriteString(nodeTag);
-                    }
-                    writer.WriteEndArray();
+                    writer.WriteArray("Nodes", nodeList);
                     writer.WriteEndObject();
                 }
             }
