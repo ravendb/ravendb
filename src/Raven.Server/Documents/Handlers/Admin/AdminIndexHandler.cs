@@ -248,7 +248,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             var raftRequestId = GetRaftRequestIdFromQuery();
             var name = GetStringQueryString("name");
-            var clusterWide = GetBoolValueQueryString("clusterWide") ?? false;
+            var clusterWide = GetBoolValueQueryString("clusterWide", false) ?? false;
             var index = Database.IndexStore.GetIndex(name);
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
@@ -270,7 +270,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             var raftRequestId = GetRaftRequestIdFromQuery();
             var name = GetStringQueryString("name");
-            var clusterWide = GetBoolValueQueryString("clusterWide") ?? false;
+            var clusterWide = GetBoolValueQueryString("clusterWide", false) ?? false;
             var index = Database.IndexStore.GetIndex(name);
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
