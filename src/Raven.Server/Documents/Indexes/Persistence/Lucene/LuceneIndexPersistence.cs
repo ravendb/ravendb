@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                 var newReader = reader.Reopen(state);
                                 if (newReader != reader)
                                 {
-                                    reader.Dispose();
+                                    reader.DecRef(state);
                                 }
 
                                 reader = _lastReader = newReader;
@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 lock (_readersLock)
                 {
-                    _lastReader?.Dispose();
+                    _lastReader?.DecRef(null);
                     _lastReader = null;
                 }
             }
