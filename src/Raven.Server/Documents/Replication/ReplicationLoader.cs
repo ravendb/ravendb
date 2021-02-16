@@ -1603,12 +1603,13 @@ namespace Raven.Server.Documents.Replication
         private int ReplicatedPastInternalDestinations(HashSet<string> internalUrls, string changeVector)
         {
             var count = 0;
+            //We need to avoid the case that we removed database from DB group and CV updated only in the destination
+            Database.DocumentsStorage.TryRemoveUnusedIds(ref changeVector);
             foreach (var destination in _outgoing)
             {
                 if (internalUrls.Contains(destination.Destination.Url) == false)
                     continue;
-                //We need to avoid the case that we removed database from DB group and CV updated only in the destination
-                Database.DocumentsStorage.TryRemoveUnusedIds(ref changeVector);
+
                 var conflictStatus = Database.DocumentsStorage.GetConflictStatus(changeVector, destination.LastAcceptedChangeVector);
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                     count++;
