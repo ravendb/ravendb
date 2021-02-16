@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private Timer _timer;
         private const long MinTimeToWait = 1000;
         private readonly string _tmpFilePath;
-        private S3Settings _s3Settings;
+        private readonly S3Settings _s3Settings;
 
         public OlaptEtl(Transformation transformation, OlapEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, OlaptEtlTag)
@@ -104,8 +104,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             throw new NotSupportedException("Time series deletes aren't supported by OLAP ETL");
         }
 
-        protected override bool ShouldUpdateOnLastBatch => true;
-
+        protected override void AfterAllBatchesCompleted(long batchTime)
+        {
+            var batchTimeMs = batchTime / 10_000;
+            UpdateEtlProcessState(LastProcessState, batchTimeMs);
+        }
 
         public override void NotifyAboutWork(DatabaseChange change)
         {

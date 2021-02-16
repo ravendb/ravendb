@@ -33,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
 
         public UpdateEtlProcessStateCommand(string databaseName, string configurationName, string transformationName, long lastProcessedEtag, string changeVector,
-            string nodeTag, bool hasHighlyAvailableTasks, string uniqueRequestId, HashSet<string> skippedTimeSeriesDocs, long batchTimeMilliseconds = 0) : base(databaseName, uniqueRequestId)
+            string nodeTag, bool hasHighlyAvailableTasks, string uniqueRequestId, HashSet<string> skippedTimeSeriesDocs, long lastBatchTimeMilliseconds) : base(databaseName, uniqueRequestId)
         {
             ConfigurationName = configurationName;
             TransformationName = transformationName;
@@ -43,8 +43,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
             HasHighlyAvailableTasks = hasHighlyAvailableTasks;
             SkippedTimeSeriesDocs = skippedTimeSeriesDocs;
 
-            if (batchTimeMilliseconds > 0)
-                LastBatchTime = batchTimeMilliseconds;
+            if (lastBatchTimeMilliseconds > 0)
+                LastBatchTime = lastBatchTimeMilliseconds;
         }
 
         public override string GetItemId()

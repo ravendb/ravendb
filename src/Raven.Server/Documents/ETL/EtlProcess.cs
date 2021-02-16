@@ -118,7 +118,6 @@ namespace Raven.Server.Documents.ETL
         private PoolOfThreads.LongRunningWork _longRunningWork;
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
         private EtlStatsAggregator _lastStats;
-        private EtlProcessState _lastProcessState;
         private int _statsId;
 
         private TestMode _testMode;
@@ -126,6 +125,8 @@ namespace Raven.Server.Documents.ETL
         protected readonly Transformation Transformation;
         protected readonly Logger Logger;
         protected readonly DocumentDatabase Database;
+        protected EtlProcessState LastProcessState;
+
         private readonly ServerStore _serverStore;
 
         public readonly TConfiguration Configuration;
@@ -147,7 +148,7 @@ namespace Raven.Server.Documents.ETL
             if (transformation.ApplyToAllDocuments == false)
                 _collections = new HashSet<string>(Transformation.Collections, StringComparer.OrdinalIgnoreCase);
 
-            _lastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
+            LastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
         }
 
         protected CancellationToken CancellationToken => _cts.Token;
@@ -645,7 +646,7 @@ namespace Raven.Server.Documents.ETL
 
                     var didWork = false;
 
-                    var state  = _lastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
+                    var state  = LastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
 
                     var loadLastProcessedEtag = state.GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
@@ -711,40 +712,28 @@ namespace Raven.Server.Documents.ETL
                         statsAggregator.Complete();
                     }
 
-                    if (didWork || ShouldUpdateOnLastBatch)
+                    if (didWork)
                     {
-                        var batchTimeMilliseconds = didWork ? 0 : startTime.Ticks / 10_000;
-
-                        var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
-                            ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
-                            _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId(), state.SkippedTimeSeriesDocs, batchTimeMilliseconds);
-
                         try
                         {
-                            var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
-
-                            sendToLeaderTask.Wait(CancellationToken);
-                            var (etag, _) = sendToLeaderTask.Result;
-
-                            Database.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout).Wait(CancellationToken);
+                            UpdateEtlProcessState(state);
                         }
                         catch (OperationCanceledException)
                         {
                             return;
                         }
 
-                        if (didWork)
+                        if (CancellationToken.IsCancellationRequested == false)
                         {
-                            if (CancellationToken.IsCancellationRequested == false)
-                            {
-                                Database.EtlLoader.OnBatchCompleted(ConfigurationName, TransformationName, Statistics);
-                            }
-
-                            continue;
+                            Database.EtlLoader.OnBatchCompleted(ConfigurationName, TransformationName, Statistics);
                         }
+
+                        continue;
                     }
                     try
                     {
+                        AfterAllBatchesCompleted(startTime.Ticks);
+
                         PauseIfCpuCreditsBalanceIsTooLow();
 
                         if (FallbackTime == null)
@@ -793,6 +782,20 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
+        protected void UpdateEtlProcessState(EtlProcessState state, long lastBatchTime = 0)
+        {
+            var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
+                ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
+                _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId(), state.SkippedTimeSeriesDocs, lastBatchTime);
+
+            var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
+
+            sendToLeaderTask.Wait(CancellationToken);
+            var (etag, _) = sendToLeaderTask.Result;
+
+            Database.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout).Wait(CancellationToken);
+        }
+
         private void PauseIfCpuCreditsBalanceIsTooLow()
         {
             AlertRaised alert = null;
@@ -822,7 +825,9 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract bool ShouldFilterOutHiLoDocument();
 
-        protected virtual bool ShouldUpdateOnLastBatch => false;
+        protected virtual void AfterAllBatchesCompleted(long batchTime)
+        {
+        }
         
         private static bool AlreadyLoadedByDifferentNode(ExtractedItem item, EtlProcessState state)
         {
@@ -1069,7 +1074,7 @@ namespace Raven.Server.Documents.ETL
                 ? Database.DocumentsStorage.GetCollections(documentsContext).Select(x => x.Name).ToList() 
                 : Transformation.Collections;
 
-            var lastProcessedEtag = _lastProcessState.GetLastProcessedEtagForNode(_serverStore.NodeTag);
+            var lastProcessedEtag = LastProcessState.GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
             foreach (var collection in collections)
             {
