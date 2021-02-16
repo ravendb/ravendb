@@ -13,6 +13,13 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
     public class ParquetTransformedItems : OlapTransformedItems
     {
+        private bool[] _boolArr;
+        private string[] _strArr;
+        private double[] _doubleArr;
+        private long[] _longArr;
+        private DateTimeOffset[] _dtoArr;
+        private TimeSpan[] _tsArr;
+
         public ParquetTransformedItems(string name, string key) : base(OlapEtlFileFormat.Parquet)
         {
             CollectionName = name;
@@ -83,41 +90,47 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                         continue;
 
                     var data = kvp.Value;
-                    Array array = default;
+                    Array array;
 
                     switch (field.DataType)
                     {
-                        case DataType.Unspecified:
-                            break;
                         case DataType.Boolean:
-                            array = ((List<bool>)data).ToArray();
+                            array = _boolArr ??= new bool[data.Count];
                             break;
                         case DataType.Int32:
                         case DataType.Int64:
-                            array = ((List<long>)data).ToArray();
+                            array = _longArr ??= new long[data.Count];
                             break;
                         case DataType.String:
-                            array = ((List<string>)data).ToArray();
+                            array = _strArr ??= new string[data.Count];
                             break;
                         case DataType.Float:
                         case DataType.Double:
                         case DataType.Decimal:
-                            array = ((List<double>)data).ToArray();
+                            array = _doubleArr ??= new double[data.Count];
                             break;
                         case DataType.DateTimeOffset:
-                            array = ((List<DateTimeOffset>)data).ToArray();
+                            array = _dtoArr ??= new DateTimeOffset[data.Count];
                             break;
                         case DataType.TimeSpan:
-                            array = ((List<TimeSpan>)data).ToArray();
+                            array = _tsArr ??= new TimeSpan[data.Count];
                             break;
                         default:
                             ThrowUnsupportedDataType(field.DataType);
                             return;
                     }
 
+                    data.CopyTo(array, 0);
                     groupWriter.WriteColumn(new DataColumn(field, array));
                 }
             }
+
+            _boolArr = null;
+            _longArr = null;
+            _strArr = null;
+            _doubleArr = null;
+            _dtoArr = null;
+            _tsArr = null;
         }
 
         public override void AddItem(ToOlapItem item)
