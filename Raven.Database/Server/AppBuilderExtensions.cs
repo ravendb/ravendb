@@ -132,7 +132,9 @@ namespace Owin
             cfg.Services.Replace(typeof(IAssembliesResolver), new RavenAssemblyResolver());
             cfg.Filters.Add(new RavenExceptionFilterAttribute());
 
-            cfg.MessageHandlers.Add(new ThrottlingHandler(options.SystemDatabase.Configuration.MaxConcurrentServerRequests));
+            if (options.SystemDatabase.Configuration.MaxConcurrentServerRequests >= 0)
+                cfg.MessageHandlers.Add(new ThrottlingHandler(options.SystemDatabase.Configuration.MaxConcurrentServerRequests));
+
             cfg.MessageHandlers.Add(new GZipToJsonAndCompressHandler());
 
             cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
