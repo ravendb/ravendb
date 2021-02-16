@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -15,11 +13,12 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
-using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
@@ -29,6 +28,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -307,13 +307,24 @@ namespace RachisTests.DatabaseCluster
                 settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url;
                 cluster.Nodes[2] = GetNewServer(new ServerCreationOptions
                 {
-                    DeletePrevious = false,
+                    DeletePrevious = true,
                     RunInMemory = false,
                     DataDirectory = result.DataDirectory,
                     CustomSettings = settings
                 });
 
                 var preferredCount = new Dictionary<string, int> { ["A"] = 0, ["B"] = 0, ["C"] = 0 };
+
+                using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(Servers[0].WebUrl, null))
+                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    await WaitForValueAsync(async () =>
+                    {
+                        var clusterTopology = new GetClusterTopologyCommand();
+                        await requestExecutor.ExecuteAsync(clusterTopology, context);
+                        return clusterTopology.Result.Topology.Members.Count;
+                    }, 3);
+                }
 
                 // wait for recovery of all of the nodes back to member
                 var timeout = cluster.Leader.Configuration.Cluster.SupervisorSamplePeriod.AsTimeSpan * numberOfDatabases * 5;
