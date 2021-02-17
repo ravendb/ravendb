@@ -60,6 +60,12 @@ namespace Raven.Client.Documents.Operations.Attachments
             ThrowNotWritableStream();
         }
 
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            ThrowNotWritableStream();
+            return Task.CompletedTask;
+        }
+
         public override bool CanRead { get; } = true;
         public override bool CanSeek => _stream.CanSeek;
         public override bool CanWrite { get; } = false;
