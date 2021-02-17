@@ -30,6 +30,7 @@
         transition: all .3s cubic-bezier(1, 0, 0, 1);
         background-color: @panel-bg;
         border-radius: 2px;
+        z-index: 10;
         //box-shadow: 0 0 0 1px @gray-700 inset, 0 0 10px -3px rgba(#000, .4);
         
         .cluster-dashboard-item-header {
@@ -86,7 +87,7 @@
         &.is-dragging {
             opacity: .5;
             transition: none !important;
-            z-index: 10;
+            z-index: 15;
 
             .cluster-dashboard-item-header {
                 cursor: grabbing;
@@ -112,7 +113,7 @@
         .license-item {
             display: flex;
             min-width: 50%;
-            padding: @gutter-sm/2;            
+            padding: @gutter-sm/2;
 
             &> i {
                 font-size: 22px;
@@ -137,6 +138,37 @@
                     font-size: 13px;
                     color: @text-muted;
                 }
+            }
+
+            &:nth-of-type(10n+1) > i  {
+                color: @color-4;
+            }
+            &:nth-of-type(10n+2) > i {
+                color: @color-4-2;
+            }
+            &:nth-of-type(10n+3) > i {
+                color: @color-5;
+            }
+            &:nth-of-type(10n+4) > i {
+                color: @color-5-2;
+            }
+            &:nth-of-type(10n+5) > i {
+                color: @color-1;
+            }
+            &:nth-of-type(10n+6) > i {
+                color: @color-1-2;
+            }
+            &:nth-of-type(10n+7) > i {
+                color: @color-2;
+            }
+            &:nth-of-type(10n+8) > i {
+                color: @color-2-2;
+            }
+            &:nth-of-type(10n+9) > i {
+                color: @color-3;
+            }
+            &:nth-of-type(10n) > i {
+                color: @color-3-2;
             }
         }
     }
@@ -196,7 +228,6 @@
 
         .property {            
             width: 100%;
-            overflow-x: auto;
             --node-color: @color-4;
 
             .nodes-container {
@@ -265,17 +296,6 @@
                         .supplementary-info {
                             color: @brand-danger !important;
                         }
-                    }
-
-                    .memory-mode {
-                        font-size: 9px;
-                        text-transform: uppercase;
-                        display: flex;
-                        text-align: center;
-                        line-height: 1em;
-                        margin: @gutter-xs 0;
-                        height: 1em;
-                        font-weight: 800;
                     }
 
                     .details-list {
@@ -401,6 +421,10 @@
                             flex-shrink: 0;
                             width: 130px;
                         }
+
+                        .details-list {
+                            flex-grow: 1;
+                        }
                     }
                 }
             }                  
@@ -524,6 +548,10 @@
 
         &.count-dot-warning {
             background-color: @brand-warning;
+        }
+
+        &.count-dot-info {
+            background-color: @brand-info;
         }
 
         &.count-dot-danger {

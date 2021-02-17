@@ -627,8 +627,12 @@
                                             </div>
                                         </div>
                                     </div>
-
+                                    
+                                    
+                                    <a href="#" class="btn btn-sm margin-left">License details</a>
+                                    
                                 </div>
+                                
                             </div>
 
                             <div class="cluster-dashboard-item" id="cpuPanel">
@@ -761,17 +765,14 @@
                                             </button>
 
                                             <div class="nodes-container">
-                                                <div class="nodes-item node-warning">
-                                                    <div class="nodes-item-header">
+                                                <div class="nodes-item node-warning">                                                    
+                                                    <div class="nodes-item-header" data-toggle="tooltip" data-placement="top" title="Low Memory Mode">
                                                         <div class="node-label">A</div>
                                                         <div class="node-value">
                                                             <span>240</span>
                                                             <span class="supplementary-info">MB</span>
                                                         </div>
-                                                    </div>
-                                                    
-                                                    <div class="memory-mode text-warning">low-mem mode</div>
-                                                    
+                                                    </div>                                                    
                                                     <div class="details-list">
                                                         <div class="details-item">
                                                             <div class="details-item-name">Managed Allocations</div>
@@ -793,15 +794,13 @@
                                                 </div>
 
                                                 <div class="nodes-item node-danger">
-                                                    <div class="nodes-item-header">
+                                                    <div class="nodes-item-header" data-toggle="tooltip" data-placement="top" title="Extremely Low Memory Mode">
                                                         <div class="node-label">B</div>
                                                         <div class="node-value">
                                                             <span>1.2</span>
                                                             <span class="supplementary-info">GB</span>
                                                         </div>
                                                     </div>
-
-                                                    <div class="memory-mode text-danger">extremely low-mem mode</div>
 
                                                     <div class="details-list">
                                                         <div class="details-item">
@@ -832,8 +831,6 @@
                                                         </div>
                                                     </div>
 
-                                                    <div class="memory-mode"></div>
-
                                                     <div class="details-list">
                                                         <div class="details-item">
                                                             <div class="details-item-name">Managed Allocations</div>
@@ -863,8 +860,6 @@
                                                         </div>
                                                     </div>
 
-                                                    <div class="memory-mode"></div>
-
                                                     <div class="details-list">
                                                         <div class="details-item">
                                                             <div class="details-item-name">Managed Allocations</div>
@@ -893,8 +888,6 @@
                                                             <span class="supplementary-info">MB</span>
                                                         </div>
                                                     </div>
-
-                                                    <div class="memory-mode"></div>
 
                                                     <div class="details-list">
                                                         <div class="details-item">
@@ -1103,15 +1096,17 @@
                                                             <span class="supplementary-info">40/80 Gb</span>
                                                         </div>
                                                     </div>
-                                                    <div class="storage-chart">
-                                                        <div class="storage-ravendb" style="min-width: 10%" >
-                                                            <span>250MB</span>
+                                                    <div class="details-list">
+                                                        <div class="storage-legend">
+                                                            <span>250MB</span> <span>300MB</span> <span>79GB</span> <span>Total: 79GB</span>
                                                         </div>
-                                                        <div class="storage-used" style="min-width: 15%">
-                                                            <span>300MB</span>
-                                                        </div>
-                                                        <div class="storage-free">
-                                                            <span>79GB</span>
+                                                        <div class="storage-chart">
+                                                            
+                                                            <div class="storage-used" style="min-width: 15%">
+                                                                <div class="storage-ravendb" style="min-width: 10%" ></div>
+                                                            </div>
+                                                            <div class="storage-free">                                                            
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1237,7 +1232,7 @@
                                                         <div class="node-label">A</div>
                                                         <div class="node-value">
                                                             <span>100</span>
-                                                            <span class="supplementary-info">Bytes/s</span>
+                                                            <span class="supplementary-info"></span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1247,7 +1242,7 @@
                                                         <div class="node-label">B</div>
                                                         <div class="node-value">
                                                             <span>10281</span>
-                                                            <span class="supplementary-info">Bytes/s</span>
+                                                            <span class="supplementary-info"></span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1257,7 +1252,7 @@
                                                         <div class="node-label">C</div>
                                                         <div class="node-value">
                                                             <span>263</span>
-                                                            <span class="supplementary-info">Bytes/s</span>
+                                                            <span class="supplementary-info"></span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1267,7 +1262,7 @@
                                                         <div class="node-label">D</div>
                                                         <div class="node-value">
                                                             <span>3458</span>
-                                                            <span class="supplementary-info">Bytes/s</span>
+                                                            <span class="supplementary-info"></span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1277,7 +1272,7 @@
                                                         <div class="node-label">E</div>
                                                         <div class="node-value">
                                                             <span>3048</span>
-                                                            <span class="supplementary-info">Bytes/s</span>
+                                                            <span class="supplementary-info"></span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1308,7 +1303,7 @@
                                                         <div class="node-label">A</div>
                                                         <div class="node-value">
                                                             <span>10</span>
-                                                            <span class="supplementary-info">Bytes/s</span>
+                                                            <span class="supplementary-info"></span>
                                                         </div>
                                                     </div>
                                                     <div class="details-list">
@@ -1336,7 +1331,7 @@
                                                         <div class="node-label">B</div>
                                                         <div class="node-value">
                                                             <span>20</span>
-                                                            <span class="supplementary-info">Bytes/s</span>
+                                                            <span class="supplementary-info"></span>
                                                         </div>
                                                     </div>
                                                     <div class="details-list">
@@ -1364,7 +1359,7 @@
                                                         <div class="node-label">C</div>
                                                         <div class="node-value">
                                                             <span>130</span>
-                                                            <span class="supplementary-info">Bytes/s</span>
+                                                            <span class="supplementary-info"></span>
                                                         </div>
                                                     </div>
                                                     <div class="details-list">
@@ -1392,7 +1387,7 @@
                                                         <div class="node-label">C</div>
                                                         <div class="node-value">
                                                             <span>210</span>
-                                                            <span class="supplementary-info">Bytes/s</span>
+                                                            <span class="supplementary-info"></span>
                                                         </div>
                                                     </div>
                                                     <div class="details-list">
@@ -1420,7 +1415,7 @@
                                                         <div class="node-label">C</div>
                                                         <div class="node-value">
                                                             <span>10</span>
-                                                            <span class="supplementary-info">Bytes/s</span>
+                                                            <span class="supplementary-info"></span>
                                                         </div>
                                                     </div>
                                                     <div class="details-list">
@@ -1933,47 +1928,7 @@
 
                                 <div class="databases-list" style="position: relative;">
 
-                                    <div class="databases-summary">
-                                        <div class="margin-right">
-                                            <small class="text-uppercase margin-right margin-sm">Total:</small>
-                                            <strong>
-                                                <span data-bind="text: totalDatabases">2</span>
-                                                <i class="icon-database"></i>
-                                            </strong>
-                                        </div>
-                                        <div class="flex-grow"></div>
-                                        <div class="margin-right">
-                                            <small class="text-uppercase margin-right margin-sm">Online:</small>
-                                            <strong class="text-success">
-                                                <span data-bind="text: totalOnlineDatabases">1</span>
-                                                <i class="icon-database-cutout icon-addon-check"></i>
-                                            </strong>
-                                        </div>
-                                        <div class="margin-right">
-                                            <small class="text-uppercase margin-right margin-sm">Offline:</small>
-                                            <strong class="text-muted">
-                                                <span data-bind="text: totalOfflineDatabases">0</span>
-                                                <i class="icon-database-cutout icon-addon-clock"></i>
-                                            </strong>
-                                        </div>
-                                        <div>
-                                            <small class="text-uppercase margin-right margin-sm">Disabled:</small>
-                                            <strong class="text-warning">
-                                                <span data-bind="text: totalDisabledDatabases">1</span>
-                                                <i class="icon-database-cutout icon-addon-cancel"></i>
-                                            </strong>
-                                        </div>
-                                    </div>
-
-                                    <div class="list-container">
-                                        <div class="create-database"
-                                            data-bind="visible: $root.noDatabases() &amp;&amp; !$root.spinners.loading()"
-                                            style="display: none;">
-                                            <div><i class="icon-empty-set"></i><span>No data</span></div>
-                                            <button data-bind="click: $root.newDatabase"
-                                                class="btn btn-primary btn-xs text-uppercase">Create
-                                                Database</button>
-                                        </div>
+                                    <div class="list-container">                                        
                                         <div class="list absolute-fill">
                                             <virtual-grid class="resizable no-margin"
                                                 params="controller: gridController, condensed: true">
@@ -1986,41 +1941,38 @@
                                                     </div>
                                                     <div class="column-container flex-window-head"
                                                         data-bind="foreach: columns, visible: settings.showHeader">
-                                                        <div class="column sortable asc"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
-                                                            title="Database" style="width: 167.1px;">
-                                                            <div class="sortable-controls"></div><strong
-                                                                data-bind="html: $data.header">Name</strong>
+                                                        <div class="column " style="width: 167.1px;">
+                                                            <strong data-bind="html: $data.header">Name</strong>
                                                         </div>
-                                                        <div class="column sortable"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
-                                                            title="Docs #" style="width: 139.25px;">
-                                                            <div class="sortable-controls"></div><strong
-                                                                data-bind="html: $data.header">Indexes</strong>
+                                                        <div class="column " style="width: 50px;">
+                                                            <strong data-bind="html: $data.header">Node</strong>
                                                         </div>
-                                                        <div class="column sortable" title="Index # (Error #)"
+                                                        <div class="column " title="Docs #" style="width: 139.25px;">
+                                                            <strong data-bind="html: $data.header">Indexes</strong>
+                                                        </div>
+                                                        <div class="column " title="Index # (Error #)"
                                                             style="width: 71.4px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Alerts</strong>
                                                         </div>
-                                                        <div class="column sortable" title="Alerts #"
+                                                        <div class="column " title="Alerts #"
                                                             style="width: 96.84px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Index Errors</strong>
                                                         </div>
-                                                        <div class="column sortable" title="Replica factor"
+                                                        <div class="column " title="Replica factor"
                                                             style="width: 106.84px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Ongoing Tasks</strong>
                                                         </div>
-                                                        <div class="column sortable" title="Replica factor"
+                                                        <div class="column " title="Replica factor"
                                                             style="width: 86.84px;">
-                                                            <div class="sortable-controls"></div><strong
-                                                                data-bind="html: $data.header">Backed Up</strong>
+                                                            <strong
+                                                                data-bind="html: $data.header">Backups</strong>
                                                         </div>
-                                                        <div class="column sortable" title="Replica factor"
+                                                        <div class="column " title="Replica factor"
                                                             style="width: 66.84px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Nodes</strong>
                                                         </div>
                                                     </div>
@@ -2038,12 +1990,13 @@
                                                                         <span>Clients</span>
                                                                     </a>
                                                                 </div>
+                                                                <div class="cell text-cell" style="width: 50px"></div>
                                                                 <div class="cell text-cell" style="width: 139.25px">
                                                                     3500
                                                                 </div>
                                                                 <div class="cell text-cell" style="width: 71.4px">
-                                                                    <span
-                                                                        class="count-dot count-dot-warning">1204</span>
+                                                                    <span class="count-dot count-dot-warning">1204</span>
+                                                                    <span class="count-dot count-dot-info">304</span>
                                                                 </div>
                                                                 <div class="cell text-cell" style="width: 96.84px">
                                                                     <span class="count-dot count-dot-danger">3</span>
@@ -2068,6 +2021,7 @@
                                                                             class="icon-database-cutout icon-addon-cancel text-warning"></i><span>Orders</span>
                                                                     </a>
                                                                 </div>
+                                                                <div class="cell text-cell" style="width: 50px"></div>
                                                                 <div class="cell text-cell " style="width: 139.25px">
                                                                     3500
                                                                 </div>
@@ -2146,28 +2100,32 @@
                                                     </div>
                                                     <div class="column-container flex-window-head"
                                                         data-bind="foreach: columns, visible: settings.showHeader">
-                                                        <div class="column sortable asc"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
-                                                            title="Database" style="width: 167.1px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                        <div class="column"
+                                                            
+                                                             style="width: 167.1px;">
+                                                            <strong
                                                                 data-bind="html: $data.header">Name</strong>
                                                         </div>
-                                                        <div class="column sortable"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
+                                                        
+                                                        <div class="column " style="width: 50;">
+                                                            <strong data-bind="html: $data.header">Node</strong>
+                                                        </div>
+                                                        <div class="column "
+                                                            
                                                             title="Docs #" style="width: 139.25px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Indexed/s</strong>
                                                         </div>
-                                                        <div class="column sortable"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
+                                                        <div class="column "
+                                                            
                                                             title="Index # (Error #)" style="width: 111.4px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Mapped/s</strong>
                                                         </div>
-                                                        <div class="column sortable"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
+                                                        <div class="column "
+                                                            
                                                             title="Alerts #" style="width: 66.84px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Entries
                                                                 reduced/s</strong>
                                                         </div>
@@ -2184,6 +2142,43 @@
                                                                         href="#databases/documents?&amp;database=DemoUser-1c5f24b3-9e11-43fd-b964-135c8c3c6240"><i
                                                                             class="icon-database-cutout icon-addon-check text-success"></i><span>Clients</span></a>
                                                                 </div>
+                                                                <div class="cell text-cell " style="width: 50px">
+                                                                    <span class="node-label node-a">A</span>
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 139.25px">
+                                                                    3500</div>
+                                                                <div class="cell text-cell " style="width: 111.4px">
+                                                                    1204
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 66.84px">
+                                                                    3
+                                                                </div>
+                                                            </div>
+                                                            <div class="virtual-row even"
+                                                                style="height: 24px; top: 0px;">
+                                                                <div class="cell text-cell token string  sorted"
+                                                                    style="width: 167.1px">
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 50px">
+                                                                    <span class="node-label node-b">B</span>
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 139.25px">
+                                                                    3500</div>
+                                                                <div class="cell text-cell " style="width: 111.4px">
+                                                                    1204
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 66.84px">
+                                                                    3
+                                                                </div>
+                                                            </div>
+                                                            <div class="virtual-row even"
+                                                                style="height: 24px; top: 0px;">
+                                                                <div class="cell text-cell token string  sorted"
+                                                                    style="width: 167.1px">
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 50px">
+                                                                    <span class="node-label node-c">C</span>
+                                                                </div>
                                                                 <div class="cell text-cell " style="width: 139.25px">
                                                                     3500</div>
                                                                 <div class="cell text-cell " style="width: 111.4px">
@@ -2198,6 +2193,24 @@
                                                                     style="width: 167.1px"><a
                                                                         href="#databases/documents?&amp;database=DemoUser-f2f3a0cb-6e1f-4cbe-ae56-c2a9cc0e93bd"><i
                                                                             class="icon-database-cutout icon-addon-cancel text-warning"></i><span>Orders</span></a>
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 50px">
+                                                                    <span class="node-label node-a">A</span>
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 139.25px">
+                                                                    3500</div>
+                                                                <div class="cell text-cell " style="width: 111.4px">
+                                                                    -</div>
+                                                                <div class="cell text-cell " style="width: 66.84px">
+                                                                    2
+                                                                </div>
+                                                            </div>
+                                                            <div class="virtual-row" style="height: 24px; top: 24px;">
+                                                                <div class="cell text-cell token string  sorted"
+                                                                    style="width: 167.1px">
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 50px">
+                                                                    <span class="node-label node-c">C</span>
                                                                 </div>
                                                                 <div class="cell text-cell " style="width: 139.25px">
                                                                     3500</div>
@@ -2262,33 +2275,33 @@
                                                     </div>
                                                     <div class="column-container flex-window-head"
                                                         data-bind="foreach: columns, visible: settings.showHeader">
-                                                        <div class="column sortable asc"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
-                                                            title="Database" style="width: 167.1px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                        <div class="column "
+                                                            
+                                                             style="width: 167.1px;">
+                                                            <strong
                                                                 data-bind="html: $data.header">Name</strong>
                                                         </div>
 
                                                         <div class="column " style="width: 50px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Node</strong>
                                                         </div>
-                                                        <div class="column sortable"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
+                                                        <div class="column "
+                                                            
                                                             title="Docs #" style="width: 139.25px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Data</strong>
                                                         </div>
-                                                        <div class="column sortable"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
+                                                        <div class="column "
+                                                            
                                                             title="Index # (Error #)" style="width: 111.4px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Temp</strong>
                                                         </div>
-                                                        <div class="column sortable"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
+                                                        <div class="column "
+                                                            
                                                             title="Alerts #" style="width: 66.84px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Total</strong>
                                                         </div>
                                                     </div>
@@ -2438,34 +2451,34 @@
                                                     </div>
                                                     <div class="column-container flex-window-head"
                                                         data-bind="foreach: columns, visible: settings.showHeader">
-                                                        <div class="column sortable asc"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
-                                                            title="Database" style="width: 167.1px;">
-                                                            <div class="sortable-controls"></div><strong
-                                                                data-bind="html: $data.header">Name</strong>
+                                                        <div class="column " style="width: 167.1px;">
+                                                            <strong data-bind="html: $data.header">Name</strong>
                                                         </div>
-                                                        <div class="column sortable"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
+                                                        <div class="column " style="width: 50;">
+                                                            <strong data-bind="html: $data.header">Node</strong>
+                                                        </div>
+                                                        <div class="column "
+                                                            
                                                             title="Docs #" style="width: 139.25px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Requests / s</strong>
                                                         </div>
-                                                        <div class="column sortable"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
+                                                        <div class="column "
+                                                            
                                                             title="Index # (Error #)" style="width: 111.4px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Writes / s</strong>
                                                         </div>
-                                                        <div class="column sortable"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
+                                                        <div class="column "
+                                                            
                                                             title="Alerts #" style="width: 66.84px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Data written / s</strong>
                                                         </div>
-                                                        <div class="column sortable"
-                                                            data-bind="style: { width: $data.width }, attr: { title: $data.headerTitle }, css: { sortable: sortable, asc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'asc', desc: $data === $parent.sortByColumn() &amp;&amp; $parent.sortMode() === 'desc' }"
+                                                        <div class="column "
+                                                            
                                                             title="Alerts #" style="width: 66.84px;">
-                                                            <div class="sortable-controls"></div><strong
+                                                            <strong
                                                                 data-bind="html: $data.header">Avg Req Time</strong>
                                                         </div>
                                                     </div>
@@ -2480,6 +2493,45 @@
                                                                     style="width: 167.1px"><a
                                                                         href="#databases/documents?&amp;database=DemoUser-1c5f24b3-9e11-43fd-b964-135c8c3c6240"><i
                                                                             class="icon-database-cutout icon-addon-check text-success"></i><span>Clients</span></a>
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 50px">
+                                                                    <span class="node-label node-a">A</span>
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 139.25px">
+                                                                    32.25 MB
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 111.4px">
+                                                                    64.25 MB
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 66.84px">
+                                                                    96.5 MB
+                                                                </div>
+                                                            </div>
+                                                            <div class="virtual-row even"
+                                                                style="height: 24px; top: 0px;">
+                                                                <div class="cell text-cell token string  sorted"
+                                                                    style="width: 167.1px">
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 50px">
+                                                                    <span class="node-label node-b">B</span>
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 139.25px">
+                                                                    32.25 MB
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 111.4px">
+                                                                    64.25 MB
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 66.84px">
+                                                                    96.5 MB
+                                                                </div>
+                                                            </div>
+                                                            <div class="virtual-row even"
+                                                                style="height: 24px; top: 0px;">
+                                                                <div class="cell text-cell token string  sorted"
+                                                                    style="width: 167.1px">
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 50px">
+                                                                    <span class="node-label node-c">C</span>
                                                                 </div>
                                                                 <div class="cell text-cell " style="width: 139.25px">
                                                                     32.25 MB
@@ -2496,6 +2548,24 @@
                                                                     style="width: 167.1px"><a
                                                                         href="#databases/documents?&amp;database=DemoUser-f2f3a0cb-6e1f-4cbe-ae56-c2a9cc0e93bd"><i
                                                                             class="icon-database-cutout icon-addon-cancel text-warning"></i><span>Orders</span></a>
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 50px">
+                                                                    <span class="node-label node-a">A</span>
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 139.25px">
+                                                                    325.31 MB</div>
+                                                                <div class="cell text-cell " style="width: 111.4px">
+                                                                    717.25 MB</div>
+                                                                <div class="cell text-cell " style="width: 66.84px">
+                                                                    1.01 GB
+                                                                </div>
+                                                            </div>
+                                                            <div class="virtual-row" style="height: 24px; top: 24px;">
+                                                                <div class="cell text-cell token string  sorted"
+                                                                    style="width: 167.1px">
+                                                                </div>
+                                                                <div class="cell text-cell " style="width: 50px">
+                                                                    <span class="node-label node-c">C</span>
                                                                 </div>
                                                                 <div class="cell text-cell " style="width: 139.25px">
                                                                     325.31 MB</div>
@@ -2722,7 +2792,9 @@
     <!-- <script type="text/javascript" src="masonry.pkgd.min.js"></script> -->
     <script type="text/javascript" src="masonry-init.js"></script>
     <script>
-
+        $(function () {
+          $('[data-toggle="tooltip"]').tooltip()
+        })
 
         document.querySelectorAll('.property-control').forEach(item => {
             item.addEventListener('click', event => {
