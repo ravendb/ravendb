@@ -16,11 +16,11 @@ namespace Raven.Server.Documents.Subscriptions
         public long DocumentsCount { get; set; }
         public long DocumentsSize { get; set; }
         
-        public long IncludedDocumentsCount { get; set; }
-        public long IncludedDocumentsSize { get; set; }
+        public long NumberOfIncludedDocuments { get; set; }
+        public long SizeOfIncludedDocuments { get; set; }
         
-        public long IncludedCountersCount { get; set; }
-        public long IncludedTimeSeriesEntriesCount { get; set; }
+        public long NumberOfIncludedCounters { get; set; }
+        public long NumberOfIncludedTimeSeriesEntries { get; set; }
         
         public DateTime Started { get; set; }
         public DateTime? Completed { get; set; }

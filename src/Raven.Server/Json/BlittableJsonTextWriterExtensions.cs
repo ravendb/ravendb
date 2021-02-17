@@ -73,11 +73,14 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(connectionStats.Script));
             writer.WriteString(connectionStats.Script);
             writer.WriteComma();
-            
-            writer.WritePropertyName(nameof(connectionStats.Exception));
-            writer.WriteString(connectionStats.Exception);
-            writer.WriteComma();
-            
+
+            if (connectionStats.Exception != null)
+            {
+                writer.WritePropertyName(nameof(connectionStats.Exception));
+                writer.WriteString(connectionStats.Exception);
+                writer.WriteComma();
+            }
+
             writer.WritePropertyName(nameof(connectionStats.Started));
             writer.WriteDateTime(connectionStats.Started, true);
             
@@ -112,20 +115,20 @@ namespace Raven.Server.Json
             writer.WriteInteger(batchStats.DocumentsSize);
             writer.WriteComma();
             
-            writer.WritePropertyName(nameof(batchStats.IncludedDocumentsCount));
-            writer.WriteInteger(batchStats.IncludedDocumentsCount);
+            writer.WritePropertyName(nameof(batchStats.NumberOfIncludedDocuments));
+            writer.WriteInteger(batchStats.NumberOfIncludedDocuments);
             writer.WriteComma();
             
-            writer.WritePropertyName(nameof(batchStats.IncludedDocumentsSize));
-            writer.WriteInteger(batchStats.IncludedDocumentsSize);
+            writer.WritePropertyName(nameof(batchStats.SizeOfIncludedDocuments));
+            writer.WriteInteger(batchStats.SizeOfIncludedDocuments);
             writer.WriteComma();
             
-            writer.WritePropertyName(nameof(batchStats.IncludedCountersCount));
-            writer.WriteInteger(batchStats.IncludedCountersCount);
+            writer.WritePropertyName(nameof(batchStats.NumberOfIncludedCounters));
+            writer.WriteInteger(batchStats.NumberOfIncludedCounters);
             writer.WriteComma();
             
-            writer.WritePropertyName(nameof(batchStats.IncludedTimeSeriesEntriesCount));
-            writer.WriteInteger(batchStats.IncludedTimeSeriesEntriesCount);
+            writer.WritePropertyName(nameof(batchStats.NumberOfIncludedTimeSeriesEntries));
+            writer.WriteInteger(batchStats.NumberOfIncludedTimeSeriesEntries);
             writer.WriteComma();
             
             writer.WritePropertyName(nameof(batchStats.Started));
