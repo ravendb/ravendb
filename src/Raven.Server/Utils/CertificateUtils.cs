@@ -13,16 +13,85 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
+using Raven.Server.Config.Categories;
 using Sparrow;
+using Sparrow.Logging;
 using Sparrow.Platform;
 using BigInteger = Org.BouncyCastle.Math.BigInteger;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Raven.Server.Utils
 {
-    internal class CertificateUtils
+    internal static class CertificateUtils
     {
         private const int BitsPerByte = 8;
+
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(CertificateUtils).FullName);
+
+        internal static bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, SecurityConfiguration securityConfiguration, out string issuerPinningHash)
+        {
+            issuerPinningHash = null;
+            X509Certificate2 issuerCertificate = null;
+
+            var userChain = new X509Chain();
+            var knownCertChain = new X509Chain();
+
+            try
+            {
+                userChain.Build(userCertificate);
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}', failed to build the chain.", e);
+                return false;
+            }
+
+            try
+            {
+                issuerCertificate = userChain.ChainElements.Count > 1
+                    ? userChain.ChainElements[1].Certificate
+                    : userChain.ChainElements[0].Certificate;
+                issuerPinningHash = issuerCertificate.GetPublicKeyPinningHash();
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Cannot extract pinning hash from the client certificate's issuer '{issuerCertificate?.FriendlyName} {issuerCertificate?.Thumbprint}'.", e);
+                return false;
+            }
+
+            var wellKnown = securityConfiguration.WellKnownIssuerHashes;
+            if (wellKnown != null && wellKnown.Contains(issuerPinningHash, StringComparer.Ordinal)) // Case sensitive, base64
+                return true;
+
+            try
+            {
+                knownCertChain.Build(knownCertificate);
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}'. Found a known certificate '{knownCertificate.Thumbprint}' with the same hash but failed to build its chain.", e);
+                return false;
+            }
+
+            if (knownCertChain.ChainElements.Count != userChain.ChainElements.Count)
+                return false;
+
+            for (var i = 0; i < knownCertChain.ChainElements.Count; i++)
+            {
+                // We walk the chain and compare the user certificate vs one of the existing certificate with same pinning hash
+                var currentElementPinningHash = userChain.ChainElements[i].Certificate.GetPublicKeyPinningHash();
+                if (currentElementPinningHash != knownCertChain.ChainElements[i].Certificate.GetPublicKeyPinningHash())
+                {
+                    issuerPinningHash = currentElementPinningHash;
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         public static byte[] CreateSelfSignedTestCertificate(string commonNameValue, string issuerName, StringBuilder log = null)
         {

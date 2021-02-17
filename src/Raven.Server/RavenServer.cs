@@ -35,6 +35,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TcpHandlers;
@@ -1590,7 +1591,7 @@ namespace Raven.Server
 
             // Hash is good, let's validate it was signed by a known issuer, otherwise users can use the private key to register a new cert with a different issuer.
             var goodKnownCert = new X509Certificate2(Convert.FromBase64String(certWithSameHash.Certificate));
-            if (CertHasKnownIssuer(certificate, goodKnownCert, out var issuerHash) == false)
+            if (CertificateUtils.CertHasKnownIssuer(certificate, goodKnownCert, ServerStore.Configuration.Security, out var issuerHash) == false)
             {
                 if (_authAuditLog.IsInfoEnabled)
                     _authAuditLog.Info($"Connection from {remoteAddress} with certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
@@ -1648,73 +1649,6 @@ namespace Raven.Server
             cert = ctx.ReadObject(newCertDef.ToJson(), "Client/Certificate/Definition");
         }
 
-        private bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, out string issuerPinningHash)
-        {
-            issuerPinningHash = null;
-            X509Certificate2 issuerCertificate = null;
-
-            var userChain = new X509Chain();
-            userChain.ChainPolicy.DisableCertificateDownloads = true;
-
-            var knownCertChain = new X509Chain();
-            knownCertChain.ChainPolicy.DisableCertificateDownloads = true;
-
-            try
-            {
-                userChain.Build(userCertificate);
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}', failed to build the chain.", e);
-                return false;
-            }
-
-            try
-            {
-                issuerCertificate = userChain.ChainElements.Count > 1
-                    ? userChain.ChainElements[1].Certificate
-                    : userChain.ChainElements[0].Certificate;
-                issuerPinningHash = issuerCertificate.GetPublicKeyPinningHash();
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Cannot extract pinning hash from the client certificate's issuer '{issuerCertificate?.FriendlyName} {issuerCertificate?.Thumbprint}'.", e);
-                return false;
-            }
-
-            var wellKnown = ServerStore.Configuration.Security.WellKnownIssuerHashes;
-            if (wellKnown != null && wellKnown.Contains(issuerPinningHash, StringComparer.Ordinal)) // Case sensitive, base64
-                return true;
-
-            try
-            {
-                knownCertChain.Build(knownCertificate);
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}'. Found a known certificate '{knownCertificate.Thumbprint}' with the same hash but failed to build its chain.", e);
-                return false;
-            }
-
-            if (knownCertChain.ChainElements.Count != userChain.ChainElements.Count)
-                return false;
-
-            for (var i = 0; i < knownCertChain.ChainElements.Count; i++)
-            {
-                // We walk the chain and compare the user certificate vs one of the existing certificate with same pinning hash
-                var currentElementPinningHash = userChain.ChainElements[i].Certificate.GetPublicKeyPinningHash();
-                if (currentElementPinningHash != knownCertChain.ChainElements[i].Certificate.GetPublicKeyPinningHash())
-                {
-                    issuerPinningHash = currentElementPinningHash;
-                    return false;
-                }
-            }
-
-            return true;
-        }
 
         public string WebUrl { get; private set; }
 
@@ -2496,8 +2430,7 @@ namespace Raven.Server
                                     if (ServerStore.Cluster.IsReplicationCertificate(ctx, header.DatabaseName, info.AuthorizationFor, certificate, out header.ReplicationHubAccess))
                                         return true;
 
-                                    if (ServerStore.Cluster.IsReplicationCertificateByPublicKeyPinningHash(ctx, header.DatabaseName, info.AuthorizationFor, certificate,
-                                        out header.ReplicationHubAccess))
+                                    if (ServerStore.Cluster.IsReplicationCertificateByPublicKeyPinningHash(ctx, header.DatabaseName, info.AuthorizationFor, certificate, configuration.Security, out header.ReplicationHubAccess))
                                     {
                                         RegisterNewReplicationCertificateWithSamePublicKeyPinningHash(tcpClient.Client.RemoteEndPoint.ToString(), header.DatabaseName, info.AuthorizationFor, header.ReplicationHubAccess, certificate);
 
