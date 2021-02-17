@@ -2,7 +2,7 @@ import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import periodicBackupConfiguration = require("models/database/tasks/periodicBackup/periodicBackupConfiguration");
-import testPeriodicBackupCredentialsCommand = require("commands/database/tasks/testPeriodicBackupCredentialsCommand");
+import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testPeriodicBackupCredentialsCommand");
 import getServerWideBackupConfigCommand = require("commands/resources/getServerWideBackupConfigCommand");
 import getServerWideBackupsCommand = require("commands/resources/getServerWideBackupCommand");
 import popoverUtils = require("common/popoverUtils");
@@ -187,7 +187,7 @@ class editServerWideBackup extends viewModelBase {
         bs.isTestingCredentials(true);
         bs.testConnectionResult(null);
 
-        new testPeriodicBackupCredentialsCommand(this.activeDatabase(), bs.connectionType, bs.toDto())
+        new testPeriodicBackupCredentialsCommand(bs.connectionType, bs.toDto())
             .execute()
             .done((result: Raven.Server.Web.System.NodeConnectionTestResult) => {
                 bs.testConnectionResult(result);
