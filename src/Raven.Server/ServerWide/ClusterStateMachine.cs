@@ -3531,22 +3531,22 @@ namespace Raven.Server.ServerWide
                 ServerWideBackupConfiguration.NamePrefix,
                 allServerWideTasksNames);
         }
-        
+
         private static bool IsServerWideExternalReplicationToEdit(BlittableJsonReaderObject databaseTask, string serverWideTaskName, HashSet<string> allServerWideTasksNames)
         {
             return IsServerWideTaskToEdit(
-                databaseTask, 
-                serverWideTaskName, 
-                nameof(ExternalReplication.Name), 
+                databaseTask,
+                serverWideTaskName,
+                nameof(ExternalReplication.Name),
                 ServerWideExternalReplication.NamePrefix,
                 allServerWideTasksNames);
         }
-        
+
         private static bool IsServerWideTaskToEdit(
-            BlittableJsonReaderObject databaseTask, 
-            string serverWideTaskName, 
-            string propName, 
-            string serverWidePrefix, 
+            BlittableJsonReaderObject databaseTask,
+            string serverWideTaskName,
+            string propName,
+            string serverWidePrefix,
             HashSet<string> allServerWideTasksNames)
         {
             if (databaseTask.TryGet(propName, out string taskName) == false || taskName == null)
@@ -3612,7 +3612,7 @@ namespace Raven.Server.ServerWide
             using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
             {
                 var allServerWideTaskNames = GetAllSeverWideExternalReplicationNames(context);
-                
+
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
                     var (key, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
@@ -3726,7 +3726,7 @@ namespace Raven.Server.ServerWide
                 return names;
             }
         }
-        
+
         private void DeleteServerWideBackupConfigurationFromAllDatabases(DeleteServerWideTaskCommand.DeleteConfiguration deleteConfiguration, ClusterOperationContext context, string type, long index)
         {
             if (string.IsNullOrWhiteSpace(deleteConfiguration.TaskName))
@@ -4063,7 +4063,11 @@ namespace Raven.Server.ServerWide
                 using var knownCert = new X509Certificate2(buffer);
 
                 var userChain = new X509Chain();
+                userChain.ChainPolicy.DisableCertificateDownloads = true;
+
                 var knownCertChain = new X509Chain();
+                knownCertChain.ChainPolicy.DisableCertificateDownloads = true;
+
                 try
                 {
                     userChain.Build(userCert);

@@ -582,7 +582,7 @@ namespace Raven.Server
                 // After that we retry every sync interval (from configuration) or if ForceSyncCpuCredits() is called
                 try
                 {
-                    if (sw.Elapsed.TotalSeconds >= (int)Configuration.Server.CpuCreditsExecSyncInterval.AsTimeSpan.TotalSeconds 
+                    if (sw.Elapsed.TotalSeconds >= (int)Configuration.Server.CpuCreditsExecSyncInterval.AsTimeSpan.TotalSeconds
                         || CpuCreditsBalance.ForceSync
                         || (duringStartup && startupRetriesSw.Elapsed.TotalSeconds >= TimeSpan.FromMinutes(1).TotalSeconds)) // Time to wait between retries = 1 minute
                     {
@@ -1582,6 +1582,7 @@ namespace Raven.Server
                 case TcpClient tcp:
                     remoteAddress = tcp.Client.RemoteEndPoint.ToString();
                     break;
+
                 case HttpConnectionFeature http:
                     remoteAddress = $"{http.RemoteIpAddress}:{http.RemotePort}";
                     break;
@@ -1653,7 +1654,10 @@ namespace Raven.Server
             X509Certificate2 issuerCertificate = null;
 
             var userChain = new X509Chain();
+            userChain.ChainPolicy.DisableCertificateDownloads = true;
+
             var knownCertChain = new X509Chain();
+            knownCertChain.ChainPolicy.DisableCertificateDownloads = true;
 
             try
             {
@@ -1857,6 +1861,7 @@ namespace Raven.Server
             {
                 case "localhost.fiddler":
                     return GetListenIpAddresses("localhost");
+
                 default:
                     try
                     {
@@ -2348,10 +2353,12 @@ namespace Raven.Server
                 case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                     SubscriptionConnection.SendSubscriptionDocuments(ServerStore, tcp, bufferToCopy);
                     break;
+
                 case TcpConnectionHeaderMessage.OperationTypes.Replication:
                     var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
                     documentReplicationLoader.AcceptIncomingConnection(tcp, header, cert, bufferToCopy);
                     break;
+
                 default:
                     throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
             }
@@ -2415,13 +2422,16 @@ namespace Raven.Server
                 case AuthenticationStatus.Expired:
                     msg = $"The provided client certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') is expired on {certificate.NotAfter}";
                     return false;
+
                 case AuthenticationStatus.NotYetValid:
                     msg = $"The provided client certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') is not yet valid because it starts on {certificate.NotBefore}";
                     return false;
+
                 case AuthenticationStatus.ClusterAdmin:
                 case AuthenticationStatus.Operator:
                     msg = "Admin can do it all";
                     return true;
+
                 case AuthenticationStatus.Allowed:
                     switch (header.Operation)
                     {
@@ -2429,6 +2439,7 @@ namespace Raven.Server
                         case TcpConnectionHeaderMessage.OperationTypes.Heartbeats:
                             msg = $"{header.Operation} is a server-wide operation and the certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') is not ClusterAdmin/Operator";
                             return false;
+
                         case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                         case TcpConnectionHeaderMessage.OperationTypes.Replication:
                         case TcpConnectionHeaderMessage.OperationTypes.TestConnection:
@@ -2441,6 +2452,7 @@ namespace Raven.Server
                                 return true;
                             msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName}";
                             return false;
+
                         default:
                             throw new InvalidOperationException("Unknown operation " + header.Operation);
                     }
@@ -2448,6 +2460,7 @@ namespace Raven.Server
                     msg = $"The client certificate {certificate.FriendlyName} is not registered in the cluster. Tried to allow the connection implicitly based on the client certificate's Public Key Pinning Hash but the client certificate was signed by an unknown issuer - closing the connection. " +
                           $"To fix this, the admin can register the pinning hash of the *issuer* certificate: '{auth.IssuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry. Alternatively, the admin can register the actual certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') explicitly in the cluster.";
                     return false;
+
                 case AuthenticationStatus.UnfamiliarCertificate:
                     var info = header.AuthorizeInfo;
                     switch (info?.AuthorizeAs)
@@ -2523,9 +2536,9 @@ namespace Raven.Server
                     };
 
                     await ServerStore.SendToLeaderAsync(new RegisterReplicationHubAccessCommand(database, hub, access, certificate, RaftIdGenerator.NewId())
-                        {
-                            RegisteringSamePublicKeyPinningHash = true
-                        })
+                    {
+                        RegisteringSamePublicKeyPinningHash = true
+                    })
                         .ConfigureAwait(false);
                 }
                 catch (Exception e)
