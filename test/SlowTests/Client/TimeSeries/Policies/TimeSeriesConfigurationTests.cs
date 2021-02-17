@@ -1382,7 +1382,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                await Task.Delay((TimeSpan)(p4.RetentionTime + TimeValue.FromSeconds(10)));
+                await Task.Delay((TimeSpan)(p4.RetentionTime + TimeValue.FromSeconds(30)));
                 // nothing should be left
 
                 foreach (var node in cluster.Nodes)
