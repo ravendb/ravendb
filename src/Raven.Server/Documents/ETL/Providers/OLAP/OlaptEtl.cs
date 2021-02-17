@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             foreach (var transformed in records)
             {
                 var localPath = GetPath(transformed, out var remotePath);
-                transformed.GenerateFileFromItems(localPath, Logger);
+                count += transformed.GenerateFileFromItems(localPath, Logger);
 
                 using (Stream fileStream = File.OpenRead(localPath))
                 {

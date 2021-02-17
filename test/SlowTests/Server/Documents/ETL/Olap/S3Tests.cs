@@ -10,6 +10,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Tests.Infrastructure;
 using Xunit;
@@ -76,7 +77,7 @@ loadToOrders(key,
     })
 ";
                 var settings = GetS3Settings();
-                SetupS3ParquetEtl(store, script, settings, TimeSpan.FromMinutes(10));
+                SetupS3OlapEtl(store, script, settings, TimeSpan.FromMinutes(10));
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -126,13 +127,12 @@ var key = new Date(year, month);
 
 loadToOrders(key,
     {
-        OrderId: id(this),
         Company : this.Company,
         ShipVia : this.ShipVia
     })
 ";
                 var settings = GetS3Settings();
-                SetupS3ParquetEtl(store, script, settings, TimeSpan.FromMinutes(10));
+                SetupS3OlapEtl(store, script, settings, TimeSpan.FromMinutes(10));
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -151,7 +151,7 @@ loadToOrders(key,
                     {
                         Assert.Equal(1, parquetReader.RowGroupCount);
 
-                        var expectedFields = new[] { "OrderId", "Company" };
+                        var expectedFields = new[] { "Company", ParquetTransformedItems.IdField, ParquetTransformedItems.LastModifiedField };
 
                         Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
 
@@ -163,12 +163,15 @@ loadToOrders(key,
                             var data = rowGroupReader.ReadColumn((DataField)field).Data;
                             Assert.True(data.Length == 10);
 
+                            if (field.Name == ParquetTransformedItems.LastModifiedField)
+                                continue;
+
                             var count = 1;
                             foreach (var val in data)
                             {
                                 switch (field.Name)
                                 {
-                                    case "OrderId":
+                                    case ParquetTransformedItems.IdField:
                                         Assert.Equal($"orders/{count}", val);
                                         break;
                                     case "Company":
@@ -177,7 +180,6 @@ loadToOrders(key,
                                 }
 
                                 count++;
-
                             }
                         }
                     }
@@ -185,7 +187,7 @@ loadToOrders(key,
             }
         }
 
-        protected void SetupS3ParquetEtl(DocumentStore store, string script, S3Settings settings, TimeSpan frequency)
+        protected void SetupS3OlapEtl(DocumentStore store, string script, S3Settings settings, TimeSpan frequency)
         {
             var connectionStringName = $"{store.Database} to S3";
 
