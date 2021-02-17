@@ -265,7 +265,7 @@ namespace Raven.Server.Web.Studio
             public string ErrorMessage { get; set; }
         }
 
-        [RavenAction("/studio-tasks/periodic-backup/test-credentials", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/studio-tasks/periodic-backup/test-credentials", "POST", AuthorizationStatus.ValidUser)]
         public async Task TestPeriodicBackupCredentials()
         {
             var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
