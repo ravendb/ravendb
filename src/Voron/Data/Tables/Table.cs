@@ -350,6 +350,9 @@ namespace Voron.Data.Tables
                     // MemoryCopy into final position.
                     page.OverflowSize = builder.Size;
 
+                    if (builder.Compressed)
+                        page.Flags |= PageFlags.Compressed;
+
                     builder.CopyTo(pos);
 
                     return id;
