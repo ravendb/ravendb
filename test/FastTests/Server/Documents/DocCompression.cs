@@ -261,7 +261,7 @@ namespace FastTests.Server.Documents
             public string HumaneAllocatedSize { get; set; }
         }
 
-        private class GetDocumentSize : RavenCommand<DocumentSize>
+        internal class GetDocumentSize : RavenCommand<DocumentSize>
         {
             private readonly string _id;
             public override bool IsReadRequest => true;
