@@ -20,6 +20,9 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private DateTimeOffset[] _dtoArr;
         private TimeSpan[] _tsArr;
 
+        public const string IdField = "_id";
+        public const string LastModifiedField = "_lastModifiedTicks";
+
         public ParquetTransformedItems(string name, string key) : base(OlapEtlFileFormat.Parquet)
         {
             CollectionName = name;
@@ -47,7 +50,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private Dictionary<string, DataField> GenerateDataFields()
         {
-            var fields = new Dictionary<string, DataField>(_dataFields.Count);
+            var fields = new Dictionary<string, DataField>(_dataFields.Count + 2);
 
             foreach (var kvp in _dataFields)
             {
@@ -56,6 +59,9 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
                 fields[kvp.Key] = new DataField(kvp.Key, kvp.Value);
             }
+
+            fields[IdField] = new DataField(IdField, DataType.String);
+            fields[LastModifiedField] = new DataField(LastModifiedField, DataType.Int64);
 
             return fields;
         }
@@ -82,6 +88,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private void WriteGroup(ParquetWriter parquetWriter, RowGroup group)
         {
+            AddMandatoryFields(group);
+
             using (ParquetRowGroupWriter groupWriter = parquetWriter.CreateRowGroup())
             {
                 foreach (var kvp in group.Data)
@@ -133,11 +141,19 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _tsArr = null;
         }
 
+        private static void AddMandatoryFields(RowGroup group)
+        {
+            group.Data[IdField] = group.Ids;
+            group.Data[LastModifiedField] = group.LastModified;
+        }
+
         public override void AddItem(ToOlapItem item)
         {
-            var group = GetCurrentGroup();
-            group.Ids.Add(item.DocumentId);
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var group = GetCurrentGroup();
+            
+            group.Ids.Add(item.DocumentId);
+            group.LastModified.Add(item.Document.LastModified.Ticks);
             
             foreach (var prop in item.Properties)
             {
@@ -227,9 +243,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     throw new InvalidOperationException($"Failed to add value '{prop.Value}' to DataField of type '{dataType}'. " +
                                                         $"On document '{item.DocumentId}', property '{prop.Id}'", e);
                 }
-
             }
-
 
             foreach (var kvp in _dataFields)
             {
