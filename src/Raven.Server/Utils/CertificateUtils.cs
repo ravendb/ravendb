@@ -34,7 +34,14 @@ namespace Raven.Server.Utils
             X509Certificate2 issuerCertificate = null;
 
             var userChain = new X509Chain();
+            // we are not disabling certificate downloads because this method is checking public key pinning hashes
+            // in order to do that properly it needs to be able to verify the chain by download the certificates
+            // userChain.ChainPolicy.DisableCertificateDownloads = true;
+
             var knownCertChain = new X509Chain();
+            // we are not disabling certificate downloads because this method is checking public key pinning hashes
+            // in order to do that properly it needs to be able to verify the chain by download the certificates
+            //knownCertChain.ChainPolicy.DisableCertificateDownloads = true;
 
             try
             {
