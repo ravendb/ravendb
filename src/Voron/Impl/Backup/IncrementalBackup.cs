@@ -16,6 +16,7 @@ using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Voron.Impl.Journal;
 using Voron.Global;
+using Voron.Impl.FileHeaders;
 using Voron.Util;
 using Voron.Util.Settings;
 
@@ -386,7 +387,7 @@ namespace Voron.Impl.Backup
                             using (var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, new HashSet<long>(), new JournalInfo
                             {
                                 LastSyncedTransactionId = lastTxId
-                            }, lastTxHeader))
+                            }, new FileHeader { HeaderRevision = -1 }, lastTxHeader))
                             {
                                 while (reader.ReadOneTransactionToDataFile(env.Options))
                                 {
