@@ -157,6 +157,7 @@ namespace Voron.Impl.Journal
             var requireHeaderUpdate = false;
 
             var logInfo = _headerAccessor.Get(ptr => ptr->Journal);
+            var currentFileHeader = _headerAccessor.Get(ptr => *ptr);
 
             if (_env.Options.IncrementalBackupEnabled == false && _env.Options.CopyOnWriteMode == false)
             {
@@ -202,7 +203,7 @@ namespace Voron.Impl.Journal
                             deleteLastJournal = isMoreThanMaxFileSize;
 
                         var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
-                        using (var journalReader = new JournalReader(pager, _dataPager, recoveryPager, modifiedPages, logInfo, transactionHeader))
+                        using (var journalReader = new JournalReader(pager, _dataPager, recoveryPager, modifiedPages, logInfo, currentFileHeader, transactionHeader))
                         {
                             var transactionHeaders = journalReader.RecoverAndValidate(_env.Options);
 
