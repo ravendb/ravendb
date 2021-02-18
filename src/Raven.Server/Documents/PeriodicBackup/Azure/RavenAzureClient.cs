@@ -44,7 +44,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public static bool TestMode;
 
-
         public string RemoteFolderName { get; }
 
         public RavenAzureClient(AzureSettings azureSettings, Progress progress = null, Logger logger = null, CancellationToken? cancellationToken = null)
@@ -68,7 +67,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             if (string.IsNullOrWhiteSpace(azureSettings.StorageContainer))
                 throw new ArgumentException($"{nameof(AzureSettings.StorageContainer)} cannot be null or empty");
-
 
             if (hasAccountKey)
             {
@@ -274,7 +272,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
                     if (retryCount == MaxRetriesForMultiPartUpload)
                         throw StorageException.FromResponseMessage(response);
-
                 }
                 catch (Exception)
                 {
@@ -667,7 +664,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);
 
-            using var stream = response.Content.ReadAsStreamAsync().Result;
+            using var contentStream = response.Content.ReadAsStreamAsync().Result;
+            using var stream = new MemoryStream();
+
+            contentStream.CopyTo(stream);
+            stream.Position = 0;
+
             using var reader = new StreamReader(stream);
 
             const string statusCode = "StatusCode";
@@ -708,7 +710,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                     var r = line.Split(": ");
                     responseDictionary[r.First()] = r.Last();
                     line = reader.ReadLine();
-
                 }
 
                 if (responseDictionary.TryGetValue(xMsClientRequestId, out var responseDictionaryValue) &&
@@ -719,7 +720,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 else
                 {
                     stream.Position = 0;
-                    var fullResponse = reader.ReadToEndAsync().Result;
+                    var fullResponse = reader.ReadToEnd();
                     throw new InvalidOperationException($"Failed to get {xMsClientRequestId}, full response: {fullResponse}");
                 }
 
