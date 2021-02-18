@@ -710,7 +710,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                     line = reader.ReadLine();
 
                 }
-                result[blobsWithIds[responseDictionary["x-ms-client-request-id"]]] = responseDictionary;
+
+                if (responseDictionary.TryGetValue(xMsClientRequestId, out var responseDictionaryValue) &&
+                    blobsWithIds.TryGetValue(responseDictionaryValue, out var blob))
+                {
+                    result[blob] = responseDictionary;
+                }
+                else
+                {
+                    stream.Position = 0;
+                    var fullResponse = reader.ReadToEndAsync().Result;
+                    throw new InvalidOperationException($"Failed to get {xMsClientRequestId}, full response: {fullResponse}");
+                }
 
                 if (responseDictionary.TryGetValue("x-ms-error-code", out _))
                 {
