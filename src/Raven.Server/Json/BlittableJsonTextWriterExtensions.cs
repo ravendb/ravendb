@@ -74,12 +74,9 @@ namespace Raven.Server.Json
             writer.WriteString(connectionStats.Script);
             writer.WriteComma();
 
-            if (connectionStats.Exception != null)
-            {
-                writer.WritePropertyName(nameof(connectionStats.Exception));
-                writer.WriteString(connectionStats.Exception);
-                writer.WriteComma();
-            }
+            writer.WritePropertyName(nameof(connectionStats.Exception));
+            writer.WriteString(connectionStats.Exception);
+            writer.WriteComma();
 
             writer.WritePropertyName(nameof(connectionStats.Started));
             writer.WriteDateTime(connectionStats.Started, true);
