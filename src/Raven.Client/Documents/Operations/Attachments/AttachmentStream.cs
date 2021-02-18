@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
@@ -38,6 +40,11 @@ namespace Raven.Client.Documents.Operations.Attachments
             return _stream.Read(buffer, offset, count);
         }
 
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            return _stream.ReadAsync(buffer, offset, count, cancellationToken);
+        }
+
         public override long Seek(long offset, SeekOrigin origin)
         {
             return _stream.Seek(offset, origin);
@@ -51,6 +58,12 @@ namespace Raven.Client.Documents.Operations.Attachments
         public override void Write(byte[] buffer, int offset, int count)
         {
             ThrowNotWritableStream();
+        }
+
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            ThrowNotWritableStream();
+            return Task.CompletedTask;
         }
 
         public override bool CanRead { get; } = true;
