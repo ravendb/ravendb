@@ -2233,7 +2233,7 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Spatial_Contains:
                     case MethodType.Spatial_Disjoint:
                     case MethodType.Spatial_Intersects:
-                        HandleSpatial(methodName.Value, arguments, withoutAlias: false, parameters);
+                        HandleSpatial(methodName.Value, arguments, withoutAlias: true, parameters);
                         return;
 
                     case MethodType.MoreLikeThis:
@@ -2395,7 +2395,29 @@ namespace Raven.Server.Documents.Queries
                             throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() or wkt() method", QueryText, parameters);
                     }
 
-                    fieldName = new QueryFieldName(spatialExpression.GetText(null), false);
+                    fieldName = new QueryFieldName(GetSpatialFieldName(), false);
+
+                    string GetSpatialFieldName()
+                    {
+                        var sb = new StringBuilder();
+                        sb
+                            .Append(spatialExpression.Name.ToString())
+                            .Append("(");
+
+                        for (var i = 0; i < spatialExpression.Arguments.Count; i++)
+                        {
+                            if (i != 0)
+                                sb.Append(", ");
+
+                            var fieldName = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[i], withoutAlias, spatialExpression.Name.Value, parameters, QueryText).Value;
+                            sb.Append(fieldName);
+                        }
+
+                        sb
+                            .Append(")");
+
+                        return sb.ToString();
+                    }
                 }
 
                 if (arguments.Count < 2 || arguments.Count > 3)
