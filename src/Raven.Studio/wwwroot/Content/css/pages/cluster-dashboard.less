@@ -336,16 +336,44 @@
                         margin: @gutter-xxs auto 0;
                         width: 80px;
                     }
+                    .storage-legend { 
+                        display: flex;
+                        font-size: 11px;
 
+                        &>div {
+                            line-height: 1em;
+                            margin-bottom: @gutter-xxs;
+                            
+                            &+div {
+                                margin-left: @gutter-sm;
+                            }
+                        }
+
+                        .storage-ravendb {
+                            color: @brand-primary
+                        }
+
+                        .storage-used {
+                            color: @color-2;
+                        }
+
+                        .storage-free {
+                            
+                        }
+                        .storage-total {                            
+                            text-align: right;
+                            color: @text-emphasis;
+                        }
+                    }
                     
                     .storage-chart {
                         display: flex;
                         width: 100%;
-                        height: @gutter-sm;
+                        height: @gutter-xxs;
                         box-shadow: 0 0 0 1px @hr-border inset;
                         font-size: 11px;
     
-                        &+.storage-chart {
+                        &+.storage-legend {
                             margin-top: @gutter-xs;
                         }
                         
@@ -364,10 +392,12 @@
                         .storage-ravendb {
                             background-color: @brand-primary;
                             color: @black;
+                            height: 100%;
                         }   
     
                         .storage-used {
-                            background-color: @panel-bg;
+                            background-color: @color-2;
+                            padding: 1px
                         }
 
                         .storage-free {                            
@@ -418,8 +448,13 @@
                         padding: @gutter-xs;
 
                         .nodes-item-header {
-                            flex-shrink: 0;
-                            width: 130px;
+                            flex-shrink: 0;                            
+                            align-self: flex-start;
+                            min-height: 30px;
+
+                            .node-label {
+                                margin-right: @gutter-xs;
+                            }
                         }
 
                         .details-list {
@@ -463,6 +498,12 @@
         }
     }
 
+    .header-row {
+        background-color: @panel-bg;
+        border-top: 1px solid @hr-border;
+        border-bottom: 1px dashed @hr-border;
+    }
+
     .databases-list {
         min-height: 300px;
         display: flex;
@@ -493,12 +534,11 @@
         display: grid;
         grid-gap: @gutter-sm;
         grid-template: 
-            "graph graph graph" auto
-            "task node connection" auto / 1fr 1fr 1fr;
+            "graph graph" auto
+            "node connection" auto / 1fr 1fr;
 
         @media (min-width: @screen-xl) {
-            grid-template: 
-            "graph task" auto
+            grid-template:             
             "graph node" auto
             "graph connection" 1fr /  1fr auto;
         }
@@ -563,6 +603,7 @@
         .node-label {
             background-color: @gray-300;
             color: #22252b;
+            font-size: 10px;
             font-weight: 800;
             display: inline-block;
             width: 15px;
@@ -618,7 +659,7 @@
     bottom: 50px;
     right: @gutter;
     background-color: @brand-primary;
-    color: @gray-100;
+    color: @white;
     border: none;
     border-radius: 100px;
     width: @gutter-md;
@@ -626,6 +667,7 @@
     line-height: @gutter-md;
     padding: 0;
     box-shadow: 0 10px 20px 2px fadeout(@gray-base, 55%);
+    z-index: 100;
 
     &:hover {
         background-color: @brand-primary-light;
@@ -636,11 +678,11 @@
     display: flex;
     flex-wrap: wrap;    
 
-    .widget-item {
-        background-color: @panel-bg;        
+    .widget-item {               
         padding: @gutter-sm/2;
         width: 25%;
-        transition: transform .2s ease;
+        transition: transform .2s cubic-bezier(0, 0.5, 0.5, 1);
+        transform-origin: bottom center;
 
         .widget-name {
             text-align: center;
@@ -651,9 +693,35 @@
             font-weight: bold;
         }
 
-        &:hover {
-            scale: 1.1;
+        &::before {
+            content: 'ADD';
+            display: block;            
+            background-color: @panel-bg;
+            color: @text-color;
+            border-radius: 40px;
+            text-align: center;
+            font-size: 14px;
+            padding: @gutter-xs @gutter-sm;
+            font-weight: bold;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translateX(-50%) translatey(-50%) scale(.9);
+            opacity: 0;
+            transition: all .15s cubic-bezier(0, 0.5, 0.5, 1);
+            
         }
+
+        &:hover {
+            transform: scale(1.05);            
+
+            &::before {
+                transform: translateX(-50%) translatey(-50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        
     }
 }
 
