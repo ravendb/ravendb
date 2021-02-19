@@ -32,6 +32,7 @@ namespace Voron.Impl
         private readonly Timer _cleanupTimer;
         private long _generation;
         public bool Disabled;
+        private long _currentlyInUseBytes;
 
         public long Generation => _generation;
 
@@ -82,8 +83,12 @@ namespace Voron.Impl
             {
                 // We don't want to pool large buffers
                 size = numberOfPages * Constants.Storage.PageSize;
+                Interlocked.Add(ref _currentlyInUseBytes, size);
+
                 return PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out thread);
             }
+
+            Interlocked.Add(ref _currentlyInUseBytes, size);
 
             var index = Bits.MostSignificantBit(size);
             NativeAllocation allocation;
@@ -122,6 +127,8 @@ namespace Voron.Impl
         {
             if (ptr == null)
                 return;
+
+            Interlocked.Add(ref _currentlyInUseBytes, -size);
 
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
@@ -214,6 +221,7 @@ namespace Voron.Impl
         {
             var stats = new EncryptionBufferStats();
             stats.Disabled = Disabled;
+            stats.CurrentlyInUseSize = _currentlyInUseBytes;
 
             for (int i = 0; i < _items.Length; i++)
             {
@@ -249,7 +257,7 @@ namespace Voron.Impl
 
                 if (numberOfItems > 0)
                 {
-                    stats.TotalSize += totalStackSize;
+                    stats.TotalPoolSize += totalStackSize;
                     stats.TotalNumberOfItems += numberOfItems;
 
                     stats.Details.Add(new EncryptionBufferStats.AllocationInfo
@@ -263,7 +271,7 @@ namespace Voron.Impl
 
                 if (numberOfGlobalStackItems > 0)
                 {
-                    stats.TotalSize += totalGlobalStackSize;
+                    stats.TotalPoolSize += totalGlobalStackSize;
                     stats.TotalNumberOfItems += numberOfGlobalStackItems;
 
                     stats.Details.Add(new EncryptionBufferStats.AllocationInfo
@@ -410,9 +418,13 @@ namespace Voron.Impl
 
         public List<AllocationInfo> Details { get; private set; }
 
-        public long TotalSize { get; set; }
+        public long TotalPoolSize { get; set; }
 
-        public Size TotalSizeHumane => new Size(TotalSize, SizeUnit.Bytes);
+        public long CurrentlyInUseSize { get; set; }
+
+        public Size CurrentlyInUseSizeHumane => new Size(CurrentlyInUseSize, SizeUnit.Bytes);
+
+        public Size TotalPoolSizeHumane => new Size(TotalPoolSize, SizeUnit.Bytes);
 
         public long TotalNumberOfItems { get; set; }
 
@@ -455,8 +467,10 @@ namespace Voron.Impl
             return new DynamicJsonValue
             {
                 [nameof(Disabled)] = Disabled,
-                [nameof(TotalSize)] = TotalSize,
-                [nameof(TotalSizeHumane)] = TotalSizeHumane.ToString(),
+                [nameof(CurrentlyInUseSize)] = CurrentlyInUseSize,
+                [nameof(CurrentlyInUseSizeHumane)] = CurrentlyInUseSizeHumane.ToString(),
+                [nameof(TotalPoolSize)] = TotalPoolSize,
+                [nameof(TotalPoolSizeHumane)] = TotalPoolSizeHumane.ToString(),
                 [nameof(TotalNumberOfItems)] = TotalNumberOfItems,
                 [nameof(Details)] = Details.OrderByDescending(x => x.TotalSize).Select(x => x.ToJson())
             };
