@@ -1090,7 +1090,7 @@ namespace Raven.Server.Documents.Queries
             else
             {
                 var spatialExpression = (MethodExpression)expression.Arguments[0];
-                fieldName = spatialExpression.GetText(null);
+                fieldName = metadata.GetSpatialFieldName(spatialExpression, parameters);
             }
 
             var shapeExpression = (MethodExpression)expression.Arguments[1];

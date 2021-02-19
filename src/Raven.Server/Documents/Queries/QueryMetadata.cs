@@ -2395,29 +2395,7 @@ namespace Raven.Server.Documents.Queries
                             throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() or wkt() method", QueryText, parameters);
                     }
 
-                    fieldName = new QueryFieldName(GetSpatialFieldName(), false);
-
-                    string GetSpatialFieldName()
-                    {
-                        var sb = new StringBuilder();
-                        sb
-                            .Append(spatialExpression.Name.ToString())
-                            .Append("(");
-
-                        for (var i = 0; i < spatialExpression.Arguments.Count; i++)
-                        {
-                            if (i != 0)
-                                sb.Append(", ");
-
-                            var fieldName = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[i], withoutAlias, spatialExpression.Name.Value, parameters, QueryText).Value;
-                            sb.Append(fieldName);
-                        }
-
-                        sb
-                            .Append(")");
-
-                        return sb.ToString();
-                    }
+                    fieldName = new QueryFieldName(_metadata.GetSpatialFieldName(spatialExpression, parameters), false);
                 }
 
                 if (arguments.Count < 2 || arguments.Count > 3)
@@ -2567,6 +2545,28 @@ namespace Raven.Server.Documents.Queries
                 _metadata.SpatialShapes ??= new List<SpatialShapeBase>();
                 _metadata.SpatialShapes.Add(spatialShape);
             }
+        }
+
+        internal string GetSpatialFieldName(MethodExpression spatialExpression, BlittableJsonReaderObject parameters)
+        {
+            var sb = new StringBuilder();
+            sb
+                .Append(spatialExpression.Name.ToString())
+                .Append("(");
+
+            for (var i = 0; i < spatialExpression.Arguments.Count; i++)
+            {
+                if (i != 0)
+                    sb.Append(", ");
+
+                var fieldName = ExtractFieldNameFromArgument(spatialExpression.Arguments[i], withoutAlias: true, spatialExpression.Name.Value, parameters, QueryText).Value;
+                sb.Append(fieldName);
+            }
+
+            sb
+                .Append(")");
+
+            return sb.ToString();
         }
 
         private QueryFieldName ExtractFieldNameFromFirstArgument(List<QueryExpression> arguments, string methodName, BlittableJsonReaderObject parameters)
