@@ -43,7 +43,7 @@ namespace Sparrow.Json
         private PathCache _activeAllocatePathCaches;
         private readonly Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
 
-        private static readonly PerCoreContainer<FastList<LazyStringValue>> _perCoreLazyStringValuesList = new PerCoreContainer<FastList<LazyStringValue>>();
+        private static readonly PerCoreContainer<FastList<LazyStringValue>> _perCoreLazyStringValuesList = new PerCoreContainer<FastList<LazyStringValue>>(32);
         private int _numberOfAllocatedStringsValues;
         private FastList<LazyStringValue> _allocateStringValues;
 
