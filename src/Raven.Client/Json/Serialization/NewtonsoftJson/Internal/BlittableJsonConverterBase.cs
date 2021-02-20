@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
@@ -240,10 +240,34 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
         }
 
+        internal class TypeCacheItem : IEquatable<TypeCacheItem>
+        {
+            public string Property;
+            public Type Type;
+
+            public bool Equals(TypeCacheItem other)
+            {
+                if (other == null)
+                    return false;
+                return this.Type == other.Type && this.Property == other.Property;
+            }
+
+            public override int GetHashCode()
+            {
+                return Sparrow.Hashing.HashCombiner.CombineInline(Property.GetHashCode(), Type.GetHashCode());
+            }
+        }
+
+        private static Dictionary<TypeCacheItem, Type> _propertyTypeCache = new();
+
         internal static Type GetPropertyType(string propertyName, Type rootType)
         {
             if (rootType == null)
                 return null;
+
+            var item = new TypeCacheItem() { Property = propertyName, Type = rootType };
+            if (_propertyTypeCache.TryGetValue(item, out var result))
+                return result;
 
             MemberInfo memberInfo = null;
             try
@@ -269,15 +293,21 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                 }
             }
 
+            Type type = null;
             switch (memberInfo)
             {
                 case PropertyInfo pi:
-                    return pi.PropertyType;
+                    type = pi.PropertyType;
+                    break;
                 case FieldInfo fi:
-                    return fi.FieldType;
-                default:
-                    return null;
+                    type = fi.FieldType;
+                    break;
             }
+
+            var dict = new Dictionary<TypeCacheItem, Type>(_propertyTypeCache);
+            dict[item] = type;
+            _propertyTypeCache = dict;
+            return type;
         }
     }
 }
