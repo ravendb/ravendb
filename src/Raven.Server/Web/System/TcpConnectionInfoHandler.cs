@@ -140,7 +140,7 @@ namespace Raven.Server.Web.System
                                 if (serverStore.Cluster.IsReplicationCertificate(context, database, remoteTask, cert, out _))
                                     return true;
 
-                                if (serverStore.Cluster.IsReplicationCertificateByPublicKeyPinningHash(context, database, remoteTask, cert, out _))
+                                if (serverStore.Cluster.IsReplicationCertificateByPublicKeyPinningHash(context, database, remoteTask, cert, serverStore.Configuration.Security, out _))
                                     return true;
                             }
                         }

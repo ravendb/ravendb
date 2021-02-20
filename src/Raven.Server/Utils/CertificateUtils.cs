@@ -13,17 +13,92 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
-using Raven.Server.ServerWide;
+using Raven.Server.Config.Categories;
 using Sparrow;
+using Sparrow.Logging;
 using Sparrow.Platform;
 using BigInteger = Org.BouncyCastle.Math.BigInteger;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Raven.Server.Utils
 {
-    internal class CertificateUtils
+    internal static class CertificateUtils
     {
-        private const int BitsPerByte = 8; 
+        private const int BitsPerByte = 8;
+
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(CertificateUtils).FullName);
+
+        internal static bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, SecurityConfiguration securityConfiguration, out string issuerPinningHash)
+        {
+            issuerPinningHash = null;
+            X509Certificate2 issuerCertificate = null;
+
+            var userChain = new X509Chain();
+            // we are not disabling certificate downloads because this method is checking public key pinning hashes
+            // in order to do that properly it needs to be able to verify the chain by download the certificates
+            // userChain.ChainPolicy.DisableCertificateDownloads = true;
+
+            var knownCertChain = new X509Chain();
+            // we are not disabling certificate downloads because this method is checking public key pinning hashes
+            // in order to do that properly it needs to be able to verify the chain by download the certificates
+            //knownCertChain.ChainPolicy.DisableCertificateDownloads = true;
+
+            try
+            {
+                userChain.Build(userCertificate);
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}', failed to build the chain.", e);
+                return false;
+            }
+
+            try
+            {
+                issuerCertificate = userChain.ChainElements.Count > 1
+                    ? userChain.ChainElements[1].Certificate
+                    : userChain.ChainElements[0].Certificate;
+                issuerPinningHash = issuerCertificate.GetPublicKeyPinningHash();
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Cannot extract pinning hash from the client certificate's issuer '{issuerCertificate?.FriendlyName} {issuerCertificate?.Thumbprint}'.", e);
+                return false;
+            }
+
+            var wellKnown = securityConfiguration.WellKnownIssuerHashes;
+            if (wellKnown != null && wellKnown.Contains(issuerPinningHash, StringComparer.Ordinal)) // Case sensitive, base64
+                return true;
+
+            try
+            {
+                knownCertChain.Build(knownCertificate);
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}'. Found a known certificate '{knownCertificate.Thumbprint}' with the same hash but failed to build its chain.", e);
+                return false;
+            }
+
+            if (knownCertChain.ChainElements.Count != userChain.ChainElements.Count)
+                return false;
+
+            for (var i = 0; i < knownCertChain.ChainElements.Count; i++)
+            {
+                // We walk the chain and compare the user certificate vs one of the existing certificate with same pinning hash
+                var currentElementPinningHash = userChain.ChainElements[i].Certificate.GetPublicKeyPinningHash();
+                if (currentElementPinningHash != knownCertChain.ChainElements[i].Certificate.GetPublicKeyPinningHash())
+                {
+                    issuerPinningHash = currentElementPinningHash;
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         public static byte[] CreateSelfSignedTestCertificate(string commonNameValue, string issuerName, StringBuilder log = null)
         {
@@ -32,7 +107,7 @@ namespace Raven.Server.Utils
             CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, DateTime.UtcNow.Date.AddMonths(3), out var certBytes, log: log);
             var selfSignedCertificateBasedOnPrivateKey = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
             selfSignedCertificateBasedOnPrivateKey.Verify();
-            
+
             // We had a problem where we didn't cleanup the user store in Linux (~/.dotnet/corefx/cryptography/x509stores/ca)
             // and it exploded with thousands of certificates. This caused ssl handshakes to fail on that machine, because it would timeout when
             // trying to match one of these certs to validate the chain
@@ -74,6 +149,8 @@ namespace Raven.Server.Utils
                         continue;
 
                     var chain = new X509Chain();
+                    chain.ChainPolicy.DisableCertificateDownloads = true;
+
                     chain.Build(c);
 
                     foreach (var element in chain.ChainElements)
@@ -113,7 +190,7 @@ namespace Raven.Server.Utils
 
             store.Load(new MemoryStream(certBytes), Array.Empty<char>());
             store.SetCertificateEntry(serverCert.SubjectDN.ToString(), new X509CertificateEntry(serverCert));
-            
+
             var memoryStream = new MemoryStream();
             store.Save(memoryStream, Array.Empty<char>(), GetSeededSecureRandom());
             certBytes = memoryStream.ToArray();
@@ -135,7 +212,7 @@ namespace Raven.Server.Utils
         public static X509Certificate2 CreateSelfSignedExpiredClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder)
         {
             var readCertificate = new X509CertificateParser().ReadCertificate(certificateHolder.Certificate.Export(X509ContentType.Cert));
-            
+
             CreateSelfSignedCertificateBasedOnPrivateKey(
                 commonNameValue,
                 readCertificate.SubjectDN,
@@ -148,8 +225,8 @@ namespace Raven.Server.Utils
             return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
         }
 
-        public static void CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue, 
-            X509Name issuer, 
+        public static void CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue,
+            X509Name issuer,
             (AsymmetricKeyParameter PrivateKey, AsymmetricKeyParameter PublicKey) issuerKeyPair,
             bool isClientCertificate,
             bool isCaCertificate,
@@ -208,7 +285,7 @@ namespace Raven.Server.Utils
             certificateGenerator.SetNotAfter(notAfter);
             log?.AppendLine($"notBefore = {notBefore}");
             log?.AppendLine($"notAfter = {notAfter}");
-            
+
             if (subjectKeyPair == null)
                 subjectKeyPair = GetRsaKey();
 
@@ -233,7 +310,7 @@ namespace Raven.Server.Utils
             log?.AppendLine($"cert in base64 = {Convert.ToBase64String(certBytes)}");
         }
 
-        public static void CreateCertificateAuthorityCertificate(string commonNameValue, 
+        public static void CreateCertificateAuthorityCertificate(string commonNameValue,
             out (AsymmetricKeyParameter PrivateKey, AsymmetricKeyParameter PublicKey) ca,
             out X509Name name, StringBuilder log = null)
         {
@@ -283,7 +360,7 @@ namespace Raven.Server.Utils
         }
 
         // generating this can take a while, so we cache that at the process level, to significantly speed up the tests
-        private static Lazy<(byte[] Private, byte[] Public)> 
+        private static Lazy<(byte[] Private, byte[] Public)>
             caKeyPair = new Lazy<(byte[] Private, byte[] Public)>(GenerateKey);
 
         private static (byte[] Private, byte[] Public) GenerateKey()
@@ -339,7 +416,7 @@ namespace Raven.Server.Utils
                 Certificate  ::=  SEQUENCE  {
                     tbsCertificate       TBSCertificate,
                     signatureAlgorithm   AlgorithmIdentifier,
-                    signatureValue       BIT STRING  
+                    signatureValue       BIT STRING
                 }
 
                TBSCertificate  ::=  SEQUENCE  {
@@ -371,8 +448,8 @@ namespace Raven.Server.Utils
                 ptr = AsnNext(ptr, ref bufferLength, false, true);  // skip tbsCertificate.Signature
                 ptr = AsnNext(ptr, ref bufferLength, false, true);  // skip tbsCertificate.Issuer
                 ptr = AsnNext(ptr, ref bufferLength, false, true);  // skip tbsCertificate.Validity
-                ptr = AsnNext(ptr, ref bufferLength, false, true);  // skip tbsCertificate.Subject  
-                ptr = AsnNext(ptr, ref bufferLength, false, false); // get tbsCertificate.SubjectPublicKeyInfo 
+                ptr = AsnNext(ptr, ref bufferLength, false, true);  // skip tbsCertificate.Subject
+                ptr = AsnNext(ptr, ref bufferLength, false, false); // get tbsCertificate.SubjectPublicKeyInfo
 
                 var subjectPublicKeyInfo = new byte[bufferLength];
                 fixed (byte* newPtr = subjectPublicKeyInfo)
@@ -380,7 +457,7 @@ namespace Raven.Server.Utils
                     Memory.Copy(newPtr, ptr, bufferLength);
                 }
                 return subjectPublicKeyInfo;
-            }    
+            }
         }
 
         private static unsafe byte* AsnNext(byte* buffer, ref int bufferLength, bool unwrap, bool getRemaining)
