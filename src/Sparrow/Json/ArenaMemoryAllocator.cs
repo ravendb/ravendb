@@ -423,7 +423,12 @@ namespace Sparrow.Json
         public NativeMemory.ThreadStats AllocatingThread;
 
         private MemoryManager<byte> _memoryManager;
-        public MemoryManager<byte> MemoryManager => _memoryManager ??= new UnmanagedMemoryManager(Address, SizeInBytes);
+        public MemoryManager<byte> MemoryManager => _memoryManager ??= new UnmanagedMemoryManager(Address, SizeInBytes);        
+
+        public Span<byte> AsSpan()
+        {
+            return new Span<byte>(Address, SizeInBytes);
+        }
 
 #if MEM_GUARD_STACK || TRACK_ALLOCATED_MEMORY_DATA
         public string AllocatedBy = Environment.StackTrace;

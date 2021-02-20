@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -463,12 +463,10 @@ namespace Sparrow.Json
             try
             {
                 buffer = _context.GetMemory(size);
-                fixed (char* pChars = str)
-                {
-                    var stringSize = Encodings.Utf8.GetBytes(pChars, str.Length, buffer.Address, size);
-                    JsonParserState.FindEscapePositionsIn(_intBuffer, buffer.Address, ref stringSize, escapePositionsMaxSize);
-                    return WriteValue(buffer.Address, stringSize, _intBuffer, out token, mode, null);
-                }
+
+                var stringSize = Encodings.Utf8.GetBytes(str.AsSpan(), buffer.AsSpan());
+                JsonParserState.FindEscapePositionsIn(_intBuffer, buffer.Address, ref stringSize, escapePositionsMaxSize);
+                return WriteValue(buffer.Address, stringSize, _intBuffer, out token, mode, null);                
             }
             finally
             {
