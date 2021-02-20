@@ -48,7 +48,12 @@ namespace Sparrow.Json
         {
             get
             {
-                ThrowIfCachedPropertiesWereReset();
+                if (_documentNumber == -1)
+                    _documentNumber = _context.CachedProperties.DocumentNumber;
+
+                if (_documentNumber != _context.CachedProperties.DocumentNumber)
+                    ThrowCachedPropertiesWereReset();
+                
                 return _context.CachedProperties;
             }
         }
@@ -391,7 +396,7 @@ namespace Sparrow.Json
             return count;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]       
         public unsafe int WriteVariableSizeInt(int value)
         {
             // assume that we don't use negative values very often
@@ -766,16 +771,9 @@ namespace Sparrow.Json
             return _compressionBuffer.Address;
         }
 
-        internal void ThrowIfCachedPropertiesWereReset()
+        internal void ThrowCachedPropertiesWereReset()
         {
-            if (_documentNumber == -1)
-            {
-                _documentNumber = _context.CachedProperties.DocumentNumber;
-            }
-            else if (_documentNumber != _context.CachedProperties.DocumentNumber)
-            {
-                throw new InvalidOperationException($"The {_context.CachedProperties} were reset while building the document");
-            }
+            throw new InvalidOperationException($"The {_context.CachedProperties} were reset while building the document");
         }
 
         public void Dispose()

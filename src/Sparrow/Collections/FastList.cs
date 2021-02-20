@@ -114,14 +114,26 @@ namespace Sparrow.Collections
         public void Add(T item)
         {
             if (_size == _items.Length)
-                goto Unlikely;
+                EnsureCapacity((int)_size + 1);
 
             _items[_size++] = item;
             _version++;
             return;
+        }
 
-            Unlikely:
-            AddUnlikely(item, (int)_size + 1);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T AddAsRef()
+        {
+            if (_size == _items.Length)
+                EnsureCapacity((int)_size + 1);
+
+            ref T item = ref _items[_size];
+            item = default(T);
+
+            _size++;
+            _version++;
+            
+            return ref item;
         }
 
         public void CopyTo(FastList<int> dest)
@@ -135,13 +147,6 @@ namespace Sparrow.Collections
             dest._version++;
         }
 
-        private void AddUnlikely(T item, int size)
-        {
-            EnsureCapacity(size);
-            _items[_size++] = item;
-            _version++;
-        }
-
         private const int DefaultCapacity = 16;
         private const int MaxArrayLength = 0X7FEFFFFF;
 
@@ -149,7 +154,6 @@ namespace Sparrow.Collections
         // value. If the current capacity of the list is less than min, the
         // capacity is increased to twice the current capacity or to min,
         // whichever is larger.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureCapacity(int min)
         {
             if (_items.Length < min)

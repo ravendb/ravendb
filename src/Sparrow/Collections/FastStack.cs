@@ -164,6 +164,15 @@ namespace Sparrow.Collections
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T PeekByRef()
+        {
+            if (_size == 0)
+                throw new InvalidOperationException("The stack is empty.");
+
+            return ref _array[_size-1];
+        }
+
         // Pops an item from the top of the stack.  If the stack is empty, Pop
         // throws an InvalidOperationException.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -208,8 +217,24 @@ namespace Sparrow.Collections
             _version++;
             return;
 
-            Grow:
+        Grow:
             PushUnlikely(item);
+        }
+
+        // Pushes an item to the top of the stack.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T PushByRef()
+        {
+            if (_size == _array.Length)
+                Array.Resize(ref _array, (_array.Length == 0) ? DefaultCapacity : 2 * _array.Length);
+
+            ref var result = ref _array[_size];                        
+            result = default(T);
+
+            _version++;
+            _size++;
+
+            return ref result;
         }
 
         private void PushUnlikely(T item)
