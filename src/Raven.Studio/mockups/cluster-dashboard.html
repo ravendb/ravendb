@@ -2742,6 +2742,91 @@
                             </div>
 
 
+                            <div class="cluster-dashboard-item" id="tasksPanel">
+                                <div class="cluster-dashboard-item-header">
+                                    <h3> <i class="icon-tasks"></i> <span>Tasks</span></h3>
+                                    <button class="btn btn-warning btn-sm remove-item"
+                                        data-targetid="#tasksPanel">
+                                        <i class="icon-trash"></i>
+                                    </button>
+                                    <button class="btn btn-default btn-sm edit-item"
+                                        data-targetid="#tasksPanel">
+                                        <i class="icon-edit"></i>
+                                    </button>
+                                    <button class="btn btn-default btn-sm toggle-fullscreen"
+                                        data-targetid="#tasksPanel">
+                                        <i class="icon-fullscreen"></i>
+                                    </button>
+                                </div>
+
+                                <div class="tasks-container">
+
+                                    <a href="#" class="task-item external-replication">
+                                        <div class="task-name"><i class="icon-external-replication"></i> <span>External Replication</span></div>
+                                        <div class="task-count">3</div>
+                                        <div>
+                                            <span class="node-label node-a">A</span>
+                                            <span class="node-label node-b">B</span>
+                                        </div>
+                                    </a>
+
+                                    <a href="#" class="task-item replication-hub">
+                                        <div class="task-name"><i class="icon-pull-replication-hub"></i> <span>Replication Hub</span></div>
+                                        <div class="task-count">2</div>
+                                        <div>
+                                            <span class="node-label node-a">A</span>
+                                            <span class="node-label node-b">B</span>
+                                        </div>
+                                    </a>
+
+                                    <a href="#" class="task-item replication-sink">
+                                        <div class="task-name"><i class="icon-pull-replication-agent"></i> <span>Replication Sink</span></div>
+                                        <div class="task-count text-muted">×</div>
+                                        <div>
+                                            <span class="node-label node-a">A</span>
+                                            <span class="node-label node-b">B</span>
+                                        </div>
+                                    </a>
+
+                                    <a href="#" class="task-item ravendb-etl">
+                                        <div class="task-name"><i class="icon-ravendb-etl"></i> <span>RavenDB ETL</span></div>
+                                        <div class="task-count">3</div>
+                                        <div>
+                                            <span class="node-label node-a">A</span>
+                                            <span class="node-label node-b">B</span>
+                                        </div>
+                                    </a>
+
+                                    <a href="#" class="task-item sql-etl">
+                                        <div class="task-name"><i class="icon-sql-etl"></i> <span>SQL ETL</span></div>
+                                        <div class="task-count">1</div>
+                                        <div>
+                                            <span class="node-label node-a">A</span>
+                                            <span class="node-label node-b">B</span>
+                                        </div>
+                                    </a>
+
+                                    <a href="#" class="task-item periodic-backup">
+                                        <div class="task-name"><i class="icon-backups"></i> <span>Periodic Backup</span></div> 
+                                        <div class="task-count">4</div>
+                                        <div>
+                                            <span class="node-label node-a">A</span>
+                                            <span class="node-label node-b">B</span>
+                                            <span class="node-label node-c">C</span>
+                                        </div>
+                                    </a>
+
+                                    <a href="#" class="task-item subscription">
+                                        <div class="task-name"><i class="icon-subscription"></i> <span>Subscription</span></div>
+                                        <div class="task-count text-muted">×</div>
+                                        <div>
+                                            <span class="node-label node-a">A</span>
+                                            <span class="node-label node-b">B</span>
+                                        </div>
+                                    </a>
+
+                                </div>
+                            </div>
 
 
                             <button class="add-widget" data-toggle="modal" data-target="#myModal">

@@ -499,7 +499,7 @@
     }
 
     .header-row {
-        background-color: @panel-bg;
+        background-color: @panel-bg !important;
         border-top: 1px solid @hr-border;
         border-bottom: 1px dashed @hr-border;
     }
@@ -524,6 +524,69 @@
         .list-container {
             position: relative;
             flex-grow: 1;
+        }
+    }
+
+    .tasks-container {
+        background-color: @well-bg;
+        margin: 0 @gutter-xxs @gutter-xxs;
+
+        .task-item {
+            display: flex;
+            font-size: 13px;
+            padding: @gutter-xxs @gutter-sm;
+            color: inherit;
+
+            &:hover {
+                background-color: @gray-900;
+            }
+
+            &:first-of-type {
+                padding-top: @gutter-sm;
+            }
+
+            &:last-of-type {
+                padding-bottom: @gutter-sm;
+            }
+
+
+            .task-name {
+                width: 200px;
+                flex-shrink: 0;
+            }
+
+            .task-count {
+                flex-grow: 1;
+            }
+
+            &.external-replication .task-name i{
+                color: @external-replication-color;
+            }
+
+            &.replication-hub .task-name i{
+                color: @pull-replication-hub-color;
+            }
+
+            &.replication-sink .task-name i{
+                color: @pull-replication-sink-color;
+            }
+
+            &.ravendb-etl .task-name i{
+                color: @ravendb-etl-color;
+            }
+
+            &.sql-etl .task-name i{
+                color: @sql-etl-color;
+            }
+
+            &.periodic-backup .task-name i{
+                color: @backup-color;
+            }
+
+            &.subscription .task-name i{
+                color: @subscription-color;
+            }
+
         }
     }
 
@@ -599,53 +662,53 @@
         }
     }
 
-    .virtual-grid {
-        .node-label {
-            background-color: @gray-300;
-            color: #22252b;
-            font-size: 10px;
-            font-weight: 800;
-            display: inline-block;
-            width: 15px;
-            height: 15px;
-            line-height: 15px;
-            text-align: center;
-            border-radius: 15px;
-            margin-right: 7.0820917px;
-            flex-shrink: 0;
+    .node-label {
+        background-color: @gray-300;
+        color: #22252b;
+        font-size: 10px;
+        font-weight: 800;
+        display: inline-block;
+        width: 15px;
+        height: 15px;
+        line-height: 15px;
+        text-align: center;
+        border-radius: 15px;
+        margin-right: 7.0820917px;
+        flex-shrink: 0;
 
-            &.node-a {
-                background-color: @color-4;
-            }
-            &.node-b {
-                background-color: @color-5;
-            }
-            &.node-c {
-                background-color: @color-1;
-            }
-            &.node-d {
-                background-color: @color-2;
-            }
-            &.node-e {
-                background-color: @color-3;
-            }
-            &.node-f {
-                background-color: @color-4-2;
-            }
-            &.node-g {
-                background-color: @color-5-2;
-            }
-            &.node-h {
-                background-color: @color-1-2;
-            }
-            &.node-i {
-                background-color: @color-2-2;
-            }
-            &.node-j {
-                background-color: @color-3-2;
-            }
+        &.node-a {
+            background-color: @color-4;
         }
+        &.node-b {
+            background-color: @color-5;
+        }
+        &.node-c {
+            background-color: @color-1;
+        }
+        &.node-d {
+            background-color: @color-2;
+        }
+        &.node-e {
+            background-color: @color-3;
+        }
+        &.node-f {
+            background-color: @color-4-2;
+        }
+        &.node-g {
+            background-color: @color-5-2;
+        }
+        &.node-h {
+            background-color: @color-1-2;
+        }
+        &.node-i {
+            background-color: @color-2-2;
+        }
+        &.node-j {
+            background-color: @color-3-2;
+        }
+    }
 
+    .virtual-grid {
         // DELETE THIS!!!
         .virtual-row {
             position: static !important;
