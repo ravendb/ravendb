@@ -67,7 +67,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         internal LuceneVoronDirectory LuceneDirectory => _directory;
 
         private readonly object _readersLock = new object();
-        private readonly object _writersLock = new object();
 
         public LuceneIndexPersistence(Index index)
         {
@@ -196,7 +195,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
         }
-        
+
+        private bool _indexWriterCleanupNeeded;
+
+        public void CleanWritersIfNeeded()
+        {
+            if(_indexWriterCleanupNeeded == false)
+                return;
+
+            DisposeWriters();
+            _indexWriterCleanupNeeded = false;
+        }
+
         public void Clean(IndexCleanup mode)
         {
             Debug.Assert(mode != IndexCleanup.None, "mode != IndexCleanup.None");
@@ -205,7 +215,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexSearcherHolder.Cleanup(_index._indexStorage.Environment().PossibleOldestReadTransaction(null), mode);
 
             if (mode.HasFlag(IndexCleanup.Writers))
-                DisposeWriters();
+            {
+                _indexWriterCleanupNeeded = true;
+                _index.ScheduleIndexingRun();
+            }
 
             if (mode.HasFlag(IndexCleanup.Readers))
             {
@@ -462,16 +475,47 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         internal LuceneIndexWriter EnsureIndexWriter(IState state)
         {
-            lock (_writersLock)
+            if (_indexWriter != null)
+                return _indexWriter;
+
+            try
             {
-                if (_indexWriter != null)
-                    return _indexWriter;
+                _snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+                return _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter,
+                    IndexWriter.MaxFieldLength.UNLIMITED, null, _index, state);
+            }
+            catch (Exception e) when (e.IsOutOfMemory())
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                throw new IndexWriteException(e);
+            }
+        }
+
+        internal Dictionary<string, LuceneSuggestionIndexWriter> EnsureSuggestionIndexWriter(IState state)
+        {
+            if (_suggestionsIndexWriters != null)
+                return _suggestionsIndexWriters;
+
+            _suggestionsIndexWriters = new Dictionary<string, LuceneSuggestionIndexWriter>();
+
+            foreach (var item in _fields)
+            {
+                if (item.Value.HasSuggestions == false)
+                    continue;
+
+                string field = item.Key;
 
                 try
                 {
-                    _snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-                    return _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter,
-                        IndexWriter.MaxFieldLength.UNLIMITED, null, _index, state);
+                    var snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+                    var writer = new LuceneSuggestionIndexWriter(field, _suggestionsDirectories[field],
+                        snapshotter, IndexWriter.MaxFieldLength.UNLIMITED,
+                        _index, state);
+
+                    _suggestionsIndexWriters[field] = writer;
                 }
                 catch (Exception e) when (e.IsOutOfMemory())
                 {
@@ -482,45 +526,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     throw new IndexWriteException(e);
                 }
             }
-        }
 
-        internal Dictionary<string, LuceneSuggestionIndexWriter> EnsureSuggestionIndexWriter(IState state)
-        {
-            lock (_writersLock)
-            {
-                if (_suggestionsIndexWriters != null)
-                    return _suggestionsIndexWriters;
-
-                _suggestionsIndexWriters = new Dictionary<string, LuceneSuggestionIndexWriter>();
-
-                foreach (var item in _fields)
-                {
-                    if (item.Value.HasSuggestions == false)
-                        continue;
-
-                    string field = item.Key;
-
-                    try
-                    {
-                        var snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-                        var writer = new LuceneSuggestionIndexWriter(field, _suggestionsDirectories[field],
-                            snapshotter, IndexWriter.MaxFieldLength.UNLIMITED,
-                            _index, state);
-
-                        _suggestionsIndexWriters[field] = writer;
-                    }
-                    catch (Exception e) when (e.IsOutOfMemory())
-                    {
-                        throw;
-                    }
-                    catch (Exception e)
-                    {
-                        throw new IndexWriteException(e);
-                    }
-                }
-
-                return _suggestionsIndexWriters;
-            }
+            return _suggestionsIndexWriters;
         }
 
         public bool ContainsField(string field)
@@ -533,21 +540,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void DisposeWriters()
         {
-            lock (_writersLock)
+            _indexWriter?.Analyzer?.Dispose();
+            _indexWriter?.Dispose();
+            _indexWriter = null;
+
+            if (_suggestionsIndexWriters != null)
             {
-                _indexWriter?.Analyzer?.Dispose();
-                _indexWriter?.Dispose();
-                _indexWriter = null;
-
-                if (_suggestionsIndexWriters != null)
+                foreach (var writer in _suggestionsIndexWriters)
                 {
-                    foreach (var writer in _suggestionsIndexWriters)
-                    {
-                        writer.Value?.Dispose();
-                    }
-
-                    _suggestionsIndexWriters = null;
+                    writer.Value?.Dispose();
                 }
+
+                _suggestionsIndexWriters = null;
             }
         }
 

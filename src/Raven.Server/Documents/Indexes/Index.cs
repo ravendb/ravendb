@@ -1924,6 +1924,8 @@ namespace Raven.Server.Documents.Indexes
                                     stats.RecordEntriesCountAfterTxCommit(entriesCount.Value);
                             };
 
+                            tx.InnerTransaction.LowLevelTransaction.OnDispose += _ => IndexPersistence.CleanWritersIfNeeded();
+
                             tx.Commit();
                             SlowWriteNotification.Notify(commitStats, DocumentDatabase);
                             stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
