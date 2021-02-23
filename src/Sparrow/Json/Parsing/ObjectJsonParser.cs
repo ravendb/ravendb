@@ -577,24 +577,30 @@ namespace Sparrow.Json.Parsing
         {
             // max possible size - we avoid using GetByteCount because profiling showed it to take 2% of runtime
             // the buffer might be a bit longer, but we'll reuse it, and it is better than the computing cost
-            int byteCount = Encodings.Utf8.GetMaxByteCount(str.Length);
+           
             int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str, out _);
 
-            // If we do not have a buffer or the buffer is too small, return the memory and get more.
-            var size = byteCount + escapePositionsSize;
-            if (_currentStateBuffer == null || _currentStateBuffer.SizeInBytes < size)
+            int byteCount = str.Length * 5 + escapePositionsSize;
+            if (_currentStateBuffer == null || _currentStateBuffer.SizeInBytes < byteCount)
             {
-                if (_currentStateBuffer != null)
-                    _ctx.ReturnMemory(_currentStateBuffer);
-                _currentStateBuffer = _ctx.GetMemory(size);
-                Debug.Assert(_currentStateBuffer != null && _currentStateBuffer.Address != null);
+                byteCount = Encodings.Utf8.GetMaxByteCount(str.Length);
+
+                // If we do not have a buffer or the buffer is too small, return the memory and get more.
+                var size = byteCount + escapePositionsSize;
+                if (_currentStateBuffer == null || _currentStateBuffer.SizeInBytes < size)
+                {
+                    if (_currentStateBuffer != null)
+                        _ctx.ReturnMemory(_currentStateBuffer);
+                    _currentStateBuffer = _ctx.GetMemory(size);
+                    Debug.Assert(_currentStateBuffer != null && _currentStateBuffer.Address != null);
+                }
             }
 
             _state.StringBuffer = _currentStateBuffer.Address;
 
             fixed (char* pChars = str)
             {
-                _state.StringSize = Encodings.Utf8.GetBytes(pChars, str.Length, _state.StringBuffer, byteCount);
+                _state.StringSize = Encodings.Utf8.GetBytes(pChars, str.Length, _state.StringBuffer, _currentStateBuffer.SizeInBytes);
                 _state.CompressedSize = null; // don't even try
                 _state.FindEscapePositionsIn(_state.StringBuffer, ref _state.StringSize, escapePositionsSize);
 
