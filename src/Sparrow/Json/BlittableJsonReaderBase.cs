@@ -94,27 +94,17 @@ namespace Sparrow.Json
                 BlittableJsonToken.StartObject |
                 BlittableJsonToken.String |
                 BlittableJsonToken.CompressedString;
-
+        
         public BlittableJsonToken ProcessTokenTypeFlags(BlittableJsonToken currentType)
         {
             AssertContextNotDisposed();
-            switch (currentType & TypesMask)
-            {
-                case BlittableJsonToken.StartObject:
-                case BlittableJsonToken.StartArray:
-                case BlittableJsonToken.Integer:
-                case BlittableJsonToken.LazyNumber:
-                case BlittableJsonToken.String:
-                case BlittableJsonToken.CompressedString:
-                case BlittableJsonToken.Boolean:
-                case BlittableJsonToken.Null:
-                case BlittableJsonToken.EmbeddedBlittable:
-                case BlittableJsonToken.RawBlob:
-                    return currentType & TypesMask;
-                default:
-                    ThrowInvalidType(currentType);
-                    return default(BlittableJsonToken);// will never happen
-            }
+
+            var token = currentType & TypesMask;
+            if (token >= BlittableJsonToken.StartObject && token <= BlittableJsonToken.RawBlob)
+                return currentType & TypesMask;
+
+            ThrowInvalidType(currentType);
+            return default(BlittableJsonToken);// will never happen
         }
 
         private static void ThrowInvalidType(BlittableJsonToken currentType)
