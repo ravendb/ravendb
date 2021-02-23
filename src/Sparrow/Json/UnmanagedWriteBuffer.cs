@@ -249,6 +249,63 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Write(ReadOnlySpan<byte> buffer, int start, int count)
+        {
+            Debug.Assert(start >= 0 && start < buffer.Length); // start is an index
+            Debug.Assert(count >= 0); // count is a size
+            Debug.Assert(start + count <= buffer.Length); // can't overrun the buffer
+
+            ThrowOnDisposed();
+
+            if (count == 0)
+                return;
+
+            var head = _head;
+            int size = head.Allocation.SizeInBytes - head.Used;
+            if (size > count)
+            {
+                var outputBuffer = new Span<byte>(head.Address + head.Used, count);
+                buffer.CopyTo(outputBuffer);
+                head.AccumulatedSizeInBytes += count;
+                head.Used += count;
+            }
+            else
+                WriteUnlikely(buffer, count);
+        }
+
+        private void WriteUnlikely(ReadOnlySpan<byte> buffer, int count)
+        {
+            Debug.Assert(count >= 0); // count is a size
+
+            var amountPending = count;
+            var head = _head;
+            do
+            {
+                var availableSpace = head.Allocation.SizeInBytes - head.Used;
+                // If the current Segment does not have any space left, allocate a new one
+                if (availableSpace == 0)
+                {
+                    AllocateNextSegment(amountPending, true);
+                    head = _head;
+                }
+
+                // Write as much as we can in the current Segment
+                var amountWrittenInRound = Math.Min(amountPending, availableSpace);
+                var outputBuffer = new Span<byte>(head.Address + head.Used, amountWrittenInRound);
+                buffer.CopyTo(outputBuffer);
+
+                // Update Segment invariants
+                head.AccumulatedSizeInBytes += amountWrittenInRound;
+                head.Used += amountWrittenInRound;
+
+                // Update loop invariants
+                amountPending -= amountWrittenInRound;
+                buffer = buffer.Slice(amountWrittenInRound);
+            } 
+            while (amountPending > 0);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ThrowOnDisposed()
         {
 #if DEBUG

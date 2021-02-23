@@ -16,7 +16,7 @@ namespace Sparrow.Json.Parsing
         public JsonParserTokenContinuation Continuation;
 
         public readonly FastList<int> EscapePositions = new FastList<int>();
-       
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteVariableSizeInt(ref byte* dest, int value)
         {
@@ -50,7 +50,7 @@ namespace Sparrow.Json.Parsing
         {
             return FindEscapePositionsMaxSize(str.AsSpan(), out escapedCount);
         }
-        
+
         public static int FindEscapePositionsMaxSize(ReadOnlySpan<char> str, out int escapedCount)
         {
             var count = 0;
@@ -184,10 +184,13 @@ namespace Sparrow.Json.Parsing
                     Buffer.MemoryCopy(from, to, (uint)sizeToCopy, (uint)sizeToCopy);
                     str[i] = (byte)'\\';
                     str[i + 1] = (byte)'u';
-                    fixed (byte* controlString = AbstractBlittableJsonTextWriter.ControlCodeEscapes[value])
-                    {
-                        Memory.Copy(str + i + 2, controlString, 4);
-                    }
+
+                    int controlCodes = AbstractBlittableJsonTextWriter.ControlCodeEscapes[value];
+                    str[i + 2 + 0] = (byte)(controlCodes >> 24);
+                    str[i + 2 + 1] = (byte)(controlCodes >> 16);
+                    str[i + 2 + 2] = (byte)(controlCodes >> 8);
+                    str[i + 2 + 3] = (byte)(controlCodes);
+
                     //The original string already had one byte so we only added 5.
                     len += ControlCharacterItemSize;
                     i += ControlCharacterItemSize;

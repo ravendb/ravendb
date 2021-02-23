@@ -94,12 +94,13 @@ namespace Sparrow.Json
         private const byte Comma = (byte)',';
         private const byte Quote = (byte)'"';
         private const byte Colon = (byte)':';
-        public static readonly byte[] NaNBuffer = { (byte)'"', (byte)'N', (byte)'a', (byte)'N', (byte)'"' };
-        public static readonly byte[] PositiveInfinityBuffer =
+        public static ReadOnlySpan<byte> NaNBuffer => new byte[] { (byte)'"', (byte)'N', (byte)'a', (byte)'N', (byte)'"' };
+        public static ReadOnlySpan<byte> PositiveInfinityBuffer => new byte[]
         {
             (byte)'"', (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y', (byte)'"'
-        };
-        public static readonly byte[] NegativeInfinityBuffer =
+        };        
+
+        public static ReadOnlySpan<byte> NegativeInfinityBuffer => new byte[]
         {
             (byte)'"', (byte)'-', (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y', (byte)'"'
         };
@@ -107,8 +108,22 @@ namespace Sparrow.Json
         public static readonly byte[] TrueBuffer = { (byte)'t', (byte)'r', (byte)'u', (byte)'e', };
         public static readonly byte[] FalseBuffer = { (byte)'f', (byte)'a', (byte)'l', (byte)'s', (byte)'e', };
 
-        private static readonly byte[] EscapeCharacters;
-        public static readonly byte[][] ControlCodeEscapes;
+        private static ReadOnlySpan<byte> EscapeCharacters => InitializeEscapeCharacters();
+
+        public static ReadOnlySpan<int> ControlCodeEscapes => InitializeControlCodeEscapes();
+
+        private static ReadOnlySpan<int> InitializeControlCodeEscapes()
+        {
+            var escapes = new int[32];
+
+            for (int i = 0; i < 32; i++)
+            {
+                byte[] bytes = Encodings.Utf8.GetBytes(i.ToString("X4"));
+                escapes[i] = (int)bytes[0] << 24 | (int)bytes[1] << 16 | (int)bytes[2] << 8 | (int)bytes[3];
+            }
+
+            return new ReadOnlySpan<int>(escapes);
+        }
 
         private int _pos;
         private readonly byte* _buffer;
@@ -116,30 +131,25 @@ namespace Sparrow.Json
         private readonly JsonOperationContext.MemoryBuffer _pinnedBuffer;
         private readonly AllocatedMemoryData _parserAuxiliarMemory;
 
-        static AbstractBlittableJsonTextWriter()
+        private static ReadOnlySpan<byte> InitializeEscapeCharacters()
         {
-            ControlCodeEscapes = new byte[32][];
-
+            var escapeCharacters = new byte[256];
             for (int i = 0; i < 32; i++)
-            {
-                ControlCodeEscapes[i] = Encodings.Utf8.GetBytes(i.ToString("X4"));
-            }
+                escapeCharacters[i] = 0;
 
-            EscapeCharacters = new byte[256];
-            for (int i = 0; i < 32; i++)
-                EscapeCharacters[i] = 0;
+            for (int i = 32; i < escapeCharacters.Length; i++)
+                escapeCharacters[i] = 255;
 
-            for (int i = 32; i < EscapeCharacters.Length; i++)
-                EscapeCharacters[i] = 255;
+            escapeCharacters[(byte)'\b'] = (byte)'b';
+            escapeCharacters[(byte)'\t'] = (byte)'t';
+            escapeCharacters[(byte)'\n'] = (byte)'n';
+            escapeCharacters[(byte)'\f'] = (byte)'f';
+            escapeCharacters[(byte)'\r'] = (byte)'r';
+            escapeCharacters[(byte)'\\'] = (byte)'\\';
+            escapeCharacters[(byte)'/'] = (byte)'/';
+            escapeCharacters[(byte)'"'] = (byte)'"';
 
-            EscapeCharacters[(byte)'\b'] = (byte)'b';
-            EscapeCharacters[(byte)'\t'] = (byte)'t';
-            EscapeCharacters[(byte)'\n'] = (byte)'n';
-            EscapeCharacters[(byte)'\f'] = (byte)'f';
-            EscapeCharacters[(byte)'\r'] = (byte)'r';
-            EscapeCharacters[(byte)'\\'] = (byte)'\\';
-            EscapeCharacters[(byte)'/'] = (byte)'/';
-            EscapeCharacters[(byte)'"'] = (byte)'"';
+            return escapeCharacters;
         }
 
         protected AbstractBlittableJsonTextWriter(JsonOperationContext context, Stream stream)
@@ -384,19 +394,26 @@ namespace Sparrow.Json
             if (r == 0)
             {
                 EnsureBuffer(6);
-                buffer[_pos++] = (byte)'\\';
-                buffer[_pos++] = (byte)'u';
-                fixed (byte* esc = ControlCodeEscapes[b])
-                    Memory.Copy(buffer + _pos, esc, 4);
-                _pos += 4;
+
+                int controlCodes = ControlCodeEscapes[b];
+
+                buffer[_pos + 0] = (byte)'\\';
+                buffer[_pos + 1] = (byte)'u';
+                buffer[_pos + 2] = (byte)(controlCodes >> 24);
+                buffer[_pos + 3] = (byte)(controlCodes >> 16);
+                buffer[_pos + 4] = (byte)(controlCodes >> 8);
+                buffer[_pos + 5] = (byte)(controlCodes);
+
+                _pos += 6;
                 return;
             }
 
             if (r != 255)
             {
                 EnsureBuffer(2);
-                buffer[_pos++] = (byte)'\\';
-                buffer[_pos++] = r;
+                buffer[_pos + 0] = (byte)'\\';
+                buffer[_pos + 1] = r;
+                _pos += 2;
                 return;
             }
 
@@ -711,6 +728,15 @@ namespace Sparrow.Json
             var lazyStringValue = val.Inner;
             EnsureBuffer(lazyStringValue.Size);
             WriteRawString(lazyStringValue.Buffer, lazyStringValue.Size);
+        }
+
+        public void WriteBufferFor(ReadOnlySpan<byte> buffer)
+        {
+            EnsureBuffer(buffer.Length);
+
+            var outputSpan = new Span<byte>(_buffer + _pos, buffer.Length);
+            buffer.CopyTo(outputSpan);
+            _pos += buffer.Length;
         }
 
         public void WriteBufferFor(byte[] buffer)

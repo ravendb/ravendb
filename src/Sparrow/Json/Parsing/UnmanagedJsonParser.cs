@@ -702,7 +702,8 @@ namespace Sparrow.Json.Parsing
         {
             uint bufferSize = _bufSize;
             byte* inputBuffer = _inputBuffer;
-            byte[] expectedTokenBuffer = _expectedTokenBuffer;
+
+            ReadOnlySpan<byte> expectedTokenBuffer = _expectedTokenBuffer;
             for (int i = _expectedTokenBufferPosition; i < expectedTokenBuffer.Length; i++)
             {
                 if (pos >= bufferSize)
