@@ -35,6 +35,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TcpHandlers;
@@ -582,7 +583,7 @@ namespace Raven.Server
                 // After that we retry every sync interval (from configuration) or if ForceSyncCpuCredits() is called
                 try
                 {
-                    if (sw.Elapsed.TotalSeconds >= (int)Configuration.Server.CpuCreditsExecSyncInterval.AsTimeSpan.TotalSeconds 
+                    if (sw.Elapsed.TotalSeconds >= (int)Configuration.Server.CpuCreditsExecSyncInterval.AsTimeSpan.TotalSeconds
                         || CpuCreditsBalance.ForceSync
                         || (duringStartup && startupRetriesSw.Elapsed.TotalSeconds >= TimeSpan.FromMinutes(1).TotalSeconds)) // Time to wait between retries = 1 minute
                     {
@@ -1582,6 +1583,7 @@ namespace Raven.Server
                 case TcpClient tcp:
                     remoteAddress = tcp.Client.RemoteEndPoint.ToString();
                     break;
+
                 case HttpConnectionFeature http:
                     remoteAddress = $"{http.RemoteIpAddress}:{http.RemotePort}";
                     break;
@@ -1589,7 +1591,7 @@ namespace Raven.Server
 
             // Hash is good, let's validate it was signed by a known issuer, otherwise users can use the private key to register a new cert with a different issuer.
             var goodKnownCert = new X509Certificate2(Convert.FromBase64String(certWithSameHash.Certificate));
-            if (CertHasKnownIssuer(certificate, goodKnownCert, out var issuerHash) == false)
+            if (CertificateUtils.CertHasKnownIssuer(certificate, goodKnownCert, ServerStore.Configuration.Security, out var issuerHash) == false)
             {
                 if (_authAuditLog.IsInfoEnabled)
                     _authAuditLog.Info($"Connection from {remoteAddress} with certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
@@ -1647,70 +1649,6 @@ namespace Raven.Server
             cert = ctx.ReadObject(newCertDef.ToJson(), "Client/Certificate/Definition");
         }
 
-        private bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, out string issuerPinningHash)
-        {
-            issuerPinningHash = null;
-            X509Certificate2 issuerCertificate = null;
-
-            var userChain = new X509Chain();
-            var knownCertChain = new X509Chain();
-
-            try
-            {
-                userChain.Build(userCertificate);
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}', failed to build the chain.", e);
-                return false;
-            }
-
-            try
-            {
-                issuerCertificate = userChain.ChainElements.Count > 1
-                    ? userChain.ChainElements[1].Certificate
-                    : userChain.ChainElements[0].Certificate;
-                issuerPinningHash = issuerCertificate.GetPublicKeyPinningHash();
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Cannot extract pinning hash from the client certificate's issuer '{issuerCertificate?.FriendlyName} {issuerCertificate?.Thumbprint}'.", e);
-                return false;
-            }
-
-            var wellKnown = ServerStore.Configuration.Security.WellKnownIssuerHashes;
-            if (wellKnown != null && wellKnown.Contains(issuerPinningHash, StringComparer.Ordinal)) // Case sensitive, base64
-                return true;
-
-            try
-            {
-                knownCertChain.Build(knownCertificate);
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}'. Found a known certificate '{knownCertificate.Thumbprint}' with the same hash but failed to build its chain.", e);
-                return false;
-            }
-
-            if (knownCertChain.ChainElements.Count != userChain.ChainElements.Count)
-                return false;
-
-            for (var i = 0; i < knownCertChain.ChainElements.Count; i++)
-            {
-                // We walk the chain and compare the user certificate vs one of the existing certificate with same pinning hash
-                var currentElementPinningHash = userChain.ChainElements[i].Certificate.GetPublicKeyPinningHash();
-                if (currentElementPinningHash != knownCertChain.ChainElements[i].Certificate.GetPublicKeyPinningHash())
-                {
-                    issuerPinningHash = currentElementPinningHash;
-                    return false;
-                }
-            }
-
-            return true;
-        }
 
         public string WebUrl { get; private set; }
 
@@ -1857,6 +1795,7 @@ namespace Raven.Server
             {
                 case "localhost.fiddler":
                     return GetListenIpAddresses("localhost");
+
                 default:
                     try
                     {
@@ -2348,10 +2287,12 @@ namespace Raven.Server
                 case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                     SubscriptionConnection.SendSubscriptionDocuments(ServerStore, tcp, bufferToCopy);
                     break;
+
                 case TcpConnectionHeaderMessage.OperationTypes.Replication:
                     var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
                     documentReplicationLoader.AcceptIncomingConnection(tcp, header, cert, bufferToCopy);
                     break;
+
                 default:
                     throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
             }
@@ -2415,13 +2356,16 @@ namespace Raven.Server
                 case AuthenticationStatus.Expired:
                     msg = $"The provided client certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') is expired on {certificate.NotAfter}";
                     return false;
+
                 case AuthenticationStatus.NotYetValid:
                     msg = $"The provided client certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') is not yet valid because it starts on {certificate.NotBefore}";
                     return false;
+
                 case AuthenticationStatus.ClusterAdmin:
                 case AuthenticationStatus.Operator:
                     msg = "Admin can do it all";
                     return true;
+
                 case AuthenticationStatus.Allowed:
                     switch (header.Operation)
                     {
@@ -2429,6 +2373,7 @@ namespace Raven.Server
                         case TcpConnectionHeaderMessage.OperationTypes.Heartbeats:
                             msg = $"{header.Operation} is a server-wide operation and the certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') is not ClusterAdmin/Operator";
                             return false;
+
                         case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                         case TcpConnectionHeaderMessage.OperationTypes.Replication:
                         case TcpConnectionHeaderMessage.OperationTypes.TestConnection:
@@ -2441,6 +2386,7 @@ namespace Raven.Server
                                 return true;
                             msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName}";
                             return false;
+
                         default:
                             throw new InvalidOperationException("Unknown operation " + header.Operation);
                     }
@@ -2448,6 +2394,7 @@ namespace Raven.Server
                     msg = $"The client certificate {certificate.FriendlyName} is not registered in the cluster. Tried to allow the connection implicitly based on the client certificate's Public Key Pinning Hash but the client certificate was signed by an unknown issuer - closing the connection. " +
                           $"To fix this, the admin can register the pinning hash of the *issuer* certificate: '{auth.IssuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry. Alternatively, the admin can register the actual certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') explicitly in the cluster.";
                     return false;
+
                 case AuthenticationStatus.UnfamiliarCertificate:
                     var info = header.AuthorizeInfo;
                     switch (info?.AuthorizeAs)
@@ -2483,8 +2430,7 @@ namespace Raven.Server
                                     if (ServerStore.Cluster.IsReplicationCertificate(ctx, header.DatabaseName, info.AuthorizationFor, certificate, out header.ReplicationHubAccess))
                                         return true;
 
-                                    if (ServerStore.Cluster.IsReplicationCertificateByPublicKeyPinningHash(ctx, header.DatabaseName, info.AuthorizationFor, certificate,
-                                        out header.ReplicationHubAccess))
+                                    if (ServerStore.Cluster.IsReplicationCertificateByPublicKeyPinningHash(ctx, header.DatabaseName, info.AuthorizationFor, certificate, configuration.Security, out header.ReplicationHubAccess))
                                     {
                                         RegisterNewReplicationCertificateWithSamePublicKeyPinningHash(tcpClient.Client.RemoteEndPoint.ToString(), header.DatabaseName, info.AuthorizationFor, header.ReplicationHubAccess, certificate);
 
@@ -2523,9 +2469,9 @@ namespace Raven.Server
                     };
 
                     await ServerStore.SendToLeaderAsync(new RegisterReplicationHubAccessCommand(database, hub, access, certificate, RaftIdGenerator.NewId())
-                        {
-                            RegisteringSamePublicKeyPinningHash = true
-                        })
+                    {
+                        RegisteringSamePublicKeyPinningHash = true
+                    })
                         .ConfigureAwait(false);
                 }
                 catch (Exception e)

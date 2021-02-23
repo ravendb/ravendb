@@ -69,6 +69,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             AssemblyLoadContext.Default.Resolving += (context, name) =>
             {
                 var assemblyPath = Path.Combine(AppContext.BaseDirectory, name.Name + ".dll");
+                if (File.Exists(assemblyPath) == false)
+                    return null;
+
                 var loadFromAssemblyPath = context.LoadFromAssemblyPath(assemblyPath);
                 if (loadFromAssemblyPath == null)
                     throw new FileNotFoundException("Unable to load " + name.FullName + " from " + assemblyPath);

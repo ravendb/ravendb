@@ -54,148 +54,13 @@ namespace Raven.Server.Documents.Handlers
                     StringBuilder trafficWatchStringBuilder = null;
                     if (TrafficWatchManager.HasRegisteredClients)
                         trafficWatchStringBuilder = new StringBuilder();
-                    for (int i = 0; i < requests.Length; i++)
+                    for (var i = 0; i < requests.Length; i++)
                     {
-                        var request = (BlittableJsonReaderObject)requests[i];
-
                         if (i != 0)
                             writer.WriteComma();
-                        writer.WriteStartObject();
 
-                        if (request.TryGet("Url", out string url) == false || request.TryGet("Query", out string query) == false)
-                        {
-                            writer.WriteEndObject();
-                            continue;
-                        }
-
-                        if (request.TryGet("Method", out string method) == false || string.IsNullOrEmpty(method))
-                            method = HttpMethod.Get.Method;
-
-                        httpContext.Request.Method = method;
-
-                        var routeInformation = Server.Router.GetRoute(method, url, out RouteMatch localMatch);
-                        if (routeInformation == null)
-                        {
-                            writer.WritePropertyName(statusProperty);
-                            writer.WriteInteger((int)HttpStatusCode.BadRequest);
-                            writer.WritePropertyName(resultProperty);
-                            context.Write(writer, new DynamicJsonValue
-                            {
-                                ["Error"] = $"There is no handler for path: {method} {url}{query}"
-                            });
-                            writer.WriteEndObject();
-                            continue;
-                        }
-
-                        var requestHandler = routeInformation.GetRequestHandler();
-                        writer.WritePropertyName(resultProperty);
-                        writer.Flush();
-
-                        httpContext.Response.StatusCode = 0;
-                        httpContext.Request.Headers.Clear();
-                        httpContext.Response.Headers.Clear();
-                        httpContext.Request.Host = host;
-                        httpContext.Request.Scheme = scheme;
-                        httpContext.Request.QueryString = new QueryString(query);
-                        if (request.TryGet("Headers", out BlittableJsonReaderObject headers))
-                        {
-                            foreach (var header in headers.GetPropertyNames())
-                            {
-                                if (headers.TryGet(header, out string value) == false)
-                                    continue;
-
-                                if (string.IsNullOrWhiteSpace(value))
-                                    continue;
-
-                                httpContext.Request.Headers.Add(header, value);
-                            }
-                        }
-                        // initiated to use it at the end of for
-                        object content = null;
-                        if (method == HttpMethod.Post.Method && request.TryGet("Content", out content))
-                        {
-                            if (content is LazyStringValue)
-                            {
-                                var requestBody = GetRequestBody(content.ToString());
-                                HttpContext.Response.RegisterForDispose(requestBody);
-                                httpContext.Request.Body = requestBody;
-                            }
-                            else
-                            {
-                                var requestBody = new MemoryStream();
-                                var contentWriter = new BlittableJsonTextWriter(context, requestBody);
-                                context.Write(contentWriter, (BlittableJsonReaderObject)content);
-                                contentWriter.Flush();
-                                HttpContext.Response.RegisterForDispose(requestBody);
-                                httpContext.Request.Body = requestBody;
-                                httpContext.Request.Body.Position = 0;
-                            }
-                        }
-                        else if (method == HttpMethod.Get.Method && trafficWatchStringBuilder != null)
-                        {
-                            content = request.ToString();
-                        }
-
-                        var bytesWrittenBeforeRequest = responseStream.BytesWritten;
-                        int statusCode;
-                        try
-                        {
-                            await requestHandler(new RequestHandlerContext
-                            {
-                                Database = Database,
-                                RavenServer = Server,
-                                RouteMatch = localMatch,
-                                HttpContext = httpContext
-                            });
-
-                            if (bytesWrittenBeforeRequest == responseStream.BytesWritten)
-                                writer.WriteNull();
-
-                            statusCode = httpContext.Response.StatusCode == 0
-                                ? (int)HttpStatusCode.OK
-                                : httpContext.Response.StatusCode;
-                        }
-                        catch (Exception e)
-                        {
-                            if (bytesWrittenBeforeRequest != responseStream.BytesWritten)
-                                throw;
-
-                            statusCode = (int)HttpStatusCode.InternalServerError;
-
-                            var djv = new DynamicJsonValue
-                            {
-                                [nameof(ExceptionDispatcher.ExceptionSchema.Url)] = $"{url}{query}",
-                                [nameof(ExceptionDispatcher.ExceptionSchema.Type)] = e.GetType().FullName,
-                                [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message,
-                                [nameof(ExceptionDispatcher.ExceptionSchema.Error)] = e.ToString()
-                            };
-
-                            using (var json = context.ReadObject(djv, "exception"))
-                                writer.WriteObject(json);
-                        }
-
-                        writer.WriteComma();
-                        writer.WritePropertyName(statusProperty);
-                        writer.WriteInteger(statusCode);
-                        writer.WriteComma();
-
-                        writer.WritePropertyName(headersProperty);
-                        writer.WriteStartObject();
-                        bool headerStart = true;
-                        foreach (var header in httpContext.Response.Headers)
-                        {
-                            foreach (var value in header.Value)
-                            {
-                                if (headerStart == false)
-                                    writer.WriteComma();
-                                headerStart = false;
-                                writer.WritePropertyName(header.Key);
-                                writer.WriteString(value);
-                            }
-                        }
-                        writer.WriteEndObject();
-                        writer.WriteEndObject();
-                        trafficWatchStringBuilder?.Append(content).AppendLine();
+                        var request = (BlittableJsonReaderObject)requests[i];
+                        await HandleRequestAsync(request, context, responseStream, writer, httpContext, host, scheme, resultProperty, statusProperty, headersProperty, trafficWatchStringBuilder);
                     }
                     if (trafficWatchStringBuilder != null)
                         AddStringToHttpContext(trafficWatchStringBuilder.ToString(), TrafficWatchChangeType.MultiGet);
@@ -211,6 +76,185 @@ namespace Raven.Server.Documents.Handlers
             return requestBody;
         }
 
+        private void HandleException(JsonOperationContext context, BlittableJsonTextWriter writer, Exception e, string url, string query)
+        {
+            var djv = new DynamicJsonValue
+            {
+                [nameof(ExceptionDispatcher.ExceptionSchema.Url)] = url + query,
+                [nameof(ExceptionDispatcher.ExceptionSchema.Type)] = e.GetType().FullName,
+                [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message,
+                [nameof(ExceptionDispatcher.ExceptionSchema.Error)] = e.ToString()
+            };
+
+            using (var json = context.ReadObject(djv, "exception"))
+                writer.WriteObject(json);
+        }
+
+        private void HandleNoRoute(JsonOperationContext context, BlittableJsonTextWriter writer, string method, string url, string query, LazyStringValue statusProperty, LazyStringValue resultProperty)
+        {
+            writer.WritePropertyName(statusProperty);
+            writer.WriteInteger((int)HttpStatusCode.BadRequest);
+            writer.WritePropertyName(resultProperty);
+            context.Write(writer, new DynamicJsonValue
+            {
+                ["Error"] = $"There is no handler for path: {method} {url}{query}"
+            });
+            writer.WriteEndObject();
+        }
+
+        private async Task HandleRequestAsync(
+            BlittableJsonReaderObject request,
+            JsonOperationContext context,
+            MultiGetHttpResponseStream responseStream,
+            BlittableJsonTextWriter writer,
+            HttpContext httpContext,
+            HostString host,
+            string scheme,
+            LazyStringValue resultProperty,
+            LazyStringValue statusProperty,
+            LazyStringValue headersProperty,
+            StringBuilder trafficWatchStringBuilder)
+        {
+            writer.WriteStartObject();
+
+            if (request.TryGet(nameof(GetRequest.Url), out string url) == false || request.TryGet(nameof(GetRequest.Query), out string query) == false)
+            {
+                writer.WriteEndObject();
+                return;
+            }
+
+            if (request.TryGet(nameof(GetRequest.Method), out string method) == false || string.IsNullOrEmpty(method))
+                method = HttpMethod.Get.Method;
+
+            httpContext.Request.Method = method;
+
+            var routeInformation = Server.Router.GetRoute(method, url, out RouteMatch localMatch);
+            if (routeInformation == null)
+            {
+                HandleNoRoute(context, writer, method, url, query, statusProperty, resultProperty);
+                return;
+            }
+
+            var requestHandler = routeInformation.GetRequestHandler();
+            writer.WritePropertyName(resultProperty);
+            writer.Flush();
+
+            PrepareHttpContext(request, context, httpContext, method, query, host, scheme, trafficWatchStringBuilder, out var content);
+
+            var bytesWrittenBeforeRequest = responseStream.BytesWritten;
+            int statusCode;
+            try
+            {
+                if (Server.Configuration.Security.AuthenticationEnabled == false
+                    || Server.Router.TryAuthorize(routeInformation, httpContext, Database, out var status))
+                {
+                    await requestHandler(new RequestHandlerContext
+                    {
+                        Database = Database,
+                        RavenServer = Server,
+                        RouteMatch = localMatch,
+                        HttpContext = httpContext
+                    });
+                }
+
+                if (bytesWrittenBeforeRequest == responseStream.BytesWritten)
+                    writer.WriteNull();
+
+                statusCode = httpContext.Response.StatusCode == 0
+                    ? (int)HttpStatusCode.OK
+                    : httpContext.Response.StatusCode;
+            }
+            catch (Exception e)
+            {
+                if (bytesWrittenBeforeRequest != responseStream.BytesWritten)
+                    throw;
+
+                statusCode = (int)HttpStatusCode.InternalServerError;
+
+                HandleException(context, writer, e, url, query);
+            }
+
+            writer.WriteComma();
+
+            writer.WritePropertyName(statusProperty);
+            writer.WriteInteger(statusCode);
+
+            writer.WriteComma();
+
+            WriteHeaders(writer, httpContext, headersProperty);
+
+            writer.WriteEndObject();
+
+            trafficWatchStringBuilder?.Append(content).AppendLine();
+        }
+
+        private void PrepareHttpContext(BlittableJsonReaderObject request, JsonOperationContext context, HttpContext httpContext, string method, string query, HostString host, string scheme, StringBuilder trafficWatchStringBuilder, out object content)
+        {
+            httpContext.Response.StatusCode = 0;
+            httpContext.Request.Headers.Clear();
+            httpContext.Response.Headers.Clear();
+            httpContext.Request.Host = host;
+            httpContext.Request.Scheme = scheme;
+            httpContext.Request.QueryString = new QueryString(query);
+            if (request.TryGet(nameof(GetRequest.Headers), out BlittableJsonReaderObject headers))
+            {
+                foreach (var header in headers.GetPropertyNames())
+                {
+                    if (headers.TryGet(header, out string value) == false)
+                        continue;
+
+                    if (string.IsNullOrWhiteSpace(value))
+                        continue;
+
+                    httpContext.Request.Headers.Add(header, value);
+                }
+            }
+            // initiated to use it at the end of for
+            content = null;
+            if (method == HttpMethod.Post.Method && request.TryGet(nameof(GetRequest.Content), out content))
+            {
+                if (content is LazyStringValue)
+                {
+                    var requestBody = GetRequestBody(content.ToString());
+                    HttpContext.Response.RegisterForDispose(requestBody);
+                    httpContext.Request.Body = requestBody;
+                }
+                else
+                {
+                    var requestBody = new MemoryStream();
+                    var contentWriter = new BlittableJsonTextWriter(context, requestBody);
+                    context.Write(contentWriter, (BlittableJsonReaderObject)content);
+                    contentWriter.Flush();
+                    HttpContext.Response.RegisterForDispose(requestBody);
+                    httpContext.Request.Body = requestBody;
+                    httpContext.Request.Body.Position = 0;
+                }
+            }
+            else if (method == HttpMethod.Get.Method && trafficWatchStringBuilder != null)
+            {
+                content = request.ToString();
+            }
+        }
+
+        private void WriteHeaders(BlittableJsonTextWriter writer, HttpContext httpContext, LazyStringValue headersProperty)
+        {
+            writer.WritePropertyName(headersProperty);
+            writer.WriteStartObject();
+            bool headerStart = true;
+            foreach (var header in httpContext.Response.Headers)
+            {
+                foreach (var value in header.Value)
+                {
+                    if (headerStart == false)
+                        writer.WriteComma();
+                    headerStart = false;
+                    writer.WritePropertyName(header.Key);
+                    writer.WriteString(value);
+                }
+            }
+            writer.WriteEndObject();
+        }
+
         private class MultiGetHttpResponseFeature : IHttpResponseFeature
         {
             public MultiGetHttpResponseFeature()
@@ -218,30 +262,61 @@ namespace Raven.Server.Documents.Handlers
                 Headers = new HeaderDictionary();
             }
 
-            public void OnStarting(Func<object, Task> callback, object state)
-            {
-            }
+            public Stream Body { get; set; }
+
+            public bool HasStarted { get; }
+
+            public IHeaderDictionary Headers { get; set; }
+
+            public string ReasonPhrase { get; set; }
+
+            public int StatusCode { get; set; }
 
             public void OnCompleted(Func<object, Task> callback, object state)
             {
             }
 
-            public int StatusCode { get; set; }
-            public string ReasonPhrase { get; set; }
-            public IHeaderDictionary Headers { get; set; }
-            public Stream Body { get; set; }
-            public bool HasStarted { get; }
+            public void OnStarting(Func<object, Task> callback, object state)
+            {
+            }
         }
 
         private class MultiGetHttpResponseStream : Stream
         {
             private readonly Stream _stream;
 
-            public long BytesWritten { get; private set; }
-
             public MultiGetHttpResponseStream(Stream stream)
             {
                 _stream = stream;
+            }
+
+            public long BytesWritten { get; private set; }
+            public override bool CanRead => _stream.CanRead;
+
+            public override bool CanSeek => _stream.CanRead;
+
+            public override bool CanTimeout => _stream.CanTimeout;
+
+            public override bool CanWrite => _stream.CanRead;
+
+            public override long Length => _stream.Length;
+
+            public override long Position
+            {
+                get { return _stream.Position; }
+                set { _stream.Position = value; }
+            }
+
+            public override int ReadTimeout
+            {
+                get { return _stream.ReadTimeout; }
+                set { _stream.ReadTimeout = value; }
+            }
+
+            public override int WriteTimeout
+            {
+                get { return _stream.WriteTimeout; }
+                set { _stream.WriteTimeout = value; }
             }
 
             public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
@@ -268,11 +343,6 @@ namespace Raven.Server.Documents.Handlers
             public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
             {
                 throw new NotSupportedException();
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                _stream.Dispose();
             }
 
             public override ValueTask DisposeAsync()
@@ -365,28 +435,9 @@ namespace Raven.Server.Documents.Handlers
                 _stream.WriteByte(value);
             }
 
-            public override bool CanRead => _stream.CanRead;
-            public override bool CanSeek => _stream.CanRead;
-            public override bool CanTimeout => _stream.CanTimeout;
-            public override bool CanWrite => _stream.CanRead;
-            public override long Length => _stream.Length;
-
-            public override long Position
+            protected override void Dispose(bool disposing)
             {
-                get { return _stream.Position; }
-                set { _stream.Position = value; }
-            }
-
-            public override int ReadTimeout
-            {
-                get { return _stream.ReadTimeout; }
-                set { _stream.ReadTimeout = value; }
-            }
-
-            public override int WriteTimeout
-            {
-                get { return _stream.WriteTimeout; }
-                set { _stream.WriteTimeout = value; }
+                _stream.Dispose();
             }
         }
     }

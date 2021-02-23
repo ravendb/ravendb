@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
+using Microsoft.Extensions.Configuration;
+using Raven.Client;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Configuration;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Platform;
@@ -265,6 +269,30 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.History.NumberOfRevisions", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int HistoryRevisionsNumber { get; set; }
 
+        [Description("Default analyzer that will be used for fields.")]
+        [DefaultValue(Constants.Documents.Indexing.Analyzers.Default)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Analyzers.Default", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public string DefaultAnalyzer { get; set; }
+
+        [Description("Default analyzer that will be used for exact fields.")]
+        [DefaultValue(Constants.Documents.Indexing.Analyzers.DefaultExact)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Analyzers.Exact.Default", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public string DefaultExactAnalyzer { get; set; }
+
+        [Description("Default analyzer that will be used for search fields.")]
+        [DefaultValue(Constants.Documents.Indexing.Analyzers.DefaultSearch)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Analyzers.Search.Default", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public string DefaultSearchAnalyzer { get; set; }
+
+        public Type DefaultAnalyzerType { get; private set; }
+
+        public Type DefaultExactAnalyzerType { get; private set; }
+
+        public Type DefaultSearchAnalyzerType { get; private set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);
@@ -272,6 +300,20 @@ namespace Raven.Server.Config.Categories
             var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();
             if (updateTypeAttribute == null)
                 throw new InvalidOperationException($"No {nameof(IndexUpdateTypeAttribute)} available for '{property.Name}' property.");
+        }
+
+        public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
+        {
+            base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
+
+            InitializeAnalyzers();
+        }
+
+        public void InitializeAnalyzers()
+        {
+            DefaultAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultAnalyzer);
+            DefaultExactAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultExactAnalyzer);
+            DefaultSearchAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultSearchAnalyzer);
         }
 
         public enum IndexStartupBehavior

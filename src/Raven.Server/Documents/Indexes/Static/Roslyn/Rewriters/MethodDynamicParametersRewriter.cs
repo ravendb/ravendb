@@ -44,6 +44,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
+            var isPublic = node.Modifiers.Any(x => x.Kind() == SyntaxKind.PublicKeyword);
+            if (isPublic == false)
+                return node; //need to only modify public methods 
+            
             //first change method parameters to dynamic
             var parameterList = RewriteParametersToDynamicTypes(node, out var statements);
 

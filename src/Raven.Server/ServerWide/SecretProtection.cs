@@ -643,6 +643,8 @@ namespace Raven.Server.ServerWide
 
                     // Remove all expired certs which have the same subject name as our own
                     var chain = new X509Chain();
+                    chain.ChainPolicy.DisableCertificateDownloads = true;
+
                     chain.Build(c);
 
                     foreach (var element in chain.ChainElements)

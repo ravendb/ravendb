@@ -885,7 +885,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, long start, long take, Reference<int> totalCount)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take, Reference<int> totalCount)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -921,7 +921,7 @@ namespace Raven.Server.Documents
             return GetDocuments(context, listOfIds, start, take, totalCount);
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, string collection, long start, long take, Reference<int> totalCount)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, string collection, long start, long take, Reference<int> totalCount)
         {
             foreach (var doc in GetDocuments(context, ids, start, take, totalCount))
             {
@@ -2118,7 +2118,15 @@ namespace Raven.Server.Documents
 
         public CollectionDetails GetCollectionDetails(DocumentsOperationContext context, string collection)
         {
-            CollectionDetails collectionDetails = new CollectionDetails { Name = collection, CountOfDocuments = 0, Size = new Client.Util.Size() };
+            CollectionDetails collectionDetails = new CollectionDetails
+            {
+                Name = collection, 
+                CountOfDocuments = 0, 
+                Size = new Client.Util.Size(), 
+                DocumentsSize = new Client.Util.Size(),
+                RevisionsSize = new Client.Util.Size(),
+                TombstonesSize = new Client.Util.Size()
+            };
             CollectionName collectionName = GetCollection(collection, throwIfDoesNotExist: false);
 
             if (collectionName != null)
@@ -2127,9 +2135,16 @@ namespace Raven.Server.Documents
 
                 collectionDetails.CountOfDocuments = collectionTableReport.NumberOfEntries;
 
-                collectionDetails.Size.SizeInBytes = collectionTableReport.DataSizeInBytes
-                    + GetReportForTable(context, RevisionsStorage.RevisionsSchema, collectionName.GetTableName(CollectionTableType.Revisions)).DataSizeInBytes
-                    + GetReportForTable(context, TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones)).DataSizeInBytes;
+                var documentsSize = collectionTableReport.DataSizeInBytes;
+                var revisionsSize = GetReportForTable(context, RevisionsStorage.RevisionsSchema, collectionName.GetTableName(CollectionTableType.Revisions))
+                    .DataSizeInBytes;
+                var tombstonesSize = GetReportForTable(context, TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones)).DataSizeInBytes;
+                
+                collectionDetails.DocumentsSize.SizeInBytes = documentsSize;
+                collectionDetails.RevisionsSize.SizeInBytes = revisionsSize;
+                collectionDetails.TombstonesSize.SizeInBytes = tombstonesSize;
+
+                collectionDetails.Size.SizeInBytes = documentsSize + revisionsSize + tombstonesSize;
             }
 
             return collectionDetails;

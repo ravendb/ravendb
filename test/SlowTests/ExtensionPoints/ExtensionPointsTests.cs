@@ -10,6 +10,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Smuggler;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -30,7 +31,7 @@ namespace SlowTests.ExtensionPoints
 
         private const string SystemDbName = "System";
 
-        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
+        [Fact]
         public async Task OnDirectoryInitializeInMemoryTest()
         {
             string script;
@@ -67,23 +68,23 @@ exit 0";
             {
                 using (var store = GetDocumentStore())
                 {
-                    store.Maintenance.Send(new CreateSampleDataOperation());
+                    store.Maintenance.Send(new CreateSampleDataOperation(DatabaseItemType.Indexes));
 
                     // the database loads after all indexes are loaded
                     var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
                     var lines = File.ReadAllLines(outputFile);
-                    Assert.True(lines.Length == 6);
+                    Assert.Equal(10, lines.Length);
                     Assert.True(lines[0].Contains($"{DirectoryExecUtils.EnvironmentType.System} {SystemDbName} {options.BasePath} {options.TempPath} {options.JournalPath}"));
                     Assert.True(lines[1].Contains($"{DirectoryExecUtils.EnvironmentType.Configuration} {store.Database} {options.BasePath} {options.TempPath} {options.JournalPath}"));
                     Assert.True(lines[2].Contains($"{DirectoryExecUtils.EnvironmentType.Database} {store.Database} {options.BasePath} {options.TempPath} {options.JournalPath}"));
 
                     var indexes = documentDatabase.IndexStore.GetIndexes().ToArray();
 
-                    Assert.True(indexes.Length == 3);
+                    Assert.Equal(7, indexes.Length);
 
                     // The indexes order in the IndexStore don't match the order of storage env creation and we need a one-to-one match.
-                    var matches = lines.ToList().GetRange(3, 3);
+                    var matches = lines.ToList().GetRange(3, 7);
 
                     foreach (var index in indexes)
                     {
@@ -98,7 +99,7 @@ exit 0";
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
+        [Fact]
         public async Task OnDirectoryInitializePersistedTest()
         {
             string script;
@@ -136,13 +137,13 @@ exit 0";
                 Path = basePath
             }))
             {
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation(DatabaseItemType.Indexes));
 
                 // The database loads after all indexes are loaded
                 var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
                 var lines = File.ReadAllLines(outputFile);
-                Assert.True(lines.Length == 6);
+                Assert.Equal(10, lines.Length);
 
                 var systemEnvOptions = Server.ServerStore._env.Options;
                 var configEnvOptions = documentDatabase.ConfigurationStorage.Environment.Options;
@@ -154,10 +155,10 @@ exit 0";
 
                 var indexes = documentDatabase.IndexStore.GetIndexes().ToArray();
 
-                Assert.True(indexes.Length == 3);
+                Assert.Equal(7, indexes.Length);
 
                 // The indexes order in the IndexStore don't match the order of storage env creation and we need a one-to-one match.
-                var matches = lines.ToList().GetRange(3, 3);
+                var matches = lines.ToList().GetRange(3, 7);
 
                 foreach (var index in indexes)
                 {
@@ -171,7 +172,7 @@ exit 0";
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
+        [Fact]
         public void CanGetErrorsFromOnDirectoryInitialize()
         {
             string script;
@@ -205,7 +206,7 @@ exit 129";
             Assert.True(e.InnerException.Message.Contains("ERROR!") && e.InnerException.Message.Contains("Karmelush is ANGRY"));
         }
 
-        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
+        [Fact]
         public void CanGetCpuCreditsFromExec()
         {
             string script;
@@ -253,7 +254,7 @@ exit 129";
             Assert.Equal(34.665476, value);
         }
 
-        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
+        [Fact]
         public void CertificateAndMasterKeyExecTest()
         {
             string script;

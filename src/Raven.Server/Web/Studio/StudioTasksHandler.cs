@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.Formatting;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -22,6 +23,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Util.Settings;
@@ -52,7 +54,7 @@ namespace Raven.Server.Web.Studio
                     result = new PathSetting(path, baseDataDirectory).FullPath;
                 }
 
-                // 3. Name defined, No path 
+                // 3. Name defined, No path
                 else if (string.IsNullOrEmpty(name) == false)
                 {
                     // 'Databases' prefix is added...
@@ -96,7 +98,8 @@ namespace Raven.Server.Web.Studio
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var folderPathOptions  = new FolderPathOptions();;
+                var folderPathOptions = new FolderPathOptions();
+                ;
                 switch (connectionType)
                 {
                     case PeriodicBackupConnectionType.Local:
@@ -104,6 +107,7 @@ namespace Raven.Server.Web.Studio
                         var path = GetStringQueryString("path", required: false);
                         folderPathOptions = FolderPath.GetOptions(path, isBackupFolder, ServerStore.Configuration);
                         break;
+
                     case PeriodicBackupConnectionType.S3:
                         var json = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
                         if (connectionType != PeriodicBackupConnectionType.Local && json == null)
@@ -136,9 +140,10 @@ namespace Raven.Server.Web.Studio
                             }
                         }
                         break;
+
                     case PeriodicBackupConnectionType.Azure:
                         var azureJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
-                        
+
                         if (connectionType != PeriodicBackupConnectionType.Local && azureJson == null)
                             throw new BadRequestException("No JSON was posted.");
 
@@ -165,9 +170,10 @@ namespace Raven.Server.Web.Studio
                             }
                         }
                         break;
+
                     case PeriodicBackupConnectionType.GoogleCloud:
                         var googleCloudJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
-                        
+
                         if (connectionType != PeriodicBackupConnectionType.Local && googleCloudJson == null)
                             throw new BadRequestException("No JSON was posted.");
 
@@ -189,7 +195,7 @@ namespace Raven.Server.Web.Studio
                                 const char separator = '/';
                                 var splitted = folder.Name.Split(separator);
                                 var result = string.Join(separator, splitted.Take(requestedPathLength)) + separator;
-                                
+
                                 if (string.IsNullOrWhiteSpace(result))
                                     continue;
 
@@ -197,6 +203,7 @@ namespace Raven.Server.Web.Studio
                             }
                         }
                         break;
+
                     case PeriodicBackupConnectionType.FTP:
                     case PeriodicBackupConnectionType.Glacier:
                         throw new NotSupportedException();
@@ -231,9 +238,11 @@ namespace Raven.Server.Web.Studio
                         case "dataDir":
                             OfflineMigrationConfiguration.ValidateDataDirectory(path);
                             break;
+
                         case "migratorPath":
                             OfflineMigrationConfiguration.ValidateExporterPath(path);
                             break;
+
                         default:
                             throw new BadRequestException("Unknown mode: " + mode);
                     }
@@ -263,6 +272,89 @@ namespace Raven.Server.Web.Studio
             public string ErrorMessage { get; set; }
         }
 
+        [RavenAction("/studio-tasks/periodic-backup/test-credentials", "POST", AuthorizationStatus.ValidUser)]
+        public async Task TestPeriodicBackupCredentials()
+        {
+            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            if (Enum.TryParse(type, out PeriodicBackupConnectionType connectionType) == false)
+                throw new ArgumentException($"Unknown backup connection: {type}");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                DynamicJsonValue result;
+                try
+                {
+                    var connectionInfo = await context.ReadForMemoryAsync(RequestBodyStream(), "test-connection");
+                    switch (connectionType)
+                    {
+                        case PeriodicBackupConnectionType.S3:
+                            var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
+                            using (var awsClient = new RavenAwsS3Client(s3Settings, cancellationToken: ServerStore.ServerShutdown))
+                            {
+                                awsClient.TestConnection();
+                            }
+                            break;
+
+                        case PeriodicBackupConnectionType.Glacier:
+                            var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
+                            using (var glacierClient = new RavenAwsGlacierClient(glacierSettings, cancellationToken: ServerStore.ServerShutdown))
+                            {
+                                glacierClient.TestConnection();
+                            }
+                            break;
+
+                        case PeriodicBackupConnectionType.Azure:
+                            var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
+                            using (var azureClient = new RavenAzureClient(azureSettings, cancellationToken: ServerStore.ServerShutdown))
+                            {
+                                azureClient.TestConnection();
+                            }
+                            break;
+
+                        case PeriodicBackupConnectionType.GoogleCloud:
+                            var googleCloudSettings = JsonDeserializationClient.GoogleCloudSettings(connectionInfo);
+                            using (var googleCloudClient = new RavenGoogleCloudClient(googleCloudSettings, cancellationToken: ServerStore.ServerShutdown))
+                            {
+                                await googleCloudClient.TestConnection();
+                            }
+                            break;
+
+                        case PeriodicBackupConnectionType.FTP:
+                            var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
+                            using (var ftpClient = new RavenFtpClient(ftpSettings))
+                            {
+                                ftpClient.TestConnection();
+                            }
+                            break;
+
+                        case PeriodicBackupConnectionType.Local:
+                        case PeriodicBackupConnectionType.None:
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    result = new DynamicJsonValue
+                    {
+                        [nameof(NodeConnectionTestResult.Success)] = true,
+                    };
+                }
+                catch (Exception e)
+                {
+                    result = new DynamicJsonValue
+                    {
+                        [nameof(NodeConnectionTestResult.Success)] = false,
+                        [nameof(NodeConnectionTestResult.Error)] = e.ToString()
+                    };
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result);
+                }
+            }
+        }
+
         [RavenAction("/studio-tasks/is-valid-name", "GET", AuthorizationStatus.ValidUser)]
         public Task IsValidName()
         {
@@ -284,6 +376,7 @@ namespace Raven.Server.Web.Studio
                     case ItemType.Database:
                         isValid = ResourceNameValidator.IsValidResourceName(name, path, out errorMessage);
                         break;
+
                     case ItemType.Index:
                         isValid = IndexStore.IsValidIndexName(name, isStatic: true, out errorMessage);
                         break;
@@ -363,6 +456,7 @@ namespace Raven.Server.Web.Studio
                             };
                         }
                         break;
+
                     case IndexType.JavaScriptMap:
                     case IndexType.JavaScriptMapReduce:
                         formattedExpression = new FormattedExpression
@@ -370,6 +464,7 @@ namespace Raven.Server.Web.Studio
                             Expression = JSBeautify.Apply(expressionAsString)
                         };
                         break;
+
                     default:
                         throw new NotSupportedException($"Unknown index type '{type}'.");
                 }
@@ -442,7 +537,6 @@ namespace Raven.Server.Web.Studio
 
             public DateTime ServerTime { get; set; }
         }
-
 
         public class FormattedExpression : IDynamicJson
         {

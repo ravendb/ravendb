@@ -12,12 +12,12 @@ namespace Sparrow.Json
     {
         private readonly T[][] _perCoreArrays;
 
-        public PerCoreContainer()
+        public PerCoreContainer(int numberOfSlotsPerCore = 64)
         {
             _perCoreArrays = new T[Environment.ProcessorCount][];
             for (int i = 0; i < _perCoreArrays.Length; i++)
             {
-                _perCoreArrays[i] = new T[64];
+                _perCoreArrays[i] = new T[numberOfSlotsPerCore];
             }
         }
 

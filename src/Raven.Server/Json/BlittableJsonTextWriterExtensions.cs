@@ -1647,6 +1647,12 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 first = false;
 
+                if (counter == null)
+                {
+                    writer.WriteNull();
+                    continue;
+                }
+
                 writer.WriteStartObject();
 
                 writer.WritePropertyName(nameof(CounterDetail.DocumentId));
