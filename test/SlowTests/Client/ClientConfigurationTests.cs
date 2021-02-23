@@ -1,9 +1,12 @@
-﻿using System.Threading.Tasks;
-using FastTests;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Http;
+using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -177,5 +180,36 @@ namespace SlowTests.Client
                 }
             }
         }
+
+        [Fact]
+        public async Task PutClientConfiguration_ShouldNotChangeTopologyEtag()
+        {
+            using var store = GetDocumentStore();
+
+            var initTopology = await GetTopology();
+
+            // Just increment topology Etag so it will not be initial value -1
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            var fixedOrder = record.Topology.AllNodes.ToList();
+            await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(store.Database, fixedOrder, fixedTopology: true));
+
+            var topologyBefore = await GetTopology();
+            Assert.True(topologyBefore.Etag > initTopology.Etag);
+
+            await store.Maintenance.SendAsync(new PutClientConfigurationOperation(new ClientConfiguration { ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin }));
+            var topologyAfter = await GetTopology();
+
+            Assert.Equal(topologyBefore.Etag, topologyAfter.Etag);
+
+            async Task<Topology> GetTopology()
+            {
+                using var context = JsonOperationContext.ShortTermSingleUse();
+                var requestExecutor = store.GetRequestExecutor();
+                var topologyGetCommand = new GetDatabaseTopologyCommand();
+                await requestExecutor.ExecuteAsync(topologyGetCommand, context);
+                return topologyGetCommand.Result;
+            }
+        }
+
     }
 }

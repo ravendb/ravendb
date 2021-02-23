@@ -2331,11 +2331,9 @@ namespace Raven.Server.ServerWide
             if (string.IsNullOrEmpty(record.Topology.DatabaseTopologyIdBase64))
                 record.Topology.DatabaseTopologyIdBase64 = Guid.NewGuid().ToBase64Unpadded();
 
-            record.Topology.Stamp = new LeaderStamp
-            {
-                Term = _engine.CurrentTerm,
-                LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0
-            };
+            record.Topology.Stamp ??= new LeaderStamp();
+            record.Topology.Stamp.Term = _engine.CurrentTerm;
+            record.Topology.Stamp.LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0;
 
             var addDatabaseCommand = new AddDatabaseCommand(raftRequestId)
             {
