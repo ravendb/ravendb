@@ -2463,7 +2463,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (CanConvert(context.Node, _conventions, out var alias, out var innerMemberExpression) == false)
+                if (CanConvert(context.Node, _conventions, out var innerMemberExpression) == false)
                     return;
 
                 var writer = context.GetWriter();
@@ -2476,32 +2476,23 @@ namespace Raven.Client.Util
                     {
                         context.Visitor.Visit(innerMemberExpression);
                     }
-                    else
-                    {
-                        writer.Write(alias);
-                    }
 
                     writer.Write(")");
                 }
             }
 
-            internal static bool CanConvert(Expression expression, DocumentConventions conventions, out string aliasName)
-            {
-                return CanConvert(expression, conventions, out aliasName, out _);
-            }
 
-            private static bool CanConvert(Expression expression, DocumentConventions conventions, out string aliasName, out MemberExpression innerMemberExpression)
+            private static bool CanConvert(Expression expression, DocumentConventions conventions, out Expression innerMemberExpression)
             {
-                aliasName = null;
                 innerMemberExpression = null;
 
                 if (!(expression is MemberExpression member) ||
                     conventions.GetIdentityProperty(member.Member.DeclaringType) != member.Member)
                     return false;
-
+                
                 if (member.Expression is ParameterExpression parameter)
                 {
-                    aliasName = parameter.Name;
+                    innerMemberExpression = parameter;
                     return true;
                 }
 
@@ -2511,14 +2502,22 @@ namespace Raven.Client.Util
                 innerMemberExpression = innerMember;
 
                 var p = GetParameter(innerMember)?.Name;
+                return p != null && p.StartsWith(TransparentIdentifier);
+            }
+        }
+        
+        public class MemberInit : JavascriptConversionExtension
+        {
+            public static MemberInit Instance { get; } = new();
 
-                if (p != null && p.StartsWith(TransparentIdentifier))
-                {
-                    aliasName = innerMember.Member.Name;
-                    return true;
-                }
+            private MemberInit() { }
 
-                return false;
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (context.Node is MemberInitExpression == false)
+                    return;
+
+                MemberInitAsJson.ForAllTypes.ConvertToJavascript(context);
             }
         }
 
