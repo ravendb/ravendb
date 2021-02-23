@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -128,22 +128,16 @@ namespace Sparrow.Json
             AssertContextNotDisposed();
             int returnValue = *value;
             if (sizeOfValue == sizeof(byte))
-                goto Successful;
+                return returnValue;
 
             returnValue |= *(value + 1) << 8;
             if (sizeOfValue == sizeof(short))
-                goto Successful;
+                return returnValue;
 
             returnValue |= *(short*)(value + 2) << 16;
             if (sizeOfValue == sizeof(int))
-                goto Successful;
+                return returnValue;
 
-            goto Error;
-            
-            Successful:
-            return returnValue;
-
-            Error:
             return ThrowInvalidSizeForNumber(sizeOfValue);
         }
 
@@ -206,7 +200,7 @@ namespace Sparrow.Json
             offset = 0;
 
             if (pos < 0)
-                goto ThrowInvalid;
+                ThrowInvalidPosition(pos);
 
             // Read out an Int32 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
@@ -219,7 +213,7 @@ namespace Sparrow.Json
             do
             {
                 if (shift == 35)
-                    goto Error; // PERF: Using goto to diminish the size of the loop.
+                    ThrowInvalidShift();
 
                 b = buffer[pos];
                 pos++;
@@ -231,14 +225,6 @@ namespace Sparrow.Json
             while ((b & 0x80) != 0);
 
             return count;
-
-            Error:
-            ThrowInvalidShift();            
-
-            ThrowInvalid:
-            ThrowInvalidPosition(pos);
-
-            return -1;
         }
 
         private static void ThrowInvalidShift()
@@ -264,7 +250,7 @@ namespace Sparrow.Json
             do
             {
                 if (shift == 35)
-                    goto Error; // PERF: Using goto to diminish the size of the loop.
+                    ThrowInvalidShift();
 
                 b = buffer[pos];
                 pos--;
@@ -275,10 +261,6 @@ namespace Sparrow.Json
             }
             while ((b & 0x80) != 0);
             return count;
-
-            Error:
-            ThrowInvalidShift();
-            return -1;
         }
 
         protected long ReadVariableSizeLong(int pos)
@@ -293,7 +275,7 @@ namespace Sparrow.Json
             do
             {
                 if (shift == 70)
-                    goto Error; // PERF: Using goto to diminish the size of the loop.
+                    ThrowInvalidShift();
 
                 b = _mem[pos++];
                 count |= (ulong)(b & 0x7F) << shift;
@@ -305,10 +287,6 @@ namespace Sparrow.Json
             // http://code.google.com/apis/protocolbuffers/docs/encoding.html#types
 
             return (long)(count >> 1) ^ -(long)(count & 1);
-
-            Error:
-            ThrowInvalidShift();
-            return -1;
         }
 
         [Conditional("DEBUG")]
