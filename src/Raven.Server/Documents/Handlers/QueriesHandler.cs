@@ -396,7 +396,7 @@ namespace Raven.Server.Documents.Handlers
                     skipPatchIfChangeVectorMismatch: false,
                     patch: (patch, query.QueryParameters),
                     patchIfMissing: (null, null),
-                    database: context.DocumentDatabase,
+                    identityPartsSeparator: context.DocumentDatabase.IdentityPartsSeparator,
                     debugMode: true,
                     isTest: true,
                     collectResultsNeeded: true,

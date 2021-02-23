@@ -368,6 +368,11 @@ namespace Raven.Client
             }
         }
 
+        internal static class Identities
+        {
+            public const char DefaultSeparator = '/';
+        }
+
         internal static class Smuggler
         {
             public const string ImportOptions = "importOptions";

@@ -68,6 +68,12 @@ namespace Raven.Server.Web
             return feature?.Certificate;
         }
 
+        public CancellationToken AbortRequestToken
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _context.HttpContext.RequestAborted; }
+        }
+
         public virtual void Init(RequestHandlerContext context)
         {
             _context = context;
@@ -102,7 +108,7 @@ namespace Raven.Server.Web
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected Stream GetBodyStream(MultipartSection section)
+        public Stream GetBodyStream(MultipartSection section)
         {
             Stream stream = new StreamWithTimeout(GetDecompressedStream(section.Body, section.Headers));
             _context.HttpContext.Response.RegisterForDispose(stream);

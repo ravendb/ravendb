@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Sparrow.Json.Parsing;
@@ -41,6 +42,23 @@ namespace Sparrow.Json
                 if (i > 0)
                     writer.WriteComma();
                 writer.WriteDouble(span[i]);
+            }
+            writer.WriteEndArray();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, List<Stream> items)
+        {
+            writer.WritePropertyName(name);
+
+            writer.WriteStartArray();
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (i > 0)
+                    writer.WriteComma();
+
+                items[i].Position = 0;
+                writer.WriteStream(items[i]);
             }
             writer.WriteEndArray();
         }

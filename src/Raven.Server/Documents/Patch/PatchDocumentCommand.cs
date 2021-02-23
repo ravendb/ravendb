@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Patch
 
         private readonly JsonOperationContext _externalContext;
 
-        protected readonly DocumentDatabase _database;
+        protected DocumentDatabase _database;
         private readonly bool _isTest;
         private readonly bool _debugMode;
         protected readonly bool _returnDocument;
@@ -37,7 +37,6 @@ namespace Raven.Server.Documents.Patch
             bool skipPatchIfChangeVectorMismatch,
             (PatchRequest run, BlittableJsonReaderObject args) patch,
             (PatchRequest run, BlittableJsonReaderObject args) patchIfMissing,
-            DocumentDatabase database,
             bool isTest,
             bool debugMode,
             bool collectResultsNeeded,
@@ -47,7 +46,6 @@ namespace Raven.Server.Documents.Patch
             _patchIfMissing = patchIfMissing;
             _patch = patch;
             _skipPatchIfChangeVectorMismatch = skipPatchIfChangeVectorMismatch;
-            _database = database;
             _isTest = isTest;
             _debugMode = debugMode;
             _returnDocument = returnDocument;
@@ -55,6 +53,7 @@ namespace Raven.Server.Documents.Patch
 
         protected PatchResult ExecuteOnDocument(DocumentsOperationContext context, string id, LazyStringValue expectedChangeVector, ScriptRunner.SingleRun run, ScriptRunner.SingleRun runIfMissing)
         {
+            _database = context.DocumentDatabase;
             run.DebugMode = _debugMode;
             if (runIfMissing != null)
                 runIfMissing.DebugMode = _debugMode;
@@ -343,10 +342,9 @@ namespace Raven.Server.Documents.Patch
             bool skipPatchIfChangeVectorMismatch,
             (PatchRequest run, BlittableJsonReaderObject args) patch,
             (PatchRequest run, BlittableJsonReaderObject args) patchIfMissing,
-            DocumentDatabase database,
             bool isTest,
             bool debugMode,
-            bool collectResultsNeeded) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, database, isTest, debugMode, collectResultsNeeded, returnDocument: false)
+            bool collectResultsNeeded) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, isTest, debugMode, collectResultsNeeded, returnDocument: false)
         {
             _ids = ids;
         }
@@ -357,6 +355,7 @@ namespace Raven.Server.Documents.Patch
                 return 0;
 
             ScriptRunner.SingleRun runIfMissing = null;
+            _database = context.DocumentDatabase;
             using (_database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out var run))
             using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out runIfMissing) : (IDisposable)null)
             {
@@ -413,22 +412,23 @@ namespace Raven.Server.Documents.Patch
             bool skipPatchIfChangeVectorMismatch,
             (PatchRequest run, BlittableJsonReaderObject args) patch,
             (PatchRequest run, BlittableJsonReaderObject args) patchIfMissing,
-            DocumentDatabase database,
+            char identityPartsSeparator,
             bool isTest,
             bool debugMode,
             bool collectResultsNeeded,
-            bool returnDocument) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, database, isTest, debugMode, collectResultsNeeded, returnDocument)
+            bool returnDocument) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, isTest, debugMode, collectResultsNeeded, returnDocument)
         {
             _id = id;
             _expectedChangeVector = expectedChangeVector;
 
-            if (string.IsNullOrEmpty(id) || id.EndsWith(database.IdentityPartsSeparator) || id.EndsWith('|'))
+            if (string.IsNullOrEmpty(id) || id.EndsWith(identityPartsSeparator) || id.EndsWith('|'))
                 throw new ArgumentException($"The ID argument has invalid value: '{id}'", nameof(id));
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             ScriptRunner.SingleRun runIfMissing = null;
+            _database = context.DocumentDatabase;
 
             using (_database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out var run))
             using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out runIfMissing) : (IDisposable)null)
@@ -468,7 +468,6 @@ namespace Raven.Server.Documents.Patch
                 SkipPatchIfChangeVectorMismatch,
                 Patch,
                 PatchIfMissing,
-                database,
                 IsTest,
                 DebugMode,
                 CollectResultsNeeded);
@@ -490,7 +489,7 @@ namespace Raven.Server.Documents.Patch
                 SkipPatchIfChangeVectorMismatch,
                 Patch,
                 PatchIfMissing,
-                database,
+                database.IdentityPartsSeparator,
                 IsTest,
                 DebugMode,
                 CollectResultsNeeded,

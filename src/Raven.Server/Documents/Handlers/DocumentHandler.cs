@@ -521,7 +521,7 @@ namespace Raven.Server.Documents.Handlers
                     skipPatchIfChangeVectorMismatch,
                     (patch, patchArgs),
                     (patchIfMissing, patchIfMissingArgs),
-                    Database,
+                    Database.IdentityPartsSeparator,
                     isTest,
                     debugMode,
                     true,

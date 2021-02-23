@@ -1,10 +1,8 @@
-﻿using System;
-using System.Net.Http;
+﻿using System.Net.Http;
 using Raven.Client;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding
 {
@@ -50,7 +48,7 @@ namespace Raven.Server.Documents.Sharding
             if (header.HasFlag(Headers.IfMatch))
                 command.Headers["If-Match"] = GetStringFromHeaders("If-Match");
 
-            if (header.HasFlag(Headers.IfNonMatch))
+            if (header.HasFlag(Headers.IfNoneMatch))
                 command.Headers["If-None-Match"] = GetStringFromHeaders("If-None-Match");
         }
     }

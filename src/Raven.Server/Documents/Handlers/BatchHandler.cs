@@ -8,8 +8,6 @@ using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
@@ -27,7 +25,6 @@ using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -44,87 +41,91 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/bulk_docs", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task BulkDocs()
         {
+            var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
+            var waitForIndexThrow = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
+            var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndex"];
+
+            var commandBuilder = new BatchRequestParser.DatabaseBatchCommandBuilder(this, Database);
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var command = new MergedBatchCommand(Database))
             {
                 var contentType = HttpContext.Request.ContentType;
                 if (contentType == null ||
                     contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
                 {
-                    await BatchRequestParser.BuildCommandsAsync(context, command, RequestBodyStream(), Database, ServerStore);
+                    await commandBuilder.BuildCommandsAsync(context, RequestBodyStream());
                 }
                 else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
                     contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                 {
-                    await ParseMultipart(context, command);
+                    await commandBuilder.ParseMultipart(context, RequestBodyStream(), HttpContext.Request.ContentType);
                 }
                 else
                     ThrowNotSupportedType(contentType);
 
                 if (TrafficWatchManager.HasRegisteredClients)
                 {
-                    BatchTrafficWatch(command.ParsedCommands);
+                    var log = BatchTrafficWatch(commandBuilder.Commands);
+                    // add sb to httpContext
+                    AddStringToHttpContext(log, TrafficWatchChangeType.BulkDocs);
                 }
 
-                var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
-                var waitForIndexThrow = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
-                var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndex"];
-
-                if (command.IsClusterTransaction)
+                using (var command = await commandBuilder.GetCommand(context))
                 {
-                    ValidateCommandForClusterWideTransaction(command);
-
-                    using (Database.ClusterTransactionWaiter.CreateTask(out var taskId))
+                    if (command.IsClusterTransaction)
                     {
-                        // Since this is a cluster transaction we are not going to wait for the write assurance of the replication.
-                        // Because in any case the user will get a raft index to wait upon on his next request.
-                        var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId)
+                        ValidateCommandForClusterWideTransaction(command);
+
+                        using (Database.ClusterTransactionWaiter.CreateTask(out var taskId))
                         {
-                            WaitForIndexesTimeout = waitForIndexesTimeout,
-                            WaitForIndexThrow = waitForIndexThrow,
-                            SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null
-                        };
-                        await HandleClusterTransaction(context, command, options);
+                            // Since this is a cluster transaction we are not going to wait for the write assurance of the replication.
+                            // Because in any case the user will get a raft index to wait upon on his next request.
+                            var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId)
+                            {
+                                WaitForIndexesTimeout = waitForIndexesTimeout,
+                                WaitForIndexThrow = waitForIndexThrow,
+                                SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null
+                            };
+                            await HandleClusterTransaction(context, command, options);
+                        }
+
+                        return;
                     }
-                    return;
-                }
 
-                if (waitForIndexesTimeout != null)
-                    command.ModifiedCollections = new HashSet<string>();
+                    if (waitForIndexesTimeout != null)
+                        command.ModifiedCollections = new HashSet<string>();
 
-                try
-                {
-                    await Database.TxMerger.Enqueue(command);
-                    command.ExceptionDispatchInfo?.Throw();
-                }
-                catch (ConcurrencyException)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                    throw;
-                }
-
-                var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
-                if (waitForReplicasTimeout != null)
-                {
-                    var numberOfReplicasStr = GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
-                    var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas", required: false) ?? true;
-
-                    await WaitForReplicationAsync(Database, waitForReplicasTimeout.Value, numberOfReplicasStr, throwOnTimeoutInWaitForReplicas, command.LastChangeVector);
-                }
-
-                if (waitForIndexesTimeout != null)
-                {
-                    await WaitForIndexesAsync(ContextPool, Database, waitForIndexesTimeout.Value, specifiedIndexesQueryString.ToList(), waitForIndexThrow,
-                        command.LastChangeVector, command.LastTombstoneEtag, command.ModifiedCollections);
-                }
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
+                    try
                     {
-                        [nameof(BatchCommandResult.Results)] = command.Reply
-                    });
+                        await Database.TxMerger.Enqueue(command);
+                        command.ExceptionDispatchInfo?.Throw();
+                    }
+                    catch (ConcurrencyException)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                        throw;
+                    }
+
+                    var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
+                    if (waitForReplicasTimeout != null)
+                    {
+                        var numberOfReplicasStr = GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
+                        var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas", required: false) ?? true;
+
+                        await WaitForReplicationAsync(Database, waitForReplicasTimeout.Value, numberOfReplicasStr, throwOnTimeoutInWaitForReplicas,
+                            command.LastChangeVector);
+                    }
+
+                    if (waitForIndexesTimeout != null)
+                    {
+                        await WaitForIndexesAsync(ContextPool, Database, waitForIndexesTimeout.Value, specifiedIndexesQueryString.ToList(), waitForIndexThrow,
+                            command.LastChangeVector, command.LastTombstoneEtag, command.ModifiedCollections);
+                    }
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, new DynamicJsonValue {[nameof(BatchCommandResult.Results)] = command.Reply});
+                    }
                 }
             }
         }
@@ -163,7 +164,7 @@ namespace Raven.Server.Documents.Handlers
             public DynamicJsonArray Array;
         }
 
-        private void BatchTrafficWatch(ArraySegment<BatchRequestParser.CommandData> parsedCommands)
+        public static string BatchTrafficWatch(ArraySegment<BatchRequestParser.CommandData> parsedCommands)
         {
             var sb = new StringBuilder();
             for (var i = parsedCommands.Offset; i < (parsedCommands.Offset + parsedCommands.Count); i++)
@@ -182,8 +183,8 @@ namespace Raven.Server.Documents.Handlers
                         .Append(parsedCommands.Array[i].Id).AppendLine();
                 }
             }
-            // add sb to httpContext
-            AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.BulkDocs);
+
+            return sb.ToString();
         }
 
         private async Task HandleClusterTransaction(DocumentsOperationContext context, MergedBatchCommand command, ClusterTransactionCommand.ClusterTransactionOptions options)
@@ -244,44 +245,9 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static void ThrowNotSupportedType(string contentType)
+        public static void ThrowNotSupportedType(string contentType)
         {
             throw new InvalidOperationException($"The requested Content type '{contentType}' is not supported. Use 'application/json' or 'multipart/mixed'.");
-        }
-
-        private async Task ParseMultipart(DocumentsOperationContext context, MergedBatchCommand command)
-        {
-            var boundary = MultipartRequestHelper.GetBoundary(
-                MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
-                MultipartRequestHelper.MultipartBoundaryLengthLimit);
-            var reader = new MultipartReader(boundary, RequestBodyStream());
-            for (var i = 0; i < int.MaxValue; i++)
-            {
-                var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
-                if (section == null)
-                    break;
-
-                var bodyStream = GetBodyStream(section);
-                if (i == 0)
-                {
-                    await BatchRequestParser.BuildCommandsAsync(context, command, bodyStream, Database, ServerStore);
-                    continue;
-                }
-
-                if (command.AttachmentStreams == null)
-                {
-                    command.AttachmentStreams = new List<MergedBatchCommand.AttachmentStream>();
-                    command.AttachmentStreamsTempFile = Database.DocumentsStorage.AttachmentsStorage.GetTempFile("batch");
-                }
-
-                var attachmentStream = new MergedBatchCommand.AttachmentStream
-                {
-                    Stream = command.AttachmentStreamsTempFile.StartNewStream()
-                };
-                attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, bodyStream, attachmentStream.Stream, Database.DatabaseShutdown);
-                attachmentStream.Stream.Flush();
-                command.AttachmentStreams.Add(attachmentStream);
-            }
         }
 
         public static async Task WaitForReplicationAsync(DocumentDatabase database, TimeSpan waitForReplicasTimeout, string numberOfReplicasStr, bool throwOnTimeoutInWaitForReplicas, string lastChangeVector)
@@ -1231,11 +1197,11 @@ namespace Raven.Server.Documents.Handlers
                     skipPatchIfChangeVectorMismatch: false,
                     patch: (ParsedCommands[i].Patch, ParsedCommands[i].PatchArgs),
                     patchIfMissing: (ParsedCommands[i].PatchIfMissing, ParsedCommands[i].PatchIfMissingArgs),
-                    database: database,
                     isTest: false,
                     debugMode: false,
                     collectResultsNeeded: true,
-                    returnDocument: ParsedCommands[i].ReturnDocument
+                    returnDocument: ParsedCommands[i].ReturnDocument,
+                    identityPartsSeparator:database.IdentityPartsSeparator
                 );
             }
 

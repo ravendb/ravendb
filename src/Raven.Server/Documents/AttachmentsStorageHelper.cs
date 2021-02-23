@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Server;
 
@@ -10,7 +9,7 @@ namespace Raven.Server.Documents
 {
     public static class AttachmentsStorageHelper
     {
-        public static async Task<string> CopyStreamToFileAndCalculateHash(DocumentsOperationContext context, Stream requestStream, Stream file, CancellationToken cancellationToken)
+        public static async Task<string> CopyStreamToFileAndCalculateHash(JsonOperationContext context, Stream requestStream, Stream file, CancellationToken cancellationToken)
         {
             using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
             using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer cryptoState))

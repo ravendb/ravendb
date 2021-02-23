@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
-using System.IO;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Server.Documents.Sharding;
 using Sparrow.Json;
 
@@ -36,7 +35,7 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
             var message = new HttpRequestMessage
             {
                 Method = Method, 
-                Content = Content == null ? null : new BlittableJsonContent(Content),
+                Content = Content == null ? null : new BlittableJsonContent((stream)=> Content.WriteJsonTo(stream)),
             };
             foreach ((string key, string value) in Headers)
             {
@@ -54,35 +53,12 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
             Response = response;
             return base.ProcessResponse(context, cache, response, url);
         }
-
-        internal class BlittableJsonContent : HttpContent
-        {
-            private readonly BlittableJsonReaderObject _data;
-
-            public BlittableJsonContent(BlittableJsonReaderObject data)
-            {
-                _data = data;
-
-            }
-
-            protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
-            {
-                _data.WriteJsonTo(stream);
-                return Task.CompletedTask;
-            }
-
-            protected override bool TryComputeLength(out long length)
-            {
-                length = -1;
-                return false;
-            }
-        }
     }
     
     public enum Headers
     {
         None,
         IfMatch,
-        IfNonMatch,
+        IfNoneMatch,
     }
 }

@@ -1263,7 +1263,7 @@ namespace Raven.Server.Documents
             var name = $"attachment.{Guid.NewGuid():N}.{prefix}";
             var tempPath = _documentsStorage.Environment.Options.DataPager.Options.TempPath.Combine(name);
 
-            return new StreamsTempFile(tempPath.FullPath, _documentDatabase.DocumentsStorage.Environment);
+            return new StreamsTempFile(tempPath.FullPath, _documentDatabase.DocumentsStorage.Environment.Options.Encryption.IsEnabled);
         }
 
         public static (LazyStringValue DocId, LazyStringValue AttachmentName) ExtractDocIdAndAttachmentNameFromTombstone(JsonOperationContext context,

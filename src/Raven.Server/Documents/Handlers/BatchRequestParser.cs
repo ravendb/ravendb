@@ -7,6 +7,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
@@ -17,8 +19,11 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.ShardedHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
+using Raven.Server.Smuggler;
+using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -28,7 +33,8 @@ namespace Raven.Server.Documents.Handlers
 {
     public static class BatchRequestParser
     {
-        public struct CommandData
+        // TODO sharding: CommandData seems to grew beyond the good practice of struct
+        public struct CommandData 
         {
             public CommandType Type;
             public string Id;
@@ -60,7 +66,7 @@ namespace Raven.Server.Documents.Handlers
             public string DestinationName;
             public string ContentType;
             public AttachmentType AttachmentType;
-            public BatchHandler.MergedBatchCommand.AttachmentStream AttachmentStream;
+            public BatchHandler.MergedBatchCommand.AttachmentStream AttachmentStream; // used for bulk insert only
 
             #endregion Attachment
 
@@ -118,120 +124,241 @@ namespace Raven.Server.Documents.Handlers
             _cache.Push(cmds);
         }
 
-        public static async Task BuildCommandsAsync(JsonOperationContext context, BatchHandler.MergedBatchCommand command, Stream stream,
-            DocumentDatabase database, ServerStore serverStore)
+
+        public class DatabaseBatchCommandBuilder : BatchCommandBuilder
         {
-            CommandData[] cmds = Empty;
-            List<string> identities = null;
-            List<int> positionInListToCommandIndex = null;
+            private readonly DocumentDatabase _database;
+            public List<BatchHandler.MergedBatchCommand.AttachmentStream> AttachmentStreams;
+            public StreamsTempFile AttachmentStreamsTempFile;
 
-            int index = -1;
-            var state = new JsonParserState();
-            using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
-            using (var parser = new UnmanagedJsonParser(context, state, "bulk_docs"))
-            /* In case we have a conflict between attachment with the same name we need attachment information from metadata */
-            /* we can't know from advanced if we will need this information so we save this for all batch commands */
-            using (var modifier = new BlittableMetadataModifier(context, legacyImport: false, readLegacyEtag: false,DatabaseItemType.Attachments))
+            public DatabaseBatchCommandBuilder(RequestHandler handler, DocumentDatabase database) : base(handler, database.Name, database.IdentityPartsSeparator)
             {
-                while (parser.Read() == false)
-                    await RefillParserBuffer(stream, buffer, parser);
+                _database = database;
+            }
 
-                if (state.CurrentTokenType != JsonParserToken.StartObject)
-                    ThrowUnexpectedToken(JsonParserToken.StartObject, state);
+            public override async Task SaveStream(JsonOperationContext context, Stream input)
+            {
+                if (AttachmentStreams == null)
+                {
+                    AttachmentStreams = new List<BatchHandler.MergedBatchCommand.AttachmentStream>();
+                    AttachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("batch");
+                }
 
-                while (parser.Read() == false)
-                    await RefillParserBuffer(stream, buffer, parser);
+                var attachmentStream = new BatchHandler.MergedBatchCommand.AttachmentStream
+                {
+                    Stream = AttachmentStreamsTempFile.StartNewStream()
+                };
+                attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, input, attachmentStream.Stream, _database.DatabaseShutdown);
+                await attachmentStream.Stream.FlushAsync();
+                AttachmentStreams.Add(attachmentStream);
+            }
 
-                if (state.CurrentTokenType != JsonParserToken.String)
-                    ThrowUnexpectedToken(JsonParserToken.String, state);
+            public async Task<BatchHandler.MergedBatchCommand> GetCommand(JsonOperationContext ctx)
+            {
+                await ExecuteGetIdentities();
+                return new BatchHandler.MergedBatchCommand(_database)
+                {
+                    ParsedCommands = Commands,
+                    AttachmentStreams = AttachmentStreams,
+                    AttachmentStreamsTempFile = AttachmentStreamsTempFile,
+                    IsClusterTransaction = IsClusterTransactionRequest
+                };
+            }
+        }
 
-                if (GetLongFromStringBuffer(state) != 8314892176759549763) // Commands
-                    ThrowUnexpectedToken(JsonParserToken.String, state);
+        public abstract class BatchCommandBuilder
+        {
+            private readonly char _identityPartsSeparator;
+            protected readonly RequestHandler Handler;
+            private readonly string _database;
+            protected ServerStore ServerStore => Handler.ServerStore;
 
-                while (parser.Read() == false)
-                    await RefillParserBuffer(stream, buffer, parser);
+            private int _index = -1;
+            private CommandData[] _commands = Empty;
+            public ArraySegment<CommandData> Commands => new ArraySegment<CommandData>(_commands, 0, _index + 1);
 
-                if (state.CurrentTokenType != JsonParserToken.StartArray)
-                    ThrowUnexpectedToken(JsonParserToken.StartArray, state);
+            protected List<string> _identities;
+            protected List<int> _identityPositions;
 
-                while (true)
+            public bool HasIdentities => _identities != null;
+            public bool IsClusterTransactionRequest;
+
+            protected BatchCommandBuilder(RequestHandler handler, string database, char identityPartsSeparator)
+            {
+                Handler = handler;
+                _database = database;
+                _identityPartsSeparator = identityPartsSeparator;
+            }
+
+            private void AddIdentity(JsonOperationContext ctx, ref CommandData command, int index)
+            {
+                _identities ??= new List<string>();
+                _identityPositions ??= new List<int>();
+
+                _identities.Add(command.Id);
+                _identityPositions.Add(index);
+
+                command.ChangeVector ??= ctx.GetLazyString("");
+            }
+
+            protected async Task ExecuteGetIdentities()
+            {
+                if (HasIdentities == false)
+                    return;
+
+                var newIds = await ServerStore.GenerateClusterIdentitiesBatchAsync(_database, _identities, RaftIdGenerator.NewId());
+                Debug.Assert(newIds.Count == _identities.Count);
+
+                for (var index = 0; index < _identityPositions.Count; index++)
+                {
+                    var value = _identityPositions[index];
+                    var cmd = _commands[value];
+
+                    cmd.Id = cmd.Id.Substring(0, cmd.Id.Length - 1) + _identityPartsSeparator + newIds[index];
+                    
+                    if (string.IsNullOrEmpty(cmd.ChangeVector) == false)
+                        ThrowInvalidUsageOfChangeVectorWithIdentities(cmd);
+
+                    // command it a struct so we need to copy it again
+                    _commands[value] = cmd;
+                }
+            }
+
+            public abstract Task SaveStream(JsonOperationContext context, Stream input);
+
+            public virtual Task<CommandData> ReadCommand(
+                JsonOperationContext ctx, 
+                Stream stream, 
+                JsonParserState state, 
+                UnmanagedJsonParser parser, 
+                JsonOperationContext.MemoryBuffer buffer, 
+                BlittableMetadataModifier modifier,
+                CancellationToken token)
+            {
+                return ReadSingleCommand(ctx, stream, state, parser, buffer, modifier, token);
+            }
+
+            public async Task BuildCommandsAsync(JsonOperationContext context, Stream stream, char separator = '/')
+            {
+                var state = new JsonParserState();
+                using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
+                using (var parser = new UnmanagedJsonParser(context, state, "bulk_docs"))
+                    /* In case we have a conflict between attachment with the same name we need attachment information from metadata */
+                    /* we can't know from advanced if we will need this information so we save this for all batch commands */
+                using (var modifier = new BlittableMetadataModifier(context, legacyImport: false, readLegacyEtag: false, DatabaseItemType.Attachments))
                 {
                     while (parser.Read() == false)
                         await RefillParserBuffer(stream, buffer, parser);
 
-                    if (state.CurrentTokenType == JsonParserToken.EndArray)
+                    if (state.CurrentTokenType != JsonParserToken.StartObject)
+                        ThrowUnexpectedToken(JsonParserToken.StartObject, state);
+
+                    while (parser.Read() == false)
+                        await RefillParserBuffer(stream, buffer, parser);
+
+                    if (state.CurrentTokenType != JsonParserToken.String)
+                        ThrowUnexpectedToken(JsonParserToken.String, state);
+
+                    if (GetLongFromStringBuffer(state) != 8314892176759549763) // Commands
+                        ThrowUnexpectedToken(JsonParserToken.String, state);
+
+                    while (parser.Read() == false)
+                        await RefillParserBuffer(stream, buffer, parser);
+
+                    if (state.CurrentTokenType != JsonParserToken.StartArray)
+                        ThrowUnexpectedToken(JsonParserToken.StartArray, state);
+
+                    while (true)
+                    {
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser);
+
+                        if (state.CurrentTokenType == JsonParserToken.EndArray)
+                            break;
+
+                        _index++;
+                        if (_index >= _commands.Length)
+                        {
+                            _commands = IncreaseSizeOfCommandsBuffer(_index, _commands);
+                        }
+
+                        var commandData = await ReadCommand(context, stream, state, parser, buffer, modifier, Handler.AbortRequestToken);
+
+                        if (commandData.Type == CommandType.PATCH)
+                        {
+                            //TODO sharding: make it nicer
+                            commandData.PatchCommand =
+                                new PatchDocumentCommand(
+                                    context,
+                                    commandData.Id,
+                                    commandData.ChangeVector,
+                                    skipPatchIfChangeVectorMismatch: false,
+                                    (commandData.Patch, commandData.PatchArgs),
+                                    (commandData.PatchIfMissing, commandData.PatchIfMissingArgs),
+                                    isTest: false,
+                                    debugMode: false,
+                                    collectResultsNeeded: true,
+                                    returnDocument: commandData.ReturnDocument,
+                                    identityPartsSeparator: separator
+                                );
+                        }
+
+                        if (commandData.Type == CommandType.BatchPATCH)
+                        {
+                            //TODO sharding: make it nicer
+                            commandData.PatchCommand =
+                                new BatchPatchDocumentCommand(
+                                    context,
+                                    commandData.Ids,
+                                    skipPatchIfChangeVectorMismatch: false,
+                                    (commandData.Patch, commandData.PatchArgs),
+                                    (commandData.PatchIfMissing, commandData.PatchIfMissingArgs),
+                                    isTest: false,
+                                    debugMode: false,
+                                    collectResultsNeeded: true
+                                );
+                        }
+
+                        if (IsIdentityCommand(ref commandData))
+                        {
+                            // queue identities requests in order to send them at once to the leader (using List for simplicity)
+                            AddIdentity(context, ref commandData, _index);
+                        }
+
+                        _commands[_index] = commandData;
+                    }
+
+                    if (await IsClusterTransaction(stream, parser, buffer, state))
+                        IsClusterTransactionRequest = true;
+                }
+            }
+
+            public static bool IsIdentityCommand(ref CommandData commandData)
+            {
+                return commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[^1] == '|';
+            }
+
+            public async Task ParseMultipart(JsonOperationContext context, Stream stream, string contentType)
+            {
+                var boundary = MultipartRequestHelper.GetBoundary(
+                    MediaTypeHeaderValue.Parse(contentType),
+                    MultipartRequestHelper.MultipartBoundaryLengthLimit);
+                var reader = new MultipartReader(boundary, stream);
+                for (var i = 0; i < int.MaxValue; i++)
+                {
+                    var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
+                    if (section == null)
                         break;
 
-                    index++;
-                    if (index >= cmds.Length)
+                    var bodyStream = Handler.GetBodyStream(section);
+                    if (i == 0)
                     {
-                        cmds = IncreaseSizeOfCommandsBuffer(index, cmds);
+                        await BuildCommandsAsync(context, bodyStream);
+                        continue;
                     }
 
-                    var commandData = await ReadSingleCommand(context, stream, state, parser, buffer, modifier, default);
-
-                    if (commandData.Type == CommandType.PATCH)
-                    {
-                        commandData.PatchCommand =
-                            new PatchDocumentCommand(
-                                context,
-                                commandData.Id,
-                                commandData.ChangeVector,
-                                skipPatchIfChangeVectorMismatch: false,
-                                (commandData.Patch, commandData.PatchArgs),
-                                (commandData.PatchIfMissing, commandData.PatchIfMissingArgs),
-                                database,
-                                isTest: false,
-                                debugMode: false,
-                                collectResultsNeeded: true,
-                                returnDocument: commandData.ReturnDocument
-                            );
-                    }
-
-                    if (commandData.Type == CommandType.BatchPATCH)
-                    {
-                        commandData.PatchCommand =
-                            new BatchPatchDocumentCommand(
-                                context,
-                                commandData.Ids,
-                                skipPatchIfChangeVectorMismatch: false,
-                                (commandData.Patch, commandData.PatchArgs),
-                                (commandData.PatchIfMissing, commandData.PatchIfMissingArgs),
-                                database,
-                                isTest: false,
-                                debugMode: false,
-                                collectResultsNeeded: true
-                               );
-                    }
-
-                    if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '|')
-                    {
-                        if (identities == null)
-                        {
-                            identities = new List<string>();
-                            positionInListToCommandIndex = new List<int>();
-                        }
-                        // queue identities requests in order to send them at once to the leader (using List for simplicity)
-                        identities.Add(commandData.Id);
-                        positionInListToCommandIndex.Add(index);
-                    }
-
-                    cmds[index] = commandData;
+                    await SaveStream(context, bodyStream);
                 }
-
-                if (identities != null)
-                {
-                    await GetIdentitiesValues(context,
-                        database,
-                        serverStore,
-                        identities,
-                        positionInListToCommandIndex,
-                        cmds);
-                }
-
-                command.ParsedCommands = new ArraySegment<CommandData>(cmds, 0, index + 1);
-                if (await IsClusterTransaction(stream, parser, buffer, state))
-                    command.IsClusterTransaction = true;
             }
         }
 
@@ -260,26 +387,7 @@ namespace Raven.Server.Documents.Handlers
                    *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 25711 && // od
                    *(state.StringBuffer + sizeof(long) + sizeof(int) + sizeof(short)) == (byte)'e';
         }
-
-        private static async Task GetIdentitiesValues(JsonOperationContext ctx, DocumentDatabase database, ServerStore serverStore,
-            List<string> identities, List<int> positionInListToCommandIndex, CommandData[] cmds)
-        {
-            var newIds = await serverStore.GenerateClusterIdentitiesBatchAsync(database.Name, identities, RaftIdGenerator.NewId());
-            Debug.Assert(newIds.Count == identities.Count);
-
-            var emptyChangeVector = ctx.GetLazyString("");
-
-            for (var index = 0; index < positionInListToCommandIndex.Count; index++)
-            {
-                var value = positionInListToCommandIndex[index];
-                cmds[value].Id = cmds[value].Id.Substring(0, cmds[value].Id.Length - 1) + database.IdentityPartsSeparator + newIds[index];
-
-                if (string.IsNullOrEmpty(cmds[value].ChangeVector) == false)
-                    ThrowInvalidUsageOfChangeVectorWithIdentities(cmds[value]);
-                cmds[value].ChangeVector = emptyChangeVector;
-            }
-        }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static unsafe long GetLongFromStringBuffer(JsonParserState state)
         {
@@ -360,6 +468,128 @@ namespace Raven.Server.Documents.Handlers
                     Offset = 0
                 }, _stream), blobSize, 0, 0);
             }
+        }
+
+        public static async Task<CommandData> ReadAndCopySingleCommand(
+            JsonOperationContext ctx,
+            Stream stream,
+            JsonParserState state,
+            UnmanagedJsonParser parser,
+            JsonOperationContext.MemoryBuffer buffer,
+            ShardedBatchCommandBuilder.BufferedCommand bufferedCommand,
+            CancellationToken token)
+        {
+            var commandData = new CommandData();
+            if (state.CurrentTokenType != JsonParserToken.StartObject)
+            {
+                ThrowUnexpectedToken(JsonParserToken.StartObject, state);
+            }
+
+            var commandCopy = bufferedCommand.CommandStream;
+            var position = parser.BufferOffset;
+            commandCopy.WriteByte((byte)'{'); // object start
+
+            var depth = 0;
+
+            while (true)
+            {
+                while (parser.Read() == false)
+                {
+                    parser.CopyParsedChunk(commandCopy, position);
+                    position = 0;
+                    await RefillParserBuffer(stream, buffer, parser, token);
+                }
+
+                if (state.CurrentTokenType == JsonParserToken.StartObject)
+                {
+                    depth++;
+                    continue;
+                }
+
+                if (state.CurrentTokenType == JsonParserToken.EndObject)
+                {
+                    if (depth == 0)
+                    {
+                        parser.CopyParsedChunk(commandCopy, position);
+                        break;
+                    }
+
+                    depth--;
+                }
+
+                if (depth > 0)
+                    continue;
+
+                switch (GetPropertyType(state))
+                {
+                    case CommandPropertyName.Type:
+                        while (parser.Read() == false)
+                        {
+                            parser.CopyParsedChunk(commandCopy, position);
+                            position = 0;
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        }
+                        if (state.CurrentTokenType != JsonParserToken.String)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.String, state);
+                        }
+                        
+                        commandData.Type = GetCommandType(state, ctx);
+                        break;
+                    case CommandPropertyName.Id:
+                        while (parser.Read() == false)
+                        {
+                            parser.CopyParsedChunk(commandCopy, position);
+                            position = 0;
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        }
+
+                        switch (state.CurrentTokenType)
+                        {
+                            case JsonParserToken.Null:
+                                commandData.Id = null;
+                                break;
+                            case JsonParserToken.String:
+                                bufferedCommand.IdStartPosition = checked((int)(commandCopy.Position + parser.BufferOffset - position - state.StringSize - 1));
+                                bufferedCommand.IdLength = state.StringSize;
+                                commandData.Id = GetStringPropertyValue(state);
+                                break;
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
+                                break;
+                        }
+
+                        break;
+                    case CommandPropertyName.Ids:
+                        bufferedCommand.IsBatchPatch = true;
+                        bufferedCommand.IdsStartPosition = checked((int)(commandCopy.Position + parser.BufferOffset - position));
+                        commandData.Ids = await ReadJsonArray(ctx, stream, parser, state, buffer, token);
+                        bufferedCommand.IdsEndPosition = checked((int)(commandCopy.Position + parser.BufferOffset - position));
+                        break;
+
+                    case CommandPropertyName.ChangeVector:
+                        while (parser.Read() == false)
+                        {
+                            parser.CopyParsedChunk(commandCopy, position);
+                            position = 0;
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        }
+
+                        if (state.CurrentTokenType == JsonParserToken.Null)
+                        {
+                            // we need this only for identities and we expect to have always null
+                            bufferedCommand.ChangeVectorPosition = checked((int)(commandCopy.Position + parser.BufferOffset - position - 4));
+                        }
+                        break;
+                }
+            }
+
+            if (commandData.Id == null && commandData.Ids == null)
+            {
+                throw new NotSupportedException($"The command type '{commandData.Type}' isn't supported, since it must contain Id or Ids property.");
+            }
+
+            return commandData;
         }
 
         private static async Task<CommandData> ReadSingleCommand(

@@ -618,7 +618,7 @@ namespace Raven.Server.Rachis
             var fileName = $"snapshot.{Guid.NewGuid():N}";
             var filePath = context.Environment.Options.DataPager.Options.TempPath.Combine(fileName);
             
-            using (var temp = new StreamsTempFile(filePath.FullPath, context.Environment))
+            using (var temp = new StreamsTempFile(filePath.FullPath, context.Environment.Options.Encryption.IsEnabled))
             using(var stream = temp.StartNewStream())
             using(var remoteReader = _connection.CreateReaderToStream(stream))
             {

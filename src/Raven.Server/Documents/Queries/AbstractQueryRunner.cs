@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Queries
                         skipPatchIfChangeVectorMismatch: false,
                         patch: (patch, patchArgs),
                         patchIfMissing: (null, null),
-                        database: Database,
+                        identityPartsSeparator: Database.IdentityPartsSeparator,
                         debugMode: false,
                         isTest: false,
                         collectResultsNeeded: true,
