@@ -30,14 +30,17 @@ namespace Raven.Server.Routing
 {
     public class RequestRouter
     {
-        private static readonly TimeSpan LastRequestTimeUpdateFrequency = TimeSpan.FromSeconds(15);
-        private DateTime _lastRequestTimeUpdated;
-        private DateTime _lastAuthorizedNonClusterAdminRequestTime;
+        public List<RouteInformation> AllRoutes;
 
-        private readonly Trie<RouteInformation> _trie;
+        private static readonly string BrowserCertificateMessage = Environment.NewLine + "Your certificate store may be cached by the browser. " +
+            "Create a new private browsing tab, which will not cache any certificates. (Ctrl+Shift+N in Chrome, Ctrl+Shift+P in Firefox)";
+
+        private static readonly TimeSpan LastRequestTimeUpdateFrequency = TimeSpan.FromSeconds(15);
         private readonly RavenServer _ravenServer;
         private readonly MetricCounters _serverMetrics;
-        public List<RouteInformation> AllRoutes;
+        private readonly Trie<RouteInformation> _trie;
+        private DateTime _lastAuthorizedNonClusterAdminRequestTime;
+        private DateTime _lastRequestTimeUpdated;
 
         public RequestRouter(Dictionary<string, RouteInformation> routes, RavenServer ravenServer)
         {
@@ -47,11 +50,162 @@ namespace Raven.Server.Routing
             AllRoutes = new List<RouteInformation>(routes.Values);
         }
 
+        public static void AssertClientVersion(HttpContext context, Exception innerException)
+        {
+            // client in this context could be also a follower sending a command to his leader.
+            if (TryGetClientVersion(context, out var clientVersion) == false)
+                return;
+
+            if (CheckClientVersionAndWrapException(clientVersion, ref innerException) == false)
+                throw innerException;
+        }
+
+        public static bool CheckClientVersionAndWrapException(Version clientVersion, ref Exception innerException)
+        {
+            var currentServerVersion = RavenVersionAttribute.Instance;
+
+            if (currentServerVersion.MajorVersion == clientVersion.Major &&
+                currentServerVersion.BuildVersion >= clientVersion.Revision &&
+                currentServerVersion.BuildVersion != ServerVersion.DevBuildNumber)
+                return true;
+
+            innerException = new ClientVersionMismatchException(
+                $"Failed to make a request from a newer client with build version {clientVersion} to an older server with build version {RavenVersionAttribute.Instance.AssemblyVersion}.{Environment.NewLine}" +
+                $"Upgrading this node might fix this issue.",
+                innerException);
+            return false;
+        }
+
+        public static bool TryGetClientVersion(HttpContext context, out Version version)
+        {
+            version = null;
+
+            if (context.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var versionHeader) == false)
+                return false;
+
+            return Version.TryParse(versionHeader, out version);
+        }
+
         public RouteInformation GetRoute(string method, string path, out RouteMatch match)
         {
             var tryMatch = _trie.TryMatch(method, path);
             match = tryMatch.Match;
             return tryMatch.Value;
+        }
+
+        internal bool TryAuthorize(RouteInformation route, HttpContext context, DocumentDatabase database, out RavenServer.AuthenticationStatus authenticationStatus)
+        {
+            var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+
+            if (feature.WrittenToAuditLog == 0) // intentionally racy, we'll check it again later
+            {
+                var auditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("RequestRouter", "Audit") : null;
+
+                if (auditLog != null)
+                {
+                    // only one thread will win it, technically, there can't really be threading
+                    // here, because there is a single connection, but better to be safe
+                    if (Interlocked.CompareExchange(ref feature.WrittenToAuditLog, 1, 0) == 0)
+                    {
+                        if (feature.WrongProtocolMessage != null)
+                        {
+                            auditLog.Info($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
+                                $"used the wrong protocol and will be rejected. {feature.WrongProtocolMessage}");
+                        }
+                        else
+                        {
+                            auditLog.Info($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
+                                $"with certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
+                                $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]");
+
+                            var conLifetime = context.Features.Get<IConnectionLifetimeFeature>();
+                            if (conLifetime != null)
+                            {
+                                var msg = $"Connection {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} closed. Was used with: " +
+                                 $"with certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
+                                 $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]";
+
+                                CancellationTokenRegistration cancellationTokenRegistration = default;
+
+                                cancellationTokenRegistration = conLifetime.ConnectionClosed.Register(() =>
+                                {
+                                    auditLog.Info(msg);
+                                    cancellationTokenRegistration.Dispose();
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            authenticationStatus = feature?.Status ?? RavenServer.AuthenticationStatus.None;
+            switch (route.AuthorizationStatus)
+            {
+                case AuthorizationStatus.UnauthenticatedClients:
+                    var userWantsToAccessStudioMainPage = context.Request.Path == "/studio/index.html";
+                    if (userWantsToAccessStudioMainPage)
+                    {
+                        switch (authenticationStatus)
+                        {
+                            case RavenServer.AuthenticationStatus.NoCertificateProvided:
+                            case RavenServer.AuthenticationStatus.Expired:
+                            case RavenServer.AuthenticationStatus.NotYetValid:
+                            case RavenServer.AuthenticationStatus.None:
+                            case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
+                            case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
+                                UnlikelyFailAuthorization(context, database?.Name, feature, route.AuthorizationStatus);
+                                return false;
+                        }
+                    }
+
+                    return true;
+
+                case AuthorizationStatus.ClusterAdmin:
+                case AuthorizationStatus.Operator:
+                case AuthorizationStatus.ValidUser:
+                case AuthorizationStatus.DatabaseAdmin:
+                case AuthorizationStatus.RestrictedAccess:
+                    switch (authenticationStatus)
+                    {
+                        case RavenServer.AuthenticationStatus.NoCertificateProvided:
+                        case RavenServer.AuthenticationStatus.Expired:
+                        case RavenServer.AuthenticationStatus.NotYetValid:
+                        case RavenServer.AuthenticationStatus.None:
+                            UnlikelyFailAuthorization(context, database?.Name, feature, route.AuthorizationStatus);
+                            return false;
+
+                        case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
+                        case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
+                            // we allow an access to the restricted endpoints with an unfamiliar certificate, since we will authorize it at the endpoint level
+                            if (route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess)
+                                return true;
+                            goto case RavenServer.AuthenticationStatus.None;
+
+                        case RavenServer.AuthenticationStatus.Allowed:
+                            if (route.AuthorizationStatus == AuthorizationStatus.Operator || route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
+                                goto case RavenServer.AuthenticationStatus.None;
+
+                            if (database == null)
+                                return true;
+                            if (feature.CanAccess(database.Name, route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin))
+                                return true;
+
+                            goto case RavenServer.AuthenticationStatus.None;
+                        case RavenServer.AuthenticationStatus.Operator:
+                            if (route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
+                                goto case RavenServer.AuthenticationStatus.None;
+                            return true;
+
+                        case RavenServer.AuthenticationStatus.ClusterAdmin:
+                            return true;
+
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                default:
+                    ThrowUnknownAuthStatus(route);
+                    return false; // never hit
+            }
         }
 
         public async ValueTask HandlePath(RequestHandlerContext reqCtx)
@@ -135,18 +289,18 @@ namespace Raven.Server.Routing
                             _lastRequestTimeUpdated = now;
                         }
 
-                        if (now - _lastAuthorizedNonClusterAdminRequestTime >= LastRequestTimeUpdateFrequency && 
+                        if (now - _lastAuthorizedNonClusterAdminRequestTime >= LastRequestTimeUpdateFrequency &&
                             skipAuthorization == false)
                         {
                             switch (status)
                             {
                                 case RavenServer.AuthenticationStatus.Allowed:
                                 case RavenServer.AuthenticationStatus.Operator:
-                                {
-                                    _ravenServer.Statistics.LastAuthorizedNonClusterAdminRequestTime = now;
-                                    _lastAuthorizedNonClusterAdminRequestTime = now;
-                                    break;
-                                }
+                                    {
+                                        _ravenServer.Statistics.LastAuthorizedNonClusterAdminRequestTime = now;
+                                        _lastAuthorizedNonClusterAdminRequestTime = now;
+                                        break;
+                                    }
                                 case RavenServer.AuthenticationStatus.None:
                                 case RavenServer.AuthenticationStatus.NoCertificateProvided:
                                 case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
@@ -155,6 +309,7 @@ namespace Raven.Server.Routing
                                 case RavenServer.AuthenticationStatus.Expired:
                                 case RavenServer.AuthenticationStatus.NotYetValid:
                                     break;
+
                                 default:
                                     ThrowUnknownAuthStatus(status);
                                     break;
@@ -195,6 +350,23 @@ namespace Raven.Server.Routing
             }
         }
 
+        private static void DrainRequest(JsonOperationContext ctx, HttpContext context)
+        {
+            if (context.Response.Headers.TryGetValue("Connection", out Microsoft.Extensions.Primitives.StringValues value) && value == "close")
+                return; // don't need to drain it, the connection will close
+
+            using (ctx.GetMemoryBuffer(out var buffer))
+            {
+                var requestBody = context.Request.Body;
+                while (true)
+                {
+                    var read = requestBody.Read(buffer.Memory.Span);
+                    if (read == 0)
+                        break;
+                }
+            }
+        }
+
         private static void RejectRequestBecauseOfCpuThreshold(HttpContext context)
         {
             context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
@@ -208,167 +380,6 @@ namespace Raven.Server.Routing
                         ["Message"] = $"The request has been rejected because the CPU credits balance on this instance has been exhausted. See /debug/cpu-credits endpoint for details."
                     });
             }
-        }
-        
-        public static bool TryGetClientVersion(HttpContext context, out Version version)
-        {
-            version = null;
-
-            if (context.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var versionHeader) == false)
-                return false;
-
-            return Version.TryParse(versionHeader, out version);
-        }
-
-        public static void AssertClientVersion(HttpContext context, Exception innerException)
-        {
-            // client in this context could be also a follower sending a command to his leader.
-            if (TryGetClientVersion(context, out var clientVersion) == false) 
-                return;
-
-            if(CheckClientVersionAndWrapException(clientVersion, ref innerException) == false)
-                throw innerException;
-        }
-
-        public static bool CheckClientVersionAndWrapException(Version clientVersion, ref Exception innerException)
-        {
-            var currentServerVersion = RavenVersionAttribute.Instance;
-
-            if (currentServerVersion.MajorVersion == clientVersion.Major &&
-                currentServerVersion.BuildVersion >= clientVersion.Revision &&
-                currentServerVersion.BuildVersion != ServerVersion.DevBuildNumber)
-                return true;
-            
-            innerException =  new ClientVersionMismatchException(
-                $"Failed to make a request from a newer client with build version {clientVersion} to an older server with build version {RavenVersionAttribute.Instance.AssemblyVersion}.{Environment.NewLine}" +
-                $"Upgrading this node might fix this issue.",
-                innerException);
-            return false;
-        }
-
-        private bool TryAuthorize(RouteInformation route, HttpContext context, DocumentDatabase database, out RavenServer.AuthenticationStatus authenticationStatus)
-        {
-            var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-
-            if (feature.WrittenToAuditLog == 0) // intentionally racy, we'll check it again later
-            {
-                var auditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("RequestRouter", "Audit") : null;
-
-                if (auditLog != null)
-                {
-                    // only one thread will win it, technically, there can't really be threading
-                    // here, because there is a single connection, but better to be safe
-                    if (Interlocked.CompareExchange(ref feature.WrittenToAuditLog, 1, 0) == 0)
-                    {
-                        if (feature.WrongProtocolMessage != null)
-                        {
-                            auditLog.Info($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
-                                $"used the wrong protocol and will be rejected. {feature.WrongProtocolMessage}");
-                        }
-                        else
-                        {
-                            auditLog.Info($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
-                                $"with certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
-                                $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]");
-
-                            var conLifetime = context.Features.Get<IConnectionLifetimeFeature>();
-                            if (conLifetime != null)
-                            {
-                                var msg = $"Connection {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} closed. Was used with: " +
-                                 $"with certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
-                                 $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]";
-
-                                CancellationTokenRegistration cancellationTokenRegistration = default;
-                                
-                                cancellationTokenRegistration = conLifetime.ConnectionClosed.Register(() =>
-                                {
-                                    auditLog.Info(msg);
-                                    cancellationTokenRegistration.Dispose();
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-
-            authenticationStatus = feature?.Status ?? RavenServer.AuthenticationStatus.None;
-            switch (route.AuthorizationStatus)
-            {
-                case AuthorizationStatus.UnauthenticatedClients:
-                    var userWantsToAccessStudioMainPage = context.Request.Path == "/studio/index.html";
-                    if (userWantsToAccessStudioMainPage)
-                    {
-                        switch (authenticationStatus)
-                        {
-                            case RavenServer.AuthenticationStatus.NoCertificateProvided:
-                            case RavenServer.AuthenticationStatus.Expired:
-                            case RavenServer.AuthenticationStatus.NotYetValid:
-                            case RavenServer.AuthenticationStatus.None:
-                            case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
-                            case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
-                                UnlikelyFailAuthorization(context, database?.Name, feature, route.AuthorizationStatus);
-                                return false;
-                        }
-                    }
-
-                    return true;
-
-                case AuthorizationStatus.ClusterAdmin:
-                case AuthorizationStatus.Operator:
-                case AuthorizationStatus.ValidUser:
-                case AuthorizationStatus.DatabaseAdmin:
-                case AuthorizationStatus.RestrictedAccess:
-                    switch (authenticationStatus)
-                    {
-                        case RavenServer.AuthenticationStatus.NoCertificateProvided:
-                        case RavenServer.AuthenticationStatus.Expired:
-                        case RavenServer.AuthenticationStatus.NotYetValid:
-                        case RavenServer.AuthenticationStatus.None:
-                            UnlikelyFailAuthorization(context, database?.Name, feature, route.AuthorizationStatus);
-                            return false;
-
-                        case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
-                        case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
-                            // we allow an access to the restricted endpoints with an unfamiliar certificate, since we will authorize it at the endpoint level
-                            if (route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess)
-                                return true;
-                            goto case RavenServer.AuthenticationStatus.None;
-
-                        case RavenServer.AuthenticationStatus.Allowed:
-                            if (route.AuthorizationStatus == AuthorizationStatus.Operator || route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
-                                goto case RavenServer.AuthenticationStatus.None;
-
-                            if (database == null)
-                                return true;
-                            if (feature.CanAccess(database.Name, route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin))
-                                return true;
-
-                            goto case RavenServer.AuthenticationStatus.None;
-                        case RavenServer.AuthenticationStatus.Operator:
-                            if (route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
-                                goto case RavenServer.AuthenticationStatus.None;
-                            return true;
-
-                        case RavenServer.AuthenticationStatus.ClusterAdmin:
-                            return true;
-
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                default:
-                    ThrowUnknownAuthStatus(route);
-                    return false; // never hit
-            }
-        }
-
-        private static void ThrowUnknownAuthStatus(RouteInformation route)
-        {
-            throw new ArgumentOutOfRangeException("Unknown route auth status: " + route.AuthorizationStatus);
-        }
-
-        private static void ThrowUnknownAuthStatus(RavenServer.AuthenticationStatus status)
-        {
-            throw new ArgumentOutOfRangeException("Unknown auth status: " + status);
         }
 
         public static void UnlikelyFailAuthorization(HttpContext context, string database,
@@ -401,7 +412,7 @@ namespace Raven.Server.Routing
                 else if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarIssuer)
                 {
                     message = $"The supplied client certificate '{name}' is unknown to the server but has a known Public Key Pinning Hash. Will not use it to authenticate because the issuer is unknown. " +
-                              Environment.NewLine + 
+                              Environment.NewLine +
                               $"To fix this, the admin can register the pinning hash of the *issuer* certificate: '{feature.IssuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Allowed)
@@ -425,7 +436,7 @@ namespace Raven.Server.Routing
                     message = "Access to the server was denied.";
                 }
             }
-            
+
             switch (authorizationStatus)
             {
                 case AuthorizationStatus.ClusterAdmin:
@@ -463,24 +474,14 @@ namespace Raven.Server.Routing
             }
         }
 
-        private static void DrainRequest(JsonOperationContext ctx, HttpContext context)
+        private static void ThrowUnknownAuthStatus(RouteInformation route)
         {
-            if (context.Response.Headers.TryGetValue("Connection", out Microsoft.Extensions.Primitives.StringValues value) && value == "close")
-                return; // don't need to drain it, the connection will close
-
-            using (ctx.GetMemoryBuffer(out var buffer))
-            {
-                var requestBody = context.Request.Body;
-                while (true)
-                {
-                    var read = requestBody.Read(buffer.Memory.Span);
-                    if (read == 0)
-                        break;
-                }
-            }
+            throw new ArgumentOutOfRangeException("Unknown route auth status: " + route.AuthorizationStatus);
         }
-        
-        private static readonly string BrowserCertificateMessage = Environment.NewLine + "Your certificate store may be cached by the browser. " +
-            "Create a new private browsing tab, which will not cache any certificates. (Ctrl+Shift+N in Chrome, Ctrl+Shift+P in Firefox)";
+
+        private static void ThrowUnknownAuthStatus(RavenServer.AuthenticationStatus status)
+        {
+            throw new ArgumentOutOfRangeException("Unknown auth status: " + status);
+        }
     }
 }

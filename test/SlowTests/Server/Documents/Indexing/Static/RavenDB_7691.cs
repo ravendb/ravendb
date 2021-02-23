@@ -490,6 +490,7 @@ from EdgeCaseValues as e select MyProjection(e)"
                     var doubleEpsillonTimes3 = edgeCaseValues.DoubleEpsilon * 3;
                     Assert.Empty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.DoubleEpsilon == doubleEpsillonTimes3).ToListAsync());
 
+                    /* todo: RavenDB-15952
                     Assert.NotEmpty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.FloatMinVal == edgeCaseValues.FloatMinVal).ToListAsync());
 
                     float floatMinValPlus1 = edgeCaseValues.FloatMinVal + (float)Math.Pow(10, 32);
@@ -514,6 +515,7 @@ from EdgeCaseValues as e select MyProjection(e)"
 
                     Assert.NotEmpty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.FloatNan == edgeCaseValues.FloatNan).ToListAsync());
                     Assert.Empty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.FloatNan == 0).ToListAsync());
+                    */
 
                     Assert.NotEmpty(await session.Query<EdgeCaseValues>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.UintMaxVal == edgeCaseValues.UintMaxVal).ToListAsync());
 

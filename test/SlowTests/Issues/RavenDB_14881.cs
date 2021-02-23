@@ -102,6 +102,11 @@ namespace SlowTests.Issues
                 Assert.Equal(20, detailedCollectionStats_afterDataChanged.Collections[strCollectionName].CountOfDocuments);
                 long sizeInBytesWithRevisions = detailedCollectionStats_afterDataChanged.Collections[strCollectionName].Size.SizeInBytes;
                 Assert.True(sizeInBytesWithRevisions > sizeInBytesWithoutRevisions);
+
+                var collectionDetails = detailedCollectionStats_afterDataChanged.Collections[strCollectionName];
+                Assert.True(collectionDetails.DocumentsSize.SizeInBytes > 0);
+                Assert.True(collectionDetails.RevisionsSize.SizeInBytes > 0);
+                Assert.Equal(collectionDetails.Size.SizeInBytes, collectionDetails.DocumentsSize.SizeInBytes + collectionDetails.RevisionsSize.SizeInBytes + collectionDetails.TombstonesSize.SizeInBytes);
             }
         }
     }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
@@ -14,6 +15,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Voron;
+using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
@@ -134,7 +136,38 @@ namespace Raven.Server.Documents.Indexes
 
                 _index.Definition.Persist(context, _environment.Options);
 
+                PersistConfiguration();
+
                 tx.Commit();
+
+                void PersistConfiguration()
+                {
+                    var configurationTree = tx.InnerTransaction.CreateTree(IndexSchema.ConfigurationTree);
+
+                    AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultAnalyzer), _index.Configuration.DefaultAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.Default);
+                    AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultExactAnalyzer), _index.Configuration.DefaultExactAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.DefaultExact);
+                    AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer), _index.Configuration.DefaultSearchAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.DefaultSearch);
+                }
+
+                void AssertAndPersistAnalyzer(Tree configurationTree, string configurationKey, string expectedAnalyzer, string defaultAnalyzer)
+                {
+                    var result = configurationTree.Read(configurationKey);
+                    string persistedConfigurationValue = null;
+                    if (result != null)
+                        persistedConfigurationValue = result.Reader.ToStringValue();
+                    else if (_index.Definition.Version < IndexDefinitionBase.IndexVersion.Analyzers)
+                        persistedConfigurationValue = defaultAnalyzer;
+
+                    if (persistedConfigurationValue != null)
+                    {
+                        if (persistedConfigurationValue != expectedAnalyzer)
+                            throw new InvalidOperationException($"Invalid analyzer. The index '{_index.Name}' was created with analyzer '{persistedConfigurationValue}' for '{configurationKey}' configuration, but current one is '{expectedAnalyzer}'. Please reset the index.");
+
+                        return;
+                    }
+
+                    configurationTree.Add(configurationKey, expectedAnalyzer);
+                }
             }
         }
 
@@ -444,6 +477,7 @@ namespace Raven.Server.Documents.Indexes
                                 return documentEtags.LastEtag;
                             }
                             break;
+
                         case ReferencesType.CompareExchange:
                             if (cache.Collections.TryGetValue(collection, out var compareExchangeEtags) &&
                                 compareExchangeEtags.LastReferencedEtagsForCompareExchange != null)
@@ -487,6 +521,7 @@ namespace Raven.Server.Documents.Indexes
                                 return documentEtags.LastProcessedTombstoneEtag;
                             }
                             break;
+
                         case ReferencesType.CompareExchange:
                             if (cache.Collections.TryGetValue(collection, out var compareExchangeEtags) &&
                                 compareExchangeEtags.LastReferencedEtagsForCompareExchange != null)
@@ -940,6 +975,8 @@ namespace Raven.Server.Documents.Indexes
 
         internal class IndexSchema
         {
+            public const string ConfigurationTree = "Configuration";
+
             public const string StatsTree = "Stats";
 
             public const string EtagsTree = "Etags";
@@ -951,7 +988,7 @@ namespace Raven.Server.Documents.Indexes
             public const string References = "References";
 
             public const string ReferencesForCompareExchange = "ReferencesForCompareExchange";
-            
+
             public const string LastDocumentEtagOnIndexCreationTree = "LastDocumentEtagOnIndexCreation";
 
             public static readonly Slice TypeSlice;

@@ -11,6 +11,8 @@ namespace Raven.Server.Json
 {
     public unsafe class LazyStringReader : IDisposable
     {
+        internal const int MinLengthForLazyStringStreamReader = 2048;
+
         private MmapStream _mmapStream;
         private LazyStringStreamReader _reader;
 
@@ -20,7 +22,7 @@ namespace Raven.Server.Json
             // the reason is that a reader takes 3KB of memory, and if we won't
             // save it, might as well reduce the cost
 
-            if (value.Length < 2048 && _reader == null)
+            if (value.Length < MinLengthForLazyStringStreamReader && _reader == null)
                 return new ReusableStringReader(GetStringFor(value));
 
             if (_mmapStream == null)

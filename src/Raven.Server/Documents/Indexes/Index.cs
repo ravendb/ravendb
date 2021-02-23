@@ -665,6 +665,8 @@ namespace Raven.Server.Documents.Indexes
             IndexingConfiguration configuration,
             PerformanceHintsConfiguration performanceHints)
         {
+            configuration.InitializeAnalyzers();
+
             if (_disposeOne.Disposed)
                 throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
 
@@ -894,6 +896,8 @@ namespace Raven.Server.Documents.Indexes
         public virtual void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
         {
             Debug.Assert(Type.IsStatic());
+
+            configuration.InitializeAnalyzers();
 
             using (DrainRunningQueries())
             {
@@ -1290,6 +1294,8 @@ namespace Raven.Server.Documents.Indexes
                                 }
                                 catch (OperationCanceledException)
                                 {
+                                    Debug.Assert(_indexingProcessCancellationTokenSource.IsCancellationRequested, $"Got {nameof(OperationCanceledException)} while the index was not canceled");
+
                                     // We are here only in the case of indexing process cancellation.
                                     scope.RecordMapCompletedReason("Operation canceled.");
                                     return;
@@ -2546,7 +2552,7 @@ namespace Raven.Server.Documents.Indexes
         public bool NoQueryInLast10Minutes()
         {
             var last = _lastQueryingTime;
-            return last.HasValue == false || 
+            return last.HasValue == false ||
                    DocumentDatabase.Time.GetUtcNow() - last.Value > TimeSpan.FromMinutes(10);
         }
 

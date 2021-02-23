@@ -21,8 +21,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
         private Analyzer _defaultExactAnalyzer;
         private Analyzer _defaultSearchAnalyzer;
 
-        private readonly Func<Analyzer> _defaultSearchAnalyzerFactory;
-        private readonly Func<Analyzer> _defaultExactAnalyzerFactory;
+        private readonly Func<string, Analyzer> _defaultSearchAnalyzerFactory;
+        private readonly Func<string, Analyzer> _defaultExactAnalyzerFactory;
 
         private readonly Dictionary<string, Analyzer> _analyzerMap = new Dictionary<string, Analyzer>(default(PerFieldAnalyzerComparer));
         private readonly bool _hasDynamicFields;
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
             _defaultAnalyzer = defaultAnalyzer;
         }
 
-        public RavenPerFieldAnalyzerWrapper(Analyzer defaultAnalyzer, Func<Analyzer> defaultSearchAnalyzerFactory, Func<Analyzer> defaultExactAnalyzerFactory)
+        public RavenPerFieldAnalyzerWrapper(Analyzer defaultAnalyzer, Func<string, Analyzer> defaultSearchAnalyzerFactory, Func<string, Analyzer> defaultExactAnalyzerFactory)
             : this(defaultAnalyzer)
         {
             _hasDynamicFields = true;
@@ -104,9 +104,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
                         switch (fieldIndexing)
                         {
                             case FieldIndexing.Search:
-                                return _defaultSearchAnalyzer ?? (_defaultSearchAnalyzer = _defaultSearchAnalyzerFactory());
+                                return _defaultSearchAnalyzer ??= _defaultSearchAnalyzerFactory(fieldName);
                             case FieldIndexing.Exact:
-                                return _defaultExactAnalyzer ?? (_defaultExactAnalyzer = _defaultExactAnalyzerFactory());
+                                return _defaultExactAnalyzer ??= _defaultExactAnalyzerFactory(fieldName);
                         }
                     }
                 }

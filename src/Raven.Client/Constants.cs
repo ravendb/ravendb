@@ -49,11 +49,11 @@ namespace Raven.Client
             public const string StudioVersion = "Raven-Studio-Version";
 
             public const string IfNoneMatch = "If-None-Match";
-            
+
             public const string TransferEncoding = "Transfer-Encoding";
-            
+
             public const string ContentEncoding = "Content-Encoding";
-            
+
             public const string ContentLength = "Content-Length";
         }
 
@@ -300,6 +300,19 @@ namespace Raven.Client
                     public const double EarthMeanRadiusKm = 6371.0087714;
 
                     public const double MilesToKm = 1.60934;
+                }
+
+                internal class Analyzers
+                {
+                    private Analyzers()
+                    {
+                    }
+
+                    public const string Default = "LowerCaseKeywordAnalyzer";
+
+                    public const string DefaultExact = "KeywordAnalyzer";
+
+                    public const string DefaultSearch = "RavenStandardAnalyzer";
                 }
             }
 
