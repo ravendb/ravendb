@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
@@ -876,6 +877,62 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
+
+        class A
+        {
+            public string Id { get; set; }
+            public string BId { get; set; }
+        }
+
+        class B
+        {
+            public string Id { get; set; }
+            public string SomeProp { get; set; }
+        }
+
+        [Fact]
+        public async Task Subscription_WhenProjectLoad_ShouldTranslateToJavascriptLoad()
+        {
+            using var store = GetDocumentStore();
+
+            const string someProp = "SomeValue";
+            using (var session = store.OpenAsyncSession())
+            {
+                var b = new B { SomeProp = someProp };
+                await session.StoreAsync(b);
+                await session.StoreAsync(new A { BId = b.Id });
+                await session.SaveChangesAsync();
+            }
+
+            var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<A>
+            {
+                Name = "Test subscription",
+                Projection = x => new { RavenQuery.Load<B>(x.BId).SomeProp }
+            });
+
+            WaitForUserToContinueTheTest(store);
+
+            await using (var sub = store.Subscriptions.GetSubscriptionWorker<ProjectionObject>(name))
+            {
+                var mre = new AsyncManualResetEvent();
+                var subscriptionTask = sub.Run(batch =>
+                {
+                    Assert.NotEmpty(batch.Items);
+                    var projectionObject = batch.Items.First().Result;
+                    Assert.Equal("SomeValue", projectionObject.SomeProp);
+                    mre.Set();
+                });
+                var timeout = TimeSpan.FromSeconds(30);
+                if (await mre.WaitAsync(timeout) == false)
+                {
+                    if (subscriptionTask.IsFaulted)
+                        await subscriptionTask;
+
+                    throw new TimeoutException($"No batch received for {timeout}");
+                }
+            }
+        }
+
         [Fact]
         public async Task Subscription_WhenProjectWithId_ShouldTranslateToJavascriptIdFunction()
         {
@@ -920,13 +977,7 @@ namespace FastTests.Client.Subscriptions
         
         private class ProjectionObject
         {
-            public ProjectionObject() { }
-
-            public ProjectionObject(string projectionId)
-            {
-                ProjectionId = projectionId;
-            }
-
+            public string SomeProp { get; set; }
             public string ProjectionId { get; set; }
         }
 
