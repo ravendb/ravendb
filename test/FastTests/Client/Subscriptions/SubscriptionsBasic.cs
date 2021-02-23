@@ -876,6 +876,60 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
+        [Fact]
+        public async Task Subscription_WhenProjectWithId_ShouldTranslateToJavascriptIdFunction()
+        {
+            using var store = GetDocumentStore();
+
+            var entity = new User();
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(entity);
+                await session.SaveChangesAsync();
+            }
+
+            var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>
+            {
+                Name = "Test subscription",
+                Projection = x => new ProjectionObject
+                {
+                    ProjectionId = x.Id
+                }
+            });
+
+            await using (var sub = store.Subscriptions.GetSubscriptionWorker<ProjectionObject>(name))
+            {
+                var mre = new AsyncManualResetEvent();
+                var subscriptionTask = sub.Run(batch =>
+                {
+                    Assert.NotEmpty(batch.Items);
+                    string resultOrderId = batch.Items.First().Result.ProjectionId;
+                    Assert.Equal(entity.Id, resultOrderId);
+                    mre.Set();
+                });
+                var timeout = TimeSpan.FromSeconds(30);
+                if (await mre.WaitAsync(timeout) == false)
+                {
+                    if (subscriptionTask.IsFaulted)
+                        await subscriptionTask;
+
+                    throw new TimeoutException($"No batch received for {timeout}");
+                }
+            }
+        }
+        
+        private class ProjectionObject
+        {
+            public ProjectionObject() { }
+
+            public ProjectionObject(string projectionId)
+            {
+                ProjectionId = projectionId;
+            }
+
+            public string ProjectionId { get; set; }
+        }
+
         public class CreateDatabaseOperationWithoutNameValidation : IServerOperation<DatabasePutResult>
         {
             private readonly DatabaseRecord _databaseRecord;
