@@ -197,15 +197,19 @@ namespace Sparrow.Json
             if (_string != null)
                 return string.Equals(_string, other, StringComparison.Ordinal);
 
-            var sizeInBytes = Encodings.Utf8.GetMaxByteCount(other.Length);
 
-            if (_lazyStringTempComparisonBuffer == null || _lazyStringTempComparisonBuffer.Length < other.Length)
-                _lazyStringTempComparisonBuffer = new byte[Bits.PowerOf2(sizeInBytes)];
+            if (_lazyStringTempComparisonBuffer == null || _lazyStringTempComparisonBuffer.Length < other.Length * 5)
+            {
+                var sizeInBytes = Encodings.Utf8.GetMaxByteCount(other.Length);
+
+                if (_lazyStringTempComparisonBuffer == null || _lazyStringTempComparisonBuffer.Length < other.Length)
+                    _lazyStringTempComparisonBuffer = new byte[Bits.PowerOf2(sizeInBytes)];
+            }
 
             fixed (char* pOther = other)
             fixed (byte* pBuffer = _lazyStringTempComparisonBuffer)
             {
-                var tmpSize = Encodings.Utf8.GetBytes(pOther, other.Length, pBuffer, sizeInBytes);
+                var tmpSize = Encodings.Utf8.GetBytes(pOther, other.Length, pBuffer, _lazyStringTempComparisonBuffer.Length);
                 if (Size != tmpSize)
                     return false;
 
