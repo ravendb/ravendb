@@ -22,7 +22,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         internal const string AzureAccountName = "devstoreaccount1";
         internal const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 
-        [AzureStorageEmulatorFact(Skip = "Batch operations are not supported in emulator")]
+        [AzureStorageEmulatorFact]
         public void CanRemoveBlobsInBatch()
         {
             var containerName = Guid.NewGuid().ToString();
@@ -56,7 +56,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AzureStorageEmulatorFact(Skip = "Batch operations are not supported in emulator")]
+        [AzureStorageEmulatorFact]
         public void RemoveNonExistingBlobsInBatchShouldThrow()
         {
             var containerName = Guid.NewGuid().ToString();
