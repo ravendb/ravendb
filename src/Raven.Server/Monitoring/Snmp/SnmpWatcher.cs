@@ -370,6 +370,10 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerTotalSwapUsage(server.MetricCacher));
             store.Add(new ServerWorkingSetSwapUsage(server.MetricCacher));
             store.Add(new ServerDirtyMemory());
+            store.Add(new ServerManagedMemory());
+            store.Add(new ServerUnmanagedMemory());
+            store.Add(new ServerEncryptionBuffersMemoryInUse());
+            store.Add(new ServerEncryptionBuffersMemoryInPool());
 
             store.Add(new ServerLastRequestTime(server.Statistics));
             store.Add(new ServerLastAuthorizedNonClusterAdminRequestTime(server.Statistics));
