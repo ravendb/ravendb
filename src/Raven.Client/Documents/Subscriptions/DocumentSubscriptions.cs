@@ -166,6 +166,7 @@ namespace Raven.Client.Documents.Subscriptions
                         new JavascriptConversionExtensions.IdentityPropertySupport(conventions),
                         JavascriptConversionExtensions.CounterSupport.Instance,
                         JavascriptConversionExtensions.CompareExchangeSupport.Instance,
+                        new JavascriptConversionExtensions.LoadSupport(),
                         JavascriptConversionExtensions.MemberInit.Instance
                     ));
                 criteria.Query += Environment.NewLine + "select " + script;
