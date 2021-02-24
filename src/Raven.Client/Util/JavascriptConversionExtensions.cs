@@ -2482,9 +2482,9 @@ namespace Raven.Client.Util
             }
 
 
-            private static bool CanConvert(Expression expression, DocumentConventions conventions, out Expression innerMemberExpression)
+            private static bool CanConvert(Expression expression, DocumentConventions conventions, out Expression innerExpression)
             {
-                innerMemberExpression = null;
+                innerExpression = null;
 
                 if (!(expression is MemberExpression member) ||
                     conventions.GetIdentityProperty(member.Member.DeclaringType) != member.Member)
@@ -2492,14 +2492,14 @@ namespace Raven.Client.Util
                 
                 if (member.Expression is ParameterExpression parameter)
                 {
-                    innerMemberExpression = parameter;
+                    innerExpression = parameter;
                     return true;
                 }
 
                 if (!(member.Expression is MemberExpression innerMember))
                     return false;
 
-                innerMemberExpression = innerMember;
+                innerExpression = innerMember;
 
                 var p = GetParameter(innerMember)?.Name;
                 return p != null && p.StartsWith(TransparentIdentifier);
