@@ -2508,7 +2508,7 @@ namespace Raven.Client.Util
         
         public class MemberInit : JavascriptConversionExtension
         {
-            public static MemberInit Instance { get; } = new();
+            public static MemberInit Instance { get; } = new MemberInit();
 
             private MemberInit() { }
 
