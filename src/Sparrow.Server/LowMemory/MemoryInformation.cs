@@ -539,7 +539,8 @@ namespace Sparrow.LowMemory
                     new Size(installedMemoryInKb, SizeUnit.Kilobytes) :
                     new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
                 WorkingSet = new Size(process?.WorkingSet64 ?? 0, SizeUnit.Bytes),
-                IsExtended = extended
+                IsExtended = extended,
+                TotalSwapUsage = new Size(process?.PagedMemorySize64 ?? 0, SizeUnit.Bytes)
             };
         }
 
