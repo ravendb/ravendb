@@ -590,6 +590,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             if (blobs.Count == 0)
                 return;
 
+            DeleteBlobsWithSasToken(blobs);
+
+            /* TODO: RavenDB-16264
             if (_hasSasToken)
             {
                 // Multi-Delete isn't supported when using a SAS token
@@ -760,7 +763,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 return num == 0 || num > 1 ? "s" : string.Empty;
             }
 
-            throw new InvalidOperationException(message);
+            throw new InvalidOperationException(message);*/
         }
 
         private void DeleteBlobsWithSasToken(List<string> blobs)

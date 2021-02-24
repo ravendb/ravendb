@@ -257,7 +257,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.WorkingSet)] = memInfo.WorkingSet.ToString(),
                 [nameof(MemoryInfo.ManagedAllocations)] = Size.Humane(managedMemoryInBytes),
                 [nameof(MemoryInfo.UnmanagedAllocations)] = Size.Humane(totalUnmanagedAllocations),
-                [nameof(MemoryInfo.EncryptionBuffers)] = Size.Humane(encryptionBuffers.TotalSize),
+                [nameof(MemoryInfo.EncryptionBuffersInUse)] = Size.Humane(encryptionBuffers.CurrentlyInUseSize),
+                [nameof(MemoryInfo.EncryptionBuffersPool)] = Size.Humane(encryptionBuffers.TotalPoolSize),
                 [nameof(MemoryInfo.MemoryMapped)] = Size.Humane(totalMapping),
                 [nameof(MemoryInfo.ScratchDirtyMemory)] = memInfo.TotalScratchDirtyMemory.ToString(),
                 [nameof(MemoryInfo.IsHighDirty)] = dirtyMemoryState.IsHighDirty,
@@ -460,7 +461,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string WorkingSet { get; set; }
             public string ManagedAllocations { get; set; }
             public string UnmanagedAllocations { get; set; }
-            public string EncryptionBuffers { get; set; }
+            public string EncryptionBuffersInUse { get; set; }
+            public string EncryptionBuffersPool { get; set; }
             public string MemoryMapped { get; set; }
             public string ScratchDirtyMemory { get; set; }
             public bool IsHighDirty { get; set; }
