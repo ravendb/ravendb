@@ -95,6 +95,18 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Dirty Memory that is used by the scratch buffers in MB")]
             public const string DirtyMemory = "1.6.6";
 
+            [Description("Server managed memory size in MB")]
+            public const string ManagedMemory = "1.6.7";
+
+            [Description("Server unmanaged memory size in MB")]
+            public const string UnmanagedMemory = "1.6.8";
+
+            [Description("Server encryption buffers memory being in use in MB")]
+            public const string EncryptionBuffersMemoryInUse = "1.6.9";
+
+            [Description("Server encryption buffers memory being in pool in MB")]
+            public const string EncryptionBuffersMemoryInPool = "1.6.10";
+
             [Description("Number of concurrent requests")]
             public const string ConcurrentRequests = "1.7.1";
 

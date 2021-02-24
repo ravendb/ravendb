@@ -93,12 +93,12 @@ namespace FastTests.Voron
 
             // will cache the buffer
             stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(8192, stats.TotalPoolSize);
+            Assert.Equal(size, stats.TotalPoolSize);
 
             // will continue to cache the buffer
             encryptionBuffersPool.LowMemory(lowMemorySeverity);
             stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(8192, stats.TotalPoolSize);
+            Assert.Equal(size, stats.TotalPoolSize);
 
             encryptionBuffersPool.LowMemoryOver();
             ClearMemory(encryptionBuffersPool);
