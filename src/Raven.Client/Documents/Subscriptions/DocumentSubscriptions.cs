@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 using Lambda2Js;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
@@ -111,7 +110,7 @@ namespace Raven.Client.Documents.Subscriptions
                 var builder = new StringBuilder("from '");
                 StringExtensions.EscapeString(builder, collectionName);
                 builder.Append('\'');
-                if(includeRevisions)
+                if (includeRevisions)
                     builder.Append(" (Revisions = true)");
 
                 criteria.Query = builder.Append(" as doc").ToString();
@@ -160,8 +159,11 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.StringSupport.Instance,
                         JavascriptConversionExtensions.NestedConditionalSupport.Instance,
                         new JavascriptConversionExtensions.ReplaceParameterWithNewName(project.Parameters[0], "doc"),
+                        new JavascriptConversionExtensions.IdentityPropertySupport(conventions),
                         JavascriptConversionExtensions.CounterSupport.Instance,
-                        JavascriptConversionExtensions.CompareExchangeSupport.Instance
+                        JavascriptConversionExtensions.CompareExchangeSupport.Instance,
+                        new JavascriptConversionExtensions.LoadSupport(),
+                        JavascriptConversionExtensions.MemberInit.Instance
                     ));
                 criteria.Query += Environment.NewLine + "select " + script;
             }

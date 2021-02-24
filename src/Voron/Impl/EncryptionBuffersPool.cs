@@ -130,6 +130,8 @@ namespace Voron.Impl
 
             Interlocked.Add(ref _currentlyInUseBytes, -size);
 
+            Interlocked.Add(ref _currentlyInUseBytes, -size);
+
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
             var numberOfPages = size / Constants.Storage.PageSize;

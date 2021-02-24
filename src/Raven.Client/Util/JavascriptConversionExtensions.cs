@@ -186,6 +186,7 @@ namespace Raven.Client.Util
                             _innerCallExpected = DictionaryInnerCall.Key;
                             context.Visitor.Visit(contextNode.Expression);
                             return;
+
                         case "Values":
                             _innerCallExpected = DictionaryInnerCall.Value;
                             context.Visitor.Visit(contextNode.Expression);
@@ -206,11 +207,14 @@ namespace Raven.Client.Util
                             default:
                                 _innerCallExpected = DictionaryInnerCall.KeyValue;
                                 break;
+
                             case "Count":
                                 _innerCallExpected = DictionaryInnerCall.Key;
                                 break;
+
                             case "SelectMany":
                                 return;
+
                             case "Select":
                                 _innerCallExpected = DictionaryInnerCall.Map;
                                 HandleMap(context, callNode);
@@ -247,6 +251,7 @@ namespace Raven.Client.Util
                                     context.Visitor.Visit(context.Node);
                                     writer.Write("[a];");
                                     break;
+
                                 case DictionaryInnerCall.KeyValue:
                                     writer.Write("return{Key: a,Value:");
                                     context.Visitor.Visit(context.Node);
@@ -339,6 +344,7 @@ namespace Raven.Client.Util
                     case "All":
                         newName = "every";
                         break;
+
                     case "Select":
                     case "Sum":
                         newName = "map";
@@ -347,10 +353,12 @@ namespace Raven.Client.Util
                     case "Where":
                         newName = "filter";
                         break;
+
                     case "IndexOf":
                     case "Contains":
                         newName = "indexOf";
                         break;
+
                     case "Cast":
                     case "ToList":
                     case "ToArray":
@@ -1529,16 +1537,20 @@ namespace Raven.Client.Util
                             case "MinValue":
                                 writer.Write("new Date(-62135596800000)");
                                 break;
+
                             case "MaxValue":
                                 writer.Write("new Date(253402297199999)");
                                 break;
+
                             case "Now":
                                 writer.Write("new Date(Date.now())");
                                 break;
+
                             case "UtcNow":
                                 writer.Write(
                                     @"(function (date) { return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());})(new Date())");
                                 break;
+
                             case "Today":
                                 writer.Write("new Date(new Date().setHours(0,0,0,0))");
                                 break;
@@ -1575,24 +1587,31 @@ namespace Raven.Client.Util
                             case "Year":
                                 writer.Write(IsUtc() ? ".getUTCFullYear()" : ".getFullYear()");
                                 break;
+
                             case "Month":
                                 writer.Write(IsUtc() ? ".getUTCMonth()+1" : ".getMonth()+1");
                                 break;
+
                             case "Day":
                                 writer.Write(IsUtc() ? ".getUTCDate()" : ".getDate()");
                                 break;
+
                             case "Hour":
                                 writer.Write(IsUtc() ? ".getUTCHours()" : ".getHours()");
                                 break;
+
                             case "Minute":
                                 writer.Write(IsUtc() ? ".getUTCMinutes()" : ".getMinutes()");
                                 break;
+
                             case "Second":
                                 writer.Write(IsUtc() ? ".getUTCSeconds()" : ".getSeconds()");
                                 break;
+
                             case "Millisecond":
                                 writer.Write(IsUtc() ? ".getUTCMilliseconds()" : ".getMilliseconds()");
                                 break;
+
                             case "Ticks":
                                 writer.Write(".getTime()*10000");
                                 break;
@@ -2208,51 +2227,67 @@ namespace Raven.Client.Util
                     case "PadLeft":
                         newName = "padStart";
                         break;
+
                     case "PadRight":
                         newName = "padEnd";
                         break;
+
                     case "Substring":
                         newName = "substr";
                         break;
+
                     case "StartsWith":
                         newName = "startsWith";
                         break;
+
                     case "EndsWith":
                         newName = "endsWith";
                         break;
+
                     case "Join":
                         newName = "join";
                         break;
+
                     case "Contains":
                         newName = "indexOf";
                         break;
+
                     case "Split":
                         newName = "split";
                         break;
+
                     case "Trim":
                         newName = "trim";
                         break;
+
                     case "ToUpper":
                         newName = "toUpperCase";
                         break;
+
                     case "ToLower":
                         newName = "toLowerCase";
                         break;
+
                     case "Replace":
                         newName = "replace";
                         break;
+
                     case "IsNullOrEmpty":
                         newName = "nullOrEmpty";
                         break;
+
                     case "IsNullOrWhiteSpace":
                         newName = "nullOrWhitespace";
                         break;
+
                     case "ToCharArray":
                         newName = "toCharArray";
                         break;
+
                     case "Format":
                         newName = "format";
                         break;
+
                     default:
                         return;
                 }
@@ -2280,6 +2315,7 @@ namespace Raven.Client.Util
                             context.Visitor.Visit(mce.Arguments[0]);
                             writer.Write(")");
                             break;
+
                         case "nullOrEmpty":
                             writer.Write("(");
                             context.Visitor.Visit(mce.Arguments[0]);
@@ -2287,6 +2323,7 @@ namespace Raven.Client.Util
                             context.Visitor.Visit(mce.Arguments[0]);
                             writer.Write(" === \"\")");
                             break;
+
                         case "nullOrWhitespace":
                             writer.Write("(!");
                             context.Visitor.Visit(mce.Arguments[0]);
@@ -2294,6 +2331,7 @@ namespace Raven.Client.Util
                             context.Visitor.Visit(mce.Arguments[0]);
                             writer.Write(".trim())");
                             break;
+
                         case "toCharArray":
                             context.Visitor.Visit(mce.Object);
                             if (mce.Arguments.Count > 0)
@@ -2306,6 +2344,7 @@ namespace Raven.Client.Util
                             }
                             writer.Write(".split('')");
                             break;
+
                         case "format":
                             context.Visitor.Visit(mce.Arguments[0]);
                             writer.Write(".format(");
@@ -2319,6 +2358,7 @@ namespace Raven.Client.Util
                             }
                             writer.Write(")");
                             break;
+
                         default:
                             context.Visitor.Visit(mce.Object);
                             writer.Write($".{newName}(");
@@ -2346,6 +2386,7 @@ namespace Raven.Client.Util
                                         case string s:
                                             writer.WriteLiteral(s);
                                             break;
+
                                         case Array items:
                                             for (var i = 0; i < items.Length; i++)
                                             {
@@ -2359,6 +2400,7 @@ namespace Raven.Client.Util
                                                 writer.WriteLiteral(str);
                                             }
                                             break;
+
                                         default:
                                             throw new InvalidOperationException("Unable to understand how to convert " + value + " to RQL (" + value?.GetType() ?? "null" + ")");
                                     }
@@ -2416,31 +2458,31 @@ namespace Raven.Client.Util
                 switch (methodCallExpression.Method.Name)
                 {
                     case nameof(RavenQuery.LastModified):
-                    {
-                        context.PreventDefault();
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
                         {
-                            writer.Write("getMetadata(");
-                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                            writer.Write(")['" + Constants.Documents.Metadata.LastModified + "']");
+                            context.PreventDefault();
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
+                            {
+                                writer.Write("getMetadata(");
+                                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                                writer.Write(")['" + Constants.Documents.Metadata.LastModified + "']");
+                            }
+                            break;
                         }
-                        break;
-                    }
                     case nameof(RavenQuery.Metadata):
                     case nameof(IAdvancedSessionOperations.GetMetadataFor):
-                    {
-                        context.PreventDefault();
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
                         {
-                            writer.Write("getMetadata(");
-                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                            writer.Write(")");
-                        }
+                            context.PreventDefault();
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
+                            {
+                                writer.Write("getMetadata(");
+                                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                                writer.Write(")");
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                 }
             }
         }
@@ -2456,7 +2498,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (CanConvert(context.Node, _conventions, out var alias, out var innerMemberExpression) == false)
+                if (CanConvert(context.Node, _conventions, out var innerExpression) == false)
                     return;
 
                 var writer = context.GetWriter();
@@ -2465,23 +2507,18 @@ namespace Raven.Client.Util
                 using (writer.Operation(context.Node))
                 {
                     writer.Write("id(");
-                    if (innerMemberExpression != null)
+                    if (innerExpression != null)
                     {
-                        context.Visitor.Visit(innerMemberExpression);
-                    }
-                    else
-                    {
-                        context.Visitor.Visit(alias);
+                        context.Visitor.Visit(innerExpression);
                     }
 
                     writer.Write(")");
                 }
             }
 
-            private static bool CanConvert(Expression expression, DocumentConventions conventions, out ParameterExpression alias, out MemberExpression innerMemberExpression)
+            private static bool CanConvert(Expression expression, DocumentConventions conventions, out Expression innerExpression)
             {
-                alias = null;
-                innerMemberExpression = null;
+                innerExpression = null;
 
                 if (!(expression is MemberExpression member) ||
                     conventions.GetIdentityProperty(member.Member.DeclaringType) != member.Member)
@@ -2489,18 +2526,35 @@ namespace Raven.Client.Util
 
                 if (member.Expression is ParameterExpression parameter)
                 {
-                    alias = parameter;
+                    innerExpression = parameter;
                     return true;
                 }
 
                 if (!(member.Expression is MemberExpression innerMember))
                     return false;
 
-                innerMemberExpression = innerMember;
+                innerExpression = innerMember;
 
                 var p = GetParameter(innerMember)?.Name;
 
                 return p != null && p.StartsWith(TransparentIdentifier);
+            }
+        }
+
+        public class MemberInit : JavascriptConversionExtension
+        {
+            public static MemberInit Instance { get; } = new MemberInit();
+
+            private MemberInit()
+            {
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (context.Node is MemberInitExpression == false)
+                    return;
+
+                MemberInitAsJson.ForAllTypes.ConvertToJavascript(context);
             }
         }
 
