@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.Extensions;
 
@@ -22,7 +21,6 @@ namespace Raven.Client.Documents.Indexes
         {
             _configuration = new IndexConfiguration();
         }
-
 
         /// <summary>
         /// This is the means by which the outside world refers to this index definition
@@ -218,20 +216,24 @@ namespace Raven.Client.Documents.Indexes
 
         [JsonIgnore]
         private byte[] _cachedHashCodeAsBytes;
+
         [JsonIgnore]
         private HashSet<string> _maps;
+
         [JsonIgnore]
         private Dictionary<string, IndexFieldOptions> _fields;
+
         [JsonIgnore]
         private Dictionary<string, string> _additionalSources;
+
         [JsonIgnore]
         private IndexConfiguration _configuration;
 
         /// <summary>
         /// Provide a cached version of the index hash code, which is used when generating
-        /// the index etag. 
+        /// the index etag.
         /// It isn't really useful for anything else, in particular, we cache that because
-        /// we want to avoid calculating the cost of doing this over and over again on each 
+        /// we want to avoid calculating the cost of doing this over and over again on each
         /// query.
         /// </summary>
         public byte[] GetIndexHash()
@@ -247,16 +249,17 @@ namespace Raven.Client.Documents.Indexes
         /// Returns a hash code for this instance.
         /// </summary>
         /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.
         /// </returns>
         public override int GetHashCode()
         {
             unchecked
             {
-                int result = Maps.Where(x => x != null).Aggregate(0, (acc, val) => acc * 397 ^ val.GetHashCode());
+                var result = Maps.GetEnumerableHashCode();
                 result = (result * 397) ^ Maps.Count;
                 result = (result * 397) ^ (Reduce?.GetHashCode() ?? 0);
                 result = (result * 397) ^ DictionaryHashCode(Fields);
+                result = (result * 397) ^ DictionaryHashCode(AdditionalSources);
                 result = (result * 397) ^ (OutputReduceToCollection?.GetHashCode() ?? 0);
                 return result;
             }
@@ -277,7 +280,6 @@ namespace Raven.Client.Documents.Indexes
             }
             internal set => _indexType = value;
         }
-
 
         /// <summary>
         /// Remove the default values that we don't actually need
@@ -344,8 +346,6 @@ namespace Raven.Client.Documents.Indexes
                 Fields.Remove(key);
         }
 
-
-
         public IndexType DetectStaticIndexType()
         {
             var firstMap = Maps.FirstOrDefault();
@@ -375,7 +375,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Defines pattern for identifiers of documents which reference IDs of reduce outputs documents
         /// </summary>
-        public string PatternForOutputReduceToCollectionReferences{ get; set; }
+        public string PatternForOutputReduceToCollectionReferences { get; set; }
 
         /// <summary>
         /// Defines a collection name for reference documents created based on provided pattern
