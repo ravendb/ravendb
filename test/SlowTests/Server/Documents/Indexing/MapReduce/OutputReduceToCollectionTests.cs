@@ -137,6 +137,8 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 await store.ExecuteIndexAsync(new Replacement_AverageFieldAdded.DailyInvoicesIndex());
                 WaitForIndexing(store);
 
+                RavenTestHelper.AssertNoIndexErrors(store);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     Assert.Equal(120, await session.Query<Invoice>().CountAsync());
