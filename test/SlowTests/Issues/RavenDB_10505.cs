@@ -43,12 +43,11 @@ update
 }
 ")).WaitForCompletion(TimeSpan.FromSeconds(30));
 
-
                 WaitForIndexing(store);
 
-                var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation("Auto/Users/ByName"));
+                var entriesCount = WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation("Auto/Users/ByName")).EntriesCount, 0);
 
-                Assert.Equal(0, indexStats.EntriesCount);
+                Assert.Equal(0, entriesCount);
             }
         }
     }
