@@ -45,7 +45,7 @@ namespace Voron.Impl
         private DateTime[] _lastGlobalStackRebuilds;
         private readonly TimeSpan _globalStackRebuildInterval = TimeSpan.FromMinutes(15);
 
-        public EncryptionBuffersPool()
+        public EncryptionBuffersPool(bool registerLowMemory = true, bool registerCleanup = true)
         {
             _maxNumberOfAllocationsToKeepInGlobalStackPerSlot = PlatformDetails.Is32Bits == false
                 ? 128
@@ -68,9 +68,11 @@ namespace Voron.Impl
                 _lastGlobalStackRebuilds[i] = now;
             }
 
-            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
+            if (registerLowMemory)
+                LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
 
-            _cleanupTimer = new Timer(Cleanup, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            if (registerCleanup)
+                _cleanupTimer = new Timer(Cleanup, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
 
         public byte* Get(int numberOfPages, out long size, out NativeMemory.ThreadStats thread)
