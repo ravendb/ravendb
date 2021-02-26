@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using Sparrow.Collections;
@@ -23,7 +23,6 @@ namespace Sparrow.Json
     public class CachedProperties
     {
         private readonly JsonOperationContext _context;
-        private int _propertyNameCounter;
 
         private Sorter<BlittableJsonDocumentBuilder.PropertyTag, PropertySorter> _sorter;
 
@@ -53,7 +52,6 @@ namespace Sparrow.Json
             _docPropNames.Clear();
             _propertiesSortOrder.Clear();
             _propertyNameToId.Clear();
-            _propertyNameCounter = 0;
             _propertiesNeedSorting = false;
             PropertiesDiscovered = 0;
             _hasDuplicates = false;
@@ -94,11 +92,14 @@ namespace Sparrow.Json
 
             public LazyStringValue Comparer;
             public int GlobalSortOrder;
-            public int PropertyId;            
+            public int PropertyId;
 
-            public PropertyName(int hash)
+            public PropertyName(int hash, LazyStringValue comparer, int globalSortOrder, int propertyId)
             {
                 HashCode = hash;
+                Comparer = comparer;
+                GlobalSortOrder = globalSortOrder;
+                PropertyId = propertyId;
             }
 
             public int CompareTo(PropertyName other)
@@ -123,8 +124,7 @@ namespace Sparrow.Json
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                var a = obj as PropertyName;
-                return a != null && HashCode == a.HashCode;
+                return obj is PropertyName a && HashCode == a.HashCode;
             }
 
             public override int GetHashCode()
@@ -138,6 +138,12 @@ namespace Sparrow.Json
             public PropertyName Property;
             public int SortedPosition;
             public BlittableJsonDocumentBuilder.PropertyTag Tmp;
+
+            public PropertyPosition(PropertyName property, int sortedPosition)
+            {
+                Property = property;
+                SortedPosition = sortedPosition;
+            }
         }
 
         private class CachedSort
@@ -180,8 +186,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PropertyName GetProperty(LazyStringValue propName)
         {
-            PropertyName prop;
-            if (_propertyNameToId.TryGetValue(propName, out prop))
+            if (_propertyNameToId.TryGetValue(propName, out PropertyName prop))
             {
                 // PERF: This is the most common scenario, we need it to come first. 
                 if (prop.PropertyId < PropertiesDiscovered)
@@ -202,12 +207,10 @@ namespace Sparrow.Json
         {
             var propIndex = _docPropNames.Count;
             propName = _context.GetLazyStringForFieldWithCaching(propName);
-            var prop = new PropertyName(_propertyNameCounter++)
-            {
-                Comparer = propName,
-                GlobalSortOrder = -1,
-                PropertyId = propIndex
-            };
+
+            // PERF: The hash for the property needs to be a hash code, if its not
+            //       we will be paying the cost of hash collisions in the sort checks.
+            var prop = new PropertyName(propName.GetHashCode(), propName, -1, propIndex);
 
             _docPropNames.Add(prop);
             _propertiesSortOrder.Add(prop, prop);
@@ -307,6 +310,8 @@ namespace Sparrow.Json
             int hash = 0;
             for (int i = 0; i < count; i++)
             {
+                // Because we are using a HashCombiner to avoid hash collisions, the HashCode should be
+                // an actual hash. Failing to do so will cause hash collisions. 
                 hash = Hashing.HashCombiner.CombineInline(hash, properties[i].Property.HashCode);
             }
 
@@ -325,18 +330,16 @@ namespace Sparrow.Json
             if (_cachedSorts[index] == null)
                 _cachedSorts[index] = new CachedSort();
 
-            _cachedSorts[index].Sorting.Clear();
-
+            var cachedSort = _cachedSorts[index];
+            var sorting = cachedSort.Sorting;
+            
+            sorting.Clear();
             for (int i = 0; i < properties.Count; i++)
             {
-                _cachedSorts[index].Sorting.Add(new PropertyPosition
-                {
-                    Property = properties[i].Property,
-                    SortedPosition = -1
-                });
+                sorting.Add(new PropertyPosition(properties[i].Property, -1));
             }
 
-            _cachedSorts[index].FinalCount = properties.Count;
+            cachedSort.FinalCount = properties.Count;
 
             properties.Sort(ref _sorter);
 
@@ -349,14 +352,13 @@ namespace Sparrow.Json
                 {
                     if (properties[i].Property.Equals(properties[i + 1].Property))
                     {
-                        _cachedSorts[index].FinalCount--;
-                        _cachedSorts[index].Sorting[i + 1] = new PropertyPosition
-                        {
-                            Property = properties[i + 1].Property,
+                        cachedSort.FinalCount--;
+                        sorting[i + 1] = new PropertyPosition(
+                            properties[i + 1].Property,
                             // set it to the previous value, so it'll just overwrite
                             // this saves us a check and more complex code
-                            SortedPosition = i 
-                        };
+                            sortedPosition: i
+                        );
 
                         properties.RemoveAt(i + 1);
 
@@ -365,9 +367,9 @@ namespace Sparrow.Json
                 }
             }            
 
-            for (int i = 0; i < _cachedSorts[index].Sorting.Count; i++)
+            for (int i = 0; i < sorting.Count; i++)
             {
-                var propPos = _cachedSorts[index].Sorting[i];
+                var propPos = sorting[i];
                 propPos.SortedPosition = -1;
                 for (int j = 0; j < properties.Count; j++)
                 {
