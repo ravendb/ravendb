@@ -287,6 +287,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Analyzers.Search.Default", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public string DefaultSearchAnalyzer { get; set; }
 
+        [Description("How long the index should delay processing after new work is detected")]
+        [DefaultValue(null)]
+        [TimeUnit(TimeUnit.Milliseconds)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Throttling.TimeIntervalInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting? ThrottlingTimeInterval { get; protected set; }
+
         public Type DefaultAnalyzerType { get; private set; }
 
         public Type DefaultExactAnalyzerType { get; private set; }
