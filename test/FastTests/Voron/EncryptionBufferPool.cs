@@ -192,7 +192,7 @@ namespace FastTests.Voron
         [Fact]
         public void properly_calculate_thread_total_allocations_when_we_cant_put_buffer_in_pool()
         {
-            var encryptionBuffersPool = new EncryptionBuffersPool();
+            var encryptionBuffersPool = new EncryptionBuffersPool(registerLowMemory: false, registerCleanup: false);
 
             var threadStats = NativeMemory.ThreadAllocations.Value;
             var before = threadStats.Allocations;
