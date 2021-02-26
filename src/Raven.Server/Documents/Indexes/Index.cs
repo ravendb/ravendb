@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal TransactionContextPool _contextPool;
 
-        protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
+        protected ThrottledManualResetEventSlim _mre;
         private readonly object _disablingIndexLock = new object();
 
         private readonly ManualResetEventSlim _logsAppliedEvent = new ManualResetEventSlim();
@@ -276,7 +276,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void ScheduleIndexingRun()
         {
-            _mre.Set();
+            _mre.Set(ignoreThrottling: true);
         }
 
         protected virtual void DisposeIndex()
@@ -316,6 +316,8 @@ namespace Raven.Server.Documents.Indexes
             exceptionAggregator.Execute(() => { _contextPool?.Dispose(); });
 
             exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
+
+            exceptionAggregator.Execute(() => { _mre?.Dispose(); });
 
             exceptionAggregator.ThrowIfNeeded();
         }
@@ -694,6 +696,7 @@ namespace Raven.Server.Documents.Indexes
                 Configuration = configuration;
                 PerformanceHints = performanceHints;
 
+                _mre = new ThrottledManualResetEventSlim(Configuration.ThrottlingTimeInterval?.AsTimeSpan, throttlingBehavior: ThrottledManualResetEventSlim.ThrottlingBehavior.ManualManagement);
                 _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                 _environment = environment;
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
@@ -874,7 +877,7 @@ namespace Raven.Server.Documents.Indexes
                 lock (_disablingIndexLock)
                 {
                     _indexDisabled = true;
-                    _mre.Set();
+                    _mre.Set(ignoreThrottling: true);
                 }
             }
             else
@@ -913,6 +916,9 @@ namespace Raven.Server.Documents.Indexes
 
                 Definition = definition;
                 Configuration = configuration;
+
+                if (Configuration.ThrottlingTimeInterval?.AsTimeSpan != _mre.ThrottlingInterval) 
+                    _mre.Update(Configuration.ThrottlingTimeInterval?.AsTimeSpan);
 
                 OnInitialization();
 
@@ -1161,10 +1167,12 @@ namespace Raven.Server.Documents.Indexes
                 var storageEnvironment = _environment;
                 if (storageEnvironment == null)
                     return; // can be null if we disposed immediately
+
+                _mre.EnableThrottlingTimer();
+
                 try
                 {
-                    if (storageEnvironment != null)
-                        storageEnvironment.OnLogsApplied += HandleLogsApplied;
+                    storageEnvironment.OnLogsApplied += HandleLogsApplied;
 
                     SubscribeToChanges(DocumentDatabase);
 
@@ -1225,7 +1233,7 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         // need to call it here to the let the index continue running
                                         // we'll stop when we reach the index error threshold
-                                        _mre.Set();
+                                        _mre.Set(ignoreThrottling: true);
                                         throw;
                                     }
                                     finally
@@ -1364,7 +1372,7 @@ namespace Raven.Server.Documents.Indexes
                                 }
                                 catch (Exception e)
                                 {
-                                    _mre.Set(); // try again
+                                    _mre.Set(ignoreThrottling: true); // try again
 
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Could not replace index '{Name}'.", e);
@@ -1387,6 +1395,17 @@ namespace Raven.Server.Documents.Indexes
                             // This is because faster indexes will tend to allocate the memory faster, and we want to give them
                             // all the available resources so they can complete faster.
                             var timeToWaitForMemoryCleanup = 5000;
+
+                            var throttlingInterval = _mre.ThrottlingInterval;
+
+                            if (throttlingInterval != null && throttlingInterval.Value.TotalMilliseconds > timeToWaitForMemoryCleanup)
+                            {
+                                // when we're throttling the index then let's wait twice as much as the throttling interval to ensure
+                                // that we cleanup the memory only when we really don't have any work
+
+                                timeToWaitForMemoryCleanup = (int)(2 * throttlingInterval.Value.TotalMilliseconds);
+                            }
+
                             var forceMemoryCleanup = false;
 
                             if (_lowMemoryFlag.IsRaised())
@@ -1395,7 +1414,12 @@ namespace Raven.Server.Documents.Indexes
                             }
                             else if (_allocationCleanupNeeded > 0)
                             {
-                                timeToWaitForMemoryCleanup = 0; // if there is nothing to do, immediately cleanup everything
+                                if (_mre.IsSetScheduled == false)
+                                {
+                                    // if there is nothing to do and no work has been scheduled already (when running in throttled mode) then
+                                    // immediately cleanup everything 
+                                    timeToWaitForMemoryCleanup = 0; 
+                                }
 
                                 // at any rate, we'll reduce the budget for this index to what it currently has allocated to avoid
                                 // the case where we freed memory at the end of the batch, but didn't adjust the budget accordingly
@@ -1476,6 +1500,8 @@ namespace Raven.Server.Documents.Indexes
                         storageEnvironment.OnLogsApplied -= HandleLogsApplied;
 
                     UnsubscribeFromChanges(DocumentDatabase);
+
+                    _mre.DisableThrottlingTimer();
                 }
             }
         }
@@ -1787,7 +1813,7 @@ namespace Raven.Server.Documents.Indexes
                 lock (_disablingIndexLock)
                 {
                     _indexDisabled = true;
-                    _mre.Set();
+                    _mre.Set(ignoreThrottling: true);
                 }
 
                 return;
@@ -1875,11 +1901,15 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 using (var scope = stats.For(work.Name))
                                 {
-                                    mightBeMore |= work.Execute(context, indexContext, writeOperation, scope,
-                                        cancellationToken);
+                                    var result = work.Execute(context, indexContext, writeOperation, scope, cancellationToken);
+                                    mightBeMore |= result.MoreWorkFound;
 
                                     if (mightBeMore)
-                                        _mre.Set();
+                                    {
+                                        var ignoreThrottling = result.BatchContinuationResult == CanContinueBatchResult.False; // if batch was stopped because of memory limit or batch size then let it continue immediately
+
+                                        _mre.Set(ignoreThrottling);
+                                    }
                                 }
                             }
 
@@ -2085,7 +2115,7 @@ namespace Raven.Server.Documents.Indexes
                 catch (TimeoutException)
                 {
                     _definitionChanged.Raise();
-                    _mre.Set();
+                    _mre.Set(ignoreThrottling: true);
                 }
                 catch (Exception)
                 {
@@ -2213,7 +2243,7 @@ namespace Raven.Server.Documents.Indexes
                 catch (TimeoutException)
                 {
                     _definitionChanged.Raise();
-                    _mre.Set();
+                    _mre.Set(ignoreThrottling: true);
                 }
                 catch (Exception)
                 {
@@ -3768,6 +3798,7 @@ namespace Raven.Server.Documents.Indexes
 
         public enum CanContinueBatchResult
         {
+            None,
             True,
             False,
             RenewTransaction

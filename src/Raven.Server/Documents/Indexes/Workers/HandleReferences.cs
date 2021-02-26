@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected virtual bool ItemsAndReferencesAreUsingSameEtagPool => true;
 
-        public bool Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
+        public (bool MoreWorkFound, Index.CanContinueBatchResult BatchContinuationResult) Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             const long pageSize = long.MaxValue;
@@ -101,17 +101,24 @@ namespace Raven.Server.Documents.Indexes.Workers
                             ? _configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan
                             : TimeSpan.FromMinutes(15);
 
-            var moreWorkFound = HandleItems(ActionType.Tombstone, queryContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
-            moreWorkFound |= HandleItems(ActionType.Document, queryContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
+            var tombstonesHandlingResult = HandleItems(ActionType.Tombstone, queryContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
+            var documentsHandlingResult = HandleItems(ActionType.Document, queryContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
 
-            return moreWorkFound;
+            var batchContinuationResult = Index.CanContinueBatchResult.True;
+
+            if (tombstonesHandlingResult.BatchContinuationResult == Index.CanContinueBatchResult.False || documentsHandlingResult.BatchContinuationResult == Index.CanContinueBatchResult.False)
+                batchContinuationResult = Index.CanContinueBatchResult.False;
+
+            return (tombstonesHandlingResult.MoreWorkFound | documentsHandlingResult.MoreWorkFound, batchContinuationResult);
         }
 
         protected abstract bool TryGetReferencedCollectionsFor(string collection, out HashSet<CollectionName> referencedCollections);
 
-        private unsafe bool HandleItems(ActionType actionType, QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, long pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
+        private (bool MoreWorkFound, Index.CanContinueBatchResult BatchContinuationResult) HandleItems(ActionType actionType, QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, long pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
         {
             var moreWorkFound = false;
+            var batchContinuationResult = Index.CanContinueBatchResult.None;
+
             Dictionary<string, long> lastIndexedEtagsByCollection = null;
 
             var totalProcessedCount = 0;
@@ -264,11 +271,11 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                             bool CanContinueReferenceBatch()
                             {
-                                var canContinueBatch = _index.CanContinueBatch(stats, queryContext, indexContext, indexWriter, 
+                                batchContinuationResult = _index.CanContinueBatch(stats, queryContext, indexContext, indexWriter, 
                                     lastEtag, lastCollectionEtag, totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
-                                if (canContinueBatch != Index.CanContinueBatchResult.True)
+                                if (batchContinuationResult != Index.CanContinueBatchResult.True)
                                 {
-                                    keepRunning = canContinueBatch == Index.CanContinueBatchResult.RenewTransaction;
+                                    keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;
                                     return false;
                                 }
 
@@ -286,7 +293,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         {
                             // the last referenced etag hasn't changed
                             if (keepRunning == false && earlyExit)
-                                return true;
+                                return (true, batchContinuationResult);
 
                             continue;
                         }
@@ -317,7 +324,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (moreWorkFound == false)
                 _referencesState.Clear(actionType);
 
-            return moreWorkFound;
+            return (moreWorkFound, batchContinuationResult);
         }
 
         private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext,
