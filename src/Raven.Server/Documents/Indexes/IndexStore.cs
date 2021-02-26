@@ -456,6 +456,7 @@ namespace Raven.Server.Documents.Indexes
                     case IndexType.JavaScriptMap:
                         index = MapIndex.CreateNew(definition, _documentDatabase);
                         break;
+
                     case IndexType.MapReduce:
                     case IndexType.JavaScriptMapReduce:
                         var mapReduceIndex = MapReduceIndex.CreateNew(definition, _documentDatabase);
@@ -465,6 +466,7 @@ namespace Raven.Server.Documents.Indexes
 
                         index = mapReduceIndex;
                         break;
+
                     default:
                         throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
                 }
@@ -750,10 +752,12 @@ namespace Raven.Server.Documents.Indexes
                 case IndexType.JavaScriptMap:
                     MapIndex.Update(existingIndex, definition, _documentDatabase);
                     break;
+
                 case IndexType.MapReduce:
                 case IndexType.JavaScriptMapReduce:
                     MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
                     break;
+
                 default:
                     throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
             }
@@ -812,10 +816,13 @@ namespace Raven.Server.Documents.Indexes
                 {
                     case IndexUpdateType.None:
                         break;
+
                     case IndexUpdateType.Refresh:
                         return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
+
                     case IndexUpdateType.Reset:
                         return IndexCreationOptions.Update;
+
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
@@ -1034,7 +1041,14 @@ namespace Raven.Server.Documents.Indexes
             {
                 using (IndexLock(index.Name))
                 {
-                    index.Start();
+                    try
+                    {
+                        index.Start();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // this can happen if we replaced or removed the index
+                    }
                 }
             });
         }
@@ -1101,21 +1115,20 @@ namespace Raven.Server.Documents.Indexes
 
             var list = indexes.ToList();
 
-            ExecuteForIndexes(list,
-                index =>
+            ExecuteForIndexes(list, index =>
+            {
+                using (IndexLock(index.Name))
                 {
                     try
                     {
-                        using (IndexLock(index.Name))
-                        {
-                            index.Stop(disableIndex: true);
-                        }
+                        index.Stop(disableIndex: true);
                     }
                     catch (ObjectDisposedException)
                     {
-                        // index was deleted ?
+                        // this can happen if we replaced or removed the index
                     }
-                });
+                }
+            });
 
             foreach (var index in list)
             {
@@ -1141,14 +1154,13 @@ namespace Raven.Server.Documents.Indexes
                 indexLock.Value.Wait();
             }
 
-            ExecuteForIndexes(_indexes,
-                index =>
-                {
-                    if (index is FaultyInMemoryIndex)
-                        return;
+            ExecuteForIndexes(_indexes, index =>
+            {
+                if (index is FaultyInMemoryIndex)
+                    return;
 
-                    exceptionAggregator.Execute(index.Dispose);
-                });
+                exceptionAggregator.Execute(index.Dispose);
+            });
 
             exceptionAggregator.ThrowIfNeeded();
         }
@@ -1185,10 +1197,12 @@ namespace Raven.Server.Documents.Indexes
                             case IndexType.JavaScriptMap:
                                 index = MapIndex.CreateNew(staticIndexDefinition, _documentDatabase);
                                 break;
+
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
                                 index = MapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase, isIndexReset: true);
                                 break;
+
                             default:
                                 throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
                         }
@@ -1367,6 +1381,7 @@ namespace Raven.Server.Documents.Indexes
                         case IndexingConfiguration.IndexStartupBehavior.Start:
                             index.SetState(IndexState.Normal);
                             break;
+
                         case IndexingConfiguration.IndexStartupBehavior.ResetAndStart:
                             index = ResetIndexInternal(index);
                             startIndex = false; // reset already starts the index
@@ -1495,7 +1510,7 @@ namespace Raven.Server.Documents.Indexes
                     if (result.MatchType == DynamicQueryMatchType.Complete || result.MatchType == DynamicQueryMatchType.CompleteButIdle)
                     {
                         var lastMappedEtagFor = index.GetLastMappedEtagFor(collection);
-                        if(result.LastMappedEtag >= lastMappedEtagFor)
+                        if (result.LastMappedEtag >= lastMappedEtagFor)
                         {
                             indexesToRemove.Add(index.Name);
                             indexesToExtend.Remove(index.Name);
@@ -1756,7 +1771,7 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 _documentDatabase.Changes.RaiseNotifications(
-                    new IndexChange {Name = oldIndexName, Type = IndexChangeTypes.SideBySideReplace});
+                    new IndexChange { Name = oldIndexName, Type = IndexChangeTypes.SideBySideReplace });
             }
             finally
             {
