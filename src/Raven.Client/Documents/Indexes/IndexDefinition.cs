@@ -257,10 +257,11 @@ namespace Raven.Client.Documents.Indexes
         {
             unchecked
             {
-                int result = Maps.Where(x => x != null).Aggregate(0, (acc, val) => acc * 397 ^ val.GetHashCode());
+                var result = Maps.GetEnumerableHashCode();
                 result = (result * 397) ^ Maps.Count;
                 result = (result * 397) ^ (Reduce?.GetHashCode() ?? 0);
                 result = (result * 397) ^ DictionaryHashCode(Fields);
+                result = (result * 397) ^ DictionaryHashCode(AdditionalSources);
                 result = (result * 397) ^ (OutputReduceToCollection?.GetHashCode() ?? 0);
                 return result;
             }

@@ -453,7 +453,10 @@ namespace SlowTests.Voron
 
                 for (int i = 0; i < buffer.Length; i++)
                 {
-                    buffer[i] = value;
+                    if (buffer[i] != value)
+                        buffer[i] = value;
+                    else
+                        buffer[i] = (byte)(value + 1); // we really want to change the original value here so it must not stay the same
                 }
                 fileStream.Position = position;
                 fileStream.Write(buffer, 0, buffer.Length);
