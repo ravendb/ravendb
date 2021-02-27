@@ -103,6 +103,8 @@ namespace FastTests
             if (canUseProtect == false) // fall back to a file
                 Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
 
+            Server.ServerStore.EnsureNotPassive(); // activate license so we can insert the secret key
+
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
             name = dbName;
             return Convert.ToBase64String(buffer);
