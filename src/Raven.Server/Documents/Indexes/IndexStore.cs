@@ -463,6 +463,7 @@ namespace Raven.Server.Documents.Indexes
                             case IndexType.JavaScriptMap:
                                 index = MapIndex.CreateNew(definition, _documentDatabase);
                                 break;
+
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
                                 var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceIndex>(definition, _documentDatabase);
@@ -472,6 +473,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 index = mapReduceIndex;
                                 break;
+
                             default:
                                 throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
                         }
@@ -806,10 +808,12 @@ namespace Raven.Server.Documents.Indexes
                         case IndexType.JavaScriptMap:
                             MapIndex.Update(existingIndex, definition, _documentDatabase);
                             break;
+
                         case IndexType.MapReduce:
                         case IndexType.JavaScriptMapReduce:
                             MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
                             break;
+
                         default:
                             throw new NotSupportedException($"Cannot update {definition.Type} index from {nameof(IndexDefinition)}");
                     }
@@ -905,10 +909,13 @@ namespace Raven.Server.Documents.Indexes
                 {
                     case IndexUpdateType.None:
                         break;
+
                     case IndexUpdateType.Refresh:
                         return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
+
                     case IndexUpdateType.Reset:
                         return IndexCreationOptions.Update;
+
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
@@ -1123,7 +1130,14 @@ namespace Raven.Server.Documents.Indexes
             {
                 using (IndexLock(index.Name))
                 {
+                    try
+                    {
                     index.Start();
+                }
+                    catch (ObjectDisposedException)
+                    {
+                        // this can happen if we replaced or removed the index
+                    }
                 }
             });
         }
@@ -1190,20 +1204,19 @@ namespace Raven.Server.Documents.Indexes
 
             var list = indexes.ToList();
 
-            ExecuteForIndexes(list,
-                index =>
+            ExecuteForIndexes(list, index =>
+                {
+                using (IndexLock(index.Name))
                 {
                     try
                     {
-                        using (IndexLock(index.Name))
-                        {
                             index.Stop(disableIndex: true);
                         }
-                    }
                     catch (ObjectDisposedException)
                     {
-                        // index was deleted ?
+                        // this can happen if we replaced or removed the index
                     }
+                }
                 });
 
             foreach (var index in list)
@@ -1230,8 +1243,7 @@ namespace Raven.Server.Documents.Indexes
                 indexLock.Value.Wait();
             }
 
-            ExecuteForIndexes(_indexes,
-                index =>
+            ExecuteForIndexes(_indexes, index =>
                 {
                     if (index is FaultyInMemoryIndex)
                         return;
@@ -1279,10 +1291,12 @@ namespace Raven.Server.Documents.Indexes
                                     case IndexType.JavaScriptMap:
                                         index = MapIndex.CreateNew(staticIndexDefinition, _documentDatabase);
                                         break;
+
                                     case IndexType.MapReduce:
                                     case IndexType.JavaScriptMapReduce:
                                         index = MapReduceIndex.CreateNew<MapReduceIndex>(staticIndexDefinition, _documentDatabase, isIndexReset: true);
                                         break;
+
                                     default:
                                         throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
                                 }
@@ -1495,6 +1509,7 @@ namespace Raven.Server.Documents.Indexes
                         case IndexingConfiguration.IndexStartupBehavior.Start:
                             index.SetState(IndexState.Normal);
                             break;
+
                         case IndexingConfiguration.IndexStartupBehavior.ResetAndStart:
                             index = ResetIndexInternal(index);
                             startIndex = false; // reset already starts the index

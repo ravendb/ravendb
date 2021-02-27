@@ -119,6 +119,8 @@ namespace FastTests
             if (canUseProtect == false) // fall back to a file
                 Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
 
+            Assert.True(Server.ServerStore.EnsureNotPassiveAsync().Wait(TimeSpan.FromSeconds(30))); // activate license so we can insert the secret key
+
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
             name = dbName;
             return Convert.ToBase64String(buffer);
@@ -1046,13 +1048,14 @@ namespace FastTests
 
         private readonly Dictionary<(RavenServer Server, string Database), string> _serverDatabaseToMasterKey = new Dictionary<(RavenServer Server, string Database), string>();
 
-        protected void PutSecrectKeyForDatabaseInServersStore(string dbName, RavenServer ravenServer)
+        protected void PutSecrectKeyForDatabaseInServersStore(string dbName, RavenServer server)
         {
             var base64key = CreateMasterKey(out _);
             var base64KeyClone = new string(base64key.ToCharArray());
-            EnsureServerMasterKeyIsSetup(ravenServer);
-            ravenServer.ServerStore.PutSecretKey(base64key, dbName, true);
-            _serverDatabaseToMasterKey.Add((ravenServer, dbName), base64KeyClone);
+            EnsureServerMasterKeyIsSetup(server);
+            Assert.True(server.ServerStore.EnsureNotPassiveAsync().Wait(TimeSpan.FromSeconds(30))); // activate license so we can insert the secret key
+            server.ServerStore.PutSecretKey(base64key, dbName, true);
+            _serverDatabaseToMasterKey.Add((server, dbName), base64KeyClone);
         }
 
         protected string SetupEncryptedDatabase(out TestCertificatesHolder certificates, out byte[] masterKey, [CallerMemberName] string caller = null)
