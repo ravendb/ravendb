@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Config;
@@ -255,7 +254,7 @@ exit 129";
         }
 
         [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
-        public void CertificateAndMasterKeyExecTest()
+        public async Task CertificateAndMasterKeyExecTest()
         {
             string script;
             IDictionary<string, string> customSettings = new ConcurrentDictionary<string, string>();
@@ -328,6 +327,8 @@ exit 0";
             {
                 return;
             }
+
+            await Server.ServerStore.EnsureNotPassiveAsync();
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
             X509Certificate2 serverCertificate;
             try
@@ -355,4 +356,3 @@ exit 0";
         }
     }
 }
-
