@@ -964,13 +964,14 @@ namespace FastTests
 
         private readonly Dictionary<(RavenServer Server, string Database), string> _serverDatabaseToMasterKey = new Dictionary<(RavenServer Server, string Database), string>();
 
-        protected void PutSecrectKeyForDatabaseInServersStore(string dbName, RavenServer ravenServer)
+        protected void PutSecrectKeyForDatabaseInServersStore(string dbName, RavenServer server)
         {
             var base64key = CreateMasterKey(out _);
             var base64KeyClone = new string(base64key.ToCharArray());
-            EnsureServerMasterKeyIsSetup(ravenServer);
-            ravenServer.ServerStore.PutSecretKey(base64key, dbName, true);
-            _serverDatabaseToMasterKey.Add((ravenServer, dbName), base64KeyClone);
+            EnsureServerMasterKeyIsSetup(server);
+            server.ServerStore.EnsureNotPassive(); // activate license so we can insert the secret key
+            server.ServerStore.PutSecretKey(base64key, dbName, true);
+            _serverDatabaseToMasterKey.Add((server, dbName), base64KeyClone);
         }
 
         protected string SetupEncryptedDatabase(out TestCertificatesHolder certificates, out byte[] masterKey, [CallerMemberName] string caller = null)
