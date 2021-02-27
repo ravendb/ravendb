@@ -330,6 +330,7 @@ exit 0";
             {
                 return;
             }
+
             await Server.ServerStore.EnsureNotPassiveAsync();
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
             X509Certificate2 serverCertificate;

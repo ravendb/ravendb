@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
+using Sparrow.Platform;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -67,12 +68,12 @@ namespace SlowTests.Issues
 
                 var batchCount = 0;
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                
+
                 store.Changes().ForIndex(index.IndexName).Subscribe(x =>
                 {
                     if (x.Type == IndexChangeTypes.BatchCompleted)
                     {
-                        if(Interlocked.Increment(ref batchCount) > 1)
+                        if (Interlocked.Increment(ref batchCount) > 1)
                             tcs.TrySetResult(null);
                     }
                 });
@@ -732,6 +733,8 @@ namespace SlowTests.Issues
                     var query2 = session.Query<MapReduceCountersIndex.Result, MapReduceCountersIndex>()
                         .Where(x => x.CompanyName == _companyName2).CountLazilyAsync();
 
+                    await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();
+
                     return (await query1.Value, await query2.Value);
                 }
             }
@@ -764,7 +767,7 @@ namespace SlowTests.Issues
 
             using (var session = store.OpenAsyncSession())
             {
-                session.Advanced.MaxNumberOfRequestsPerSession = 50;
+                session.Advanced.MaxNumberOfRequestsPerSession = PlatformDetails.Is32Bits == false ? 50 : 200;
 
                 (int itemsCount1, int itemsCount2) = await getItemsCount(session);
                 Assert.Equal(_employeesCount, itemsCount1);
@@ -865,11 +868,11 @@ namespace SlowTests.Issues
                 AddMap(
                     _commonName,
                     timeSeries => from ts in timeSeries
-                        from entry in ts.Entries
-                        select new Result
-                        {
-                            CompanyName = LoadDocument<Company>(entry.Tag).Name
-                        });
+                                  from entry in ts.Entries
+                                  select new Result
+                                  {
+                                      CompanyName = LoadDocument<Company>(entry.Tag).Name
+                                  });
             }
         }
 
@@ -887,21 +890,20 @@ namespace SlowTests.Issues
                 AddMap(
                     _commonName,
                     timeSeries => from ts in timeSeries
-                        from entry in ts.Entries
-                        select new Result
-                        {
-                            DocumentId = ts.DocumentId,
-                            CompanyName = LoadDocument<Company>(entry.Tag).Name
-                        });
-
+                                  from entry in ts.Entries
+                                  select new Result
+                                  {
+                                      DocumentId = ts.DocumentId,
+                                      CompanyName = LoadDocument<Company>(entry.Tag).Name
+                                  });
 
                 Reduce = results => from r in results
-                    group r by r.DocumentId into g
-                    select new Result
-                    {
-                        DocumentId = g.Key,
-                        CompanyName = g.Select(x => x.CompanyName).FirstOrDefault()
-                    };
+                                    group r by r.DocumentId into g
+                                    select new Result
+                                    {
+                                        DocumentId = g.Key,
+                                        CompanyName = g.Select(x => x.CompanyName).FirstOrDefault()
+                                    };
             }
         }
 
@@ -935,12 +937,12 @@ namespace SlowTests.Issues
 
             public CountersIndex()
             {
-                AddMap(_commonName, 
+                AddMap(_commonName,
                     counters => from counter in counters
-                    select new Result
-                    {
-                        CompanyName = LoadDocument<Company>(counter.Name).Name
-                    });
+                                select new Result
+                                {
+                                    CompanyName = LoadDocument<Company>(counter.Name).Name
+                                });
             }
         }
 
@@ -957,19 +959,19 @@ namespace SlowTests.Issues
             {
                 AddMap(_commonName,
                     counters => from counter in counters
-                        select new Result
-                        {
-                            DocumentId = counter.DocumentId,
-                            CompanyName = LoadDocument<Company>(counter.Name).Name
-                        });
+                                select new Result
+                                {
+                                    DocumentId = counter.DocumentId,
+                                    CompanyName = LoadDocument<Company>(counter.Name).Name
+                                });
 
                 Reduce = results => from r in results
-                    group r by r.DocumentId into g
-                    select new Result
-                    {
-                        DocumentId = g.Key,
-                        CompanyName = g.Select(x => x.CompanyName).FirstOrDefault()
-                    };
+                                    group r by r.DocumentId into g
+                                    select new Result
+                                    {
+                                        DocumentId = g.Key,
+                                        CompanyName = g.Select(x => x.CompanyName).FirstOrDefault()
+                                    };
             }
         }
 

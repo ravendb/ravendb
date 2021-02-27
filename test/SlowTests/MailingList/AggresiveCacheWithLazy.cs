@@ -27,18 +27,18 @@ namespace SlowTests.MailingList
                 var doc = await docLazy.Value;
             }
 
-            var requests = requestExecutor.NumberOfServerRequests;
-
             using (var session = store.OpenAsyncSession())
             using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
             {
+                var requests = session.Advanced.NumberOfRequests;
+
                 var cachedDocLazy = session.Advanced.Lazily.LoadAsync<Doc>("doc-1");
                 var cachedDoc = await cachedDocLazy.Value;
-            }
 
-            Assert.Equal(requests, requestExecutor.NumberOfServerRequests);
+                Assert.Equal(requests, session.Advanced.NumberOfRequests);
+            }
         }
-        
+
         [Fact]
         public async Task AggresiveCacheWithLazyTestAsync_MixedMode()
         {
@@ -59,18 +59,18 @@ namespace SlowTests.MailingList
                 var doc = await docLazy.Value;
             }
 
-            var requests = requestExecutor.NumberOfServerRequests;
-
             using (var session = store.OpenAsyncSession())
             using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
             {
+                var requests = session.Advanced.NumberOfRequests;
+
                 var cachedDocLazy = session.Advanced.Lazily.LoadAsync<Doc>("doc-1");
                 var cachedDoc = await cachedDocLazy.Value;
-            }
 
-            Assert.Equal(requests, requestExecutor.NumberOfServerRequests);
+                Assert.Equal(requests, session.Advanced.NumberOfRequests);
+            }
         }
-        
+
         [Fact]
         public async Task AggresiveCacheWithLazyTestAsync_Partly()
         {
@@ -112,7 +112,6 @@ namespace SlowTests.MailingList
                 Assert.Equal(1, session.Advanced.NumberOfRequests);
             }
         }
-
 
         [Fact]
         public void AggresiveCacheWithLazyTest()
