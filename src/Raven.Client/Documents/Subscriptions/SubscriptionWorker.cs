@@ -76,9 +76,6 @@ namespace Raven.Client.Documents.Subscriptions
 
         public void Dispose(bool waitForSubscriptionTask)
         {
-            if (_disposed)
-                return;
-
             AsyncHelpers.RunSync(() => DisposeAsync(waitForSubscriptionTask));
         }
 
@@ -89,11 +86,11 @@ namespace Raven.Client.Documents.Subscriptions
 
         public async Task DisposeAsync(bool waitForSubscriptionTask)
         {
+            if (_disposed)
+                return;
+
             try
             {
-                if (_disposed)
-                    return;
-
                 _disposed = true;
                 _processingCts?.Cancel();
 
@@ -609,7 +606,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         private async Task RunSubscriptionAsync()
         {
-            while (_processingCts.Token.IsCancellationRequested == false)
+            while (_processingCts.IsCancellationRequested == false)
             {
                 try
                 {
@@ -629,7 +626,7 @@ namespace Raven.Client.Documents.Subscriptions
                     _recentExceptions.Enqueue(ex);
                     try
                     {
-                        if (_processingCts.Token.IsCancellationRequested)
+                        if (_processingCts.IsCancellationRequested)
                         {
                             if (_disposed == false)
                                 throw;
