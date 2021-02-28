@@ -2190,17 +2190,13 @@ namespace Raven.Client.Http
 
         private async Task EnsureNodeSelector()
         {
-            if (_firstTopologyUpdate != null && _firstTopologyUpdate.Status != TaskStatus.RanToCompletion)
-                await _firstTopologyUpdate.ConfigureAwait(false);
+            await WaitForTopologyUpdate(_firstTopologyUpdate).ConfigureAwait(false);
 
-            if (_nodeSelector == null)
+            _nodeSelector ??= new NodeSelector(new Topology
             {
-                _nodeSelector = new NodeSelector(new Topology
-                {
-                    Nodes = TopologyNodes.ToList(),
-                    Etag = TopologyEtag
-                });
-            }
+                Nodes = TopologyNodes.ToList(), 
+                Etag = TopologyEtag
+            });
         }
 
         private static void ThrowIfClientException(Exception e)
