@@ -2,12 +2,15 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using MySql.Data.MySqlClient;
+using Oracle.ManagedDataAccess.Client;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Extensions.Streams;
 using Raven.Client.Util;
@@ -469,7 +472,35 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                                 objectValue.TryGetMember(nameof(SqlDocumentTransformer.VarcharFunctionCall.Value), out object fieldValue))
                             {
                                 colParam.DbType = (DbType)Enum.Parse(typeof(DbType), dbType.ToString(), false);
-                                colParam.Value = fieldValue.ToString();
+
+                                var value = fieldValue.ToString();
+                                if (colParam.DbType == DbType.Guid && Guid.TryParse(value, out var guid))
+                                {
+                                    if (colParam is Npgsql.NpgsqlParameter || colParam is SqlParameter)
+                                        colParam.Value = guid;
+
+                                    if (colParam is MySqlParameter mySqlParameter)
+                                    {
+                                        var arr = guid.ToByteArray();
+                                        mySqlParameter.Value = arr;
+                                        mySqlParameter.MySqlDbType = MySqlDbType.Binary;
+                                        mySqlParameter.Size = arr.Length;
+                                        break;
+                                    }
+
+                                    if (colParam is OracleParameter oracleParameter)
+                                    {
+                                        var arr = guid.ToByteArray();
+                                        oracleParameter.Value = arr;
+                                        oracleParameter.OracleDbType = OracleDbType.Raw;
+                                        oracleParameter.Size = arr.Length;
+                                        break;
+                                    }
+                                }
+                                else
+                                {
+                                    colParam.Value = value;
+                                }
 
                                 if (objectValue.TryGetMember(nameof(SqlDocumentTransformer.VarcharFunctionCall.Size), out object size))
                                 {
