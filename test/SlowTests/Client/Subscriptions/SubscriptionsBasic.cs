@@ -387,5 +387,41 @@ namespace SlowTests.Client.Subscriptions
                 Assert.Equal(subscriptionStatus[0].ChangeVectorForNextBatchStartingPoint, lastChangeVector);
             }
         }
+
+        [Fact]
+        public async Task DisposeSubscriptionWorkerShouldNotThrow()
+        {
+            var mre = new AsyncManualResetEvent();
+            var mre2 = new AsyncManualResetEvent();
+            using (var store = GetDocumentStore(new Options()
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.OnBeforeRequest += async (sender, args) =>
+                    {
+                        if (args.Url.Contains("info/remote-task/tcp?database="))
+                        {
+                            mre.Set();
+                            await mre2.WaitAsync(_reasonableWaitTime);
+                        }
+                    };
+                }
+            }))
+            {
+                var id = store.Subscriptions.Create(new SubscriptionCreationOptions<Company>());
+                var workerOptions = new SubscriptionWorkerOptions(id) { IgnoreSubscriberErrors = true, Strategy = SubscriptionOpeningStrategy.TakeOver };
+                var worker = store.Subscriptions.GetSubscriptionWorker<Company>(workerOptions, store.Database);
+
+                var t = worker.Run(x => { });
+
+                await mre.WaitAsync(_reasonableWaitTime);
+                await worker.DisposeAsync(false);
+                mre2.Set();
+
+               var status= WaitForValue(() => t.Status, TaskStatus.RanToCompletion);
+                Assert.Equal(TaskStatus.RanToCompletion, status);
+                Assert.True(t.IsCompletedSuccessfully, "t.IsCompletedSuccessfully");
+            }
+        }
     }
 }
