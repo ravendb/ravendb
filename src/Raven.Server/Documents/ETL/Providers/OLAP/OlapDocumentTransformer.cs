@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             {
                 _tables[name] = _config.Format switch
                 {
-                    OlapEtlFileFormat.Parquet => table = new ParquetTransformedItems(tableName, key),
+                    OlapEtlFileFormat.Parquet => table = new ParquetTransformedItems(tableName, key, _config.PartitionFieldName),
                     _ => throw new ArgumentOutOfRangeException(nameof(OlapEtlConfiguration.Format))
                 };
             }

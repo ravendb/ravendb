@@ -22,21 +22,28 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         public const string IdField = "_id";
         public const string LastModifiedField = "_lastModifiedTicks";
+        public const string DefaultPartitionName = "dt";
 
-        public ParquetTransformedItems(string name, string key) : base(OlapEtlFileFormat.Parquet)
+
+        public ParquetTransformedItems(string name, string key, string partitionFieldName) : base(OlapEtlFileFormat.Parquet)
         {
             CollectionName = name;
             PartitionKey = key;
             Groups = new List<RowGroup>();
 
             _dataFields = new Dictionary<string, DataType>();
+
+            if (string.IsNullOrEmpty(partitionFieldName))
+                partitionFieldName = DefaultPartitionName;
+
+            Prefix = $"{CollectionName}/{partitionFieldName}%3D{PartitionKey}";
         }
 
-        public override string Prefix => PartitionKey;
+        public override string Prefix { get; }
 
-        public string CollectionName { get; set; }
+        public string CollectionName { get; }
 
-        public string PartitionKey { get; set; }
+        public string PartitionKey { get; }
 
         public Dictionary<string, DataField> Fields => _fields ??= GenerateDataFields();
 
