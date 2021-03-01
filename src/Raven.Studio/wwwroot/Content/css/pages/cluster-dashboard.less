@@ -906,21 +906,57 @@
 
     .connection {
         fill: none;
-        stroke: #333D48;
+        stroke: @text-color;
         stroke-width: 4;
         stroke-miterlimit: 10;
+        transition: all .2s;        
+    }
+
+    .connection-broken {
+        .connection {
+            stroke: @brand-danger;            
+        }
+
+        
+        .connection-outgoing, .connection-incoming {
+            .connection {
+                stroke: @brand-danger !important;  
+                stroke-dasharray: 8px !important;
+            }
+
+            .arrow {
+                fill: @brand-danger !important;                
+            }
+        }
     }
 
     .connection-selected {
-        .connection-incoming {
+        .connection-incoming, .connection-outgoing {
+            .connection {                
+                stroke-dashoffset: -400px;
+                stroke-dasharray: 400px;
+                opacity: 0;
+                transition-delay: 0s;
+                transition-duration: 0s;
+            }
+
+            .arrow {                
+                transition: all 0s;
+                transition-delay: 0s;
+                opacity: 0;
+            }
+        }
+
+        .connection-incoming,  {
             .connection {
                 stroke: #edcd51;
             }
 
             .arrow {
-                fill: #edcd51;
+                fill: #edcd51;                
             }
         }
+
 
         .connection-outgoing {
             .connection {
@@ -956,27 +992,62 @@
     }
 
     .node {
+        cursor: pointer;
 
         .node-fill {
-            fill: #7BD85D;
+            fill: @brand-success;
 
-            &.node-unavailable {
-                fill: #FF510F;
-            }
+            
         }
 
         &:hover {
-            fill: lighten(#7BD85D, 10%);
+            .node-fill {
+                fill: @brand-success-dark;
+            }
         }
 
+        &.node-unavailable {
+            .ping-value {
+                font-size: 80px;
+            }
+            .node-fill {
+                fill: @brand-danger;
+            }
+
+            &:hover {
+                .node-fill {
+                    fill: @brand-danger-dark;
+                }
+            }
+        }        
     }
 
+    .selected-info {
+        transition: all .2s cubic-bezier(1, 0, 0, 1);   
+        transition-delay: 0s;
+        opacity: 0;
+        transform: translateY(@gutter-sm);
+        
+        .ping-label {
+            font-size: 19.389px;
+            font-family: sans-serif;
+            fill: #FFFFFF;        
+        }    
+
+        .ping-value {
+            font-size: 34.4694px;
+            font-family: sans-serif;
+            font-weight: bold;
+            fill: #FFFFFF;
+        }
+    }
     .node-type {
         fill: #FFFFFF;
+        transition: all .2s cubic-bezier(1, 0, 0, 1);        
     }
 
     .node-letter {
-        enable-background: new;
+        background-color: @well-bg;
     }
 
     .selected-outline {
@@ -987,26 +1058,55 @@
         transition: all .2s cubic-bezier(1, 0, 0, 1);        
         opacity: 0;
     }
-    .ping-label {
-        font-size: 19.389px;
-        font-family: sans-serif;
-        fill: #FFFFFF;
-    }
-
-    .ping-value {
-        font-size: 34.4694px;
-        font-family: sans-serif;
-        fill: #FFFFFF;
-    }
 
     .st14 {
         font-size: 80px;
     }
 
     &.selected {
-        .selected-outline {
-            transform: scale(1);
+        .selected-outline {            
             opacity: 1;
         }
+
+        
+
+        .node{
+            &:not(.node-selected) {
+                .node-type {
+                    transform: translateY(-@gutter-sm);
+                    opacity: 0;
+                }
+            }
+        }
+
+        .connection {
+            fill: none;
+            stroke: @panel-bg;
+        }
+
+        .selected-info {
+            transform: translateY(0);
+            opacity: 1;
+            transition-delay: .2s;
+        }
+        .connection-selected {
+            .connection {
+                opacity: 0;
+            }
+            .connection-incoming, .connection-outgoing {
+                .connection {
+                    opacity: 1;
+                    stroke-dashoffset: 0;
+                    transition-delay: .2s;
+                    transition-duration: .2s;                        
+                }
+
+                .arrow {
+                    opacity: 1;
+                    transition-delay: .2s;                    
+                }
+            }
+        }
+
     }
 }
