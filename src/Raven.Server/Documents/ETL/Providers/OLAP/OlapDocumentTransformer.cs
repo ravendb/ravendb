@@ -35,11 +35,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             base.Initialize(debugMode);
 
-            foreach (var collection in LoadToDestinations)
+            foreach (var table in LoadToDestinations)
             {
-                var name = Transformation.LoadTo + collection;
+                var name = Transformation.LoadTo + table;
                 DocumentScript.ScriptEngine.SetValue(name, new ClrFunctionInstance(DocumentScript.ScriptEngine, name,
-                    (value, args) => LoadToS3FunctionTranslator(collection, value, args)));
+                    (value, args) => LoadToS3FunctionTranslator(table, value, args)));
             }
         }
 
@@ -103,11 +103,29 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             if (_tables.TryGetValue(name, out var table) == false)
             {
-                _tables[name] = _config.Format switch
+                switch (_config.Format)
                 {
-                    OlapEtlFileFormat.Parquet => table = new ParquetTransformedItems(tableName, key, _config.PartitionFieldName),
-                    _ => throw new ArgumentOutOfRangeException(nameof(OlapEtlConfiguration.Format))
-                };
+                    case OlapEtlFileFormat.Parquet:
+                        string partitionColumn = default, idColumn = default;
+
+                        if (_config.OlapTables != null)
+                        {
+                            foreach (var olapTable in _config.OlapTables)
+                            {
+                                if (olapTable.TableName != tableName) 
+                                    continue;
+                                
+                                partitionColumn = olapTable.PartitionColumn;
+                                idColumn = olapTable.DocumentIdColumn;
+                                break;
+                            }
+                        }
+                        _tables[name] = table = new ParquetTransformedItems(tableName, key, idColumn, partitionColumn);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(OlapEtlConfiguration.Format));
+                        break;
+                }
             }
 
             return table;

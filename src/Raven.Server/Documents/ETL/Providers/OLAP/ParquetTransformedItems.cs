@@ -20,12 +20,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private DateTimeOffset[] _dtoArr;
         private TimeSpan[] _tsArr;
 
-        public const string IdField = "_id";
-        public const string LastModifiedField = "_lastModifiedTicks";
-        public const string DefaultPartitionName = "dt";
+        public const string DefaultIdColumn = "_id";
+        public const string DefaultPartitionColumn = "_dt";
+        public const string LastModifiedColumn = "_lastModifiedTicks";
 
-
-        public ParquetTransformedItems(string name, string key, string partitionFieldName) : base(OlapEtlFileFormat.Parquet)
+        public ParquetTransformedItems(string name, string key, string idColumn, string partitionColumn) : base(OlapEtlFileFormat.Parquet)
         {
             CollectionName = name;
             PartitionKey = key;
@@ -33,10 +32,14 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             _dataFields = new Dictionary<string, DataType>();
 
-            if (string.IsNullOrEmpty(partitionFieldName))
-                partitionFieldName = DefaultPartitionName;
+            if (string.IsNullOrEmpty(partitionColumn))
+                partitionColumn = DefaultPartitionColumn;
 
-            Prefix = $"{CollectionName}/{partitionFieldName}%3D{PartitionKey}";
+            DocumentIdColumn = string.IsNullOrEmpty(idColumn)
+                ? DefaultIdColumn
+                : idColumn;
+
+            Prefix = $"{CollectionName}/{partitionColumn}%3D{PartitionKey}";
         }
 
         public override string Prefix { get; }
@@ -44,6 +47,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         public string CollectionName { get; }
 
         public string PartitionKey { get; }
+
+        public string DocumentIdColumn { get; }
 
         public Dictionary<string, DataField> Fields => _fields ??= GenerateDataFields();
 
@@ -67,8 +72,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 fields[kvp.Key] = new DataField(kvp.Key, kvp.Value);
             }
 
-            fields[IdField] = new DataField(IdField, DataType.String);
-            fields[LastModifiedField] = new DataField(LastModifiedField, DataType.Int64);
+            fields[DocumentIdColumn] = new DataField(DocumentIdColumn, DataType.String);
+            fields[LastModifiedColumn] = new DataField(LastModifiedColumn, DataType.Int64);
 
             return fields;
         }
@@ -148,10 +153,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _tsArr = null;
         }
 
-        private static void AddMandatoryFields(RowGroup group)
+        private void AddMandatoryFields(RowGroup group)
         {
-            group.Data[IdField] = group.Ids;
-            group.Data[LastModifiedField] = group.LastModified;
+            group.Data[DocumentIdColumn] = group.Ids;
+            group.Data[LastModifiedColumn] = group.LastModified;
         }
 
         public override void AddItem(ToOlapItem item)
