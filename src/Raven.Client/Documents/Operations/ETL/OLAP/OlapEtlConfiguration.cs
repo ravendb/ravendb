@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.OLAP
 {
@@ -14,6 +16,8 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public string CustomPrefix { get; set; }
 
+        public List<OlapEtlTable> OlapTables { get; set; }
+
         public override string GetDestination() => ConnectionStringName;
 
         public override EtlType EtlType => EtlType.Olap;
@@ -26,6 +30,31 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
         public override string GetDefaultTaskName()
         {
             return $"OLAP ETL to {ConnectionStringName}";
+        }
+    }
+
+    public class OlapEtlTable
+    {
+        public string TableName { get; set; }
+
+        public string DocumentIdColumn { get; set; }
+
+        public string PartitionColumn { get; set; }
+
+        protected bool Equals(OlapEtlTable other)
+        {
+            return string.Equals(TableName, other.TableName) && string.Equals(DocumentIdColumn, other.DocumentIdColumn, StringComparison.OrdinalIgnoreCase) &&
+                   PartitionColumn == other.PartitionColumn;
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(TableName)] = TableName,
+                [nameof(DocumentIdColumn)] = DocumentIdColumn,
+                [nameof(PartitionColumn)] = PartitionColumn
+            };
         }
     }
 }
