@@ -95,8 +95,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         protected override IEnumerator<ToOlapItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
         {
-            // todo
-            throw new NotImplementedException();
+            // RavenDB-16308
+            throw new NotSupportedException("Time Series are currently not supported by OLAP ETL");
         }
 
         protected override IEnumerator<ToOlapItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)

@@ -1041,6 +1041,9 @@ namespace Raven.Server.Documents.ETL
                                 DebugOutput = debugOutput
                             };
                         }
+                    case EtlType.Olap:
+                        // todo RavenDB-16311
+                        goto default;
                     default:
                         throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
                 }
