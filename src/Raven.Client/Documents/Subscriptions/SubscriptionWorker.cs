@@ -56,6 +56,7 @@ namespace Raven.Client.Documents.Subscriptions
         public event AfterAcknowledgmentAction AfterAcknowledgment;
 
         public event Action<Exception> OnSubscriptionConnectionRetry;
+
         public event Action<Exception> OnUnexpectedSubscriptionError;
 
         internal SubscriptionWorker(SubscriptionWorkerOptions options, DocumentStore documentStore, string dbName)
@@ -75,9 +76,6 @@ namespace Raven.Client.Documents.Subscriptions
 
         public void Dispose(bool waitForSubscriptionTask)
         {
-            if (_disposed)
-                return;
-
             var dispose = DisposeAsync(waitForSubscriptionTask);
             if (dispose.IsCompletedSuccessfully)
                 return;
@@ -92,11 +90,11 @@ namespace Raven.Client.Documents.Subscriptions
 
         public async ValueTask DisposeAsync(bool waitForSubscriptionTask)
         {
+            if (_disposed)
+                return;
+
             try
             {
-                if (_disposed)
-                    return;
-
                 _disposed = true;
                 _processingCts?.Cancel();
 
@@ -304,6 +302,7 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     case TcpConnectionStatus.Ok:
                         return reply.Version;
+
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"Cannot access database {_dbName} because " + reply.Message);
                     case TcpConnectionStatus.TcpVersionMismatch:
@@ -347,6 +346,7 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Accepted:
                     break;
+
                 case SubscriptionConnectionServerMessage.ConnectionStatus.InUse:
                     throw new SubscriptionInUseException(
                         $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it's in use and the connection strategy is {_options.Strategy}");
@@ -529,18 +529,23 @@ namespace Raven.Client.Documents.Subscriptions
                     case SubscriptionConnectionServerMessage.MessageType.Data:
                         incomingBatch.Add(receivedMessage);
                         break;
+
                     case SubscriptionConnectionServerMessage.MessageType.Includes:
                         includes.Add(receivedMessage.Includes);
                         break;
+
                     case SubscriptionConnectionServerMessage.MessageType.CounterIncludes:
                         counterIncludes.Add((receivedMessage.CounterIncludes, receivedMessage.IncludedCounterNames));
                         break;
+
                     case SubscriptionConnectionServerMessage.MessageType.TimeSeriesIncludes:
                         timeSeriesIncludes.Add(receivedMessage.TimeSeriesIncludes);
                         break;
+
                     case SubscriptionConnectionServerMessage.MessageType.EndOfBatch:
                         endOfBatch = true;
                         break;
+
                     case SubscriptionConnectionServerMessage.MessageType.Confirm:
                         var onAfterAcknowledgment = AfterAcknowledgment;
                         if (onAfterAcknowledgment != null)
@@ -548,12 +553,15 @@ namespace Raven.Client.Documents.Subscriptions
                         incomingBatch.Clear();
                         batch.Items.Clear();
                         break;
+
                     case SubscriptionConnectionServerMessage.MessageType.ConnectionStatus:
                         AssertConnectionState(receivedMessage);
                         break;
+
                     case SubscriptionConnectionServerMessage.MessageType.Error:
                         ThrowSubscriptionError(receivedMessage);
                         break;
+
                     default:
                         ThrowInvalidServerResponse(receivedMessage);
                         break;
@@ -622,7 +630,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         private async Task RunSubscriptionAsync()
         {
-            while (_processingCts.Token.IsCancellationRequested == false)
+            while (_processingCts.IsCancellationRequested == false)
             {
                 try
                 {
@@ -645,7 +653,7 @@ namespace Raven.Client.Documents.Subscriptions
                     _recentExceptions.Enqueue(ex);
                     try
                     {
-                        if (_processingCts.Token.IsCancellationRequested)
+                        if (_processingCts.IsCancellationRequested)
                         {
                             if (_disposed == false)
                                 throw;
@@ -741,6 +749,7 @@ namespace Raven.Client.Documents.Subscriptions
                                         new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying"));
 
                     return true;
+
                 case NodeIsPassiveException e:
                     {
                         // if we failed to talk to a node, we'll forget about it and let the topology to
@@ -750,12 +759,14 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                 case SubscriptionChangeVectorUpdateConcurrencyException _:
                     return true;
+
                 case SubscriptionClosedException sce:
                     if (sce.CanReconnect)
                         return true;
 
                     _processingCts.Cancel();
                     return false;
+
                 case SubscriptionInUseException _:
                 case SubscriptionDoesNotExistException _:
                 case SubscriptionInvalidStateException _:
@@ -766,6 +777,7 @@ namespace Raven.Client.Documents.Subscriptions
                 case RavenException _:
                     _processingCts.Cancel();
                     return false;
+
                 default:
                     OnUnexpectedSubscriptionError?.Invoke(ex);
                     AssertLastConnectionFailure();

@@ -56,7 +56,8 @@ namespace SlowTests.Client.Subscriptions
                 Assert.Equal("from 'Users' as doc", subscriptionDocuments[0].Query);
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker(
-                    new SubscriptionWorkerOptions(subscriptionDocuments[0].SubscriptionName) {
+                    new SubscriptionWorkerOptions(subscriptionDocuments[0].SubscriptionName)
+                    {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                     });
 
@@ -86,7 +87,7 @@ namespace SlowTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>(){Name = "sub1"});
+                store.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub1" });
                 store.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub2" });
                 store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
 
@@ -166,7 +167,6 @@ namespace SlowTests.Client.Subscriptions
                     Assert.Equal(3, subscriptionStataList.Count);
                     Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub1")));
                     Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub2")));
-
                 }
             }
             finally
@@ -208,7 +208,6 @@ namespace SlowTests.Client.Subscriptions
                     session.SaveChanges();
                 }
                 store.Subscriptions.Create<User>();
-
 
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<PersonWithAddress>()
                 {
@@ -353,7 +352,6 @@ namespace SlowTests.Client.Subscriptions
                 var docsAmount = 50;
                 using (var biPeople = store.BulkInsert())
                 {
-
                     for (int i = 0; i < docsAmount; i++)
                     {
                         lastId = biPeople.Store(new Company
@@ -377,7 +375,6 @@ namespace SlowTests.Client.Subscriptions
                     IgnoreSubscriberErrors = true,
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
-
 
                 var cde = new CountdownEvent(docsAmount);
 
@@ -907,7 +904,6 @@ namespace SlowTests.Client.Subscriptions
                             Includes = builder => builder
                                 .IncludeTimeSeries(new[] { "StockPrice", "StockPrice2" }, TimeSeriesRangeType.Last, count: 32)
                         });
-
                 }
 
                 var mre = new ManualResetEventSlim();
@@ -989,7 +985,6 @@ namespace SlowTests.Client.Subscriptions
                             Includes = builder => builder
                                 .IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 32)
                         });
-
                 }
 
                 var mre = new ManualResetEventSlim();
@@ -1044,7 +1039,43 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        public class Dog
+        [Fact]
+        public async Task DisposeSubscriptionWorkerShouldNotThrow()
+        {
+            var mre = new AsyncManualResetEvent();
+            var mre2 = new AsyncManualResetEvent();
+            using (var store = GetDocumentStore(new Options()
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.OnBeforeRequest += async (sender, args) =>
+                    {
+                        if (args.Url.Contains("info/remote-task/tcp?database="))
+                        {
+                            mre.Set();
+                            await mre2.WaitAsync(_reasonableWaitTime);
+                        }
+                    };
+                }
+            }))
+            {
+                var id = store.Subscriptions.Create(new SubscriptionCreationOptions<Company>());
+                var workerOptions = new SubscriptionWorkerOptions(id) { IgnoreSubscriberErrors = true, Strategy = SubscriptionOpeningStrategy.TakeOver };
+                var worker = store.Subscriptions.GetSubscriptionWorker<Company>(workerOptions, store.Database);
+
+                var t = worker.Run(x => { });
+
+                await mre.WaitAsync(_reasonableWaitTime);
+                await worker.DisposeAsync(false);
+                mre2.Set();
+
+                var status = WaitForValue(() => t.Status, TaskStatus.RanToCompletion);
+                Assert.Equal(TaskStatus.RanToCompletion, status);
+                Assert.True(t.IsCompletedSuccessfully, "t.IsCompletedSuccessfully");
+            }
+        }
+
+        private class Dog
         {
             public int Name { get; set; }
 
