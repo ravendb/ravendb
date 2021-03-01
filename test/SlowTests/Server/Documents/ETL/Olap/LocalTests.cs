@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Server.Basic.Entities;
@@ -773,13 +772,13 @@ loadToOrders(key, o);
 
                     SetupLocalOlapEtl(store, script, path, TimeSpan.FromSeconds(30));
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                    var files = Directory.GetFiles(path);
-                    Assert.Equal(1, files.Length);
+                    Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                     var sw = new Stopwatch();
                     sw.Start();
+
+                    var files = Directory.GetFiles(path);
+                    Assert.Equal(1, files.Length);
 
                     // disable an re enable the database
 
