@@ -41,14 +41,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public Analyzer Analyzer => _indexWriter?.Analyzer;
 
         public LuceneIndexWriter(LuceneVoronDirectory d, Analyzer a, IndexDeletionPolicy deletionPolicy,
-            IndexWriter.MaxFieldLength mfl, IndexWriter.IndexReaderWarmer indexReaderWarmer, DocumentDatabase documentDatabase, IState state)
+            IndexWriter.MaxFieldLength mfl, IndexWriter.IndexReaderWarmer indexReaderWarmer, Index index, IState state)
         {
             _directory = d;
             _analyzer = a;
             _indexDeletionPolicy = deletionPolicy;
             _maxFieldLength = mfl;
             _indexReaderWarmer = indexReaderWarmer;
-            _logger = LoggingSource.Instance.GetLogger<LuceneIndexWriter>(documentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<LuceneIndexWriter>(index.DocumentDatabase.Name);
             RecreateIndexWriter(state);
         }
 
@@ -76,12 +76,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             catch (SystemException e)
             {
                 TryThrowingBetterException(e, _directory);
-
                 throw;
-            }
-            finally
-            {
-                RecreateIndexWriter(state);
             }
         }
 
@@ -135,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private void RecreateIndexWriter(IState state)
+        public void RecreateIndexWriter(IState state)
         {
             try
             {
