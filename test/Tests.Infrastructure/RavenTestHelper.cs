@@ -162,6 +162,18 @@ namespace FastTests
             Assert.Empty(forMonitor);
         }
 
+        public static void AssertAll(Func<string> massageFactory, params Action[] asserts)
+        {
+            try
+            {
+                Assert.All(asserts, assert => assert());
+            }
+            catch (Exception e)
+            {
+                throw new XunitException(massageFactory() + Environment.NewLine + e.Message);
+            }
+        }
+
         public static void AssertAll(params Action[] asserts)
         {
             Assert.All(asserts, assert => assert());
