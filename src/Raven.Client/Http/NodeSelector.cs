@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 
 namespace Raven.Client.Http
 {
@@ -78,7 +79,7 @@ namespace Raven.Client.Http
             }
 
             if (state.Nodes.Count == 0)
-                throw new AllTopologyNodesDownException("There are no nodes in the topology.");
+                throw new DatabaseDoesNotExistException("There are no nodes in the topology.");
 
             throw new RequestedNodeUnavailableException($"Could not find requested node {nodeTag}.");
         }
@@ -118,7 +119,7 @@ namespace Raven.Client.Http
             // if there are all marked as failed, we'll chose the first
             // one so the user will get an error (or recover :-) );
             if (state.Nodes.Count == 0)
-                throw new AllTopologyNodesDownException("There are no nodes in the topology at all");
+                throw new DatabaseDoesNotExistException("There are no nodes in the topology at all");
 
             return (0, state.Nodes[0]);
         }
