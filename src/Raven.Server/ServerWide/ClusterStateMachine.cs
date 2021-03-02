@@ -38,6 +38,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -374,6 +375,8 @@ namespace Raven.Server.ServerWide
 
                     case nameof(PutSortersCommand):
                     case nameof(DeleteSorterCommand):
+                    case nameof(PutAnalyzersCommand):
+                    case nameof(DeleteAnalyzerCommand):
                     case nameof(PutIndexCommand):
                     case nameof(PutIndexesCommand):
                     case nameof(PutAutoIndexCommand):

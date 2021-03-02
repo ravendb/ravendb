@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
@@ -24,7 +25,7 @@ namespace Raven.Client.ServerWide
         public long Etag { get; set; }
     }
 
-    // The DatabaseRecord resides in EVERY server/node inside the cluster regardless if the db is actually within the node 
+    // The DatabaseRecord resides in EVERY server/node inside the cluster regardless if the db is actually within the node
     public class DatabaseRecord
     {
         public DatabaseRecord()
@@ -58,6 +59,8 @@ namespace Raven.Client.ServerWide
         public DocumentsCompressionConfiguration DocumentsCompression;
 
         public Dictionary<string, SorterDefinition> Sorters = new Dictionary<string, SorterDefinition>();
+
+        public Dictionary<string, AnalyzerDefinition> Analyzers = new Dictionary<string, AnalyzerDefinition>();
 
         public Dictionary<string, IndexDefinition> Indexes;
 
@@ -114,6 +117,19 @@ namespace Raven.Client.ServerWide
             Sorters?.Remove(sorterName);
         }
 
+        public void AddAnalyzer(AnalyzerDefinition definition)
+        {
+            if (Analyzers == null)
+                Analyzers = new Dictionary<string, AnalyzerDefinition>(StringComparer.OrdinalIgnoreCase);
+
+            Analyzers[definition.Name] = definition;
+        }
+
+        public void DeleteAnalyzer(string sorterName)
+        {
+            Analyzers?.Remove(sorterName);
+        }
+
         public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex, int revisionsToKeep)
         {
             var lockMode = IndexLockMode.Unlock;
@@ -151,7 +167,7 @@ namespace Raven.Client.ServerWide
 
                 if (differences != null)
                 {
-                    if (differences.Value.HasFlag(IndexDefinitionCompareDifferences.Maps) == false && 
+                    if (differences.Value.HasFlag(IndexDefinitionCompareDifferences.Maps) == false &&
                         differences.Value.HasFlag(IndexDefinitionCompareDifferences.Reduce) == false &&
                         differences.Value.HasFlag(IndexDefinitionCompareDifferences.Fields) == false &&
                         differences.Value.HasFlag(IndexDefinitionCompareDifferences.AdditionalSources) == false &&
@@ -221,7 +237,7 @@ namespace Raven.Client.ServerWide
             {
                 if (periodicBackup.TaskId == backupTaskId)
                 {
-                    if (periodicBackup.Name != null && 
+                    if (periodicBackup.Name != null &&
                         periodicBackup.Name.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException($"Can't delete task id: {periodicBackup.TaskId}, name: '{periodicBackup.Name}', " +
                                                             $"because it is a server-wide backup task. Please use a dedicated operation.");
@@ -327,17 +343,20 @@ namespace Raven.Client.ServerWide
 
         protected bool Equals(DocumentsCompressionConfiguration other)
         {
-            var mine = new HashSet<string>(Collections,StringComparer.OrdinalIgnoreCase);
+            var mine = new HashSet<string>(Collections, StringComparer.OrdinalIgnoreCase);
             var them = new HashSet<string>(other.Collections, StringComparer.OrdinalIgnoreCase);
-            return CompressRevisions == other.CompressRevisions && 
+            return CompressRevisions == other.CompressRevisions &&
                    mine.SetEquals(them);
         }
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
             return Equals((DocumentsCompressionConfiguration)obj);
         }
 
@@ -353,12 +372,12 @@ namespace Raven.Client.ServerWide
             hash = 31 * hash + CompressRevisions.GetHashCode();
             return hash;
         }
-        
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Collections)] =  new DynamicJsonArray(Collections),
+                [nameof(Collections)] = new DynamicJsonArray(Collections),
                 [nameof(CompressRevisions)] = CompressRevisions
             };
         }

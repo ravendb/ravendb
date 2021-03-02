@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Text;
 using System.Text.RegularExpressions;
-using Lucene.Net.Search;
+using Lucene.Net.Analysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
@@ -14,18 +14,18 @@ using Microsoft.CodeAnalysis.Formatting;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Server.Documents.Indexes.Static;
 
-namespace Raven.Server.Documents.Indexes.Sorting
+namespace Raven.Server.Documents.Indexes.Analysis
 {
-    public delegate FieldComparator CreateSorter(string fieldName, int numHits, int sortPos, bool reversed, List<string> diagnostics);
+    public delegate Analyzer CreateAnalyzer();
 
-    public static class SorterCompiler
+    public static class AnalyzerCompiler
     {
-        public static CreateSorter Compile(string name, string sorterCode)
+        public static CreateAnalyzer Compile(string name, string analyzerCode)
         {
             var originalName = name;
-            name = GetCSharpSafeName(name) + "." + Guid.NewGuid() + ".sorter";
+            name = GetCSharpSafeName(name) + "." + Guid.NewGuid() + ".analyzer";
 
-            var compilationUnit = SyntaxFactory.ParseCompilationUnit(sorterCode);
+            var compilationUnit = SyntaxFactory.ParseCompilationUnit(analyzerCode);
 
             SyntaxNode formattedCompilationUnit;
             using (var workspace = new AdhocWorkspace())
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Sorting
                     .Where(diagnostic => diagnostic.IsWarningAsError || diagnostic.Severity == DiagnosticSeverity.Error);
 
                 var sb = new StringBuilder();
-                sb.AppendLine($"Failed to compile sorter '{originalName}'");
+                sb.AppendLine($"Failed to compile analyzer '{originalName}'");
                 sb.AppendLine();
                 sb.AppendLine(code);
                 sb.AppendLine();
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Indexes.Sorting
                 foreach (var diagnostic in failures)
                     sb.AppendLine(diagnostic.ToString());
 
-                throw new SorterCompilationException(sb.ToString());
+                throw new AnalyzerCompilationException(sb.ToString());
             }
 
             asm.Position = 0;
@@ -105,13 +105,13 @@ namespace Raven.Server.Documents.Indexes.Sorting
             }
 
             if (type == null)
-                throw new SorterCompilationException($"Could not find type '{originalName}' in given assembly.");
+                throw new AnalyzerCompilationException($"Could not find type '{originalName}' in given assembly.");
 
-            return (fieldName, numHits, sortPos, reversed, diagnostics) =>
+            return () =>
             {
-                var instance = Activator.CreateInstance(type, fieldName, numHits, sortPos, reversed, diagnostics) as FieldComparator;
+                var instance = Activator.CreateInstance(type) as Analyzer;
                 if (instance == null)
-                    throw new InvalidOperationException($"Created sorter does not inherit from '{nameof(FieldComparator)}' class.");
+                    throw new InvalidOperationException($"Created analyzer does not inherit from '{nameof(Analyzer)}' class.");
 
                 return instance;
             };
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Indexes.Sorting
 
         private static string GetCSharpSafeName(string name)
         {
-            return $"Sorter_{Regex.Replace(name, @"[^\w\d]", "_")}";
+            return $"Analyzer_{Regex.Replace(name, @"[^\w\d]", "_")}";
         }
     }
 }
