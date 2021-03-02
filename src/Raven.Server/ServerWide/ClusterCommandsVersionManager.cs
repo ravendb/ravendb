@@ -121,7 +121,10 @@ namespace Raven.Server.ServerWide
             [nameof(UnregisterReplicationHubAccessCommand)] = 51_000,
             [nameof(PutServerWideExternalReplicationCommand)] = 51_000,
             [nameof(DeleteServerWideTaskCommand)] = 51_000,
-            [nameof(ToggleServerWideTaskStateCommand)] = 51_000
+            [nameof(ToggleServerWideTaskStateCommand)] = 51_000,
+
+            [nameof(PutSortersCommand)] = 52_000,
+            [nameof(DeleteSorterCommand)] = 52_000,
         };
 
         public static bool CanPutCommand(string command)
