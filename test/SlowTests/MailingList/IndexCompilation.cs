@@ -877,7 +877,7 @@ namespace SlowTests.MailingList
                                        RemainingFt = 0,
                                        TotalFt = 0,
                                        RemainingQty = 0,
-                                       ScheduleState = State.Undone
+                                       ScheduleState = IndexCompilation.State.Undone
                                    };
 
                 Reduce = results => from result in results
@@ -899,7 +899,7 @@ namespace SlowTests.MailingList
                                     let totalFt = g.SelectMany(x => x.IdsWithDecimals.Select(y => y.Value)).Aggregate(0m, (d1, d2) => d1 + d2)
                                     let completeFt = g.SelectMany(x => x.IdsWithDecimals2.Select(y => y.Value)).Aggregate(0m, (d1, d2) => d1 + d2)
                                     let remainingFt = dic1.Join(dic2, tot => tot.Key, good => good.Key, (tot, good) => Math.Max(tot.Value - (int)good.Value, 0)).Aggregate(0m, (d1, d2) => d1 + d2)
-                                    let scheduleState = totalQty <= 0 ? State.Undone : State.Done
+                                    let scheduleState = totalQty <= 0 ? IndexCompilation.State.Undone : IndexCompilation.State.Done
                                     select new Result
                                     {
                                         Id = g.Key.Id,

@@ -26,6 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly LuceneVoronDirectory _directory;
         private readonly SnapshotDeletionPolicy _indexDeletionPolicy;
         private readonly IndexWriter.MaxFieldLength _maxFieldLength;
+        private readonly Index _index;
         private readonly HashSet<string> _alreadySeen = new HashSet<string>();
 
         private IndexWriter _indexWriter;
@@ -35,13 +36,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public Analyzer Analyzer => _indexWriter?.Analyzer;
 
-        public LuceneSuggestionIndexWriter(string field, LuceneVoronDirectory directory, SnapshotDeletionPolicy snapshotter, IndexWriter.MaxFieldLength maxFieldLength, DocumentDatabase database, IState state)
+        public LuceneSuggestionIndexWriter(string field, LuceneVoronDirectory directory, SnapshotDeletionPolicy snapshotter, IndexWriter.MaxFieldLength maxFieldLength, Index index, IState state)
         {
             _directory = directory;
             _indexDeletionPolicy = snapshotter;
             _maxFieldLength = maxFieldLength;
+            _index = index;
             _field = field;
-            _logger = LoggingSource.Instance.GetLogger<LuceneSuggestionIndexWriter>(database.Name);
+            _logger = LoggingSource.Instance.GetLogger<LuceneSuggestionIndexWriter>(_index.DocumentDatabase.Name);
 
             RecreateIndexWriter(state);
         }
@@ -198,10 +200,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 LuceneIndexWriter.TryThrowingBetterException(e, _directory);
 
                 throw;
-            }
-            finally
-            {
-                RecreateIndexWriter(state);
             }
         }
 
