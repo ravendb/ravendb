@@ -662,6 +662,14 @@ namespace FastTests
             return entriesCount;
         }
 
+        protected async Task AssertWaitForExceptionAsync<T>(Func<Task> act, int timeout = 15000, int interval = 100) 
+            where T : class 
+        {
+            await WaitAndAssertForValueAsync(async () => 
+                await act().ContinueWith(t => 
+                    t.Exception?.InnerException?.GetType()), typeof(T), timeout, interval);
+        }
+
         protected async Task<T> AssertWaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class
         {
             var ret = await WaitForNotNullAsync(act, timeout, interval);
