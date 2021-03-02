@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
@@ -64,6 +65,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Logger _logger;
 
         internal LuceneVoronDirectory LuceneDirectory => _directory;
+
+        private readonly object _readersLock = new object();
 
         public LuceneIndexPersistence(Index index)
         {
@@ -134,7 +137,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             IndexSearcher CreateIndexSearcher(IState state)
             {
-                lock (this)
+                lock (_readersLock)
                 {
                     var reader = _lastReader;
 
@@ -150,7 +153,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             {
                                 var newReader = reader.Reopen(state);
                                 if (newReader != reader)
+                                {
                                     reader.DecRef(state);
+                                }
 
                                 reader = _lastReader = newReader;
                             }
@@ -175,18 +180,35 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
+        private bool _indexWriterCleanupNeeded;
         
-
-        public void Clean(CleanupMode mode)
+        public void CleanWritersIfNeeded()
         {
+            if(_indexWriterCleanupNeeded == false)
+                return;
+
+            DisposeWriters();
+            _indexWriterCleanupNeeded = false;
+        }
+
+        public void Clean(IndexCleanup mode)
+        {
+            Debug.Assert(mode != IndexCleanup.None, "mode != IndexCleanup.None");
+
             _converter?.Clean();
             _indexSearcherHolder.Cleanup(_index._indexStorage.Environment().PossibleOldestReadTransaction(null), mode);
 
-            if (mode == CleanupMode.Deep)
+            if (mode.HasFlag(IndexCleanup.Writers))
             {
-                lock (this)
+                _indexWriterCleanupNeeded = true;
+                _index.ScheduleIndexingRun();
+            }
+
+            if (mode.HasFlag(IndexCleanup.Readers))
                 {
-                    _lastReader?.Dispose();
+                lock (_readersLock)
+                {
+                    _lastReader?.DecRef(null);
                     _lastReader = null;
                 }
             }
@@ -475,7 +497,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
                     var writer = new LuceneSuggestionIndexWriter(field, _suggestionsDirectories[field],
                                         snapshotter, IndexWriter.MaxFieldLength.UNLIMITED,
-                                        _index._indexStorage.DocumentDatabase, state);
+                        _index, state);
 
                     _suggestionsIndexWriters[field] = writer;
                 }
