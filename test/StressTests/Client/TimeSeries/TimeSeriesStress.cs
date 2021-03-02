@@ -84,7 +84,7 @@ namespace StressTests.Client.TimeSeries
                 var check = true;
                 while (check)
                 {
-                    Assert.True(sp.Elapsed < ((TimeSpan)retention).Add((TimeSpan)retention / 2),
+                    Assert.True(sp.Elapsed < ((TimeSpan)retention).Add((TimeSpan)retention),
                         $"too long has passed {sp.Elapsed}, retention is {retention} {Environment.NewLine}" +
                         $"debug: {string.Join(',', debug.Select(kvp => $"{kvp.Key}: ({kvp.Value.Count},{kvp.Value.Start},{kvp.Value.End})"))}");
 
@@ -114,7 +114,7 @@ namespace StressTests.Client.TimeSeries
                     }
                 }
                 Assert.Empty(debug);
-                Assert.True(sp.Elapsed < (TimeSpan)retention + (TimeSpan)retention / 2);
+                Assert.True(sp.Elapsed < (TimeSpan)retention + (TimeSpan)retention);
                 await Task.Delay(3000); // let the dust to settle
 
                 await EnsureNoReplicationLoop(Servers[0], store.Database);
