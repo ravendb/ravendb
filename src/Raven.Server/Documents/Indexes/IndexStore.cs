@@ -1593,16 +1593,26 @@ namespace Raven.Server.Documents.Indexes
             return _indexes;
         }
 
-        public void RunIdleOperations(CleanupMode mode = CleanupMode.Regular)
+        public void RunIdleOperations(DatabaseCleanupMode mode = DatabaseCleanupMode.Regular)
         {
+            var indexCleanupMode = IndexCleanup.None;
+            switch (mode)
+            {
+                case DatabaseCleanupMode.Regular:
+                    indexCleanupMode = IndexCleanup.Basic;
+                    break;
+                case DatabaseCleanupMode.Deep:
+                    indexCleanupMode = IndexCleanup.All;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
+            }
+
             foreach (var index in _indexes)
             {
-                var current = mode;
-                if (current != CleanupMode.Deep)
-                {
-                    if (index.NoQueryInLast10Minutes())
-                        current = CleanupMode.Deep;
-                }
+                var current = indexCleanupMode;
+                if (index.NoQueryInLast10Minutes())
+                    current |= IndexCleanup.Readers;
 
                 index.Cleanup(current);
             }
@@ -2155,5 +2165,15 @@ namespace Raven.Server.Documents.Indexes
             internal Action DuringIndexReplacement_AfterUpdatingCollectionOfIndexes;
             internal Action DuringIndexReplacement_OnOldIndexDeletion;
         }
+    }
+
+    [Flags]
+    public enum IndexCleanup
+    {
+        None = 0,
+        Basic = 1,
+        Readers = 2,
+        Writers = 4,
+        All = Basic | Readers | Writers
     }
 }

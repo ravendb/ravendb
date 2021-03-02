@@ -2260,8 +2260,8 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-
-        private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database, out CleanupMode mode)
+         
+        private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database, out DatabaseCleanupMode mode)
         {
             var now = DateTime.UtcNow;
 
@@ -2277,17 +2277,17 @@ namespace Raven.Server.ServerWide
 
             if ((now - maxLastWork).TotalMinutes > 5)
             {
-                mode = CleanupMode.Deep;
+                mode = DatabaseCleanupMode.Deep;
                 return true;
             }
 
             if ((now - database.LastIdleTime).TotalMinutes > 10)
             {
-                mode = CleanupMode.Regular;
+                mode = DatabaseCleanupMode.Regular;
                 return true;
             }
 
-            mode = CleanupMode.None;
+            mode = DatabaseCleanupMode.None;
             return false;
         }
 

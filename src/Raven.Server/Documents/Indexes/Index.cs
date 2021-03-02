@@ -1383,7 +1383,7 @@ namespace Raven.Server.Documents.Indexes
 
                             if (_lowMemoryFlag.IsRaised())
                             {
-                                ReduceMemoryUsage(storageEnvironment, CleanupMode.Regular);
+                                ReduceMemoryUsage(storageEnvironment, IndexCleanup.Basic | IndexCleanup.Writers);
                             }
                             else if (_allocationCleanupNeeded > 0)
                             {
@@ -1431,7 +1431,10 @@ namespace Raven.Server.Documents.Indexes
                                 // so this is a good time to release resources we won't need
                                 // anytime soon
 
-                                var mode = NoQueryInLast10Minutes() ? CleanupMode.Deep : CleanupMode.Regular;
+                                var mode = IndexCleanup.Basic;
+                                if (NoQueryInLast10Minutes())
+                                    mode |= IndexCleanup.Readers;
+
                                 ReduceMemoryUsage(storageEnvironment, mode);
 
                                 if (forceMemoryCleanup)
@@ -1514,7 +1517,7 @@ namespace Raven.Server.Documents.Indexes
             batchCompletedAction?.Invoke((Name, didWork));
         }
 
-        public void Cleanup(CleanupMode mode)
+        public void Cleanup(IndexCleanup mode)
         {
             if (_initialized == false)
                 return;
@@ -1579,7 +1582,7 @@ namespace Raven.Server.Documents.Indexes
                 _logsAppliedEvent.Set();
         }
 
-        private void ReduceMemoryUsage(StorageEnvironment environment, CleanupMode mode)
+        private void ReduceMemoryUsage(StorageEnvironment environment, IndexCleanup mode)
         {
             if (_indexingInProgress.Wait(0) == false)
                 return;
@@ -1921,6 +1924,8 @@ namespace Raven.Server.Documents.Indexes
                                     stats.RecordEntriesCountAfterTxCommit(entriesCount.Value);
                             };
 
+                            tx.InnerTransaction.LowLevelTransaction.OnDispose += _ => IndexPersistence.CleanWritersIfNeeded();
+
                             tx.Commit();
                             SlowWriteNotification.Notify(commitStats, DocumentDatabase);
                             stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
@@ -2243,7 +2248,7 @@ namespace Raven.Server.Documents.Indexes
 
                 Stop(disableIndex: true);
                 SetState(IndexState.Disabled);
-                Cleanup(CleanupMode.Deep);
+                Cleanup(IndexCleanup.All);
             }
         }
 
