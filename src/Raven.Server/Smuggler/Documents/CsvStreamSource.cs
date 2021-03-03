@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Raven.Client;
@@ -22,7 +23,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Smuggler.Documents
 {
-    public class CsvImportOptions 
+    public class CsvImportOptions
     {
         public string Delimiter { get; set; }
         public char Quote { get; set; }
@@ -35,7 +36,7 @@ namespace Raven.Server.Smuggler.Documents
             Delimiter = ",";
             Quote = '"';
         }
-        
+
         public CsvImportOptions(string delimiter, char quote, TrimOptions trim, bool allowComments, char comment)
         {
             Delimiter = delimiter;
@@ -45,7 +46,7 @@ namespace Raven.Server.Smuggler.Documents
             AllowComments = allowComments;
         }
     }
-        
+
     public class CsvStreamSource : ISmugglerSource, IDisposable
     {
         private readonly DocumentDatabase _database;
@@ -80,9 +81,9 @@ namespace Raven.Server.Smuggler.Documents
             _context = context;
             _currentType = DatabaseItemType.Documents;
             _collection = collection;
-            
+
             _csvHelperConfig = new CsvConfiguration(CultureInfo.InvariantCulture);
-            
+
             _csvHelperConfig.Delimiter = csvConfig.Delimiter;
             _csvHelperConfig.Quote = csvConfig.Quote;
             _csvHelperConfig.TrimOptions = csvConfig.TrimOptions;
@@ -91,24 +92,24 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _csvHelperConfig.Comment = (char)csvConfig.Comment;
             }
-            
+
             _csvHelperConfig.BadDataFound = null;
         }
 
-        public IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, out long buildVersion)
+        public Task<SmugglerInitializeResult> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result)
         {
-            buildVersion = ServerVersion.DevBuildNumber;
-            
             _reader = new StreamReader(_stream);
             _csvReader = new CsvReader(_reader, _csvHelperConfig);
-            
+
             _result = result;
-            
-            return new DisposableAction(() =>
+
+            var disposable = new DisposableAction(() =>
             {
                 _reader.Dispose();
                 _csvReader.Dispose();
             });
+
+            return Task.FromResult(new SmugglerInitializeResult(disposable, ServerVersion.DevBuildNumber));
         }
 
         private bool ProcessFieldsIfNeeded()
@@ -199,22 +200,22 @@ namespace Raven.Server.Smuggler.Documents
             return (segments.ToArray(), true);
         }
 
-        public DatabaseItemType GetNextType()
+        public Task<DatabaseItemType> GetNextTypeAsync()
         {
             var type = _currentType;
             _currentType = DatabaseItemType.None;
-            return type;
+            return Task.FromResult(type);
         }
 
-        public DatabaseRecord GetDatabaseRecord()
+        public Task<DatabaseRecord> GetDatabaseRecordAsync()
         {
-            return new DatabaseRecord();
+            return Task.FromResult(new DatabaseRecord());
         }
 
-        public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
+        public async IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions)
         {
             var line = 0;
-            while (_csvReader.Read())
+            while (await _csvReader.ReadAsync())
             {
                 line++;
 
@@ -235,7 +236,6 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 yield return item;
             }
-
         }
 
         private DocumentItem ConvertRecordToDocumentItem(DocumentsOperationContext context, string[] csvReaderCurrentRecord, string[] csvReaderFieldHeaders, string collection)
@@ -359,84 +359,84 @@ namespace Raven.Server.Smuggler.Documents
             return s;
         }
 
-        public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions)
+        public IAsyncEnumerable<DocumentItem> GetRevisionDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            return Enumerable.Empty<DocumentItem>();
+            return AsyncEnumerable.Empty<DocumentItem>();
         }
 
-        public IEnumerable<DocumentItem> GetLegacyAttachments(INewDocumentActions actions)
+        public IAsyncEnumerable<DocumentItem> GetLegacyAttachmentsAsync(INewDocumentActions actions)
         {
-            return Enumerable.Empty<DocumentItem>();
+            return AsyncEnumerable.Empty<DocumentItem>();
         }
 
-        public IEnumerable<string> GetLegacyAttachmentDeletions()
+        public IAsyncEnumerable<string> GetLegacyAttachmentDeletionsAsync()
         {
-            return Enumerable.Empty<string>();
+            return AsyncEnumerable.Empty<string>();
         }
 
-        public IEnumerable<string> GetLegacyDocumentDeletions()
+        public IAsyncEnumerable<string> GetLegacyDocumentDeletionsAsync()
         {
-            return Enumerable.Empty<string>();
+            return AsyncEnumerable.Empty<string>();
         }
 
-        public IEnumerable<Tombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
+        public IAsyncEnumerable<Tombstone> GetTombstonesAsync(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            return Enumerable.Empty<Tombstone>();
+            return AsyncEnumerable.Empty<Tombstone>();
         }
 
-        public IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions)
+        public IAsyncEnumerable<DocumentConflict> GetConflictsAsync(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            yield break;
+            return AsyncEnumerable.Empty<DocumentConflict>();
         }
 
-        public IEnumerable<IndexDefinitionAndType> GetIndexes()
+        public IAsyncEnumerable<IndexDefinitionAndType> GetIndexesAsync()
         {
-            return Enumerable.Empty<IndexDefinitionAndType>();
+            return AsyncEnumerable.Empty<IndexDefinitionAndType>();
         }
 
-        public IEnumerable<(string Prefix, long Value, long Index)> GetIdentities()
+        public IAsyncEnumerable<(string Prefix, long Value, long Index)> GetIdentitiesAsync()
         {
-            return Enumerable.Empty<(string Prefix, long Value, long Index)>();
+            return AsyncEnumerable.Empty<(string Prefix, long Value, long Index)>();
         }
 
-        public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValues()
+        public IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync()
         {
-            return Enumerable.Empty<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)>();
+            return AsyncEnumerable.Empty<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)>();
         }
 
-        public IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstones()
+        public IAsyncEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesAsync()
         {
-            return Enumerable.Empty<(CompareExchangeKey Key, long Index)>();
+            return AsyncEnumerable.Empty<(CompareExchangeKey Key, long Index)>();
         }
 
-        public IEnumerable<CounterGroupDetail> GetCounterValues(List<string> collectionsToExport, ICounterActions actions)
+        public IAsyncEnumerable<CounterGroupDetail> GetCounterValuesAsync(List<string> collectionsToExport, ICounterActions actions)
         {
-            return Enumerable.Empty<CounterGroupDetail>();
+            return AsyncEnumerable.Empty<CounterGroupDetail>();
         }
 
-        public IEnumerable<CounterDetail> GetLegacyCounterValues()
+        public IAsyncEnumerable<CounterDetail> GetLegacyCounterValuesAsync()
         {
-            return Enumerable.Empty<CounterDetail>();
+            return AsyncEnumerable.Empty<CounterDetail>();
         }
 
-        public IEnumerable<SubscriptionState> GetSubscriptions()
+        public IAsyncEnumerable<SubscriptionState> GetSubscriptionsAsync()
         {
-            return Enumerable.Empty<SubscriptionState>();
+            return AsyncEnumerable.Empty<SubscriptionState>();
         }
 
-        public IEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificates()
+        public IAsyncEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificatesAsync()
         {
-            return Enumerable.Empty<(string Hub, ReplicationHubAccess Access)>();
+            return AsyncEnumerable.Empty<(string Hub, ReplicationHubAccess Access)>();
         }
 
-        public IEnumerable<TimeSeriesItem> GetTimeSeries(List<string> collectionsToExport)
+        public IAsyncEnumerable<TimeSeriesItem> GetTimeSeriesAsync(List<string> collectionsToExport)
         {
-            return Enumerable.Empty<TimeSeriesItem>();
+            return AsyncEnumerable.Empty<TimeSeriesItem>();
         }
 
-        public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)
+        public Task<long> SkipTypeAsync(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)
         {
-            return 0;
+            return Task.FromResult(0L);
         }
 
         public SmugglerSourceType GetSourceType()

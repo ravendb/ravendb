@@ -78,6 +78,7 @@ namespace Raven.Server.Documents.Replication
         {
             _incomingErrors.AddOrUpdate(node, incomingFailureReporter, (_, __) => incomingFailureReporter);
         }
+
         protected IEnumerable<IReplicationPerformanceStats> PrepareInitialPerformanceStats()
         {
             foreach (var handler in Database.ReplicationLoader.IncomingHandlers)
@@ -126,7 +127,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     var stats = itemsToSend.Select(item => item.ToReplicationPerformanceLiveStatsWithDetails()).ToArray();
                     results.Add(handler.PullReplication
-                        ? IncomingPerformanceStats.ForPullReplication(handler.ConnectionInfo.SourceDatabaseId, handler.SourceFormatted, stats) 
+                        ? IncomingPerformanceStats.ForPullReplication(handler.ConnectionInfo.SourceDatabaseId, handler.SourceFormatted, stats)
                         : IncomingPerformanceStats.ForPushReplication(handler.ConnectionInfo.SourceDatabaseId, handler.SourceFormatted, stats));
                 }
             }
@@ -178,7 +179,7 @@ namespace Raven.Server.Documents.Replication
         {
             writer.WriteStartObject();
 
-            writer.WriteArray(context, "Results", stats, (w, c, p) => { p.Write(c, w); });
+            writer.WriteArray(context, "Results", stats, (w, c, p) => p.Write(c, w));
 
             writer.WriteEndObject();
         }
@@ -277,7 +278,7 @@ namespace Raven.Server.Documents.Replication
             {
                 return new IncomingPerformanceStats(id, description, ReplicationPerformanceType.IncomingPull, performance);
             }
-            
+
             public static IncomingPerformanceStats ForPushReplication(string id, string description, IncomingReplicationPerformanceStats[] performance)
             {
                 return new IncomingPerformanceStats(id, description, ReplicationPerformanceType.IncomingPush, performance);

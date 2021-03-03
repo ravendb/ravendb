@@ -94,7 +94,7 @@ namespace Raven.Client.Documents.Smuggler
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
-                var command = new ExportCommand(_requestExecutor.Conventions, context, options, handleStreamResponse, operationId, tcs, getOperationIdCommand.NodeTag);
+                var command = new ExportCommand(context, options, handleStreamResponse, operationId, tcs, getOperationIdCommand.NodeTag);
                 var requestTask = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token)
                     .ContinueWith(t =>
                     {
@@ -232,7 +232,7 @@ namespace Raven.Client.Documents.Smuggler
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
-                    var command = new ImportCommand(_requestExecutor.Conventions, context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
+                    var command = new ImportCommand(context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
 
                     var task = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
                     var requestTask = task
@@ -279,7 +279,7 @@ namespace Raven.Client.Documents.Smuggler
             private readonly long _operationId;
             private readonly TaskCompletionSource<object> _tcs;
 
-            public ExportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, long operationId, TaskCompletionSource<object> tcs, string nodeTag)
+            public ExportCommand(JsonOperationContext context, DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, long operationId, TaskCompletionSource<object> tcs, string nodeTag)
             {
                 if (options == null)
                     throw new ArgumentNullException(nameof(options));
@@ -304,9 +304,9 @@ namespace Raven.Client.Documents.Smuggler
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
                     {
-                        ctx.Write(stream, _options);
+                        await ctx.WriteAsync(stream, _options).ConfigureAwait(false);
                         _tcs.TrySetResult(null);
                     })
                 };
@@ -333,7 +333,7 @@ namespace Raven.Client.Documents.Smuggler
 
             public override bool IsReadRequest => false;
 
-            public ImportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource<object> tcs, DatabaseSmuggler parent, string nodeTag)
+            public ImportCommand(JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource<object> tcs, DatabaseSmuggler parent, string nodeTag)
             {
                 _stream = stream ?? throw new ArgumentNullException(nameof(stream));
                 if (options == null)
@@ -358,7 +358,7 @@ namespace Raven.Client.Documents.Smuggler
 
                 var form = new MultipartFormDataContent
                 {
-                    {new BlittableJsonContent(stream => { ctx.Write(stream, _options); }), Constants.Smuggler.ImportOptions},
+                    {new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _options).ConfigureAwait(false)), Constants.Smuggler.ImportOptions},
                     {new StreamContentWithConfirmation(_stream, _tcs, _parent), "file", "name"}
                 };
 

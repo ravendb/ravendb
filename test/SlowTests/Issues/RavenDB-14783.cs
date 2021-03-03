@@ -25,11 +25,11 @@ namespace SlowTests.Issues
             var dummyDump = CreateDummyDump(1);
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             using (var bjro = ctx.ReadObject(dummyDump, "dump"))
-            using (var ms = new MemoryStream())
-            using (var zipStream = new GZipStream(ms, CompressionMode.Compress))
+            await using (var ms = new MemoryStream())
+            await using (var zipStream = new GZipStream(ms, CompressionMode.Compress))
             {
-                bjro.WriteJsonTo(zipStream);
-                zipStream.Flush();
+                await bjro.WriteJsonToAsync(zipStream);
+                await zipStream.FlushAsync();
                 ms.Position = 0;
                 using (var store = GetDocumentStore())
                 {

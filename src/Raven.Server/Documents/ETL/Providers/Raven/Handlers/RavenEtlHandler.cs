@@ -13,17 +13,17 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Handlers
     public class RavenEtlHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/etl/raven/test", "POST", AuthorizationStatus.Operator)]
-        public Task PostScriptTest()
+        public async Task PostScriptTest()
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var testConfig = context.ReadForMemory(RequestBodyStream(), "TestRavenEtlScript");
+                var testConfig = await context.ReadForMemoryAsync(RequestBodyStream(), "TestRavenEtlScript");
 
                 var testScript = JsonDeserializationServer.TestRavenEtlScript(testConfig);
 
-                var result = (RavenEtlTestScriptResult) RavenEtl.TestScript(testScript, Database, ServerStore, context);
+                var result = (RavenEtlTestScriptResult)RavenEtl.TestScript(testScript, Database, ServerStore, context);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var defaultConventions = new DocumentConventions();
 
@@ -37,8 +37,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Handlers
                     writer.WriteObject(context.ReadObject(djv, "et/raven/test"));
                 }
             }
-
-            return Task.CompletedTask;
         }
     }
 }

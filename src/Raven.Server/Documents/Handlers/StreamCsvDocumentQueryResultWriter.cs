@@ -31,7 +31,6 @@ namespace Raven.Server.Documents.Handlers
         public StreamCsvDocumentQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null,
             string csvFileName = "export") : base(response, stream, properties, csvFileName)
         {
-
         }
     }
 }

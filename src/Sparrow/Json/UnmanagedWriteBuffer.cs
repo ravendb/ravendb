@@ -49,9 +49,9 @@ namespace Sparrow.Json
             if (count == 0)
                 return;
 
-            if (_buffer.Length - Used > count)
+            if (_buffer.Size - Used > count)
             {
-                Memory.Copy(_buffer.Pointer + Used, buffer, (uint)count);
+                Memory.Copy(_buffer.Address + Used, buffer, (uint)count);
                 _sizeInBytes += count;
                 Used += count;
             }
@@ -68,15 +68,15 @@ namespace Sparrow.Json
             var lengthLeft = count;
             do
             {
-                if (Used == _buffer.Length)
+                if (Used == _buffer.Size)
                 {
-                    _stream.Write(_buffer.Memory.Span.Slice(0, Used));
+                    _stream.Write(_buffer.Memory.Memory.Span.Slice(0, Used));
                     Used = 0;
                 }
 
-                var bytesToWrite = Math.Min(lengthLeft, _buffer.Length - Used);
+                var bytesToWrite = Math.Min(lengthLeft, _buffer.Size - Used);
 
-                Memory.Copy(_buffer.Pointer + Used, buffer, (uint)bytesToWrite);
+                Memory.Copy(_buffer.Address + Used, buffer, (uint)bytesToWrite);
 
                 _sizeInBytes += bytesToWrite;
                 lengthLeft -= bytesToWrite;
@@ -91,13 +91,13 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteByte(byte data)
         {
-            if (Used == _buffer.Length)
+            if (Used == _buffer.Size)
             {
-                _stream.Write(_buffer.Memory.Span.Slice(0, Used));
+                _stream.Write(_buffer.Memory.Memory.Span.Slice(0, Used));
                 Used = 0;
             }
             _sizeInBytes++;
-            *(_buffer.Pointer + Used) = data;
+            *(_buffer.Address + Used) = data;
             Used++;
         }
 
@@ -116,7 +116,7 @@ namespace Sparrow.Json
             using (_returnBuffer)
             {
                 if (Used != 0)
-                    _stream.Write(_buffer.Memory.Span.Slice(0, Used));
+                    _stream.Write(_buffer.Memory.Memory.Span.Slice(0, Used));
                 Used = 0;
             }            
         }
@@ -470,7 +470,9 @@ Grow:
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EnsureSingleChunk(JsonParserState state)
         {
-            EnsureSingleChunk(out state.StringBuffer, out state.StringSize);
+            EnsureSingleChunk(out var buffer, out var size);
+            state.StringBuffer = buffer;
+            state.StringSize = size;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

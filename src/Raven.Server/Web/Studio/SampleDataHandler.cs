@@ -89,7 +89,7 @@ namespace Raven.Server.Web.Studio
                                 SkipRevisionCreation = true
                             });
 
-                        smuggler.Execute();
+                        await smuggler.ExecuteAsync();
                     }
                 }
 

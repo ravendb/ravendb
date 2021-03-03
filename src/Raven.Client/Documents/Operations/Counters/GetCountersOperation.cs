@@ -140,12 +140,7 @@ namespace Raven.Client.Documents.Operations.Counters
                         ReplyWithAllNodesValues = _returnFullResults
                     };
 
-                    request.Content = new BlittableJsonContent(stream =>
-                    {
-                        var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(batch, ctx);
-
-                        ctx.Write(stream, config);
-                    });
+                    request.Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(batch, ctx)).ConfigureAwait(false));
                 }
             }
 

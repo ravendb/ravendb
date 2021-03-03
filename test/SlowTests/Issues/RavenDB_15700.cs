@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Debugging;
+using Raven.Server.Json;
+using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
-using Raven.Server.Documents.Indexes.Debugging;
-using Sparrow.Json;
-using Raven.Server.Json;
 
 namespace SlowTests.Issues
 {
@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                 WaitForUserToContinueTheTest(store);
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
-                using (var writer = new BlittableJsonTextWriter(context, new MemoryStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, new MemoryStream()))
                 using (index.GetReduceTree(new[] { searchedVakanzId, "bewerbung/000d7605-a581-4f3e-8c73-dc2eb4e3f95c" }, out var trees))
                 {
                     // must not throw
@@ -81,7 +81,6 @@ namespace SlowTests.Issues
                     _session.Store(newEntity);
                 }
 
-
                 _session.Store(new Bewerbung { Id = "Bewerbung/1", VakanzId = "Vakanz/DoesNotExist", BewerberStatusId = "BewerberStatus/1" });
 
                 _session.Advanced.WaitForIndexesAfterSaveChanges();
@@ -108,7 +107,6 @@ namespace SlowTests.Issues
             public string Id { get; set; }
             public string Status { get; set; }
             public object SomeOtherProperty { get; set; }
-
         }
 
         private static IEnumerable<string> ReadAllLines(string name)
@@ -151,9 +149,7 @@ namespace SlowTests.Issues
                                                              SoftDeleted = v.SoftDeleted,
                                                              Bewerbungen = new IndexResultModel.Bewerbung[0],
                                                              Bewerbungen_BewerberStatus_Status = default(string),
-
                                                          });
-
 
                 // The reason for "IstVakanz" is that i only want "Bewerbung"-Dokuments that still exist and are not softdeleted
                 // There might be some "Bewerbung" with not existing "Vakanz" or softdeleted Vakanz
@@ -167,8 +163,6 @@ namespace SlowTests.Issues
                                                                  Bewerbungen = new IndexResultModel.Bewerbung[] { new IndexResultModel.Bewerbung { BewerberStatus = bewerberStatus } },
                                                                  Bewerbungen_BewerberStatus_Status = bewerberStatus.Status,
                                                              });
-
-
 
                 Reduce = results => from result in results
                                     where result.SoftDeleted == false
@@ -184,7 +178,6 @@ namespace SlowTests.Issues
                                         Bewerbungen = g.SelectMany(e => e.Bewerbungen),
                                         Bewerbungen_BewerberStatus_Status = g.SelectMany(e => e.Bewerbungen).Select(e => e.BewerberStatus.Status).Distinct(),
                                     };
-
             }
         }
     }

@@ -20,6 +20,7 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Json.Sync;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -250,12 +251,12 @@ namespace FastTests.Server.Documents.Indexing
             throw new NotImplementedException();
         }
 
-        protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistMapFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             throw new NotImplementedException();
         }
 
-        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             throw new NotImplementedException();
         }

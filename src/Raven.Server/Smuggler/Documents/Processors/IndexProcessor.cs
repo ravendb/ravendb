@@ -3,15 +3,15 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Json;
+using Raven.Server.Json.Sync;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Smuggler.Documents.Processors
@@ -30,6 +30,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
                     Debug.Assert(type.IsStatic());
 
                     return indexDefinition;
+
                 case BuildVersionType.V4:
                 case BuildVersionType.V5:
                 case BuildVersionType.GreaterThanCurrent:
@@ -38,13 +39,16 @@ namespace Raven.Server.Smuggler.Documents.Processors
                     {
                         case IndexType.AutoMap:
                             return AutoMapIndexDefinition.LoadFromJson(reader);
+
                         case IndexType.AutoMapReduce:
                             return AutoMapReduceIndexDefinition.LoadFromJson(reader);
+
                         case IndexType.Map:
                         case IndexType.MapReduce:
                         case IndexType.JavaScriptMap:
                         case IndexType.JavaScriptMapReduce:
                             return JsonDeserializationServer.IndexDefinition(reader);
+
                         default:
                             throw new NotSupportedException(type.ToString());
                     }
@@ -63,10 +67,12 @@ namespace Raven.Server.Smuggler.Documents.Processors
                     var autoMapIndexDefinition = (AutoMapIndexDefinition)definition;
                     AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(autoMapIndexDefinition, RaftIdGenerator.NewId()));
                     break;
+
                 case IndexType.AutoMapReduce:
                     var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)definition;
                     AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(autoMapReduceIndexDefinition, RaftIdGenerator.NewId()));
                     break;
+
                 case IndexType.Map:
                 case IndexType.MapReduce:
                 case IndexType.JavaScriptMap:
@@ -81,6 +87,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
                     }
                     AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(indexDefinition, RaftIdGenerator.NewId()));
                     break;
+
                 default:
                     throw new NotSupportedException(indexType.ToString());
             }
@@ -123,7 +130,6 @@ namespace Raven.Server.Smuggler.Documents.Processors
 
             if (reader.TryGet(nameof(IndexDefinition), out indexDef) == false)
                 throw new InvalidOperationException("Could not read index definition");
-
 
             return (IndexType)Enum.Parse(typeof(IndexType), typeAsString, ignoreCase: true);
         }
@@ -186,15 +192,19 @@ namespace Raven.Server.Smuggler.Documents.Processors
                     case LegacyIndexDefinition.LegacyFieldIndexing.No:
                         indexing = FieldIndexing.No;
                         break;
+
                     case LegacyIndexDefinition.LegacyFieldIndexing.Analyzed:
                         indexing = FieldIndexing.Search;
                         break;
+
                     case LegacyIndexDefinition.LegacyFieldIndexing.NotAnalyzed:
                         indexing = FieldIndexing.Exact;
                         break;
+
                     case LegacyIndexDefinition.LegacyFieldIndexing.Default:
                         indexing = FieldIndexing.Default;
                         break;
+
                     default:
                         throw new ArgumentOutOfRangeException();
                 }

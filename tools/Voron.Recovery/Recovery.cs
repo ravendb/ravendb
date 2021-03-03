@@ -23,6 +23,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Voron.Data;
@@ -742,7 +743,7 @@ namespace Voron.Recovery
         }
 
         private Size _maxTransactionSize = new Size(64, SizeUnit.Megabytes);
-        
+
         private byte* DecryptPageIfNeeded(byte* mem, long start, ref TempPagerTransaction tx, bool maybePulseTransaction = false)
         {
             if (IsEncrypted == false)
@@ -962,7 +963,7 @@ namespace Voron.Recovery
             writer.WriteLine("Starting to compute orphan and missing time-series. this may take a while.");
             if (ct.IsCancellationRequested)
                 return;
-            
+
             _documentsTimeSeries.Sort((x, y) => Compare(x.DocId + SpecialChars.RecordSeparator + x.Name,
                 y.DocId + SpecialChars.RecordSeparator + y.Name, StringComparison.OrdinalIgnoreCase));
             //We rely on the fact that the time-series id+name is unique in the _uniqueTimeSeriesDiscovered list (no duplicated values).
@@ -981,7 +982,7 @@ namespace Voron.Recovery
                     var discoveredKey = docId + SpecialChars.RecordSeparator + name;
                     if (ct.IsCancellationRequested)
                         return;
-                    
+
                     while (_documentsTimeSeries.Count > index)
                     {
                         var timeSeriesKey = _documentsTimeSeries[index].DocId + SpecialChars.RecordSeparator + _documentsTimeSeries[index].Name;
@@ -1030,7 +1031,7 @@ namespace Voron.Recovery
             writer.WriteLine("Starting to compute orphan and missing counters. this may take a while.");
             if (ct.IsCancellationRequested)
                 return;
-            
+
             _documentsCounters.Sort((x, y) => Compare(x.DocId + SpecialChars.RecordSeparator + x.Name,
                 y.DocId + SpecialChars.RecordSeparator + y.Name, StringComparison.OrdinalIgnoreCase));
             //We rely on the fact that the counter id+name is unique in the _discoveredCounters list (no duplicated values).
@@ -1049,7 +1050,7 @@ namespace Voron.Recovery
                     var discoveredKey = docId + SpecialChars.RecordSeparator + name;
                     if (ct.IsCancellationRequested)
                         return;
-                    
+
                     while (_documentsCounters.Count > index)
                     {
                         var documentsCountersKey = _documentsCounters[index].DocId + SpecialChars.RecordSeparator + _documentsCounters[index].Name;
@@ -1285,16 +1286,22 @@ namespace Voron.Recovery
             {
                 case TableType.None:
                     return false;
+
                 case TableType.Documents:
                     return WriteDocument(mem, sizeInBytes, documentsWriter, context, startOffset);
+
                 case TableType.Revisions:
                     return WriteRevision(mem, sizeInBytes, revisionsWriter, context, startOffset);
+
                 case TableType.Conflicts:
                     return WriteConflict(mem, sizeInBytes, conflictsWriter, context, startOffset);
+
                 case TableType.Counters:
                     return WriteCounter(mem, sizeInBytes, countersWriter, context, startOffset);
+
                 case TableType.TimeSeries:
                     return WriteTimeSeries(mem, sizeInBytes, timeSeries, context, startOffset);
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(tableType), tableType, null);
             }

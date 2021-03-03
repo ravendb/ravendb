@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Utils.Cli
 {
@@ -22,7 +23,7 @@ namespace Raven.Server.Utils.Cli
             {
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 using (FileStream f = File.OpenRead(runtimeConfigurationPath))
-                using (BlittableJsonReaderObject @object = context.Read(f, "n"))
+                using (BlittableJsonReaderObject @object = context.Sync.ReadForMemory(f, "n"))
                 {
                     if (@object.TryGet("runtimeOptions", out BlittableJsonReaderObject runtime) &&
                         runtime.TryGet("configProperties", out BlittableJsonReaderObject properties) &&

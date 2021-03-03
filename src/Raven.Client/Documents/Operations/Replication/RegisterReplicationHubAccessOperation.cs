@@ -52,10 +52,7 @@ namespace Raven.Client.Documents.Operations.Replication
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(stream =>
-                    {
-                        blittable.WriteJsonTo(stream);
-                    })
+                    Content = new BlittableJsonContent(async stream => await blittable.WriteJsonToAsync(stream).ConfigureAwait(false))
                 };
 
                 return request;

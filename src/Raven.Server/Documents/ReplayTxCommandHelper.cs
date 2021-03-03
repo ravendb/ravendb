@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
@@ -27,7 +28,7 @@ namespace Raven.Server.Documents
 {
     internal static class ReplayTxCommandHelper
     {
-        internal static IEnumerable<ReplayProgress> Replay(DocumentDatabase database, Stream replayStream)
+        internal static async IAsyncEnumerable<ReplayProgress> ReplayAsync(DocumentDatabase database, Stream replayStream)
         {
             using (var txs = new ReplayTxs())
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -39,11 +40,11 @@ namespace Raven.Server.Documents
                 var parser = new UnmanagedJsonParser(context, state, "file");
 
                 var commandsProgress = 0L;
-                var readers = UnmanagedJsonParserHelper.ReadArrayToMemory(context, peepingTomStream, parser, state, buffer);
-                using (var readersItr = readers.GetEnumerator())
+                var readers = UnmanagedJsonParserHelper.ReadArrayToMemoryAsync(context, peepingTomStream, parser, state, buffer);
+                await using (var readersItr = readers.GetAsyncEnumerator())
                 {
-                    ReadStartRecordingDetails(readersItr, context, peepingTomStream);
-                    while (readersItr.MoveNext())
+                    await ReadStartRecordingDetailsAsync(readersItr, context, peepingTomStream);
+                    while (await readersItr.MoveNextAsync())
                     {
                         using (readersItr.Current)
                         {
@@ -60,20 +61,25 @@ namespace Raven.Server.Documents
                                         database.DocumentsStorage.ContextPool.AllocateOperationContext(out txs.TxCtx);
                                         txs.TxCtx.OpenWriteTransaction();
                                         break;
+
                                     case TxInstruction.Commit:
                                         txs.TxCtx.Transaction.Commit();
                                         break;
+
                                     case TxInstruction.DisposeTx:
                                         txs.TxCtx.Dispose();
                                         txs.TxCtx = null;
                                         break;
+
                                     case TxInstruction.BeginAsyncCommitAndStartNewTransaction:
                                         txs.PrevTx = txs.TxCtx.Transaction;
                                         txs.TxCtx.Transaction = txs.TxCtx.Transaction.BeginAsyncCommitAndStartNewTransaction(txs.TxCtx);
                                         break;
+
                                     case TxInstruction.EndAsyncCommit:
                                         txs.PrevTx.EndAsyncCommit();
                                         break;
+
                                     case TxInstruction.DisposePrevTx:
                                         txs.PrevTx.Dispose();
                                         txs.PrevTx = null;
@@ -116,9 +122,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static void ReadStartRecordingDetails(IEnumerator<BlittableJsonReaderObject> iterator, DocumentsOperationContext context, PeepingTomStream peepingTomStream)
+        private static async Task ReadStartRecordingDetailsAsync(IAsyncEnumerator<BlittableJsonReaderObject> iterator, DocumentsOperationContext context, PeepingTomStream peepingTomStream)
         {
-            if (false == iterator.MoveNext())
+            if (await iterator.MoveNextAsync().ConfigureAwait(false) == false)
             {
                 throw new ReplayTransactionsException("Replay stream is empty", peepingTomStream);
             }
@@ -180,56 +186,80 @@ namespace Raven.Server.Documents
             {
                 case nameof(BatchHandler.MergedBatchCommand):
                     return jsonSerializer.Deserialize<MergedBatchCommandDto>(reader);
+
                 case nameof(DeleteDocumentCommand):
                     return jsonSerializer.Deserialize<DeleteDocumentCommandDto>(reader);
+
                 case nameof(PatchDocumentCommand):
                     return jsonSerializer.Deserialize<PatchDocumentCommandDto>(reader);
+
                 case nameof(DatabaseDestination.MergedBatchPutCommand):
                     return jsonSerializer.Deserialize<DatabaseDestination.MergedBatchPutCommandDto>(reader);
+
                 case nameof(MergedPutCommand):
                     return jsonSerializer.Deserialize<MergedPutCommand.MergedPutCommandDto>(reader);
+
                 case nameof(BulkInsertHandler.MergedInsertBulkCommand):
                     return jsonSerializer.Deserialize<MergedInsertBulkCommandDto>(reader);
+
                 case nameof(AttachmentHandler.MergedPutAttachmentCommand):
                     return jsonSerializer.Deserialize<MergedPutAttachmentCommandDto>(reader);
+
                 case nameof(AttachmentHandler.MergedDeleteAttachmentCommand):
                     return jsonSerializer.Deserialize<MergedDeleteAttachmentCommandDto>(reader);
+
                 case nameof(ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand):
                     return jsonSerializer.Deserialize<PutResolvedConflictsCommandDto>(reader);
+
                 case nameof(HiLoHandler.MergedNextHiLoCommand):
                     return jsonSerializer.Deserialize<MergedNextHiLoCommandDto>(reader);
+
                 case nameof(HiLoHandler.MergedHiLoReturnCommand):
                     return jsonSerializer.Deserialize<MergedHiLoReturnCommandDto>(reader);
+
                 case nameof(IncomingReplicationHandler.MergedDocumentReplicationCommand):
                     return jsonSerializer.Deserialize<MergedDocumentReplicationCommandDto>(reader);
+
                 case nameof(ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand):
                     return jsonSerializer.Deserialize<DeleteExpiredDocumentsCommandDto>(reader);
+
                 case nameof(OutgoingReplicationHandler.UpdateSiblingCurrentEtag):
                     return jsonSerializer.Deserialize<UpdateSiblingCurrentEtagDto>(reader);
+
                 case nameof(IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand):
                     return jsonSerializer.Deserialize<MergedUpdateDatabaseChangeVectorCommandDto>(reader);
+
                 case nameof(AdminRevisionsHandler.DeleteRevisionsCommand):
                     return jsonSerializer.Deserialize<DeleteRevisionsCommandDto>(reader);
+
                 case nameof(RevisionsStorage.RevertDocumentsCommand):
                     return jsonSerializer.Deserialize<RevisionsStorage.RevertDocumentsCommandDto>(reader);
+
                 case nameof(RevisionsOperations.DeleteRevisionsBeforeCommand):
                     throw new ReplayTransactionsException(
                         "Because this command is deleting according to revisions' date & the revisions that created by replaying have different date an in place decision needed to be made",
                         peepingTomStream);
                 case nameof(TombstoneCleaner.DeleteTombstonesCommand):
                     return jsonSerializer.Deserialize<DeleteTombstonesCommandDto>(reader);
+
                 case nameof(OutputReduceToCollectionCommand):
                     return jsonSerializer.Deserialize<OutputReduceToCollectionCommandDto>(reader);
+
                 case nameof(BatchHandler.ClusterTransactionMergedCommand):
                     return jsonSerializer.Deserialize<ClusterTransactionMergedCommandDto>(reader);
+
                 case nameof(CountersHandler.ExecuteCounterBatchCommand):
                     return jsonSerializer.Deserialize<ExecuteCounterBatchCommandDto>(reader);
+
                 case nameof(TimeSeriesRollups.AddedNewRollupPoliciesCommand):
                     return jsonSerializer.Deserialize<TimeSeriesRollups.AddedNewRollupPoliciesCommand.AddedNewRollupPoliciesCommandDto>(reader);
+
                 case nameof(TimeSeriesRollups.RollupTimeSeriesCommand):
                     return jsonSerializer.Deserialize<TimeSeriesRollups.RollupTimeSeriesCommand.RollupTimeSeriesCommandDto>(reader);
+
                 case nameof(TimeSeriesRollups.TimeSeriesRetentionCommand):
                     return jsonSerializer.Deserialize<TimeSeriesRollups.TimeSeriesRetentionCommand.TimeSeriesRetentionCommandDto>(reader);
+
                 default:
                     throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }

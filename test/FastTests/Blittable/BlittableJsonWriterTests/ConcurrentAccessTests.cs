@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             var str = GenerateSimpleEntityForFunctionalityTest2();
             using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
-            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var employee = blittableContext.Sync.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 /* FileStream file = SafeFileStream.Create(@"c:\Temp\example.txt",FileMode.Create);
                  employee.WriteTo(file);
@@ -65,12 +66,12 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             var size = employee.Size;
 
             Parallel.ForEach(Enumerable.Range(0, 100), RavenTestHelper.DefaultParallelOptions, x =>
-             {
-                 using (var localCtx = JsonOperationContext.ShortTermSingleUse())
-                 {
-                     AssertComplexEmployee(str, new BlittableJsonReaderObject(basePointer, size, localCtx), localCtx);
-                 }
-             });
+            {
+                using (var localCtx = JsonOperationContext.ShortTermSingleUse())
+                {
+                    AssertComplexEmployee(str, new BlittableJsonReaderObject(basePointer, size, localCtx), localCtx);
+                }
+            });
         }
     }
 }

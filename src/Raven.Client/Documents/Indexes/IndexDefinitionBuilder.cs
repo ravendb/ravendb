@@ -100,6 +100,11 @@ namespace Raven.Client.Documents.Indexes
         public IndexPriority? Priority { get; set; }
 
         /// <summary>
+        /// Index state
+        /// </summary>
+        public IndexState? State { get; set; }
+
+        /// <summary>
         /// If not null than each reduce result will be created as a document in the specified collection name.
         /// </summary>
         public string OutputReduceToCollection { get; set; }
@@ -162,6 +167,7 @@ namespace Raven.Client.Documents.Indexes
                     Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, conventions, "results", translateIdentityProperty: false),
                     LockMode = LockMode,
                     Priority = Priority,
+                    State = State,
                     OutputReduceToCollection = OutputReduceToCollection,
                     PatternForOutputReduceToCollectionReferences = PatternReferencesCollectionName,
                     PatternReferencesCollectionName = PatternReferencesCollectionName

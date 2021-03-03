@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-using Microsoft.AspNetCore.Http;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Session;
 using Raven.Server.Json;
 using Sparrow.Extensions;
@@ -10,21 +10,19 @@ namespace Raven.Server.Documents.Queries
 {
     public class StreamJsonDocumentQueryResultWriter : IStreamQueryResultWriter<Document>
     {
-        private BlittableJsonTextWriter _writer;
-        private HttpResponse _response;
-        private JsonOperationContext _context;
+        private readonly AsyncBlittableJsonTextWriter _writer;
+        private readonly JsonOperationContext _context;
         private bool _first = true;
 
-        public StreamJsonDocumentQueryResultWriter(HttpResponse response, Stream stream, JsonOperationContext context)
+        public StreamJsonDocumentQueryResultWriter(Stream stream, JsonOperationContext context)
         {
             _context = context;
-            _writer = new BlittableJsonTextWriter(context, stream);
-            _response = response;
+            _writer = new AsyncBlittableJsonTextWriter(context, stream);
         }
 
-        public void Dispose()
+        public ValueTask DisposeAsync()
         {
-            _writer.Dispose();
+            return _writer.DisposeAsync();
         }
 
         public void StartResponse()
@@ -70,7 +68,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         public void WriteError(string error)
-        {            
+        {
             _writer.WritePropertyName("Error");
             _writer.WriteString(error);
         }

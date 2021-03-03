@@ -13,7 +13,7 @@ namespace Raven.Server.Web.System
     public class DatabasesDebugHandler : RequestHandler
     {
         [RavenAction("/admin/debug/databases/idle", "GET", AuthorizationStatus.Operator)]
-        public Task Idle()
+        public async Task Idle()
         {
             //var name = GetStringQueryString("name", required: false);
 
@@ -33,7 +33,7 @@ namespace Raven.Server.Web.System
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
 
@@ -49,8 +49,6 @@ namespace Raven.Server.Web.System
 
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
 
         public class IdleDatabaseStatistics : IDynamicJson

@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Handlers
     public class TcpManagementHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/tcp", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task GetAll()
+        public async Task GetAll()
         {
             var start = GetStart();
             var pageSize = GetPageSize();
@@ -33,19 +33,15 @@ namespace Raven.Server.Documents.Handlers
                     .Skip(start)
                     .Take(pageSize);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
-                    writer.WriteArray(context, "Results", connections, (w, c, connection) =>
-                    {
-                        c.Write(w, connection.GetConnectionStats());
-                    });
+                    writer.WriteArray(context, "Results", connections, (w, c, connection) => c.Write(w, connection.GetConnectionStats()));
 
                     writer.WriteEndObject();
                 }
             }
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/tcp", "DELETE", AuthorizationStatus.ValidUser)]

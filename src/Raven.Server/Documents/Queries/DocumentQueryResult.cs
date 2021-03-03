@@ -34,6 +34,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         public override Dictionary<string, List<CounterDetail>> GetCounterIncludes() => _counterIncludes;
+
         public override void AddTimeSeriesIncludes(IncludeTimeSeriesCommand includeTimeSeriesCommand)
         {
             _timeSeriesIncludes = includeTimeSeriesCommand.Results;

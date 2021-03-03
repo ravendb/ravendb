@@ -4,6 +4,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -40,7 +41,7 @@ namespace FastTests.Client
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
-                BlittableJsonReaderObject reader = ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "users/1");
+                BlittableJsonReaderObject reader = ctx.Sync.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes(json)), "users/1");
 
                 var serializer = new JsonSerializer();
                 var blittableJsonReader = new BlittableJsonReader();

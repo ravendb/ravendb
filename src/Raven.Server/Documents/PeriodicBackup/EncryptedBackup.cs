@@ -27,11 +27,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             _pullState = new byte[(int)Sodium.crypto_secretstream_xchacha20poly1305_statebytes()];
             var headerbytes = (int)Sodium.crypto_secretstream_xchacha20poly1305_headerbytes();
             var header = stackalloc byte[headerbytes];
-            
+
             var readingHeader = new Span<byte>(header, headerbytes);
             while (readingHeader.IsEmpty == false)
             {
-                var read = _inner.Read(readingHeader);  
+                var read = _inner.Read(readingHeader);
                 if (read == 0)
                     throw new EndOfStreamException("Wrong or corrupted file, we are missing the header");
 
@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             fixed (byte* ps = _pushState, pKey = key)
             {
-                if ( Sodium.crypto_secretstream_xchacha20poly1305_init_push(ps, header, pKey) != 0)
+                if (Sodium.crypto_secretstream_xchacha20poly1305_init_push(ps, header, pKey) != 0)
                     throw new CryptographicException("Failed to init state, wrong or corrupted key");
 
                 _inner.Write(new ReadOnlySpan<byte>(header, headerbytes));
@@ -190,13 +190,13 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public override void Flush()
         {
-           if (_pos > 0)
-           {
-               var sizeToWrite = EncryptBuffer();
-               _inner.Write(_cyrptedBuffer, 0, sizeToWrite);
-               _pos = 0;
+            if (_pos > 0)
+            {
+                var sizeToWrite = EncryptBuffer();
+                _inner.Write(_cyrptedBuffer, 0, sizeToWrite);
+                _pos = 0;
             }
-           _inner.Flush();
+            _inner.Flush();
         }
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
@@ -244,7 +244,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             fixed (byte* fileBlockPtr = _innerBuffer, ciphertextPtr = _cyrptedBuffer, statePtr = _pushState)
             {
                 ulong size;
-                if (Sodium.crypto_secretstream_xchacha20poly1305_push(statePtr, ciphertextPtr, &size, fileBlockPtr , (ulong)_pos, null, 0, 0) != 0)
+                if (Sodium.crypto_secretstream_xchacha20poly1305_push(statePtr, ciphertextPtr, &size, fileBlockPtr, (ulong)_pos, null, 0, 0) != 0)
                     throw new CryptographicException("Failed to encrypt backup");
                 return (int)size;
             }
@@ -299,12 +299,18 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         protected override void Dispose(bool disposing)
         {
+            GC.SuppressFinalize(this);
+
             Flush(flushToDisk: true);
             _inner.Dispose();
-            base.Dispose(disposing);
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            GC.SuppressFinalize(this);
+
+            await FlushAsync();
+            await _inner.DisposeAsync();
         }
     }
-
-    
 }
-

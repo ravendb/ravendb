@@ -7,7 +7,6 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Server;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
@@ -261,7 +260,7 @@ namespace Raven.Server.Documents.Queries.Graph
         public async Task CreateAutoIndexesAndWaitIfNecessary()
         {
             var queryStepsGatherer = new QueryQueryStepGatherer();
-            queryStepsGatherer.Visit(RootQueryStep);
+            await queryStepsGatherer.VisitAsync(RootQueryStep);
 
             if (_context.AreTransactionsOpened() == false)
                 _context.OpenReadTransaction();
@@ -306,7 +305,7 @@ namespace Raven.Server.Documents.Queries.Graph
             var etag = DocumentsStorage.ReadLastEtag(_context.Documents.Transaction.InnerTransaction);
             var queryDuration = Stopwatch.StartNew();
             var indexNamesGatherer = new GraphQueryIndexNamesGatherer();
-            indexNamesGatherer.Visit(RootQueryStep);
+            await indexNamesGatherer.VisitAsync(RootQueryStep);
             var indexes = new List<Index>();
             var indexNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var indexWaiters = new Dictionary<Index, (IndexQueryServerSide, AsyncWaitForIndexing)>();

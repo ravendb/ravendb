@@ -26,7 +26,7 @@ namespace Raven.Server.Web.Studio
                     var indexType = indexDefinition.DetectStaticIndexType();
                     var indexSourceType = indexDefinition.DetectStaticIndexSourceType();
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
                         writer.WritePropertyName(nameof(IndexTypeInfo.IndexType));
@@ -45,7 +45,7 @@ namespace Raven.Server.Web.Studio
             public IndexType IndexType { get; set; }
             public IndexSourceType IndexSourceType { get; set; }
         }
-        
+
         [RavenAction("/databases/*/studio/index-fields", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostIndexFields()
         {
@@ -76,17 +76,17 @@ namespace Raven.Server.Web.Studio
 
                         var outputFields = compiledIndex.OutputFields;
 
-                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                         {
                             writer.WriteStartObject();
-                            writer.WriteArray(context, "Results", outputFields, (w, c, field) => { w.WriteString(field); });
+                            writer.WriteArray(context, "Results", outputFields, (w, c, field) => w.WriteString(field));
                             writer.WriteEndObject();
                         }
                     }
                     catch (IndexCompilationException)
                     {
                         // swallow compilation exception and return empty array as response
-                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                         {
                             writer.WriteStartArray();
                             writer.WriteEndArray();
@@ -171,4 +171,3 @@ namespace Raven.Server.Web.Studio
         }
     }
 }
-

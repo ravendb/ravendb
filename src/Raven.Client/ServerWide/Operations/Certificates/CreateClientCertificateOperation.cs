@@ -56,14 +56,14 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                     Method = HttpMethod.Post
                 };
 
-                request.Content = new BlittableJsonContent(stream =>
+                request.Content = new BlittableJsonContent(async stream =>
                 {
-                    using (var writer = new BlittableJsonTextWriter(ctx, stream))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                     {
                         writer.WriteStartObject();
 
                         writer.WritePropertyName(nameof(CertificateDefinition.Name));
-                        writer.WriteString(_name.ToString());
+                        writer.WriteString(_name);
                         writer.WriteComma();
                         writer.WritePropertyName(nameof(SecurityClearance));
                         writer.WriteString(_clearance.ToString());

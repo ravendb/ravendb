@@ -225,7 +225,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             int writtenBytes;
             using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, TcpConnection.Stream))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, TcpConnection.Stream))
             {
                 context.Write(writer, value);
                 writtenBytes = writer.Position;
@@ -469,7 +469,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             void RegisterNotification(DocumentChange notification)
             {
-                if (Client.Constants.Documents.Collections.AllDocumentsCollection.Equals(Subscription.Collection, StringComparison.OrdinalIgnoreCase) || 
+                if (Client.Constants.Documents.Collections.AllDocumentsCollection.Equals(Subscription.Collection, StringComparison.OrdinalIgnoreCase) ||
                     notification.CollectionName.Equals(Subscription.Collection, StringComparison.OrdinalIgnoreCase))
                 {
                     try
@@ -688,6 +688,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 case SubscriptionConnectionClientMessage.MessageType.DisposedNotification:
                     CancellationTokenSource.Cancel();
                     break;
+
                 default:
                     throw new ArgumentException("Unknown message type from client " +
                                                 clientReply.Type);
@@ -708,7 +709,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             bool anyDocumentsSentInCurrentIteration = false;
             int docsToFlush = 0;
-            using (var writer = new BlittableJsonTextWriter(docsContext, _buffer))
+            await using (var writer = new AsyncBlittableJsonTextWriter(docsContext, _buffer))
             {
                 using (docsContext.OpenReadTransaction())
                 {
@@ -805,7 +806,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
                             var includes = new List<Document>();
                             includeDocumentsCommand.Fill(includes);
-                            writer.WriteIncludes(docsContext, includes);
+                            await writer.WriteIncludesAsync(docsContext, includes);
 
                             writer.WriteEndObject();
                         }
@@ -830,7 +831,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                         if (includeTimeSeriesCommand != null)
                         {
-                            writer.WriteStartObject();
+                        writer.WriteStartObject();
 
                             writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
                             writer.WriteValue(BlittableJsonToken.String, docsContext.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
@@ -900,7 +901,7 @@ namespace Raven.Server.Documents.TcpHandlers
             TcpConnection.RegisterBytesSent(Heartbeat.Length);
         }
 
-        private async Task FlushDocsToClient(AbstractBlittableJsonTextWriter writer, int flushedDocs, bool endOfBatch = false)
+        private async Task FlushDocsToClient(AsyncBlittableJsonTextWriter writer, int flushedDocs, bool endOfBatch = false)
         {
             CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
@@ -910,7 +911,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     $"Flushing {flushedDocs} documents for subscription {SubscriptionId} sending to {TcpConnection.TcpClient.Client.RemoteEndPoint} {(endOfBatch ? ", ending batch" : string.Empty)}");
             }
 
-            writer.Flush();
+            await writer.FlushAsync();
             var bufferSize = _buffer.Length;
             await FlushBufferToNetwork();
             Stats.LastMessageSentAt = DateTime.UtcNow;
@@ -1073,6 +1074,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
                         }
                         break;
+
                     default:
                         throw new NotSupportedException("Subscription must not specify a collection filter (move it to the where clause)");
                 }
@@ -1096,18 +1098,18 @@ namespace Raven.Server.Documents.TcpHandlers
                             switch (includeType)
                             {
                                 case MethodType.Counters:
-                                    QueryValidator.ValidateIncludeCounter(me.Arguments, q.QueryText, null);
+                            QueryValidator.ValidateIncludeCounter(me.Arguments, q.QueryText, null);
 
-                                    if (counterIncludes == null)
-                                        counterIncludes = new List<string>();
+                            if (counterIncludes == null)
+                                counterIncludes = new List<string>();
 
-                                    if (me.Arguments.Count > 0)
-                                    {
-                                        var argument = me.Arguments[0];
+                            if (me.Arguments.Count > 0)
+                            {
+                                var argument = me.Arguments[0];
 
                                         counterIncludes.Add(ExtractPathFromExpression(argument, q));
-                                    }
-                                    break;
+                            }
+                            break;
                                 case MethodType.TimeSeries:
                                     QueryValidator.ValidateIncludeTimeseries(me.Arguments, q.QueryText, null);
 
@@ -1138,7 +1140,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                                             break;
                                                         }
-                                                    default:
+                        default:
                                                         throw new InvalidQueryException($"Got invalid arguments count '{methodExpression.Arguments.Count}' in '{methodExpression.Name}' method.", q.QueryText);
                                                 }
                                             }
@@ -1195,9 +1197,11 @@ namespace Raven.Server.Documents.TcpHandlers
                         case FieldExpression fe:
                             (string fieldPath, string _) = QueryMetadata.ParseExpressionPath(expression, fe.FieldValue, q.From.Alias);
                             return fieldPath;
+
                         case ValueExpression ve:
                             (string memberPath, string _) = QueryMetadata.ParseExpressionPath(expression, ve.Token.Value, q.From.Alias);
                             return memberPath;
+
                         default:
                             throw new InvalidOperationException("Subscription only support include of fields, but got: " + expression);
                     }

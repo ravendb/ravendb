@@ -3255,9 +3255,9 @@ namespace Raven.Server.ServerWide
             return size;
         }
 
-        private int ClusterReadResponseAndGetVersion(JsonOperationContext ctx, BlittableJsonTextWriter writer, Stream stream, string url)
+        private async ValueTask<int> ClusterReadResponseAndGetVersion(JsonOperationContext ctx, AsyncBlittableJsonTextWriter writer, Stream stream, string url)
         {
-            using (var response = ctx.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
+            using (var response = await ctx.ReadForMemoryAsync(stream, "cluster-ConnectToPeer-header-response"))
             {
                 var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
                 switch (reply.Status)
@@ -3310,12 +3310,12 @@ namespace Raven.Server.ServerWide
                 (tcpClient, choosenUrl) = await TcpUtils.ConnectAsyncWithPriority(info, _parent.TcpConnectionTimeout).ConfigureAwait(false);
                 stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.CipherSuitesPolicy, _parent.TcpConnectionTimeout);
 
-                var parameters = new TcpNegotiateParameters
+                var parameters = new AsyncTcpNegotiateParameters
                 {
                     Database = null,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Cluster,
                     Version = TcpConnectionHeaderMessage.ClusterTcpVersion,
-                    ReadResponseAndGetVersionCallback = ClusterReadResponseAndGetVersion,
+                    ReadResponseAndGetVersionCallbackAsync = ClusterReadResponseAndGetVersion,
                     DestinationUrl = choosenUrl,
                     DestinationNodeTag = tag,
                     SourceNodeTag = _parent.Tag
@@ -3324,7 +3324,7 @@ namespace Raven.Server.ServerWide
                 TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, stream, parameters);
+                    supportedFeatures = await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters);
 
                     if (supportedFeatures.ProtocolVersion <= 0)
                     {

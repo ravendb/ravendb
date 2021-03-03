@@ -6,7 +6,7 @@ namespace Raven.Client.Extensions
 {
     internal static class BlittableJsonTextWriterExtensions
     {
-        public static void WriteIndexQuery(this BlittableJsonTextWriter writer, DocumentConventions conventions, JsonOperationContext context, IndexQuery query)
+        public static void WriteIndexQuery(this AbstractBlittableJsonTextWriter writer, DocumentConventions conventions, JsonOperationContext context, IndexQuery query)
         {
             writer.WriteStartObject();
 

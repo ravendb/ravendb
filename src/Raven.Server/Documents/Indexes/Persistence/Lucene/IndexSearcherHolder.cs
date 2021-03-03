@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
 
-        public void Cleanup(long oldestTx, CleanupMode mode = CleanupMode.Regular)
+        public void Cleanup(long oldestTx, IndexCleanup mode = IndexCleanup.Basic)
         {
             // note: cleanup cannot be called concurrently
 
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
-            if (mode == CleanupMode.Deep)
+            if (mode.HasFlag(IndexCleanup.Readers))
             {
                 foreach (var state in _states)
                 {

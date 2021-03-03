@@ -460,7 +460,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                                     using (var stream = GetInputStream(entryStream, snapshotEncryptionKey))
                                     {
-                                        var json = context.Read(stream, "read database settings for restore");
+                                        var json = await context.ReadForMemoryAsync(stream, "read database settings for restore");
                                         json.BlittableValidation();
 
                                         restoreSettings = JsonDeserializationServer.RestoreSettings(json);
@@ -720,7 +720,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     OnIndexAction = onIndexAction,
                     OnDatabaseRecordAction = onDatabaseRecordAction
                 };
-                smuggler.Execute(ensureStepsProcessed: false, isLastFile);
+                await smuggler.ExecuteAsync(ensureStepsProcessed: false, isLastFile);
             }
         }
 
@@ -758,7 +758,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
                                 database.Time, smugglerOptions, onProgress: onProgress, token: _operationCancelToken.Token);
 
-                            smuggler.Execute(ensureStepsProcessed: true, isLastFile: true);
+                            await smuggler.ExecuteAsync(ensureStepsProcessed: true, isLastFile: true);
                         }
                         break;
                     }

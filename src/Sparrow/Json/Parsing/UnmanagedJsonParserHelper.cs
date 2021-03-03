@@ -6,8 +6,6 @@ using System.Threading.Tasks;
 
 namespace Sparrow.Json.Parsing
 {
-    
-
     public static class UnmanagedJsonParserHelper
     {
         public static unsafe string ReadString(JsonOperationContext context, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer)
@@ -17,7 +15,7 @@ namespace Sparrow.Json.Parsing
 
             if (state.CurrentTokenType == JsonParserToken.Null)
                 return null;
-            
+
             if (state.CurrentTokenType != JsonParserToken.String)
                 ThrowInvalidJson(peepingTomStream);
 
@@ -28,7 +26,7 @@ namespace Sparrow.Json.Parsing
         {
             while (parser.Read() == false)
             {
-                var read = stream.Read(buffer.Memory.Span);
+                var read = stream.Read(buffer.Memory.Memory.Span);
                 if (read == 0)
                 {
                     if (state.CurrentTokenType != JsonParserToken.EndObject)
@@ -47,7 +45,7 @@ namespace Sparrow.Json.Parsing
             if (parser.Read())
                 return true;
 
-            var read = await peepingTomStream.ReadAsync(buffer.Memory, token).ConfigureAwait(false);
+            var read = await peepingTomStream.ReadAsync(buffer.Memory.Memory, token).ConfigureAwait(false);
             if (read == 0)
             {
                 if (state.CurrentTokenType != JsonParserToken.EndObject)
@@ -97,7 +95,7 @@ namespace Sparrow.Json.Parsing
             builder.ReadNestedObject();
             while (builder.Read() == false)
             {
-                var read = peepingTomStream.Read(buffer.Memory.Span);
+                var read = peepingTomStream.Read(buffer.Memory.Memory.Span);
                 if (read == 0)
                     throw new EndOfStreamException("Stream ended without reaching end of json content" + GetPeepingTomBufferAsString(peepingTomStream));
 
@@ -111,7 +109,7 @@ namespace Sparrow.Json.Parsing
             builder.ReadProperty();
             while (builder.Read() == false)
             {
-                var read = peepingTomStream.Read(buffer.Memory.Span);
+                var read = peepingTomStream.Read(buffer.Memory.Memory.Span);
                 if (read == 0)
                     throw new EndOfStreamException("Stream ended without reaching end of json content" + GetPeepingTomBufferAsString(peepingTomStream));
 
@@ -125,7 +123,7 @@ namespace Sparrow.Json.Parsing
             builder.ReadProperty();
             while (builder.Read() == false)
             {
-                var read = await peepingTomStream.ReadAsync(buffer.Memory, token).ConfigureAwait(false);
+                var read = await peepingTomStream.ReadAsync(buffer.Memory.Memory, token).ConfigureAwait(false);
                 if (read == 0)
                     throw new EndOfStreamException("Stream ended without reaching end of json content" + GetPeepingTomBufferAsString(peepingTomStream));
 
@@ -150,7 +148,7 @@ namespace Sparrow.Json.Parsing
             builder.ReadNestedObject();
             while (builder.Read() == false)
             {
-                var read = await peepingTomStream.ReadAsync(buffer.Memory, token).ConfigureAwait(false);
+                var read = await peepingTomStream.ReadAsync(buffer.Memory.Memory, token).ConfigureAwait(false);
                 if (read == 0)
                     throw new EndOfStreamException("Stream ended without reaching end of json content");
 
@@ -195,6 +193,48 @@ namespace Sparrow.Json.Parsing
                 {
                     cachedItemsRenew = builder.NeedClearPropertiesCache();
                     ReadObject(builder, peepingTomStream, parser, buffer);
+
+                    yield return builder.CreateReader();
+                }
+            }
+        }
+
+        public static async IAsyncEnumerable<BlittableJsonReaderObject> ReadArrayToMemoryAsync(JsonOperationContext context, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer)
+        {
+            if (await ReadAsync(peepingTomStream, parser, state, buffer).ConfigureAwait(false) == false)
+                ThrowInvalidJson(peepingTomStream);
+
+            if (state.CurrentTokenType != JsonParserToken.StartArray)
+                ThrowInvalidJson(peepingTomStream);
+
+            int docsCountOnCachedRenewSession = 0;
+            bool cachedItemsRenew = false;
+            while (true)
+            {
+                if (docsCountOnCachedRenewSession <= 16 * 1024)
+                {
+                    if (cachedItemsRenew)
+                    {
+                        context.CachedProperties = new CachedProperties(context);
+                        ++docsCountOnCachedRenewSession;
+                    }
+                }
+                else
+                {
+                    context.Renew();
+                    docsCountOnCachedRenewSession = 0;
+                }
+
+                if (await ReadAsync(peepingTomStream, parser, state, buffer).ConfigureAwait(false) == false)
+                    ThrowInvalidJson(peepingTomStream);
+
+                if (state.CurrentTokenType == JsonParserToken.EndArray)
+                    break;
+
+                using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "readArray/singleResult", parser, state))
+                {
+                    cachedItemsRenew = builder.NeedClearPropertiesCache();
+                    await ReadObjectAsync(builder, peepingTomStream, parser, buffer).ConfigureAwait(false);
 
                     yield return builder.CreateReader();
                 }

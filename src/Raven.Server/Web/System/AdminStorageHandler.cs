@@ -10,13 +10,13 @@ namespace Raven.Server.Web.System
     public class AdminStorageHandler : RequestHandler
     {
         [RavenAction("/admin/debug/storage/environment/report", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = false)]
-        public Task SystemEnvironmentReport()
+        public async Task SystemEnvironmentReport()
         {
             var details = GetBoolValueQueryString("details", required: false) ?? false;
             var env = ServerStore._env;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Environment");
@@ -36,8 +36,6 @@ namespace Raven.Server.Web.System
 
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
     }
 }

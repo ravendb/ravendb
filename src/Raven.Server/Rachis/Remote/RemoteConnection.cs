@@ -9,6 +9,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 
@@ -274,7 +275,7 @@ namespace Raven.Server.Rachis.Remote
             var size = Math.Min(count, _buffer.Valid - _buffer.Used);
             fixed (byte* pBuffer = buffer)
             {
-                Memory.Copy(pBuffer + offset, _buffer.Pointer + _buffer.Used, size);
+                Memory.Copy(pBuffer + offset, _buffer.Address + _buffer.Used, size);
                 _buffer.Used += size;
                 return size;
             }
@@ -295,7 +296,7 @@ namespace Raven.Server.Rachis.Remote
         {
             using (_disposerLock.EnsureNotDisposed())
             using (
-                var json = context.ParseToMemory(_stream, "rachis-item",
+                var json = context.Sync.ParseToMemory(_stream, "rachis-item",
                     BlittableJsonDocumentBuilder.UsageMode.None, _buffer))
             {
                 json.BlittableValidation();
@@ -313,7 +314,7 @@ namespace Raven.Server.Rachis.Remote
             {
                 using (_disposerLock.EnsureNotDisposed())
                 {
-                    json = context.ParseToMemory(_stream, "rachis-snapshot",
+                    json = context.Sync.ParseToMemory(_stream, "rachis-snapshot",
                         BlittableJsonDocumentBuilder.UsageMode.None, _buffer);
                     json.BlittableValidation();
                     ValidateMessage(nameof(InstallSnapshot), json);
@@ -336,7 +337,7 @@ namespace Raven.Server.Rachis.Remote
             {
                 using (_disposerLock.EnsureNotDisposed())
                 {
-                    json = context.ParseToMemory(_stream, "rachis-entry",
+                    json = context.Sync.ParseToMemory(_stream, "rachis-entry",
                     BlittableJsonDocumentBuilder.UsageMode.None, _buffer);
                     json.BlittableValidation();
                     ValidateMessage(nameof(RachisEntry), json);
@@ -398,7 +399,7 @@ namespace Raven.Server.Rachis.Remote
         {
             using (_disposerLock.EnsureNotDisposed())
             using (
-                var json = context.ParseToMemory(_stream, "rachis-initial-msg",
+                var json = context.Sync.ParseToMemory(_stream, "rachis-initial-msg",
                     BlittableJsonDocumentBuilder.UsageMode.None, _buffer))
             {
                 json.BlittableValidation();

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Replication;
@@ -17,77 +17,98 @@ namespace Raven.Server.Smuggler.Documents.Data
 {
     public interface ISmugglerDestination
     {
-        IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion);
+        IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion);
+
         IDatabaseRecordActions DatabaseRecord();
+
         IDocumentActions Documents();
+
         IDocumentActions RevisionDocuments();
+
         IDocumentActions Tombstones();
+
         IDocumentActions Conflicts();
+
         IIndexActions Indexes();
+
         IKeyValueActions<long> Identities();
+
         ICompareExchangeActions CompareExchange(JsonOperationContext context);
+
         ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context);
+
         ICounterActions Counters(SmugglerResult result);
+
         ISubscriptionActions Subscriptions();
+
         IReplicationHubCertificateActions ReplicationHubCertificates();
+
         ITimeSeriesActions TimeSeries();
     }
 
-    public interface IDocumentActions : INewDocumentActions, IDisposable
+    public interface IDocumentActions : INewDocumentActions, IAsyncDisposable
     {
-        void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress);
-        void WriteTombstone(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress);
-        void WriteConflict(DocumentConflict conflict, SmugglerProgressBase.CountsWithLastEtag progress);
-        void DeleteDocument(string id);
+        ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress);
+
+        ValueTask WriteTombstoneAsync(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress);
+
+        ValueTask WriteConflictAsync(DocumentConflict conflict, SmugglerProgressBase.CountsWithLastEtag progress);
+
+        ValueTask DeleteDocumentAsync(string id);
     }
 
     public interface INewDocumentActions
     {
         DocumentsOperationContext GetContextForNewDocument();
+
         Stream GetTempStream();
     }
 
-    public interface IIndexActions : IDisposable
+    public interface IIndexActions : IAsyncDisposable
     {
-        void WriteIndex(IndexDefinitionBase indexDefinition, IndexType indexType);
-        void WriteIndex(IndexDefinition indexDefinition);
+        ValueTask WriteIndexAsync(IndexDefinitionBase indexDefinition, IndexType indexType);
+
+        ValueTask WriteIndexAsync(IndexDefinition indexDefinition);
     }
 
-    public interface ICounterActions : IDisposable, INewDocumentActions
+    public interface ICounterActions : IAsyncDisposable, INewDocumentActions
     {
-        void WriteCounter(CounterGroupDetail counterDetail);
-        void WriteLegacyCounter(CounterDetail counterDetail);
+        ValueTask WriteCounterAsync(CounterGroupDetail counterDetail);
+
+        ValueTask WriteLegacyCounterAsync(CounterDetail counterDetail);
+
         void RegisterForDisposal(IDisposable data);
     }
 
-    public interface ISubscriptionActions : IDisposable
+    public interface ISubscriptionActions : IAsyncDisposable
     {
-        void WriteSubscription(SubscriptionState subscriptionState);
-    }
-    
-    public interface IReplicationHubCertificateActions : IDisposable
-    {
-        void WriteReplicationHubCertificate(string hub, ReplicationHubAccess access);
+        ValueTask WriteSubscriptionAsync(SubscriptionState subscriptionState);
     }
 
-    public interface IKeyValueActions<in T> : IDisposable
+    public interface IReplicationHubCertificateActions : IAsyncDisposable
     {
-        void WriteKeyValue(string key, T value);
+        ValueTask WriteReplicationHubCertificateAsync(string hub, ReplicationHubAccess access);
     }
 
-    public interface ICompareExchangeActions : IDisposable
+    public interface IKeyValueActions<in T> : IAsyncDisposable
     {
-        void WriteKeyValue(string key, BlittableJsonReaderObject value);
-        void WriteTombstoneKey(string key);
+        ValueTask WriteKeyValueAsync(string key, T value);
     }
 
-    public interface IDatabaseRecordActions : IDisposable
+    public interface ICompareExchangeActions : IAsyncDisposable
     {
-        void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType);
+        ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value);
+
+        ValueTask WriteTombstoneKeyAsync(string key);
     }
 
-    public interface ITimeSeriesActions : IDisposable
+    public interface IDatabaseRecordActions : IAsyncDisposable
     {
-        void WriteTimeSeries(TimeSeriesItem ts);
+        ValueTask WriteDatabaseRecordAsync(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType);
+    }
+
+    public interface ITimeSeriesActions : IAsyncDisposable
+    {
+        ValueTask WriteTimeSeriesAsync(TimeSeriesItem ts);
     }
 }

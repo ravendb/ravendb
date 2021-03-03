@@ -58,10 +58,7 @@ namespace Raven.Client.ServerWide.Operations.Logs
 
                 return new HttpRequestMessage(HttpMethod.Post, url)
                 {
-                    Content = new BlittableJsonContent(stream =>
-                    {
-                        ctx.Write(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx));
-                    })
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx)).ConfigureAwait(false))
                 };
             }
         }

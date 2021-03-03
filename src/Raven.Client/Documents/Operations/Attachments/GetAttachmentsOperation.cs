@@ -54,9 +54,9 @@ namespace Raven.Client.Documents.Operations.Attachments
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
                     {
-                        using (var writer = new BlittableJsonTextWriter(_context, stream))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(_context, stream))
                         {
                             writer.WriteStartObject();
 
@@ -124,7 +124,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                     var bufferSize = parser.BufferSize - parser.BufferOffset;
                     var copy = ArrayPool<byte>.Shared.Rent(bufferSize);
                     var copyMemory = new Memory<byte>(copy);
-                    buffer.Memory.Slice(parser.BufferOffset, bufferSize).CopyTo(copyMemory);
+                    buffer.Memory.Memory.Slice(parser.BufferOffset, bufferSize).CopyTo(copyMemory);
 
                     Result = Iterate(stream, copy, bufferSize).GetEnumerator();
                 }

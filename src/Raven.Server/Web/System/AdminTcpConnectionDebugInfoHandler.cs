@@ -12,7 +12,7 @@ namespace Raven.Server.Web.System
     public class AdminTcpConnectionDebugInfoHandler : RequestHandler
     {
         [RavenAction("/admin/debug/info/tcp/stats", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
-        public Task Statistics()
+        public async Task Statistics()
         {
             var properties = TcpExtensions.GetIPGlobalPropertiesSafely();
             var ipv4Stats = properties.GetTcpIPv4StatisticsSafely();
@@ -25,12 +25,10 @@ namespace Raven.Server.Web.System
             };
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, djv);
             }
-
-            return Task.CompletedTask;
 
             static DynamicJsonValue ToDynamic(TcpStatistics stats)
             {
@@ -58,7 +56,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/debug/info/tcp/active-connections", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
-        public Task ActiveConnections()
+        public async Task ActiveConnections()
         {
             var properties = TcpExtensions.GetIPGlobalPropertiesSafely();
             var connections = properties.GetActiveTcpConnectionsSafely();
@@ -70,12 +68,10 @@ namespace Raven.Server.Web.System
             };
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, djv);
             }
-
-            return Task.CompletedTask;
 
             static DynamicJsonValue ToDynamic(TcpConnectionInformation[] connections)
             {

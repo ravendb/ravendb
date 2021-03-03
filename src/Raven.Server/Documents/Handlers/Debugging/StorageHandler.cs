@@ -19,14 +19,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
     public class StorageHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/debug/storage/trees", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = false)]
-        public Task Trees()
+        public async Task Trees()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-
                     writer.WriteStartObject();
 
                     writer.WritePropertyName("Results");
@@ -60,8 +59,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/debug/storage/btree-structure", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = false)]
@@ -70,7 +67,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var treeName = GetStringQueryString("name", required: true);
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using(var tx = context.OpenReadTransaction())
+            using (var tx = context.OpenReadTransaction())
             {
                 var tree = tx.InnerTransaction.ReadTree(treeName)
                     ?? throw new InvalidOperationException("Tree name '" + treeName + "' was not found. Existing trees: " +
@@ -103,7 +100,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             string.Join(", ", GetTreeNames(tx.InnerTransaction, RootObjectType.FixedSizeTree))
                         , e);
                 }
-                
 
                 HttpContext.Response.ContentType = "text/html";
                 DebugStuff.DumpFixedSizedTreeToStream(tx.InnerTransaction.LowLevelTransaction, tree, ResponseBodyStream());
@@ -111,7 +107,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             return Task.CompletedTask;
         }
-
 
         private IEnumerable<string> GetTreeNames(Transaction tx, RootObjectType type)
         {
@@ -126,17 +121,16 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         continue;
 
                     yield return rootIterator.CurrentKey.ToString();
-
                 } while (rootIterator.MoveNext());
             }
         }
 
         [RavenAction("/databases/*/debug/storage/report", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task Report()
+        public async Task Report()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
@@ -176,18 +170,16 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/debug/storage/all-environments/report", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task AllEnvironmentsReport()
+        public async Task AllEnvironmentsReport()
         {
             var name = GetStringQueryString("database");
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
@@ -203,11 +195,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
-        private void WriteAllEnvs(BlittableJsonTextWriter writer, DocumentsOperationContext context)
+        private void WriteAllEnvs(AsyncBlittableJsonTextWriter writer, DocumentsOperationContext context)
         {
             var envs = Database.GetAllStoragesEnvironment();
 
@@ -239,7 +229,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         [RavenAction("/databases/*/debug/storage/environment/report", "GET", AuthorizationStatus.ValidUser)]
-        public Task EnvironmentReport()
+        public async Task EnvironmentReport()
         {
             var name = GetStringQueryString("name");
             var typeAsString = GetStringQueryString("type");
@@ -254,12 +244,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
             if (env == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
+                return;
             }
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
@@ -278,8 +268,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         private static StorageReport GetReport(StorageEnvironmentWithType environment)

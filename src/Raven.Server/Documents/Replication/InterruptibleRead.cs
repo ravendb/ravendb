@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Replication
             public DocumentsOperationContext Context;
             public bool Timeout;
             public bool Interrupted;
+
             public void Dispose()
             {
                 Document?.Dispose();
@@ -81,7 +82,7 @@ namespace Raven.Server.Documents.Replication
             catch (ObjectDisposedException)
             {
                 //we are disposing, so don't care about this exception.
-                //this is thrown from inside ParseToMemoryAsync() call 
+                //this is thrown from inside ParseToMemoryAsync() call
                 //from inside of ReadNextObject() when disposing (thrown from disposed stream basically)
                 return new Result
                 {
@@ -100,7 +101,7 @@ namespace Raven.Server.Documents.Replication
             var retCtx = _contextPool.AllocateOperationContext(out DocumentsOperationContext context);
             try
             {
-                var jsonReaderObject = await context.ParseToMemoryAsync(_stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None, buffer, token);
+                var jsonReaderObject = await context.ParseToMemoryAsync(_stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None, buffer, token: token);
                 return new Result
                 {
                     Document = jsonReaderObject,
@@ -125,7 +126,6 @@ namespace Raven.Server.Documents.Replication
                 _stream.Dispose();// need to dispose the current stream to abort the operation
                 using (_prevCall.Result)
                 {
-
                 }
             }
             catch (Exception)

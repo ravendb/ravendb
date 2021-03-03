@@ -99,7 +99,7 @@ namespace Raven.Client.Documents.Session
                 {
                     loadOperation.WithCounters(counterIncludes);
                 }
-                
+
                 loadOperation.WithTimeSeries(timeSeriesIncludes);
                 loadOperation.WithCompareExchange(compareExchangeValueIncludes);
 
@@ -183,7 +183,7 @@ namespace Raven.Client.Documents.Session
                     await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
 
                     if (stream != null)
-                        Context.Write(stream, command.Result.Results.Parent);
+                        await Context.WriteAsync(stream, command.Result.Results.Parent, token).ConfigureAwait(false);
                     else
                         operation.SetResult(command.Result);
                 }
@@ -205,7 +205,7 @@ namespace Raven.Client.Documents.Session
                     await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
 
                     if (stream != null)
-                        Context.Write(stream, command.Result.Results.Parent);
+                        await Context.WriteAsync(stream, command.Result.Results.Parent, token).ConfigureAwait(false);
                     else
                         operation.SetResult(command.Result);
                 }

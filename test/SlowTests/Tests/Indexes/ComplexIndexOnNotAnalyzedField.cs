@@ -13,6 +13,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -33,7 +34,7 @@ namespace SlowTests.Tests.Indexes
                 {
                     using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'Name':'Hibernating Rhinos', 'Partners': ['companies/49', 'companies/50']}")))
                     {
-                        var json = commands.Context.ReadForMemory(stream, "doc");
+                        var json = commands.Context.Sync.ReadForMemory(stream, "doc");
                         commands.Put("companies/", null, json, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "Companies" } });
                     }
 

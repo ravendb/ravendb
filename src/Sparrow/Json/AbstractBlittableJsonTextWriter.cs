@@ -3,87 +3,11 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
 using Sparrow.Extensions;
 
 namespace Sparrow.Json
 {
-    public class AsyncBlittableJsonTextWriter : AbstractBlittableJsonTextWriter
-    {
-        private readonly Stream _outputStream;
-        private readonly CancellationToken _cancellationToken;
-
-        public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream, CancellationToken cancellationToken) : base(context, context.CheckoutMemoryStream())
-        {
-            _outputStream = stream;
-            _cancellationToken = cancellationToken;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask<int> MaybeOuterFlushAsync()
-        {
-            var innerStream = _stream as MemoryStream;
-            if (innerStream == null)
-                ThrowInvalidTypeException(_stream?.GetType());
-            if (innerStream.Length * 2 <= innerStream.Capacity)
-                return new ValueTask<int>(0);
-
-            Flush();
-            return new ValueTask<int>(OuterFlushAsync());
-        }
-
-        public async Task<int> OuterFlushAsync()
-        {
-            var innerStream = _stream as MemoryStream;
-            if (innerStream == null)
-                ThrowInvalidTypeException(_stream?.GetType());
-            Flush();
-            innerStream.TryGetBuffer(out var bytes);
-            var bytesCount = bytes.Count;
-            if (bytesCount == 0)
-                return 0;
-            await _outputStream.WriteAsync(bytes.Array, bytes.Offset, bytesCount, _cancellationToken).ConfigureAwait(false);
-            innerStream.SetLength(0);
-            return bytesCount;
-        }
-
-        public int OuterFlush()
-        {
-            var innerStream = _stream as MemoryStream;
-            if (innerStream == null)
-                ThrowInvalidTypeException(_stream?.GetType());
-            Flush();
-            innerStream.TryGetBuffer(out var bytes);
-            var bytesCount = bytes.Count;
-            if (bytesCount == 0)
-                return 0;
-            _outputStream.Write(bytes.Array, bytes.Offset, bytesCount);
-            _stream.SetLength(0);
-            return bytesCount;
-        }
-
-        public override void Dispose()
-        {
-            base.Dispose();
-            OuterFlush();
-            _context.ReturnMemoryStream((MemoryStream)_stream);
-        }
-
-        private void ThrowInvalidTypeException(Type typeOfStream)
-        {
-            throw new ArgumentException($"Expected stream to be MemoryStream, but got {(typeOfStream == null ? "null" : typeOfStream.ToString())}.");
-        }
-    }
-
-    public class BlittableJsonTextWriter : AbstractBlittableJsonTextWriter
-    {
-        public BlittableJsonTextWriter(JsonOperationContext context, Stream stream) : base(context, stream)
-        {
-        }
-    }
-
-    public abstract unsafe class AbstractBlittableJsonTextWriter : IDisposable
+    public abstract unsafe class AbstractBlittableJsonTextWriter
     {
         protected readonly JsonOperationContext _context;
         protected readonly Stream _stream;
@@ -95,26 +19,23 @@ namespace Sparrow.Json
         private const byte Quote = (byte)'"';
         private const byte Colon = (byte)':';
         public static readonly byte[] NaNBuffer = { (byte)'"', (byte)'N', (byte)'a', (byte)'N', (byte)'"' };
+
         public static readonly byte[] PositiveInfinityBuffer =
         {
-            (byte)'"', (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y', (byte)'"'
+           (byte)'"', (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y', (byte)'"'
         };
+
         public static readonly byte[] NegativeInfinityBuffer =
         {
-            (byte)'"', (byte)'-', (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y', (byte)'"'
+           (byte)'"', (byte)'-', (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y', (byte)'"'
         };
+
         public static readonly byte[] NullBuffer = { (byte)'n', (byte)'u', (byte)'l', (byte)'l', };
         public static readonly byte[] TrueBuffer = { (byte)'t', (byte)'r', (byte)'u', (byte)'e', };
         public static readonly byte[] FalseBuffer = { (byte)'f', (byte)'a', (byte)'l', (byte)'s', (byte)'e', };
 
-        private static readonly byte[] EscapeCharacters;
+        internal static readonly byte[] EscapeCharacters;
         public static readonly byte[][] ControlCodeEscapes;
-
-        private int _pos;
-        private readonly byte* _buffer;
-        private JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
-        private readonly JsonOperationContext.MemoryBuffer _pinnedBuffer;
-        private readonly AllocatedMemoryData _parserAuxiliarMemory;
 
         static AbstractBlittableJsonTextWriter()
         {
@@ -142,22 +63,34 @@ namespace Sparrow.Json
             EscapeCharacters[(byte)'"'] = (byte)'"';
         }
 
+        private readonly JsonOperationContext.MemoryBuffer _pinnedBuffer;
+        private readonly byte* _buffer;
+
+        private readonly byte* _auxiliarBuffer;
+        private readonly int _auxiliarBufferLength;
+
+        private int _pos;
+        private readonly JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
+        private readonly JsonOperationContext.MemoryBuffer.ReturnBuffer _returnAuxiliarBuffer;
+
         protected AbstractBlittableJsonTextWriter(JsonOperationContext context, Stream stream)
         {
             _context = context;
             _stream = stream;
 
             _returnBuffer = context.GetMemoryBuffer(out _pinnedBuffer);
-            _buffer = _pinnedBuffer.Pointer;
+            _buffer = _pinnedBuffer.Address;
 
-            _parserAuxiliarMemory = context.GetMemory(32);
+            _returnAuxiliarBuffer = context.GetMemoryBuffer(32, out var buffer);
+            _auxiliarBuffer = buffer.Address;
+            _auxiliarBufferLength = buffer.Size;
         }
 
         public int Position => _pos;
 
         public override string ToString()
         {
-            return Encodings.Utf8.GetString(_pinnedBuffer.Memory.Span.Slice(0, _pos));
+            return Encodings.Utf8.GetString(_buffer, _pos);
         }
 
         public void WriteObject(BlittableJsonReaderObject obj)
@@ -169,7 +102,7 @@ namespace Sparrow.Json
             }
 
             WriteStartObject();
-            
+
             var prop = new BlittableJsonReaderObject.PropertyDetails();
             using (var buffer = obj.GetPropertiesByInsertionOrder())
             {
@@ -181,12 +114,11 @@ namespace Sparrow.Json
                     }
 
                     obj.GetPropertyByIndex(buffer.Properties[i], ref prop);
-                    WritePropertyName(prop.Name);
+                    WritePropertyName((string)prop.Name);
 
                     WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                 }
             }
-
 
             WriteEndObject();
         }
@@ -203,10 +135,11 @@ namespace Sparrow.Json
                 {
                     WriteComma();
                 }
+
                 // write field value
                 WriteValue(propertyValueAndType.Item2, propertyValueAndType.Item1);
-
             }
+
             WriteEndArray();
         }
 
@@ -217,33 +150,42 @@ namespace Sparrow.Json
                 case BlittableJsonToken.String:
                     WriteString((LazyStringValue)val);
                     break;
+
                 case BlittableJsonToken.Integer:
                     WriteInteger((long)val);
                     break;
+
                 case BlittableJsonToken.StartArray:
                     WriteArrayToStream((BlittableJsonReaderArray)val);
                     break;
+
                 case BlittableJsonToken.EmbeddedBlittable:
                 case BlittableJsonToken.StartObject:
                     var blittableJsonReaderObject = (BlittableJsonReaderObject)val;
                     WriteObject(blittableJsonReaderObject);
                     break;
+
                 case BlittableJsonToken.CompressedString:
                     WriteString((LazyCompressedStringValue)val);
                     break;
+
                 case BlittableJsonToken.LazyNumber:
                     WriteDouble((LazyNumberValue)val);
                     break;
+
                 case BlittableJsonToken.Boolean:
                     WriteBool((bool)val);
                     break;
+
                 case BlittableJsonToken.Null:
                     WriteNull();
                     break;
+
                 case BlittableJsonToken.RawBlob:
                     var blob = (BlittableJsonReaderObject.RawBlob)val;
-                    WriteRawString(blob.Ptr, blob.Length);
+                    WriteRawString(blob.Address, blob.Length);
                     break;
+
                 default:
                     throw new DataMisalignedException($"Unidentified Type {token}");
             }
@@ -252,11 +194,9 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteDateTime(DateTime value, bool isUtc)
         {
-            int size = value.GetDefaultRavenFormat(_parserAuxiliarMemory, isUtc);
+            int size = value.GetDefaultRavenFormat(_auxiliarBuffer, _auxiliarBufferLength, isUtc);
 
-            var strBuffer = _parserAuxiliarMemory.Address;
-
-            WriteRawStringWhichMustBeWithoutEscapeChars(strBuffer, size);
+            WriteRawStringWhichMustBeWithoutEscapeChars(_auxiliarBuffer, size);
         }
 
         public void WriteString(string str, bool skipEscaping = false)
@@ -293,9 +233,9 @@ namespace Sparrow.Json
             const int NumberOfQuotesChars = 2; // for " "
 
             int bufferSize = 2 * numberOfEscapeSequences + size + NumberOfQuotesChars;
-            if (bufferSize >= JsonOperationContext.MemoryBuffer.Size)
+            if (bufferSize >= JsonOperationContext.MemoryBuffer.DefaultSize)
             {
-                UnlikelyWriteLargeString(strBuffer, size, numberOfEscapeSequences, escapeSequencePos); // OK, do it the slow way. 
+                UnlikelyWriteLargeString(strBuffer, size, numberOfEscapeSequences, escapeSequencePos); // OK, do it the slow way.
                 return;
             }
 
@@ -304,7 +244,7 @@ namespace Sparrow.Json
 
             if (numberOfEscapeSequences == 0)
             {
-                // PERF: Fast Path. 
+                // PERF: Fast Path.
                 WriteRawString(strBuffer, size);
             }
             else
@@ -423,7 +363,7 @@ namespace Sparrow.Json
 
                 // We ensure our buffer will have enough space to deal with the whole string.
                 int bufferSize = 2 * numberOfEscapeSequences + size + 2;
-                if (bufferSize >= JsonOperationContext.MemoryBuffer.Size)
+                if (bufferSize >= JsonOperationContext.MemoryBuffer.DefaultSize)
                     goto WriteLargeCompressedString; // OK, do it the slow way instead.
 
                 EnsureBuffer(bufferSize);
@@ -493,7 +433,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void WriteRawString(byte* buffer, int size)
         {
-            if (size < JsonOperationContext.MemoryBuffer.Size)
+            if (size < JsonOperationContext.MemoryBuffer.DefaultSize)
             {
                 EnsureBuffer(size);
                 Memory.Copy(_buffer + _pos, buffer, size);
@@ -510,8 +450,8 @@ namespace Sparrow.Json
             var posInStr = 0;
             while (posInStr < size)
             {
-                var amountToCopy = Math.Min(size - posInStr, JsonOperationContext.MemoryBuffer.Size);
-                Flush();
+                var amountToCopy = Math.Min(size - posInStr, JsonOperationContext.MemoryBuffer.DefaultSize);
+                FlushInternal();
                 Memory.Copy(_buffer, buffer + posInStr, amountToCopy);
                 posInStr += amountToCopy;
                 _pos = amountToCopy;
@@ -549,21 +489,22 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureBuffer(int len)
         {
-            if (len >= JsonOperationContext.MemoryBuffer.Size)
+            if (len >= JsonOperationContext.MemoryBuffer.DefaultSize)
                 ThrowValueTooBigForBuffer(len);
-            if (_pos + len < JsonOperationContext.MemoryBuffer.Size)
+            if (_pos + len < JsonOperationContext.MemoryBuffer.DefaultSize)
                 return;
 
-            Flush();
+            FlushInternal();
         }
 
-        public void Flush()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void FlushInternal()
         {
             if (_stream == null)
                 ThrowStreamClosed();
             if (_pos == 0)
                 return;
-            _stream.Write(_pinnedBuffer.Memory.Span.Slice(0, _pos));
+            _stream.Write(_pinnedBuffer.Memory.Memory.Span.Slice(0, _pos));
             _pos = 0;
         }
 
@@ -604,7 +545,6 @@ namespace Sparrow.Json
         {
             EnsureBuffer(1);
             _buffer[_pos++] = Comma;
-
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -642,7 +582,7 @@ namespace Sparrow.Json
                 return;
             }
 
-            var localBuffer = _parserAuxiliarMemory.Address;
+            var localBuffer = _auxiliarBuffer;
 
             int idx = 0;
             var negative = false;
@@ -670,8 +610,7 @@ namespace Sparrow.Json
 
                 localBuffer[idx++] = (byte)('0' + v);
                 val /= 10;
-            }
-            while (val != 0);
+            } while (val != 0);
 
             if (negative)
                 localBuffer[idx++] = (byte)'-';
@@ -749,11 +688,11 @@ namespace Sparrow.Json
             }
         }
 
-        public virtual void Dispose()
+        protected void DisposeInternal()
         {
             try
             {
-                Flush();
+                FlushInternal();
             }
             catch (ObjectDisposedException)
             {
@@ -768,7 +707,7 @@ namespace Sparrow.Json
             finally
             {
                 _returnBuffer.Dispose();
-                _context.ReturnMemory(_parserAuxiliarMemory);
+                _returnAuxiliarBuffer.Dispose();
             }
         }
 
@@ -781,15 +720,15 @@ namespace Sparrow.Json
 
         public void WriteStream(Stream stream)
         {
-            Flush();
+            FlushInternal();
 
             while (true)
             {
-                _pos = stream.Read(_pinnedBuffer.Memory.Span);
+                _pos = stream.Read(_pinnedBuffer.Memory.Memory.Span);
                 if (_pos == 0)
                     break;
 
-                Flush();
+                FlushInternal();
             }
         }
 
@@ -800,17 +739,17 @@ namespace Sparrow.Json
 
         public void WriteMemoryChunk(byte* ptr, int size)
         {
-            Flush();
+            FlushInternal();
             var leftToWrite = size;
             var totalWritten = 0;
             while (leftToWrite > 0)
             {
-                var toWrite = Math.Min(JsonOperationContext.MemoryBuffer.Size, leftToWrite);
+                var toWrite = Math.Min(JsonOperationContext.MemoryBuffer.DefaultSize, leftToWrite);
                 Memory.Copy(_buffer, ptr + totalWritten, toWrite);
                 _pos += toWrite;
                 totalWritten += toWrite;
                 leftToWrite -= toWrite;
-                Flush();
+                FlushInternal();
             }
         }
     }

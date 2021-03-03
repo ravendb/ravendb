@@ -78,6 +78,35 @@ namespace System.IO
                 ArrayPool<byte>.Shared.Return(sharedBuffer);
             }
         }
+
+        /// <summary>
+        /// https://github.com/dotnet/runtime/blob/0f829188c6c1ca35a951214f8e9c43f377953b96/src/libraries/System.Private.CoreLib/src/System/IO/Stream.cs#L762-L786
+        /// </summary>
+        public static ValueTask WriteAsync(this Stream stream, ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (MemoryMarshal.TryGetArray(buffer, out ArraySegment<byte> array))
+            {
+                return new ValueTask(stream.WriteAsync(array.Array!, array.Offset, array.Count, cancellationToken));
+            }
+            else
+            {
+                byte[] sharedBuffer = ArrayPool<byte>.Shared.Rent(buffer.Length);
+                buffer.Span.CopyTo(sharedBuffer);
+                return new ValueTask(FinishWriteAsync(stream.WriteAsync(sharedBuffer, 0, buffer.Length, cancellationToken), sharedBuffer));
+                
+                static async Task FinishWriteAsync(Task writeTask, byte[] localBuffer)
+                {
+                    try
+                    {
+                        await writeTask.ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        ArrayPool<byte>.Shared.Return(localBuffer);
+                    }
+                }
+            }
+        }
     }
 }
 

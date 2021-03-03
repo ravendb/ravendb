@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Util
 {
-    internal class StreamWithTimeout : Stream
+    internal class StreamWithTimeout : Stream, IAsyncDisposable
     {
         private static readonly TimeSpan DefaultWriteTimeout = TimeSpan.FromSeconds(120);
         private static readonly TimeSpan DefaultReadTimeout = TimeSpan.FromSeconds(120);
@@ -116,6 +116,11 @@ namespace Raven.Client.Util
             _stream.Flush();
         }
 
+        public override Task FlushAsync(CancellationToken cancellationToken)
+        {
+            return _stream.FlushAsync(cancellationToken);
+        }
+
         public override int Read(byte[] buffer, int offset, int count)
         {
             if (_canBaseStreamTimeoutOnRead)
@@ -197,6 +202,7 @@ namespace Raven.Client.Util
             _readCts?.Dispose();
             _writeCts?.Dispose();
         }
+
         protected override void Dispose(bool disposing)
         {
             GC.SuppressFinalize(this);
@@ -204,6 +210,26 @@ namespace Raven.Client.Util
             _stream.Dispose();
             _readCts?.Dispose();
             _writeCts?.Dispose();
+        }
+
+#if NETSTANDARD2_0 || NETCOREAPP2_1
+        public ValueTask DisposeAsync()
+#else
+        public override async ValueTask DisposeAsync()
+#endif
+        {
+#if NETSTANDARD2_0 || NETCOREAPP2_1
+            Dispose();
+            return new ValueTask();
+#else
+            GC.SuppressFinalize(this);
+
+            await base.DisposeAsync().ConfigureAwait(false);
+            await _stream.DisposeAsync().ConfigureAwait(false);
+
+            _readCts?.Dispose();
+            _writeCts?.Dispose();
+#endif
         }
     }
 }

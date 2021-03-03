@@ -97,12 +97,12 @@ namespace Sparrow.Json.Parsing
 
         public void SetBuffer(JsonOperationContext.MemoryBuffer inputBuffer)
         {
-            SetBuffer(inputBuffer.Pointer + inputBuffer.Used, inputBuffer.Valid - inputBuffer.Used);
+            SetBuffer(inputBuffer.Address + inputBuffer.Used, inputBuffer.Valid - inputBuffer.Used);
         }
 
         public void SetBuffer(JsonOperationContext.MemoryBuffer inputBuffer, int offset, int size)
         {
-            SetBuffer(inputBuffer.Pointer + offset, size);
+            SetBuffer(inputBuffer.Address + offset, size);
         }
 
         public void SetBuffer(byte* inputBuffer, int size)
@@ -352,7 +352,7 @@ namespace Sparrow.Json.Parsing
                 case (byte)'n':
                     {
                         _state.CurrentTokenType = JsonParserToken.Null;
-                        _expectedTokenBuffer = BlittableJsonTextWriter.NullBuffer;
+                        _expectedTokenBuffer = AsyncBlittableJsonTextWriter.NullBuffer;
                         _expectedTokenBufferPosition = 1;
                         _expectedTokenString = "null";
                         if (EnsureRestOfToken(ref pos) == false)
@@ -368,7 +368,7 @@ namespace Sparrow.Json.Parsing
                 case (byte)'t':
                     {
                         _state.CurrentTokenType = JsonParserToken.True;
-                        _expectedTokenBuffer = BlittableJsonTextWriter.TrueBuffer;
+                        _expectedTokenBuffer = AsyncBlittableJsonTextWriter.TrueBuffer;
                         _expectedTokenBufferPosition = 1;
                         _expectedTokenString = "true";
                         if (EnsureRestOfToken(ref pos) == false)
@@ -384,7 +384,7 @@ namespace Sparrow.Json.Parsing
                 case (byte)'f':
                     {
                         _state.CurrentTokenType = JsonParserToken.False;
-                        _expectedTokenBuffer = BlittableJsonTextWriter.FalseBuffer;
+                        _expectedTokenBuffer = AsyncBlittableJsonTextWriter.FalseBuffer;
                         _expectedTokenBufferPosition = 1;
                         _expectedTokenString = "false";
                         if (EnsureRestOfToken(ref pos) == false)

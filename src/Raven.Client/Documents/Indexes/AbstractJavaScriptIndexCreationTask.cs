@@ -71,6 +71,7 @@ namespace Raven.Client.Documents.Indexes
             _definition.Configuration = Configuration;
             _definition.LockMode = LockMode;
             _definition.Priority = Priority;
+            _definition.State = State;
 
             var definition = new IndexDefinition();
             _definition.CopyTo(definition);

@@ -72,10 +72,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     ExecuteCollectionQuery(result, query, collection, queryContext, pulseReadingTransaction: true, token.Token);
 
                     result.Flush();
-
-                    return Task.CompletedTask;
                 }
             }
+
+            return Task.CompletedTask;
         }
 
         public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)

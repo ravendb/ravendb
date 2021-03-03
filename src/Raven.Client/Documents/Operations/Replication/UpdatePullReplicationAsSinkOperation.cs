@@ -55,14 +55,14 @@ namespace Raven.Client.Documents.Operations.Replication
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
                     {
                         var json = new DynamicJsonValue
                         {
                             ["PullReplicationAsSink"] = _pullReplication.ToJson()
                         };
 
-                        ctx.Write(stream, ctx.ReadObject(json, "update-pull-replication"));
+                        await ctx.WriteAsync(stream, ctx.ReadObject(json, "update-pull-replication")).ConfigureAwait(false);
                     })
                 };
 

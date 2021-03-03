@@ -1,22 +1,12 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
-using Sparrow.Platform;
-using Sparrow.Utils;
 
 namespace Raven.Server.Config.Categories
 {
     [ConfigurationCategory(ConfigurationCategoryType.Server)]
     public class ServerConfiguration : ConfigurationCategory
     {
-        public ServerConfiguration()
-        {
-            int minThreadPoolThreads = (PlatformDetails.Is32Bits ? 2 : 4) * ProcessorInfo.ProcessorCount;
-
-            ThreadPoolMinWorkerThreads = minThreadPoolThreads;
-            ThreadPoolMinCompletionPortThreads = minThreadPoolThreads;
-        }
-
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Server.MaxTimeForTaskToWaitForDatabaseToLoadInSec", ConfigurationEntryScope.ServerWideOnly)]
@@ -91,12 +81,12 @@ namespace Raven.Server.Config.Categories
         public TimeSetting CpuCreditsExecTimeout { get; set; }
 
         [Description("EXPERT: Sets the minimum number of worker threads the thread pool creates on demand, as new requests are made, before switching to an algorithm for managing thread creation and destruction.")]
-        [DefaultValue(DefaultValueSetInConstructor)]
+        [DefaultValue(null)]
         [ConfigurationEntry("Server.ThreadPool.MinWorkerThreads", ConfigurationEntryScope.ServerWideOnly)]
         public int? ThreadPoolMinWorkerThreads { get; set; }
 
         [Description("EXPERT: Sets the minimum number of asynchronous I/O threads the thread pool creates on demand, as new requests are made, before switching to an algorithm for managing thread creation and destruction.")]
-        [DefaultValue(DefaultValueSetInConstructor)]
+        [DefaultValue(null)]
         [ConfigurationEntry("Server.ThreadPool.MinCompletionPortThreads", ConfigurationEntryScope.ServerWideOnly)]
         public int? ThreadPoolMinCompletionPortThreads { get; set; }
 

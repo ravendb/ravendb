@@ -7,13 +7,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
     public class ScriptRunnersDebugInfoHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/debug/script-runners", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task GetJSDebugInfo()
+        public async Task GetJSDebugInfo()
         {
             var detailed = GetBoolValueQueryString("detailed", required: false) ?? false;
 
             using (Database.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("ScriptRunners");
@@ -32,7 +32,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     writer.WriteEndObject();
                 }
             }
-            return Task.CompletedTask;
         }
     }
 }

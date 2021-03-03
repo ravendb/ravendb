@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 {
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             var ms = _reader.InnerReader.BaseStream;
 
             ms.Position = 0;
-            value.WriteJsonTo(ms);
+            value._context.Sync.Write(ms, value);
             ms.SetLength(ms.Position);
             ms.Position = 0;
 

@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Commercial
 {
@@ -114,7 +115,7 @@ namespace Raven.Server.Commercial
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var json = context.Read(stream, "license/json");
+                var json = context.Sync.ReadForMemory(stream, "license/json");
                 return JsonDeserializationServer.License(json);
             }
         }
@@ -233,7 +234,7 @@ namespace Raven.Server.Commercial
                 BlittableJsonReaderObject settingsJson;
                 using (var fs = new FileStream(_serverStore.Configuration.ConfigPath, FileMode.Open, FileAccess.Read))
                 {
-                    settingsJson = context.ReadForMemory(fs, "settings-json");
+                    settingsJson = context.Sync.ReadForMemory(fs, "settings-json");
                 }
 
                 // validate that we have the license property
