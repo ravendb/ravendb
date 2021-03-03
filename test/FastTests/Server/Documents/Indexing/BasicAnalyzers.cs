@@ -40,7 +40,9 @@ namespace FastTests.Server.Documents.Indexing
             var configuration = RavenConfiguration.CreateForTesting("test", Raven.Server.ServerWide.ResourceType.Server);
             configuration.Initialize();
 
-            var operation = new TestOperation(configuration.Indexing, null);
+            var index = new TestIndex(configuration.Indexing);
+
+            var operation = new TestOperation(index, null);
 
             var fields = new Dictionary<string, IndexField>();
             fields.Add(Constants.Documents.Indexing.Fields.AllFields, new IndexField());
@@ -106,7 +108,9 @@ namespace FastTests.Server.Documents.Indexing
 
             configuration.Initialize();
 
-            var operation = new TestOperation(configuration.Indexing, null);
+            var index = new TestIndex(configuration.Indexing);
+
+            var operation = new TestOperation(index, null);
 
             var fields = new Dictionary<string, IndexField>();
             fields.Add(Constants.Documents.Indexing.Fields.AllFields, new IndexField());
@@ -164,16 +168,16 @@ namespace FastTests.Server.Documents.Indexing
 
         private class TestOperation : IndexOperationBase
         {
-            private readonly IndexingConfiguration _configuration;
+            private readonly Index _index;
 
-            public TestOperation(IndexingConfiguration configuration, Logger logger) : base(new TestIndex(), logger)
+            public TestOperation(Index index, Logger logger) : base(index, logger)
             {
-                _configuration = configuration;
+                _index = index;
             }
 
             public RavenPerFieldAnalyzerWrapper GetAnalyzer(Dictionary<string, IndexField> fields, bool forQuerying)
             {
-                return CreateAnalyzer(_configuration, new TestIndexDefinitions
+                return CreateAnalyzer(_index, new TestIndexDefinitions
                 {
                     IndexFields = fields
                 }, forQuerying);
@@ -196,8 +200,9 @@ namespace FastTests.Server.Documents.Indexing
 
     internal class TestIndex : Index
     {
-        public TestIndex() : base(IndexType.None, IndexSourceType.None, new TestIndexDefinitions())
+        public TestIndex(IndexingConfiguration configuration) : base(IndexType.None, IndexSourceType.None, new TestIndexDefinitions())
         {
+            Configuration = configuration;
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()

@@ -6,21 +6,19 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Text;
 using System.Text.RegularExpressions;
-using Lucene.Net.Analysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Formatting;
 using Raven.Client.Exceptions.Documents.Compilation;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes.Analysis
 {
-    public delegate Analyzer CreateAnalyzer();
-
     public static class AnalyzerCompiler
     {
-        public static CreateAnalyzer Compile(string name, string analyzerCode)
+        public static Type Compile(string name, string analyzerCode)
         {
             var originalName = name;
             name = GetCSharpSafeName(name) + "." + Guid.NewGuid() + ".analyzer";
@@ -107,14 +105,12 @@ namespace Raven.Server.Documents.Indexes.Analysis
             if (type == null)
                 throw new AnalyzerCompilationException($"Could not find type '{originalName}' in given assembly.");
 
-            return () =>
+            using (IndexingExtensions.CreateAnalyzerInstance("@compile", type))
             {
-                var instance = Activator.CreateInstance(type) as Analyzer;
-                if (instance == null)
-                    throw new InvalidOperationException($"Created analyzer does not inherit from '{nameof(Analyzer)}' class.");
+                // check if we can create that analyzer
+            }
 
-                return instance;
-            };
+            return type;
         }
 
         private static string GetCSharpSafeName(string name)

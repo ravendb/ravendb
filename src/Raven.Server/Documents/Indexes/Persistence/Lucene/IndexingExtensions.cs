@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
+using Raven.Server.Documents.Indexes.Analysis;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -43,20 +44,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             throw new InvalidOperationException($"Could not create new analyzer instance '{analyzerType.Name}' for field: {name}. No recognizable constructor found.");
         }
 
-        public static Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)
-        {
-            var analyzerType = GetAnalyzerType(name, analyzerTypeAsString);
-
-            return CreateAnalyzerInstance(name, analyzerType);
-        }
-
-        public static Type GetAnalyzerType(string name, string analyzerTypeAsString)
+        public static Type GetAnalyzerType(string name, string analyzerTypeAsString, string databaseName)
         {
             var analyzerType = LuceneAssembly.GetType(analyzerTypeAsString) ??
                                Type.GetType(analyzerTypeAsString) ??
                                Type.GetType("Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers." + analyzerTypeAsString) ??
                                LuceneAssembly.GetType("Lucene.Net.Analysis." + analyzerTypeAsString) ??
-                               LuceneAssembly.GetType("Lucene.Net.Analysis.Standard." + analyzerTypeAsString);
+                               LuceneAssembly.GetType("Lucene.Net.Analysis.Standard." + analyzerTypeAsString) ??
+                               AnalyzerCompilationCache.GetAnalyzerType(name, databaseName);
 
             if (analyzerType == null)
                 throw new InvalidOperationException($"Cannot find analyzer type '{analyzerTypeAsString}' for field: {name}");

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using Raven.Client.Documents.Indexes.Analysis;
-using Raven.Client.Exceptions.Documents.Analyzers;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
 
@@ -9,16 +8,16 @@ namespace Raven.Server.Documents.Indexes.Analysis
 {
     public static class AnalyzerCompilationCache
     {
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<CreateAnalyzer>> AnalyzersCache = new ConcurrentDictionary<CacheKey, Lazy<CreateAnalyzer>>();
+        private static readonly ConcurrentDictionary<CacheKey, Lazy<Type>> AnalyzersCache = new ConcurrentDictionary<CacheKey, Lazy<Type>>();
 
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<CreateAnalyzer>> AnalyzersPerDatabaseCache = new ConcurrentDictionary<CacheKey, Lazy<CreateAnalyzer>>();
+        private static readonly ConcurrentDictionary<CacheKey, Lazy<Type>> AnalyzersPerDatabaseCache = new ConcurrentDictionary<CacheKey, Lazy<Type>>();
 
-        public static CreateAnalyzer GetAnalyzer(string name, string databaseName)
+        public static Type GetAnalyzerType(string name, string databaseName)
         {
             var key = new CacheKey(databaseName, name, null);
 
             if (AnalyzersPerDatabaseCache.TryGetValue(key, out var result) == false)
-                AnalyzerDoesNotExistException.ThrowFor(name);
+                return null;
 
             try
             {
@@ -70,7 +69,7 @@ namespace Raven.Server.Documents.Indexes.Analysis
         {
             var key = new CacheKey(databaseName, name, analyzerCode);
 
-            var result = AnalyzersPerDatabaseCache.GetOrAdd(key, _ => new Lazy<CreateAnalyzer>(() => CompileAnalyzer(name, analyzerCode)));
+            var result = AnalyzersPerDatabaseCache.GetOrAdd(key, _ => new Lazy<Type>(() => CompileAnalyzer(name, analyzerCode)));
             if (result.IsValueCreated)
                 return;
 
@@ -86,10 +85,10 @@ namespace Raven.Server.Documents.Indexes.Analysis
             }
         }
 
-        private static CreateAnalyzer CompileAnalyzer(string name, string analyzerCode)
+        private static Type CompileAnalyzer(string name, string analyzerCode)
         {
             var key = new CacheKey(null, name, analyzerCode);
-            var result = AnalyzersCache.GetOrAdd(key, _ => new Lazy<CreateAnalyzer>(() => AnalyzerCompiler.Compile(name, analyzerCode)));
+            var result = AnalyzersCache.GetOrAdd(key, _ => new Lazy<Type>(() => AnalyzerCompiler.Compile(name, analyzerCode)));
 
             try
             {
