@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
@@ -651,6 +652,78 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var url = topology.GetUrlFromTag(nodeTag);
                 await ServerStore.Engine.ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.NonVoter);
                 NoContentStatus();
+            }
+        }
+
+        [RavenAction("/admin/cluster/remove-entry-from-log", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
+        public async Task RemoveEntryFromLog()
+        {
+            var index = GetLongQueryString("index");
+            var first = GetBoolValueQueryString("first", false) ?? true;
+            var nodeList = new List<string>();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var removed = ServerStore.Engine.RemoveEntryFromRaftLog(index);
+                if (removed)
+                    nodeList.Add(ServerStore.NodeTag);
+
+                if (first)
+                {
+                    foreach (var node in ServerStore.GetClusterTopology(context).AllNodes)
+                    {
+                        if (node.Value == Server.WebUrl)
+                        {
+                            continue;
+                        }
+
+                        var cmd = new RemoveEntryFromRaftLogCommand(index);
+                        using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(node.Value, Server.Certificate.Certificate))
+                        {
+                            await requestExecutor.ExecuteAsync(cmd, context);
+                            nodeList.AddRange(cmd.Result);
+                        }
+                    }
+                }
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WriteArray("Nodes", nodeList);
+                    writer.WriteEndObject();
+                }
+            }
+        }
+
+        private class RemoveEntryFromRaftLogCommand : RavenCommand<List<string>>
+        {
+            private readonly long _index;
+
+            public RemoveEntryFromRaftLogCommand(long index)
+            {
+                _index = index;
+            }
+
+            public override bool IsReadRequest { get; }
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/admin/cluster/remove-entry-from-log?index={_index}&first=false";
+
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post
+                };
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                Result = new List<string>();
+
+                response.TryGet("Nodes", out BlittableJsonReaderArray array);
+
+                foreach (var item in array)
+                    Result.Add(item.ToString());
             }
         }
     }

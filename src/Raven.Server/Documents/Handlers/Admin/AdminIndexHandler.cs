@@ -241,29 +241,47 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         [RavenAction("/databases/*/admin/indexes/enable", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public Task Enable()
+        public async Task Enable()
         {
+            var raftRequestId = GetRaftRequestIdFromQuery();
             var name = GetStringQueryString("name");
+            var clusterWide = GetBoolValueQueryString("clusterWide", false) ?? false;
             var index = Database.IndexStore.GetIndex(name);
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
 
-            index.Enable();
+            if (clusterWide)
+            {
+                await Database.IndexStore.SetState(name, IndexState.Normal, $"{raftRequestId}/{index}");
+            }
+            else
+            {
+                index.Enable();
+            }
 
-            return NoContent();
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/admin/indexes/disable", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public Task Disable()
+        public async Task Disable()
         {
+            var raftRequestId = GetRaftRequestIdFromQuery();
             var name = GetStringQueryString("name");
+            var clusterWide = GetBoolValueQueryString("clusterWide", false) ?? false;
             var index = Database.IndexStore.GetIndex(name);
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
 
-            index.Disable();
+            if (clusterWide)
+            {
+                await Database.IndexStore.SetState(name, IndexState.Disabled, $"{raftRequestId}/{index}");
+            }
+            else
+            {
+                index.Disable();
+            }
 
-            return NoContent();
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/admin/indexes/dump", "POST", AuthorizationStatus.DatabaseAdmin)]

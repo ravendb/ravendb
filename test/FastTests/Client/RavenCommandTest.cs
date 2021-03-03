@@ -50,7 +50,7 @@ namespace FastTests.Client
                 "StartTransactionsRecordingCommand", "StopIndexCommand", "StopIndexingCommand", "StopTransactionsRecordingCommand",
                 "UpdateUnusedDatabasesCommand", "WaitForRaftIndexCommand", "ConfigureTimeSeriesCommand", "ConfigureTimeSeriesPolicyCommand", 
                 "UpdateSubscriptionCommand", "RemoveTimeSeriesPolicyCommand", "GetTimeSeriesStatisticsCommand", "GetTimeSeriesCommand", "GetMultipleTimeSeriesCommand",
-                "GetAttachmentsCommand", "ConfigureTimeSeriesValueNamesCommand", "DeleteIndexErrorsCommand", "TimeSeriesBatchCommand", "GetRevisionsResultCommand", 
+                "GetAttachmentsCommand", "ConfigureTimeSeriesValueNamesCommand", "DeleteIndexErrorsCommand", "TimeSeriesBatchCommand", "GetRevisionsResultCommand", "SetIndexStateCommand",
                 "BackupCommand", "GetReplicationHubAccessCommand", "GetServerWideExternalReplicationCommand", "GetServerWideExternalReplicationsCommand", 
                 "PutServerWideBackupConfigurationCommand", "PutServerWideExternalReplicationCommand", "ConditionalGetDocumentsCommand",
                 "DeleteServerWideTaskCommand", "RegisterReplicationHubAccessCommand", "ToggleServerWideTaskStateCommand", "UnregisterReplicationHubAccessCommand", "GetRevisionsCountCommand"

@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -52,7 +53,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
 
                 // let's force to clean the reader
-                indexInstance.IndexPersistence.Clean(CleanupMode.Deep);
+                indexInstance.IndexPersistence.Clean(IndexCleanup.All);
 
                 Assert.Null(indexInstance.IndexPersistence._lastReader);
 
