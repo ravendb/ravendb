@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             try
             {
-                _analyzer = CreateAnalyzer(index.Configuration, index.Definition, forQuerying: true);
+                _analyzer = CreateAnalyzer(index, index.Definition, forQuerying: true);
             }
             catch (Exception e)
             {

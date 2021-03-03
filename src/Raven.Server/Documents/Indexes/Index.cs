@@ -671,7 +671,7 @@ namespace Raven.Server.Documents.Indexes
             IndexingConfiguration configuration,
             PerformanceHintsConfiguration performanceHints)
         {
-            configuration.InitializeAnalyzers();
+            configuration.InitializeAnalyzers(documentDatabase.Name);
 
             if (_disposeOne.Disposed)
                 throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
@@ -904,7 +904,7 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(Type.IsStatic());
 
-            configuration.InitializeAnalyzers();
+            configuration.InitializeAnalyzers(DocumentDatabase.Name);
 
             using (DrainRunningQueries())
             {

@@ -16,6 +16,9 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="Data\RavenDB_14939\MyAnalyzer.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <None Remove="Data\legacy-counters.4.1.5.ravendbdump" />
     <None Remove="Data\RavenDB_11488\ravendb-11488-artificial-docs-not-included.ravendbdump" />
     <None Remove="Data\RavenDB-12785.ravendbdump" />
@@ -71,6 +74,7 @@
     <EmbeddedResource Include="Data\mssql.basic.insert.sql" />
     <EmbeddedResource Include="Data\mysql.basic.create.sql" />
     <EmbeddedResource Include="Data\mysql.basic.insert.sql" />
+    <EmbeddedResource Include="Data\RavenDB_14939\MyAnalyzer.cs" />
     <EmbeddedResource Include="Data\RavenDB_15159\12119.smaps.gz" />
     <EmbeddedResource Include="Data\RavenDB_15294\northwind-4.2.103.zip" />
   </ItemGroup>

@@ -20,6 +20,7 @@ using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Errors;
@@ -94,6 +95,8 @@ namespace Raven.Server.Documents.Indexes
             var indexesToStart = new List<Index>();
 
             HandleSorters(record, raftIndex);
+            HandleAnalyzers(record, raftIndex);
+
             HandleDeletes(record, raftIndex);
 
             HandleChangesForStaticIndexes(record, raftIndex, indexesToStart);
@@ -173,6 +176,20 @@ namespace Raven.Server.Documents.Indexes
                 _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Could not update sorters", e);
+            }
+        }
+
+        private void HandleAnalyzers(DatabaseRecord record, long index)
+        {
+            try
+            {
+                AnalyzerCompilationCache.AddAnalyzers(record);
+            }
+            catch (Exception e)
+            {
+                _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Could not update analyzers", e);
             }
         }
 
@@ -478,6 +495,7 @@ namespace Raven.Server.Documents.Indexes
                                 throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
                         }
                         break;
+
                     case IndexSourceType.TimeSeries:
                         switch (definition.Type)
                         {
@@ -485,6 +503,7 @@ namespace Raven.Server.Documents.Indexes
                             case IndexType.JavaScriptMap:
                                 index = MapTimeSeriesIndex.CreateNew(definition, _documentDatabase);
                                 break;
+
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
                                 var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceTimeSeriesIndex>(definition, _documentDatabase);
@@ -494,10 +513,12 @@ namespace Raven.Server.Documents.Indexes
 
                                 index = mapReduceIndex;
                                 break;
+
                             default:
                                 throw new NotSupportedException($"Cannot create {definition.Type} index from TimeSeriesIndexDefinition");
                         }
                         break;
+
                     case IndexSourceType.Counters:
                         switch (definition.Type)
                         {
@@ -505,6 +526,7 @@ namespace Raven.Server.Documents.Indexes
                             case IndexType.JavaScriptMap:
                                 index = MapCountersIndex.CreateNew(definition, _documentDatabase);
                                 break;
+
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
                                 var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceCountersIndex>(definition, _documentDatabase);
@@ -514,10 +536,12 @@ namespace Raven.Server.Documents.Indexes
 
                                 index = mapReduceIndex;
                                 break;
+
                             default:
                                 throw new NotSupportedException($"Cannot create {definition.Type} index from TimeSeriesIndexDefinition");
                         }
                         break;
+
                     default:
                         throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
                 }
@@ -818,6 +842,7 @@ namespace Raven.Server.Documents.Indexes
                             throw new NotSupportedException($"Cannot update {definition.Type} index from {nameof(IndexDefinition)}");
                     }
                     break;
+
                 case IndexSourceType.Counters:
                     switch (definition.Type)
                     {
@@ -825,14 +850,17 @@ namespace Raven.Server.Documents.Indexes
                         case IndexType.JavaScriptMap:
                             MapCountersIndex.Update(existingIndex, definition, _documentDatabase);
                             break;
+
                         case IndexType.MapReduce:
                         case IndexType.JavaScriptMapReduce:
                             MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
                             break;
+
                         default:
                             throw new NotSupportedException($"Cannot create {definition.Type} index from {nameof(CountersIndexDefinition)}");
                     }
                     break;
+
                 case IndexSourceType.TimeSeries:
                     switch (definition.Type)
                     {
@@ -840,14 +868,17 @@ namespace Raven.Server.Documents.Indexes
                         case IndexType.JavaScriptMap:
                             MapTimeSeriesIndex.Update(existingIndex, definition, _documentDatabase);
                             break;
+
                         case IndexType.MapReduce:
                         case IndexType.JavaScriptMapReduce:
                             MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
                             break;
+
                         default:
                             throw new NotSupportedException($"Cannot create {definition.Type} index from {nameof(TimeSeriesIndexDefinition)}");
                     }
                     break;
+
                 default:
                     throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
@@ -1152,8 +1183,8 @@ namespace Raven.Server.Documents.Indexes
                 {
                     try
                     {
-                    index.Start();
-                }
+                        index.Start();
+                    }
                     catch (ObjectDisposedException)
                     {
                         // this can happen if we replaced or removed the index
@@ -1226,17 +1257,17 @@ namespace Raven.Server.Documents.Indexes
 
             ExecuteForIndexes(list, index =>
                 {
-                using (IndexLock(index.Name))
-                {
-                    try
+                    using (IndexLock(index.Name))
                     {
+                        try
+                        {
                             index.Stop(disableIndex: true);
                         }
-                    catch (ObjectDisposedException)
-                    {
-                        // this can happen if we replaced or removed the index
+                        catch (ObjectDisposedException)
+                        {
+                            // this can happen if we replaced or removed the index
+                        }
                     }
-                }
                 });
 
             foreach (var index in list)
@@ -1321,6 +1352,7 @@ namespace Raven.Server.Documents.Indexes
                                         throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
                                 }
                                 break;
+
                             case IndexSourceType.Counters:
                                 switch (staticIndexDefinition.Type)
                                 {
@@ -1328,14 +1360,17 @@ namespace Raven.Server.Documents.Indexes
                                     case IndexType.JavaScriptMap:
                                         index = MapCountersIndex.CreateNew(staticIndexDefinition, _documentDatabase);
                                         break;
+
                                     case IndexType.MapReduce:
                                     case IndexType.JavaScriptMapReduce:
                                         index = MapReduceIndex.CreateNew<MapReduceCountersIndex>(staticIndexDefinition, _documentDatabase, isIndexReset: true);
                                         break;
+
                                     default:
                                         throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
                                 }
                                 break;
+
                             case IndexSourceType.TimeSeries:
                                 switch (staticIndexDefinition.Type)
                                 {
@@ -1343,14 +1378,17 @@ namespace Raven.Server.Documents.Indexes
                                     case IndexType.JavaScriptMap:
                                         index = MapTimeSeriesIndex.CreateNew(staticIndexDefinition, _documentDatabase);
                                         break;
+
                                     case IndexType.MapReduce:
                                     case IndexType.JavaScriptMapReduce:
                                         index = MapReduceIndex.CreateNew<MapReduceTimeSeriesIndex>(staticIndexDefinition, _documentDatabase, isIndexReset: true);
                                         break;
+
                                     default:
                                         throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
                                 }
                                 break;
+
                             default:
                                 throw new ArgumentException($"Unknown index source type {staticIndexDefinition.SourceType} for index {staticIndexDefinition.Name}");
                         }
@@ -1676,7 +1714,7 @@ namespace Raven.Server.Documents.Indexes
                     if (result.MatchType == DynamicQueryMatchType.Complete || result.MatchType == DynamicQueryMatchType.CompleteButIdle)
                     {
                         var lastMappedEtagFor = index.GetLastMappedEtagFor(collection);
-                        if(result.LastMappedEtag >= lastMappedEtagFor)
+                        if (result.LastMappedEtag >= lastMappedEtagFor)
                         {
                             indexesToRemove.Add(index.Name);
                             indexesToExtend.Remove(index.Name);
@@ -1746,7 +1784,7 @@ namespace Raven.Server.Documents.Indexes
                 Directory.CreateDirectory(path.FullPath);
         }
 
-        private static void ValidateAnalyzers(IndexDefinition definition)
+        private void ValidateAnalyzers(IndexDefinition definition)
         {
             if (definition.Fields == null)
                 return;
@@ -1758,7 +1796,7 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    IndexingExtensions.GetAnalyzerType(kvp.Key, kvp.Value.Analyzer);
+                    IndexingExtensions.GetAnalyzerType(kvp.Key, kvp.Value.Analyzer, _documentDatabase.Name);
                 }
                 catch (Exception e)
                 {
@@ -1942,7 +1980,7 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 _documentDatabase.Changes.RaiseNotifications(
-                    new IndexChange {Name = oldIndexName, Type = IndexChangeTypes.SideBySideReplace});
+                    new IndexChange { Name = oldIndexName, Type = IndexChangeTypes.SideBySideReplace });
             }
             finally
             {

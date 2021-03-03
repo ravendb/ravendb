@@ -313,14 +313,14 @@ namespace Raven.Server.Config.Categories
         {
             base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
 
-            InitializeAnalyzers();
+            InitializeAnalyzers(resourceName);
         }
 
-        public void InitializeAnalyzers()
+        public void InitializeAnalyzers(string resourceName)
         {
-            DefaultAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultAnalyzer);
-            DefaultExactAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultExactAnalyzer);
-            DefaultSearchAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultSearchAnalyzer);
+            DefaultAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultAnalyzer, resourceName);
+            DefaultExactAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultExactAnalyzer, resourceName);
+            DefaultSearchAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultSearchAnalyzer, resourceName);
         }
 
         public enum IndexStartupBehavior
