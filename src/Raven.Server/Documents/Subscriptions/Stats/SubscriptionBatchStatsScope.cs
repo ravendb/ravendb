@@ -4,8 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
-using Raven.Client.Util;
+using System.Linq;
 using Raven.Server.Utils.Stats;
 
 namespace Raven.Server.Documents.Subscriptions.Stats
@@ -55,19 +54,26 @@ namespace Raven.Server.Documents.Subscriptions.Stats
             _stats.NumberOfIncludedTimeSeriesEntries += includedTimeSeriesEntriesCount;
         }
         
-        public void RecordStartWaitingForClientAck()
-        {
-            _stats.StartWaitingForClientAck = SystemTime.UtcNow;
-        }
-        
-        public void RecordClientAckTime(DateTime clientAckTime)
-        {
-            _stats.ClientAckTime = clientAckTime;
-        }
-        
         public void RecordException(string exceptionMsg)
         {
             _stats.Exception = exceptionMsg;
+        }
+        
+        public SubscriptionBatchPerformanceOperation ToPerformanceOperation(string name)
+        {
+            var operation = new SubscriptionBatchPerformanceOperation(Duration)
+            {
+                Name = name
+            };
+
+            if (Scopes != null)
+            {
+                operation.Operations = Scopes
+                    .Select(x => x.Value.ToPerformanceOperation(x.Key))
+                    .ToArray();
+            }
+
+            return operation;
         }
     }
 }

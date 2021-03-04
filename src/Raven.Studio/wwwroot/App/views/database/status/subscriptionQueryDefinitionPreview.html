@@ -1,0 +1,37 @@
+<div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
+                    <h3 class="modal-title" id="myModalLabel">Subscription query definition preview</h3>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div class="padding text-center" data-bind="visible: spinners.loading">
+                <i class="global-spinner"></i>
+            </div>
+            <div class="modal-details" data-bind="visible: !spinners.loading()">
+                <div class="details-item flex-horizontal">
+                    <div>Task Name:</div>
+                    <div class="details-value" data-bind="text: taskName"></div>
+                </div>
+                <div data-bind="visible: query">
+                    <div class="margin-bottom">Query:</div>
+                    <pre class="form-control editor"
+                         data-bind="aceEditor: { code: query, fontSize: '14px', lang: 'ace/mode/rql', readOnly: true }" style="height: 250px;"></pre>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <div class="text-right">
+                <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -281,6 +281,26 @@ interface arrayOfResultsAndCountDto<T> {
     Count: number;
 }
 
+interface subscriptionItemTooltipInfo {
+    title: string;
+    clientUri: string;
+}
+
+interface subscriptionConnectionItemInfo extends subscriptionItemTooltipInfo {
+    duration: number;
+    batchCount: number;
+    connectionId: number;
+    exceptionText: string;
+}
+
+interface subscriptionPendingItemInfo extends subscriptionItemTooltipInfo {
+    duration: number;
+}
+
+interface subscriptionExceptionItemInfo extends subscriptionItemTooltipInfo {
+    exceptionText: string;    
+}
+
 interface timeGapInfo {
     durationInMillis: number;
     start: Date;
@@ -341,7 +361,11 @@ interface IOMetricsRecentStatsWithCache extends Raven.Server.Utils.IoMetrics.IOM
     CompletedAsDate: Date; // used for caching
 }
 
-type ongoingTaskStatType = Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType | Raven.Client.Documents.Operations.ETL.EtlType;
+type subscriptionType =  "SubscriptionConnection" | "SubscriptionBatch" | "AggregatedBatchesInfo";
+
+type ongoingTaskStatType = Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType |
+                           Raven.Client.Documents.Operations.ETL.EtlType |
+                           subscriptionType;
 
 interface ReplicationPerformanceBaseWithCache extends Raven.Client.Documents.Replication.ReplicationPerformanceBase {
     StartedAsDate: Date;
@@ -356,6 +380,22 @@ interface EtlPerformanceBaseWithCache extends Raven.Server.Documents.ETL.Stats.E
     CompletedAsDate: Date;
     Type: Raven.Client.Documents.Operations.ETL.EtlType;
     HasErrors: boolean;
+}
+
+interface SubscriptionConnectionPerformanceStatsWithCache extends Raven.Server.Documents.Subscriptions.Stats.SubscriptionConnectionPerformanceStats {
+    StartedAsDate: Date;
+    CompletedAsDate: Date;
+    ConnectedAtAsDate: Date;
+    Type: subscriptionType;
+    HasErrors: boolean;
+}
+
+interface SubscriptionBatchPerformanceStatsWithCache extends Raven.Server.Documents.Subscriptions.SubscriptionBatchPerformanceStats {
+    StartedAsDate: Date;
+    CompletedAsDate: Date;
+    Type: subscriptionType;
+    HasErrors: boolean;
+    AggregatedBatchesCount: number;
 }
 
 interface IndexingPerformanceOperationWithParent extends Raven.Client.Documents.Indexes.IndexingPerformanceOperation {

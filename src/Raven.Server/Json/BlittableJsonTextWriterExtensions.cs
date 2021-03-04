@@ -53,110 +53,6 @@ namespace Raven.Server.Json
             });
             writer.WriteEndObject();
         }
-
-        public static void WriteSubscriptionTaskConnectionPerformanceStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionConnectionPerformanceStats connectionStats)
-        {
-            writer.WriteStartObject();
-            
-            writer.WritePropertyName(nameof(connectionStats.ConnectionId));
-            writer.WriteInteger(connectionStats.ConnectionId);
-            writer.WriteComma();
-            
-            writer.WritePropertyName(nameof(connectionStats.BatchCount));
-            writer.WriteInteger(connectionStats.BatchCount);
-            writer.WriteComma();
-            
-            writer.WritePropertyName(nameof(connectionStats.ClientUri));
-            writer.WriteString(connectionStats.ClientUri);
-            writer.WriteComma();
-            
-            writer.WritePropertyName(nameof(connectionStats.Script));
-            writer.WriteString(connectionStats.Script);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(connectionStats.Exception));
-            writer.WriteString(connectionStats.Exception);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(connectionStats.Started));
-            writer.WriteDateTime(connectionStats.Started, true);
-            
-            var completed = connectionStats.Completed;
-            if (completed != null) 
-            {
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(connectionStats.Completed));
-                writer.WriteDateTime((DateTime)completed, true);
-            }
-            
-            writer.WriteEndObject();
-        }
-        
-        public static void WriteSubscriptionTaskBatchPerformanceStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchPerformanceStats batchStats)
-        {
-            writer.WriteStartObject();
-            
-            writer.WritePropertyName(nameof(batchStats.BatchId));
-            writer.WriteInteger(batchStats.BatchId);
-            writer.WriteComma();
-            
-            writer.WritePropertyName(nameof(batchStats.ConnectionId));
-            writer.WriteInteger(batchStats.ConnectionId);
-            writer.WriteComma();
-            
-            writer.WritePropertyName(nameof(batchStats.DocumentsCount));
-            writer.WriteInteger(batchStats.DocumentsCount);
-            writer.WriteComma();
-            
-            writer.WritePropertyName(nameof(batchStats.DocumentsSize));
-            writer.WriteInteger(batchStats.DocumentsSize);
-            writer.WriteComma();
-            
-            writer.WritePropertyName(nameof(batchStats.NumberOfIncludedDocuments));
-            writer.WriteInteger(batchStats.NumberOfIncludedDocuments);
-            writer.WriteComma();
-            
-            writer.WritePropertyName(nameof(batchStats.SizeOfIncludedDocuments));
-            writer.WriteInteger(batchStats.SizeOfIncludedDocuments);
-            writer.WriteComma();
-            
-            writer.WritePropertyName(nameof(batchStats.NumberOfIncludedCounters));
-            writer.WriteInteger(batchStats.NumberOfIncludedCounters);
-            writer.WriteComma();
-            
-            writer.WritePropertyName(nameof(batchStats.NumberOfIncludedTimeSeriesEntries));
-            writer.WriteInteger(batchStats.NumberOfIncludedTimeSeriesEntries);
-            writer.WriteComma();
-            
-            writer.WritePropertyName(nameof(batchStats.Started));
-            writer.WriteDateTime(batchStats.Started, true);
-            
-            var completed = batchStats.Completed;
-            if (completed != null) 
-            {
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(batchStats.Completed));
-                writer.WriteDateTime((DateTime)completed, true);
-            }
-            
-            var startWaitingForAck = batchStats.StartWaitingForClientAck;
-            if (startWaitingForAck != null) 
-            {
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(batchStats.StartWaitingForClientAck));
-                writer.WriteDateTime((DateTime)startWaitingForAck, true);
-            }
-            
-            var ackTime = batchStats.ClientAckTime;
-            if (ackTime != null) 
-            {
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(batchStats.ClientAckTime));
-                writer.WriteDateTime((DateTime)ackTime, true);
-            }
-            
-            writer.WriteEndObject();
-        }
         
         public static void WriteSubscriptionTaskPerformanceStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<SubscriptionTaskPerformanceStats> stats)
         {
@@ -176,18 +72,14 @@ namespace Raven.Server.Json
                 {
                     w.WriteComma();
                     w.WriteArray(c, nameof(taskStats.ConnectionPerformance), taskStats.ConnectionPerformance, (wp, cp, connectionStats) =>
-                    {
-                        wp.WriteSubscriptionTaskConnectionPerformanceStats(cp, connectionStats);
-                    });
+                        wp.WriteSubscriptionConnectionPerformanceStats(cp, connectionStats));
                 }
 
                 if (taskStats.BatchPerformance != null && taskStats.BatchPerformance.Any())
                 {
                     w.WriteComma();
                     w.WriteArray(c, nameof(taskStats.BatchPerformance), taskStats.BatchPerformance, (wp, cp, batchStats) =>
-                    {
-                        wp.WriteSubscriptionTaskBatchPerformanceStats(cp, batchStats);
-                    });
+                        wp.WriteSubscriptionBatchPerformanceStats(cp, batchStats));
                 }
 
                 w.WriteEndObject();
@@ -977,6 +869,18 @@ namespace Raven.Server.Json
         {
             var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats);
             writer.WriteObject(context.ReadObject(djv, "etl/performance"));
+        }
+        
+        public static void WriteSubscriptionBatchPerformanceStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchPerformanceStats batchStats)
+        {
+            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(batchStats);
+            writer.WriteObject(context.ReadObject(djv, "subscriptionBatch/performance"));
+        }
+        
+        public static void WriteSubscriptionConnectionPerformanceStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionConnectionPerformanceStats connectionStats)
+        {
+            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(connectionStats);
+            writer.WriteObject(context.ReadObject(djv, "subscriptionConnection/performance"));
         }
 
         public static void WriteIndexQuery(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IIndexQuery query)

@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,7 +71,7 @@ namespace Raven.Server.Documents.Subscriptions
                         if (currentConnection != null)
                         {
                             // add inProgress aggregator
-                            connectionAggregators.Add(currentConnection.GetPerformanceStats()); 
+                            connectionAggregators.Add(currentConnection.GetPerformanceStats());
                         }
 
                         // add history aggregators
@@ -173,6 +174,7 @@ namespace Raven.Server.Documents.Subscriptions
                 {
                     var inProgressConnection = Database.SubscriptionStorage.GetSubscriptionConnection(context, subscriptionName);
                     var inProgressStats = inProgressConnection?.Connection?.GetPerformanceStats();
+                    
                     if (inProgressStats != null &&
                         inProgressStats.Completed == false &&
                         connectionsAggregators.Contains(inProgressStats) == false)
@@ -213,8 +215,10 @@ namespace Raven.Server.Documents.Subscriptions
                 {
                     var inProgressConnection = Database.SubscriptionStorage.GetSubscriptionConnection(context, subscriptionName);
                     var inProgressBatchStats = inProgressConnection?.Connection?.GetBatchPerformanceStats();
+                    
                     if (inProgressBatchStats != null &&
                         inProgressBatchStats.Completed == false &&
+                        inProgressBatchStats.ToBatchPerformanceLiveStatsWithDetails().DocumentsCount > 0 &&
                         batchAggregators.Contains(inProgressBatchStats) == false)
                     {
                         batchAggregators.Add(inProgressBatchStats);
@@ -223,6 +227,7 @@ namespace Raven.Server.Documents.Subscriptions
                 
                 // 3. add to results
                 batchPerformance.AddRange(batchAggregators.Select(x => x.ToBatchPerformanceLiveStatsWithDetails()));
+                
                 var subscriptionItem = preparedStats.Find(x => x.TaskName == kvp.Key);
                 if (subscriptionItem != null)
                 {

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using Raven.Server.Documents.Subscriptions.Stats;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -25,9 +26,15 @@ namespace Raven.Server.Documents.Subscriptions
         public DateTime Started { get; set; }
         public DateTime? Completed { get; set; }
         
-        public DateTime? StartWaitingForClientAck { get; set; }
-        public DateTime? ClientAckTime { get; set; }
-        
         public string Exception { get; set; }
+        
+        public double DurationInMs { get; }
+        
+        public SubscriptionBatchPerformanceOperation Details { get; set; }
+        
+        public SubscriptionBatchPerformanceStats(TimeSpan duration)
+        {
+            DurationInMs = Math.Round(duration.TotalMilliseconds, 2);
+        }
     }
 }
