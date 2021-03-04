@@ -598,6 +598,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.PeriodicBackups = smugglerDatabaseRecord.PeriodicBackups;
                     databaseRecord.ExternalReplications = smugglerDatabaseRecord.ExternalReplications;
                     databaseRecord.Sorters = smugglerDatabaseRecord.Sorters;
+                    databaseRecord.Analyzers = smugglerDatabaseRecord.Analyzers;
                     databaseRecord.SinkPullReplications = smugglerDatabaseRecord.SinkPullReplications;
                     databaseRecord.HubPullReplications = smugglerDatabaseRecord.HubPullReplications;
                     databaseRecord.Revisions = smugglerDatabaseRecord.Revisions;

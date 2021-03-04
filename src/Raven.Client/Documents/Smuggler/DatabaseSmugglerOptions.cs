@@ -30,7 +30,9 @@
                                                                                   DatabaseRecordItemType.HubPullReplications |
                                                                                   DatabaseRecordItemType.SinkPullReplications |
                                                                                   DatabaseRecordItemType.TimeSeries |
-                                                                                  DatabaseRecordItemType.DocumentsCompression;
+                                                                                  DatabaseRecordItemType.DocumentsCompression |
+                                                                                  DatabaseRecordItemType.Analyzers;
+
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 
         public DatabaseSmugglerOptions()

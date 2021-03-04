@@ -199,9 +199,9 @@ namespace Raven.Client.Documents.Smuggler
         public CountsWithLastEtag CompareExchange { get; set; }
 
         public Counts Subscriptions { get; set; }
-        
+
         public Counts ReplicationHubCertificates { get; set; }
-        
+
         public CountsWithLastEtag Counters { get; set; }
 
         public CountsWithLastEtag TimeSeries { get; set; }
@@ -232,6 +232,8 @@ namespace Raven.Client.Documents.Smuggler
         {
             public bool SortersUpdated { get; set; }
 
+            public bool AnalyzersUpdated { get; set; }
+
             public bool SinkPullReplicationsUpdated { get; set; }
 
             public bool HubPullReplicationsUpdated { get; set; }
@@ -247,8 +249,8 @@ namespace Raven.Client.Documents.Smuggler
             public bool ConflictSolverConfigUpdated { get; set; }
 
             public bool TimeSeriesConfigurationUpdated { get; set; }
-            
-            public bool DocumentsCompressionConfigurationUpdated { get; set;  }
+
+            public bool DocumentsCompressionConfigurationUpdated { get; set; }
 
             public bool RevisionsConfigurationUpdated { get; set; }
 
@@ -310,6 +312,9 @@ namespace Raven.Client.Documents.Smuggler
                 if (SortersUpdated)
                     json[nameof(SortersUpdated)] = SortersUpdated;
 
+                if (AnalyzersUpdated)
+                    json[nameof(AnalyzersUpdated)] = AnalyzersUpdated;
+
                 if (SinkPullReplicationsUpdated)
                     json[nameof(SinkPullReplicationsUpdated)] = SinkPullReplicationsUpdated;
 
@@ -357,6 +362,9 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (SortersUpdated)
                     sb.AppendLine("- Sorters");
+
+                if (AnalyzersUpdated)
+                    sb.AppendLine("- Analyzers");
 
                 if (SinkPullReplicationsUpdated)
                     sb.AppendLine("- Pull Replication Sinks");
@@ -445,18 +453,18 @@ namespace Raven.Client.Documents.Smuggler
                 return $"{base.ToString()} Attachments: {Attachments}";
             }
         }
-        
+
         public class CountsWithSkippedCountAndLastEtag : CountsWithLastEtagAndAttachments
         {
             public long SkippedCount { get; set; }
-        
+
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
                 json[nameof(SkippedCount)] = SkippedCount;
                 return json;
             }
-        
+
             public override string ToString()
             {
                 return $"Skipped: {SkippedCount}. {base.ToString()}";

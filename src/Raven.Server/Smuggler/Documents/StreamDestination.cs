@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
@@ -277,6 +278,13 @@ namespace Raven.Server.Smuggler.Documents
                     WriteSorters(databaseRecord.Sorters);
                 }
 
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.Analyzers))
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.Analyzers));
+                    WriteAnalyzers(databaseRecord.Analyzers);
+                }
+
                 switch (authorizationStatus)
                 {
                     case AuthorizationStatus.DatabaseAdmin:
@@ -406,6 +414,30 @@ namespace Raven.Server.Smuggler.Documents
 
                 _writer.WriteEndObject();
             }
+
+            private void WriteAnalyzers(Dictionary<string, AnalyzerDefinition> analyzers)
+            {
+                if (analyzers == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+
+                _writer.WriteStartObject();
+                var first = true;
+                foreach (var analyzer in analyzers)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+
+                    _writer.WritePropertyName(analyzer.Key);
+                    _context.Write(_writer, analyzer.Value.ToJson());
+                }
+
+                _writer.WriteEndObject();
+            }
+
 
             private static readonly HashSet<string> DoNotBackUp = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {

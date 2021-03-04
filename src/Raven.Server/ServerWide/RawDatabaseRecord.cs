@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
@@ -646,6 +647,38 @@ namespace Raven.Server.ServerWide
                 }
 
                 return _sorters;
+            }
+        }
+
+        private Dictionary<string, AnalyzerDefinition> _analyzers;
+
+        public Dictionary<string, AnalyzerDefinition> Analyzers
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.Analyzers;
+
+                if (_analyzers == null)
+                {
+                    _analyzers = new Dictionary<string, AnalyzerDefinition>();
+                    if (_record.TryGet(nameof(DatabaseRecord.Analyzers), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject bjro)
+                                _analyzers[propertyDetails.Name] = JsonDeserializationCluster.AnalyzerDefinition(bjro);
+                        }
+                    }
+                }
+
+                return _analyzers;
             }
         }
 

@@ -23,6 +23,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -684,6 +685,19 @@ namespace Raven.Server.Smuggler.Documents
                     }));
 
                     progress.SortersUpdated = true;
+                }
+
+                if (databaseRecord.Analyzers.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Analyzers))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring analyzers configuration from smuggler");
+
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutAnalyzersCommand(_database.Name, RaftIdGenerator.DontCareId)
+                    {
+                        Analyzers = databaseRecord.Analyzers.Values.ToList()
+                    }));
+
+                    progress.AnalyzersUpdated = true;
                 }
 
                 if (databaseRecord.ExternalReplications.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ExternalReplications))
