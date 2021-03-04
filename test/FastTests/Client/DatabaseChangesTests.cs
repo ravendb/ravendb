@@ -1,27 +1,39 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
-    public class DatabaseChangesTests : RavenTestBase
+    public class DatabaseChangesTests : ClusterTestBase
     {
         public DatabaseChangesTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public async Task DatabaseChanges_WhenRetryAfterCreatingDatabase_ShouldSubscribe()
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task DatabaseChanges_WhenRetryAfterCreatingDatabase_ShouldSubscribe(bool disableTopologyUpdates)
         {
             var database = GetDatabaseName();
             var server = GetNewServer();
-            using var store = new DocumentStore {Database = database, Urls = new[] {server.WebUrl}}.Initialize();
+            using var store = new DocumentStore
+            {
+                Database = database, 
+                Urls = new[] {server.WebUrl},
+                Conventions = new DocumentConventions { DisableTopologyUpdates = disableTopologyUpdates }
+            }.Initialize();
+
+            server.ServerStore.EnsureNotPassive();
 
             using (var changes = store.Changes())
             {
@@ -44,10 +56,15 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task DatabaseChanges_WhenTryToReconnectAfterDeletingDatabase_ShouldFailToSubscribe()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task DatabaseChanges_WhenTryToReconnectAfterDeletingDatabase_ShouldFailToSubscribe(bool disableTopologyUpdates)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = documentStore => documentStore.Conventions = new DocumentConventions { DisableTopologyUpdates = disableTopologyUpdates }
+            });
 
             using (var changes = store.Changes())
             {
@@ -69,10 +86,15 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task DatabaseChanges_WhenDeleteDatabaseAfterSubscribe_ShouldSetConnectionStateToDatabaseDoesNotExistException()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task DatabaseChanges_WhenDeleteDatabaseAfterSubscribe_ShouldSetConnectionStateToDatabaseDoesNotExistException(bool disableTopologyUpdates)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = documentStore => documentStore.Conventions = new DocumentConventions { DisableTopologyUpdates = disableTopologyUpdates }
+            });
 
             using (var changes = store.Changes())
             {
@@ -85,10 +107,15 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task DatabaseChanges_WhenDisposeDatabaseChanges_ShouldSetConnectionStateDisposed()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task DatabaseChanges_WhenDisposeDatabaseChanges_ShouldSetConnectionStateDisposed(bool disableTopologyUpdates)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = documentStore => documentStore.Conventions = new DocumentConventions { DisableTopologyUpdates = disableTopologyUpdates }
+            });
 
             using (var changes = store.Changes())
             {
