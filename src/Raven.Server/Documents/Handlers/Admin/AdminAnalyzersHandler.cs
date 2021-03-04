@@ -53,9 +53,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
 
-                NoContentStatus();
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                NoContentStatus(HttpStatusCode.Created);
             }
         }
 

@@ -252,8 +252,7 @@ namespace Raven.Server.Web.Authentication
                     throw new InvalidOperationException($"Failed to put certificate {certificate.Name} in the cluster.", e);
                 }
 
-                NoContentStatus();
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                NoContentStatus(HttpStatusCode.Created);
             }
         }
 
@@ -691,8 +690,7 @@ namespace Raven.Server.Web.Authentication
                     }, GetRaftRequestIdFromQuery()));
                 await ServerStore.Cluster.WaitForIndexNotification(putResult.Index);
 
-                NoContentStatus();
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                NoContentStatus(HttpStatusCode.Created);
             }
         }
 
@@ -1015,8 +1013,7 @@ namespace Raven.Server.Web.Authentication
                     }
                 }
 
-                NoContentStatus();
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                NoContentStatus(HttpStatusCode.Created);
                 return;
             }
 

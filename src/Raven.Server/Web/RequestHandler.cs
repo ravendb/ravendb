@@ -532,17 +532,17 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Query string value '{name}' must appear exactly once");
         }
 
-        protected Task NoContent()
+        protected Task NoContent(HttpStatusCode statusCode = HttpStatusCode.NoContent)
         {
-            NoContentStatus();
+            NoContentStatus(statusCode);
 
             return Task.CompletedTask;
         }
 
-        protected void NoContentStatus()
+        protected void NoContentStatus(HttpStatusCode statusCode = HttpStatusCode.NoContent)
         {
             HttpContext.Response.Headers.Remove("Content-Type");
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            HttpContext.Response.StatusCode = (int)statusCode;
         }
 
         protected bool IsClusterAdmin()

@@ -93,8 +93,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 await UpdateDatabaseRecord(context, (record, _) => record.Settings = settings, GetRaftRequestIdFromQuery());
             }
 
-            NoContentStatus();
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+            NoContentStatus(HttpStatusCode.Created);
         }
 
         [RavenAction("/databases/*/admin/configuration/studio", "PUT", AuthorizationStatus.DatabaseAdmin)]
@@ -113,8 +112,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }, GetRaftRequestIdFromQuery());
             }
 
-            NoContentStatus();
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+            NoContentStatus(HttpStatusCode.Created);
         }
 
         [RavenAction("/databases/*/admin/configuration/client", "PUT", AuthorizationStatus.DatabaseAdmin)]
@@ -134,9 +132,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }, GetRaftRequestIdFromQuery());
             }
 
-            NoContentStatus();
+            NoContentStatus(HttpStatusCode.Created);
             HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
         }
 
         private async Task UpdateDatabaseRecord(TransactionOperationContext context, Action<DatabaseRecord, long> action, string raftRequestId)
