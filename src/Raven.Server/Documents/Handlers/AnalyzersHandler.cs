@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Handlers
     public class AnalyzersHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/analyzers", "GET", AuthorizationStatus.ValidUser)]
-        public Task Get()
+        public async Task Get()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers
                     analyzers = new Dictionary<string, AnalyzerDefinition>();
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
@@ -47,8 +47,6 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
     }
 }

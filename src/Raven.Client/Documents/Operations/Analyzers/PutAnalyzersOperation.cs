@@ -57,9 +57,9 @@ namespace Raven.Client.Documents.Operations.Analyzers
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
                     {
-                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                         {
                             writer.WriteStartObject();
                             writer.WriteArray("Analyzers", _analyzersToAdd);
