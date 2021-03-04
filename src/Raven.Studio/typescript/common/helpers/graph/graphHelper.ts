@@ -105,23 +105,32 @@ class graphHelper {
         return config;
     }
     
-    static drawErrorMark(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number) {
-        const markWidth = 8;
+    static drawErrorMark(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number, dy: number = 8) {
+        const markWidth = dy;
         if (dx > markWidth) {
             // draw full triangle
             ctx.beginPath();
-            ctx.moveTo(x+ dx, y);
+            ctx.moveTo(x + dx, y);
             ctx.lineTo(x + dx - markWidth, y);
             ctx.lineTo(x + dx, y + markWidth);
             ctx.fill();
         } else if (dx > 1) {
             ctx.beginPath();
-            ctx.moveTo(x+ dx, y);
+            ctx.moveTo(x + dx, y);
             ctx.lineTo(x, y);
             ctx.lineTo(x, y + markWidth - dx);
             ctx.lineTo(x + dx, y + markWidth);
             ctx.fill();
         }
+    }
+    
+    static drawPendingArea(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number) {
+        ctx.setLineDash([8, 2]);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + dx, y);
+        ctx.stroke();
     }
     
     static drawScroll(ctx: CanvasRenderingContext2D, scrollLocation: { left: number, top: number }, topScrollOffset: number, visibleHeight: number, 

@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Subscriptions.Stats
         
         private SubscriptionConnectionPerformanceStats CreateConnectionPerformanceStats(bool completed) 
         {
-            return new SubscriptionConnectionPerformanceStats()
+            return new SubscriptionConnectionPerformanceStats(Scope.Duration)
             {
                 Started = StartTime,
                 Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
@@ -49,8 +49,11 @@ namespace Raven.Server.Documents.Subscriptions.Stats
                 BatchCount = Stats.BatchCount,
 
                 ClientUri = Stats.ClientUri,
-                Script = Stats.Script,
-                Exception = Stats.Exception
+                ConnectedAt = Stats.ConnectedAt,
+                
+                Exception = Stats.Exception,
+                
+                Details = Scope.ToPerformanceOperation("Connection")
             };
         }
         

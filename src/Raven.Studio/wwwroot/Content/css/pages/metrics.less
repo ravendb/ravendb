@@ -114,19 +114,15 @@ rect.pane {
             .networkTombstoneRead {
                 color: @color-3-2;
             }
-
             .storageTombstoneRead {
                 color: @color-3-2;
-            }
-            
+            }            
             .storageCounterRead {
                 color: @color-3-1;
             }
-            
             .storageTimeSeriesRead {
                 color: @color-5-2;
-            }
-            
+            }            
             .etl {
                 color: @color-4;
             }
@@ -138,6 +134,27 @@ rect.pane {
             }
             .load {
                 color: @color-2-2;
+            }
+            .pendingConnection {
+                color: darken(@color-1-1, 5%);
+            }
+            .actualConnection {
+                color: @color-1-1;
+            }
+            .batch {
+                color: @color-3;
+            }            
+            .sendDocuments {
+                color: @color-2-1;
+            }
+            .ack {
+                color: @color-3-3;
+            }
+            .connectionFailure {
+                color: lighten(darkred, 5%);
+            }
+            .aggregatedBatchesInfo {
+                color: @color-4-3;
             }
         }
     }   

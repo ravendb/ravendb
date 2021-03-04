@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+
 namespace Raven.Server.Documents.Subscriptions.Stats
 {
     public class SubscriptionConnectionRunStats
@@ -12,7 +14,8 @@ namespace Raven.Server.Documents.Subscriptions.Stats
         public string TaskName { get; set; }
         
         public string ClientUri { get; set; }
-        public string Script { get; set; }
+        public DateTime ConnectedAt { get; set; }
+
         public string Exception { get; set; }
         public long BatchCount { get; set; }
     }

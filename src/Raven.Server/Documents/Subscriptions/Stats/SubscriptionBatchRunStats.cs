@@ -4,8 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
-
 namespace Raven.Server.Documents.Subscriptions.Stats
 {
     public class SubscriptionBatchRunStats
@@ -24,9 +22,6 @@ namespace Raven.Server.Documents.Subscriptions.Stats
                 
         public long NumberOfIncludedCounters { get; set; }
         public long NumberOfIncludedTimeSeriesEntries { get; set; }
-        
-        public DateTime? StartWaitingForClientAck  { get; set; }
-        public DateTime? ClientAckTime { get; set; }
         
         public string Exception { get; set; }
     }

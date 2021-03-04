@@ -1,6 +1,5 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import database = require("models/resources/database");
 
 class etlScriptDefinitionPreview extends dialogViewModelBase {
     

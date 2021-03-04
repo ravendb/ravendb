@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Subscriptions.Stats
         
         private SubscriptionBatchPerformanceStats CreateBatchPerformanceStats(bool completed) 
         {
-            return new SubscriptionBatchPerformanceStats()
+            return new SubscriptionBatchPerformanceStats(Scope.Duration)
             {
                 Started = StartTime,
                 Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
@@ -57,10 +57,9 @@ namespace Raven.Server.Documents.Subscriptions.Stats
                 NumberOfIncludedCounters = Stats.NumberOfIncludedCounters,
                 NumberOfIncludedTimeSeriesEntries = Stats.NumberOfIncludedTimeSeriesEntries,
                 
-                StartWaitingForClientAck = Stats.StartWaitingForClientAck,
-                ClientAckTime = Stats.ClientAckTime,
+                Exception = Stats.Exception,
                 
-                Exception = Stats.Exception
+                Details = Scope.ToPerformanceOperation("Batch")
             };
         }
         

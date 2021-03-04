@@ -4,7 +4,6 @@ import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTa
 import app = require("durandal/app");
 import etlScriptDefinitionPreview = require("viewmodels/database/status/etlScriptDefinitionPreview");
 
-
 class etlScriptDefinitionCache {
     private readonly taskInfoCache = new Map<number, etlScriptDefinitionCacheItem>();
     private readonly db: database;

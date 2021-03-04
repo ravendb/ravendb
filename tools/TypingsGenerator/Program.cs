@@ -399,6 +399,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SubscriptionCreationOptions));
             scripter.AddType(typeof(Constants.Documents.SubscriptionChangeVectorSpecialStates));
             scripter.AddType(typeof(SubscriptionOpeningStrategy));
+            scripter.AddType(typeof(SubscriptionTaskPerformanceStats));
 
             // ongoing tasks - ravenDB ETL
             scripter.AddType(typeof(EtlTaskProgress));

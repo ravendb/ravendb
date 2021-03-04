@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Linq;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Utils.Stats;
 
@@ -27,8 +29,12 @@ namespace Raven.Server.Documents.Subscriptions.Stats
         {
             _stats.TaskId = subscriptionState.SubscriptionId;
             _stats.TaskName = subscriptionState.SubscriptionName;
-            _stats.Script = subscriptionState.Query;
             _stats.ClientUri = clientUri;
+        }
+        
+        public void RecordConnectedAt(DateTime connectedAtTime)
+        {
+            _stats.ConnectedAt = connectedAtTime;
         }
         
         public void RecordException(string exception)
@@ -39,6 +45,23 @@ namespace Raven.Server.Documents.Subscriptions.Stats
         public void RecordBatchCompleted()
         {
             _stats.BatchCount++;
+        }
+        
+        public SubscriptionConnectionPerformanceOperation ToPerformanceOperation(string name)
+        {
+            var operation = new SubscriptionConnectionPerformanceOperation(Duration)
+            {
+                Name = name
+            };
+
+            if (Scopes != null)
+            {
+                operation.Operations = Scopes
+                    .Select(x => x.Value.ToPerformanceOperation(x.Key))
+                    .ToArray();
+            }
+
+            return operation;
         }
     }
 }
