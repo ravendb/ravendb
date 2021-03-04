@@ -93,8 +93,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Could not load additional assembly from '{path}'.", e);
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Could not load additional assembly from '{path}'.", e);
                 }
             }
 
