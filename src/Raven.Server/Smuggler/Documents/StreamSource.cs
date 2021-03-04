@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
@@ -284,13 +285,40 @@ namespace Raven.Server.Smuggler.Documents
                                 continue;
                             }
 
-                            databaseRecord.Sorters[sorterName] = JsonDeserializationCluster.Sorters(sorter);
+                            databaseRecord.Sorters[sorterName] = JsonDeserializationCluster.SorterDefinition(sorter);
                         }
                     }
                     catch (Exception e)
                     {
                         if (_log.IsInfoEnabled)
                             _log.Info("Wasn't able to import the sorters configuration from smuggler file. Skipping.", e);
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.Analyzers), out BlittableJsonReaderObject analyzers) &&
+                    analyzers != null)
+                {
+                    databaseRecord.Analyzers = new Dictionary<string, AnalyzerDefinition>();
+
+                    try
+                    {
+                        foreach (var analyzerName in analyzers.GetPropertyNames())
+                        {
+                            if (analyzers.TryGet(analyzerName, out BlittableJsonReaderObject analyzer) == false)
+                            {
+                                if (_log.IsInfoEnabled)
+                                    _log.Info($"Wasn't able to import the analyzer {analyzerName} from smuggler file. Skipping.");
+
+                                continue;
+                            }
+
+                            databaseRecord.Analyzers[analyzerName] = JsonDeserializationCluster.AnalyzerDefinition(analyzer);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the analyzers configuration from smuggler file. Skipping.", e);
                     }
                 }
 

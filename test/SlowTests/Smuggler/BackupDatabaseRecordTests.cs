@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
@@ -21,7 +22,6 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Config;
 using Raven.Server.Smuggler.Migration;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
@@ -57,7 +57,6 @@ namespace SlowTests.Smuggler
                     {
                         record.ConflictSolverConfig = new ConflictSolver
                         {
-
                             ResolveToLatest = false,
                             ResolveByCollection = new Dictionary<string, ScriptResolver>
                                 {
@@ -68,19 +67,28 @@ namespace SlowTests.Smuggler
                                         }
                                     }
                                 }
-                    };
+                        };
                         record.Sorters = new Dictionary<string, SorterDefinition>
                         {
                             {
                                 "MySorter", new SorterDefinition
                                 {
                                     Name = "MySorter",
-                                    Code = GetSorter("RavenDB_8355.MySorter.cs")
+                                    Code = GetCode("RavenDB_8355.MySorter.cs")
+                                }
+                            }
+                        };
+                        record.Analyzers = new Dictionary<string, AnalyzerDefinition>
+                        {
+                            {
+                                "MyAnalyzer", new AnalyzerDefinition
+                                {
+                                    Name = "MyAnalyzer",
+                                    Code = GetCode("RavenDB_14939.MyAnalyzer.cs")
                                 }
                             }
                         };
                     }
-
                 }))
                 using (var store2 = GetDocumentStore(new Options
                 {
@@ -201,6 +209,11 @@ namespace SlowTests.Smuggler
                     Assert.Equal("MySorter", sd.Name);
                     Assert.NotEmpty(sd.Code);
 
+                    Assert.Equal(1, record.Analyzers.Count);
+                    Assert.Equal(true, record.Analyzers.TryGetValue("MyAnalyzer", out AnalyzerDefinition ad));
+                    Assert.Equal("MyAnalyzer", ad.Name);
+                    Assert.NotEmpty(ad.Code);
+
                     Assert.Equal(1, record.ExternalReplications.Count);
                     Assert.Equal("tempDatabase", record.ExternalReplications[0].Database);
                     Assert.Equal(true, record.ExternalReplications[0].Disabled);
@@ -259,7 +272,6 @@ namespace SlowTests.Smuggler
                     {
                         record.ConflictSolverConfig = new ConflictSolver
                         {
-
                             ResolveToLatest = false,
                             ResolveByCollection = new Dictionary<string, ScriptResolver>
                                 {
@@ -277,12 +289,21 @@ namespace SlowTests.Smuggler
                                 "MySorter", new SorterDefinition
                                 {
                                     Name = "MySorter",
-                                    Code = GetSorter("RavenDB_8355.MySorter.cs")
+                                    Code = GetCode("RavenDB_8355.MySorter.cs")
+                                }
+                            }
+                        };
+                        record.Analyzers = new Dictionary<string, AnalyzerDefinition>
+                        {
+                            {
+                                "MyAnalyzer", new AnalyzerDefinition
+                                {
+                                    Name = "MyAnalyzer",
+                                    Code = GetCode("RavenDB_14939.MyAnalyzer.cs")
                                 }
                             }
                         };
                     }
-
                 }))
                 using (var store2 = GetDocumentStore(new Options
                 {
@@ -376,7 +397,8 @@ namespace SlowTests.Smuggler
                                                                DatabaseRecordItemType.RavenEtls |
                                                                DatabaseRecordItemType.SqlConnectionStrings |
                                                                DatabaseRecordItemType.SqlEtls |
-                                                               DatabaseRecordItemType.RavenConnectionStrings
+                                                               DatabaseRecordItemType.RavenConnectionStrings |
+                                                               DatabaseRecordItemType.Analyzers
                             }
                         }
                     }, Server.ServerStore);
@@ -385,7 +407,7 @@ namespace SlowTests.Smuggler
                     {
                         DatabaseName = store1.Database,
                         OperateOnTypes = DatabaseItemType.DatabaseRecord,
-                        OperateOnDatabaseRecordTypes = DatabaseRecordItemType.Expiration | 
+                        OperateOnDatabaseRecordTypes = DatabaseRecordItemType.Expiration |
                                                        DatabaseRecordItemType.ConflictSolverConfig |
                                                        DatabaseRecordItemType.Client |
                                                        DatabaseRecordItemType.ExternalReplications |
@@ -395,7 +417,8 @@ namespace SlowTests.Smuggler
                                                        DatabaseRecordItemType.RavenEtls |
                                                        DatabaseRecordItemType.SqlConnectionStrings |
                                                        DatabaseRecordItemType.SqlEtls |
-                                                       DatabaseRecordItemType.RavenConnectionStrings 
+                                                       DatabaseRecordItemType.RavenConnectionStrings |
+                                                       DatabaseRecordItemType.Analyzers
                     }, GetDocumentDatabaseInstanceFor(store2).Result);
 
                     WaitForValue(() =>
@@ -418,6 +441,11 @@ namespace SlowTests.Smuggler
                     Assert.Equal(true, record.Sorters.TryGetValue("MySorter", out SorterDefinition sd));
                     Assert.Equal("MySorter", sd.Name);
                     Assert.NotEmpty(sd.Code);
+
+                    Assert.Equal(1, record.Analyzers.Count);
+                    Assert.Equal(true, record.Analyzers.TryGetValue("MyAnalyzer", out AnalyzerDefinition ad));
+                    Assert.Equal("MyAnalyzer", ad.Name);
+                    Assert.NotEmpty(ad.Code);
 
                     Assert.Equal(1, record.ExternalReplications.Count);
                     Assert.Equal("tempDatabase", record.ExternalReplications[0].Database);
@@ -543,10 +571,8 @@ namespace SlowTests.Smuggler
                                     PurgeOnDelete = false,
                                     MinimumRevisionsToKeep = 20
                                 }
-
                             }
                         }
-
                     };
                     var revisionConfig2 = new RevisionsConfiguration
                     {
@@ -570,10 +596,8 @@ namespace SlowTests.Smuggler
                                     PurgeOnDelete = false,
                                     MinimumRevisionsToKeep = 20
                                 }
-
                             }
                         }
-
                     };
                     await store1.Maintenance.SendAsync(new ConfigureRevisionsOperation(revisionConfig));
                     await store2.Maintenance.SendAsync(new ConfigureRevisionsOperation(revisionConfig2));
@@ -790,7 +814,7 @@ namespace SlowTests.Smuggler
                     Assert.NotNull(putResult3.RaftCommandIndex);
                     Assert.NotNull(putResult4.RaftCommandIndex);
 
-                    var sqlEtl =new SqlEtlConfiguration
+                    var sqlEtl = new SqlEtlConfiguration
                     {
                         ConnectionStringName = "scon1",
                         Name = "setl1",
@@ -920,14 +944,13 @@ namespace SlowTests.Smuggler
                     {
                         if (backup.Configuration.Disabled)
                             disabled++;
-                        if (!backup.Configuration.Name.Equals("Backup")) continue;
+                        if (!backup.Configuration.Name.Equals("Backup"))
+                            continue;
                         Assert.Equal(true, backup.Configuration.IncrementalBackupFrequency.Equals("0 6 * * *"));
                         Assert.Equal(true, backup.Configuration.FullBackupFrequency.Equals("0 1 * * *"));
                         Assert.Equal(BackupType.Backup, backup.Configuration.BackupType);
                     }
                     Assert.Equal(2, disabled);
-
-                    
 
                     var record = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store2.Database));
 
@@ -1038,7 +1061,6 @@ namespace SlowTests.Smuggler
             {
                 using (var store = GetDocumentStore(new Options
                 {
-                    
                     ModifyDatabaseName = s => $"{s}_1",
 
                     ModifyDatabaseRecord = record =>
@@ -1062,7 +1084,7 @@ namespace SlowTests.Smuggler
                                 "MySorter", new SorterDefinition
                                 {
                                     Name = "MySorter",
-                                    Code = GetSorter("RavenDB_8355.MySorter.cs")
+                                    Code = GetCode("RavenDB_8355.MySorter.cs")
                                 }
                             }
                         };
@@ -1174,7 +1196,7 @@ namespace SlowTests.Smuggler
                     var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                     await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
                     var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                    
+
                     var value = WaitForValue(() =>
                     {
                         var getPeriodicBackupResult = store.Maintenance.Send(operation);
@@ -1363,27 +1385,31 @@ namespace SlowTests.Smuggler
                 // etl
                 store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
-                    Name = store.Database, TopologyDiscoveryUrls = new[] {"http://127.0.0.1:8080"}, Database = "Northwind",
+                    Name = store.Database,
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                    Database = "Northwind",
                 }));
 
                 var etlConfiguration = new RavenEtlConfiguration
                 {
                     ConnectionStringName = store.Database,
-                    Transforms = {new Transformation() {Name = "loadAll", Collections = {"Users"}, Script = "loadToUsers(this)"}}
+                    Transforms = { new Transformation() { Name = "loadAll", Collections = { "Users" }, Script = "loadToUsers(this)" } }
                 };
                 await store.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
 
                 // external replication
                 var connectionString = new RavenConnectionString
                 {
-                    Name = store.Database, Database = store.Database, TopologyDiscoveryUrls = new[] {"http://127.0.0.1:12345"}
+                    Name = store.Database,
+                    Database = store.Database,
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:12345" }
                 };
 
                 await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(store.Database, store.Database)));
 
                 // pull replication sink
-                var sink = new PullReplicationAsSink {HubName = "aa", ConnectionString = connectionString, ConnectionStringName = connectionString.Name};
+                var sink = new PullReplicationAsSink { HubName = "aa", ConnectionString = connectionString, ConnectionStringName = connectionString.Name };
                 await store.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink));
 
                 // pull replication hub
@@ -1392,7 +1418,9 @@ namespace SlowTests.Smuggler
                 // backup
                 var config = new PeriodicBackupConfiguration
                 {
-                    BackupType = BackupType.Backup, LocalSettings = new LocalSettings {FolderPath = backupPath}, IncrementalBackupFrequency = "* * * * *"
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings { FolderPath = backupPath },
+                    IncrementalBackupFrequency = "* * * * *"
                 };
 
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
@@ -1507,7 +1535,7 @@ namespace SlowTests.Smuggler
             return assembly.GetManifestResourceStream("SlowTests.Data." + name);
         }
 
-        private static string GetSorter(string name)
+        private static string GetCode(string name)
         {
             using (var stream = GetDump(name))
             using (var reader = new StreamReader(stream))
