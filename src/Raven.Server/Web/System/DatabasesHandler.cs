@@ -135,6 +135,7 @@ namespace Raven.Server.Web.System
                             ["Type"] = "Error", 
                             ["Message"] = "Database " + name + " was deleted"
                         });
+                        return Task.CompletedTask;
                     }
 
                     clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
