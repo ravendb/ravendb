@@ -89,76 +89,80 @@ namespace Raven.Server.Web.System
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
             {
                 var dbId = Constants.Documents.Prefix + name;
-                using var dbBlit = ServerStore.Cluster.Read(context, dbId, out long _);
-
-                if (TryGetAllowedDbs(name, out var _, requireAdmin: false) == false)
-                    return Task.CompletedTask;
-
-                if (dbBlit == null)
+                using (context.OpenReadTransaction())
+                using (var dbBlit = ServerStore.Cluster.Read(context, dbId, out long _))
                 {
-                    // here we return 503 so clients will try to failover to another server
-                    // if this is a newly created db that we haven't been notified about it yet
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
-                    HttpContext.Response.Headers["Database-Missing"] = name;
-                    using var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
-                    context.Write(writer, new DynamicJsonValue
+                    if (TryGetAllowedDbs(name, out var _, requireAdmin: false) == false)
+                        return Task.CompletedTask;
+
+                    if (dbBlit == null)
+                    {
+                        // here we return 503 so clients will try to failover to another server
+                        // if this is a newly created db that we haven't been notified about it yet
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                        HttpContext.Response.Headers["Database-Missing"] = name;
+                        using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
                         {
-                            ["Type"] = "Error",
-                            ["Message"] = "Database " + name + " wasn't found"
-                        });
-                    return Task.CompletedTask;
-                }
+                            context.Write(writer,
+                                new DynamicJsonValue
+                                {
+                                    ["Type"] = "Error",
+                                    ["Message"] = "Database " + name + " wasn't found"
+                                });
+                        }
+                        return Task.CompletedTask;
+                    }
 
-                var clusterTopology = ServerStore.GetClusterTopology(context);
-                if (ServerStore.IsPassive() && clusterTopology.TopologyId != null)
-                {
-                    // we were kicked-out from the cluster
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
-                    return Task.CompletedTask;
-                }
+                    var clusterTopology = ServerStore.GetClusterTopology(context);
+                    if (ServerStore.IsPassive() && clusterTopology.TopologyId != null)
+                    {
+                        // we were kicked-out from the cluster
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                        return Task.CompletedTask;
+                    }
 
-                var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbBlit);
-                if (dbRecord.Topology.Members.Count == 0 && dbRecord.Topology.Rehabs.Count == 0 && dbRecord.DeletionInProgress.Any())
-                {
-                    // The database at deletion progress from all nodes
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
-                    HttpContext.Response.Headers["Database-Missing"] = name;
-                    using var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
-                    context.Write(writer, new DynamicJsonValue
+                    var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbBlit);
+                    if (dbRecord.Topology.Members.Count == 0 && dbRecord.Topology.Rehabs.Count == 0 && dbRecord.DeletionInProgress.Any())
+                    {
+                        // The database at deletion progress from all nodes
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                        HttpContext.Response.Headers["Database-Missing"] = name;
+                        using var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
+                        context.Write(writer, new DynamicJsonValue
                         {
-                            ["Type"] = "Error",
+                            ["Type"] = "Error", 
                             ["Message"] = "Database " + name + " was deleted"
                         });
-                }
+                    }
 
-                clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
+                    clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        [nameof(Topology.Nodes)] = new DynamicJsonArray(
-                            dbRecord.Topology.Members.Select(x => new DynamicJsonValue
-                            {
-                                [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
-                                [nameof(ServerNode.ClusterTag)] = x,
-                                [nameof(ServerNode.ServerRole)] = ServerNode.Role.Member,
-                                [nameof(ServerNode.Database)] = dbRecord.DatabaseName
-                            })
-                            .Concat(dbRecord.Topology.Rehabs.Select(x => new DynamicJsonValue
-                            {
-                                [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
-                                [nameof(ServerNode.ClusterTag)] = x,
-                                [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
-                                [nameof(ServerNode.ServerRole)] = ServerNode.Role.Rehab
-                            })
-                            )
-                        ),
-                        [nameof(Topology.Etag)] = dbRecord.Topology.Stamp?.Index ?? -1
-                    });
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(Topology.Nodes)] = new DynamicJsonArray(
+                                dbRecord.Topology.Members.Select(x => new DynamicJsonValue
+                                {
+                                    [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
+                                    [nameof(ServerNode.ClusterTag)] = x,
+                                    [nameof(ServerNode.ServerRole)] = ServerNode.Role.Member,
+                                    [nameof(ServerNode.Database)] = dbRecord.DatabaseName
+                                })
+                                .Concat(dbRecord.Topology.Rehabs.Select(x => new DynamicJsonValue
+                                {
+                                    [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
+                                    [nameof(ServerNode.ClusterTag)] = x,
+                                    [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
+                                    [nameof(ServerNode.ServerRole)] = ServerNode.Role.Rehab
+                                })
+                                )
+                            ),
+                            [nameof(Topology.Etag)] = dbRecord.Topology.Stamp?.Index ?? -1
+                        });
+                    }
                 }
             }
             return Task.CompletedTask;
