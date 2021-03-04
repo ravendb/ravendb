@@ -349,8 +349,8 @@ namespace Raven.Server.Documents.Replication
             }
             catch (Exception e)
             {
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Connection from [{connectionInfo}] is rejected.", e);
+                if (_log.IsOperationsEnabled)
+                    _log.Operations($"Connection from [{connectionInfo}] is rejected.", e);
 
                 var incomingConnectionRejectionInfos = _incomingRejectionStats.GetOrAdd(connectionInfo,
                     _ => new ConcurrentQueue<IncomingConnectionRejectionInfo>());
