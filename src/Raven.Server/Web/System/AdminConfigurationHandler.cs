@@ -66,9 +66,7 @@ namespace Raven.Server.Web.System
                 var res = await ServerStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(studioConfiguration, GetRaftRequestIdFromQuery()));
                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
-                NoContentStatus();
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                NoContentStatus(HttpStatusCode.Created);
             }
         }
 
@@ -107,9 +105,7 @@ namespace Raven.Server.Web.System
                 var res = await ServerStore.PutValueInClusterAsync(new PutClientConfigurationCommand(clientConfiguration, GetRaftRequestIdFromQuery()));
                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
-                NoContentStatus();
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                NoContentStatus(HttpStatusCode.Created);
             }
         }
 
