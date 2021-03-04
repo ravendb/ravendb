@@ -294,11 +294,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Throttling.TimeIntervalInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting? ThrottlingTimeInterval { get; protected set; }
 
-        public Type DefaultAnalyzerType { get; private set; }
+        public Lazy<Type> DefaultAnalyzerType { get; private set; }
 
-        public Type DefaultExactAnalyzerType { get; private set; }
+        public Lazy<Type> DefaultExactAnalyzerType { get; private set; }
 
-        public Type DefaultSearchAnalyzerType { get; private set; }
+        public Lazy<Type> DefaultSearchAnalyzerType { get; private set; }
 
         protected override void ValidateProperty(PropertyInfo property)
         {
@@ -318,9 +318,9 @@ namespace Raven.Server.Config.Categories
 
         public void InitializeAnalyzers(string resourceName)
         {
-            DefaultAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultAnalyzer, resourceName);
-            DefaultExactAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultExactAnalyzer, resourceName);
-            DefaultSearchAnalyzerType = IndexingExtensions.GetAnalyzerType("@default", DefaultSearchAnalyzer, resourceName);
+            DefaultAnalyzerType = new Lazy<Type>(() => IndexingExtensions.GetAnalyzerType("@default", DefaultAnalyzer, resourceName));
+            DefaultExactAnalyzerType = new Lazy<Type>(() => IndexingExtensions.GetAnalyzerType("@default", DefaultExactAnalyzer, resourceName));
+            DefaultSearchAnalyzerType = new Lazy<Type>(() => IndexingExtensions.GetAnalyzerType("@default", DefaultSearchAnalyzer, resourceName));
         }
 
         public enum IndexStartupBehavior
