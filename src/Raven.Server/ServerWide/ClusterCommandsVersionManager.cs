@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -123,8 +124,8 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteServerWideTaskCommand)] = 51_000,
             [nameof(ToggleServerWideTaskStateCommand)] = 51_000,
 
-            [nameof(PutSortersCommand)] = 52_000,
-            [nameof(DeleteSorterCommand)] = 52_000,
+            [nameof(PutAnalyzersCommand)] = 52_000,
+            [nameof(DeleteAnalyzerCommand)] = 52_000,
         };
 
         public static bool CanPutCommand(string command)
