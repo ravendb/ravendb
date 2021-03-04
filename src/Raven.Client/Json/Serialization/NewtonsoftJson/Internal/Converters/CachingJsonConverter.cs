@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
-    internal class CachingJsonConverter : JsonConverter
+    internal sealed class CachingJsonConverter : JsonConverter
     {
         private readonly JsonConverter[] _converters;
         private Dictionary<Type, JsonConverter> _cache = new Dictionary<Type, JsonConverter>();

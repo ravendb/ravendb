@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Text;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Server.Json.Sync;
 using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,7 +26,7 @@ namespace FastTests.Voron.Optimizations
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 {
                     var tx1 = context.OpenWriteTransaction();
-                    var b = context.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes("{}")), "adi");
+                    var b = context.Sync.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes("{}")), "adi");
 
                     database.DocumentsStorage.Put(context, "1", null, b);
                     database.DocumentsStorage.Put(context, "2", null, b);
@@ -54,7 +55,7 @@ namespace FastTests.Voron.Optimizations
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 {
                     var tx1 = context.OpenWriteTransaction();
-                    var b = context.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes("{}")), "adi2");
+                    var b = context.Sync.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes("{}")), "adi2");
 
                     database.DocumentsStorage.Put(context, "1", null, b);
                     database.DocumentsStorage.Put(context, "2", null, b);

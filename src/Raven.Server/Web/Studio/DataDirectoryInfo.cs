@@ -69,7 +69,7 @@ namespace Raven.Server.Web.Studio
             {
                 // write info of a single node
                 using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                using (var writer = new BlittableJsonTextWriter(context, _responseBodyStream))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, _responseBodyStream))
                 {
                     context.Write(writer, currentNodeDirectoryInfo.ToJson());
                 }
@@ -89,7 +89,7 @@ namespace Raven.Server.Web.Studio
             }
 
             using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, _responseBodyStream))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, _responseBodyStream))
             {
                 context.Write(writer, dataDirectoryResult.ToJson());
             }
@@ -218,7 +218,6 @@ namespace Raven.Server.Web.Studio
             private readonly string _path;
             private readonly string _name;
             private readonly bool _isBackup;
-
 
             public GetDataDirectoryInfoCommand(string path, string name, bool isBackup)
             {

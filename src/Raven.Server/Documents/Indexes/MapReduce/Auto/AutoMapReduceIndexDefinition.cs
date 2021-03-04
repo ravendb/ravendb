@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes.Auto;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return GroupByFields.TryGetValue(field, out value);
         }
 
-        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             PersistMapFields(context, writer);
 
@@ -67,6 +68,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 Type = IndexType.AutoMapReduce,
                 LockMode = LockMode,
                 Priority = Priority,
+                State = State,
             };
 
             var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => x.Value.As<AutoIndexField>()).Select(x => $"<Name:{x.Name}#Operation:{x.Aggregation}>"))}]";
@@ -80,7 +82,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return indexDefinition;
         }
 
-        protected void PersistGroupByFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected void PersistGroupByFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             writer.WritePropertyName((nameof(GroupByFields)));
             writer.WriteStartArray();
@@ -159,7 +161,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 {
                     if (stream == null)
                         return null;
-                    using (var reader = context.ReadForDisk(stream, string.Empty))
+                    using (var reader = context.Sync.ReadForDisk(stream, string.Empty))
                     {
                         return LoadFromJson(reader);
                     }
@@ -171,6 +173,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             var lockMode = ReadLockMode(reader);
             var priority = ReadPriority(reader);
+            var state = ReadState(reader);
             var version = ReadVersion(reader);
 
             if (reader.TryGet(nameof(Collections), out BlittableJsonReaderArray jsonArray) == false)
@@ -228,7 +231,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields, version)
             {
                 LockMode = lockMode,
-                Priority = priority
+                Priority = priority,
+                State = state
             };
         }
     }

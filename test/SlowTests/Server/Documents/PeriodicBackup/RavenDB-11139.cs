@@ -18,6 +18,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -1739,7 +1740,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         stream.Position = 0;
 
                         using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                        using (var bjro = ctx.ReadForMemory(stream, "test"))
+                        using (var bjro = ctx.Sync.ReadForMemory(stream, "test"))
                         {
                             Assert.True(bjro.TryGet(nameof(DatabaseItemType.CompareExchange), out BlittableJsonReaderArray uniqueValues));
                             Assert.True(bjro.TryGet(nameof(DatabaseItemType.CompareExchangeTombstones), out BlittableJsonReaderArray tombstones));

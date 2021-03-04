@@ -45,10 +45,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
                     {
                         var config = ctx.ReadObject(_configuration.ToJson(), "convert time-series policy");
-                        ctx.Write(stream, config);
+                        await ctx.WriteAsync(stream, config).ConfigureAwait(false);
                     })
                 };
 

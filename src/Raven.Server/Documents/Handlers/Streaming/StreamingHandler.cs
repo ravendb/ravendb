@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
     public class StreamingHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/streams/docs", "GET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
-        public Task StreamDocsGet()
+        public async Task StreamDocsGet()
         {
             var start = GetStart();
             var pageSize = GetPageSize();
@@ -64,21 +64,18 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     },
                     initialState);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
 
-                    writer.WriteDocuments(context, documentsEnumerator, metadataOnly: false, numberOfResults: out long _);
+                    writer.WriteDocuments(context, documentsEnumerator, metadataOnly: false, out _);
 
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
-        
         [RavenAction("/databases/*/streams/timeseries", "GET", AuthorizationStatus.ValidUser)]
         public async Task Stream()
         {
@@ -88,8 +85,8 @@ namespace Raven.Server.Documents.Handlers.Streaming
             var toStr = GetStringQueryString("to", required: false);
             var offset = GetTimeSpanQueryString("offset", required: false);
 
-            var from = string.IsNullOrEmpty(fromStr) 
-                ? DateTime.MinValue 
+            var from = string.IsNullOrEmpty(fromStr)
+                ? DateTime.MinValue
                 : TimeSeriesHandler.ParseDate(fromStr, name);
 
             var to = string.IsNullOrEmpty(toStr)
@@ -101,7 +98,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
             {
                 var reader = new TimeSeriesReader(context, documentId, name, from, to, offset);
 
-                using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
@@ -110,12 +107,12 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     {
                         context.Write(writer, entry.ToTimeSeriesEntryJson());
                         writer.WriteComma();
-                        await writer.MaybeOuterFlushAsync();
+                        await writer.MaybeFlushAsync(Database.DatabaseShutdown);
                     }
                     writer.WriteEndArray();
                     writer.WriteEndObject();
 
-                    await writer.MaybeOuterFlushAsync();
+                    await writer.MaybeFlushAsync(Database.DatabaseShutdown);
                 }
             }
         }
@@ -152,7 +149,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                         }
                     }
                 }
-                var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), queryContext.Documents, tracker, overrideQuery);
+                var query = await IndexQueryServerSide.CreateAsync(HttpContext, GetStart(), GetPageSize(), queryContext.Documents, tracker, overrideQuery);
                 query.IsStream = true;
 
                 var format = GetStringQueryString("format", false);
@@ -166,7 +163,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 {
                     if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
                     {
-                        using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                        await using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                         {
                             try
                             {
@@ -186,7 +183,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 }
                 else
                 {
-                    using (var writer = GetQueryResultWriter(format, HttpContext.Response, queryContext.Documents, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                    await using (var writer = GetQueryResultWriter(format, HttpContext.Response, queryContext.Documents, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                     {
                         try
                         {
@@ -254,7 +251,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 {
                     if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
                     {
-                        using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                        await using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                         {
                             try
                             {
@@ -274,7 +271,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 }
                 else
                 {
-                    using (var writer = GetQueryResultWriter(format, HttpContext.Response, queryContext.Documents, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                    await using (var writer = GetQueryResultWriter(format, HttpContext.Response, queryContext.Documents, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                     {
                         try
                         {
@@ -312,7 +309,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 ThrowUnsupportedException("Using json output format with custom fields is not supported.");
             }
 
-            return new StreamJsonDocumentQueryResultWriter(response, responseBodyStream, context);
+            return new StreamJsonDocumentQueryResultWriter(responseBodyStream, context);
         }
 
         private void ThrowUnsupportedException(string message)

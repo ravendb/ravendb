@@ -41,11 +41,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(stream =>
-                    {
-                        var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_connectionString, ctx);
-                        ctx.Write(stream, config);
-                    })
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_connectionString, ctx)).ConfigureAwait(false))
                 };
 
                 return request;

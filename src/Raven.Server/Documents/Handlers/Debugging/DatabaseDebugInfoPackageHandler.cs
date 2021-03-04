@@ -18,12 +18,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/info-package", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public async Task GetInfoPackage()
         {
-           
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Database [{Database.Name}].zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
@@ -36,7 +35,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         Debug.Assert(feature != null);
                         var routes = DebugInfoPackageUtils.GetAuthorizedRoutes(feature, Database.Name)
                             .Where(x => x.TypeOfRoute == RouteInformation.RouteType.Databases);
-                        
+
                         foreach (RouteInformation route in routes)
                         {
                             var entryName = DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, null);
@@ -45,20 +44,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 var entry = archive.CreateEntry(entryName);
                                 entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                                using (var entryStream = entry.Open())
-                                using (var writer = new BlittableJsonTextWriter(context, entryStream))
+                                await using (var entryStream = entry.Open())
+                                await using (var writer = new AsyncBlittableJsonTextWriter(context, entryStream))
                                 {
                                     using (var endpointOutput = await localEndpointClient.InvokeAndReadObjectAsync(route, context, endpointParameters))
                                     {
                                         context.Write(writer, endpointOutput);
-                                        writer.Flush();
+                                        await writer.FlushAsync();
                                         await entryStream.FlushAsync();
                                     }
                                 }
                             }
                             catch (Exception e)
                             {
-                                DebugInfoPackageUtils.WriteExceptionAsZipEntry(e,archive,entryName.Replace(".json", string.Empty));
+                                DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName.Replace(".json", string.Empty));
                             }
                         }
                     }

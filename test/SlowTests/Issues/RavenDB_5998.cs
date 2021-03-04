@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                         TransformScript = "this['Test'] = 'NewValue';"
                     });
 
-                    var result = smuggler.Execute();
+                    var result = smuggler.ExecuteAsync().Result;
 
                     Assert.Equal(1059, result.Documents.ReadCount);
                     Assert.Equal(0, result.Documents.SkippedCount);

@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Queries
         public override bool SupportsHighlighting => false;
         public override bool SupportsExplanations => false;
 
-        public void Flush()// intentionally not using Disposable here, because we need better error handling
+        public void Flush() // intentionally not using Disposable here, because we need better error handling
         {
             StartResponseIfNeeded();
 

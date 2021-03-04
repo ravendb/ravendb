@@ -16,25 +16,24 @@ using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Server.Platform.Win32;
 using Sparrow.Utils;
-using Size = Raven.Client.Util.Size;
 using Voron.Impl;
+using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class MemoryDebugHandler : RequestHandler
     {
         [RavenAction("/admin/debug/memory/low-mem-log", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
-        public Task LowMemLog()
+        public async Task LowMemLog()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var djv = LowMemLogInternal();
 
-                using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var write = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(write, djv);
                 }
-                return Task.CompletedTask;
             }
         }
 
@@ -108,7 +107,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         [RavenAction("/admin/debug/memory/smaps", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
-        public Task MemorySmaps()
+        public async Task MemorySmaps()
         {
             if (PlatformDetails.RunningOnLinux == false)
             {
@@ -132,11 +131,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         },
                         ["Details"] = rc.Json
                     };
-                    using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+
+                    await using (var write = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(write, djv);
                     }
-                    return Task.CompletedTask;
+
+                    return;
                 }
             }
 
@@ -172,12 +173,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         ["Details"] = result.SmapsResults.ReturnResults()
                     };
 
-                    using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var write = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(write, djv);
                     }
 
-                    return Task.CompletedTask;
+                    return;
                 }
                 finally
                 {
@@ -188,37 +189,33 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         [RavenAction("/admin/debug/memory/stats", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
-        public Task MemoryStats()
+        public async Task MemoryStats()
         {
             var includeThreads = GetBoolValueQueryString("includeThreads", required: false) ?? true;
             var includeMappings = GetBoolValueQueryString("includeMappings", required: false) ?? true;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     WriteMemoryStats(writer, context, includeThreads, includeMappings);
                 }
-
-                return Task.CompletedTask;
             }
         }
 
         [RavenAction("/admin/debug/memory/encryption-buffer-pool", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
-        public Task EncryptionBufferPoolStats()
+        public async Task EncryptionBufferPoolStats()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var write = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(write, EncryptionBuffersPool.Instance.GetStats().ToJson());
                 }
-
-                return Task.CompletedTask;
             }
         }
 
-        private static void WriteMemoryStats(BlittableJsonTextWriter writer, JsonOperationContext context, bool includeThreads, bool includeMappings)
+        private static void WriteMemoryStats(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, bool includeThreads, bool includeMappings)
         {
             writer.WriteStartObject();
 
@@ -291,7 +288,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             writer.WriteEndObject();
         }
 
-        private static void WriteThreads(bool includeThreads, BlittableJsonTextWriter writer, JsonOperationContext context)
+        private static void WriteThreads(bool includeThreads, AsyncBlittableJsonTextWriter writer, JsonOperationContext context)
         {
             if (includeThreads == false)
                 return;
@@ -336,7 +333,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private static void WriteMappings(bool includeMappings, BlittableJsonTextWriter writer, JsonOperationContext context,
+        private static void WriteMappings(bool includeMappings, AsyncBlittableJsonTextWriter writer, JsonOperationContext context,
             Dictionary<string, long> fileMappingSizesByDir, Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>> fileMappingByDir)
         {
             if (includeMappings == false)
@@ -372,7 +369,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                     foreach (var maps in dic)
                     {
-                        dja.Add(new DynamicJsonValue {[nameof(MemoryInfoMappingDetails.Size)] = maps.Key, [nameof(MemoryInfoMappingDetails.Count)] = maps.Value});
+                        dja.Add(new DynamicJsonValue { [nameof(MemoryInfoMappingDetails.Size)] = maps.Key, [nameof(MemoryInfoMappingDetails.Count)] = maps.Value });
                     }
 
                     var fileSize = GetFileSize(file.Key);
@@ -453,7 +450,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             return prefixLength;
         }
-
 
         internal class MemoryInfo
         {

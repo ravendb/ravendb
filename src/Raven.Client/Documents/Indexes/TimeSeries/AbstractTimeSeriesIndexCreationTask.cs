@@ -76,7 +76,8 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
                 AdditionalAssemblies = AdditionalAssemblies,
                 Configuration = Configuration,
                 LockMode = LockMode,
-                Priority = Priority
+                Priority = Priority,
+                State = State
             };
 
             if (_map != default)

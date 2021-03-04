@@ -9,6 +9,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Includes
 {
@@ -107,7 +108,7 @@ namespace Raven.Server.Documents.Includes
                         BlittableJsonReaderObject json;
                         try
                         {
-                            json = _context.ReadForMemory(value.Range, "Facet/Object");
+                            json = _context.Sync.ReadForMemory(value.Range, "Facet/Object");
                         }
                         catch (Exception)
                         {

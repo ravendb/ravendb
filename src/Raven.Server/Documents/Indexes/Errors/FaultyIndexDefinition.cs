@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {
@@ -9,18 +10,18 @@ namespace Raven.Server.Documents.Indexes.Errors
     {
         private readonly IndexDefinition _definition;
 
-        public FaultyIndexDefinition(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexField[] mapFields, IndexDefinition definition)
-            : base(name, collections, lockMode, priority, mapFields, IndexVersion.CurrentVersion)
+        public FaultyIndexDefinition(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexState state, IndexField[] mapFields, IndexDefinition definition)
+            : base(name, collections, lockMode, priority, state, mapFields, IndexVersion.CurrentVersion)
         {
             _definition = definition;
         }
 
-        protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistMapFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }
 
-        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }
@@ -33,6 +34,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             definition.Name = Name;
             definition.LockMode = LockMode;
             definition.Priority = Priority;
+            definition.State = State;
             return definition;
         }
 

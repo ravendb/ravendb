@@ -30,7 +30,6 @@ namespace Raven.Server.Documents.Queries
 
         public override void HandleException(Exception e)
         {
-            throw new NotSupportedException();
         }
 
         public override void AddCounterIncludes(IncludeCountersCommand includeCountersCommand)
@@ -70,6 +69,5 @@ namespace Raven.Server.Documents.Queries
         public override bool SupportsInclude => false;
         public override bool SupportsHighlighting => false;
         public override bool SupportsExplanations => false;
-
     }
 }

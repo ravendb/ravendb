@@ -13,6 +13,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -172,7 +173,7 @@ namespace FastTests.Client
                     requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
                     using (var json = store.Conventions.Serialization.DefaultConverter.ToBlittable(entity, metadata, context, jsonSerializer ??= store.Conventions.Serialization.CreateSerializer()))
                     {
-                        json.WriteJsonTo(streamWriter.BaseStream);
+                        json._context.Sync.Write(streamWriter.BaseStream, json);
                     }
 
                     return true;

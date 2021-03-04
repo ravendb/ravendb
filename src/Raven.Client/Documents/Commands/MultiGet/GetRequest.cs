@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
         /// Query information e.g. "?pageStart=10&amp;pageSize=20".
         /// </summary>
         public string Query { get; set; }
-        
+
         public HttpMethod Method { get; set; }
 
         /// <summary>
@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
             {
                 if (Query == null)
                     return Url;
-                
+
                 if (Query.StartsWith("?"))
                     return Url + Query;
                 return Url + "?" + Query;
@@ -51,7 +51,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         public interface IContent
         {
-            void WriteContent(BlittableJsonTextWriter writer, JsonOperationContext context);
+            void WriteContent(AbstractBlittableJsonTextWriter writer, JsonOperationContext context);
         }
     }
 }

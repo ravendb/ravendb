@@ -79,13 +79,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             catch (SystemException e)
             {
                 TryThrowingBetterException(e, _directory);
-
                 throw;
             }
             finally
             {
                 _indexWriter.SetCommitStats(null);
-                RecreateIndexWriter(state);
             }
         }
 
@@ -139,7 +137,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private void RecreateIndexWriter(IState state)
+        public void RecreateIndexWriter(IState state)
         {
             try
             {

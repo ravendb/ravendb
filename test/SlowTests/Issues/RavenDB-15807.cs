@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -75,11 +76,11 @@ namespace SlowTests.Issues
 
                 long taskId;
                 // sink with ownCertificate - unauthorized to access
-                var json = "{\"PullReplicationAsSink\":{\"TaskId\": null,\"Database\":\"" + hubStore.Database + "\",\"ConnectionStringName\": \"ConnectionString-" + hubStore.Database + "\",\"HubName\": \"" + pullReplicationName + "\",\"Mode\": \"HubToSink\",\"AccessName\": null,\"CertificateWithPrivateKey\":\" "+Convert.ToBase64String(ownCertificate.Export(X509ContentType.Pfx))+ "\",  \"AllowedHubToSinkPaths\": null ,\"AllowedSinkToHubPaths\": null }}";
+                var json = "{\"PullReplicationAsSink\":{\"TaskId\": null,\"Database\":\"" + hubStore.Database + "\",\"ConnectionStringName\": \"ConnectionString-" + hubStore.Database + "\",\"HubName\": \"" + pullReplicationName + "\",\"Mode\": \"HubToSink\",\"AccessName\": null,\"CertificateWithPrivateKey\":\" " + Convert.ToBase64String(ownCertificate.Export(X509ContentType.Pfx)) + "\",  \"AllowedHubToSinkPaths\": null ,\"AllowedSinkToHubPaths\": null }}";
 
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
-                    BlittableJsonReaderObject reader = ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "users/1");
+                    BlittableJsonReaderObject reader = ctx.Sync.ReadForMemory(new MemoryStream(Encoding.UTF8.GetBytes(json)), "users/1");
 
                     using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
@@ -103,7 +104,7 @@ namespace SlowTests.Issues
 
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
-                    BlittableJsonReaderObject reader = ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "users/1");
+                    BlittableJsonReaderObject reader = ctx.Sync.ReadForMemory(new MemoryStream(Encoding.UTF8.GetBytes(json)), "users/1");
 
                     using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
@@ -111,7 +112,6 @@ namespace SlowTests.Issues
                         Task.WaitAll(task);
                         Assert.Null(pullReplication.CertificateWithPrivateKey);
                     }
-
                 }
 
                 using (var hubSession = hubStore.OpenSession())

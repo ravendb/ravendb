@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -51,7 +50,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         {
                             await WriteForDatabase(archive, jsonOperationContext, localEndpointClient, databaseName);
                         }
-
                     }
 
                     ms.Position = 0;
@@ -257,12 +255,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(NodeDebugInfoRequestHeader.DatabaseNames)] = databaseNames
             };
 
-            using (var ms = new MemoryStream())
-            using (var writer = new BlittableJsonTextWriter(context, ms))
+            await using (var ms = new MemoryStream())
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
             {
                 context.Write(writer, bodyJson);
-                writer.Flush();
-                ms.Flush();
+                await writer.FlushAsync();
+                await ms.FlushAsync();
 
                 var rawStreamCommand = new GetRawStreamResultCommand($"admin/debug/remote-cluster-info-package", ms);
 
@@ -284,12 +282,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     var entry = archive.CreateEntry(entryRoute);
                     entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                    using (var entryStream = entry.Open())
-                    using (var writer = new BlittableJsonTextWriter(context, entryStream))
+                    await using (var entryStream = entry.Open())
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, entryStream))
                     using (var endpointOutput = await localEndpointClient.InvokeAndReadObjectAsync(route, context))
                     {
                         context.Write(writer, endpointOutput);
-                        writer.Flush();
+                        await writer.FlushAsync();
                         await entryStream.FlushAsync();
                     }
                 }
@@ -311,7 +309,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     {
                         if (rawRecord == null ||
                             rawRecord.Topology.RelevantFor(ServerStore.NodeTag) == false ||
-                            rawRecord.IsDisabled||
+                            rawRecord.IsDisabled ||
                             rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress ||
                             IsDatabaseBeingDeleted(ServerStore.NodeTag, rawRecord))
                             continue;
@@ -333,7 +331,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return deletionInProgress != null && deletionInProgress.TryGetValue(tag, out var delInProgress) && delInProgress != DeletionInProgressStatus.No;
         }
 
-        private static async Task WriteForDatabase(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, string databaseName, string path = null)
+        private static async Task WriteForDatabase(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, string databaseName, string path = null)
         {
             var endpointParameters = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
             {
@@ -347,13 +345,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     var entry = archive.CreateEntry(DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, path ?? databaseName));
                     entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                    using (var entryStream = entry.Open())
-                    using (var writer = new BlittableJsonTextWriter(jsonOperationContext, entryStream))
+                    await using (var entryStream = entry.Open())
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, entryStream))
                     {
-                        using (var endpointOutput = await localEndpointClient.InvokeAndReadObjectAsync(route, jsonOperationContext, endpointParameters))
+                        using (var endpointOutput = await localEndpointClient.InvokeAndReadObjectAsync(route, context, endpointParameters))
                         {
-                            jsonOperationContext.Write(writer, endpointOutput);
-                            writer.Flush();
+                            context.Write(writer, endpointOutput);
+                            await writer.FlushAsync();
                             await entryStream.FlushAsync();
                         }
                     }
@@ -388,7 +386,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             return nodeUrlToDatabaseNames;
         }
-
 
         internal class NodeDebugInfoRequestHeader
         {

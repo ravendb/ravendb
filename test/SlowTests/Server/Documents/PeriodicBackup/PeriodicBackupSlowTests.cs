@@ -36,6 +36,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -1661,8 +1662,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var backupResult = backupOperation.Result as BackupResult;
                     Assert.NotNull(backupResult);
                     return $"Expected etag: {lastEtag}, backupResult:{Environment.NewLine}{string.Join(Environment.NewLine, backupResult.Messages)}";
+                }
             }
-        }
         }
 
         private static async Task<long> RunBackupOperationAndAssertCompleted(DocumentStore store, bool isFullBackup, long taskId)
@@ -2184,7 +2185,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 string result = response.Content.ReadAsStringAsync().Result;
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
-                    using var bjro = ctx.ReadForMemory(result, "test");
+                    using var bjro = ctx.Sync.ReadForMemory(result, "test");
                     bjro.TryGet("Status", out BlittableJsonReaderObject statusBjro);
                     var status = JsonDeserializationClient.PeriodicBackupStatus(statusBjro);
                     Assert.NotNull(status.LocalBackup);
@@ -2318,7 +2319,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 string result = response.Content.ReadAsStringAsync().Result;
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
-                    using var bjro = ctx.ReadForMemory(result, "test");
+                    using var bjro = ctx.Sync.ReadForMemory(result, "test");
                     var databaseInfo = JsonDeserializationServer.DatabaseInfo(bjro);
                     Assert.NotNull(databaseInfo);
                     Assert.Equal(BackupTaskType.OneTime, databaseInfo.BackupInfo.BackupTaskType);

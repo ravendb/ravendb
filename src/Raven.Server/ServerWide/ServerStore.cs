@@ -283,7 +283,7 @@ namespace Raven.Server.ServerWide
                                         context.Reset();
                                         context.Renew();
 
-                                        var readTask = context.ReadFromWebSocket(ws, "ws from Leader", cts.Token);
+                                        var readTask = context.ReadFromWebSocketAsync(ws, "ws from Leader", cts.Token);
                                         using (var notification = readTask.Result)
                                         {
                                             if (notification == null)
@@ -2373,7 +2373,7 @@ namespace Raven.Server.ServerWide
             return true;
         }
         
-        private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database, out CleanupMode mode)
+        private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database, out DatabaseCleanupMode mode)
         {
             var now = DateTime.UtcNow;
 
@@ -2389,17 +2389,17 @@ namespace Raven.Server.ServerWide
 
             if ((now - maxLastWork).TotalMinutes > 5)
             {
-                mode = CleanupMode.Deep;
+                mode = DatabaseCleanupMode.Deep;
                 return true;
             }
 
             if ((now - database.LastIdleTime).TotalMinutes > 10)
             {
-                mode = CleanupMode.Regular;
+                mode = DatabaseCleanupMode.Regular;
                 return true;
             }
 
-            mode = CleanupMode.None;
+            mode = DatabaseCleanupMode.None;
             return false;
         }
 
@@ -2878,9 +2878,9 @@ namespace Raven.Server.ServerWide
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
                     {
-                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                         {
                             writer.WriteObject(_command);
                         }

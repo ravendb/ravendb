@@ -16,7 +16,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.TrafficWatch
 {
-   public class TrafficWatchHandler : RequestHandler
+    public class TrafficWatchHandler : RequestHandler
     {
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficWatchHandler>("Server");
 
@@ -46,9 +46,9 @@ namespace Raven.Server.TrafficWatch
 
                         try
                         {
-                            using (var ms = new MemoryStream())
+                            await using (var ms = new MemoryStream())
                             {
-                                using (var writer = new BlittableJsonTextWriter(context, ms))
+                                await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
                                 {
                                     context.Write(writer, new DynamicJsonValue
                                     {

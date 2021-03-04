@@ -49,7 +49,7 @@ namespace Sparrow.Json
         {
             unsafe
             {
-                //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.                                 
+                //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.
                 if (IntPtr.Size == 4)
                     return (int)Hashing.XXHash32.CalculateInline(obj.Buffer, obj.Size);
                 return (int)Hashing.XXHash64.CalculateInline(obj.Buffer, (ulong)obj.Size);
@@ -74,6 +74,7 @@ namespace Sparrow.Json
         public int Size => _size;
 
         private int _length;
+
         public int Length
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -266,6 +267,7 @@ namespace Sparrow.Json
         }
 
         public static bool operator !=(LazyStringValue self, LazyStringValue str) => !(self == str);
+
         public static bool operator !=(LazyStringValue self, string str) => !(self == str);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -303,7 +305,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator byte[] (LazyStringValue self)
+        public static implicit operator byte[](LazyStringValue self)
         {
             var valueAsString = (string)self;
             return Convert.FromBase64String(valueAsString);
@@ -350,10 +352,13 @@ namespace Sparrow.Json
             {
                 case null:
                     return false;
+
                 case string str:
                     return Equals(str);
+
                 case LazyStringValue lsv:
                     return lsv.Equals(this);
+
                 case LazyCompressedStringValue lcsv:
                     return lcsv.ToLazyStringValue().Equals(this);
             }
@@ -424,9 +429,9 @@ namespace Sparrow.Json
 
         private void ReturnAllocatedMemory()
         {
-            if (AllocatedMemoryData == null) 
+            if (AllocatedMemoryData == null)
                 return;
-            
+
             if (_context.Generation == AllocatedMemoryData.ContextGeneration)
             {
                 _context.ReturnMemory(AllocatedMemoryData);
@@ -447,6 +452,7 @@ namespace Sparrow.Json
         }
 
 #if NETCOREAPP
+
         public bool Contains(char value, StringComparison comparisonType)
         {
             if (IsDisposed)
@@ -457,6 +463,7 @@ namespace Sparrow.Json
 
             return ToString().Contains(value, comparisonType);
         }
+
 #endif
 
         public bool Contains(string value)
@@ -471,6 +478,7 @@ namespace Sparrow.Json
         }
 
 #if NETCOREAPP
+
         public bool Contains(string value, StringComparison comparisonType)
         {
             if (IsDisposed)
@@ -481,6 +489,7 @@ namespace Sparrow.Json
 
             return ToString().Contains(value, comparisonType);
         }
+
 #endif
 
         public bool EndsWith(string value)
@@ -520,10 +529,12 @@ namespace Sparrow.Json
         }
 
 #if !NETSTANDARD1_3
+
         public bool EndsWith(string value, bool ignoreCase, CultureInfo culture)
         {
             return ToString().EndsWith(value, ignoreCase, culture);
         }
+
 #endif
 
         public bool EndsWith(char value)
@@ -537,6 +548,7 @@ namespace Sparrow.Json
         }
 
 #if NETCOREAPP
+
         public int IndexOf(char value, StringComparison comparisonType)
         {
             if (IsDisposed)
@@ -547,6 +559,7 @@ namespace Sparrow.Json
 
             return ToString().IndexOf(value, comparisonType);
         }
+
 #endif
 
         public int IndexOf(char value, int startIndex)
@@ -939,6 +952,7 @@ namespace Sparrow.Json
         }
 
 #if !NETSTANDARD1_3
+
         public bool StartsWith(string value, bool ignoreCase, CultureInfo culture)
         {
             if (IsDisposed)
@@ -949,6 +963,7 @@ namespace Sparrow.Json
 
             return ToString().StartsWith(value, ignoreCase, culture);
         }
+
 #endif
 
         public bool StartsWith(char value)
@@ -972,10 +987,12 @@ namespace Sparrow.Json
         }
 
 #if !NETSTANDARD1_3
+
         public string ToLower(CultureInfo culture)
         {
             return ToString().ToLower(culture);
         }
+
 #endif
 
         public string ToLowerInvariant()
@@ -989,10 +1006,12 @@ namespace Sparrow.Json
         }
 
 #if !NETSTANDARD1_3
+
         public string ToUpper(CultureInfo culture)
         {
             return ToString().ToUpper(culture);
         }
+
 #endif
 
         public string ToUpperInvariant()

@@ -5,10 +5,10 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
-using Sparrow.Logging;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Server;
 
 namespace Raven.Server.TrafficWatch
@@ -20,6 +20,7 @@ namespace Raven.Server.TrafficWatch
         private readonly WebSocket _webSocket;
         private readonly JsonOperationContext _context;
         public string TenantSpecific { get; set; }
+
         public bool IsAlive => _receive.IsCompleted == false &&
                                _cancellationTokenSource.IsCancellationRequested == false;
 
@@ -73,7 +74,7 @@ namespace Raven.Server.TrafficWatch
                         if (IsAlive == false)
                             return;
 
-                        await SendMessage(ToByteArraySegment(message)).ConfigureAwait(false);
+                        await SendMessage(await ToByteArraySegmentAsync(message)).ConfigureAwait(false);
                     }
                 }
             }
@@ -98,7 +99,7 @@ namespace Raven.Server.TrafficWatch
             }
         }
 
-        private ArraySegment<byte> ToByteArraySegment(TrafficWatchChange change)
+        private async Task<ArraySegment<byte>> ToByteArraySegmentAsync(TrafficWatchChange change)
         {
             var json = new DynamicJsonValue
             {
@@ -116,10 +117,10 @@ namespace Raven.Server.TrafficWatch
             };
 
             _bufferStream.SetLength(0);
-            using (var writer = new BlittableJsonTextWriter(_context, _bufferStream))
+            await using (var writer = new AsyncBlittableJsonTextWriter(_context, _bufferStream))
             {
                 _context.Write(writer, json);
-                writer.Flush();
+                await writer.FlushAsync();
 
                 _bufferStream.TryGetBuffer(out var bytes);
                 return bytes;

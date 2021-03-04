@@ -46,6 +46,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
 using OpenFlags = System.Security.Cryptography.X509Certificates.OpenFlags;
@@ -286,7 +287,7 @@ namespace Raven.Server.Commercial
                     // try to find setup.json file first, as we make decisions based on its contents
                     if (entry.Name.Equals("setup.json"))
                     {
-                        var json = context.Read(entry.Open(), "license/json");
+                        var json = context.Sync.ReadForMemory(entry.Open(), "license/json");
 
                         SetupSettings setupSettings = JsonDeserializationServer.SetupSettings(json);
                         firstNodeTag = setupSettings.Nodes[0].Tag;
@@ -319,13 +320,13 @@ namespace Raven.Server.Commercial
 
                     if (entry.Name.Equals("license.json"))
                     {
-                        var json = context.Read(entry.Open(), "license/json");
+                        var json = context.Sync.ReadForMemory(entry.Open(), "license/json");
                         license = JsonDeserializationServer.License(json);
                     }
 
                     if (entry.Name.Equals("settings.json"))
                     {
-                        using (var settingsJson = context.ReadForMemory(entry.Open(), "settings-json-from-zip"))
+                        using (var settingsJson = context.Sync.ReadForMemory(entry.Open(), "settings-json-from-zip"))
                         {
                             settingsJson.TryGet(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), out string publicServerUrl);
 
@@ -1524,7 +1525,7 @@ namespace Raven.Server.Commercial
                         BlittableJsonReaderObject settingsJson;
                         using (var fs = SafeFileStream.Create(settingsPath, FileMode.Open, FileAccess.Read))
                         {
-                            settingsJson = context.ReadForMemory(fs, "settings-json");
+                            settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
                         }
 
                         settingsJson.Modifications = new DynamicJsonValue(settingsJson);

@@ -64,10 +64,7 @@ namespace Raven.Client.ServerWide.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
-                    {
-                        ctx.Write(stream, _orderBlittable);
-                    })
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _orderBlittable).ConfigureAwait(false))
                 };
 
                 return request;

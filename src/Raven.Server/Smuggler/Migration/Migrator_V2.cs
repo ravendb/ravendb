@@ -87,7 +87,7 @@ namespace Raven.Server.Smuggler.Migration
                 var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 // since we will be migrating indexes as separate task don't ensureStepsProcessed at this point
-                smuggler.Execute(ensureStepsProcessed: false);
+                await smuggler.ExecuteAsync(ensureStepsProcessed: false);
             }
         }
 
@@ -100,10 +100,10 @@ namespace Raven.Server.Smuggler.Migration
                 SkipRevisionCreation = true
             };
 
-            destination.Initialize(options, parametersResult, buildVersion: default);
+            destination.InitializeAsync(options, parametersResult, buildVersion: default);
 
             using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
-            using (var documentActions = destination.Documents())
+            await using (var documentActions = destination.Documents())
             {
                 var sp = Stopwatch.StartNew();
 
@@ -140,7 +140,7 @@ namespace Raven.Server.Smuggler.Migration
                         {
                             Parameters.Result.Tombstones.ReadCount++;
                             var id = StreamSource.GetLegacyAttachmentId(key);
-                            documentActions.DeleteDocument(id);
+                            await documentActions.DeleteDocumentAsync(id);
                             continue;
                         }
 
@@ -148,7 +148,7 @@ namespace Raven.Server.Smuggler.Migration
                         using (var old = metadata)
                             metadata = metadata.Clone(contextToUse);
 
-                        WriteDocumentWithAttachment(documentActions, contextToUse, dataStream, key, metadata);
+                        await WriteDocumentWithAttachmentAsync(documentActions, contextToUse, dataStream, key, metadata);
 
                         Parameters.Result.Documents.ReadCount++;
                         if (Parameters.Result.Documents.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
@@ -255,7 +255,7 @@ namespace Raven.Server.Smuggler.Migration
                 };
                 var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
-                smuggler.Execute();
+                await smuggler.ExecuteAsync();
             }
         }
     }

@@ -8,9 +8,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session
 {
@@ -46,7 +49,7 @@ namespace Raven.Client.Documents.Session
                 throw new ArgumentNullException(nameof(ids));
 
             var loadOperation = new LoadOperation(this);
-            LoadInternal(ids.ToArray(), loadOperation);
+            AsyncHelpers.RunSync(() => LoadInternalAsync(ids.ToArray(), loadOperation));
             return loadOperation.GetDocuments<T>();
         }
 
@@ -122,7 +125,7 @@ namespace Raven.Client.Documents.Session
             string startAfter = null)
         {
             var loadStartingWithOperation = new LoadStartingWithOperation(this);
-            LoadStartingWithInternal(idPrefix, loadStartingWithOperation, null, matches, start, pageSize, exclude, startAfter);
+            AsyncHelpers.RunSync(() => LoadStartingWithInternalAsync(idPrefix, loadStartingWithOperation, null, matches, start, pageSize, exclude, startAfter));
             return loadStartingWithOperation.GetDocuments<T>();
         }
 
@@ -139,7 +142,7 @@ namespace Raven.Client.Documents.Session
             if (output == null)
                 throw new ArgumentNullException(nameof(output));
 
-            LoadStartingWithInternal(idPrefix, new LoadStartingWithOperation(this), output, matches, start, pageSize, exclude, startAfter);
+            AsyncHelpers.RunSync(() => LoadStartingWithInternalAsync(idPrefix, new LoadStartingWithOperation(this), output, matches, start, pageSize, exclude, startAfter));
         }
 
         /// <inheritdoc />
@@ -150,10 +153,10 @@ namespace Raven.Client.Documents.Session
             if (output == null)
                 throw new ArgumentNullException(nameof(output));
 
-            LoadInternal(ids.ToArray(), new LoadOperation(this), output);
+            AsyncHelpers.RunSync(() => LoadInternalAsync(ids.ToArray(), new LoadOperation(this), output));
         }
 
-        private void LoadStartingWithInternal(
+        private async Task LoadStartingWithInternalAsync(
             string idPrefix,
             LoadStartingWithOperation operation,
             Stream stream = null,
@@ -161,7 +164,8 @@ namespace Raven.Client.Documents.Session
             int start = 0,
             int pageSize = 25,
             string exclude = null,
-            string startAfter = null)
+            string startAfter = null,
+            CancellationToken token = default)
         {
             if (idPrefix == null)
                 throw new ArgumentNullException(nameof(idPrefix));
@@ -171,16 +175,16 @@ namespace Raven.Client.Documents.Session
             var command = operation.CreateRequest();
             if (command != null)
             {
-                RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
+                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: _sessionInfo, token).ConfigureAwait(false);
 
                 if (stream != null)
-                    Context.Write(stream, command.Result.Results.Parent);
+                    await Context.WriteAsync(stream, command.Result.Results.Parent, token).ConfigureAwait(false);
                 else
                     operation.SetResult(command.Result);
             }
         }
 
-        private void LoadInternal(string[] ids, LoadOperation operation, Stream stream = null)
+        private async Task LoadInternalAsync(string[] ids, LoadOperation operation, Stream stream = null)
         {
             if (ids == null)
                 throw new ArgumentNullException(nameof(ids));
@@ -190,9 +194,9 @@ namespace Raven.Client.Documents.Session
             var command = operation.CreateRequest();
             if (command != null)
             {
-                RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
+                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: _sessionInfo).ConfigureAwait(false);
                 if (stream != null)
-                    Context.Write(stream, command.Result.Results.Parent);
+                    await Context.WriteAsync(stream, command.Result.Results.Parent).ConfigureAwait(false);
                 else
                     operation.SetResult(command.Result);
             }

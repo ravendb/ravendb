@@ -68,7 +68,7 @@ namespace FastTests.Blittable
                 {
                     // fill the buffer with garbage
                     var random = seed == null ? new Random() : new Random(seed.Value);
-                    random.NextBytes(memoryBuffer.Memory.Span);
+                    random.NextBytes(memoryBuffer.Memory.Memory.Span);
 
                     using (var peeping = new PeepingTomStream(stream, memoryBuffer))
                     {

@@ -48,10 +48,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
-                    {
-                        ctx.Write(stream, _definition);
-                    })
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _definition).ConfigureAwait(false))
                 };
             }
 

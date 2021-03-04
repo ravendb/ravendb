@@ -3,6 +3,7 @@ using System.Text;
 using FastTests;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.MailingList
             {
                 using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{}")))
                 {
-                    var json = context.ReadForMemory(stream, "json");
+                    var json = context.Sync.ReadForMemory(stream, "json");
 
                     dynamic doc = new DynamicBlittableJson(json);
 

@@ -8,13 +8,13 @@ namespace Raven.Server.Documents.Handlers.Admin
     public class AdminScriptRunnersDebugInfoHandler : RequestHandler
     {
         [RavenAction("/admin/debug/script-runners", "GET", AuthorizationStatus.Operator)]
-        public Task GetJSAdminDebugInfo()
+        public async Task GetJSAdminDebugInfo()
         {
             var detailed = GetBoolValueQueryString("detailed", required: false) ?? false;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("ScriptRunners");
@@ -33,7 +33,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                     writer.WriteEndObject();
                 }
             }
-            return Task.CompletedTask;
         }
     }
 }

@@ -27,6 +27,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Json.Sync;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -344,7 +345,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     ms.Position = 0;
-                    var configuration = context.ReadForMemory(ms, "backup-configuration-from-script");
+                    var configuration = context.Sync.ReadForMemory(ms, "backup-configuration-from-script");
                     var result = deserializeSettingsFunc(configuration);
                     if (_isServerWide)
                         updateServerWideSettingsFunc?.Invoke(result);
@@ -490,9 +491,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                 case BackupType.Backup:
                     return _isBackupEncrypted ?
                         Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension : Constants.Documents.PeriodicBackup.FullBackupExtension;
+
                 case BackupType.Snapshot:
                     return _isBackupEncrypted ?
                         Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension : Constants.Documents.PeriodicBackup.SnapshotExtension;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -568,7 +571,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         }
                         else
                         {
-                            if (_backupResult.GetLastEtag() == _previousBackupStatus.LastEtag && 
+                            if (_backupResult.GetLastEtag() == _previousBackupStatus.LastEtag &&
                                 _backupResult.GetLastRaftIndex() == _previousBackupStatus.LastRaftIndex.LastEtag)
                             {
                                 internalBackupResult.LastDocumentEtag = startDocumentEtag ?? 0;
@@ -743,16 +746,18 @@ namespace Raven.Server.Documents.PeriodicBackup
                     onProgress: _onProgress,
                     token: TaskCancelToken.Token);
 
-                smuggler.Execute();
+                smuggler.ExecuteAsync().Wait();
 
                 switch (outputStream)
                 {
                     case EncryptingXChaCha20Poly1305Stream encryptedStream:
                         encryptedStream.Flush(flushToDisk: true);
                         break;
+
                     case FileStream file:
                         file.Flush(flushToDisk: true);
                         break;
+
                     default:
                         throw new InvalidOperationException($" {outputStream.GetType()} not supported");
                 }
@@ -831,7 +836,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public static void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger, BackupResult backupResult)
         {
-
             try
             {
                 var command = new UpdatePeriodicBackupStatusCommand(documentDatabase.Name, RaftIdGenerator.NewId())
