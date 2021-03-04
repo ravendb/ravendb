@@ -33,13 +33,13 @@ namespace SlowTests.Issues
 
                 var index1Instance = database.IndexStore.GetIndex(index1.IndexName);
                 Assert.Equal(database.Configuration.Indexing.DefaultAnalyzer, index1Instance.Configuration.DefaultAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultAnalyzerType, index1Instance.Configuration.DefaultAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultAnalyzerType.Value, index1Instance.Configuration.DefaultAnalyzerType.Value);
 
                 Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzer, index1Instance.Configuration.DefaultExactAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzerType, index1Instance.Configuration.DefaultExactAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzerType.Value, index1Instance.Configuration.DefaultExactAnalyzerType.Value);
 
                 Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzer, index1Instance.Configuration.DefaultSearchAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzerType, index1Instance.Configuration.DefaultSearchAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzerType.Value, index1Instance.Configuration.DefaultSearchAnalyzerType.Value);
 
                 var index2Instance = database.IndexStore.GetIndex(index2.IndexName);
                 Assert.Equal("WhitespaceAnalyzer", index2Instance.Configuration.DefaultAnalyzer);
@@ -59,13 +59,13 @@ namespace SlowTests.Issues
 
                 index1Instance = database.IndexStore.GetIndex(index1.IndexName);
                 Assert.Equal(database.Configuration.Indexing.DefaultAnalyzer, index1Instance.Configuration.DefaultAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultAnalyzerType, index1Instance.Configuration.DefaultAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultAnalyzerType.Value, index1Instance.Configuration.DefaultAnalyzerType.Value);
 
                 Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzer, index1Instance.Configuration.DefaultExactAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzerType, index1Instance.Configuration.DefaultExactAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzerType.Value, index1Instance.Configuration.DefaultExactAnalyzerType.Value);
 
                 Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzer, index1Instance.Configuration.DefaultSearchAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzerType, index1Instance.Configuration.DefaultSearchAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzerType.Value, index1Instance.Configuration.DefaultSearchAnalyzerType.Value);
 
                 index2Instance = database.IndexStore.GetIndex(index2.IndexName);
                 Assert.Equal("WhitespaceAnalyzer", index2Instance.Configuration.DefaultAnalyzer);
@@ -103,13 +103,13 @@ namespace SlowTests.Issues
 
                 var index1Instance = database.IndexStore.GetIndex(index1.IndexName);
                 Assert.Equal(database.Configuration.Indexing.DefaultAnalyzer, index1Instance.Configuration.DefaultAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultAnalyzerType, index1Instance.Configuration.DefaultAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultAnalyzerType.Value, index1Instance.Configuration.DefaultAnalyzerType.Value);
 
                 Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzer, index1Instance.Configuration.DefaultExactAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzerType, index1Instance.Configuration.DefaultExactAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzerType.Value, index1Instance.Configuration.DefaultExactAnalyzerType.Value);
 
                 Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzer, index1Instance.Configuration.DefaultSearchAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzerType, index1Instance.Configuration.DefaultSearchAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzerType.Value, index1Instance.Configuration.DefaultSearchAnalyzerType.Value);
 
                 var index2Instance = database.IndexStore.GetIndex(index2.IndexName);
                 Assert.Equal("WhitespaceAnalyzer", index2Instance.Configuration.DefaultAnalyzer);
@@ -129,13 +129,13 @@ namespace SlowTests.Issues
 
                 index1Instance = database.IndexStore.GetIndex(index1.IndexName);
                 Assert.Equal(database.Configuration.Indexing.DefaultAnalyzer, index1Instance.Configuration.DefaultAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultAnalyzerType, index1Instance.Configuration.DefaultAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultAnalyzerType.Value, index1Instance.Configuration.DefaultAnalyzerType.Value);
 
                 Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzer, index1Instance.Configuration.DefaultExactAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzerType, index1Instance.Configuration.DefaultExactAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzerType.Value, index1Instance.Configuration.DefaultExactAnalyzerType.Value);
 
                 Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzer, index1Instance.Configuration.DefaultSearchAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzerType, index1Instance.Configuration.DefaultSearchAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzerType.Value, index1Instance.Configuration.DefaultSearchAnalyzerType.Value);
 
                 index2Instance = database.IndexStore.GetIndex(index2.IndexName);
                 Assert.Equal("WhitespaceAnalyzer", index2Instance.Configuration.DefaultAnalyzer);
@@ -174,13 +174,13 @@ namespace SlowTests.Issues
 
                 var index1Instance = database.IndexStore.GetIndex(index1.IndexName);
                 Assert.Equal(database.Configuration.Indexing.DefaultAnalyzer, index1Instance.Configuration.DefaultAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultAnalyzerType, index1Instance.Configuration.DefaultAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultAnalyzerType.Value, index1Instance.Configuration.DefaultAnalyzerType.Value);
 
                 Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzer, index1Instance.Configuration.DefaultExactAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzerType, index1Instance.Configuration.DefaultExactAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultExactAnalyzerType.Value, index1Instance.Configuration.DefaultExactAnalyzerType.Value);
 
                 Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzer, index1Instance.Configuration.DefaultSearchAnalyzer);
-                Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzerType, index1Instance.Configuration.DefaultSearchAnalyzerType);
+                Assert.Equal(database.Configuration.Indexing.DefaultSearchAnalyzerType.Value, index1Instance.Configuration.DefaultSearchAnalyzerType.Value);
 
                 var index2Instance = database.IndexStore.GetIndex(index2.IndexName);
                 Assert.Equal("WhitespaceAnalyzer", index2Instance.Configuration.DefaultAnalyzer);
