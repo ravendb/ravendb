@@ -21,6 +21,8 @@ namespace Raven.Client.Documents.Session
                 var streamOperation = new StreamOperation(this, streamQueryStats);
                 var command = streamOperation.CreateRequest(indexQuery);
                 await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
+                streamOperation.EnsureIsAcceptable(query.IndexName, command.Result);
+
                 var result = await streamOperation.SetResultForTimeSeriesAsync(command.Result).ConfigureAwait(false);
 
                 var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
