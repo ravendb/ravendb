@@ -32,7 +32,8 @@ namespace Raven.Server.NotificationCenter.Handlers
                 {
                     try
                     {
-                        using (var connection = new ClusterDashboardConnection(webSocket, writeContext, readContext, ServerStore.ServerShutdown))
+                        using (var connection = new ClusterDashboardConnection(
+                            Server, webSocket, writeContext, readContext, ServerStore.ServerShutdown))
                         {
                             await connection.Handle();
                         }
