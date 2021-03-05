@@ -74,9 +74,9 @@ namespace Raven.Client.Documents.Session
             private readonly FieldsToFetchToken _fieldsToFetch;
 
             internal YieldStream(
-                AsyncDocumentSession parent, 
+                AsyncDocumentSession parent,
                 StreamOperation.YieldStreamResults enumerator,
-                AsyncDocumentQuery<T> query, 
+                AsyncDocumentQuery<T> query,
                 FieldsToFetchToken fieldsToFetch,
                 CancellationToken token) :
                 base(enumerator, token)
@@ -156,6 +156,8 @@ namespace Raven.Client.Documents.Session
 
                 await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
 
+                streamOperation.EnsureIsAcceptable(query.IndexName, command.Result);
+
                 using (command.Result.Response)
                 using (command.Result.Stream)
                 {
@@ -175,6 +177,8 @@ namespace Raven.Client.Documents.Session
                 var streamOperation = new StreamOperation(this, streamQueryStats);
                 var command = streamOperation.CreateRequest(indexQuery);
                 await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
+                streamOperation.EnsureIsAcceptable(query.IndexName, command.Result);
+
                 var result = await streamOperation.SetResultAsync(command.Result, token).ConfigureAwait(false);
 
                 var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
