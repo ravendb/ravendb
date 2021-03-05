@@ -32,6 +32,7 @@ namespace Raven.Server.NotificationCenter.Handlers
         private readonly CancellationTokenSource _cts;
         private readonly CancellationToken _disposeToken;
 
+        private readonly RavenServer _server;
         private readonly WebSocket _webSocket;
         private readonly AsyncQueue<DynamicJsonValue> _sendQueue = new AsyncQueue<DynamicJsonValue>();
         private readonly ConcurrentDictionary<int, Widget> _widgets = new ConcurrentDictionary<int, Widget>();
@@ -39,8 +40,14 @@ namespace Raven.Server.NotificationCenter.Handlers
         private Task _receiveTask;
         private readonly MemoryStream _ms = new MemoryStream();
         
-        public ClusterDashboardConnection(WebSocket webSocket, JsonOperationContext writeContext, JsonOperationContext readContext, CancellationToken token)
+        public ClusterDashboardConnection(
+            RavenServer server,
+            WebSocket webSocket, 
+            JsonOperationContext writeContext, 
+            JsonOperationContext readContext, 
+            CancellationToken token)
         {
+            _server = server;
             _webSocket = webSocket;
             _writeContext = writeContext;
             _readContext = readContext;
@@ -95,7 +102,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             switch (type)
             {
                 case WidgetType.CpuUsage:
-                    widget = new CpuUsageWidget(widgetId, OnMessage, _disposeToken);
+                    widget = new CpuUsageWidget(widgetId, _server, OnMessage, _disposeToken);
                     break;
                 case WidgetType.Traffic:
                     widget = new TrafficWidget(widgetId, OnMessage, _disposeToken);
