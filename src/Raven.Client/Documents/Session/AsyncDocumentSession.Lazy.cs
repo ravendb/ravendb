@@ -229,5 +229,29 @@ namespace Raven.Client.Documents.Session
             return AddLazyOperation<Dictionary<string, T>>(operation, null, token);
         }
 
+        Lazy<Task<(T Entity, string ChangeVector)>> IAsyncLazySessionOperations.ConditionalLoadAsync<T>(string id, string changeVector, CancellationToken token)
+        {
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentNullException(nameof(id));
+
+            if (IsLoaded(id))
+            {
+                return new Lazy<Task<(T Entity, string ChangeVector)>>(async () =>
+                {
+                    var entity = await LoadAsync<T>(id).ConfigureAwait(false);
+                    if (entity == null)
+                        return default;
+
+                    var cv = Advanced.GetChangeVectorFor(entity);
+                    return (entity, cv);
+                });
+            }
+
+            if (string.IsNullOrEmpty(changeVector))
+                throw new InvalidOperationException($"The requested document with id '{id} is not loaded into the session and could not conditional load when {nameof(changeVector)} is null or empty.");
+
+            var lazyLoadOperation = new LazyConditionalLoadOperation<T>(id, changeVector, this);
+            return AddLazyOperation<(T Entity, string ChangeVector)>(lazyLoadOperation, null);
+        }
     }
 }

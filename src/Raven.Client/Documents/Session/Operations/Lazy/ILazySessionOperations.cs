@@ -75,6 +75,14 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         ///     null)
         /// </param>
         Lazy<Dictionary<string, TResult>> LoadStartingWith<TResult>(string idPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, string startAfter = null);
+
+        /// <summary>
+        ///     Loads the specified entity with the specified id and changeVector.
+        ///     If the entity is loaded into the session, the tracked entity will be returned otherwise the entity will be loaded only if it is fresher then the provided changeVector.
+        /// </summary>
+        /// <param name="id">Identifier of a entity that will be conditional loaded.</param>
+        /// <param name="changeVector">Change vector of a entity that will be conditional loaded.</param>
+        Lazy<(T Entity, string ChangeVector)> ConditionalLoad<T>(string id, string changeVector);
     }
 
     /// <summary>
@@ -150,6 +158,15 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         /// </param>
         /// <param name="token">Cancellation token</param>
         Lazy<Task<Dictionary<string, TResult>>> LoadStartingWithAsync<TResult>(string idPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, string startAfter = null, CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        ///     Loads the specified entity with the specified id and changeVector.
+        ///     If the entity is loaded into the session, the tracked entity will be returned otherwise the entity will be loaded only if it is fresher then the provided changeVector.
+        /// </summary>
+        /// <param name="id">Identifier of a entity that will be conditional loaded.</param>
+        /// <param name="changeVector">Change vector of a entity that will be conditional loaded.</param>
+        /// <param name="token">The cancellation token.</param>
+        Lazy<Task<(T Entity, string ChangeVector)>> ConditionalLoadAsync<T>(string id, string changeVector, CancellationToken token = default(CancellationToken));
     }
 
     /// <summary>
