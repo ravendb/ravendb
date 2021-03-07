@@ -159,6 +159,7 @@ namespace SlowTests.Server.Documents.Migration
                     dbCommand.CommandText = string.Format(createDatabaseQuery, databaseName);
                     dbCommand.ExecuteNonQuery();
                 }
+                connection.Close();
             }
 
             if (string.IsNullOrEmpty(dataSet) == false)
@@ -192,6 +193,8 @@ namespace SlowTests.Server.Documents.Migration
                             dbCommand.ExecuteNonQuery();
                         }
                     }
+
+                    dbConnection.Close();
                 }
             }
             
@@ -213,6 +216,7 @@ namespace SlowTests.Server.Documents.Migration
 
                         dbCommand.ExecuteNonQuery();
                     }
+                    con.Close();
                 }
             });
         }
@@ -332,6 +336,7 @@ namespace SlowTests.Server.Documents.Migration
                             dbCommand.ExecuteNonQuery();
                         }
                     }
+                    dbConnection.Close();
                 }
             }
 
@@ -344,10 +349,19 @@ namespace SlowTests.Server.Documents.Migration
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandTimeout = CommandTimeout;
+
+                        // remove DB active sessions
+                        dbCommand.CommandText = @$" SELECT pg_terminate_backend(pg_stat_activity.pid)
+                        FROM pg_stat_activity
+    WHERE pg_stat_activity.datname = '{dbName}'
+      AND pid <> pg_backend_pid();";
+
+                        dbCommand.ExecuteNonQuery();
                         const string dropDatabaseQuery = "DROP DATABASE IF EXISTS \"{0}\"";
                         dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
                         dbCommand.ExecuteNonQuery();
                     }
+                    con.Close();
                 }
             });
         }
@@ -430,10 +444,23 @@ namespace SlowTests.Server.Documents.Migration
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandTimeout = CommandTimeout;
+
+                        // remove DB active sessions
+                        dbCommand.CommandText = dbCommand.CommandText = $@"select sid, serial# from v$session where username = '{dbName}'";
+                        using (var r = dbCommand.ExecuteReader())
+                        {
+                            while (r.Read())
+                            {
+                                dbCommand.CommandText = $@"alter system kill session '{r.GetValue(0)},{r.GetValue(1)}'";
+                                dbCommand.ExecuteNonQuery();
+                            }
+                        }
+
                         var dropDatabaseQuery = $"DROP USER \"{dbName}\" CASCADE";
                         dbCommand.CommandText = dropDatabaseQuery;
                         dbCommand.ExecuteNonQuery();
                     }
+                    con.Close();
                 }
             });
         }
