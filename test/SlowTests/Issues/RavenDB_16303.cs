@@ -217,7 +217,7 @@ loadToTestGuidEtls(item);"
                         CREATE TABLE ""TestGuidEtls"" (
                             ""Id"" varchar2(40) NOT NULL,
                             ""Guid"" varchar2(36)
-                        );";
+                        )";
                                 dbCommand.ExecuteNonQuery();
                             }
 
@@ -271,7 +271,7 @@ loadToTestGuidEtls(item);"
                         using (var dbCommand = connection.CreateCommand())
                         {
                             dbCommand.CommandTimeout = 10 * 60;
-                            dbCommand.CommandText = @"DROP TABLE ""TestGuidEtls"";
+                            dbCommand.CommandText = @"
                         CREATE TABLE ""TestGuidEtls"" (
                             ""Id"" varchar(40) NOT NULL,
                             ""Guid"" varchar(36)
@@ -303,7 +303,7 @@ loadToTestGuidEtls(item);"
                         CREATE TABLE ""TestGuidEtls"" (
                             ""Id"" varchar2(40) NOT NULL,
                             ""Guid"" raw(16)
-                        );";
+                        )";
                             dbCommand.ExecuteNonQuery();
                         }
 
@@ -356,8 +356,7 @@ loadToTestGuidEtls(item);"
                         using (var dbCommand = connection.CreateCommand())
                         {
                             dbCommand.CommandTimeout = 10 * 60;
-                            dbCommand.CommandText = @"DROP TABLE ""TestGuidEtls"";
-                    CREATE TABLE ""TestGuidEtls"" (
+                            dbCommand.CommandText = @"CREATE TABLE ""TestGuidEtls"" (
                         ""Id"" varchar(40) NOT NULL,
                         ""Guid"" UUID
                     );";
@@ -519,26 +518,6 @@ loadToTestGuidEtls(item);"
             }
         }
 
-        public static Guid GuidFlipEndian(Guid guid)
-        {
-            var newBytes = new byte[16];
-            var oldBytes = guid.ToByteArray();
-
-            for (var i = 8; i < 16; i++)
-                newBytes[i] = oldBytes[i];
-
-            newBytes[3] = oldBytes[0];
-            newBytes[2] = oldBytes[1];
-            newBytes[1] = oldBytes[2];
-            newBytes[0] = oldBytes[3];
-            newBytes[5] = oldBytes[4];
-            newBytes[4] = oldBytes[5];
-            newBytes[6] = oldBytes[7];
-            newBytes[7] = oldBytes[6];
-
-            return new Guid(newBytes);
-        }
-
         private static void CheckSelectGuidCommand(MigrationProvider provider, Guid guid, string connectionString)
         {
             switch (provider)
@@ -550,11 +529,11 @@ loadToTestGuidEtls(item);"
                         using (var dbCommand = connection.CreateCommand())
                         {
                             dbCommand.CommandTimeout = 10 * 60;
-                            dbCommand.CommandText = "SELECT `Guid` FROM `TestGuidEtls`";
+                            dbCommand.CommandText = "SELECT \"Guid\" FROM \"TestGuidEtls\"";
                             using (var r = dbCommand.ExecuteReader())
                             {
                                 r.Read();
-                                var g = GuidFlipEndian(new Guid((byte[])r.GetValue(0)));
+                                var g = new Guid((byte[])r.GetValue(0));
                                 Assert.Equal(guid, g);
                             }
                         }

@@ -471,9 +471,26 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                             if (objectValue.TryGetMember(nameof(SqlDocumentTransformer.VarcharFunctionCall.Type), out object dbType) &&
                                 objectValue.TryGetMember(nameof(SqlDocumentTransformer.VarcharFunctionCall.Value), out object fieldValue))
                             {
-                                colParam.DbType = (DbType)Enum.Parse(typeof(DbType), dbType.ToString(), false);
-
+                                var type = (DbType)Enum.Parse(typeof(DbType), dbType.ToString(), ignoreCase: false);
                                 var value = fieldValue.ToString();
+
+                                try
+                                {
+                                    colParam.DbType = type;
+                                } catch
+                                {
+                                    if (type == DbType.Guid && Guid.TryParse(value, out var guid1) && colParam is OracleParameter oracleParameter)
+                                    {
+                                        var arr = guid1.ToByteArray();
+                                        oracleParameter.Value = arr;
+                                        oracleParameter.OracleDbType = OracleDbType.Raw;
+                                        oracleParameter.Size = arr.Length;
+                                        break;
+                                    }
+
+                                    throw;
+                                }
+
                                 if (colParam.DbType == DbType.Guid && Guid.TryParse(value, out var guid))
                                 {
                                     if (colParam is Npgsql.NpgsqlParameter || colParam is SqlParameter)
@@ -485,15 +502,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                                         mySqlParameter.Value = arr;
                                         mySqlParameter.MySqlDbType = MySqlDbType.Binary;
                                         mySqlParameter.Size = arr.Length;
-                                        break;
-                                    }
-
-                                    if (colParam is OracleParameter oracleParameter)
-                                    {
-                                        var arr = guid.ToByteArray();
-                                        oracleParameter.Value = arr;
-                                        oracleParameter.OracleDbType = OracleDbType.Raw;
-                                        oracleParameter.Size = arr.Length;
                                         break;
                                     }
                                 }
