@@ -8,7 +8,9 @@ using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Analyzers;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
+using Raven.Client.Extensions;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes.Analysis;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,6 +25,7 @@ namespace SlowTests.Issues
         [Fact]
         public void CanUseCustomAnalyzer()
         {
+            string databaseName;
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = record => record.Analyzers = new Dictionary<string, AnalyzerDefinition>
@@ -35,6 +38,8 @@ namespace SlowTests.Issues
                 }
             }))
             {
+                databaseName = store.Database;
+
                 store.ExecuteIndex(new MyIndex());
 
                 Fill(store);
@@ -43,6 +48,9 @@ namespace SlowTests.Issues
 
                 AssertCount<MyIndex>(store);
             }
+
+            foreach (var key in AnalyzerCompilationCache.AnalyzersPerDatabaseCache.ForceEnumerateInThreadSafeManner())
+                Assert.NotEqual(databaseName, key.Key.DatabaseName);
         }
 
         [Fact]
