@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Sorters;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
 
@@ -11,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.Sorting
     {
         private static readonly ConcurrentDictionary<CacheKey, Lazy<CreateSorter>> SortersCache = new ConcurrentDictionary<CacheKey, Lazy<CreateSorter>>();
 
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<CreateSorter>> SortersPerDatabaseCache = new ConcurrentDictionary<CacheKey, Lazy<CreateSorter>>();
+        internal static readonly ConcurrentDictionary<CacheKey, Lazy<CreateSorter>> SortersPerDatabaseCache = new ConcurrentDictionary<CacheKey, Lazy<CreateSorter>>();
 
         public static CreateSorter GetSorter(string name, string databaseName)
         {
@@ -38,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Sorting
 
         public static void AddSorters(DatabaseRecord databaseRecord)
         {
-            foreach (var kvp in SortersPerDatabaseCache)
+            foreach (var kvp in SortersPerDatabaseCache.ForceEnumerateInThreadSafeManner())
             {
                 var key = kvp.Key;
                 if (string.Equals(key.DatabaseName, databaseRecord.DatabaseName, StringComparison.OrdinalIgnoreCase) == false)
@@ -64,6 +65,18 @@ namespace Raven.Server.Documents.Indexes.Sorting
             }
 
             aggregator.ThrowIfNeeded();
+        }
+
+        public static void Clear(string databaseName)
+        {
+            foreach (var kvp in SortersPerDatabaseCache.ForceEnumerateInThreadSafeManner())
+            {
+                var key = kvp.Key;
+                if (string.Equals(key.DatabaseName, databaseName, StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                SortersPerDatabaseCache.TryRemove(key, out _);
+            }
         }
 
         private static void AddSorterInternal(string name, string sorterCode, string databaseName)
@@ -102,7 +115,7 @@ namespace Raven.Server.Documents.Indexes.Sorting
             }
         }
 
-        private class CacheKey : IEquatable<CacheKey>
+        internal class CacheKey : IEquatable<CacheKey>
         {
             public readonly string DatabaseName;
             public readonly string SorterName;

@@ -13,7 +13,9 @@ using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Sorters;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
@@ -30,6 +32,7 @@ namespace SlowTests.Issues
         [Fact]
         public void CanUseCustomSorter()
         {
+            string databaseName;
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = record => record.Sorters = new Dictionary<string, SorterDefinition>
@@ -42,6 +45,8 @@ namespace SlowTests.Issues
                 }
             }))
             {
+                databaseName = store.Database;
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Company { Name = "C1" });
@@ -52,6 +57,9 @@ namespace SlowTests.Issues
 
                 CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True");
             }
+
+            foreach (var key in SorterCompilationCache.SortersPerDatabaseCache.ForceEnumerateInThreadSafeManner())
+                Assert.NotEqual(databaseName, key.Key.DatabaseName);
         }
 
         [Fact]
@@ -234,7 +242,6 @@ namespace SlowTests.Issues
                 }
 
                 public override bool IsReadRequest => false;
-                
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {

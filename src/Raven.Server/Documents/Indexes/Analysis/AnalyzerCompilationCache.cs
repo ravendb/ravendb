@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using Raven.Client.Documents.Indexes.Analysis;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
 
@@ -10,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Analysis
     {
         private static readonly ConcurrentDictionary<CacheKey, Lazy<Type>> AnalyzersCache = new ConcurrentDictionary<CacheKey, Lazy<Type>>();
 
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<Type>> AnalyzersPerDatabaseCache = new ConcurrentDictionary<CacheKey, Lazy<Type>>();
+        internal static readonly ConcurrentDictionary<CacheKey, Lazy<Type>> AnalyzersPerDatabaseCache = new ConcurrentDictionary<CacheKey, Lazy<Type>>();
 
         public static Type GetAnalyzerType(string name, string databaseName)
         {
@@ -37,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.Analysis
 
         public static void AddAnalyzers(DatabaseRecord databaseRecord)
         {
-            foreach (var kvp in AnalyzersPerDatabaseCache)
+            foreach (var kvp in AnalyzersPerDatabaseCache.ForceEnumerateInThreadSafeManner())
             {
                 var key = kvp.Key;
                 if (string.Equals(key.DatabaseName, databaseRecord.DatabaseName, StringComparison.OrdinalIgnoreCase) == false)
@@ -63,6 +64,18 @@ namespace Raven.Server.Documents.Indexes.Analysis
             }
 
             aggregator.ThrowIfNeeded();
+        }
+
+        public static void Clear(string databaseName)
+        {
+            foreach (var kvp in AnalyzersPerDatabaseCache.ForceEnumerateInThreadSafeManner())
+            {
+                var key = kvp.Key;
+                if (string.Equals(key.DatabaseName, databaseName, StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                AnalyzersPerDatabaseCache.TryRemove(key, out _);
+            }
         }
 
         private static void AddAnalyzerInternal(string name, string analyzerCode, string databaseName)
@@ -101,7 +114,7 @@ namespace Raven.Server.Documents.Indexes.Analysis
             }
         }
 
-        private class CacheKey : IEquatable<CacheKey>
+        internal class CacheKey : IEquatable<CacheKey>
         {
             public readonly string DatabaseName;
             public readonly string AnalyzerName;

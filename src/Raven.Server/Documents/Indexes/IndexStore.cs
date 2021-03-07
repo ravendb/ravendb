@@ -905,7 +905,6 @@ namespace Raven.Server.Documents.Indexes
                 existingIndex.SetState(definition.State.Value);
         }
 
-
         internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex, out IndexDefinitionCompareDifferences differences)
         {
             differences = IndexDefinitionCompareDifferences.All;
@@ -919,7 +918,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 differences = existingIndex.Definition.Compare(indexDef);
                 //We need to check differences between old and new definition
-                //and also need to check differences between new index definition state to 
+                //and also need to check differences between new index definition state to
                 //in memory index state ( can be different from current definition state).
                 if ((indexDef.State != null) && (existingIndex.State != indexDef.State))
                     differences |= IndexDefinitionCompareDifferences.State;
@@ -1295,12 +1294,15 @@ namespace Raven.Server.Documents.Indexes
             }
 
             ExecuteForIndexes(_indexes, index =>
-                {
-                    if (index is FaultyInMemoryIndex)
-                        return;
+            {
+                if (index is FaultyInMemoryIndex)
+                    return;
 
-                    exceptionAggregator.Execute(index.Dispose);
-                });
+                exceptionAggregator.Execute(index.Dispose);
+            });
+
+            exceptionAggregator.Execute(() => SorterCompilationCache.Clear(_documentDatabase.Name));
+            exceptionAggregator.Execute(() => AnalyzerCompilationCache.Clear(_documentDatabase.Name));
 
             exceptionAggregator.ThrowIfNeeded();
         }
@@ -1643,9 +1645,11 @@ namespace Raven.Server.Documents.Indexes
                 case DatabaseCleanupMode.Regular:
                     indexCleanupMode = IndexCleanup.Basic;
                     break;
+
                 case DatabaseCleanupMode.Deep:
                     indexCleanupMode = IndexCleanup.All;
                     break;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
             }
