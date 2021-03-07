@@ -36,6 +36,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         private string _source;
         private string _collection;
+        private bool _quoted;
 
         private string[] _namedValues;
         private bool _configurationFetched;
@@ -79,11 +80,11 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             var timeSeriesFunction = declaredFunction.TimeSeries;
             
             _source = GetSourceAndId();
+
             resultType = ResultType.None;
 
             _collection = GetCollection(documentId);
-
-            _stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, _source);
+            _stats = GetStatsAndRemoveQuotesIfNeeded(documentId);
             if (_stats.Count == 0)
                 return Enumerable.Empty<DynamicJsonValue>();
             
@@ -726,7 +727,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 if (!(timeSeriesFunction.Source is FieldExpression field))
                     throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{timeSeriesFunction.Source}'. " +
                                                     $"Expected time series name to be a ValueExpression or a FieldExpression, but got '{timeSeriesFunction.Source.GetType()}'");
-            
+                _quoted = field.IsQuoted;
                 var compound = field.Compound;
 
                 if (compound.Count == 1)
@@ -770,6 +771,25 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
                 return field.FieldValueWithoutAlias;
             }
+        }
+
+        private (long Count, DateTime Start, DateTime End) GetStatsAndRemoveQuotesIfNeeded(string documentId)
+        {
+            var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, _source);
+            if (stats.Count > 0 || _quoted == false) 
+                return stats;
+
+            // quoted expression with no stats, 2 possible issues :
+            // 1. original series name isn't quoted, but '_source' is
+            // 2. original series name is quoted, but '_source' isn't
+
+            // check for quotes, add/remove them and try again
+            var quoteChar = _source[0];
+            var hasQuotes = (quoteChar == '"' || quoteChar == '\'') && _source.Length > 2 && quoteChar == _source[^1];
+
+            _source = hasQuotes ? _source[1..^1] : $"'{_source}'";
+
+            return _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, _source);
         }
 
         private static InterpolationType GetInterpolationType(MethodExpression groupByWith)
