@@ -17,12 +17,12 @@ namespace Raven.Server.NotificationCenter.Widgets
     public class CpuUsageWidget : Widget
     {
         private readonly RavenServer _server;
-        private readonly Action<DynamicJsonValue> _onMessage;
+        private readonly Action<CpuUsagePayload> _onMessage;
 
         private readonly TimeSpan _defaultInterval = TimeSpan.FromSeconds(1);
         private DetailsPerNode _nodeLicenseLimits;
         
-        public CpuUsageWidget(int id, RavenServer server, Action<DynamicJsonValue> onMessage, CancellationToken shutdown) : base(id, shutdown)
+        public CpuUsageWidget(int id, RavenServer server, Action<CpuUsagePayload> onMessage, CancellationToken shutdown) : base(id, shutdown)
         {
             _server = server;
             _onMessage = onMessage;
@@ -50,7 +50,7 @@ namespace Raven.Server.NotificationCenter.Widgets
             await WaitOrThrowOperationCanceled(_defaultInterval);
         }
 
-        private DynamicJsonValue PrepareData()
+        private CpuUsagePayload PrepareData()
         {
             var metricCacher = _server.MetricCacher;
             var cpuInfo = metricCacher.GetValue<(double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait)>(
@@ -58,26 +58,38 @@ namespace Raven.Server.NotificationCenter.Widgets
 
             var utilizedCores = _nodeLicenseLimits?.UtilizedCores ?? -1;
             var numberOfCores = _nodeLicenseLimits?.NumberOfCores ?? -1;
-            
-            var result = new DynamicJsonValue
-            {
-                [nameof(Payload.ProcessCpuUsage)] = cpuInfo.ProcessCpuUsage,
-                [nameof(Payload.MachineCpuUsage)] = cpuInfo.MachineCpuUsage,
-                [nameof(Payload.UtilizedCores)] = utilizedCores,
-                [nameof(Payload.NumberOfCores)] = numberOfCores,
-                [nameof(Payload.Time)] = SystemTime.UtcNow
-            };
 
-            return result;
+            return new CpuUsagePayload
+            {
+                ProcessCpuUsage = cpuInfo.ProcessCpuUsage,
+                MachineCpuUsage = cpuInfo.MachineCpuUsage,
+                UtilizedCores = utilizedCores,
+                NumberOfCores = numberOfCores,
+                Time = SystemTime.UtcNow
+            };
         }
 
-        public class Payload
+    
+    }
+    
+    public class CpuUsagePayload : IDynamicJson
+    {
+        public double MachineCpuUsage { get; set; }
+        public double ProcessCpuUsage { get; set; }
+        public int UtilizedCores { get; set; }
+        public int NumberOfCores { get; set; }
+        public DateTime Time { get; set; }
+
+        public DynamicJsonValue ToJson()
         {
-            public double MachineCpuUsage;
-            public double ProcessCpuUsage;
-            public int UtilizedCores;
-            public int NumberOfCores;
-            public DateTime Time;
+            return new DynamicJsonValue
+            {
+                [nameof(ProcessCpuUsage)] = ProcessCpuUsage,
+                [nameof(MachineCpuUsage)] = MachineCpuUsage,
+                [nameof(UtilizedCores)] = UtilizedCores,
+                [nameof(NumberOfCores)] = NumberOfCores,
+                [nameof(Time)] = Time
+            };
         }
     }
 }

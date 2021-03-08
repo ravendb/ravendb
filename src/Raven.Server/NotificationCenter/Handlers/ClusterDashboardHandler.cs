@@ -12,6 +12,7 @@ using Raven.Server.Routing;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
