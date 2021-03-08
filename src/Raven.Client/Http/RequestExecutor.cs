@@ -1637,7 +1637,16 @@ namespace Raven.Client.Http
             SpawnHealthChecks(chosenNode, nodeIndex);
             _nodeSelector?.OnFailedRequest(nodeIndex);
             var (_, serverNode) = await GetPreferredNode().ConfigureAwait(false);
-            await UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = "handle-server-not-responsive" }).ConfigureAwait(false);
+
+            if (_disableTopologyUpdates)
+            {
+                await PerformHealthCheck(chosenNode, nodeIndex).ConfigureAwait(false);
+            }
+            else
+            {
+                await UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = "handle-server-not-responsive" }).ConfigureAwait(false);
+            }
+
             OnFailedRequestInvoke(url, e);
             return serverNode;
         }
@@ -1726,6 +1735,13 @@ namespace Raven.Client.Http
             }
         }
 
+        protected virtual async Task PerformHealthCheck(ServerNode serverNode, int nodeIndex)
+        {
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                await PerformHealthCheck(serverNode, nodeIndex, context).ConfigureAwait(false);
+            }
+        }
         protected virtual async Task PerformHealthCheck(ServerNode serverNode, int nodeIndex, JsonOperationContext context)
         {
             try
@@ -2122,17 +2138,14 @@ namespace Raven.Client.Http
 
         private async Task EnsureNodeSelector()
         {
-            if (_firstTopologyUpdate != null && _firstTopologyUpdate.Status != TaskStatus.RanToCompletion)
-                await _firstTopologyUpdate.ConfigureAwait(false);
+            if(_disableTopologyUpdates == false)
+                await WaitForTopologyUpdate(_firstTopologyUpdate).ConfigureAwait(false);
 
-            if (_nodeSelector == null)
+            _nodeSelector ??= new NodeSelector(new Topology
             {
-                _nodeSelector = new NodeSelector(new Topology
-                {
-                    Nodes = TopologyNodes.ToList(),
-                    Etag = TopologyEtag
-                });
-            }
+                Nodes = TopologyNodes.ToList(), 
+                Etag = TopologyEtag
+            });
         }
 
         private static void ThrowIfClientException(Exception e)
