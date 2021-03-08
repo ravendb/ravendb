@@ -90,14 +90,13 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var dbId = Constants.Documents.Prefix + name;
                 using (context.OpenReadTransaction())
-                using (var dbBlit = ServerStore.Cluster.Read(context, dbId, out long _))
+                using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, name))
                 {
                     if (TryGetAllowedDbs(name, out var _, requireAdmin: false) == false)
                         return Task.CompletedTask;
 
-                    if (dbBlit == null)
+                    if (rawRecord == null)
                     {
                         // here we return 503 so clients will try to failover to another server
                         // if this is a newly created db that we haven't been notified about it yet
@@ -123,31 +122,44 @@ namespace Raven.Server.Web.System
                         return Task.CompletedTask;
                     }
 
+                    if (rawRecord.Topology.Members.Count == 0 && rawRecord.Topology.Rehabs.Count == 0 && rawRecord.DeletionInProgress.Any())
+                    {
+                        // The database at deletion progress from all nodes
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                        HttpContext.Response.Headers["Database-Missing"] = name;
+                        using var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["Type"] = "Error", 
+                            ["Message"] = "Database " + name + " was deleted"
+                        });
+                        return Task.CompletedTask;
+                    }
+
                     clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
 
-                    var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbBlit);
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
                             [nameof(Topology.Nodes)] = new DynamicJsonArray(
-                                dbRecord.Topology.Members.Select(x => new DynamicJsonValue
+                                rawRecord.Topology.Members.Select(x => new DynamicJsonValue
                                 {
                                     [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
                                     [nameof(ServerNode.ClusterTag)] = x,
                                     [nameof(ServerNode.ServerRole)] = ServerNode.Role.Member,
-                                    [nameof(ServerNode.Database)] = dbRecord.DatabaseName
+                                    [nameof(ServerNode.Database)] = rawRecord.DatabaseName
                                 })
-                                .Concat(dbRecord.Topology.Rehabs.Select(x => new DynamicJsonValue
+                                .Concat(rawRecord.Topology.Rehabs.Select(x => new DynamicJsonValue
                                 {
                                     [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
                                     [nameof(ServerNode.ClusterTag)] = x,
-                                    [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
+                                    [nameof(ServerNode.Database)] = rawRecord.DatabaseName,
                                     [nameof(ServerNode.ServerRole)] = ServerNode.Role.Rehab
                                 })
                                 )
                             ),
-                            [nameof(Topology.Etag)] = dbRecord.Topology.Stamp?.Index ?? -1
+                            [nameof(Topology.Etag)] = rawRecord.Topology.Stamp?.Index ?? -1
                         });
                     }
                 }
