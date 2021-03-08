@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -85,7 +86,6 @@ namespace SlowTests.Bugs.Caching
         {
             const string docId = "doc-1";
 
-            var requestExecutor = store.GetRequestExecutor();
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(new Doc(), docId);
@@ -100,14 +100,17 @@ namespace SlowTests.Bugs.Caching
 
             if (createVersion2)
             {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new Doc {Version = "2"}, docId);
-                    await session.SaveChangesAsync();
-                }
-            }
+                var amre = new AsyncManualResetEvent();
+                var observable = store.Changes().ForDocument(docId);
+                await observable.EnsureSubscribedNow();
+                observable.Subscribe(_ => amre.Set());
 
-            var requests = requestExecutor.NumberOfServerRequests;
+                using var session = store.OpenAsyncSession();
+                await session.StoreAsync(new Doc { Version = "2" }, docId);
+                await session.SaveChangesAsync();
+
+                await amre.WaitAsync(TimeSpan.FromSeconds(30));
+            }
 
             using (var session = store.OpenAsyncSession())
             using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5), aggressiveCacheMode))
@@ -180,12 +183,11 @@ namespace SlowTests.Bugs.Caching
         private static async Task<long> AggressiveCacheOnLazilyLoadTest(
             IDocumentStore store, 
             Action<IDocumentSession, string> loadFunc, 
-            AggressiveCacheMode doNotTrackChanges, 
+            AggressiveCacheMode aggressiveCacheMode, 
             bool createVersion2 = true)
         {
             const string docId = "doc-1";
 
-            var requestExecutor = store.GetRequestExecutor();
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(new Doc(), docId);
@@ -200,15 +202,20 @@ namespace SlowTests.Bugs.Caching
 
             if (createVersion2)
             {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new Doc {Version = "2"}, docId);
-                    await session.SaveChangesAsync();
-                }
+                var amre = new AsyncManualResetEvent();
+                var observable = store.Changes().ForDocument(docId);
+                await observable.EnsureSubscribedNow();
+                observable.Subscribe(_ => amre.Set());
+
+                using var session = store.OpenAsyncSession();
+                await session.StoreAsync(new Doc { Version = "2" }, docId);
+                await session.SaveChangesAsync();
+
+                await amre.WaitAsync(TimeSpan.FromSeconds(30));
             }
 
             using (var session = store.OpenSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5), doNotTrackChanges))
+            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5), aggressiveCacheMode))
             {
                 _ = session.Advanced.Lazily.Load<Doc>(docId).Value;
                 return session.Advanced.NumberOfRequests;
