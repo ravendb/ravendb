@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Changes;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -355,6 +356,10 @@ namespace Raven.Client.Documents.Changes
 
             _client?.Dispose();
 
+            foreach (var state in _counters.ForceEnumerateInThreadSafeManner())
+            {
+                state.Value.Dispose();
+            }
             _counters.Clear();
 
             try
@@ -475,9 +480,11 @@ namespace Raven.Client.Documents.Changes
         {
             try
             {
-                (_nodeIndex, _serverNode) = nodeTag == null || _requestExecutor.Conventions.DisableTopologyUpdates
-                    ? await _requestExecutor.GetPreferredNode().ConfigureAwait(false)
-                    : await _requestExecutor.GetRequestedNode(nodeTag).ConfigureAwait(false);
+                var task = nodeTag == null || _requestExecutor.Conventions.DisableTopologyUpdates
+                    ? _requestExecutor.GetPreferredNode()
+                    : _requestExecutor.GetRequestedNode(nodeTag);
+
+                (_nodeIndex, _serverNode) = await task.ConfigureAwait(false);
             }
             catch (OperationCanceledException e)
             {
@@ -540,6 +547,11 @@ namespace Raven.Client.Documents.Changes
                         try
                         {
                             _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
+                        }
+                        catch (DatabaseDoesNotExistException databaseDoesNotExistException)
+                        {
+                            e = databaseDoesNotExistException;
+                            throw;
                         }
                         catch (Exception)
                         {

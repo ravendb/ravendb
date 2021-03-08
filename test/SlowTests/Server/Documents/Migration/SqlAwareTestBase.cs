@@ -159,37 +159,42 @@ namespace SlowTests.Server.Documents.Migration
                     dbCommand.CommandText = string.Format(createDatabaseQuery, databaseName);
                     dbCommand.ExecuteNonQuery();
                 }
+                connection.Close();
             }
 
-            using (var dbConnection = new SqlConnection(connectionString))
+            if (string.IsNullOrEmpty(dataSet) == false)
             {
-                dbConnection.Open();
-
-                var assembly = Assembly.GetExecutingAssembly();
-
-                var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mssql." + dataSet + ".create.sql"));
-                var commands = textStreamReader.ReadToEnd().Split(" GO ");
-                
-                foreach (var command in commands)
+                using (var dbConnection = new SqlConnection(connectionString))
                 {
-                    using (var dbCommand = dbConnection.CreateCommand())
-                    {
-                        dbCommand.CommandTimeout = CommandTimeout;
-                        dbCommand.CommandText = command;
-                        dbCommand.ExecuteNonQuery();
-                    }
-                }
-                
+                    dbConnection.Open();
 
-                if (includeData)
-                {
-                    using (var dbCommand = dbConnection.CreateCommand())
+                    var assembly = Assembly.GetExecutingAssembly();
+
+                    var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mssql." + dataSet + ".create.sql"));
+                    var commands = textStreamReader.ReadToEnd().Split(" GO ");
+
+                    foreach (var command in commands)
                     {
-                        dbCommand.CommandTimeout = CommandTimeout;
-                        var dataStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mssql." + dataSet + ".insert.sql"));
-                        dbCommand.CommandText = dataStreamReader.ReadToEnd();
-                        dbCommand.ExecuteNonQuery();
+                        using (var dbCommand = dbConnection.CreateCommand())
+                        {
+                            dbCommand.CommandTimeout = CommandTimeout;
+                            dbCommand.CommandText = command;
+                            dbCommand.ExecuteNonQuery();
+                        }
                     }
+
+                    if (includeData)
+                    {
+                        using (var dbCommand = dbConnection.CreateCommand())
+                        {
+                            dbCommand.CommandTimeout = CommandTimeout;
+                            var dataStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mssql." + dataSet + ".insert.sql"));
+                            dbCommand.CommandText = dataStreamReader.ReadToEnd();
+                            dbCommand.ExecuteNonQuery();
+                        }
+                    }
+
+                    dbConnection.Close();
                 }
             }
             
@@ -211,6 +216,7 @@ namespace SlowTests.Server.Documents.Migration
 
                         dbCommand.ExecuteNonQuery();
                     }
+                    con.Close();
                 }
             });
         }
@@ -236,29 +242,32 @@ namespace SlowTests.Server.Documents.Migration
                     dbCommand.ExecuteNonQuery();
                 }
             }
-
-            using (var dbConnection = new MySqlConnection(connectionString))
+            
+            if (string.IsNullOrEmpty(dataSet) == false)
             {
-                dbConnection.Open();
-                
-                var assembly = Assembly.GetExecutingAssembly();
-
-                using (var dbCommand = dbConnection.CreateCommand())
+                using (var dbConnection = new MySqlConnection(connectionString))
                 {
-                    dbCommand.CommandTimeout = CommandTimeout;
-                    var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mysql." + dataSet + ".create.sql"));
-                    dbCommand.CommandText = textStreamReader.ReadToEnd();
-                    dbCommand.ExecuteNonQuery();
-                }
+                    dbConnection.Open();
 
-                if (includeData)
-                {
+                    var assembly = Assembly.GetExecutingAssembly();
+
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
                         dbCommand.CommandTimeout = CommandTimeout;
-                        var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mysql." + dataSet + ".insert.sql"));
+                        var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mysql." + dataSet + ".create.sql"));
                         dbCommand.CommandText = textStreamReader.ReadToEnd();
                         dbCommand.ExecuteNonQuery();
+                    }
+
+                    if (includeData)
+                    {
+                        using (var dbCommand = dbConnection.CreateCommand())
+                        {
+                            dbCommand.CommandTimeout = CommandTimeout;
+                            var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mysql." + dataSet + ".insert.sql"));
+                            dbCommand.CommandText = textStreamReader.ReadToEnd();
+                            dbCommand.ExecuteNonQuery();
+                        }
                     }
                 }
             }
@@ -301,29 +310,33 @@ namespace SlowTests.Server.Documents.Migration
                 connection.Close();
             }
 
-            using (var dbConnection = new NpgsqlConnection(connectionString))
+            if (string.IsNullOrEmpty(dataSet) == false)
             {
-                // ConnectionString with DB
-                dbConnection.Open();
-                var assembly = Assembly.GetExecutingAssembly();
-
-                using (var dbCommand = dbConnection.CreateCommand())
+                using (var dbConnection = new NpgsqlConnection(connectionString))
                 {
-                    dbCommand.CommandTimeout = CommandTimeout;
-                    var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.npgsql." + dataSet + ".create.sql"));
-                    dbCommand.CommandText = textStreamReader.ReadToEnd();
-                    dbCommand.ExecuteNonQuery();
-                }
+                    // ConnectionString with DB
+                    dbConnection.Open();
+                    var assembly = Assembly.GetExecutingAssembly();
 
-                if (includeData)
-                {
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
                         dbCommand.CommandTimeout = CommandTimeout;
-                        var dataStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.npgsql." + dataSet + ".insert.sql"));
-                        dbCommand.CommandText = dataStreamReader.ReadToEnd();
+                        var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.npgsql." + dataSet + ".create.sql"));
+                        dbCommand.CommandText = textStreamReader.ReadToEnd();
                         dbCommand.ExecuteNonQuery();
                     }
+
+                    if (includeData)
+                    {
+                        using (var dbCommand = dbConnection.CreateCommand())
+                        {
+                            dbCommand.CommandTimeout = CommandTimeout;
+                            var dataStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.npgsql." + dataSet + ".insert.sql"));
+                            dbCommand.CommandText = dataStreamReader.ReadToEnd();
+                            dbCommand.ExecuteNonQuery();
+                        }
+                    }
+                    dbConnection.Close();
                 }
             }
 
@@ -336,10 +349,19 @@ namespace SlowTests.Server.Documents.Migration
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandTimeout = CommandTimeout;
+
+                        // remove DB active sessions
+                        dbCommand.CommandText = @$" SELECT pg_terminate_backend(pg_stat_activity.pid)
+                        FROM pg_stat_activity
+    WHERE pg_stat_activity.datname = '{dbName}'
+      AND pid <> pg_backend_pid();";
+
+                        dbCommand.ExecuteNonQuery();
                         const string dropDatabaseQuery = "DROP DATABASE IF EXISTS \"{0}\"";
                         dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
                         dbCommand.ExecuteNonQuery();
                     }
+                    con.Close();
                 }
             });
         }
@@ -372,29 +394,18 @@ namespace SlowTests.Server.Documents.Migration
                 connection.Close();
             }
             connectionString = OracleConnectionString.Instance.GetUserConnectionString(databaseName, pass);
-            using (var dbConnection = new OracleConnection(connectionString))
+
+            if (string.IsNullOrEmpty(dataSet) == false)
             {
-                // ConnectionString with DB
-                dbConnection.Open();
-                var assembly = Assembly.GetExecutingAssembly();
-                using (var dbCommand = dbConnection.CreateCommand())
+                using (var dbConnection = new OracleConnection(connectionString))
                 {
-                    dbCommand.CommandTimeout = CommandTimeout;
-                    using (var reader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.oraclesql." + dataSet + ".create.sql")))
-                    {
-                        while (reader.Peek() >= 0)
-                        {
-                            dbCommand.CommandText = reader.ReadLine();
-                            dbCommand.ExecuteNonQuery();
-                        }
-                    }
-                }
-                if (includeData)
-                {
+                    // ConnectionString with DB
+                    dbConnection.Open();
+                    var assembly = Assembly.GetExecutingAssembly();
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
                         dbCommand.CommandTimeout = CommandTimeout;
-                        using (var reader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.oraclesql." + dataSet + ".insert.sql")))
+                        using (var reader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.oraclesql." + dataSet + ".create.sql")))
                         {
                             while (reader.Peek() >= 0)
                             {
@@ -403,8 +414,25 @@ namespace SlowTests.Server.Documents.Migration
                             }
                         }
                     }
+
+                    if (includeData)
+                    {
+                        using (var dbCommand = dbConnection.CreateCommand())
+                        {
+                            dbCommand.CommandTimeout = CommandTimeout;
+                            using (var reader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.oraclesql." + dataSet + ".insert.sql")))
+                            {
+                                while (reader.Peek() >= 0)
+                                {
+                                    dbCommand.CommandText = reader.ReadLine();
+                                    dbCommand.ExecuteNonQuery();
+                                }
+                            }
+                        }
+                    }
+
+                    dbConnection.Close();
                 }
-                dbConnection.Close();
             }
 
             var dbName = databaseName;
@@ -416,10 +444,23 @@ namespace SlowTests.Server.Documents.Migration
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandTimeout = CommandTimeout;
+
+                        // remove DB active sessions
+                        dbCommand.CommandText = dbCommand.CommandText = $@"select sid, serial# from v$session where username = '{dbName}'";
+                        using (var r = dbCommand.ExecuteReader())
+                        {
+                            while (r.Read())
+                            {
+                                dbCommand.CommandText = $@"alter system kill session '{r.GetValue(0)},{r.GetValue(1)}'";
+                                dbCommand.ExecuteNonQuery();
+                            }
+                        }
+
                         var dropDatabaseQuery = $"DROP USER \"{dbName}\" CASCADE";
                         dbCommand.CommandText = dropDatabaseQuery;
                         dbCommand.ExecuteNonQuery();
                     }
+                    con.Close();
                 }
             });
         }
