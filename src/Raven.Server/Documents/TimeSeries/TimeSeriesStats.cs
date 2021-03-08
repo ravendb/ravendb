@@ -210,6 +210,13 @@ namespace Raven.Server.Documents.TimeSeries
 
             void HandleLiveSegment()
             {
+                if (segment.NumberOfEntries == 1 && start > end)
+                {
+                    // new series
+                    start = end = baseline;
+                    return;
+                }
+
                 var lastTimestamp = GetLastLiveTimestamp(context, segment, baseline);
 
                 if (lastTimestamp > end)

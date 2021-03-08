@@ -26,6 +26,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private int _statePos;
 
         private bool _insideTimeSeriesBody;
+        private string _fromAlias;
         public const string TimeSeries = "timeseries";
 
         public QueryScanner Scanner = new QueryScanner();
@@ -225,7 +226,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return true;
         }
 
-        private DeclaredFunction SelectTimeSeries(StringSegment? rootSource = default)
+        private DeclaredFunction SelectTimeSeries()
         {
             var start = Scanner.Position;
 
@@ -237,11 +238,12 @@ namespace Raven.Server.Documents.Queries.Parser
                 _timeSeriesParser = new QueryParser();
 
             _timeSeriesParser.Init(functionText);
+            _timeSeriesParser._fromAlias = _fromAlias;
 
             if (_timeSeriesParser.Scanner.TryScan('(') == false)
                 ThrowParseException("Failed to find open parentheses ( for time series select function");
 
-            var ts = _timeSeriesParser.ParseTimeSeriesBody("time series select function", rootSource?.Value);
+            var ts = _timeSeriesParser.ParseTimeSeriesBody("time series select function");
 
             if (_timeSeriesParser.Scanner.TryScan(')') == false)
                 ThrowParseException("Failed to find closing parentheses ) for time series select function");
@@ -1333,7 +1335,7 @@ namespace Raven.Server.Documents.Queries.Parser
             };
         }
 
-        private TimeSeriesFunction ParseTimeSeriesBody(string name, StringSegment rootSource = default)
+        private TimeSeriesFunction ParseTimeSeriesBody(string name)
         {
             _insideTimeSeriesBody = true;
          
@@ -1352,7 +1354,7 @@ namespace Raven.Server.Documents.Queries.Parser
             }
             else
             {
-                if (field.Compound.Count > 1 && field.Compound[0] == rootSource) // turn u.Heartrate into just Heartrate
+                if (field.Compound.Count > 1 && field.Compound[0].Value == _fromAlias) // turn u.Heartrate into just Heartrate
                 {
                     field.Compound.RemoveAt(0);
                 }
@@ -1694,7 +1696,9 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
 
         private MethodExpression GetTimeSeriesExpression(Query query)
         {
-            var func = SelectTimeSeries(query?.From.Alias);
+            _fromAlias = query?.From.Alias?.Value;
+
+            var func = SelectTimeSeries();
 
             if (query?.TryAddTimeSeriesFunction(func) == false)
                 ThrowParseException($"time series function '{func.Name}' was declared multiple times");
@@ -1707,11 +1711,11 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
 
                 if (compound.Count > 1)
                 {
-                    if (query?.From.Alias != null)
+                    if (_fromAlias != null)
                     {
-                        args.Add(new FieldExpression(new List<StringSegment> { query.From.Alias.Value }));
+                        args.Add(new FieldExpression(new List<StringSegment> { _fromAlias }));
 
-                        if (query.From.Alias.Value != compound[0])
+                        if (_fromAlias != compound[0])
                         {
                             args.Add(new FieldExpression(new List<StringSegment> { compound[0] }));
                         }
@@ -2387,7 +2391,8 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
                 {
                     if (Scanner.String(out var str, fieldPath: part > 1))
                     {
-                        if (part == 1)
+                        if (part == 1 || 
+                            part == 2 && _insideTimeSeriesBody && parts[0].Value == _fromAlias)
                             quoted = true;
                         parts.Add(str);
                     }

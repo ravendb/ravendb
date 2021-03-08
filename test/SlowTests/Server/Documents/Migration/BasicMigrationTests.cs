@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations;
@@ -42,11 +44,12 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())
@@ -98,11 +101,12 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())
@@ -164,11 +168,12 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())
@@ -216,11 +221,12 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())
@@ -272,11 +278,12 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())
@@ -337,11 +344,12 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())
@@ -356,7 +364,6 @@ namespace SlowTests.Server.Documents.Migration
                         Assert.Equal(110, orderItem["Price"]);
                         Assert.Equal("Orders/1", orderItem["ParentOrder"]);
                         Assert.Equal("OrderItems/10", orderItem["Id"]);
-
 
                         var orderItem2 = session.Load<JObject>("OrderItems/11");
 
@@ -412,11 +419,12 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())
@@ -491,11 +499,12 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())
@@ -531,7 +540,6 @@ namespace SlowTests.Server.Documents.Migration
             }
         }
 
-
         [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresNpgSqlInlineData]
@@ -566,11 +574,12 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())
@@ -599,7 +608,6 @@ namespace SlowTests.Server.Documents.Migration
 
                 ExecuteSqlQuery(provider, connectionString, query);
 
-
                 using (var store = GetDocumentStore())
                 {
                     var orderItemCollection = new RootCollection(schemaName, "order_item", "OrderItems")
@@ -623,11 +631,12 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())
@@ -666,11 +675,12 @@ namespace SlowTests.Server.Documents.Migration
                         MaxRowsPerTable = 2
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())
@@ -680,7 +690,6 @@ namespace SlowTests.Server.Documents.Migration
                 }
             }
         }
-
 
         [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
@@ -705,16 +714,17 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         var customersSchema = schema.GetTable(schemaName, "customers2");
-                        // vat id -> should not be reference! 
+                        // vat id -> should not be reference!
                         Assert.Equal(0, customersSchema.References.Count);
                         Assert.True(customersSchema.Columns.Any(x => x.Name == "vatid"));
 
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())

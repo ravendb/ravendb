@@ -30,6 +30,8 @@ namespace Raven.Client.Documents.Session
             var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
+            streamOperation.EnsureIsAcceptable(query.IndexName, command.Result);
+
             var result = streamOperation.SetResult(command.Result);
 
             return YieldResults(query, result);
@@ -52,6 +54,8 @@ namespace Raven.Client.Documents.Session
             var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
+            streamOperation.EnsureIsAcceptable(query.IndexName, command.Result);
+
             var result = streamOperation.SetResult(command.Result);
             streamQueryStats = stats;
 
@@ -89,6 +93,7 @@ namespace Raven.Client.Documents.Session
             var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
+            streamOperation.EnsureIsAcceptable(query.IndexName, command.Result);
 
             using (command.Result.Response)
             using (command.Result.Stream)
