@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -285,40 +285,38 @@ namespace Raven.Server.Documents
 
             byte* ptr = buffer.Ptr;
 
-            fixed (char* pChars = str)
+            ReadOnlySpan<char> pChars = str.AsSpan();
+            for (var i = 0; i < pChars.Length; i++)
             {
-                for (var i = 0; i < strLength; i++)
+                uint ch = pChars[i];
+
+                // PERF: Trick to avoid multiple compare instructions on hot loops. 
+                //       This is the same as (ch >= 65 && ch <= 90)
+                if (ch - 65 <= 90 - 65)
                 {
-                    uint ch = pChars[i];
+                    ptr[i] = (byte)(ch | 0x20);
+                }
+                else
+                {
+                    if (ch > 127) // not ASCII, use slower mode
+                        goto UnlikelyUnicode;
 
-                    // PERF: Trick to avoid multiple compare instructions on hot loops. 
-                    //       This is the same as (ch >= 65 && ch <= 90)
-                    if (ch - 65 <= 90 - 65)
-                    {
-                        ptr[i] = (byte)(ch | 0x20);
-                    }
-                    else
-                    {
-                        if (ch > 127) // not ASCII, use slower mode
-                            goto UnlikelyUnicode;
-
-                        ptr[i] = (byte)ch;
-                    }
-
-                    ptr[i + idSize + maxStrSize] = (byte)ch;
+                    ptr[i] = (byte)ch;
                 }
 
-                _jsonParserState.FindEscapePositionsIn(ptr, ref strLength, escapePositionsSize);
-                if (strLength != originalStrLength)
-                {
-                    var anotherStrLength = originalStrLength;
-                    _jsonParserState.FindEscapePositionsIn(ptr + idSize + maxStrSize, ref anotherStrLength, escapePositionsSize);
+                ptr[i + idSize + maxStrSize] = (byte)ch;
+            }
+
+            _jsonParserState.FindEscapePositionsIn(ptr, ref strLength, escapePositionsSize);
+            if (strLength != originalStrLength)
+            {
+                var anotherStrLength = originalStrLength;
+                _jsonParserState.FindEscapePositionsIn(ptr + idSize + maxStrSize, ref anotherStrLength, escapePositionsSize);
 
 #if DEBUG
-                    if (strLength != anotherStrLength)
-                        throw new InvalidOperationException($"String length mismatch between Id ({str}) and it's lowercased counterpart after finding escape positions. Original: {anotherStrLength}. Lowercased: {strLength}");
+                if (strLength != anotherStrLength)
+                    throw new InvalidOperationException($"String length mismatch between Id ({str}) and it's lowercased counterpart after finding escape positions. Original: {anotherStrLength}. Lowercased: {strLength}");
 #endif
-                }
             }
 
             var writePos = ptr + maxStrSize;

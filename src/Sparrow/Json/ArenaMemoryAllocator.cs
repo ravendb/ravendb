@@ -419,6 +419,10 @@ namespace Sparrow.Json
             SizeInBytes = sizeInBytes;
             Address = address;
         }
+        public Span<byte> AsSpan()
+        {
+            return new Span<byte>(Address, SizeInBytes);
+        }
 
 #if MEM_GUARD_STACK || TRACK_ALLOCATED_MEMORY_DATA
         public string AllocatedBy = Environment.StackTrace;
