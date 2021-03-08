@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations;
@@ -49,11 +51,12 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())
@@ -103,11 +106,12 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())
@@ -161,11 +165,12 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
 
                     using (var session = store.OpenSession())
