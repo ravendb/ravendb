@@ -16,6 +16,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Collections;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
@@ -96,16 +97,18 @@ namespace Raven.Server.NotificationCenter.Handlers
 
         private void WatchCommand(int widgetId, WidgetType type, BlittableJsonReaderObject configuration)
         {
-            void OnMessage(DynamicJsonValue msg) => EnqueueMessage(widgetId, msg);
-
             Widget widget;
             switch (type)
             {
                 case WidgetType.CpuUsage:
-                    widget = new CpuUsageWidget(widgetId, _server, OnMessage, _disposeToken);
+                    widget = new CpuUsageWidget(widgetId, _server, msg => EnqueueMessage(widgetId, msg), _disposeToken);
                     break;
                 case WidgetType.Traffic:
-                    widget = new TrafficWidget(widgetId, OnMessage, _disposeToken);
+                    //TODO: widget = new TrafficWidget(widgetId, OnMessage, _disposeToken);
+                    widget = null; //TODO:
+                    break;
+                case WidgetType.MemoryUsage:
+                    widget = new MemoryUsageWidget(widgetId, _server, msg => EnqueueMessage(widgetId, msg), _disposeToken);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -119,12 +122,12 @@ namespace Raven.Server.NotificationCenter.Handlers
             }
         }
 
-        private void EnqueueMessage(int widgetId, DynamicJsonValue data)
+        private void EnqueueMessage<T>(int widgetId, T data) where T : IDynamicJson
         {
             _sendQueue.Enqueue(new DynamicJsonValue
             {
                 [nameof(WidgetMessage.Id)] = widgetId,
-                [nameof(WidgetMessage.Data)] = data
+                [nameof(WidgetMessage.Data)] = data.ToJson()
             });
         }
 
@@ -160,7 +163,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                 {
                     var segments = new[] {segment1, segment2};
                     int index = 0;
-                    var receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory, _disposeToken);
+                    var receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory.Memory, _disposeToken);
                     var jsonParserState = new JsonParserState();
                     using (var parser = new UnmanagedJsonParser(_readContext, jsonParserState, "cluster-dashboard"))
                     {
@@ -169,7 +172,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                         parser.SetBuffer(segments[index], 0, result.Count);
                         index++;
-                        receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory, _disposeToken);
+                        receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory.Memory, _disposeToken);
 
                         while (true)
                         {
@@ -188,7 +191,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                                     parser.SetBuffer(segments[index], 0, result.Count);
                                     if (++index >= segments.Length)
                                         index = 0;
-                                    receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory, _disposeToken);
+                                    receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory.Memory, _disposeToken);
                                 }
 
                                 builder.FinalizeDocument();

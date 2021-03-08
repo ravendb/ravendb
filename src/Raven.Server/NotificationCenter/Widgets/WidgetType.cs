@@ -10,6 +10,7 @@ namespace Raven.Server.NotificationCenter.Widgets
     {
         Unknown,
         CpuUsage,
+        MemoryUsage,
         Traffic,
     }
 }
