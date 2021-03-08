@@ -709,6 +709,14 @@ namespace FastTests
         protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) =>
              await WaitForPredicateAsync(a => (a == null && expectedVal == null) || (a != null && a.Equals(expectedVal)), act, timeout, interval);
 
+        protected async Task AssertWaitForExceptionAsync<T>(Func<Task> act, int timeout = 15000, int interval = 100)
+            where T : class
+        {
+            await WaitAndAssertForValueAsync(async () =>
+                await act().ContinueWith(t =>
+                    t.Exception?.InnerException?.GetType()), typeof(T), timeout, interval);
+        }
+
         protected async Task<T> AssertWaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class
         {
             var ret = await WaitForNotNullAsync(act, timeout, interval);
@@ -733,6 +741,18 @@ namespace FastTests
         {
             var val = await WaitForPredicateAsync(t => t.Equals(expectedVal), act, timeout, interval);
             Assert.Equal(expectedVal, val);
+        }
+
+        protected async Task<T> AssertWaitFoGreaterAsync<T>(Func<T> act, T value, int timeout = 15000, int interval = 100) where T : IComparable
+        {
+            return await AssertWaitFoGreaterAsync(() => Task.FromResult(act()), value, timeout, interval);
+        }
+
+        protected async Task<T> AssertWaitFoGreaterAsync<T>(Func<Task<T>> act, T value, int timeout = 15000, int interval = 100) where T : IComparable
+        {
+            var ret = await WaitForPredicateAsync(r => r.CompareTo(value) > 0, act, timeout, interval);
+            Assert.NotNull(ret);
+            return ret;
         }
 
         protected async Task<T> WaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class =>
