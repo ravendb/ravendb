@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using Jint;
 using Jint.Native;
@@ -14,6 +13,7 @@ using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Lucene.Net.Documents;
 using Raven.Client;
+using Raven.Client.Documents.Linq.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
@@ -25,6 +25,7 @@ using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Utils
 {
@@ -40,9 +41,11 @@ namespace Raven.Server.Utils
 
         private static readonly ConcurrentDictionary<Type, IPropertyAccessor> PropertyAccessorForMapReduceOutputCache = new ConcurrentDictionary<Type, IPropertyAccessor>();
 
-        public static bool IsSupportedType(object value)
+        private static readonly TypeCache<bool> _isSupportedTypeCache = new (512);
+
+        private static bool IsSupportedTypeInternal(object value)
         {
-            if (value == null || value is DynamicNullObject)
+            if (value is DynamicNullObject)
                 return true;
 
             if (value is DynamicBlittableJson)
@@ -155,6 +158,25 @@ namespace Raven.Server.Utils
             }
 
             return hasProperties & isSupported;
+        }
+
+        private static bool UnlikelyIsSupportedType(object value)
+        {
+            bool result = IsSupportedTypeInternal(value);
+            _isSupportedTypeCache.Put(value.GetType(), result);
+            return result;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsSupportedType(object value)
+        {
+            if (value == null)
+                return true;
+
+            if (_isSupportedTypeCache.TryGet(value.GetType(), out bool result))
+                return result;
+
+            return UnlikelyIsSupportedType(value);
         }
 
         public static object ToBlittableSupportedType(object value, bool flattenArrays = false, bool forIndexing = false, Engine engine = null, JsonOperationContext context = null)
@@ -390,42 +412,55 @@ namespace Raven.Server.Utils
             }
         }
 
+        private static readonly Type[] DynamicRules = new[]
+        {
+            typeof(string), typeof(LazyCompressedStringValue), 
+            typeof(LazyStringValue), typeof(BlittableJsonReaderObject),
+            typeof(BlittableJsonReaderArray)
+        };
+
+        private enum DynamicRuleTypeLocation : int
+        {
+            String = 0,
+            LazyCompressedStringValue = 1,
+            LazyStringValue = 2,
+            BlittableJsonReaderObject = 3,
+            BlittableJsonReaderArray = 4,
+        }
+
         public static dynamic ToDynamicType(object value)
         {
             if (value == null)
                 return DynamicNullObject.ExplicitNull;
 
-            if (value is DynamicNullObject)
-                return value;
+            Type objectType = value.GetType();
+            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.String])
+            {
+                if (TryConvertStringValue((string)value, out object result))
+                    return result;
 
-            if (value is IDynamicMetaObjectProvider)
                 return value;
-
-            if (value is int || value is long || value is double || value is decimal || value is float || value is short || value is byte)
-                return value;
-
-            if (value is string s && TryConvertStringValue(s, out object result))
-                return result;
+            }
 
             LazyStringValue lazyString = null;
-            if (value is LazyCompressedStringValue lazyCompressedStringValue)
-                lazyString = lazyCompressedStringValue.ToLazyStringValue();
-            else if (value is LazyStringValue lsv)
-                lazyString = lsv;
-
+            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.LazyCompressedStringValue])
+                lazyString = ((LazyCompressedStringValue)value).ToLazyStringValue();
+            else if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.LazyStringValue])
+                lazyString = (LazyStringValue) value;
             if (lazyString != null)
                 return ConvertLazyStringValue(lazyString);
 
-            if (value is BlittableJsonReaderObject jsonObject)
+            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.BlittableJsonReaderObject])
             {
+                var jsonObject = (BlittableJsonReaderObject)value;
                 if (jsonObject.TryGetWithoutThrowingOnError(ValuesPropertyName, out BlittableJsonReaderArray ja1))
                     return new DynamicArray(ja1);
 
                 return new DynamicBlittableJson(jsonObject);
             }
 
-            if (value is BlittableJsonReaderArray ja2)
-                return new DynamicArray(ja2);
+            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.BlittableJsonReaderArray])
+                return new DynamicArray((BlittableJsonReaderArray)value);
 
             return value;
         }
@@ -491,23 +526,21 @@ namespace Raven.Server.Utils
             if (value == null)
                 return null;
 
-            if (value is int || value is long || value is double || value is decimal || value is float || value is short || value is byte)
-                return value;
-
-            if (value is string s && TryConvertStringValue(s, out object result))
+            Type objectType = value.GetType();
+            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.String] && TryConvertStringValue((string)value, out object result))
                 return result;
 
             LazyStringValue lazyString = null;
-            if (value is LazyCompressedStringValue lazyCompressedStringValue)
-                lazyString = lazyCompressedStringValue.ToLazyStringValue();
-            else if (value is LazyStringValue lsv)
-                lazyString = lsv;
+            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.LazyCompressedStringValue])
+                lazyString = ((LazyCompressedStringValue)value).ToLazyStringValue();
+            else if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.LazyStringValue])
+                lazyString = (LazyStringValue)value;
 
             if (lazyString != null)
                 return ConvertLazyStringValue(lazyString);
 
-            if (value is BlittableJsonReaderObject bjo)
-                return TryConvertBlittableJsonReaderObject(bjo);
+            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.BlittableJsonReaderObject])
+                return TryConvertBlittableJsonReaderObject((BlittableJsonReaderObject) value);
 
             return value;
         }
@@ -618,21 +651,32 @@ namespace Raven.Server.Utils
             return PropertyAccessorForMapReduceOutputCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields));
         }
 
+
+        private static readonly TypeCache<bool> _treatAsEnumerableCache = new(512);
+
         public static bool ShouldTreatAsEnumerable(object item)
         {
-            if (item == null || item is DynamicNullObject)
+            if (item == null)
                 return false;
 
-            if (item is DynamicBlittableJson)
-                return false;
+            if (_treatAsEnumerableCache.TryGet(item.GetType(), out bool result))
+                return result;
 
-            if (item is string || item is LazyStringValue)
-                return false;
-
-            if (item is IDictionary)
-                return false;
-
-            return true;
+            return UnlikelyShouldTreatAsEnumerable(item);
         }
+
+        private static bool UnlikelyShouldTreatAsEnumerable(object item)
+        {
+            bool result;
+            if (item is DynamicNullObject || item is DynamicBlittableJson || item is string || item is LazyStringValue || item is IDictionary)
+                result = false;
+            else 
+                result = true;
+
+            _treatAsEnumerableCache.Put(item.GetType(), result);
+
+            return result;
+        }
+
     }
 }

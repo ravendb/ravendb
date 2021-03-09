@@ -12,7 +12,7 @@ using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
 {
-    public unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
+    public sealed unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
     {
         private AllocatedMemoryData _allocatedMemory;
         private UnmanagedWriteBuffer _buffer;
