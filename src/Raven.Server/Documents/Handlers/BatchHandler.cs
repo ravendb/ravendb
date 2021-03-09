@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 if (waitForIndexesTimeout != null)
-                    command.ModifiedCollections = new HashSet<string>();
+                    command.ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 try
                 {
@@ -392,7 +392,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     if (specificIndexes.Contains(index.Name))
                     {
-                        if (index.Collections.Count == 0 || index.Collections.Overlaps(modifiedCollections))
+                        if (index.WorksOnAnyCollection(modifiedCollections))
                             indexesToCheck.Add(index);
                     }
                 }
@@ -402,8 +402,7 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var index in database.IndexStore.GetIndexes())
                 {
                     if (index.Collections.Contains(Constants.Documents.Collections.AllDocumentsCollection) ||
-                        index.Collections.Overlaps(modifiedCollections) ||
-                        index.Collections.Count == 0)
+                        index.WorksOnAnyCollection(modifiedCollections))
                     {
                         indexesToCheck.Add(index);
                     }
@@ -524,7 +523,7 @@ namespace Raven.Server.Documents.Handlers
 
                     if (options.WaitForIndexesTimeout != null)
                     {
-                        ModifiedCollections = new HashSet<string>();
+                        ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     }
 
                     if (commands != null)
