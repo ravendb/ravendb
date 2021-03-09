@@ -10,7 +10,8 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.NotificationCenter.Widgets;
+using Raven.Server.ClusterDashboard;
+using Raven.Server.ClusterDashboard.Widgets;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -269,18 +270,4 @@ namespace Raven.Server.NotificationCenter.Handlers
             }
         }
     }
-}
-
-public class WidgetMessage
-{
-    public int Id { get; set; }
-    public DynamicJsonValue Data { get; set; }
-}
-
-public class WidgetRequest
-{
-    public string Command { get; set; }
-    public int Id { get; set; }
-    public WidgetType Type { get; set; }
-    public object Config { get; set; }
 }

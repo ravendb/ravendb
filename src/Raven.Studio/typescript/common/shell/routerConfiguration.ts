@@ -61,6 +61,7 @@ function generateAllMenuItems() {
         getDatabasesMenuItem(appUrls),
         getManageServerMenuItem(),
         rootItems.about(),
+        rootItems.clusterDashboard(),
         rootItems.dashboard()
     ];
 }

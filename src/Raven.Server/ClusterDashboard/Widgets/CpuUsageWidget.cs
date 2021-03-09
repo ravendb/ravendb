@@ -10,9 +10,8 @@ using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Utils;
-using Sparrow.Json.Parsing;
 
-namespace Raven.Server.NotificationCenter.Widgets
+namespace Raven.Server.ClusterDashboard.Widgets
 {
     public class CpuUsageWidget : Widget
     {
@@ -61,34 +60,11 @@ namespace Raven.Server.NotificationCenter.Widgets
 
             return new CpuUsagePayload
             {
-                ProcessCpuUsage = cpuInfo.ProcessCpuUsage,
-                MachineCpuUsage = cpuInfo.MachineCpuUsage,
+                ProcessCpuUsage = (int)cpuInfo.ProcessCpuUsage,
+                MachineCpuUsage = (int)cpuInfo.MachineCpuUsage,
                 UtilizedCores = utilizedCores,
                 NumberOfCores = numberOfCores,
                 Time = SystemTime.UtcNow
-            };
-        }
-
-    
-    }
-    
-    public class CpuUsagePayload : IDynamicJson
-    {
-        public double MachineCpuUsage { get; set; }
-        public double ProcessCpuUsage { get; set; }
-        public int UtilizedCores { get; set; }
-        public int NumberOfCores { get; set; }
-        public DateTime Time { get; set; }
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(ProcessCpuUsage)] = ProcessCpuUsage,
-                [nameof(MachineCpuUsage)] = MachineCpuUsage,
-                [nameof(UtilizedCores)] = UtilizedCores,
-                [nameof(NumberOfCores)] = NumberOfCores,
-                [nameof(Time)] = Time
             };
         }
     }

@@ -1,0 +1,15 @@
+<div class="content-margin">
+
+    <div class="cluster-dashboard-container masonry-grid">
+        <div class="grid-sizer"></div>
+        <div class="gutter-sizer"></div>
+        
+        <div data-bind="foreach: widgets">
+            <div data-bind="compose: $data" ></div>    
+        </div>
+
+        <button class="add-widget" data-toggle="modal" data-target="#myModal">
+            <i class="icon-plus"></i>
+        </button>
+    </div>
+</div>

@@ -170,6 +170,27 @@ interface JQuery {
     fullScreen(): boolean;
 }
 
+///
+/// Packery
+///
+
+class PackeryStatic {
+    layout(): void;
+
+    bindDraggabillyEvents(events: any): void;
+}
+
+declare const Packery: new (selector: string | Element, options?: object) => PackeryStatic; 
+
+///
+/// Draggabilly
+///
+
+class DraggabillyStatic {
+    
+}
+
+declare const Draggabilly: new (selector: string | Element, options?: object) => DraggabillyStatic; 
 
 ///
 /// jwerty
