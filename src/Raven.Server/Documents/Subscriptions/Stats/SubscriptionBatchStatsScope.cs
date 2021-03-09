@@ -75,5 +75,10 @@ namespace Raven.Server.Documents.Subscriptions.Stats
 
             return operation;
         }
+
+        public long GetBatchSize()
+        {
+            return _stats.SizeOfDocuments;
+        }
     }
 }

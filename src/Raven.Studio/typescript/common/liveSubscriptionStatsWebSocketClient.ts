@@ -134,24 +134,29 @@ class liveSubscriptionStatsWebSocketClient extends abstractWebSocketClient<resul
 
                             if (batchCountTotal && batchCountReported < batchCountTotal) {
                                 // add artificial info...
-                                const firstBatchStart = subscriptionStatsFromEndpoint.BatchPerformance[0].Started;
-                                const completed = liveSubscriptionStatsWebSocketClient.isoParser.parse(firstBatchStart).getTime();
-                                const started = liveSubscriptionStatsWebSocketClient.isoParser.parse(connection.ConnectedAt).getTime();
-                                const duration = completed - started;
-                                const details = {Name: "AggregatedBatchesInfo", DurationInMs: duration};
+                                const firstRelevantBatch = subscriptionStatsFromEndpoint.BatchPerformance.find(x => x.ConnectionId === connection.ConnectionId);
+                                const firstBatchStart = firstRelevantBatch.Started;
+                                const aggregatedCompleted = liveSubscriptionStatsWebSocketClient.isoParser.parse(firstBatchStart).getTime();
+                                
+                                const timeOfConnectionStart = liveSubscriptionStatsWebSocketClient.isoParser.parse(connection.Started).getTime();
+                                const activeStarted = timeOfConnectionStart + connection.Details.Operations[0].DurationInMs;
+                                const activeStartedAsDate = new Date(activeStarted).toISOString();
+                                
+                                const aggregatedDuration = aggregatedCompleted - activeStarted;
+                                const details = { Name: "AggregatedBatchesInfo", DurationInMs: aggregatedDuration };
 
-                                var temp = {
+                                var aggregatedBatchesPerf = {
                                     BatchId: 0,
                                     ConnectionId: connId,
-                                    Started: connection.ConnectedAt,
+                                    Started: activeStartedAsDate,
                                     Completed: firstBatchStart,
-                                    DurationInMs: duration,
+                                    DurationInMs: aggregatedDuration,
                                     AggregatedBatchesCount: batchCountTotal - batchCountReported,
                                     Details: details as Raven.Server.Documents.Subscriptions.Stats.SubscriptionBatchPerformanceOperation
                                 } as SubscriptionBatchPerformanceStatsWithCache;
 
-                                liveSubscriptionStatsWebSocketClient.fillBatchCache(temp);
-                                existingSubscriptionStats.BatchPerformance.push(temp);
+                                liveSubscriptionStatsWebSocketClient.fillBatchCache(aggregatedBatchesPerf);
+                                existingSubscriptionStats.BatchPerformance.push(aggregatedBatchesPerf);
                             }
                         });
                     }
@@ -186,7 +191,6 @@ class liveSubscriptionStatsWebSocketClient extends abstractWebSocketClient<resul
         const withCache = perf as SubscriptionConnectionPerformanceStatsWithCache;
         withCache.CompletedAsDate = perf.Completed ? liveSubscriptionStatsWebSocketClient.isoParser.parse(perf.Completed) : undefined;
         withCache.StartedAsDate = liveSubscriptionStatsWebSocketClient.isoParser.parse(perf.Started);
-        withCache.ConnectedAtAsDate = liveSubscriptionStatsWebSocketClient.isoParser.parse(perf.ConnectedAt);
         withCache.HasErrors = !!perf.Exception;
         withCache.Type = "SubscriptionConnection";
     }
@@ -196,7 +200,7 @@ class liveSubscriptionStatsWebSocketClient extends abstractWebSocketClient<resul
         withCache.CompletedAsDate = perf.Completed ? liveSubscriptionStatsWebSocketClient.isoParser.parse(perf.Completed) : undefined;
         withCache.StartedAsDate = liveSubscriptionStatsWebSocketClient.isoParser.parse(perf.Started);
         withCache.HasErrors = !!perf.Exception;
-        withCache.Type = withCache.AggregatedBatchesCount ? "AggregatedBatchesInfo" :"SubscriptionBatch";
+        withCache.Type = withCache.AggregatedBatchesCount ? "AggregatedBatchesInfo" : "SubscriptionBatch";
     }
 }
 

@@ -135,23 +135,26 @@ rect.pane {
             .load {
                 color: @color-2-2;
             }
-            .pendingConnection {
+            .connectionPending {
                 color: darken(@color-1-1, 5%);
             }
-            .actualConnection {
+            .connectionActive {
                 color: @color-1-1;
             }
             .batch {
                 color: @color-3;
-            }            
-            .sendDocuments {
+            }
+            .batchSendDocuments {
                 color: @color-2-1;
             }
-            .ack {
+            .batchWaitForAcknowledge {
                 color: @color-3-3;
             }
-            .connectionFailure {
-                color: lighten(darkred, 5%);
+            .connectionAborted {
+                color: darken(red, 5%);
+            }
+            .connectionRejected {
+                color: @color-2-2;
             }
             .aggregatedBatchesInfo {
                 color: @color-4-3;

@@ -16,13 +16,15 @@ import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefini
 import subscriptionQueryDefinitionCache = require("models/database/stats/subscriptionQueryDefinitionCache");
 import fileImporter = require("common/fileImporter");
 
+type treeActionType = "toggleTrack" | "trackItem" | "gapItem" | "previewEtlScript" |
+                      "subscriptionErrorItem" | "subscriptionPendingItem" | "subscriptionConnectionItem" | "previewSubscriptionQuery";
+
 type rTreeLeaf = {
     minX: number;
     minY: number;
     maxX: number;
     maxY: number;
-    actionType: "toggleTrack" | "trackItem" | "gapItem" | "previewEtlScript" |
-                "subscriptionExceptionItem" | "subscriptionPendingItem" | "subscriptionConnectionItem" | "previewSubscriptionQuery";
+    actionType: treeActionType;
     arg: any;
 }
 
@@ -72,7 +74,7 @@ class hitTest {
     private onPreviewEtlScript: (context: previewEtlScriptItemContext) => void;
     private onPreviewSubscriptionScript: (context: previewSubscriptionQueryItemContext) => void;
     private handleTrackTooltip: (context: trackItemContext, x: number, y: number) => void;
-    private handleSubscriptionExceptionTooltip: (context: subscriptionExceptionItemInfo, x: number, y: number) => void;
+    private handleSubscriptionErrorTooltip: (context: subscriptionErrorItemInfo, x: number, y: number) => void;
     private handleSubscriptionPendingTooltip: (context: subscriptionPendingItemInfo, x: number, y: number) => void;
     private handleSubscriptionConnectionTooltip: (context: subscriptionConnectionItemInfo, x: number, y: number) => void;
     private handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void;
@@ -87,7 +89,7 @@ class hitTest {
         onPreviewEtlScript: (context: previewEtlScriptItemContext) => void,
         onPreviewSubscriptionScript: (context: previewSubscriptionQueryItemContext) => void,
         handleTrackTooltip: (context: trackItemContext, x: number, y: number) => void,
-        handleSubscriptionExceptionTooltip: (context: subscriptionExceptionItemInfo, x: number, y: number) => void,
+        handleSubscriptionErrorTooltip: (context: subscriptionErrorItemInfo, x: number, y: number) => void,
         handleSubscriptionPendingTooltip: (context: subscriptionPendingItemInfo, x: number, y: number) => void,
         handleSubscriptionConnectionTooltip: (context: subscriptionConnectionItemInfo, x: number, y: number) => void,
         handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void,
@@ -97,109 +99,57 @@ class hitTest {
         this.onPreviewEtlScript = onPreviewEtlScript;
         this.onPreviewSubscriptionScript = onPreviewSubscriptionScript;
         this.handleTrackTooltip = handleTrackTooltip;
-        this.handleSubscriptionExceptionTooltip = handleSubscriptionExceptionTooltip;
+        this.handleSubscriptionErrorTooltip = handleSubscriptionErrorTooltip;
         this.handleSubscriptionPendingTooltip = handleSubscriptionPendingTooltip;
         this.handleSubscriptionConnectionTooltip = handleSubscriptionConnectionTooltip;
         this.handleGapTooltip = handleGapTooltip;
         this.removeTooltip = removeTooltip;
     }
 
-    registerTrackItem(x: number, y: number, width: number, height: number, rootStats: performanceBaseWithCache, item: taskOperation) {
-        const data = {
-            minX: x,
-            minY: y,
-            maxX: x + width,
-            maxY: y + height,
-            actionType: "trackItem",
-            arg: {
-                rootStats, item
-            } as trackItemContext
-        } as rTreeLeaf;
-        this.rTree.insert(data);
+    registerTrackItem(x: number, y: number, width: number, height: number, rootStats: performanceBaseWithCache, op: taskOperation) {
+        const trackInfoItem = { rootStats: rootStats, item: op } as trackItemContext;
+        this.insertItem(x, y, width, height, "trackItem", trackInfoItem);
     }
 
     registerPreviewEtlScript(x: number, y: number, width: number, height: number, taskInfo: previewEtlScriptItemContext) {
-        const data = {
-            minX: x,
-            minY: y,
-            maxX: x + width,
-            maxY: y + height,
-            actionType: "previewEtlScript",
-            arg: taskInfo
-        } as rTreeLeaf;
-        this.rTree.insert(data);
+        this.insertItem(x, y, width, height, "previewEtlScript", taskInfo);
     }
 
     registerPreviewSubscriptionQuery(x: number, y: number, width: number, height: number, taskInfo: previewSubscriptionQueryItemContext) {
-        const data = {
-            minX: x,
-            minY: y,
-            maxX: x + width,
-            maxY: y + height,
-            actionType: "previewSubscriptionQuery",
-            arg: taskInfo
-        } as rTreeLeaf;
-        this.rTree.insert(data);
+        this.insertItem(x, y, width, height, "previewSubscriptionQuery", taskInfo);
     }
 
     registerToggleTrack(x: number, y: number, width: number, height: number, trackName: string) {
-        const data = {
-            minX: x,
-            minY: y,
-            maxX: x + width,
-            maxY: y + height,
-            actionType: "toggleTrack",
-            arg: trackName
-        } as rTreeLeaf;
-        this.rTree.insert(data);
+        this.insertItem(x, y, width, height, "toggleTrack", trackName);
     }
 
-    registerGapItem(x: number, y: number, width: number, height: number, element: timeGapInfo) {
-        const data = {
-            minX: x,
-            minY: y,
-            maxX: x + width,
-            maxY: y + height,
-            actionType: "gapItem",
-            arg: element
-        } as rTreeLeaf;
-        this.rTree.insert(data);
+    registerGapItem(x: number, y: number, width: number, height: number, gapInfo: timeGapInfo) {
+        this.insertItem(x, y, width, height, "gapItem", gapInfo);
     }
 
-    registerSubscriptionExceptionItem(x: number, y: number, width: number, height: number, exceptionItem: subscriptionExceptionItemInfo) { 
-        const data = {
-            minX: x,
-            minY: y,
-            maxX: x + width,
-            maxY: y + height,
-            actionType: "subscriptionExceptionItem",
-            arg: exceptionItem
-        } as rTreeLeaf;
-        this.rTree.insert(data);
+    registerSubscriptionExceptionItem(x: number, y: number, width: number, height: number, exceptionItem: subscriptionErrorItemInfo) {
+        this.insertItem(x, y, width, height, "subscriptionErrorItem", exceptionItem);
     }
 
     registerSubscriptionPendingItem(x: number, y: number, width: number, height: number, pendingItem: subscriptionPendingItemInfo) {
-        const data = {
-            minX: x,
-            minY: y,
-            maxX: x + width,
-            maxY: y + height,
-            actionType: "subscriptionPendingItem",
-            arg: pendingItem
-        } as rTreeLeaf;
-        this.rTree.insert(data);
+        this.insertItem(x, y, width, height, "subscriptionPendingItem", pendingItem);
     }
 
-    registerSubscriptionConnectionItem(x: number, y: number, width: number, height: number, pendingItem: subscriptionConnectionItemInfo) {
-        const data = {
+    registerSubscriptionConnectionItem(x: number, y: number, width: number, height: number, connectionItem: subscriptionConnectionItemInfo) {
+        this.insertItem(x, y, width, height, "subscriptionConnectionItem", connectionItem);
+    }
+
+    private insertItem(x: number, y: number, width: number, height: number, action: treeActionType, args: any) {
+        const item =  {
             minX: x,
             minY: y,
             maxX: x + width,
             maxY: y + height,
-            actionType: "subscriptionConnectionItem",
-            arg: pendingItem
+            actionType: action,
+            arg: args
         } as rTreeLeaf;
-        this.rTree.insert(data);
+        
+        this.rTree.insert(item);
     }
 
     onClick() {
@@ -241,51 +191,51 @@ class hitTest {
         const clickLocation = d3.mouse(this.container.node());
         const items = this.findItems(clickLocation[0], clickLocation[1]);
 
-        const overToggleTrack = items.filter(x => x.actionType === "toggleTrack").length > 0;
+        const overToggleTrack = items.find(x => x.actionType === "toggleTrack");
 
-        const currentPreviewEtlItem = items.filter(x => x.actionType === "previewEtlScript").map(x => x.arg as previewEtlScriptItemContext)[0];
+        const currentPreviewEtlItem = items.find(x => x.actionType === "previewEtlScript");
         if (currentPreviewEtlItem) {
             this.cursor("pointer");
             return;
         }
         
-        const currentPreviewSubscriptionItem = items.filter(x => x.actionType === "previewSubscriptionQuery").map(x => x.arg as previewSubscriptionQueryItemContext)[0];
+        const currentPreviewSubscriptionItem = items.find(x => x.actionType === "previewSubscriptionQuery");
         if (currentPreviewSubscriptionItem) {
             this.cursor("pointer");
             return;
         }
 
-        const currentTrackEventItem = items.filter(x => x.actionType === "subscriptionExceptionItem").map(x => x.arg as subscriptionExceptionItemInfo)[0];
+        const currentTrackEventItem = items.find(x => x.actionType === "subscriptionErrorItem");
         if (currentTrackEventItem) {
-            this.handleSubscriptionExceptionTooltip(currentTrackEventItem, clickLocation[0], clickLocation[1]);
+            this.handleSubscriptionErrorTooltip(currentTrackEventItem.arg as subscriptionErrorItemInfo , clickLocation[0], clickLocation[1]);
             this.cursor("auto");
             return;
         }
 
-        const currentTrackPendingItem = items.filter(x => x.actionType === "subscriptionPendingItem").map(x => x.arg as subscriptionPendingItemInfo)[0];
+        const currentTrackPendingItem = items.find(x => x.actionType === "subscriptionPendingItem");
         if (currentTrackPendingItem) {
-            this.handleSubscriptionPendingTooltip(currentTrackPendingItem, clickLocation[0], clickLocation[1]);
+            this.handleSubscriptionPendingTooltip(currentTrackPendingItem.arg as subscriptionPendingItemInfo, clickLocation[0], clickLocation[1]);
             this.cursor("auto");
             return;
         }
 
-        const currentTrackConnectionItem = items.filter(x => x.actionType === "subscriptionConnectionItem").map(x => x.arg as subscriptionConnectionItemInfo)[0];
+        const currentTrackConnectionItem = items.find(x => x.actionType === "subscriptionConnectionItem");
         if (currentTrackConnectionItem) {
-            this.handleSubscriptionConnectionTooltip(currentTrackConnectionItem, clickLocation[0], clickLocation[1]);
+            this.handleSubscriptionConnectionTooltip(currentTrackConnectionItem.arg as subscriptionConnectionItemInfo, clickLocation[0], clickLocation[1]);
             this.cursor("auto");
             return;
         }
         
-        const currentTrackItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as trackItemContext)[0];
+        const currentTrackItem = items.find(x => x.actionType === "trackItem");
         if (currentTrackItem) {
-            this.handleTrackTooltip(currentTrackItem, clickLocation[0], clickLocation[1]);
+            this.handleTrackTooltip(currentTrackItem.arg as trackItemContext, clickLocation[0], clickLocation[1]);
             this.cursor("auto");
             return;
         }
         
-        const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
+        const currentGapItem = items.find(x => x.actionType === "gapItem");
         if (currentGapItem) {
-            this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
+            this.handleGapTooltip(currentGapItem.arg as timeGapInfo, clickLocation[0], clickLocation[1]);
             this.cursor("auto");
             return;
         }
@@ -410,7 +360,7 @@ class ongoingTasksStats extends viewModelBase {
     private brushContainer: d3.Selection<any>;
     private zoom: d3.behavior.Zoom<any>;
     private yScale: d3.scale.Ordinal<string, number>;
-    private tooltip: d3.Selection<taskOperation | timeGapInfo | performanceBaseWithCache | subscriptionExceptionItemInfo | subscriptionPendingItemInfo>;
+    private tooltip: d3.Selection<taskOperation | timeGapInfo | performanceBaseWithCache | subscriptionErrorItemInfo | subscriptionPendingItemInfo>;
 
     /* colors */
 
@@ -449,12 +399,13 @@ class ongoingTasksStats extends viewModelBase {
             "Extract": undefined as string,
             "Transform": undefined as string,
             "Load" : undefined as string,
-            "PendingConnection": undefined as string,
-            "ActualConnection": undefined as string,
+            "ConnectionPending": undefined as string,
+            "ConnectionActive": undefined as string,
             "Batch": undefined as string,
-            "SendDocuments": undefined as string,
-            "Ack": undefined as string,
-            "ConnectionFailure": undefined as string,
+            "BatchSendDocuments": undefined as string,
+            "BatchWaitForAcknowledge": undefined as string,
+            "ConnectionAborted": undefined as string,
+            "ConnectionRejected": undefined as string,
             "AggregatedBatchesInfo": undefined as string
         }
     };
@@ -528,15 +479,16 @@ class ongoingTasksStats extends viewModelBase {
 
         this.initCanvases();
 
-        this.etlDefinitionsCache = new etlScriptDefinitionCache(this.activeDatabase());
-        this.subscriptionDefinitionCache = new subscriptionQueryDefinitionCache(this.activeDatabase());
+        const activeDatabase = this.activeDatabase();
+        this.etlDefinitionsCache = new etlScriptDefinitionCache(activeDatabase);
+        this.subscriptionDefinitionCache = new subscriptionQueryDefinitionCache(activeDatabase);
 
         this.hitTest.init(this.svg,
             (replicationName) => this.onToggleTrack(replicationName),
             (context) => this.handlePreviewEtlScript(context),
             (context) => this.handlePreviewSubscriptionScript(context),
             (context, x, y) => this.handleTrackTooltip(context, x, y),
-            (context, x, y) => this.handleSubscriptionExceptionTooltip(context, x, y),
+            (context, x, y) => this.handleSubscriptionErrorTooltip(context, x, y),
             (context, x, y) => this.handleSubscriptionPendingTooltip(context, x, y),
             (context, x, y) => this.handleSubscriptionConnectionTooltip(context, x, y),
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
@@ -780,17 +732,17 @@ class ongoingTasksStats extends viewModelBase {
     }
 
     private cancelLiveView() {
-        if (!!this.liveViewReplicationClient()) {
+        if (this.liveViewReplicationClient()) {
             this.liveViewReplicationClient().dispose();
             this.liveViewReplicationClient(null);
         }
 
-        if (!!this.liveViewEtlClient()) {
+        if (this.liveViewEtlClient()) {
             this.liveViewEtlClient().dispose();
             this.liveViewEtlClient(null);
         }
 
-        if (!!this.liveViewSubscriptionClient()) {
+        if (this.liveViewSubscriptionClient()) {
             this.liveViewSubscriptionClient().dispose();
             this.liveViewSubscriptionClient(null);
         }
@@ -1285,18 +1237,16 @@ class ongoingTasksStats extends viewModelBase {
             const connectionPerfLength = connectionPerformance.length;
             const batchPerfLength = batchPerformance.length;
             
-            let connectionPerfCompleted: string = null;
+            let connectionPerfCompleted: Date = null;
 
             // Draw connections
             for (let perfIdx = 0; perfIdx < connectionPerfLength; perfIdx++) {
                 const connPerf = connectionPerformance[perfIdx];
                 const perfWithCache = connPerf as SubscriptionConnectionPerformanceStatsWithCache;
                 
-                const x1ForPending = xScale(perfWithCache.StartedAsDate);
-                const x1ForActual = xScale(perfWithCache.ConnectedAtAsDate);
-                
                 const startDateAsInt = perfWithCache.StartedAsDate.getTime();
                 const endDateAsInt = startDateAsInt + connPerf.DurationInMs;
+                
                 if (endDateAsInt < visibleStartDateAsInt || visibleEndDateAsInt < startDateAsInt)
                     continue;
                 
@@ -1307,41 +1257,51 @@ class ongoingTasksStats extends viewModelBase {
                 
                 // Draw connection items (but only if we have actual connection (not just 'trying to connect')
                 if (perfWithCache.Details.Operations.length > 1) {
-                    const actualInfo = perfWithCache.Details.Operations[1];
+                    const pendingDuration = perfWithCache.Details.Operations[0].DurationInMs;
+                    const startActiveConnectionDateAsInt = startDateAsInt + pendingDuration;
+
+                    const x1ForActive = xScale(new Date(startActiveConnectionDateAsInt));
+                    const dxForActive = extentFunc(perfWithCache.Details.Operations[1].DurationInMs);
+
+                    this.drawActiveSubscriptionConnectionStripe(context, x1ForActive, stripesYStart, yOffset, dxForActive, perfWithCache, trackName);
 
                     // Draw a separating line between adjacent connection items if needed 
-                    this.drawSubscriptionStripes(context, actualInfo, x1ForActual, stripesYStart, yOffset, extentFunc, perfWithCache, trackName);
-                    if (perfIdx >= 1 && connectionPerfCompleted === perfWithCache.ConnectedAt) {
+                    const connectedAtDate = new Date(startActiveConnectionDateAsInt);                    
+                    if (perfIdx >= 1 && connectionPerfCompleted && connectionPerfCompleted.getTime() === connectedAtDate.getTime()) {
                         context.fillStyle = this.colors.separatorLine;
-                        context.fillRect(x1ForActual, yStart + (isOpened ? yOffset : 0), 1, ongoingTasksStats.trackHeight);
+                        context.fillRect(x1ForActive, yStart + (isOpened ? yOffset : 0), 1, ongoingTasksStats.trackHeight);
                     }
-                    
-                    connectionPerfCompleted = connPerf.Completed;
-                    
+
+                    connectionPerfCompleted = connectedAtDate;
+
                     if (!connPerf.Completed) {
-                        this.findInProgressAction([actualInfo], extentFunc, x1ForActual, stripesYStart, yOffset);
+                        const activeInfo = perfWithCache.Details.Operations[1];
+                        this.findInProgressAction([activeInfo], extentFunc, x1ForActive, stripesYStart, yOffset);
                     }
                 }
-                
-                // Draw events & exceptions on top of connection stripe
+
+                // Draw errors on top of connection stripe
                 if (perfWithCache.Exception) {
-                    const x2 = xScale(perfWithCache.CompletedAsDate);
-                    const dx = 12;
-                    this.drawConnectionEvent(context, x2, stripesYStart - ongoingTasksStats.trackHeight + 3, dx);
-                    this.hitTest.registerSubscriptionExceptionItem(x2 - dx, stripesYStart - ongoingTasksStats.trackHeight, dx + 5, ongoingTasksStats.trackHeight,
+                    const xForCompleted = xScale(perfWithCache.CompletedAsDate);
+                    this.drawConnectionError(context, xForCompleted, stripesYStart - ongoingTasksStats.trackHeight + 10, 8, perfWithCache.ErrorType);
+                    
+                    const iconWidth = 16;
+                    this.hitTest.registerSubscriptionExceptionItem(xForCompleted - iconWidth/2, stripesYStart - ongoingTasksStats.trackHeight, iconWidth, ongoingTasksStats.trackHeight,
                         {
-                            title: "Connection Aborted",
+                            title: perfWithCache.ErrorType === "ConnectionRejected" ? "Connection rejected" : "Connection aborted",
                             exceptionText: perfWithCache.Exception,
-                            clientUri: perfWithCache.ClientUri
+                            clientUri: perfWithCache.ClientUri,
+                            strategy: perfWithCache.Strategy
                         });
                 }
                 
-                // Draw pending duration time on top of connection stripe
+                // Draw pending duration on top of connection stripe
                 const pendingInfo = perfWithCache.Details.Operations[0];
                 const dxForPending = extentFunc(pendingInfo.DurationInMs);
                 
                 if (dxForPending >= 0.8) {
-                    this.drawPendingConnection(context, x1ForPending, stripesYStart - ongoingTasksStats.trackHeight + 9, dxForPending);
+                    const x1ForPending = xScale(perfWithCache.StartedAsDate);
+                    this.drawPendingConnection(context, x1ForPending, stripesYStart - ongoingTasksStats.trackHeight + 12, dxForPending);
                     this.hitTest.registerSubscriptionPendingItem(x1ForPending, stripesYStart - ongoingTasksStats.trackHeight, dxForPending, ongoingTasksStats.trackHeight,
                         {
                             title: "Pending Connection",
@@ -1384,7 +1344,6 @@ class ongoingTasksStats extends viewModelBase {
                     if (perfIdx != 1 || !(batchPerformance[0] as SubscriptionBatchPerformanceStatsWithCache).AggregatedBatchesCount) {
                         context.fillStyle = this.colors.separatorLine;
                         context.fillRect(x1, stripesYStart, 1, ongoingTasksStats.trackHeight);
-                        console.log("draw line from batches - perfIdx ===  " + perfIdx);
                     }
                 }
 
@@ -1392,7 +1351,9 @@ class ongoingTasksStats extends viewModelBase {
 
                 batchPerfCompleted = batchPerf.Completed;
                 
-                const parentConnection = connectionPerformance.find(x => (x as SubscriptionConnectionPerformanceStatsWithCache).ConnectionId === perfWithCache.ConnectionId) as SubscriptionConnectionPerformanceStatsWithCache;
+                const parentConnection = connectionPerformance.find(x => 
+                    (x as SubscriptionConnectionPerformanceStatsWithCache).ConnectionId === perfWithCache.ConnectionId) as SubscriptionConnectionPerformanceStatsWithCache;
+                
                 if (!batchPerf.Completed && !parentConnection.Exception) {
                     this.findInProgressAction([batchPerf.Details], extentFunc, x1, stripesYStart, yOffset);
                 }
@@ -1478,7 +1439,7 @@ class ongoingTasksStats extends viewModelBase {
         context.fillText(text, ongoingTasksStats.textLeftPadding + 4, yStart + textShift);
 
         context.font = "16px icomoon";
-        context.fillText('\ue9a3',ongoingTasksStats.textLeftPadding + textWidth + ongoingTasksStats.previewIconWidth / 2, yStart + 16);
+        context.fillText('\ue9a3', ongoingTasksStats.textLeftPadding + textWidth + ongoingTasksStats.previewIconWidth / 2, yStart + 16);
         
         return areaWidth;
     }
@@ -1543,13 +1504,26 @@ class ongoingTasksStats extends viewModelBase {
         return "";
     }
 
-    private drawConnectionEvent(context: CanvasRenderingContext2D, x: number, y: number, dx: number) {
-        context.fillStyle = this.colors.tracks.ConnectionFailure;
-        graphHelper.drawErrorMark(context, x - dx, y, dx, dx);
+    private drawConnectionError(context: CanvasRenderingContext2D, x: number, y: number, dyForLine: number,
+                                errorType: Raven.Server.Documents.TcpHandlers.SubscriptionError) {
+        context.strokeStyle = this.colors.tracks.ConnectionAborted;
+        graphHelper.drawErrorLine(context, x, y, dyForLine);
+        
+        let errorIcon;
+        if (errorType === "ConnectionRejected") {
+            errorIcon = "\ue909"; // todo - replace icon - issue RavenDB-16331
+            context.fillStyle = this.colors.tracks.ConnectionRejected;
+        } else {
+            errorIcon = "\ue920";
+            context.fillStyle = this.colors.tracks.ConnectionAborted;
+        }
+        
+        context.font = "16px icomoon";
+        context.fillText(errorIcon, x - 8, y);
     }
 
     private drawPendingConnection(context: CanvasRenderingContext2D, x: number, y: number, dx: number) {
-        context.strokeStyle = this.colors.tracks.PendingConnection;
+        context.strokeStyle = this.colors.tracks.ConnectionPending;
         graphHelper.drawPendingArea(context, x, y, dx);
     }
     
@@ -1598,22 +1572,25 @@ class ongoingTasksStats extends viewModelBase {
         }
     }
 
-    private drawSubscriptionStripes(context: CanvasRenderingContext2D, op: taskOperation,
-                                    xStart: number, yStart: number, yOffset: number, extentFunc: (duration: number) => number,
+    private drawActiveSubscriptionConnectionStripe(context: CanvasRenderingContext2D,
+                                    xStart: number, yStart: number, yOffset: number, dx: number,
                                     perfItemWithCache: SubscriptionConnectionPerformanceStatsWithCache, trackName: string) {
 
-        const dx = extentFunc(op.DurationInMs);
+        const activeConnectionInfo = perfItemWithCache.Details.Operations[1];
+        const operationDuration = activeConnectionInfo.DurationInMs;
 
         // Draw item
-        context.fillStyle = this.getColorForOperation(op.Name);
+        context.fillStyle = this.getColorForOperation(activeConnectionInfo.Name);
         context.fillRect(xStart, yStart, dx, ongoingTasksStats.trackHeight);
 
         // Register items
         const itemToRegister = {
             title: "Client Connection",
+            strategy: perfItemWithCache.Strategy,
             batchCount: perfItemWithCache.BatchCount,
+            totalBatchSize: perfItemWithCache.TotalBatchSize,
             connectionId: perfItemWithCache.ConnectionId,
-            duration: perfItemWithCache.Details.Operations[1].DurationInMs,
+            duration: operationDuration,
             exceptionText:  perfItemWithCache.Exception,
             clientUri: perfItemWithCache.ClientUri
         }
@@ -1736,7 +1713,7 @@ class ongoingTasksStats extends viewModelBase {
         if (currentDatum !== itemInfo) {
             let tooltipHtml = `<strong>*** ${itemInfo.title} ***</strong> <br/>`;
             tooltipHtml += `Duration: ${generalUtils.formatMillis(itemInfo.duration)} <br/>`;
-            tooltipHtml += `<br>Client URI: <strong>${itemInfo.clientUri}</strong> <br/>`;
+            tooltipHtml += `Client URI: <strong>${itemInfo.clientUri}</strong>`;
             this.handleTooltip(itemInfo, x, y, tooltipHtml);
         }
     }
@@ -1747,26 +1724,27 @@ class ongoingTasksStats extends viewModelBase {
         if (currentDatum !== itemInfo) {
             let tooltipHtml = `<strong>*** ${itemInfo.title} ***</strong> <br/>`;
             tooltipHtml += `Duration: ${generalUtils.formatMillis(itemInfo.duration)} <br/>`;
-            tooltipHtml += `<br>Client URI: <strong>${itemInfo.clientUri}</strong> <br/><br/>`;
-
+            tooltipHtml += `Client URI: <strong>${itemInfo.clientUri}</strong> <br/>`;
+            tooltipHtml += `Strategy: ${itemInfo.strategy} <br/>`;
             tooltipHtml += `Number of batches acknowledged: ${itemInfo.batchCount} <br/>`;
-            //tooltipHtml += `Connection Id: ${itemInfo.connectionId} <br/>`;
+            tooltipHtml += `Size of all batches: ${itemInfo.totalBatchSize}`;
             
             if (itemInfo.exceptionText) {
-                tooltipHtml += `<br>Message: ${itemInfo.exceptionText} <br/>`;
+                tooltipHtml += `<br>Message: ${itemInfo.exceptionText}`;
             }
             
             this.handleTooltip(itemInfo, x, y, tooltipHtml);
         }
     }
 
-    private handleSubscriptionExceptionTooltip(itemInfo: subscriptionExceptionItemInfo, x: number, y: number) {
+    private handleSubscriptionErrorTooltip(itemInfo: subscriptionErrorItemInfo, x: number, y: number) {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== itemInfo) {
             let tooltipHtml = `<strong>*** ${itemInfo.title} ***</strong> <br/>`;
-            tooltipHtml += `<br>Client URI: <strong>${itemInfo.clientUri}</strong> <br/><br/>`;
-            tooltipHtml += `Message: ${itemInfo.exceptionText} <br/>`;
+            tooltipHtml += `Client URI: <strong>${itemInfo.clientUri}</strong> <br/>`;
+            tooltipHtml += `Strategy: <strong>${itemInfo.strategy}</strong> <br/>`;
+            tooltipHtml += `Message: ${itemInfo.exceptionText}`;
             this.handleTooltip(itemInfo, x, y, tooltipHtml);
         }
     }
@@ -1828,12 +1806,11 @@ class ongoingTasksStats extends viewModelBase {
                     case "SubscriptionBatch": {
                         const elementWithData = context.rootStats as SubscriptionBatchPerformanceStatsWithCache;
                        
-                        tooltipHtml += `Document sent in batch: ${elementWithData.DocumentsCount} <br/>`;
-                        tooltipHtml += `Document size: ${elementWithData.DocumentsSize} <br/>`;
-                        tooltipHtml += `Included documents: ${elementWithData.NumberOfIncludedDocuments} <br/>`;
-                        tooltipHtml += `Included counters: ${elementWithData.NumberOfIncludedCounters} <br/>`;
-                        tooltipHtml += `Included timeseries entries: ${elementWithData.NumberOfIncludedTimeSeriesEntries} <br/>`;
-                        //tooltipHtml += `Batch Id: ${elementWithData.BatchId} <br/>`;
+                        tooltipHtml += `Documents sent in batch: ${elementWithData.NumberOfDocuments} <br/>`;
+                        tooltipHtml += `Documents size: ${elementWithData.SizeOfDocuments} <br/>`;
+                        tooltipHtml += `Included Documents: ${elementWithData.NumberOfIncludedDocuments} <br/>`;
+                        tooltipHtml += `Included Counters: ${elementWithData.NumberOfIncludedCounters} <br/>`;
+                        tooltipHtml += `Included Time Series entries: ${elementWithData.NumberOfIncludedTimeSeriesEntries}`;
 
                         if (elementWithData.Exception) {
                             tooltipHtml += `<br>Message: ${elementWithData.Exception} <br/>`;
@@ -1842,10 +1819,7 @@ class ongoingTasksStats extends viewModelBase {
                         break;
                     case "AggregatedBatchesInfo": {
                         const elementWithData = context.rootStats as SubscriptionBatchPerformanceStatsWithCache;
-
-                        tooltipHtml += `Number of batches sent: ${elementWithData.AggregatedBatchesCount } <br/>`;
-                        tooltipHtml += `Connection Id: ${elementWithData.ConnectionId } <br/>`;
-                        tooltipHtml += `Batch Id: ${elementWithData.BatchId} <br/>`;
+                        tooltipHtml += `Number of batches sent: ${elementWithData.AggregatedBatchesCount }`;
                     }
                         break;
                 }
@@ -1914,7 +1888,7 @@ class ongoingTasksStats extends viewModelBase {
                     }
                 } else if (isSubscription) {
                     // used for batches stripes only 
-                    const title = context.item.Name === "Ack" ? "Waiting for ACK" : "Sending Documents";
+                    const title = context.item.Name === "BatchWaitForAcknowledge" ? "Waiting for ACK" : "Sending Documents";
                     
                     tooltipHtml = `<strong>*** ${title} ***</strong><br/>`;
                     tooltipHtml += "Duration: " + generalUtils.formatMillis(context.item.DurationInMs) + "<br/>";
@@ -1936,7 +1910,7 @@ class ongoingTasksStats extends viewModelBase {
         }
     }
 
-    private handleTooltip(element: taskOperation | timeGapInfo | performanceBaseWithCache | subscriptionExceptionItemInfo | subscriptionPendingItemInfo,
+    private handleTooltip(element: taskOperation | timeGapInfo | performanceBaseWithCache | subscriptionErrorItemInfo | subscriptionPendingItemInfo,
                           x: number, y: number, tooltipHtml: string) {
         if (element && !this.dialogVisible) {
             const canvas = this.canvas.node() as HTMLCanvasElement;
@@ -2141,4 +2115,3 @@ class ongoingTasksStats extends viewModelBase {
 }
 
 export = ongoingTasksStats;
-
