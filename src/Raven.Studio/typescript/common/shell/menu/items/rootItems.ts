@@ -25,7 +25,20 @@ function serverDashboard() {
     });
 }
 
+function clusterDashboard() {
+    return new leafMenuItem({
+        route: "clusterDashboard",
+        moduleId: 'viewmodels/resources/clusterDashboard',
+        title: 'Cluster Dashboard',
+        tooltip: "Cluster Dashboard",
+        nav: true,
+        css: 'icon-cluster', //TODO: check icon!
+        dynamicHash: appUrl.forClusterDashboard
+    }); 
+}
+
 export = {
     about: aboutItem,
-    dashboard: serverDashboard
+    clusterDashboard,
+    dashboard: serverDashboard,
 };

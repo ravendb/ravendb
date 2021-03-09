@@ -87,6 +87,8 @@ var paths = {
         "favico.js/favico.js",
         "leaflet/dist/leaflet-src.js",
         "leaflet.markercluster/dist/leaflet.markercluster.js"
+        "packery/dist/packery.pkgd.js",
+        "draggabilly/dist/draggabilly.pkgd.js"
     ]
 };
 

@@ -5,9 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Utils;
@@ -18,15 +15,16 @@ using Sparrow.Server.LowMemory;
 using Sparrow.Utils;
 using Voron.Impl;
 
-namespace Raven.Server.NotificationCenter.Widgets
+namespace Raven.Server.ClusterDashboard.Widgets
 {
     public class MemoryUsageWidget : Widget
     {
         private readonly RavenServer _server;
-        private readonly Action<MemoryUsagePayload> _onMessage;
+        private readonly LowMemoryMonitor _lowMemoryMonitor = new LowMemoryMonitor();
+        private readonly Action<IDynamicJson> _onMessage;
         private readonly TimeSpan _defaultInterval = TimeSpan.FromSeconds(5);
 
-        public MemoryUsageWidget(int id, RavenServer server, Action<MemoryUsagePayload> onMessage, CancellationToken shutdown) : base(id, shutdown)
+        public MemoryUsageWidget(int id, RavenServer server, Action<IDynamicJson> onMessage, CancellationToken shutdown) : base(id, shutdown)
         {
             _server = server;
             _onMessage = onMessage;
@@ -36,14 +34,36 @@ namespace Raven.Server.NotificationCenter.Widgets
 
         protected override async Task DoWork()
         {
-            var data = PrepareData();
+            var extendedData = PrepareExtendedData();
 
-            _onMessage(data);
+            // send all data at the beginning 
+            _onMessage(extendedData);
+
+            for (var i = 0; i < 8; i++)
+            {
+                await WaitOrThrowOperationCanceled(_defaultInterval);
+                // minor update - send only basic info - to avoid costly calculation 
+                var baseData = PrepareBasicData();
+                _onMessage(baseData);
+            }
             
             await WaitOrThrowOperationCanceled(_defaultInterval);
         }
 
-        private MemoryUsagePayload PrepareData()
+        private MemoryBasicUsagePayload PrepareBasicData()
+        {
+            var memoryInfo = _server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfo);
+            
+            return new MemoryBasicUsagePayload()
+            {
+                LowMemorySeverity = LowMemoryNotification.Instance.IsLowMemory(memoryInfo, _lowMemoryMonitor, out _),
+                PhysicalMemory = memoryInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
+                WorkingSet = memoryInfo.WorkingSet.GetValue(SizeUnit.Bytes),
+                AvailableMemory = memoryInfo.AvailableMemory.GetValue(SizeUnit.Bytes),
+            };
+        }
+        
+        private MemoryExtendedUsagePayload PrepareExtendedData()
         {
             var memoryInfo = _server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
             long managedMemoryInBytes = AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
@@ -58,13 +78,14 @@ namespace Raven.Server.NotificationCenter.Widgets
                 totalMapping += singleMapping.Value;
             }
             
-            return new MemoryUsagePayload
+            return new MemoryExtendedUsagePayload
             {
-                LowMemorySeverity = LowMemoryNotification.Instance.IsLowMemory(memoryInfo, new LowMemoryMonitor(), out _),
+                LowMemorySeverity = LowMemoryNotification.Instance.IsLowMemory(memoryInfo, _lowMemoryMonitor, out _),
                 PhysicalMemory = memoryInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
                 WorkingSet = memoryInfo.WorkingSet.GetValue(SizeUnit.Bytes),
                 ManagedAllocations = managedMemoryInBytes,
                 UnmanagedAllocations = totalUnmanagedAllocations,
+                SystemCommitLimit = memoryInfo.TotalCommittableMemory.GetValue(SizeUnit.Bytes),
                 EncryptionBuffersInUse = encryptionBuffers.CurrentlyInUseSize,
                 EncryptionBuffersPool = encryptionBuffers.TotalPoolSize,
                 MemoryMapped = totalMapping,
@@ -74,37 +95,10 @@ namespace Raven.Server.NotificationCenter.Widgets
             };
         }
     }
-    
-    public class MemoryUsagePayload : IDynamicJson
-    {
-        public LowMemorySeverity LowMemorySeverity { get; set; }
-        public long PhysicalMemory { get; set; }
-        public long WorkingSet { get; set; }
-        public long ManagedAllocations { get; set; }
-        public long UnmanagedAllocations { get; set; }
-        public long EncryptionBuffersInUse { get; set; }
-        public long EncryptionBuffersPool { get; set; }
-        public long MemoryMapped { get; set; }
-        public long DirtyMemory { get; set; }
-        public long AvailableMemory { get; set; }
-        public long AvailableMemoryForProcessing { get; set; }
 
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(LowMemorySeverity)] = LowMemorySeverity,
-                [nameof(PhysicalMemory)] = PhysicalMemory,
-                [nameof(WorkingSet)] = WorkingSet,
-                [nameof(ManagedAllocations)] = ManagedAllocations,
-                [nameof(UnmanagedAllocations)] = UnmanagedAllocations,
-                [nameof(EncryptionBuffersInUse)] = EncryptionBuffersInUse,
-                [nameof(EncryptionBuffersPool)] = EncryptionBuffersPool,
-                [nameof(MemoryMapped)] = MemoryMapped,
-                [nameof(DirtyMemory)] = DirtyMemory,
-                [nameof(AvailableMemory)] = AvailableMemory,
-                [nameof(AvailableMemoryForProcessing)] = AvailableMemoryForProcessing
-            };
-        }
+    public enum MemoryUsageType
+    {
+        Basic,
+        Extended
     }
 }

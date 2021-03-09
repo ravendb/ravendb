@@ -4,12 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-namespace Raven.Server.NotificationCenter.Widgets
+namespace Raven.Server.ClusterDashboard
 {
     public enum WidgetType
     {
         Unknown,
         CpuUsage,
+        License,
         MemoryUsage,
         Traffic,
     }

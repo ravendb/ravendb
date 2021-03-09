@@ -46,6 +46,8 @@ using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
+using Raven.Server.ClusterDashboard;
+using Raven.Server.ClusterDashboard.Widgets;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Dashboard;
@@ -302,6 +304,13 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexingSpeed));
             scripter.AddType(typeof(MachineResources));
             scripter.AddType(typeof(DrivesUsage));
+            
+            // cluster dashboard
+            scripter.AddType(typeof(WidgetRequest));
+            scripter.AddType(typeof(WidgetMessage));
+            scripter.AddType(typeof(CpuUsagePayload));
+            scripter.AddType(typeof(MemoryBasicUsagePayload));
+            scripter.AddType(typeof(MemoryExtendedUsagePayload));
 
             // expiration
             scripter.AddType(typeof(ExpirationConfiguration));

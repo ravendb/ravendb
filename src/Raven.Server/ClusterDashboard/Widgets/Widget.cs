@@ -7,7 +7,7 @@
 using System.Threading;
 using Raven.Server.Background;
 
-namespace Raven.Server.NotificationCenter.Widgets
+namespace Raven.Server.ClusterDashboard.Widgets
 {
     /// <summary>
     /// Base class for Cluster Dashboard Widgets w/o configuration

@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.NotificationCenter.Widgets
+namespace Raven.Server.ClusterDashboard.Widgets
 {
     public class TrafficWidget : Widget
     {
