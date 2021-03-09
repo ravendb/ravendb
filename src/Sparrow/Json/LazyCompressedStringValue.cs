@@ -4,7 +4,7 @@ using Sparrow.Compression;
 
 namespace Sparrow.Json
 {
-    public unsafe class LazyCompressedStringValue
+    public sealed unsafe class LazyCompressedStringValue
     {
         private readonly JsonOperationContext _context;
         public readonly byte* Buffer;

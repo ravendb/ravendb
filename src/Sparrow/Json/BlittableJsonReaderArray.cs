@@ -9,7 +9,7 @@ using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
 {
-    public unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase, IEnumerable<object>, IDisposable
+    public sealed unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase, IEnumerable<object>, IDisposable
     {
         private bool _disposeParent;
         private readonly int _count;
@@ -273,7 +273,7 @@ namespace Sparrow.Json
             return false;
         }
 
-        protected bool Equals(BlittableJsonReaderArray other)
+        public bool Equals(BlittableJsonReaderArray other)
         {
             AssertContextNotDisposed();
 
