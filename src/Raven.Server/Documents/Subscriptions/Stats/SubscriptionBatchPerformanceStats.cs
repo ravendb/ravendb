@@ -14,8 +14,8 @@ namespace Raven.Server.Documents.Subscriptions
         public long BatchId { get; set; }
         public long ConnectionId { get; set; }
         
-        public long DocumentsCount { get; set; }
-        public long DocumentsSize { get; set; }
+        public long NumberOfDocuments { get; set; }
+        public long SizeOfDocuments { get; set; }
         
         public long NumberOfIncludedDocuments { get; set; }
         public long SizeOfIncludedDocuments { get; set; }

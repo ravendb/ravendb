@@ -46,12 +46,15 @@ namespace Raven.Server.Documents.Subscriptions.Stats
                 Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
                 
                 ConnectionId = Id,
+                
                 BatchCount = Stats.BatchCount,
+                TotalBatchSize = Stats.TotalBatchSize,
 
                 ClientUri = Stats.ClientUri,
-                ConnectedAt = Stats.ConnectedAt,
+                Strategy = Stats.Strategy,
                 
                 Exception = Stats.Exception,
+                ErrorType = Stats.ErrorType,
                 
                 Details = Scope.ToPerformanceOperation("Connection")
             };

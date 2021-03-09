@@ -56,12 +56,12 @@ namespace Raven.Server.Documents.Subscriptions
 
                         case SubscriptionOpeningStrategy.OpenIfFree:
                             throw new SubscriptionInUseException(
-                                $"Subscription {incomingConnection.SubscriptionId} is occupied, connection cannot be opened");
+                                $"Subscription {incomingConnection.Options.SubscriptionName} is occupied, connection cannot be opened");
 
                         case SubscriptionOpeningStrategy.TakeOver:
                             if (_currentConnection?.Strategy == SubscriptionOpeningStrategy.TakeOver)
                                 throw new SubscriptionInUseException(
-                                    $"Subscription {incomingConnection.SubscriptionId} is already occupied by a TakeOver connection, connection cannot be opened");
+                                    $"Subscription {incomingConnection.Options.SubscriptionName} is already occupied by a TakeOver connection, connection cannot be opened");
 
                             if (_currentConnection != null)
                                 _storage.DropSubscriptionConnection(_currentConnection.SubscriptionId,

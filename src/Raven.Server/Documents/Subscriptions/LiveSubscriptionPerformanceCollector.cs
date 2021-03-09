@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -130,8 +129,8 @@ namespace Raven.Server.Documents.Subscriptions
         {
             Database.SubscriptionStorage.OnEndConnectionEvent += OnEndConnection;
             Database.SubscriptionStorage.OnEndBatchEvent += OnEndBatch;
-            Database.SubscriptionStorage.OnTaskAddedEvent += OnSubscriptionTaskAdded;
-            Database.SubscriptionStorage.OnTaskRemovedEvent += OnSubscriptionTaskRemoved;
+            Database.SubscriptionStorage.OnAddTaskEvent += OnAddSubscriptionTask;
+            Database.SubscriptionStorage.OnRemoveTaskEvent += OnRemoveSubscriptionTask;
 
             try
             {
@@ -141,101 +140,100 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 Database.SubscriptionStorage.OnEndConnectionEvent -= OnEndConnection;
                 Database.SubscriptionStorage.OnEndBatchEvent -= OnEndBatch;
-                Database.SubscriptionStorage.OnTaskAddedEvent -= OnSubscriptionTaskAdded;
-                Database.SubscriptionStorage.OnTaskRemovedEvent -= OnSubscriptionTaskRemoved;
+                Database.SubscriptionStorage.OnAddTaskEvent -= OnAddSubscriptionTask;
+                Database.SubscriptionStorage.OnRemoveTaskEvent -= OnRemoveSubscriptionTask;
             }
         }
         
         // Get periodic info for ws
         protected override List<SubscriptionTaskPerformanceStats> PreparePerformanceStats()
         {
-            var preparedStats = new List<SubscriptionTaskPerformanceStats>();
-
-            foreach (var kvp in _perSubscriptionConnectionStats)
+            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var connectionPerformance = new List<SubscriptionConnectionPerformanceStats>();
-                
-                var subscriptionAndPerformanceConnectionStatsList = kvp.Value;
-                var subscriptionName = subscriptionAndPerformanceConnectionStatsList.Handler.SubscriptionName;
-                var subscriptionId = subscriptionAndPerformanceConnectionStatsList.Handler.SubscriptionId;
-                var performance = subscriptionAndPerformanceConnectionStatsList.Performance;
-                
-                var connectionsAggregators = new List<SubscriptionConnectionStatsAggregator>(performance.Count);
+                var preparedStats = new List<SubscriptionTaskPerformanceStats>();
 
-                // 1. get 'closed' connections info
-                while (performance.TryTake(out SubscriptionConnectionStatsAggregator stat))
+                foreach (var kvp in _perSubscriptionConnectionStats)
                 {
-                    connectionsAggregators.Add(stat);
-                }
-                
-                // 2. get 'inProgress' connection info
-                using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    var inProgressConnection = Database.SubscriptionStorage.GetSubscriptionConnection(context, subscriptionName);
-                    var inProgressStats = inProgressConnection?.Connection?.GetPerformanceStats();
-                    
-                    if (inProgressStats != null &&
-                        inProgressStats.Completed == false &&
-                        connectionsAggregators.Contains(inProgressStats) == false)
+                    var connectionPerformance = new List<SubscriptionConnectionPerformanceStats>();
+
+                    var subscriptionAndPerformanceConnectionStatsList = kvp.Value;
+                    var subscriptionName = subscriptionAndPerformanceConnectionStatsList.Handler.SubscriptionName;
+                    var subscriptionId = subscriptionAndPerformanceConnectionStatsList.Handler.SubscriptionId;
+                    var performance = subscriptionAndPerformanceConnectionStatsList.Performance;
+
+                    var connectionsAggregators = new List<SubscriptionConnectionStatsAggregator>(performance.Count);
+
+                    // 1. get 'closed' connections info
+                    while (performance.TryTake(out SubscriptionConnectionStatsAggregator stat))
                     {
-                       connectionsAggregators.Add(inProgressStats);
+                        connectionsAggregators.Add(stat);
+                    }
+
+                    // 2. get 'inProgress' connection info
+                    using (context.OpenReadTransaction())
+                    {
+                        var inProgressConnection = Database.SubscriptionStorage.GetSubscriptionConnection(context, subscriptionName);
+                        var inProgressStats = inProgressConnection?.Connection?.GetPerformanceStats();
+
+                        if (inProgressStats != null &&
+                            inProgressStats.Completed == false &&
+                            connectionsAggregators.Contains(inProgressStats) == false)
+                        {
+                            connectionsAggregators.Add(inProgressStats);
+                        }
+                    }
+
+                    // 3. add to results
+                    connectionPerformance.AddRange(connectionsAggregators.Select(x => x.ToConnectionPerformanceLiveStatsWithDetails()));
+                    preparedStats.Add(new SubscriptionTaskPerformanceStats
+                    {
+                        TaskName = subscriptionName, TaskId = subscriptionId, ConnectionPerformance = connectionPerformance.ToArray()
+                    });
+                }
+
+                foreach (var kvp in _perSubscriptionBatchStats)
+                {
+                    var batchPerformance = new List<SubscriptionBatchPerformanceStats>();
+
+                    var subscriptionAndPerformanceBatchStatsList = kvp.Value;
+                    var subscriptionName = subscriptionAndPerformanceBatchStatsList.Handler.SubscriptionName;
+                    var performance = subscriptionAndPerformanceBatchStatsList.Performance;
+
+                    var batchAggregators = new List<SubscriptionBatchStatsAggregator>(performance.Count);
+
+                    // 1. get 'ended' batches info
+                    while (performance.TryTake(out SubscriptionBatchStatsAggregator stat))
+                    {
+                        batchAggregators.Add(stat);
+                    }
+
+                    // 2. get 'inProgress' batch info
+                    using (context.OpenReadTransaction())
+                    {
+                        var inProgressConnection = Database.SubscriptionStorage.GetSubscriptionConnection(context, subscriptionName);
+                        var inProgressBatchStats = inProgressConnection?.Connection?.GetBatchPerformanceStats();
+
+                        if (inProgressBatchStats != null &&
+                            inProgressBatchStats.Completed == false &&
+                            inProgressBatchStats.ToBatchPerformanceLiveStatsWithDetails().NumberOfDocuments > 0 &&
+                            batchAggregators.Contains(inProgressBatchStats) == false)
+                        {
+                            batchAggregators.Add(inProgressBatchStats);
+                        }
+                    }
+
+                    // 3. add to results
+                    batchPerformance.AddRange(batchAggregators.Select(x => x.ToBatchPerformanceLiveStatsWithDetails()));
+
+                    var subscriptionItem = preparedStats.Find(x => x.TaskName == kvp.Key);
+                    if (subscriptionItem != null)
+                    {
+                        subscriptionItem.BatchPerformance = batchPerformance.ToArray();
                     }
                 }
-                
-                // 3. add to results
-                connectionPerformance.AddRange(connectionsAggregators.Select(x => x.ToConnectionPerformanceLiveStatsWithDetails()));
-                preparedStats.Add(new SubscriptionTaskPerformanceStats
-                {
-                    TaskName = subscriptionName,
-                    TaskId = subscriptionId,
-                    ConnectionPerformance = connectionPerformance.ToArray()
-                });
-            }
-              
-            foreach (var kvp in _perSubscriptionBatchStats)
-            {
-                var batchPerformance = new List<SubscriptionBatchPerformanceStats>();
-                
-                var subscriptionAndPerformanceBatchStatsList = kvp.Value;
-                var subscriptionName = subscriptionAndPerformanceBatchStatsList.Handler.SubscriptionName;
-                var performance = subscriptionAndPerformanceBatchStatsList.Performance;
 
-                var batchAggregators = new List<SubscriptionBatchStatsAggregator>(performance.Count);
-                
-                // 1. get 'ended' batches info
-                while (performance.TryTake(out SubscriptionBatchStatsAggregator stat))
-                {
-                    batchAggregators.Add(stat);
-                }
-                
-                // 2. get 'inProgress' batch info
-                using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    var inProgressConnection = Database.SubscriptionStorage.GetSubscriptionConnection(context, subscriptionName);
-                    var inProgressBatchStats = inProgressConnection?.Connection?.GetBatchPerformanceStats();
-                    
-                    if (inProgressBatchStats != null &&
-                        inProgressBatchStats.Completed == false &&
-                        inProgressBatchStats.ToBatchPerformanceLiveStatsWithDetails().DocumentsCount > 0 &&
-                        batchAggregators.Contains(inProgressBatchStats) == false)
-                    {
-                        batchAggregators.Add(inProgressBatchStats);
-                    }
-                }
-                
-                // 3. add to results
-                batchPerformance.AddRange(batchAggregators.Select(x => x.ToBatchPerformanceLiveStatsWithDetails()));
-                
-                var subscriptionItem = preparedStats.Find(x => x.TaskName == kvp.Key);
-                if (subscriptionItem != null)
-                {
-                    subscriptionItem.BatchPerformance = batchPerformance.ToArray();
-                }
+                return preparedStats;
             }
-
-            return preparedStats;
         }
         
         private class SubscriptionAndPerformanceConnectionStatsList
@@ -265,7 +263,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
         
-        private void OnSubscriptionTaskAdded(string subscriptionName)
+        private void OnAddSubscriptionTask(string subscriptionName)
         {
             if (_perSubscriptionConnectionStats.ContainsKey(subscriptionName))
                 return;
@@ -283,7 +281,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
         
-        private void OnSubscriptionTaskRemoved(string subscriptionName)
+        private void OnRemoveSubscriptionTask(string subscriptionName)
         {
             _perSubscriptionConnectionStats.Remove(subscriptionName, out _);
             _perSubscriptionBatchStats.Remove(subscriptionName, out _);

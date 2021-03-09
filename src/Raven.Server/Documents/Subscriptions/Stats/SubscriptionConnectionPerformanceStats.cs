@@ -5,24 +5,27 @@
 // -----------------------------------------------------------------------
 
 using System;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Server.Documents.TcpHandlers;
 
 namespace Raven.Server.Documents.Subscriptions.Stats
 {
     public class SubscriptionConnectionPerformanceStats
     {        
         public long ConnectionId { get; set; }
-        public long BatchCount { get; set; }
-
         public string ClientUri { get; set; }
+        public SubscriptionOpeningStrategy Strategy { get; set; }
+
+        public long BatchCount { get; set; }
+        public long TotalBatchSize { get; set; }
 
         public string Exception { get; set; }
+        public SubscriptionError ErrorType { get; set; }
 
-        public DateTime Started { get; set; } // started is for when pending starts
+        public DateTime Started { get; set; }
         public DateTime? Completed { get; set; }
         
-        public DateTime? ConnectedAt { get; set; } // actual connection started, pending has ended
-        
-        public double DurationInMs { get; } // this duration includes the pending time 
+        public double DurationInMs { get; }
         
         public SubscriptionConnectionPerformanceOperation Details { get; set; }
         

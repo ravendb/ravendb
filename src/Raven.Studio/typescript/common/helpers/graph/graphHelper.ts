@@ -105,6 +105,14 @@ class graphHelper {
         return config;
     }
     
+    static drawErrorLine(ctx: CanvasRenderingContext2D, x: number, y: number, dy: number) {
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + dy);
+        ctx.stroke();
+    }
+    
     static drawErrorMark(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number, dy: number = 8) {
         const markWidth = dy;
         if (dx > markWidth) {
@@ -125,8 +133,8 @@ class graphHelper {
     }
     
     static drawPendingArea(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number) {
-        ctx.setLineDash([8, 2]);
-        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 2]);
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.lineTo(x + dx, y);
