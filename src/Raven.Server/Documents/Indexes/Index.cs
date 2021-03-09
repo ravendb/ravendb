@@ -3369,6 +3369,20 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
+        public virtual bool WorksOnAnyCollection(HashSet<string> collections)
+        {
+            if (Collections.Count == 0)
+                return false;
+
+            foreach (var collection in collections)
+            {
+                if (Collections.Contains(collection))
+                    return true;
+            }
+
+            return false;
+        }
+
         private int? _minBatchSize;
 
         private const int MinMapBatchSize = 128;
