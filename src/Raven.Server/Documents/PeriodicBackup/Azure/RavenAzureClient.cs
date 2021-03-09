@@ -585,22 +585,46 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
         }
 
-        public void DeleteMultipleBlobs(List<string> blobs)
+        public void DeleteBlobs(List<string> blobs)
         {
             if (blobs.Count == 0)
                 return;
 
-            DeleteBlobsWithSasToken(blobs);
+            var client = GetClient();
 
-            /* TODO: RavenDB-16264
-            if (_hasSasToken)
+            foreach (var blob in blobs)
             {
-                // Multi-Delete isn't supported when using a SAS token
-                // https://issues.hibernatingrhinos.com/issue/RavenDB-14936
-                // https://github.com/Azure/azure-sdk-for-net/issues/11762
-                DeleteBlobsWithSasToken(blobs);
-                return;
+                var url = GetUrl($"{_serverUrlForContainer}/{blob}");
+
+                var now = SystemTime.UtcNow;
+
+                var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url)
+                {
+                    Headers =
+                    {
+                        {"x-ms-date", now.ToString("R")},
+                        {"x-ms-version", AzureStorageVersion}
+                    }
+                };
+
+                SetAuthorizationHeader(client, HttpMethods.Delete, url, requestMessage.Headers);
+                var response = client.SendAsync(requestMessage, CancellationToken).Result;
+                if (response.IsSuccessStatusCode)
+                    continue;
+
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                    continue;
+
+                throw StorageException.FromResponseMessage(response);
             }
+        }
+
+        private void DeleteMultipleBlobs(List<string> blobs)
+        {
+            // TODO: RavenDB-16264
+            // Multi-Delete isn't supported when using a SAS token
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-14936
+            // https://github.com/Azure/azure-sdk-for-net/issues/11762
 
             const string xMsDate = "x-ms-date";
             const string xMsClientRequestId = "x-ms-client-request-id";
@@ -763,36 +787,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 return num == 0 || num > 1 ? "s" : string.Empty;
             }
 
-            throw new InvalidOperationException(message);*/
-        }
-
-        private void DeleteBlobsWithSasToken(List<string> blobs)
-        {
-            foreach (var blob in blobs)
-            {
-                var url = GetUrl($"{_serverUrlForContainer}/{blob}");
-
-                var now = SystemTime.UtcNow;
-
-                var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url)
-                {
-                    Headers =
-                    {
-                        {"x-ms-date", now.ToString("R")},
-                        {"x-ms-version", AzureStorageVersion}
-                    }
-                };
-
-                var client = GetClient();
-                var response = client.SendAsync(requestMessage, CancellationToken).Result;
-                if (response.IsSuccessStatusCode)
-                    continue;
-
-                if (response.StatusCode == HttpStatusCode.NotFound)
-                    continue;
-
-                throw StorageException.FromResponseMessage(response);
-            }
+            throw new InvalidOperationException(message);
         }
 
         public List<string> GetContainerNames(int maxResults)
