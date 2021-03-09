@@ -30,14 +30,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using var client = new RavenAzureClient(GetAzureSettings(containerName));
             var blobs = new List<string>();
+
             try
             {
                 client.DeleteContainer();
                 client.PutContainer();
 
+                const string perfix = nameof(CanRemoveBlobsInBatch);
+
                 for (int i = 0; i < 10; i++)
                 {
-                    var key = $"{blobKey}/northwind_{i}.ravendump";
+                    var key = $"{perfix}/{blobKey}/northwind_{i}.ravendump";
                     var tmpArr = new byte[3];
                     new Random().NextBytes(tmpArr);
                     client.PutBlob(key, new MemoryStream(tmpArr), new Dictionary<string, string> {{$"property_{i}", $"value_{i}"}});
@@ -48,7 +51,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     blobs.Add(key);
                 }
 
-                client.DeleteMultipleBlobs(blobs);
+                client.DeleteBlobs(blobs);
+
+                var listBlobs = client.ListBlobs(perfix, null, listFolders: false);
+                var blobNames = listBlobs.List.Select(b => b.Name).ToList();
+                Assert.Equal(0, blobNames.Count);
             }
             finally
             {
@@ -86,7 +93,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 try
                 {
-                    client.DeleteMultipleBlobs(blobs);
+                    client.DeleteBlobs(blobs);
                 }
                 catch (Exception e)
                 {
@@ -173,13 +180,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AzureStorageEmulatorFact(Skip = "Azure Storage Emulator doesn't support batch delete")]
+        [AzureStorageEmulatorFact]
         public void put_blob_without_sas_token()
         {
             PutBlobs(5, false);
         }
 
-        [AzureStorageEmulatorFact(Skip = "Azure Storage Emulator doesn't support SAS tokens and batch delete")]
+        [AzureStorageEmulatorFact(Skip = "Azure Storage Emulator doesn't support SAS tokens")]
         public void put_blob_with_sas_token()
         {
             PutBlobs(5, true);
@@ -231,7 +238,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(blobsCount, blobNames.Count);
 
                     // delete all blobs
-                    client.DeleteMultipleBlobs(blobNames);
+                    client.DeleteBlobs(blobNames);
 
                     listBlobs = client.ListBlobs("azure", null, listFolders: false);
                     blobNames = listBlobs.List.Select(b => b.Name).ToList();

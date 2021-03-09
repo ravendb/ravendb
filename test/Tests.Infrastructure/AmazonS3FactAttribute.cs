@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
@@ -33,13 +32,13 @@ namespace Tests.Infrastructure
         {
             if (string.IsNullOrEmpty(ParsingError) == false)
             {
-                Skip = $"Failed to parse amazon S3 settings, error: {ParsingError}";
+                Skip = $"Failed to parse the Amazon S3 settings, error: {ParsingError}";
                 return;
             }
 
             if (S3Settings == null)
             {
-                Skip = $"S3 {memberName} tests missing S3 settings.";
+                Skip = $"S3 {memberName} tests missing Amazon S3 settings.";
                 return;
             }
         }

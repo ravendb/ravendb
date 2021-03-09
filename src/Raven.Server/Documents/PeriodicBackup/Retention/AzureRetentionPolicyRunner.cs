@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                     {
                         if (blobsToDelete.Count == numberOfObjectsInBatch)
                         {
-                            _client.DeleteMultipleBlobs(blobsToDelete);
+                            _client.DeleteBlobs(blobsToDelete);
                             blobsToDelete.Clear();
                         }
 
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             }
 
             if (blobsToDelete.Count > 0)
-                _client.DeleteMultipleBlobs(blobsToDelete);
+                _client.DeleteBlobs(blobsToDelete);
         }
     }
 }
