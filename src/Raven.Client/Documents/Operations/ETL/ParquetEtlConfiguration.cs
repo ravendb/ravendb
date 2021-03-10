@@ -6,18 +6,13 @@ namespace Raven.Client.Documents.Operations.ETL
 
     public class ParquetEtlConfiguration : EtlConfiguration<ParquetEtlConnectionString>
     {
-        public string TempDirectoryPath { get; set; }
-
         public TimeSpan ETLFrequency { get; set; }
 
         public ParquetEtlConfiguration()
         {
         }
 
-        public override string GetDestination()
-        {
-            throw new NotImplementedException();
-        }
+        public override string GetDestination() => ConnectionStringName;
 
         public override EtlType EtlType => EtlType.Parquet;
 
@@ -28,7 +23,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public override string GetDefaultTaskName()
         {
-            throw new NotImplementedException();
+            return $"Parquet ETL to {ConnectionStringName}";
         }
     }
 }
