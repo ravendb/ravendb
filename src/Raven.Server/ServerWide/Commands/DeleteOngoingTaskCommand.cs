@@ -60,7 +60,7 @@ namespace Raven.Server.ServerWide.Commands
                     }
                     break;
             }
-        }
+        } 
         
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
@@ -115,11 +115,11 @@ namespace Raven.Server.ServerWide.Commands
                     }
                     break;
 
-                case OngoingTaskType.S3Etl:
-                    var s3Etl = record.S3Etls?.Find(x => x.TaskId == TaskId);
-                    if (s3Etl != null)
+                case OngoingTaskType.ParquetEtl:
+                    var parquetEtl = record.ParquetEtls?.Find(x => x.TaskId == TaskId);
+                    if (parquetEtl != null)
                     {
-                        record.S3Etls.Remove(s3Etl);
+                        record.ParquetEtls.Remove(parquetEtl);
                     }
                     break;
             }

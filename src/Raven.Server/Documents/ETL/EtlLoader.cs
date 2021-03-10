@@ -10,8 +10,8 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.ETL.Providers.Parquet;
 using Raven.Server.Documents.ETL.Providers.Raven;
-using Raven.Server.Documents.ETL.Providers.S3;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
@@ -62,11 +62,11 @@ namespace Raven.Server.Documents.ETL
 
         public List<SqlEtlConfiguration> SqlDestinations;
 
-        public List<S3EtlConfiguration> S3Destinations;
+        public List<ParquetEtlConfiguration> S3Destinations;
 
         public void Initialize(DatabaseRecord record)
         {
-            LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.S3Etls, toRemove: null);
+            LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.ParquetEtls, toRemove: null);
         }
 
         public event Action<EtlProcess> ProcessAdded;
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.ETL
         private void LoadProcesses(DatabaseRecord record,
             List<RavenEtlConfiguration> newRavenDestinations,
             List<SqlEtlConfiguration> newSqlDestinations,
-            List<S3EtlConfiguration> newS3Destinations,
+            List<ParquetEtlConfiguration> newS3Destinations,
             List<EtlProcess> toRemove)
         {
             lock (_loadProcessedLock)
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.ETL
                 _databaseRecord = record;
                 RavenDestinations = _databaseRecord.RavenEtls;
                 SqlDestinations = _databaseRecord.SqlEtls;
-                S3Destinations = _databaseRecord.S3Etls;
+                S3Destinations = _databaseRecord.ParquetEtls;
                 var processes = new List<EtlProcess>(_processes);
 
                 if (toRemove != null && toRemove.Count > 0)
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.ETL
                     newProcesses.AddRange(GetRelevantProcesses<SqlEtlConfiguration, SqlConnectionString>(newSqlDestinations, ensureUniqueConfigurationNames));
 
                 if (newS3Destinations != null && newS3Destinations.Count > 0)
-                    newProcesses.AddRange(GetRelevantProcesses<S3EtlConfiguration, S3ConnectionString>(newS3Destinations, ensureUniqueConfigurationNames));
+                    newProcesses.AddRange(GetRelevantProcesses<ParquetEtlConfiguration, ParquetEtlConnectionString>(newS3Destinations, ensureUniqueConfigurationNames));
 
                 processes.AddRange(newProcesses);
                 _processes = processes.ToArray();
@@ -198,7 +198,7 @@ namespace Raven.Server.Documents.ETL
             {
                 SqlEtlConfiguration sqlConfig = null;
                 RavenEtlConfiguration ravenConfig = null;
-                S3EtlConfiguration s3Config = null;
+                ParquetEtlConfiguration s3Config = null;
 
                 var connectionStringNotFound = false;
 
@@ -221,9 +221,9 @@ namespace Raven.Server.Documents.ETL
                             connectionStringNotFound = true;
 
                         break;
-                    case EtlType.S3:
-                        s3Config = config as S3EtlConfiguration;
-                        if (_databaseRecord.S3ConnectionStrings.TryGetValue(config.ConnectionStringName, out var s3Connection))
+                    case EtlType.Parquet:
+                        s3Config = config as ParquetEtlConfiguration;
+                        if (_databaseRecord.ParquetEtlConnectionStrings.TryGetValue(config.ConnectionStringName, out var s3Connection))
                             s3Config.Initialize(s3Connection);
                         else
                             connectionStringNotFound = true;
@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.ETL
                     if (ravenConfig != null)
                         process = new RavenEtl(transform, ravenConfig, _database, _serverStore); 
                     if (s3Config != null)
-                        process = new S3Etl(transform, s3Config, _database, _serverStore);
+                        process = new ParquetEtl(transform, s3Config, _database, _serverStore);
 
                     yield return process;
                 }
@@ -416,7 +416,7 @@ namespace Raven.Server.Documents.ETL
 
             var myRavenEtl = new List<RavenEtlConfiguration>();
             var mySqlEtl = new List<SqlEtlConfiguration>();
-            var myS3Etl = new List<S3EtlConfiguration>();
+            var myS3Etl = new List<ParquetEtlConfiguration>();
 
 
             var responsibleNodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -437,9 +437,9 @@ namespace Raven.Server.Documents.ETL
                 }
             }
 
-            foreach (var config in record.S3Etls)
+            foreach (var config in record.ParquetEtls)
             {
-                if (IsMyEtlTask<S3EtlConfiguration, S3ConnectionString>(record, config, ref responsibleNodes))
+                if (IsMyEtlTask<ParquetEtlConfiguration, ParquetEtlConnectionString>(record, config, ref responsibleNodes))
                 {
                     myS3Etl.Add(config);
                 }
@@ -499,9 +499,9 @@ namespace Raven.Server.Documents.ETL
 
                         break;
                     }
-                    case S3Etl s3Etl:
+                    case ParquetEtl s3Etl:
                     {
-                        S3EtlConfiguration existing = null;
+                        ParquetEtlConfiguration existing = null;
 
                         foreach (var config in myS3Etl)
                         {

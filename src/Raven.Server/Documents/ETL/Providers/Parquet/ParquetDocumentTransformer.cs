@@ -11,18 +11,18 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.ETL.Providers.S3
+namespace Raven.Server.Documents.ETL.Providers.Parquet
 {
-    internal class S3DocumentTransformer : EtlTransformer<ToS3Item, RowGroups>
+    internal class ParquetDocumentTransformer : EtlTransformer<ToParquetItem, RowGroups>
     {
-        private readonly S3EtlConfiguration _config;
+        private readonly ParquetEtlConfiguration _config;
         private readonly Dictionary<string, RowGroups> _tables;
 
         private EtlStatsScope _stats;
 
         private const string DateFormat = "yyyy-MM-dd-HH-mm";
 
-        public S3DocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, S3EtlConfiguration config)
+        public ParquetDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ParquetEtlConfiguration config)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl), null)
         {
             _config = config;
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.ETL.Providers.S3
                 });
             }
 
-            var s3Item = new ToS3Item(Current)
+            var s3Item = new ToParquetItem(Current)
             {
                 Properties = props
             };
@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.ETL.Providers.S3
             return _tables.Values.ToList();
         }
 
-        public override void Transform(ToS3Item item, EtlStatsScope stats, EtlProcessState state)
+        public override void Transform(ToParquetItem item, EtlStatsScope stats, EtlProcessState state)
         {
             _stats = stats;
             if (item.IsDelete)
