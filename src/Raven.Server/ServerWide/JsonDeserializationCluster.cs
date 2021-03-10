@@ -97,7 +97,7 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, SqlEtlConfiguration> SqlEtlConfiguration = GenerateJsonDeserializationRoutine<SqlEtlConfiguration>();
 
-        public static Func<BlittableJsonReaderObject, S3EtlConfiguration> S3EtlConfiguration = GenerateJsonDeserializationRoutine<S3EtlConfiguration>();
+        public static Func<BlittableJsonReaderObject, ParquetEtlConfiguration> ParquetEtlConfiguration = GenerateJsonDeserializationRoutine<ParquetEtlConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();
 
@@ -109,7 +109,7 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, SqlConnectionString> SqlConnectionString = GenerateJsonDeserializationRoutine<SqlConnectionString>();
 
-        public static Func<BlittableJsonReaderObject, S3ConnectionString> S3ConnectionString = GenerateJsonDeserializationRoutine<S3ConnectionString>();
+        public static Func<BlittableJsonReaderObject, ParquetEtlConnectionString> ParquetEtlConnectionString = GenerateJsonDeserializationRoutine<ParquetEtlConnectionString>();
 
 
         public static readonly Func<BlittableJsonReaderObject, ClientConfiguration> ClientConfiguration = GenerateJsonDeserializationRoutine<ClientConfiguration>();
@@ -190,19 +190,19 @@ namespace Raven.Server.ServerWide
             [nameof(UpdatePeriodicBackupStatusCommand)] = GenerateJsonDeserializationRoutine<UpdatePeriodicBackupStatusCommand>(),
             [nameof(AddRavenEtlCommand)] = GenerateJsonDeserializationRoutine<AddRavenEtlCommand>(),
             [nameof(AddSqlEtlCommand)] = GenerateJsonDeserializationRoutine<AddSqlEtlCommand>(),
-            [nameof(AddS3EtlCommand)] = GenerateJsonDeserializationRoutine<AddS3EtlCommand>(),
+            [nameof(AddParquetEtlCommand)] = GenerateJsonDeserializationRoutine<AddParquetEtlCommand>(),
             [nameof(UpdateRavenEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateRavenEtlCommand>(),
             [nameof(UpdateSqlEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSqlEtlCommand>(),
-            [nameof(UpdateS3EtlCommand)] = GenerateJsonDeserializationRoutine<UpdateS3EtlCommand>(), 
+            [nameof(UpdateParquetEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateParquetEtlCommand>(), 
             [nameof(UpdateEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateEtlProcessStateCommand>(),
             [nameof(UpdateExternalReplicationStateCommand)] = GenerateJsonDeserializationRoutine<UpdateExternalReplicationStateCommand>(),
             [nameof(DeleteOngoingTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteOngoingTaskCommand>(),
             [nameof(PutRavenConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutRavenConnectionStringCommand>(),
             [nameof(PutSqlConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutSqlConnectionStringCommand>(),
-            [nameof(PutS3ConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutS3ConnectionStringCommand>(),
+            [nameof(PutParquetEtlConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutParquetEtlConnectionStringCommand>(),
             [nameof(RemoveRavenConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveRavenConnectionStringCommand>(),
             [nameof(RemoveSqlConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveSqlConnectionStringCommand>(),
-            [nameof(RemoveS3ConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveS3ConnectionStringCommand>(),
+            [nameof(RemoveOlapConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveOlapConnectionStringCommand>(),
             [nameof(RemoveNodeFromClusterCommand)] = GenerateJsonDeserializationRoutine<RemoveNodeFromClusterCommand>(),
             [nameof(UpdateSubscriptionClientConnectionTime)] = GenerateJsonDeserializationRoutine<UpdateSubscriptionClientConnectionTime>(),
             [nameof(UpdateSnmpDatabasesMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabasesMappingCommand>(),

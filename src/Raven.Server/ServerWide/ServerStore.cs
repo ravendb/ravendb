@@ -1891,15 +1891,15 @@ namespace Raven.Server.ServerWide
                         command = new AddSqlEtlCommand(sqlEtl, databaseName, raftRequestId);
                         break;
 
-                    case EtlType.S3:
-                        var s3Etl = JsonDeserializationCluster.S3EtlConfiguration(etlConfiguration);
-                        s3Etl.Validate(out var s3EtlErr, validateName: false, validateConnection: false);
-                        if (ValidateConnectionString(rawRecord, s3Etl.ConnectionStringName, s3Etl.EtlType) == false)
-                            s3EtlErr.Add($"Could not find connection string named '{s3Etl.ConnectionStringName}'. Please supply an existing connection string.");
+                    case EtlType.Parquet:
+                        var parquetEtl = JsonDeserializationCluster.ParquetEtlConfiguration(etlConfiguration);
+                        parquetEtl.Validate(out var parquetEtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, parquetEtl.ConnectionStringName, parquetEtl.EtlType) == false)
+                            parquetEtlErr.Add($"Could not find connection string named '{parquetEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
-                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, s3EtlErr);
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, parquetEtlErr);
 
-                        command = new AddS3EtlCommand(s3Etl, databaseName, raftRequestId);
+                        command = new AddParquetEtlCommand(parquetEtl, databaseName, raftRequestId);
                         break;
 
                     default:
@@ -1943,8 +1943,8 @@ namespace Raven.Server.ServerWide
                 case EtlType.Sql:
                     var sqlConnectionString = databaseRecord.SqlConnectionStrings;
                     return sqlConnectionString != null && sqlConnectionString.TryGetValue(connectionStringName, out _);
-                case EtlType.S3:
-                    var s3ConnectionString = databaseRecord.S3ConnectionStrings;
+                case EtlType.Parquet:
+                    var s3ConnectionString = databaseRecord.ParquetEtlConnectionStrings;
                     return s3ConnectionString != null && s3ConnectionString.TryGetValue(connectionStringName, out _);
             }
 
@@ -1983,16 +1983,16 @@ namespace Raven.Server.ServerWide
 
                         command = new UpdateSqlEtlCommand(id, sqlEtl, databaseName, raftRequestId);
                         break;
-                    case EtlType.S3:
+                    case EtlType.Parquet:
 
-                        var s3Etl = JsonDeserializationCluster.S3EtlConfiguration(etlConfiguration);
-                        s3Etl.Validate(out var s3EtlErr, validateName: false, validateConnection: false);
-                        if (ValidateConnectionString(rawRecord, s3Etl.ConnectionStringName, s3Etl.EtlType) == false)
-                            s3EtlErr.Add($"Could not find connection string named '{s3Etl.ConnectionStringName}'. Please supply an existing connection string.");
+                        var parquetEtl = JsonDeserializationCluster.ParquetEtlConfiguration(etlConfiguration);
+                        parquetEtl.Validate(out var s3EtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, parquetEtl.ConnectionStringName, parquetEtl.EtlType) == false)
+                            s3EtlErr.Add($"Could not find connection string named '{parquetEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, s3EtlErr);
 
-                        command = new UpdateS3EtlCommand(id, s3Etl, databaseName, raftRequestId);
+                        command = new UpdateParquetEtlCommand(id, parquetEtl, databaseName, raftRequestId);
                         break;
                     default:
                         throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
@@ -2049,8 +2049,8 @@ namespace Raven.Server.ServerWide
                 case ConnectionStringType.Sql:
                     command = new PutSqlConnectionStringCommand(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName, raftRequestId);
                     break;
-                case ConnectionStringType.S3:
-                    command = new PutS3ConnectionStringCommand(JsonDeserializationCluster.S3ConnectionString(connectionString), databaseName, raftRequestId);
+                case ConnectionStringType.Parquet:
+                    command = new PutParquetEtlConnectionStringCommand(JsonDeserializationCluster.ParquetEtlConnectionString(connectionString), databaseName, raftRequestId);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");

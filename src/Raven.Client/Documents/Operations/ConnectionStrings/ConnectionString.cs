@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
 
         public abstract ConnectionStringType Type { get; }
 
-        protected abstract void ValidateImpl(ref List<string> errors);
+        public abstract void ValidateImpl(ref List<string> errors);
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -47,6 +47,6 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         None,
         Raven,
         Sql,
-        S3
+        Parquet
     }
 }

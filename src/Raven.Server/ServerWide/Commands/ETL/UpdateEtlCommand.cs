@@ -76,14 +76,14 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class UpdateS3EtlCommand : UpdateEtlCommand<S3EtlConfiguration, S3ConnectionString>
+    public class UpdateParquetEtlCommand : UpdateEtlCommand<ParquetEtlConfiguration, ParquetEtlConnectionString>
     {
-        public UpdateS3EtlCommand()
+        public UpdateParquetEtlCommand()
         {
             // for deserialization
         }
 
-        public UpdateS3EtlCommand(long taskId, S3EtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(taskId, configuration, EtlType.S3, databaseName, uniqueRequestId)
+        public UpdateParquetEtlCommand(long taskId, ParquetEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(taskId, configuration, EtlType.Parquet, databaseName, uniqueRequestId)
         {
 
         }
@@ -91,7 +91,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.SqlEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
-            new AddS3EtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+            new AddParquetEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
         }
     }
 }

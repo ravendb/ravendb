@@ -402,17 +402,17 @@ namespace Raven.Server.ServerWide
                     case nameof(ToggleTaskStateCommand):
                     case nameof(AddRavenEtlCommand):
                     case nameof(AddSqlEtlCommand):
-                    case nameof(AddS3EtlCommand):
+                    case nameof(AddParquetEtlCommand):
                     case nameof(UpdateRavenEtlCommand):
                     case nameof(UpdateSqlEtlCommand):
-                    case nameof(UpdateS3EtlCommand):
+                    case nameof(UpdateParquetEtlCommand):
                     case nameof(DeleteOngoingTaskCommand):
                     case nameof(PutRavenConnectionStringCommand):
                     case nameof(PutSqlConnectionStringCommand):
-                    case nameof(PutS3ConnectionStringCommand):
+                    case nameof(PutParquetEtlConnectionStringCommand):
                     case nameof(RemoveRavenConnectionStringCommand):
                     case nameof(RemoveSqlConnectionStringCommand):
-                    case nameof(RemoveS3ConnectionStringCommand): 
+                    case nameof(RemoveOlapConnectionStringCommand): 
                     case nameof(UpdatePullReplicationAsHubCommand):
                     case nameof(UpdatePullReplicationAsSinkCommand):
                     case nameof(EditDatabaseClientConfigurationCommand):
@@ -2277,17 +2277,17 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdateExternalReplicationCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
-                case nameof(AddS3EtlCommand):
+                case nameof(AddParquetEtlCommand):
                 case nameof(UpdateRavenEtlCommand):
                 case nameof(UpdateSqlEtlCommand):
-                case nameof(UpdateS3EtlCommand):
+                case nameof(UpdateParquetEtlCommand):
                 case nameof(DeleteOngoingTaskCommand):
                 case nameof(PutRavenConnectionStringCommand):
                 case nameof(PutSqlConnectionStringCommand):
-                case nameof(PutS3ConnectionStringCommand):
+                case nameof(PutParquetEtlConnectionStringCommand):
                 case nameof(RemoveRavenConnectionStringCommand):
                 case nameof(RemoveSqlConnectionStringCommand):
-                case nameof(RemoveS3ConnectionStringCommand):
+                case nameof(RemoveOlapConnectionStringCommand):
                 case nameof(PutIndexCommand):
                 case nameof(PutAutoIndexCommand):
                 case nameof(DeleteIndexCommand):

@@ -62,21 +62,21 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class RemoveS3ConnectionStringCommand : RemoveConnectionStringCommand<S3ConnectionString>
+    public class RemoveOlapConnectionStringCommand : RemoveConnectionStringCommand<ParquetEtlConnectionString>
     {
-        protected RemoveS3ConnectionStringCommand()
+        protected RemoveOlapConnectionStringCommand()
         {
             // for deserialization
         }
 
-        public RemoveS3ConnectionStringCommand(string connectionStringName, string databaseName, string uniqueRequestId) : base(connectionStringName, databaseName, uniqueRequestId)
+        public RemoveOlapConnectionStringCommand(string connectionStringName, string databaseName, string uniqueRequestId) : base(connectionStringName, databaseName, uniqueRequestId)
         {
 
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.S3ConnectionStrings.Remove(ConnectionStringName);
+            record.ParquetEtlConnectionStrings.Remove(ConnectionStringName);
         }
     }
 }

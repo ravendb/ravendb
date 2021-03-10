@@ -81,21 +81,21 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class AddS3EtlCommand : AddEtlCommand<S3EtlConfiguration, S3ConnectionString>
+    public class AddParquetEtlCommand : AddEtlCommand<ParquetEtlConfiguration, ParquetEtlConnectionString>
     {
-        public AddS3EtlCommand()
+        public AddParquetEtlCommand()
         {
             // for deserialization
         }
 
-        public AddS3EtlCommand(S3EtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
+        public AddParquetEtlCommand(ParquetEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
         {
 
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            Add(ref record.S3Etls, record, etag);
+            Add(ref record.ParquetEtls, record, etag);
         }
     }
 }

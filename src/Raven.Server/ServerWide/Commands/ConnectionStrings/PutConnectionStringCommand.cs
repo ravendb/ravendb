@@ -71,21 +71,30 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class PutS3ConnectionStringCommand : PutConnectionStringCommand<S3ConnectionString>
+    public class PutParquetEtlConnectionStringCommand : PutConnectionStringCommand<ParquetEtlConnectionString>
     {
-        protected PutS3ConnectionStringCommand()
+        protected PutParquetEtlConnectionStringCommand()
         {
             // for deserialization
         }
 
-        public PutS3ConnectionStringCommand(S3ConnectionString connectionString, string databaseName, string uniqueRequestId) : base(connectionString, databaseName, uniqueRequestId)
+        public PutParquetEtlConnectionStringCommand(ParquetEtlConnectionString connectionString, string databaseName, string uniqueRequestId) : base(connectionString, databaseName, uniqueRequestId)
         {
 
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.S3ConnectionStrings[ConnectionString.Name] = ConnectionString;
+            try
+            {
+                record.ParquetEtlConnectionStrings[ConnectionString.Name] = ConnectionString;
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
     }
 

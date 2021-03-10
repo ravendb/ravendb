@@ -4,6 +4,6 @@
     {
         Raven,
         Sql,
-        S3
+        Parquet
     }
 }

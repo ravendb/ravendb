@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         Replication,
         RavenEtl,
         SqlEtl,
-        S3Etl,
+        ParquetEtl,
         Backup,
         Subscription,
         PullReplicationAsHub,

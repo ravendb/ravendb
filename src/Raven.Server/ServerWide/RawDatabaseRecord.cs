@@ -742,7 +742,7 @@ namespace Raven.Server.ServerWide
 
                 if (_ravenConnectionStrings == null)
                 {
-                    _ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
+                    _ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();   
                     if (_record.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
                     {
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
@@ -763,19 +763,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private Dictionary<string, S3ConnectionString> _s3ConnectionStrings;
+        private Dictionary<string, ParquetEtlConnectionString> _parquetEtlConnectionStrings;
 
-        public Dictionary<string, S3ConnectionString> S3ConnectionStrings
+        public Dictionary<string, ParquetEtlConnectionString> ParquetEtlConnectionStrings
         {
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.S3ConnectionStrings;
+                    return _materializedRecord.ParquetEtlConnectionStrings;
 
-                if (_s3ConnectionStrings == null)
+                if (_parquetEtlConnectionStrings == null)
                 {
-                    _s3ConnectionStrings = new Dictionary<string, S3ConnectionString>();
-                    if (_record.TryGet(nameof(DatabaseRecord.S3ConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
+                    _parquetEtlConnectionStrings = new Dictionary<string, ParquetEtlConnectionString>();
+                    if (_record.TryGet(nameof(DatabaseRecord.ParquetEtlConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
                     {
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
                         for (var i = 0; i < obj.Count; i++)
@@ -786,12 +786,12 @@ namespace Raven.Server.ServerWide
                                 continue;
 
                             if (propertyDetails.Value is BlittableJsonReaderObject bjro)
-                                _s3ConnectionStrings[propertyDetails.Name] = JsonDeserializationCluster.S3ConnectionString(bjro);
+                                _parquetEtlConnectionStrings[propertyDetails.Name] = JsonDeserializationCluster.ParquetEtlConnectionString(bjro);
                         }
                     }
                 }
 
-                return _s3ConnectionStrings;
+                return _parquetEtlConnectionStrings;
             }
         }
 
