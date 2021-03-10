@@ -1,18 +1,15 @@
-<div class="cluster-dashboard-item" id="cpuPanel">
+<div>
     <div class="cluster-dashboard-item-header">
         <h3> <i class="icon-processor"></i> <span>CPU</span></h3>
-        <button class="btn btn-warning btn-sm remove-item" data-targetid="#cpuPanel">
+        <button class="btn btn-warning btn-sm" data-bind="click: remove">
             <i class="icon-trash"></i>
         </button>
-        <button class="btn btn-default btn-sm edit-item" data-targetid="#cpuPanel">
-            <i class="icon-edit"></i>
-        </button>
-        <button class="btn btn-default btn-sm toggle-fullscreen" data-targetid="#cpuPanel">
+        <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
             <i class="icon-fullscreen"></i>
         </button>
     </div>
 
-    <div class="property-container property-collapse" id="cpuStats">
+    <div class="property-container property-collapse">
         <h4>RavenDB CPU usage</h4>
         <div class="property">
             <div class="flex-horizontal">
@@ -57,7 +54,7 @@
 
     </div>
 
-    <div class="property-container property-collapse" id="machineCpuStats">
+    <div class="property-container property-collapse">
         <h4>Machine CPU usage</h4>
         <div class="property">
             <div class="flex-horizontal">

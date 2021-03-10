@@ -6,8 +6,16 @@ class cpuUsageWidget extends widget<Raven.Server.ClusterDashboard.Widgets.CpuUsa
         return "CpuUsage";
     }
     
+    attached() {
+        console.log(arguments); //TODO :
+    }
+    
+    compositionComplete() {
+        console.log("it works!"); //TODO: please remember you can use such methods!
+    }
+    
     onData(nodeTag: string, data: Raven.Server.ClusterDashboard.Widgets.CpuUsagePayload) {
-        console.log("cpu data = ", nodeTag, data);
+        //TODO: console.log("cpu data = ", nodeTag, data);
     }
 }
 

@@ -5,7 +5,7 @@
         <div class="gutter-sizer"></div>
         
         <div data-bind="foreach: widgets">
-            <div data-bind="compose: $data" ></div>    
+            <div class="cluster-dashboard-item" data-bind="compose: $data, attr: { 'data-widget-id': id }, css: { 'fullscreen': fullscreen }"></div>    
         </div>
 
         <button class="add-widget" data-toggle="modal" data-target="#myModal">

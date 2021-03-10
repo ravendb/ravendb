@@ -1,0 +1,328 @@
+<div id="memoryPanel">
+    <div class="cluster-dashboard-item-header">
+        <h3> <i class="icon-memory"></i> <span>Memory</span></h3>
+        <button class="btn btn-warning btn-sm remove-item" data-targetid="#memoryPanel">
+            <i class="icon-trash"></i>
+        </button>
+        <button class="btn btn-default btn-sm edit-item" data-targetid="#memoryPanel">
+            <i class="icon-edit"></i>
+        </button>
+        <button class="btn btn-default btn-sm toggle-fullscreen"
+                data-targetid="#memoryPanel">
+            <i class="icon-fullscreen"></i>
+        </button>
+    </div>
+
+    <div class="property-container property-collapse" id="memoryStats">
+        <h4>RavenDB Memory usage</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <button class="collapse-arrow property-control" data-toggle="collapse"
+                        data-targetid="#memoryStats">
+                    <i class="icon-arrow-down"></i>
+                    <i class="icon-arrow-up"></i>
+                </button>
+
+                <div class="nodes-container">
+                    <div class="nodes-item node-warning">
+                        <div class="nodes-item-header" data-toggle="tooltip" data-placement="top" title="Low Memory Mode">
+                            <div class="node-label">A</div>
+                            <div class="node-value">
+                                <span>240</span>
+                                <span class="supplementary-info">MB</span>
+                            </div>
+                        </div>
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Managed Allocations</div>
+                                <div class="details-item-value">0.5</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Unmanaged Allocations</div>
+                                <div class="details-item-value">0.3</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Encryption Buffers</div>
+                                <div class="details-item-value">0.4</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Memory Mapped</div>
+                                <div class="details-item-value">0.4</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nodes-item node-danger">
+                        <div class="nodes-item-header" data-toggle="tooltip" data-placement="top" title="Extremely Low Memory Mode">
+                            <div class="node-label">B</div>
+                            <div class="node-value">
+                                <span>1.2</span>
+                                <span class="supplementary-info">GB</span>
+                            </div>
+                        </div>
+
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Managed Allocations</div>
+                                <div class="details-item-value">0.5</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Unmanaged Allocations</div>
+                                <div class="details-item-value">0.3</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Encryption Buffers</div>
+                                <div class="details-item-value">0.4</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Memory Mapped</div>
+                                <div class="details-item-value">0.4</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nodes-item">
+                        <div class="nodes-item-header">
+                            <div class="node-label">C</div>
+                            <div class="node-value">
+                                <span>512</span>
+                                <span class="supplementary-info">MB</span>
+                            </div>
+                        </div>
+
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Managed Allocations</div>
+                                <div class="details-item-value">0.5</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Unmanaged Allocations</div>
+                                <div class="details-item-value">0.3</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Encryption Buffers</div>
+                                <div class="details-item-value">0.4</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Memory Mapped</div>
+                                <div class="details-item-value">0.4</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nodes-item">
+                        <div class="nodes-item-header">
+                            <div class="node-label">D</div>
+                            <div class="node-value">
+                                <span>512</span>
+                                <span class="supplementary-info">MB</span>
+                            </div>
+                        </div>
+
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Managed Allocations</div>
+                                <div class="details-item-value">0.5</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Unmanaged Allocations</div>
+                                <div class="details-item-value">0.3</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Encryption Buffers</div>
+                                <div class="details-item-value">0.4</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Memory Mapped</div>
+                                <div class="details-item-value">0.4</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nodes-item">
+                        <div class="nodes-item-header">
+                            <div class="node-label">E</div>
+                            <div class="node-value">
+                                <span>512</span>
+                                <span class="supplementary-info">MB</span>
+                            </div>
+                        </div>
+
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Managed Allocations</div>
+                                <div class="details-item-value">0.5</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Unmanaged Allocations</div>
+                                <div class="details-item-value">0.3</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Encryption Buffers</div>
+                                <div class="details-item-value">0.4</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Memory Mapped</div>
+                                <div class="details-item-value">0.4</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="graph-container">
+                <img src="./graph.svg" width="100%" />
+            </div>
+        </div>
+
+    </div>
+
+    <div class="property-container property-collapse" id="machineMemoryStats">
+        <h4>Machine Memory usage</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <button class="collapse-arrow property-control" data-toggle="collapse"
+                        data-targetid="#machineMemoryStats">
+                    <i class="icon-arrow-down"></i>
+                    <i class="icon-arrow-up"></i>
+                </button>
+
+                <div class="nodes-container">
+                    <div class="nodes-item">
+                        <div class="nodes-item-header">
+                            <div class="node-label">A</div>
+                            <div class="node-value">
+                                <span>30%</span>
+                                <span class="supplementary-info">3 / 10GB</span>
+                            </div>
+                        </div>
+
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Swap</div>
+                                <div class="details-item-value">1GB</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Available</div>
+                                <div class="details-item-value">2GB</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Available for processing</div>
+                                <div class="details-item-value">3GB</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nodes-item">
+                        <div class="nodes-item-header">
+                            <div class="node-label">B</div>
+                            <div class="node-value">
+                                <span>60%</span>
+                                <span class="supplementary-info">24 / 40 GB</span>
+                            </div>
+                        </div>
+
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Swap</div>
+                                <div class="details-item-value">1GB</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Available</div>
+                                <div class="details-item-value">2GB</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Available for processing</div>
+                                <div class="details-item-value">3GB</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nodes-item">
+                        <div class="nodes-item-header">
+                            <div class="node-label">C</div>
+                            <div class="node-value">
+                                <span>20%</span>
+                                <span class="supplementary-info">2 / 10GB</span>
+                            </div>
+                        </div>
+
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Swap</div>
+                                <div class="details-item-value">1GB</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Available</div>
+                                <div class="details-item-value">2GB</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Available for processing</div>
+                                <div class="details-item-value">3GB</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nodes-item">
+                        <div class="nodes-item-header">
+                            <div class="node-label">D</div>
+                            <div class="node-value">
+                                <span>20%</span>
+                                <span class="supplementary-info">2 / 10GB</span>
+                            </div>
+                        </div>
+
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Swap</div>
+                                <div class="details-item-value">1GB</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Available</div>
+                                <div class="details-item-value">2GB</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Available for processing</div>
+                                <div class="details-item-value">3GB</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nodes-item">
+                        <div class="nodes-item-header">
+                            <div class="node-label">E</div>
+                            <div class="node-value">
+                                <span>20%</span>
+                                <span class="supplementary-info">2 / 10GB</span>
+                            </div>
+                        </div>
+
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Swap</div>
+                                <div class="details-item-value">1GB</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Available</div>
+                                <div class="details-item-value">2GB</div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Available for processing</div>
+                                <div class="details-item-value">3GB</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="graph-container">
+                <img src="./graph.svg" width="100%" />
+            </div>
+        </div>
+
+    </div>
+
+
+</div>
