@@ -232,7 +232,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public override IEnumerable<ICommandData> GetTransformedResults()
         {
-            return _currentRun?.GetCommands() ?? Enumerable.Empty<ICommandData>();
+            return _currentRun?.GetCommands() ?? Enumerable.Empty<ICommandData>().ToList();
         }
 
         public override void Transform(RavenEtlItem item, EtlStatsScope stats, EtlProcessState state)
