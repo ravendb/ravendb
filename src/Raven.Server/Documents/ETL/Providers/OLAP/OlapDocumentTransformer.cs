@@ -11,19 +11,19 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.ETL.Providers.Parquet
+namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    internal class ParquetDocumentTransformer : EtlTransformer<ToParquetItem, RowGroups>
+    internal class OlapDocumentTransformer : EtlTransformer<ToOlapItem, RowGroups>
     {
-        private readonly ParquetEtlConfiguration _config;
+        private readonly OlapEtlConfiguration _config;
         private readonly Dictionary<string, RowGroups> _tables;
 
         private EtlStatsScope _stats;
 
         private const string DateFormat = "yyyy-MM-dd-HH-mm";
 
-        public ParquetDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ParquetEtlConfiguration config)
-            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl), null)
+        public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config)
+            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl), null) //todo
         {
             _config = config;
             _tables = new Dictionary<string, RowGroups>();
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
                 });
             }
 
-            var s3Item = new ToParquetItem(Current)
+            var s3Item = new ToOlapItem(Current)
             {
                 Properties = props
             };
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
             if (args[1].IsObject() == false)
                 ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'obj' must be an object");
 
-            var key = args[0].AsDate().ToDateTime().ToString(DateFormat);
+            var key = args[0].AsDate().ToDateTime().ToString(DateFormat); //todo
             var result = new ScriptRunnerResult(DocumentScript, args[1].AsObject());
             LoadToFunction(name, result, key);
 
@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
             return _tables.Values.ToList();
         }
 
-        public override void Transform(ToParquetItem item, EtlStatsScope stats, EtlProcessState state)
+        public override void Transform(ToOlapItem item, EtlStatsScope stats, EtlProcessState state)
         {
             _stats = stats;
             if (item.IsDelete)

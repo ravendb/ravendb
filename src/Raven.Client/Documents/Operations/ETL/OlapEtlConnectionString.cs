@@ -5,11 +5,11 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
-    public class ParquetEtlConnectionString : ConnectionString
+    public class OlapEtlConnectionString : ConnectionString
     {
-        public override ConnectionStringType Type => ConnectionStringType.Parquet;
+        public override ConnectionStringType Type => ConnectionStringType.Olap;
 
-        public ParquetEtlLocalSettings LocalSettings { get; set; }
+        public OlapEtlLocalSettings LocalSettings { get; set; }
 
         public S3Settings S3Settings { get; set; }
 
@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Operations.ETL
         }
     }
 
-    public class ParquetEtlLocalSettings : LocalSettings
+    public class OlapEtlLocalSettings : LocalSettings
     {
         public bool KeepFilesOnDisc { get; set; }
 

@@ -16,7 +16,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.ETL.Parquet
+namespace SlowTests.Server.Documents.ETL.Olap
 {
     public class Failover : ClusterTestBase
     {
@@ -88,7 +88,7 @@ loadToOrders(key,
                 var connectionStringName = $"{store.Database} to S3";
 
                 AddEtl(store,
-                    new ParquetEtlConfiguration
+                    new OlapEtlConfiguration
                     {
                         Name = connectionStringName,
                         ConnectionStringName = connectionStringName,
@@ -96,9 +96,9 @@ loadToOrders(key,
                         Transforms = {new Transformation {Name = "MonthlyOrders", Collections = new List<string> {"Orders"}, Script = script}},
                         MentorNode = server.ServerStore.NodeTag
                     },
-                    new ParquetEtlConnectionString
+                    new OlapEtlConnectionString
                     {
-                        Name = connectionStringName, LocalSettings = new ParquetEtlLocalSettings {FolderPath = path, KeepFilesOnDisc = true}
+                        Name = connectionStringName, LocalSettings = new OlapEtlLocalSettings {FolderPath = path, KeepFilesOnDisc = true}
                     });
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
@@ -177,12 +177,12 @@ loadToOrders(key,
             return mre;
         }
 
-        private static AddEtlOperationResult AddEtl(IDocumentStore src, ParquetEtlConfiguration configuration, ParquetEtlConnectionString connectionString)
+        private static AddEtlOperationResult AddEtl(IDocumentStore src, OlapEtlConfiguration configuration, OlapEtlConnectionString connectionString)
         {
-            var putResult = src.Maintenance.Send(new PutConnectionStringOperation<ParquetEtlConnectionString>(connectionString));
+            var putResult = src.Maintenance.Send(new PutConnectionStringOperation<OlapEtlConnectionString>(connectionString));
             Assert.NotNull(putResult.RaftCommandIndex);
 
-            var addResult = src.Maintenance.Send(new AddEtlOperation<ParquetEtlConnectionString>(configuration));
+            var addResult = src.Maintenance.Send(new AddEtlOperation<OlapEtlConnectionString>(configuration));
             return addResult;
         }
 

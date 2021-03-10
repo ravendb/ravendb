@@ -62,7 +62,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class RemoveOlapConnectionStringCommand : RemoveConnectionStringCommand<ParquetEtlConnectionString>
+    public class RemoveOlapConnectionStringCommand : RemoveConnectionStringCommand<OlapEtlConnectionString>
     {
         protected RemoveOlapConnectionStringCommand()
         {
@@ -76,7 +76,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.ParquetEtlConnectionStrings.Remove(ConnectionStringName);
+            record.OlapEtlConnectionStrings.Remove(ConnectionStringName);
         }
     }
 }

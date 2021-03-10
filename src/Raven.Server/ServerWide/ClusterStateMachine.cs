@@ -402,14 +402,14 @@ namespace Raven.Server.ServerWide
                     case nameof(ToggleTaskStateCommand):
                     case nameof(AddRavenEtlCommand):
                     case nameof(AddSqlEtlCommand):
-                    case nameof(AddParquetEtlCommand):
+                    case nameof(AddOlapEtlCommand):
                     case nameof(UpdateRavenEtlCommand):
                     case nameof(UpdateSqlEtlCommand):
-                    case nameof(UpdateParquetEtlCommand):
+                    case nameof(UpdateOlapEtlCommand):
                     case nameof(DeleteOngoingTaskCommand):
                     case nameof(PutRavenConnectionStringCommand):
                     case nameof(PutSqlConnectionStringCommand):
-                    case nameof(PutParquetEtlConnectionStringCommand):
+                    case nameof(PutOlapEtlConnectionStringCommand):
                     case nameof(RemoveRavenConnectionStringCommand):
                     case nameof(RemoveSqlConnectionStringCommand):
                     case nameof(RemoveOlapConnectionStringCommand): 
@@ -2277,14 +2277,14 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdateExternalReplicationCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
-                case nameof(AddParquetEtlCommand):
+                case nameof(AddOlapEtlCommand):
                 case nameof(UpdateRavenEtlCommand):
                 case nameof(UpdateSqlEtlCommand):
-                case nameof(UpdateParquetEtlCommand):
+                case nameof(UpdateOlapEtlCommand):
                 case nameof(DeleteOngoingTaskCommand):
                 case nameof(PutRavenConnectionStringCommand):
                 case nameof(PutSqlConnectionStringCommand):
-                case nameof(PutParquetEtlConnectionStringCommand):
+                case nameof(PutOlapEtlConnectionStringCommand):
                 case nameof(RemoveRavenConnectionStringCommand):
                 case nameof(RemoveSqlConnectionStringCommand):
                 case nameof(RemoveOlapConnectionStringCommand):

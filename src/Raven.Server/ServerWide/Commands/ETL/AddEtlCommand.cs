@@ -81,21 +81,21 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class AddParquetEtlCommand : AddEtlCommand<ParquetEtlConfiguration, ParquetEtlConnectionString>
+    public class AddOlapEtlCommand : AddEtlCommand<OlapEtlConfiguration, OlapEtlConnectionString>
     {
-        public AddParquetEtlCommand()
+        public AddOlapEtlCommand()
         {
             // for deserialization
         }
 
-        public AddParquetEtlCommand(ParquetEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
+        public AddOlapEtlCommand(OlapEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
         {
 
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            Add(ref record.ParquetEtls, record, etag);
+            Add(ref record.OlapEtls, record, etag);
         }
     }
 }

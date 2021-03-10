@@ -4,17 +4,17 @@ namespace Raven.Client.Documents.Operations.ETL
 {
     // todo 
 
-    public class ParquetEtlConfiguration : EtlConfiguration<ParquetEtlConnectionString>
+    public class OlapEtlConfiguration : EtlConfiguration<OlapEtlConnectionString>
     {
         public TimeSpan ETLFrequency { get; set; }
 
-        public ParquetEtlConfiguration()
+        public OlapEtlConfiguration()
         {
         }
 
         public override string GetDestination() => ConnectionStringName;
 
-        public override EtlType EtlType => EtlType.Parquet;
+        public override EtlType EtlType => EtlType.Olap;
 
         public override bool UsingEncryptedCommunicationChannel()
         {
@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public override string GetDefaultTaskName()
         {
-            return $"Parquet ETL to {ConnectionStringName}";
+            return $"OLAP ETL to {ConnectionStringName}";
         }
     }
 }

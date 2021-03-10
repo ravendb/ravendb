@@ -1,14 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 
-namespace Raven.Server.Documents.ETL.Providers.Parquet
+namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    public class DocumentsToParquetItems : IEnumerator<ToParquetItem>
+    public class DocumentsToOlapItems : IEnumerator<ToOlapItem>
     {
         private readonly IEnumerator<Document> _docs;
         private readonly string _collection;
 
-        public DocumentsToParquetItems(IEnumerator<Document> docs, string collection)
+        public DocumentsToOlapItems(IEnumerator<Document> docs, string collection)
         {
             _docs = docs;
             _collection = collection;
@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
             if (_docs.MoveNext() == false)
                 return false;
 
-            Current = new ToParquetItem(_docs.Current, _collection);
+            Current = new ToOlapItem(_docs.Current, _collection);
 
             return true;
         }
@@ -35,6 +35,6 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
         {
         }
 
-        public ToParquetItem Current { get; private set; }
+        public ToOlapItem Current { get; private set; }
     }
 }
