@@ -44,7 +44,11 @@ using Raven.Server.SqlMigration.Model;
 using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
 using Sparrow.Json;
+using Raven.Server.ServerWide;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Server.Smuggler.Documents;
 
 namespace Raven.Server.Json
 {
@@ -181,6 +185,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, RavenServer.CpuCreditsResponse> CpuCreditsResponse = GenerateJsonDeserializationRoutine<RavenServer.CpuCreditsResponse>();
 
         public static readonly Func<BlittableJsonReaderObject, LocalSettings> LocalSettings = GenerateJsonDeserializationRoutine<LocalSettings>();
+
+        public static readonly Func<BlittableJsonReaderObject, ParquetEtlLocalSettings> ParquetEtlLocalSettings = GenerateJsonDeserializationRoutine<ParquetEtlLocalSettings>();
 
         public static readonly Func<BlittableJsonReaderObject, S3Settings> S3Settings = GenerateJsonDeserializationRoutine<S3Settings>();
 

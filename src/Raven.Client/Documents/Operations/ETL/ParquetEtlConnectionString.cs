@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -6,52 +5,51 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
-    public enum ParquetEtlDestination
-    {
-        S3
-    }
-
     public class ParquetEtlConnectionString : ConnectionString
     {
-        public ParquetEtlConnectionString(ParquetEtlDestination destinationType)
-        {
-            Destination = destinationType;
-        }
-
-        public ParquetEtlConnectionString()
-        {
-            // for desiralization 
-        }
-
         public override ConnectionStringType Type => ConnectionStringType.Parquet;
 
-        public ParquetEtlDestination Destination { get; set; }
+        public ParquetEtlLocalSettings LocalSettings { get; set; }
 
         public S3Settings S3Settings { get; set; }
 
         public override void ValidateImpl(ref List<string> errors)
         {
-            switch (Destination)
+            if (S3Settings != null)
             {
-                case ParquetEtlDestination.S3:
-                    if (S3Settings == null)
-                    {
-                        errors.Add($"{nameof(S3Settings)} cannot be null");
-                        return;
-                    }
-                    if (S3Settings.HasSettings() == false)
-                        errors.Add($"{nameof(S3Settings)} has no setting");
-                    return;
-                default:
-                    throw new ArgumentOutOfRangeException();
+                if (S3Settings.HasSettings() == false)
+                    errors.Add($"{nameof(S3Settings)} has no valid setting");
+
+                return;
             }
+
+            if (LocalSettings == null)
+            {
+                errors.Add($"Missing both {nameof(LocalSettings)} and {nameof(S3Settings)}");
+                return;
+            }
+
+            if (LocalSettings.HasSettings() == false)
+                errors.Add($"{nameof(LocalSettings)} has no valid setting");
         }
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[nameof(Destination)] = Destination;
+            json[nameof(LocalSettings)] = LocalSettings?.ToJson();
             json[nameof(S3Settings)] = S3Settings?.ToJson();
+            return json;
+        }
+    }
+
+    public class ParquetEtlLocalSettings : LocalSettings
+    {
+        public bool KeepFilesOnDisc { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(KeepFilesOnDisc)] = KeepFilesOnDisc;
             return json;
         }
     }
