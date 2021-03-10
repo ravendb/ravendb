@@ -4,18 +4,22 @@ import endpoints = require("endpoints");
 
 class disableIndexCommand extends commandBase {
 
-    constructor(private indexName: string, private db: database) {
+    constructor(private indexName: string, private db: database, private clusterWide: boolean) {
         super();
     }
 
     execute(): JQueryPromise<void> {
         const args = {
-            name: this.indexName
+            name: this.indexName,
+            clusterWide: this.clusterWide
         };
+        
         const url = endpoints.databases.adminIndex.adminIndexesDisable + this.urlEncodeArgs(args);
+        
         return this.post(url, null, this.db, { dataType: undefined })
             .done(() => {
-                this.reportSuccess(`${this.indexName} was Disabled`);
+                const location = this.clusterWide ? "cluster wide" : "on local node";
+                this.reportSuccess(`${this.indexName} was Disabled ${location}`);
              })
             .fail((response: JQueryXHR) => this.reportError("Failed to disable index", response.responseText));
     }

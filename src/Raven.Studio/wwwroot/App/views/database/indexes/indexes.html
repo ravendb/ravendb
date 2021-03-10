@@ -32,34 +32,58 @@
                             <div class="btn-group-label" data-bind="css: { active: selectedIndexesName().length }" data-label="Selection" role="group">
                                 <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes, enable: selectedIndexesName().length"><i class="icon-trash"></i><span>Delete</span></button>
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" title="Change the options of selected indexes"
-                                            data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges(), css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <button type="button" class="btn btn-default dropdown-toggle" title="Set the indexing state for the selected indexes"
+                                            data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges(),
+                                                       css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         <i class="icon-play"></i><span>Set indexing state...</span>
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
                                     <ul class="dropdown-menu">
-                                        <li data-bind="click: enableSelectedIndexes">
-                                            <a href="#" title="Enable">
+                                        <li class="margin-left margin-top margin-top-sm" data-bind="visible: isCluster">
+                                            <label><strong>Cluster Wide</strong></label>
+                                        </li>
+                                        <li data-bind="click: _.partial(enableSelectedIndexes, true), visible: isCluster">
+                                            <a href="#" title="Enable indexing on ALL cluster nodes">
                                                 <i class="icon-play"></i>
                                                 <span>Enable</span>
                                             </a>
                                         </li>
-                                        <li data-bind="click: disableSelectedIndexes">
-                                            <a href="#" title="Disable">
-                                                <i class="icon-lock"></i>
+                                        <li data-bind="click: _.partial(disableSelectedIndexes, true), visible: isCluster">
+                                            <a href="#" title="Disable indexing on All cluster nodes">
+                                                <i class="icon-cancel"></i>
+                                                <span>Disable</span>
+                                            </a>
+                                        </li>
+                                        <li class="divider" data-bind="visible: isCluster"></li>
+                                        <li class="margin-left margin-top margin-top-sm" data-bind="visible: isCluster">
+                                            <label><strong>Local Node</strong></label>
+                                        </li>
+                                        <li data-bind="click: _.partial(enableSelectedIndexes, false),
+                                                       attr: { title: 'Enable indexing on node ' + localNodeTag() }">
+                                            <a href="#">
+                                                <i class="icon-play"></i>
+                                                <span>Enable</span>
+                                            </a>
+                                        </li>
+                                        <li data-bind="click: _.partial(disableSelectedIndexes, false),
+                                                       attr: { title: 'Disable indexing on node ' + localNodeTag() }">
+                                            <a href="#">
+                                                <i class="icon-cancel"></i>
                                                 <span>Disable</span>
                                             </a>
                                         </li>
                                         <li class="divider"></li>
-                                        <li data-bind="click: resumeSelectedIndexes">
-                                            <a href="#" title="Resume">
+                                        <li data-bind="click: resumeSelectedIndexes,
+                                                       attr: { title: 'Resume indexing on node ' + localNodeTag() }">
+                                            <a href="#">
                                                 <i class="icon-play"></i>
                                                 <span>Resume</span>
                                             </a>
                                         </li>
-                                        <li data-bind="click: pauseSelectedIndexes">
-                                            <a href="#" title="Pause">
+                                        <li data-bind="click: pauseSelectedIndexes,
+                                                       attr: { title: 'Pause indexing on node ' + localNodeTag() }">
+                                            <a href="#">
                                                 <i class="icon-pause"></i>
                                                 <span>Pause</span>
                                             </a>
@@ -67,7 +91,7 @@
                                     </ul>
                                 </div>
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" title="Change the options of selected indexes"
+                                    <button type="button" class="btn btn-default dropdown-toggle" title="Set the lock mode for the selected indexes"
                                             data-bind="enable: selectedIndexesName().length && !spinners.globalLockChanges(), 
                                                        css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         <i class="icon-lock"></i><span>Set lock mode...</span>
@@ -104,10 +128,12 @@
                     </div>
                 </div>
                 <div class="pull-right" id="toggleIndexing">
-                    <button class="btn btn-default disable-indexing" title="Pause indexing process for ALL indexes until restart"
-                            data-bind="click: stopIndexing, visible: $root.globalIndexingStatus() !== 'Paused', enable: !spinners.globalStartStop() && $root.globalIndexingStatus() !== 'Disabled', css: { 'btn-spinner': spinners.globalStartStop() }">
+                    <button class="btn btn-default disable-indexing" title="Pause indexing process for ALL indexes until restart - Local node"
+                            data-bind="click: stopIndexing, visible: $root.globalIndexingStatus() !== 'Paused', 
+                                       attr: { title: 'Pause indexing process for ALL indexes until restart - On node ' + localNodeTag() },
+                                       enable: !spinners.globalStartStop() && $root.globalIndexingStatus() !== 'Disabled', css: { 'btn-spinner': spinners.globalStartStop() }">
                         <i class="icon-pause"></i>
-                        <span>Pause indexing until restart</span>
+                        <span>Pause indexing until restart - Local node</span>
                     </button>
                     <button class="btn btn-success enable-indexing" title="Resume indexing process"
                             data-bind="click: startIndexing, visible: $root.globalIndexingStatus() === 'Paused', enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }">
@@ -211,24 +237,40 @@
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu">
+                            <li data-bind="visible: canBeEnabled() && $root.isCluster()">
+                                <a href="#" data-bind="click: _.partial($root.enableIndex, $data, true)" title="Enable indexing on ALL cluster nodes">
+                                    <i class="icon-play"></i>
+                                    <span>Enable indexing - Cluster wide</span>
+                                </a>
+                            </li>
                             <li data-bind="visible: canBeEnabled()">
-                                <a href="#" data-bind="click: $root.enableIndex" title="Enable">
-                                    <i class="icon-check"></i><span>Enable</span>
+                                <a href="#" data-bind="click: _.partial($root.enableIndex, $data, false), attr: { title: 'Enable indexing on node ' + $root.localNodeTag() }">
+                                    <i class="icon-play"></i>
+                                    <span data-bind="text: $root.isCluster() ? 'Enable indexing - Local node' : 'Enable indexing'"></span>
+                                </a>
+                            </li>
+                            <li data-bind="visible: canBeDisabled() && $root.isCluster()">
+                                <a href="#" data-bind="click: _.partial($root.disableIndex, $data, true)" title="Disable indexing on ALL cluster nodes">
+                                    <i class="icon-cancel"></i>
+                                    <span>Disable indexing - Cluster wide</span>
                                 </a>
                             </li>
                             <li data-bind="visible: canBeDisabled()">
-                                <a href="#" data-bind="click: $root.disableIndex" title="Disable">
-                                    <i class="icon-cancel"></i><span>Disable indexing</span>
+                                <a href="#" data-bind="click: _.partial($root.disableIndex, $data, false), attr: { title: 'Disable indexing on node ' + $root.localNodeTag() }">
+                                    <i class="icon-cancel"></i>
+                                    <span data-bind="text: $root.isCluster() ? 'Disable indexing - Local node' : 'Disable indexing'"></span>
                                 </a>
                             </li>
                             <li data-bind="visible: canBePaused()">
                                 <a href="#" class="text-warning" data-bind="click: $root.pauseUntilRestart" title="Pause until restart">
-                                    <i class="icon-pause"></i><span>Pause indexing until restart</span>
+                                    <i class="icon-pause"></i>
+                                    <span>Pause indexing until restart</span>
                                 </a>
                             </li>
                             <li data-bind="visible: canBeResumed()">
                                 <a href="#" class="text-success" data-bind="click: $root.resumeIndexing" title="Resume indexing">
-                                    <i class="icon-check"></i><span>Resume indexing</span>
+                                    <i class="icon-play"></i>
+                                    <span>Resume indexing</span>
                                 </a>
                             </li>
                         </ul>
