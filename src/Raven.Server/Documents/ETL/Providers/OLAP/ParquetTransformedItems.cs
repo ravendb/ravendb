@@ -24,6 +24,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         public const string DefaultPartitionColumn = "_dt";
         public const string LastModifiedColumn = "_lastModifiedTicks";
 
+        private static readonly string UrlEscapedEqualsSign = System.Net.WebUtility.UrlEncode("="); 
+
         public ParquetTransformedItems(string name, string key, string idColumn, string partitionColumn) : base(OlapEtlFileFormat.Parquet)
         {
             CollectionName = name;
@@ -39,7 +41,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 ? DefaultIdColumn
                 : idColumn;
 
-            Prefix = $"{CollectionName}/{partitionColumn}%3D{PartitionKey}";
+            Prefix = $"{CollectionName}/{partitionColumn}{UrlEscapedEqualsSign}{PartitionKey}";
         }
 
         public override string Prefix { get; }
@@ -177,14 +179,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 var newField = _dataFields.TryGetValue(propName, out var dataType) == false;
                 group.Data.TryGetValue(propName, out var data);
 
-                switch (prop.Type)
+                switch (prop.Type & BlittableJsonReaderBase.TypesMask)
                 {
-                    case BlittableJsonToken.StartObject:
-                    case BlittableJsonToken.StartArray:
-                    case BlittableJsonToken.CompressedString:
-                    case BlittableJsonToken.EmbeddedBlittable:
-                        // todo
-                        break;
                     case BlittableJsonToken.Null:
                         if (newField)
                             UpdateField(propType, propName, data, group);
@@ -196,10 +192,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                         data ??= new List<long>();
                         break;
                     case BlittableJsonToken.LazyNumber:
-                        // todo
                         propType = DataType.Double;
                         data ??= new List<double>();
                         break;
+                    case BlittableJsonToken.CompressedString:
                     case BlittableJsonToken.String:
                         var str = prop.Value.ToString();
 
@@ -236,7 +232,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     UpdateField(dataType = propType, propName, data, group);
                 }
 
-                else if (data != null && dataType == DataType.Unspecified)
+                else if (dataType == DataType.Unspecified)
                 {
                     // existing field that had no values, until now
                     // need to change the field type and add default values to fields' data

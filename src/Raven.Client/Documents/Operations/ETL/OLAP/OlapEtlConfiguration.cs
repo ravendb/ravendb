@@ -18,7 +18,15 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public List<OlapEtlTable> OlapTables { get; set; }
 
-        public override string GetDestination() => ConnectionStringName;
+        private string _name;
+
+        public override string GetDestination()
+        {
+            if (_name != null)
+                return _name;
+
+            return _name = Connection.GetDestination();
+        }
 
         public override EtlType EtlType => EtlType.Olap;
 
