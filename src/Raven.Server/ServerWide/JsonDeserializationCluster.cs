@@ -193,7 +193,7 @@ namespace Raven.Server.ServerWide
             [nameof(AddS3EtlCommand)] = GenerateJsonDeserializationRoutine<AddS3EtlCommand>(),
             [nameof(UpdateRavenEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateRavenEtlCommand>(),
             [nameof(UpdateSqlEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSqlEtlCommand>(),
-            //[nameof(UpdateS3EtlCommand)] = GenerateJsonDeserializationRoutine<UpdateS3EtlCommand>(), //todo
+            [nameof(UpdateS3EtlCommand)] = GenerateJsonDeserializationRoutine<UpdateS3EtlCommand>(), 
             [nameof(UpdateEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateEtlProcessStateCommand>(),
             [nameof(UpdateExternalReplicationStateCommand)] = GenerateJsonDeserializationRoutine<UpdateExternalReplicationStateCommand>(),
             [nameof(DeleteOngoingTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteOngoingTaskCommand>(),

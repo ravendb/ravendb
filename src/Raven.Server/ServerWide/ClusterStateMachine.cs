@@ -405,7 +405,7 @@ namespace Raven.Server.ServerWide
                     case nameof(AddS3EtlCommand):
                     case nameof(UpdateRavenEtlCommand):
                     case nameof(UpdateSqlEtlCommand):
-                    //case nameof(UpdateS3EtlCommand): todo
+                    case nameof(UpdateS3EtlCommand):
                     case nameof(DeleteOngoingTaskCommand):
                     case nameof(PutRavenConnectionStringCommand):
                     case nameof(PutSqlConnectionStringCommand):
@@ -2277,13 +2277,17 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdateExternalReplicationCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
+                case nameof(AddS3EtlCommand):
                 case nameof(UpdateRavenEtlCommand):
                 case nameof(UpdateSqlEtlCommand):
+                case nameof(UpdateS3EtlCommand):
                 case nameof(DeleteOngoingTaskCommand):
                 case nameof(PutRavenConnectionStringCommand):
                 case nameof(PutSqlConnectionStringCommand):
+                case nameof(PutS3ConnectionStringCommand):
                 case nameof(RemoveRavenConnectionStringCommand):
                 case nameof(RemoveSqlConnectionStringCommand):
+                case nameof(RemoveS3ConnectionStringCommand):
                 case nameof(PutIndexCommand):
                 case nameof(PutAutoIndexCommand):
                 case nameof(DeleteIndexCommand):

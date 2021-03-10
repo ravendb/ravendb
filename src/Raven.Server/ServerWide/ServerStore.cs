@@ -1891,6 +1891,17 @@ namespace Raven.Server.ServerWide
                         command = new AddSqlEtlCommand(sqlEtl, databaseName, raftRequestId);
                         break;
 
+                    case EtlType.S3:
+                        var s3Etl = JsonDeserializationCluster.S3EtlConfiguration(etlConfiguration);
+                        s3Etl.Validate(out var s3EtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, s3Etl.ConnectionStringName, s3Etl.EtlType) == false)
+                            s3EtlErr.Add($"Could not find connection string named '{s3Etl.ConnectionStringName}'. Please supply an existing connection string.");
+
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, s3EtlErr);
+
+                        command = new AddS3EtlCommand(s3Etl, databaseName, raftRequestId);
+                        break;
+
                     default:
                         throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
                 }
@@ -1924,14 +1935,20 @@ namespace Raven.Server.ServerWide
 
         private bool ValidateConnectionString(RawDatabaseRecord databaseRecord, string connectionStringName, EtlType etlType)
         {
-            if (etlType == EtlType.Raven)
+            switch (etlType)
             {
-                var ravenConnectionStrings = databaseRecord.RavenConnectionStrings;
-                return ravenConnectionStrings != null && ravenConnectionStrings.TryGetValue(connectionStringName, out _);
+                case EtlType.Raven:
+                    var ravenConnectionStrings = databaseRecord.RavenConnectionStrings;
+                    return ravenConnectionStrings != null && ravenConnectionStrings.TryGetValue(connectionStringName, out _);
+                case EtlType.Sql:
+                    var sqlConnectionString = databaseRecord.SqlConnectionStrings;
+                    return sqlConnectionString != null && sqlConnectionString.TryGetValue(connectionStringName, out _);
+                case EtlType.S3:
+                    var s3ConnectionString = databaseRecord.S3ConnectionStrings;
+                    return s3ConnectionString != null && s3ConnectionString.TryGetValue(connectionStringName, out _);
             }
 
-            var sqlConnectionString = databaseRecord.SqlConnectionStrings;
-            return sqlConnectionString != null && sqlConnectionString.TryGetValue(connectionStringName, out _);
+            return false;
         }
 
         public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration, string raftRequestId)
@@ -1966,7 +1983,17 @@ namespace Raven.Server.ServerWide
 
                         command = new UpdateSqlEtlCommand(id, sqlEtl, databaseName, raftRequestId);
                         break;
+                    case EtlType.S3:
 
+                        var s3Etl = JsonDeserializationCluster.S3EtlConfiguration(etlConfiguration);
+                        s3Etl.Validate(out var s3EtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, s3Etl.ConnectionStringName, s3Etl.EtlType) == false)
+                            s3EtlErr.Add($"Could not find connection string named '{s3Etl.ConnectionStringName}'. Please supply an existing connection string.");
+
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, s3EtlErr);
+
+                        command = new UpdateS3EtlCommand(id, s3Etl, databaseName, raftRequestId);
+                        break;
                     default:
                         throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
                 }
@@ -2022,7 +2049,9 @@ namespace Raven.Server.ServerWide
                 case ConnectionStringType.Sql:
                     command = new PutSqlConnectionStringCommand(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName, raftRequestId);
                     break;
-
+                case ConnectionStringType.S3:
+                    command = new PutS3ConnectionStringCommand(JsonDeserializationCluster.S3ConnectionString(connectionString), databaseName, raftRequestId);
+                    break;
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
             }

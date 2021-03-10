@@ -767,7 +767,9 @@ namespace Raven.Server.Web.System
                 case EtlType.Sql:
                     ServerStore.LicenseManager.AssertCanAddSqlEtl();
                     break;
-
+                case EtlType.S3:
+                    ServerStore.LicenseManager.AssertCanAddS3Etl();
+                    break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
             }

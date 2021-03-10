@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         protected override string[] LoadToDestinations { get; }
 
-        protected override void LoadToFunction(string collectionName, ScriptRunnerResult document, string key = null)
+        protected override void LoadToFunction(string collectionName, ScriptRunnerResult document)
         {
             if (collectionName == null)
                 ThrowLoadParameterIsMandatory(nameof(collectionName));
