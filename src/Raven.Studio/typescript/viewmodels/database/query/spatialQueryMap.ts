@@ -50,9 +50,18 @@ class spatialQueryMap extends viewModelBase {
         const dataLayers: Control.LayersObject = {};
         const markersGroups: MarkerClusterGroup[] = [];
 
+        const ravenMarker = L.icon({
+            iconUrl: 'Content/img/leaflet/marker-icon.svg',
+            iconSize: [35, 26],
+            iconAnchor: [17, 22],
+            popupAnchor: [5, -22],
+            tooltipAnchor: [0, -22]
+        });
+
         this.markersLayers().forEach(markersLayer => {
             const markers = markersLayer.geoPoints().map(point => {
-                return L.marker([point.Latitude, point.Longitude], { title: point.PopupContent.getId() })
+                return L.marker([point.Latitude, point.Longitude], { title: point.PopupContent.getId(), icon: ravenMarker })
+                    .bindTooltip(point.PopupContent.getId(), { direction: 'top' })
                     .bindPopup(generatePopupHtml(point.PopupContent), { "className" : "custom-popup", "maxWidth": 600, "maxHeight": 400 } );
             });
 
