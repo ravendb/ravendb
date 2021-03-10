@@ -1067,10 +1067,10 @@ class indexPerformance extends viewModelBase {
             if (level === 1) {
                 if (op.Name === "Map" && rootPerf.FailedCount > 0) {
                     context.fillStyle = this.colors.itemWithError;
-                    graphHelper.drawErrorMark(context, currentX, yStart, dx);
+                    graphHelper.drawTriangle(context, currentX, yStart, dx);
                 } else if (op.Name === "Reduce" && op.ReduceDetails && op.ReduceDetails.ReduceErrors > 0) {
                     context.fillStyle = this.colors.itemWithError;
-                    graphHelper.drawErrorMark(context, currentX, yStart, dx);
+                    graphHelper.drawTriangle(context, currentX, yStart, dx);
                 }
             }
             

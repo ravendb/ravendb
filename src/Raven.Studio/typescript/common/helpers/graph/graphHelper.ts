@@ -105,7 +105,7 @@ class graphHelper {
         return config;
     }
     
-    static drawErrorLine(ctx: CanvasRenderingContext2D, x: number, y: number, dy: number) {
+    static drawLine(ctx: CanvasRenderingContext2D, x: number, y: number, dy: number) {
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(x, y);
@@ -113,7 +113,7 @@ class graphHelper {
         ctx.stroke();
     }
     
-    static drawErrorMark(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number, dy: number = 8) {
+    static drawTriangle(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number, dy: number = 8) {
         const markWidth = dy;
         if (dx > markWidth) {
             // draw full triangle
@@ -123,6 +123,7 @@ class graphHelper {
             ctx.lineTo(x + dx, y + markWidth);
             ctx.fill();
         } else if (dx > 1) {
+            // draw truncated triangle
             ctx.beginPath();
             ctx.moveTo(x + dx, y);
             ctx.lineTo(x, y);
@@ -132,7 +133,7 @@ class graphHelper {
         }
     }
     
-    static drawPendingArea(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number) {
+    static drawDashLine(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number) {
         ctx.setLineDash([6, 2]);
         ctx.lineWidth = 1;
         ctx.beginPath();

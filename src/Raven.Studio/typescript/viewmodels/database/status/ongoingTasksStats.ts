@@ -1507,7 +1507,7 @@ class ongoingTasksStats extends viewModelBase {
     private drawConnectionError(context: CanvasRenderingContext2D, x: number, y: number, dyForLine: number,
                                 errorType: Raven.Server.Documents.TcpHandlers.SubscriptionError) {
         context.strokeStyle = this.colors.tracks.ConnectionAborted;
-        graphHelper.drawErrorLine(context, x, y, dyForLine);
+        graphHelper.drawLine(context, x, y, dyForLine);
         
         let errorIcon;
         if (errorType === "ConnectionRejected") {
@@ -1524,7 +1524,7 @@ class ongoingTasksStats extends viewModelBase {
 
     private drawPendingConnection(context: CanvasRenderingContext2D, x: number, y: number, dx: number) {
         context.strokeStyle = this.colors.tracks.ConnectionPending;
-        graphHelper.drawPendingArea(context, x, y, dx);
+        graphHelper.drawDashLine(context, x, y, dx);
     }
     
     private drawStripes(context: CanvasRenderingContext2D, operations: Array<taskOperation>,
@@ -1565,7 +1565,7 @@ class ongoingTasksStats extends viewModelBase {
             // 4. Handle errors if exist... 
             if (perfItemWithCache.HasErrors && isRootOperation) {
                 context.fillStyle = this.colors.itemWithError;
-                graphHelper.drawErrorMark(context, currentX, yStart, dx);
+                graphHelper.drawTriangle(context, currentX, yStart, dx);
             }
 
             currentX += dx;
@@ -1726,8 +1726,8 @@ class ongoingTasksStats extends viewModelBase {
             tooltipHtml += `Duration: ${generalUtils.formatMillis(itemInfo.duration)} <br/>`;
             tooltipHtml += `Client URI: <strong>${itemInfo.clientUri}</strong> <br/>`;
             tooltipHtml += `Strategy: ${itemInfo.strategy} <br/>`;
-            tooltipHtml += `Number of batches acknowledged: ${itemInfo.batchCount} <br/>`;
-            tooltipHtml += `Size of all batches: ${itemInfo.totalBatchSize}`;
+            tooltipHtml += `Number of batches acknowledged: ${itemInfo.batchCount.toLocaleString()} <br/>`;
+            tooltipHtml += `Size of all batches: ${generalUtils.formatBytesToSize(itemInfo.totalBatchSize)}`;
             
             if (itemInfo.exceptionText) {
                 tooltipHtml += `<br>Message: ${itemInfo.exceptionText}`;
@@ -1743,7 +1743,7 @@ class ongoingTasksStats extends viewModelBase {
         if (currentDatum !== itemInfo) {
             let tooltipHtml = `<strong>*** ${itemInfo.title} ***</strong> <br/>`;
             tooltipHtml += `Client URI: <strong>${itemInfo.clientUri}</strong> <br/>`;
-            tooltipHtml += `Strategy: <strong>${itemInfo.strategy}</strong> <br/>`;
+            tooltipHtml += `Strategy: ${itemInfo.strategy} <br/>`;
             tooltipHtml += `Message: ${itemInfo.exceptionText}`;
             this.handleTooltip(itemInfo, x, y, tooltipHtml);
         }
@@ -1806,11 +1806,11 @@ class ongoingTasksStats extends viewModelBase {
                     case "SubscriptionBatch": {
                         const elementWithData = context.rootStats as SubscriptionBatchPerformanceStatsWithCache;
                        
-                        tooltipHtml += `Documents sent in batch: ${elementWithData.NumberOfDocuments} <br/>`;
-                        tooltipHtml += `Documents size: ${elementWithData.SizeOfDocuments} <br/>`;
-                        tooltipHtml += `Included Documents: ${elementWithData.NumberOfIncludedDocuments} <br/>`;
-                        tooltipHtml += `Included Counters: ${elementWithData.NumberOfIncludedCounters} <br/>`;
-                        tooltipHtml += `Included Time Series entries: ${elementWithData.NumberOfIncludedTimeSeriesEntries}`;
+                        tooltipHtml += `Documents sent in batch: ${elementWithData.NumberOfDocuments.toLocaleString()} <br/>`;
+                        tooltipHtml += `Documents size: ${generalUtils.formatBytesToSize(elementWithData.SizeOfDocuments)} <br/>`;
+                        tooltipHtml += `Included Documents: ${elementWithData.NumberOfIncludedDocuments.toLocaleString()} <br/>`;
+                        tooltipHtml += `Included Counters: ${elementWithData.NumberOfIncludedCounters.toLocaleString()} <br/>`;
+                        tooltipHtml += `Included Time Series entries: ${elementWithData.NumberOfIncludedTimeSeriesEntries.toLocaleString()}`;
 
                         if (elementWithData.Exception) {
                             tooltipHtml += `<br>Message: ${elementWithData.Exception} <br/>`;
@@ -1819,7 +1819,7 @@ class ongoingTasksStats extends viewModelBase {
                         break;
                     case "AggregatedBatchesInfo": {
                         const elementWithData = context.rootStats as SubscriptionBatchPerformanceStatsWithCache;
-                        tooltipHtml += `Number of batches sent: ${elementWithData.AggregatedBatchesCount }`;
+                        tooltipHtml += `Number of batches sent: ${elementWithData.AggregatedBatchesCount.toLocaleString()}`;
                     }
                         break;
                 }
