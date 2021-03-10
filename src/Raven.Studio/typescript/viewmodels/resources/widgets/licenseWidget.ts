@@ -10,6 +10,10 @@ class licenseWidget extends widget<any> {
     onData(nodeTag: string, data: any) {
         //TODO: types!
     }
+    
+    supportedOnNode(targetNodeTag: string, currentServerNodeTag: string): boolean {
+        return targetNodeTag === currentServerNodeTag;
+    }
 
 }
 

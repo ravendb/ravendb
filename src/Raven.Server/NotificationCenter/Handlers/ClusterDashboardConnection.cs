@@ -101,6 +101,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             Widget widget;
             switch (type)
             {
+                //TODO: refactor to avoid repeats?
                 case WidgetType.CpuUsage:
                     widget = new CpuUsageWidget(widgetId, _server, msg => EnqueueMessage(widgetId, msg), _disposeToken);
                     break;
@@ -110,6 +111,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                     break;
                 case WidgetType.MemoryUsage:
                     widget = new MemoryUsageWidget(widgetId, _server, msg => EnqueueMessage(widgetId, msg), _disposeToken);
+                    break;
+                case WidgetType.License:
+                    widget = new LicenseWidget(widgetId, _server, msg => EnqueueMessage(widgetId, msg), _disposeToken);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

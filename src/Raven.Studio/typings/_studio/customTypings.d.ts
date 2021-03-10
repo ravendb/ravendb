@@ -178,6 +178,12 @@ class PackeryStatic {
     layout(): void;
 
     bindDraggabillyEvents(events: any): void;
+
+    appended(elements: Element[] | Element): void;
+    
+    remove(elements: Element[] | Element): void;
+
+    shiftLayout(): void;
 }
 
 declare const Packery: new (selector: string | Element, options?: object) => PackeryStatic; 

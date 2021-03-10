@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Server.ClusterDashboard.WidgetMessage> {
 
-    private readonly nodeTag: string;
+    readonly nodeTag: string;
     private readonly onData: (data: Raven.Server.ClusterDashboard.WidgetMessage) => void;
     loading = ko.observable<boolean>(true);
 
