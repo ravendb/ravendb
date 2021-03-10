@@ -43,7 +43,7 @@ class about extends viewModelBase {
             return false;
         }
 
-        const isDevBuildNumber = (num: number) => num >= 40 && num < 50;
+        const isDevBuildNumber = (num: number) => num >= 40 && num < 100;
 
         return !isDevBuildNumber(latestVersionInfo.BuildNumber) &&
             latestVersionInfo.BuildNumber > serverVersion.BuildVersion;

@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide
 
         public static bool IsNightlyOrDev(long buildVersion)
         {
-            return buildVersion >= 50 && buildVersion < 60;
+            return buildVersion >= 50 && buildVersion < 100;
         }
     }
 }
