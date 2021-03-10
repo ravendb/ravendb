@@ -36,10 +36,10 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly Logger _logger;
         private readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
 
-        public event Action<string> OnAddTaskEvent;
-        public event Action<string> OnRemoveTaskEvent;
-        public event Action<SubscriptionConnection> OnEndConnectionEvent;
-        public event Action<string, SubscriptionBatchStatsAggregator> OnEndBatchEvent;
+        public event Action<string> OnAddTask;
+        public event Action<string> OnRemoveTask;
+        public event Action<SubscriptionConnection> OnEndConnection;
+        public event Action<string, SubscriptionBatchStatsAggregator> OnEndBatch;
 
         public SubscriptionStorage(DocumentDatabase db, ServerStore serverStore)
         {
@@ -610,22 +610,22 @@ namespace Raven.Server.Documents.Subscriptions
         
         public void RaiseNotificationForTaskAdded(string subscriptionName)
         {
-            OnAddTaskEvent?.Invoke(subscriptionName);
+            OnAddTask?.Invoke(subscriptionName);
         }
         
         public void RaiseNotificationForTaskRemoved(string subscriptionName)
         {
-            OnRemoveTaskEvent?.Invoke(subscriptionName);
+            OnRemoveTask?.Invoke(subscriptionName);
         }
         
         public void RaiseNotificationForConnectionEnded(SubscriptionConnection connection)
         {
-            OnEndConnectionEvent?.Invoke(connection);
+            OnEndConnection?.Invoke(connection);
         }
         
         public void RaiseNotificationForBatchEnded(string subscriptionName, SubscriptionBatchStatsAggregator batchAggregator)
         {
-            OnEndBatchEvent?.Invoke(subscriptionName, batchAggregator);
+            OnEndBatch?.Invoke(subscriptionName, batchAggregator);
         }
     }
 }

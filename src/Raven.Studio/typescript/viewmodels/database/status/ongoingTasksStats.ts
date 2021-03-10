@@ -1588,7 +1588,7 @@ class ongoingTasksStats extends viewModelBase {
             title: "Client Connection",
             strategy: perfItemWithCache.Strategy,
             batchCount: perfItemWithCache.BatchCount,
-            totalBatchSize: perfItemWithCache.TotalBatchSize,
+            totalBatchSize: perfItemWithCache.TotalBatchSizeInBytes,
             connectionId: perfItemWithCache.ConnectionId,
             duration: operationDuration,
             exceptionText:  perfItemWithCache.Exception,
@@ -1807,7 +1807,7 @@ class ongoingTasksStats extends viewModelBase {
                         const elementWithData = context.rootStats as SubscriptionBatchPerformanceStatsWithCache;
                        
                         tooltipHtml += `Documents sent in batch: ${elementWithData.NumberOfDocuments.toLocaleString()} <br/>`;
-                        tooltipHtml += `Documents size: ${generalUtils.formatBytesToSize(elementWithData.SizeOfDocuments)} <br/>`;
+                        tooltipHtml += `Documents size: ${generalUtils.formatBytesToSize(elementWithData.SizeOfDocumentsInBytes)} <br/>`;
                         tooltipHtml += `Included Documents: ${elementWithData.NumberOfIncludedDocuments.toLocaleString()} <br/>`;
                         tooltipHtml += `Included Counters: ${elementWithData.NumberOfIncludedCounters.toLocaleString()} <br/>`;
                         tooltipHtml += `Included Time Series entries: ${elementWithData.NumberOfIncludedTimeSeriesEntries.toLocaleString()}`;

@@ -335,10 +335,10 @@ namespace Raven.Server.Documents.TcpHandlers
                                     await connection.InitAsync();
                                     await connection.ProcessSubscriptionAsync();
                                 }
-                                catch (SubscriptionInvalidStateException e)
+                                catch (SubscriptionInvalidStateException)
                                 {
                                     connection._pendingConnectionScope.Dispose();
-                                    throw e;
+                                    throw;
                                 }
                                 finally
                                 {
@@ -784,7 +784,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         _lastChangeVector,
                         subscriptionChangeVectorBeforeCurrentBatch);
                     subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector;
-                    Stats.LastAckReceivedAt = SystemTime.UtcNow;
+                    Stats.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
                     Stats.AckRate?.Mark();
                     await WriteJsonAsync(new DynamicJsonValue
                     {

@@ -21,6 +21,6 @@ namespace Raven.Server.Documents.Subscriptions.Stats
         public SubscriptionError ErrorType { get; set; }
 
         public long BatchCount { get; set; }
-        public long TotalBatchSize { get; set; }
+        public long TotalBatchSizeInBytes { get; set; }
     }
 }
