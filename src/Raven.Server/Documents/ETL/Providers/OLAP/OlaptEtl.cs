@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private string GetPath(OlapTransformedItems transformed, out string remotePath)
         {
-            var fileName = $"{Database.Name}__{Guid.NewGuid()}.{transformed.Format}";
+            var fileName = $"{Database.Name}_{Guid.NewGuid()}.{transformed.Format}";
             remotePath = $"{transformed.Prefix}/{fileName}";
 
             return Path.Combine(_tmpFilePath, fileName);

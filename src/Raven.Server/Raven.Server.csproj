@@ -143,11 +143,7 @@
     <PackageReference Include="NuGet.Protocol" Version="5.8.1" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.1" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.10" />
-    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.19.101" />
-    <PackageReference Include="Portable.BouncyCastle" Version="1.8.9" />
-    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.19.100" />
     <PackageReference Include="Parquet.Net" Version="3.8.4" />
-    <PackageReference Include="Portable.BouncyCastle" Version="1.8.8" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>

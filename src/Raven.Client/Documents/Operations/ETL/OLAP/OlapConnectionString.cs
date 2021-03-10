@@ -33,6 +33,25 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
                 errors.Add($"{nameof(LocalSettings)} has no valid setting");
         }
 
+        internal string GetDestination()
+        {
+            string type, destination;
+            if (S3Settings != null)
+            {
+                type = nameof(RestoreType.S3);
+                destination = S3Settings.BucketName;
+                if (string.IsNullOrEmpty(S3Settings.RemoteFolderName) == false)
+                    destination = $"{destination}/{S3Settings.RemoteFolderName}";
+            }
+            else
+            {
+                type = nameof(RestoreType.Local);
+                destination = $"{LocalSettings.FolderPath ?? "Temp"}";
+            }
+
+            return $"{type}-destination@{destination}";
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
