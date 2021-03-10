@@ -35,13 +35,13 @@ namespace Raven.Server.Documents.Subscriptions.Stats
         public void RecordDocumentInfo(long documentSize)
         {
             _stats.NumberOfDocuments++;
-            _stats.SizeOfDocuments += documentSize;
+            _stats.SizeOfDocumentsInBytes += documentSize;
         }
         
         public void RecordIncludedDocumentsInfo(long includedDocumentsCount, long includedDocumentsSize)
         {
             _stats.NumberOfIncludedDocuments += includedDocumentsCount;
-            _stats.SizeOfIncludedDocuments += includedDocumentsSize;
+            _stats.SizeOfIncludedDocumentsInBytes += includedDocumentsSize;
         }
         
         public void RecordIncludedCountersInfo(long includedCountersCount)
@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Subscriptions.Stats
 
         public long GetBatchSize()
         {
-            return _stats.SizeOfDocuments;
+            return _stats.SizeOfDocumentsInBytes;
         }
     }
 }

@@ -127,10 +127,10 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected override async Task StartCollectingStats()
         {
-            Database.SubscriptionStorage.OnEndConnectionEvent += OnEndConnection;
-            Database.SubscriptionStorage.OnEndBatchEvent += OnEndBatch;
-            Database.SubscriptionStorage.OnAddTaskEvent += OnAddSubscriptionTask;
-            Database.SubscriptionStorage.OnRemoveTaskEvent += OnRemoveSubscriptionTask;
+            Database.SubscriptionStorage.OnEndConnection += OnEndConnection;
+            Database.SubscriptionStorage.OnEndBatch += OnEndBatch;
+            Database.SubscriptionStorage.OnAddTask += OnAddSubscriptionTask;
+            Database.SubscriptionStorage.OnRemoveTask += OnRemoveSubscriptionTask;
 
             try
             {
@@ -138,10 +138,10 @@ namespace Raven.Server.Documents.Subscriptions
             }
             finally
             {
-                Database.SubscriptionStorage.OnEndConnectionEvent -= OnEndConnection;
-                Database.SubscriptionStorage.OnEndBatchEvent -= OnEndBatch;
-                Database.SubscriptionStorage.OnAddTaskEvent -= OnAddSubscriptionTask;
-                Database.SubscriptionStorage.OnRemoveTaskEvent -= OnRemoveSubscriptionTask;
+                Database.SubscriptionStorage.OnEndConnection -= OnEndConnection;
+                Database.SubscriptionStorage.OnEndBatch -= OnEndBatch;
+                Database.SubscriptionStorage.OnAddTask -= OnAddSubscriptionTask;
+                Database.SubscriptionStorage.OnRemoveTask -= OnRemoveSubscriptionTask;
             }
         }
         

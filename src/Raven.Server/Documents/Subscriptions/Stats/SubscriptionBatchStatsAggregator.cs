@@ -49,10 +49,10 @@ namespace Raven.Server.Documents.Subscriptions.Stats
                 BatchId = Id,
                 
                 NumberOfDocuments = Stats.NumberOfDocuments,
-                SizeOfDocuments = Stats.SizeOfDocuments,
+                SizeOfDocumentsInBytes = Stats.SizeOfDocumentsInBytes,
                 
                 NumberOfIncludedDocuments = Stats.NumberOfIncludedDocuments,
-                SizeOfIncludedDocuments = Stats.SizeOfIncludedDocuments,
+                SizeOfIncludedDocumentsInBytes = Stats.SizeOfIncludedDocumentsInBytes,
                 
                 NumberOfIncludedCounters = Stats.NumberOfIncludedCounters,
                 NumberOfIncludedTimeSeriesEntries = Stats.NumberOfIncludedTimeSeriesEntries,

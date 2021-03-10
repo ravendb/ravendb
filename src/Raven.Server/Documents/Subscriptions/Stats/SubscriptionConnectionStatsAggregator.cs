@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Subscriptions.Stats
                 ConnectionId = Id,
                 
                 BatchCount = Stats.BatchCount,
-                TotalBatchSize = Stats.TotalBatchSize,
+                TotalBatchSizeInBytes = Stats.TotalBatchSizeInBytes,
 
                 ClientUri = Stats.ClientUri,
                 Strategy = Stats.Strategy,

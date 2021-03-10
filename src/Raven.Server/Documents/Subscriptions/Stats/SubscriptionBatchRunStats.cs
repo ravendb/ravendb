@@ -15,10 +15,10 @@ namespace Raven.Server.Documents.Subscriptions.Stats
         public long BatchId { get; set; }
         
         public long NumberOfDocuments { get; set; }
-        public long SizeOfDocuments { get; set; }
+        public long SizeOfDocumentsInBytes { get; set; }
         
         public long NumberOfIncludedDocuments { get; set; }
-        public long SizeOfIncludedDocuments { get; set; }
+        public long SizeOfIncludedDocumentsInBytes { get; set; }
                 
         public long NumberOfIncludedCounters { get; set; }
         public long NumberOfIncludedTimeSeriesEntries { get; set; }

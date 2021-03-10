@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Subscriptions.Stats
         public void RecordBatchCompleted(long batchSize)
         {
             _stats.BatchCount++;
-            _stats.TotalBatchSize += batchSize;
+            _stats.TotalBatchSizeInBytes += batchSize;
         }
         
         public SubscriptionConnectionPerformanceOperation ToPerformanceOperation(string name)
