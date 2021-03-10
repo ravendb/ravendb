@@ -116,12 +116,12 @@ namespace Raven.Server.ServerWide.Commands
                     break;
 
                 case OngoingTaskType.S3Etl:
-                    // todo
+                    var s3Etl = record.S3Etls?.Find(x => x.TaskId == TaskId);
+                    if (s3Etl != null)
+                    {
+                        record.S3Etls.Remove(s3Etl);
+                    }
                     break;
-                case OngoingTaskType.Subscription:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
             }
         }
 

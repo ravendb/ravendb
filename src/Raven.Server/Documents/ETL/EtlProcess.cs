@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.ETL
         private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
         internal const int MinBatchSize = 64;
 
-        private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
+        protected readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
         private CancellationTokenSource _cts;
         private readonly HashSet<string> _collections;
 
@@ -166,8 +166,6 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract bool ShouldTrackAttachmentTombstones();
 
-        protected abstract bool ShouldWait(out int ticks);
-        
         public override long TaskId => Configuration.TaskId;
 
         private void Extract(DocumentsOperationContext context, ExtractedItemsEnumerator<TExtracted> merged, long fromEtag, EtlItemType type, EtlStatsScope stats, DisposableScope scope)
@@ -387,7 +385,9 @@ namespace Raven.Server.Documents.ETL
                 }
 
                 if (batchStopped == false && stats.HasBatchCompleteReason() == false)
+                {
                     stats.RecordBatchCompleteReason("No more items to process");
+                }
 
                 _testMode?.DebugOutput.AddRange(transformer.GetDebugOutput());
 
@@ -639,12 +639,6 @@ namespace Raven.Server.Documents.ETL
 
                 try
                 {
-                    if (ShouldWait(out var delay))
-                    {
-                        //todo
-                        Thread.Sleep(delay);
-                    }
-
                     _waitForChanges.Reset();
 
                     var startTime = Database.Time.GetUtcNow();
@@ -744,7 +738,6 @@ namespace Raven.Server.Documents.ETL
 
                         continue;
                     }
-
                     try
                     {
                         PauseIfCpuCreditsBalanceIsTooLow();

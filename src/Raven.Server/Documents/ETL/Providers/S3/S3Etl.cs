@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Parquet;
 using Parquet.Data;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL;
-using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
@@ -16,31 +16,25 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.S3
 {
-    public class S3Etl : EtlProcess<ToS3Item, RowGroup, SqlEtlConfiguration, SqlConnectionString>
+    public class S3Etl : EtlProcess<ToS3Item, RowGroups, S3EtlConfiguration, S3ConnectionString>
     {
         public const string S3EtlTag = "S3 ETL";
 
-        public readonly SqlEtlMetricsCountersManager SqlMetrics = new SqlEtlMetricsCountersManager();
+        public readonly S3EtlMetricsCountersManager S3Metrics = new S3EtlMetricsCountersManager();
 
+        private Timer _timer;
 
-        public S3Etl(Transformation transformation, SqlEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
+        public S3Etl(Transformation transformation, S3EtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, S3EtlTag)
         {
-            Metrics = SqlMetrics;
+            Metrics = S3Metrics;
+
+            _timer = new Timer(_ => _waitForChanges.Set(), null, TimeSpan.Zero, configuration.ETLFrequency);
         }
 
         public override EtlType EtlType => EtlType.S3;
 
-        private readonly TimeSpan _batchFrequency = TimeSpan.FromMinutes(1);  // todo
-
-        private long _lastBatchTime; // todo 
-
-        private const long MinTimeToWait = 10_000_000;
-
-        private const int MaxTimeToWait = int.MaxValue;
-
-
-        private static IEnumerator<ToS3Item> _emptyEnumerator = Enumerable.Empty<ToS3Item>().GetEnumerator();
+        private static readonly IEnumerator<ToS3Item> EmptyEnumerator = Enumerable.Empty<ToS3Item>().GetEnumerator();
 
         protected override IEnumerator<ToS3Item> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
         {
@@ -49,7 +43,7 @@ namespace Raven.Server.Documents.ETL.Providers.S3
 
         protected override IEnumerator<ToS3Item> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
         {
-            return _emptyEnumerator; // todo
+            return EmptyEnumerator; // todo
             throw new NotSupportedException("Tombstones aren't supported by S3 ETL");
         }
 
@@ -66,37 +60,27 @@ namespace Raven.Server.Documents.ETL.Providers.S3
         protected override IEnumerator<ToS3Item> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
         {
             // todo
-            throw new NotSupportedException("Time series aren't supported by S3 ETL");
+            throw new NotImplementedException();
         }
 
         protected override IEnumerator<ToS3Item> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
         {
-            throw new NotSupportedException("Time series aren't supported by S3 ETL");
+            throw new NotSupportedException("Time series deletes aren't supported by S3 ETL");
         }
 
+        public override void NotifyAboutWork(DatabaseChange change)
+        {
+            // intentionally not setting _waitForChanges here
+            // _waitForChanges is being set by the timer
+        }
 
         protected override bool ShouldTrackAttachmentTombstones()
         {
             return false;
         }
 
-        protected override bool ShouldWait(out int ticks)
+        protected override bool ShouldFilterOutHiLoDocument()
         {
-            ticks = default;
-            if (_lastBatchTime == 0)
-                return false;
-            
-            var now = Database.Time.GetUtcNow().Ticks;
-            var timeSinceLastBatch = now - _lastBatchTime;
-            var timeToWait = timeSinceLastBatch - _batchFrequency.Ticks;
-
-            if (timeToWait < MinTimeToWait) 
-                return false;
-
-            if (timeToWait > MaxTimeToWait)
-                timeToWait = MaxTimeToWait;
-
-            ticks = (int)timeToWait;
             return true;
         }
 
@@ -104,94 +88,84 @@ namespace Raven.Server.Documents.ETL.Providers.S3
 
         public override bool ShouldTrackTimeSeries() => false;
 
-        protected override EtlTransformer<ToS3Item, RowGroup> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<ToS3Item, RowGroups> GetTransformer(DocumentsOperationContext context)
         {
             return new S3DocumentTransformer(Transformation, Database, context, Configuration);
         }
 
-        protected override int LoadInternal(IEnumerable<RowGroup> records, DocumentsOperationContext context)
+        protected override int LoadInternal(IEnumerable<RowGroups> records, DocumentsOperationContext context)
         {
             var count = 0;
-            var fileNum = 0;
 
-            foreach (var rowGroup in records)
+            foreach (var rowGroups in records)
             {
-                using (Stream fileStream = File.OpenWrite($"d:\\work\\test{fileNum++}.parquet"))
+                var path = GetTempPath();
+
+                // todo split to multiple files if needed
+                using (Stream fileStream = File.OpenWrite(path))
                 {
-                    var fields = rowGroup.Fields;
+                    var fields = rowGroups.Fields;
 
                     using (var parquetWriter = new ParquetWriter(new Schema(fields), fileStream))
                     {
-                        // create a new row group in the file
-                        using (ParquetRowGroupWriter groupWriter = parquetWriter.CreateRowGroup())
+                        foreach (var rowGroup in rowGroups.Groups)
                         {
-                            var groupData = rowGroup.Data;
-
-                            for (var index = 0; index < groupData.Length; index++)
+                            // create a new row group in the file
+                            using (ParquetRowGroupWriter groupWriter = parquetWriter.CreateRowGroup())
                             {
-                                var data = groupData[index];
-                                var field = (DataField)fields[index];
-
-                                DataColumn dataColumn = default;
-                                switch (field.DataType)
+                                for (var index = 0; index < rowGroup.Data.Length; index++)
                                 {
-                                    case DataType.Unspecified:
-                                        break;
-                                    case DataType.Boolean:
-                                        dataColumn = new DataColumn(field, ((List<bool>)data).ToArray());
-                                        break;
-                                    case DataType.Int32:
-                                    case DataType.Int64:
-                                        dataColumn = new DataColumn(field, ((List<long>)data).ToArray());
-                                        break;
-                                    case DataType.String:
-                                        dataColumn = new DataColumn(field, ((List<string>)data).ToArray());
-                                        break;
-                                    case DataType.Float:
-                                    case DataType.Double:
-                                    case DataType.Decimal:
-                                        dataColumn = new DataColumn(field, ((List<double>)data).ToArray());
-                                        break;
-                                    default:
-                                        throw new ArgumentOutOfRangeException();
+                                    var data = rowGroup.Data[index];
+                                    var field = (DataField)fields[index];
+                                    Array array = default;
+
+                                    // todo handle more types
+                                    switch (field.DataType)
+                                    {
+                                        case DataType.Unspecified:
+                                            break;
+                                        case DataType.Boolean:
+                                            array = ((List<bool>)data).ToArray();
+                                            break;
+                                        case DataType.Int32:
+                                        case DataType.Int64:
+                                            array = ((List<long>)data).ToArray();
+                                            break;
+                                        case DataType.String:
+                                            array = ((List<string>)data).ToArray();
+                                            break;
+                                        case DataType.Float:
+                                        case DataType.Double:
+                                        case DataType.Decimal:
+                                            array = ((List<double>)data).ToArray();
+                                            break;
+                                        default:
+                                            throw new ArgumentOutOfRangeException();
+                                    }
+
+                                    groupWriter.WriteColumn(new DataColumn(field, array));
+
+                                    count += data.Count;
+
+                                    // todo log stats
                                 }
-
-                                groupWriter.WriteColumn(dataColumn);
                             }
-                               
-
-                            count += groupData[0].Count;
                         }
                     }
                 }
+
+                // todo upload parquet file to s3/bucketName/TableName/PartitionKey/ and delete file from disc 
             }
-
-            //using (var parquet = new DisposableLazy<RelationalDatabaseWriter>(() => new RelationalDatabaseWriter(this, Database)))
-/*                foreach (var table in records)
-                {
-                    var writer = lazyWriter.Value;
-
-                    var stats = writer.Write(table, null, CancellationToken);
-
-
-                    LogStats(stats, table);
-
-                    count += stats.DeletedRecordsCount + stats.InsertedRecordsCount;
-                }
-
-                if (lazyWriter.IsValueCreated)
-                {
-                    lazyWriter.Value.Commit();
-                }*/
-
-            _lastBatchTime = Database.Time.GetUtcNow().Ticks;
 
             return count;
         }
 
-        protected override bool ShouldFilterOutHiLoDocument()
+        private string GetTempPath()
         {
-            return true;
+            var dir = Configuration.TempDirectoryPath ?? Path.GetTempPath();
+            var fileName = $"{Guid.NewGuid()}.parquet"; 
+
+            return Path.Combine(dir, fileName);
         }
     }
 }

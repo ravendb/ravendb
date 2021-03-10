@@ -94,9 +94,13 @@ namespace Raven.Client.ServerWide
 
         public Dictionary<string, SqlConnectionString> SqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
 
+        public Dictionary<string, S3ConnectionString> S3ConnectionStrings = new Dictionary<string, S3ConnectionString>();
+
         public List<RavenEtlConfiguration> RavenEtls = new List<RavenEtlConfiguration>();
 
         public List<SqlEtlConfiguration> SqlEtls = new List<SqlEtlConfiguration>();
+
+        public List<S3EtlConfiguration> S3Etls = new List<S3EtlConfiguration>();
 
         public ClientConfiguration Client;
 

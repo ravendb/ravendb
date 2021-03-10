@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using Jint.Native;
-using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
@@ -16,64 +13,48 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.S3
 {
-    internal class S3DocumentTransformer : EtlTransformer<ToS3Item, RowGroup>
+    internal class S3DocumentTransformer : EtlTransformer<ToS3Item, RowGroups>
     {
-        private static readonly JsValue DefaultVarCharSize = 50;
-        
-        private readonly Transformation _transformation;
-        private readonly SqlEtlConfiguration _config;
-        private readonly Dictionary<string, RowGroup> _tables;
-        private readonly List<SqlEtlTable> _tablesForScript;
+        private readonly S3EtlConfiguration _config;
+        private readonly Dictionary<string, RowGroups> _tables;
 
         private EtlStatsScope _stats;
 
-        public S3DocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
+        private const string DateFormat = "yyyy-MM-dd-HH-mm";
+
+        public S3DocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, S3EtlConfiguration config)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl), null)
         {
-            _transformation = transformation;
             _config = config;
+            _tables = new Dictionary<string, RowGroups>();
+            LoadToDestinations = transformation.GetCollectionsFromScript();
+        }
 
-            var destinationTables = transformation.GetCollectionsFromScript();
+        public override void Initialize(bool debugMode)
+        {
+            base.Initialize(debugMode);
 
-            LoadToDestinations = destinationTables;
-
-
-            _tables = new Dictionary<string, RowGroup>();
-            _tablesForScript = new List<SqlEtlTable>();
-
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < _config.SqlTables.Count; i++)
+            foreach (var collection in LoadToDestinations)
             {
-                var table = _config.SqlTables[i];
-
-                if (destinationTables.Contains(table.TableName, StringComparer.OrdinalIgnoreCase))
-                    _tablesForScript.Add(table);
+                var name = Transformation.LoadTo + collection;
+                DocumentScript.ScriptEngine.SetValue(name, new ClrFunctionInstance(DocumentScript.ScriptEngine, name,
+                    (value, args) => LoadToS3FunctionTranslator(collection, value, args)));
             }
         }
 
-        protected override bool LoadToS3 => true;
-
-
-        /*        public override void Initialize(bool debugMode)
-                {
-                    base.Initialize(debugMode);
-
-        /*            DocumentScript.ScriptEngine.SetValue("varchar",
-                        new ClrFunctionInstance(DocumentScript.ScriptEngine, "varchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));
-
-                    DocumentScript.ScriptEngine.SetValue("nvarchar",
-                        new ClrFunctionInstance(DocumentScript.ScriptEngine, "nvarchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.StringType, values)));#1#
-                }*/
-
         protected override string[] LoadToDestinations { get; }
 
-        protected override void LoadToFunction(string tableName, ScriptRunnerResult res, string key = null)
+        protected override void LoadToFunction(string tableName, ScriptRunnerResult colsAsObject)
+        {
+        }
+
+        private void LoadToFunction(string tableName, ScriptRunnerResult res, string key)
         {
             if (tableName == null)
                 ThrowLoadParameterIsMandatory(nameof(tableName));
 
-            if (key == null) // todo
-                ThrowLoadParameterIsMandatory(nameof(tableName));
+            if (key == null)
+                ThrowLoadParameterIsMandatory(nameof(key));
 
             var result = res.TranslateToObject(Context);
             var props = new List<SqlColumn>(result.Count);
@@ -82,15 +63,12 @@ namespace Raven.Server.Documents.ETL.Providers.S3
             for (var i = 0; i < result.Count; i++)
             {
                 result.GetPropertyByIndex(i, ref prop);
-
-                var sqlColumn = new SqlColumn
+                props.Add(new SqlColumn
                 {
                     Id = prop.Name,
                     Value = prop.Value,
                     Type = prop.Token
-                };
-
-                props.Add(sqlColumn);
+                });
             }
 
             var s3Item = new ToS3Item(Current)
@@ -98,18 +76,8 @@ namespace Raven.Server.Documents.ETL.Providers.S3
                 Properties = props
             };
 
-            var rowGroup = GetOrAdd(tableName, key);
-
-            if (rowGroup.Add(s3Item))
-            {
-                _stats.IncrementBatchSize(result.Size);
-            }
-
-            else
-            {
-                // todo
-            }
-
+            var rowGroups = GetOrAdd(tableName, key);
+            rowGroups.Add(s3Item);
         }
 
         protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
@@ -126,22 +94,39 @@ namespace Raven.Server.Documents.ETL.Providers.S3
             throw new NotSupportedException("Time series aren't supported by SQL ETL");
         }
 
-        private RowGroup GetOrAdd(string tableName, string key)
+        private RowGroups GetOrAdd(string tableName, string key)
         {
-            if (_tables.TryGetValue(tableName, out var table) == false)
+            var name = tableName + "_" + key;
+
+            if (_tables.TryGetValue(name, out var table) == false)
             {
-                _tables[tableName] = table = new RowGroup(tableName, key);
+                _tables[name] = table = new RowGroups(tableName, key);
             }
 
             return table;
         }
 
-        private static void ThrowTableNotDefinedInConfig(string tableName)
+
+        private JsValue LoadToS3FunctionTranslator(string name, JsValue self, JsValue[] args)
         {
-            throw new InvalidOperationException($"Table '{tableName}' was not defined in the configuration of SQL ETL task");
+            if (args.Length != 2)
+                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) must be called with exactly 2 parameters");
+
+            if (args[0].IsDate() == false)
+                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be a date object");
+            
+            if (args[1].IsObject() == false)
+                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'obj' must be an object");
+
+            var key = args[0].AsDate().ToDateTime().ToString(DateFormat);
+            var result = new ScriptRunnerResult(DocumentScript, args[1].AsObject());
+            LoadToFunction(name, result, key);
+
+            return result.Instance;
         }
 
-        public override List<RowGroup> GetTransformedResults()
+
+        public override List<RowGroups> GetTransformedResults()  
         {
             return _tables.Values.ToList();
         }
@@ -155,39 +140,5 @@ namespace Raven.Server.Documents.ETL.Providers.S3
             Current = item;
             DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
         }
-
-/*        private JsValue ToVarcharTranslator(JsValue type, JsValue[] args)
-        {
-            if (args[0].IsString() == false)
-                throw new InvalidOperationException("varchar() / nvarchar(): first argument must be a string");
-
-            var sizeSpecified = args.Length > 1;
-
-            if (sizeSpecified && args[1].IsNumber() == false)
-                throw new InvalidOperationException("varchar() / nvarchar(): second argument must be a number");
-
-            var item = DocumentScript.ScriptEngine.Object.Construct(Arguments.Empty);
-
-            item.Set(nameof(VarcharFunctionCall.Type), type, true);
-            item.Set(nameof(VarcharFunctionCall.Value), args[0], true);
-            item.Set(nameof(VarcharFunctionCall.Size), sizeSpecified ? args[1] : DefaultVarCharSize, true);
-
-            return item;
-        }
-
-        public class VarcharFunctionCall
-        {
-            public static JsValue AnsiStringType = DbType.AnsiString.ToString();
-            public static JsValue StringType = DbType.String.ToString();
-
-            public DbType Type { get; set; }
-            public object Value { get; set; }
-            public int Size { get; set; }
-
-            private VarcharFunctionCall()
-            {
-
-            }
-        }*/
     }
 }

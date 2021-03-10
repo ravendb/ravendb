@@ -75,4 +75,23 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         }
     }
+
+    public class UpdateS3EtlCommand : UpdateEtlCommand<S3EtlConfiguration, S3ConnectionString>
+    {
+        public UpdateS3EtlCommand()
+        {
+            // for deserialization
+        }
+
+        public UpdateS3EtlCommand(long taskId, S3EtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(taskId, configuration, EtlType.S3, databaseName, uniqueRequestId)
+        {
+
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.SqlEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+            new AddS3EtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+        }
+    }
 }

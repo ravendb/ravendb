@@ -68,12 +68,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return false;
         }
 
-        protected override bool ShouldWait(out int ticks)
-        {
-            ticks = default;
-            return false;
-        }
-
         public override bool ShouldTrackCounters() => false;
         
         public override bool ShouldTrackTimeSeries() => false;

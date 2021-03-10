@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.Raven;
+using Raven.Server.Documents.ETL.Providers.S3;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
@@ -61,9 +62,11 @@ namespace Raven.Server.Documents.ETL
 
         public List<SqlEtlConfiguration> SqlDestinations;
 
+        public List<S3EtlConfiguration> S3Destinations;
+
         public void Initialize(DatabaseRecord record)
         {
-            LoadProcesses(record, record.RavenEtls, record.SqlEtls, toRemove: null);
+            LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.S3Etls, toRemove: null);
         }
 
         public event Action<EtlProcess> ProcessAdded;
@@ -83,6 +86,7 @@ namespace Raven.Server.Documents.ETL
         private void LoadProcesses(DatabaseRecord record,
             List<RavenEtlConfiguration> newRavenDestinations,
             List<SqlEtlConfiguration> newSqlDestinations,
+            List<S3EtlConfiguration> newS3Destinations,
             List<EtlProcess> toRemove)
         {
             lock (_loadProcessedLock)
@@ -90,7 +94,7 @@ namespace Raven.Server.Documents.ETL
                 _databaseRecord = record;
                 RavenDestinations = _databaseRecord.RavenEtls;
                 SqlDestinations = _databaseRecord.SqlEtls;
-
+                S3Destinations = _databaseRecord.S3Etls;
                 var processes = new List<EtlProcess>(_processes);
 
                 if (toRemove != null && toRemove.Count > 0)
@@ -112,6 +116,9 @@ namespace Raven.Server.Documents.ETL
 
                 if (newSqlDestinations != null && newSqlDestinations.Count > 0)
                     newProcesses.AddRange(GetRelevantProcesses<SqlEtlConfiguration, SqlConnectionString>(newSqlDestinations, ensureUniqueConfigurationNames));
+
+                if (newS3Destinations != null && newS3Destinations.Count > 0)
+                    newProcesses.AddRange(GetRelevantProcesses<S3EtlConfiguration, S3ConnectionString>(newS3Destinations, ensureUniqueConfigurationNames));
 
                 processes.AddRange(newProcesses);
                 _processes = processes.ToArray();
@@ -191,6 +198,7 @@ namespace Raven.Server.Documents.ETL
             {
                 SqlEtlConfiguration sqlConfig = null;
                 RavenEtlConfiguration ravenConfig = null;
+                S3EtlConfiguration s3Config = null;
 
                 var connectionStringNotFound = false;
 
@@ -213,7 +221,13 @@ namespace Raven.Server.Documents.ETL
                             connectionStringNotFound = true;
 
                         break;
-
+                    case EtlType.S3:
+                        s3Config = config as S3EtlConfiguration;
+                        if (_databaseRecord.S3ConnectionStrings.TryGetValue(config.ConnectionStringName, out var s3Connection))
+                            s3Config.Initialize(s3Connection);
+                        else
+                            connectionStringNotFound = true;
+                        break;
                     default:
                         ThrownUnknownEtlConfiguration(config.GetType());
                         break;
@@ -244,9 +258,10 @@ namespace Raven.Server.Documents.ETL
 
                     if (sqlConfig != null)
                         process = new SqlEtl(transform, sqlConfig, _database, _serverStore);
-
                     if (ravenConfig != null)
-                        process = new RavenEtl(transform, ravenConfig, _database, _serverStore);
+                        process = new RavenEtl(transform, ravenConfig, _database, _serverStore); 
+                    if (s3Config != null)
+                        process = new S3Etl(transform, s3Config, _database, _serverStore);
 
                     yield return process;
                 }
@@ -401,6 +416,8 @@ namespace Raven.Server.Documents.ETL
 
             var myRavenEtl = new List<RavenEtlConfiguration>();
             var mySqlEtl = new List<SqlEtlConfiguration>();
+            var myS3Etl = new List<S3EtlConfiguration>();
+
 
             var responsibleNodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -420,6 +437,14 @@ namespace Raven.Server.Documents.ETL
                 }
             }
 
+            foreach (var config in record.S3Etls)
+            {
+                if (IsMyEtlTask<S3EtlConfiguration, S3ConnectionString>(record, config, ref responsibleNodes))
+                {
+                    myS3Etl.Add(config);
+                }
+            }
+
             var toRemove = _processes.GroupBy(x => x.ConfigurationName).ToDictionary(x => x.Key, x => x.ToList());
 
             foreach (var processesPerConfig in _processes.GroupBy(x => x.ConfigurationName))
@@ -428,49 +453,77 @@ namespace Raven.Server.Documents.ETL
 
                 Debug.Assert(processesPerConfig.All(x => x.GetType() == process.GetType()));
 
-                if (process is RavenEtl ravenEtl)
+                switch (process)
                 {
-                    RavenEtlConfiguration existing = null;
-
-                    foreach (var config in myRavenEtl)
+                    case RavenEtl ravenEtl:
                     {
-                        var diff = ravenEtl.Configuration.Compare(config);
+                        RavenEtlConfiguration existing = null;
 
-                        if (diff == EtlConfigurationCompareDifferences.None)
+                        foreach (var config in myRavenEtl)
                         {
-                            existing = config;
-                            break;
+                            var diff = ravenEtl.Configuration.Compare(config);
+
+                            if (diff == EtlConfigurationCompareDifferences.None)
+                            {
+                                existing = config;
+                                break;
+                            }
                         }
-                    }
 
-                    if (existing != null)
-                    {
-                        toRemove.Remove(processesPerConfig.Key);
-                        myRavenEtl.Remove(existing);
-                    }
-                }
-                else if (process is SqlEtl sqlEtl)
-                {
-                    SqlEtlConfiguration existing = null;
-                    foreach (var config in mySqlEtl)
-                    {
-                        var diff = sqlEtl.Configuration.Compare(config);
-
-                        if (diff == EtlConfigurationCompareDifferences.None)
+                        if (existing != null)
                         {
-                            existing = config;
-                            break;
+                            toRemove.Remove(processesPerConfig.Key);
+                            myRavenEtl.Remove(existing);
                         }
+
+                        break;
                     }
-                    if (existing != null)
+                    case SqlEtl sqlEtl:
                     {
-                        toRemove.Remove(processesPerConfig.Key);
-                        mySqlEtl.Remove(existing);
+                        SqlEtlConfiguration existing = null;
+                        foreach (var config in mySqlEtl)
+                        {
+                            var diff = sqlEtl.Configuration.Compare(config);
+
+                            if (diff == EtlConfigurationCompareDifferences.None)
+                            {
+                                existing = config;
+                                break;
+                            }
+                        }
+                        if (existing != null)
+                        {
+                            toRemove.Remove(processesPerConfig.Key);
+                            mySqlEtl.Remove(existing);
+                        }
+
+                        break;
                     }
-                }
-                else
-                {
-                    throw new InvalidOperationException($"Unknown ETL process type: {process.GetType()}");
+                    case S3Etl s3Etl:
+                    {
+                        S3EtlConfiguration existing = null;
+
+                        foreach (var config in myS3Etl)
+                        {
+                            var diff = s3Etl.Configuration.Compare(config);
+
+                            if (diff == EtlConfigurationCompareDifferences.None)
+                            {
+                                existing = config;
+                                break;
+                            }
+                        }
+
+                        if (existing != null)
+                        {
+                            toRemove.Remove(processesPerConfig.Key);
+                            myS3Etl.Remove(existing);
+                        }
+
+                        break;
+                    }
+                    default:
+                        throw new InvalidOperationException($"Unknown ETL process type: {process.GetType()}");
                 }
             }
 
@@ -494,7 +547,7 @@ namespace Raven.Server.Documents.ETL
                 }
             });
 
-            LoadProcesses(record, myRavenEtl, mySqlEtl, toRemove.SelectMany(x => x.Value).ToList());
+            LoadProcesses(record, myRavenEtl, mySqlEtl, myS3Etl, toRemove.SelectMany(x => x.Value).ToList());
 
             Parallel.ForEach(toRemove, x =>
             {
