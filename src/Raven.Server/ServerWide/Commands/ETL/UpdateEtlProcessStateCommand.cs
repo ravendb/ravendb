@@ -78,7 +78,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
                 }
             }
 
-            var parquetEtls = record.ParquetEtls;
+            var parquetEtls = record.OlapEtls;
             if (parquetEtls != null)
             {
                 for (var i = 0; i < parquetEtls.Count; i++)

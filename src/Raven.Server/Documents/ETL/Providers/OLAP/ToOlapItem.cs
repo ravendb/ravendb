@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using Raven.Server.Documents.ETL.Providers.SQL;
 
-namespace Raven.Server.Documents.ETL.Providers.Parquet
+namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    public class ToParquetItem : ExtractedItem
+    public class ToOlapItem : ExtractedItem
     {
-        public ToParquetItem(ToParquetItem item)
+        public ToOlapItem(ToOlapItem item)
         {
             Etag = item.Etag;
             DocumentId = item.DocumentId;
@@ -15,11 +15,11 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
             ChangeVector = item.ChangeVector;
         }
 
-        public ToParquetItem(Document document, string collection) : base(document, collection, EtlItemType.Document)
+        public ToOlapItem(Document document, string collection) : base(document, collection, EtlItemType.Document)
         {
         }
 
-        public ToParquetItem(Tombstone tombstone, string collection) : base(tombstone, collection, EtlItemType.Document)
+        public ToOlapItem(Tombstone tombstone, string collection) : base(tombstone, collection, EtlItemType.Document)
         {
         }
 

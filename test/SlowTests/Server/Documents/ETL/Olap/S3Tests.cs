@@ -15,7 +15,7 @@ using Xunit;
 using Xunit.Abstractions;
 using static FastTests.Client.Query;
 
-namespace SlowTests.Server.Documents.ETL.Parquet
+namespace SlowTests.Server.Documents.ETL.Olap
 {
     public class S3Tests : EtlTestBase
     {
@@ -190,7 +190,7 @@ loadToOrders(key,
         {
             var connectionStringName = $"{store.Database} to S3";
 
-            AddEtl(store, new ParquetEtlConfiguration
+            AddEtl(store, new OlapEtlConfiguration
             {
                 Name = connectionStringName,
                 ConnectionStringName = connectionStringName,
@@ -204,7 +204,7 @@ loadToOrders(key,
                         Script = script
                     }
                 }
-            }, new ParquetEtlConnectionString
+            }, new OlapEtlConnectionString
             {
                 Name = connectionStringName,
                 S3Settings = settings

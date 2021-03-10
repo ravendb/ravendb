@@ -10,7 +10,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Util;
-using Raven.Server.Documents.ETL.Providers.S3;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -20,31 +19,31 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 
-namespace Raven.Server.Documents.ETL.Providers.Parquet
+namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    public class ParquetEtl : EtlProcess<ToParquetItem, RowGroups, ParquetEtlConfiguration, ParquetEtlConnectionString>
+    public class OlaptEtl : EtlProcess<ToOlapItem, RowGroups, OlapEtlConfiguration, OlapEtlConnectionString>
     {
-        public const string ParquetEtlTag = "Parquet ETL";
+        public const string OlaptEtlTag = "OLAP ETL";
 
-        public readonly S3EtlMetricsCountersManager S3Metrics = new S3EtlMetricsCountersManager();
+        public readonly OlapEtlMetricsCountersManager OlapMetrics = new OlapEtlMetricsCountersManager();
 
         private Timer _timer;
         private const long MinTimeToWait = 1000;
-        private readonly string _tmpParquetPath;
+        private readonly string _tmpFilePath;
 
-        public ParquetEtl(Transformation transformation, ParquetEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
-            : base(transformation, configuration, database, serverStore, ParquetEtlTag)
+        public OlaptEtl(Transformation transformation, OlapEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
+            : base(transformation, configuration, database, serverStore, OlaptEtlTag)
         {
-            Metrics = S3Metrics;
+            Metrics = OlapMetrics;
 
             var connection = configuration.Connection;
 
-            connection.LocalSettings = BackupTask.GetBackupConfigurationFromScript(connection.LocalSettings, x => JsonDeserializationServer.ParquetEtlLocalSettings(x),
+            connection.LocalSettings = BackupTask.GetBackupConfigurationFromScript(connection.LocalSettings, x => JsonDeserializationServer.OlapEtlLocalSettings(x),
                 Database, updateServerWideSettingsFunc: null, serverWide: false);
             connection.S3Settings = BackupTask.GetBackupConfigurationFromScript(connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
                     Database, updateServerWideSettingsFunc: null, serverWide: false);
 
-            _tmpParquetPath = connection.LocalSettings?.FolderPath ?? 
+            _tmpFilePath = connection.LocalSettings?.FolderPath ?? 
                               (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).FullPath;
 
             var etlFrequency = configuration.ETLFrequency;
@@ -72,39 +71,39 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
             return TimeSpan.FromMilliseconds(dueTime);
         }
 
-        public override EtlType EtlType => EtlType.Parquet;
+        public override EtlType EtlType => EtlType.Olap;
 
-        private static readonly IEnumerator<ToParquetItem> EmptyEnumerator = Enumerable.Empty<ToParquetItem>().GetEnumerator();
+        private static readonly IEnumerator<ToOlapItem> EmptyEnumerator = Enumerable.Empty<ToOlapItem>().GetEnumerator();
 
-        protected override IEnumerator<ToParquetItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
+        protected override IEnumerator<ToOlapItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
         {
-            return new DocumentsToParquetItems(docs, collection);
+            return new DocumentsToOlapItems(docs, collection);
         }
 
-        protected override IEnumerator<ToParquetItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
+        protected override IEnumerator<ToOlapItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
         {
             return EmptyEnumerator;
         }
 
-        protected override IEnumerator<ToParquetItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
+        protected override IEnumerator<ToOlapItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
         {
-            throw new NotSupportedException("Attachment tombstones aren't supported by S3 ETL");
+            throw new NotSupportedException("Attachment tombstones aren't supported by OLAP ETL");
         }
 
-        protected override IEnumerator<ToParquetItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection)
+        protected override IEnumerator<ToOlapItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection)
         {
-            throw new NotSupportedException("Counters aren't supported by S3 ETL");
+            throw new NotSupportedException("Counters aren't supported by OLAP ETL");
         }
 
-        protected override IEnumerator<ToParquetItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
+        protected override IEnumerator<ToOlapItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
         {
             // todo
             throw new NotImplementedException();
         }
 
-        protected override IEnumerator<ToParquetItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
+        protected override IEnumerator<ToOlapItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
         {
-            throw new NotSupportedException("Time series deletes aren't supported by S3 ETL");
+            throw new NotSupportedException("Time series deletes aren't supported by OLAP ETL");
         }
 
         protected override bool ShouldUpdateOnLastBatch => true;
@@ -130,9 +129,9 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
 
         public override bool ShouldTrackTimeSeries() => false;
 
-        protected override EtlTransformer<ToParquetItem, RowGroups> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<ToOlapItem, RowGroups> GetTransformer(DocumentsOperationContext context)
         {
-            return new ParquetDocumentTransformer(Transformation, Database, context, Configuration);
+            return new OlapDocumentTransformer(Transformation, Database, context, Configuration);
         }
 
         protected override int LoadInternal(IEnumerable<RowGroups> records, DocumentsOperationContext context)
@@ -259,7 +258,7 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
             var fileName = $"{Database.Name}_{Guid.NewGuid()}.parquet";
             remotePath = $"{group.PartitionKey}/{fileName}";
 
-            return Path.Combine(_tmpParquetPath, fileName);
+            return Path.Combine(_tmpFilePath, fileName);
         }
     }
 }

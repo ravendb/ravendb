@@ -76,22 +76,22 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class UpdateParquetEtlCommand : UpdateEtlCommand<ParquetEtlConfiguration, ParquetEtlConnectionString>
+    public class UpdateOlapEtlCommand : UpdateEtlCommand<OlapEtlConfiguration, OlapEtlConnectionString>
     {
-        public UpdateParquetEtlCommand()
+        public UpdateOlapEtlCommand()
         {
             // for deserialization
         }
 
-        public UpdateParquetEtlCommand(long taskId, ParquetEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(taskId, configuration, EtlType.Parquet, databaseName, uniqueRequestId)
+        public UpdateOlapEtlCommand(long taskId, OlapEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(taskId, configuration, EtlType.Olap, databaseName, uniqueRequestId)
         {
 
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.SqlEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
-            new AddParquetEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.OlapEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+            new AddOlapEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
         }
     }
 }

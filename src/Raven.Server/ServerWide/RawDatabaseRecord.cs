@@ -12,7 +12,6 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server.Json;
@@ -439,26 +438,26 @@ namespace Raven.Server.ServerWide
         }
 
 
-        private List<ParquetEtlConfiguration> _parquetEtls;
+        private List<OlapEtlConfiguration> _olapEtls;
 
-        public List<ParquetEtlConfiguration> ParquetEtls
+        public List<OlapEtlConfiguration> OlapEtls
         {
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.ParquetEtls;
+                    return _materializedRecord.OlapEtls;
 
-                if (_parquetEtls == null)
+                if (_olapEtls == null)
                 {
-                    _parquetEtls = new List<ParquetEtlConfiguration>();
-                    if (_record.TryGet(nameof(DatabaseRecord.ParquetEtls), out BlittableJsonReaderArray bjra) && bjra != null)
+                    _olapEtls = new List<OlapEtlConfiguration>();
+                    if (_record.TryGet(nameof(DatabaseRecord.OlapEtls), out BlittableJsonReaderArray bjra) && bjra != null)
                     {
                         foreach (BlittableJsonReaderObject element in bjra)
-                            _parquetEtls.Add(JsonDeserializationCluster.ParquetEtlConfiguration(element));
+                            _olapEtls.Add(JsonDeserializationCluster.OlapEtlConfiguration(element));
                     }
                 }
 
-                return _parquetEtls;
+                return _olapEtls;
             }
         }
 
@@ -787,19 +786,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private Dictionary<string, ParquetEtlConnectionString> _parquetEtlConnectionStrings;
+        private Dictionary<string, OlapEtlConnectionString> _olapEtlConnectionStrings;
 
-        public Dictionary<string, ParquetEtlConnectionString> ParquetEtlConnectionStrings
+        public Dictionary<string, OlapEtlConnectionString> OlapEtlConnectionString
         {
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.ParquetEtlConnectionStrings;
+                    return _materializedRecord.OlapEtlConnectionStrings;
 
-                if (_parquetEtlConnectionStrings == null)
+                if (_olapEtlConnectionStrings == null)
                 {
-                    _parquetEtlConnectionStrings = new Dictionary<string, ParquetEtlConnectionString>();
-                    if (_record.TryGet(nameof(DatabaseRecord.ParquetEtlConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
+                    _olapEtlConnectionStrings = new Dictionary<string, OlapEtlConnectionString>();
+                    if (_record.TryGet(nameof(DatabaseRecord.OlapEtlConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
                     {
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
                         for (var i = 0; i < obj.Count; i++)
@@ -810,12 +809,12 @@ namespace Raven.Server.ServerWide
                                 continue;
 
                             if (propertyDetails.Value is BlittableJsonReaderObject bjro)
-                                _parquetEtlConnectionStrings[propertyDetails.Name] = JsonDeserializationCluster.ParquetEtlConnectionString(bjro);
+                                _olapEtlConnectionStrings[propertyDetails.Name] = JsonDeserializationCluster.OlapEtlConnectionString(bjro);
                         }
                     }
                 }
 
-                return _parquetEtlConnectionStrings;
+                return _olapEtlConnectionStrings;
             }
         }
 

@@ -115,11 +115,11 @@ namespace Raven.Server.ServerWide.Commands
                     }
                     break;
 
-                case OngoingTaskType.ParquetEtl:
-                    var parquetEtl = record.ParquetEtls?.Find(x => x.TaskId == TaskId);
+                case OngoingTaskType.OlapEtl:
+                    var parquetEtl = record.OlapEtls?.Find(x => x.TaskId == TaskId);
                     if (parquetEtl != null)
                     {
-                        record.ParquetEtls.Remove(parquetEtl);
+                        record.OlapEtls.Remove(parquetEtl);
                     }
                     break;
             }

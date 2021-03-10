@@ -97,7 +97,7 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, SqlEtlConfiguration> SqlEtlConfiguration = GenerateJsonDeserializationRoutine<SqlEtlConfiguration>();
 
-        public static Func<BlittableJsonReaderObject, ParquetEtlConfiguration> ParquetEtlConfiguration = GenerateJsonDeserializationRoutine<ParquetEtlConfiguration>();
+        public static Func<BlittableJsonReaderObject, OlapEtlConfiguration> OlapEtlConfiguration = GenerateJsonDeserializationRoutine<OlapEtlConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();
 
@@ -109,7 +109,7 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, SqlConnectionString> SqlConnectionString = GenerateJsonDeserializationRoutine<SqlConnectionString>();
 
-        public static Func<BlittableJsonReaderObject, ParquetEtlConnectionString> ParquetEtlConnectionString = GenerateJsonDeserializationRoutine<ParquetEtlConnectionString>();
+        public static Func<BlittableJsonReaderObject, OlapEtlConnectionString> OlapEtlConnectionString = GenerateJsonDeserializationRoutine<OlapEtlConnectionString>();
 
 
         public static readonly Func<BlittableJsonReaderObject, ClientConfiguration> ClientConfiguration = GenerateJsonDeserializationRoutine<ClientConfiguration>();
@@ -190,16 +190,16 @@ namespace Raven.Server.ServerWide
             [nameof(UpdatePeriodicBackupStatusCommand)] = GenerateJsonDeserializationRoutine<UpdatePeriodicBackupStatusCommand>(),
             [nameof(AddRavenEtlCommand)] = GenerateJsonDeserializationRoutine<AddRavenEtlCommand>(),
             [nameof(AddSqlEtlCommand)] = GenerateJsonDeserializationRoutine<AddSqlEtlCommand>(),
-            [nameof(AddParquetEtlCommand)] = GenerateJsonDeserializationRoutine<AddParquetEtlCommand>(),
+            [nameof(AddOlapEtlCommand)] = GenerateJsonDeserializationRoutine<AddOlapEtlCommand>(),
             [nameof(UpdateRavenEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateRavenEtlCommand>(),
             [nameof(UpdateSqlEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSqlEtlCommand>(),
-            [nameof(UpdateParquetEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateParquetEtlCommand>(), 
+            [nameof(UpdateOlapEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateOlapEtlCommand>(), 
             [nameof(UpdateEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateEtlProcessStateCommand>(),
             [nameof(UpdateExternalReplicationStateCommand)] = GenerateJsonDeserializationRoutine<UpdateExternalReplicationStateCommand>(),
             [nameof(DeleteOngoingTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteOngoingTaskCommand>(),
             [nameof(PutRavenConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutRavenConnectionStringCommand>(),
             [nameof(PutSqlConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutSqlConnectionStringCommand>(),
-            [nameof(PutParquetEtlConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutParquetEtlConnectionStringCommand>(),
+            [nameof(PutOlapEtlConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutOlapEtlConnectionStringCommand>(),
             [nameof(RemoveRavenConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveRavenConnectionStringCommand>(),
             [nameof(RemoveSqlConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveSqlConnectionStringCommand>(),
             [nameof(RemoveOlapConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveOlapConnectionStringCommand>(),

@@ -20,7 +20,7 @@ using Sparrow.Platform;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.ETL.Parquet
+namespace SlowTests.Server.Documents.ETL.Olap
 {
     public class LocalTests : EtlTestBase
     {
@@ -675,10 +675,10 @@ loadToOrders(key, o);
                     var connectionStringName = $"{store.Database} to S3";
 
                     var scriptPath = GenerateConfigurationScript(path, out string command);
-                    var connectionString = new ParquetEtlConnectionString
+                    var connectionString = new OlapEtlConnectionString
                     {
                         Name = connectionStringName,
-                        LocalSettings = new ParquetEtlLocalSettings
+                        LocalSettings = new OlapEtlLocalSettings
                         {
                             GetBackupConfigurationScript = new GetBackupConfigurationScript
                             {
@@ -688,7 +688,7 @@ loadToOrders(key, o);
                         }
                     };
 
-                    var configuration = new ParquetEtlConfiguration
+                    var configuration = new OlapEtlConfiguration
                     {
                         Name = connectionStringName,
                         ConnectionStringName = connectionStringName,
@@ -865,7 +865,7 @@ loadToOrders(key, o);
         private static string GenerateConfigurationScript(string path, out string command)
         {
             var scriptPath = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
-            var localSetting = new ParquetEtlLocalSettings
+            var localSetting = new OlapEtlLocalSettings
             {
                 FolderPath = path, 
                 KeepFilesOnDisc = true
@@ -902,7 +902,7 @@ loadToOrders(key, o);
         {
             var connectionStringName = $"{store.Database} to S3";
 
-            AddEtl(store, new ParquetEtlConfiguration
+            AddEtl(store, new OlapEtlConfiguration
             {
                 Name = connectionStringName,
                 ConnectionStringName = connectionStringName,
@@ -916,10 +916,10 @@ loadToOrders(key, o);
                         Script = script
                     }
                 }
-            }, new ParquetEtlConnectionString
+            }, new OlapEtlConnectionString
             {
                 Name = connectionStringName,
-                LocalSettings = new ParquetEtlLocalSettings
+                LocalSettings = new OlapEtlLocalSettings
                 {
                     FolderPath = path,
                     KeepFilesOnDisc = true

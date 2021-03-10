@@ -767,7 +767,7 @@ namespace Raven.Server.Web.System
                 case EtlType.Sql:
                     ServerStore.LicenseManager.AssertCanAddSqlEtl();
                     break;
-                case EtlType.Parquet:
+                case EtlType.Olap:
                     ServerStore.LicenseManager.AssertCanAddParquetEtl();
                     break;
                 default:

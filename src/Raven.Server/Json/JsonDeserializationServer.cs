@@ -186,7 +186,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, LocalSettings> LocalSettings = GenerateJsonDeserializationRoutine<LocalSettings>();
 
-        public static readonly Func<BlittableJsonReaderObject, ParquetEtlLocalSettings> ParquetEtlLocalSettings = GenerateJsonDeserializationRoutine<ParquetEtlLocalSettings>();
+        public static readonly Func<BlittableJsonReaderObject, OlapEtlLocalSettings> OlapEtlLocalSettings = GenerateJsonDeserializationRoutine<OlapEtlLocalSettings>();
 
         public static readonly Func<BlittableJsonReaderObject, S3Settings> S3Settings = GenerateJsonDeserializationRoutine<S3Settings>();
 

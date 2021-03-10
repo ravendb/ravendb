@@ -4,6 +4,6 @@
     {
         Raven,
         Sql,
-        Parquet
+        Olap
     }
 }

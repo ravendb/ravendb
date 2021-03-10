@@ -71,14 +71,14 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class PutParquetEtlConnectionStringCommand : PutConnectionStringCommand<ParquetEtlConnectionString>
+    public class PutOlapEtlConnectionStringCommand : PutConnectionStringCommand<OlapEtlConnectionString>
     {
-        protected PutParquetEtlConnectionStringCommand()
+        protected PutOlapEtlConnectionStringCommand()
         {
             // for deserialization
         }
 
-        public PutParquetEtlConnectionStringCommand(ParquetEtlConnectionString connectionString, string databaseName, string uniqueRequestId) : base(connectionString, databaseName, uniqueRequestId)
+        public PutOlapEtlConnectionStringCommand(OlapEtlConnectionString connectionString, string databaseName, string uniqueRequestId) : base(connectionString, databaseName, uniqueRequestId)
         {
 
         }
@@ -87,7 +87,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         {
             try
             {
-                record.ParquetEtlConnectionStrings[ConnectionString.Name] = ConnectionString;
+                record.OlapEtlConnectionStrings[ConnectionString.Name] = ConnectionString;
 
             }
             catch (Exception e)

@@ -3,10 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Parquet.Data;
-using Raven.Server.Documents.ETL.Providers.SQL;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.ETL.Providers.Parquet
+namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
     public class RowGroups
     {
@@ -47,7 +46,7 @@ namespace Raven.Server.Documents.ETL.Providers.Parquet
             return fields;
         }
 
-        public void Add(ToParquetItem item)
+        public void Add(ToOlapItem item)
         {
             var group = GetCurrentGroup();
             group.Ids.Add(item.DocumentId);
