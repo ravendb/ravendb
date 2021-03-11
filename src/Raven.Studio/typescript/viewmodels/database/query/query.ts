@@ -1480,6 +1480,9 @@ class query extends viewModelBase {
         this.resultsExpanded.toggle();
         this.gridController().reset(true);
         this.graphQueryResults.onResize();
+        if (this.currentTab() === this.spatialMap()) {
+            this.spatialMap().onResize();
+        }
     }
     
 
