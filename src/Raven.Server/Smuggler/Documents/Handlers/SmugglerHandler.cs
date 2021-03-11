@@ -48,7 +48,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
     {
         private static readonly HttpClient HttpClient = new HttpClient();
 
-        [RavenAction("/databases/*/smuggler/validate-options", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/smuggler/validate-options", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task PostValidateOptions()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -83,7 +83,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/smuggler/export", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/smuggler/export", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostExport()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -120,7 +120,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 if (feature == null)
                     options.AuthorizationStatus = AuthorizationStatus.DatabaseAdmin;
                 else
-                    options.AuthorizationStatus = feature.CanAccess(Database.Name, requireAdmin: true) ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser;
+                    options.AuthorizationStatus = feature.CanAccess(Database.Name, requireAdmin: true, requireWrite: false) ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser;
 
                 ApplyBackwardCompatibility(options);
 
@@ -135,7 +135,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(fileName) + ".ravendbdump";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.Headers["Content-Type"] = "application/octet-stream";
-                
+
                 try
                 {
                     await Database.Operations.AddOperation(
@@ -221,7 +221,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             return fileStream;
         }
 
-        [RavenAction("/databases/*/admin/smuggler/import", "GET", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/admin/smuggler/import", "GET", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetImport()
         {
             if (HttpContext.Request.Query.ContainsKey("file") == false &&
@@ -249,7 +249,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/smuggler/import-s3-dir", "GET", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/admin/smuggler/import-s3-dir", "GET", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostImportFromS3Directory()
         {
             var url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
@@ -273,7 +273,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             await BulkImport(files, Path.GetTempPath());
         }
 
-        [RavenAction("/databases/*/admin/smuggler/import-dir", "GET", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/admin/smuggler/import-dir", "GET", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostImportDirectory()
         {
             var directory = GetQueryStringValueAndAssertIfSingleAndNotEmpty("dir");
@@ -385,7 +385,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/smuggler/migrate/ravendb", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/admin/smuggler/migrate/ravendb", "POST", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task MigrateFromRavenDB()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -413,7 +413,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/migrate/get-migrated-server-urls", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/migrate/get-migrated-server-urls", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetMigratedServerUrls()
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -466,7 +466,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/smuggler/migrate", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/admin/smuggler/migrate", "POST", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task MigrateFromAnotherDatabase()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -636,7 +636,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             return migratorFile;
         }
 
-        [RavenAction("/databases/*/smuggler/import", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/smuggler/import", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostImportAsync()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -730,7 +730,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/smuggler/import/csv", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/smuggler/import/csv", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task ImportFromCsv()
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

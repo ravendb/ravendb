@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TimeSeriesHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/timeseries/stats", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/timeseries/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Stats()
         {
             var documentId = GetStringQueryString("docId");
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Handlers
             return timeSeriesNames;
         }
 
-        [RavenAction("/databases/*/timeseries/ranges", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/timeseries/ranges", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task ReadRanges()
         {
             var documentId = GetStringQueryString("docId");
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Read()
         {
             var documentId = GetStringQueryString("docId");
@@ -585,7 +585,7 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndArray();
         }
 
-        [RavenAction("/databases/*/timeseries", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/timeseries", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Batch()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -613,7 +613,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/timeseries/config", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/timeseries/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetTimeSeriesConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -764,7 +764,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/timeseries/names/config", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/timeseries/names/config", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task ConfigTimeSeriesNames()
         {
             await ServerStore.EnsureNotPassiveAsync();
@@ -987,7 +987,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/timeseries/debug/segments-summary", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/timeseries/debug/segments-summary", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetSegmentSummary()
         {
             var documentId = GetStringQueryString("docId");

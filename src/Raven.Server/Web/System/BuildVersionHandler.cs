@@ -46,7 +46,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/build/version", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/build/version", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task Get()
         {
             HttpContext.Response.Headers.Add(Constants.Headers.ServerStartupTime, ServerStore.Server.Statistics.StartUpTime.GetDefaultRavenFormat(isUtc: true));
@@ -55,7 +55,7 @@ namespace Raven.Server.Web.System
             await ResponseBodyStream().WriteAsync(versionBuffer, 0, versionBuffer.Length);
         }
 
-        [RavenAction("/build/version/updates", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/build/version/updates", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetVersionUpdatesInfo()
         {
             var shouldRefresh = GetBoolValueQueryString("refresh", required: false) ?? false;

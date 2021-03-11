@@ -10,7 +10,7 @@ namespace Raven.Server.Web.Studio
 {
     public class StudioStatsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/studio/footer/stats", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/studio/footer/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task FooterStats()
         {
             using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))

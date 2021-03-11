@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class AnalyzersHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/analyzers", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/analyzers", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

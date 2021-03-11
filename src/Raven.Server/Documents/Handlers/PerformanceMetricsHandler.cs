@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/debug/perf-metrics", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/debug/perf-metrics", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task IoMetrics()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))

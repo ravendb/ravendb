@@ -44,7 +44,7 @@ namespace Raven.Server.Web.System
 {
     public class OngoingTasksHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/tasks", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/tasks", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetOngoingTasks()
         {
             var result = GetOngoingTasksInternal();
@@ -591,7 +591,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task RemoveConnectionString()
         {
-            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true) == false)
+            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true, requireWrite: true) == false)
                 return;
 
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -624,7 +624,7 @@ namespace Raven.Server.Web.System
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            if (await CanAccessDatabaseAsync(Database.Name, true) == false)
+            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true, requireWrite: false) == false)
                 return;
 
             var connectionStringName = GetStringQueryString("connectionStringName", false);
@@ -709,7 +709,7 @@ namespace Raven.Server.Web.System
             await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), "put-connection-string", GetRaftRequestIdFromQuery());
         }
 
-        [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.DatabaseAdmin)]
         public async Task ResetEtl()
         {
             var configurationName = GetStringQueryString("configurationName"); // etl task name
@@ -718,7 +718,7 @@ namespace Raven.Server.Web.System
             await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName, guid), "etl-reset", GetRaftRequestIdFromQuery());
         }
 
-        [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddEtl()
         {
             var id = GetLongQueryString("id", required: false);
@@ -882,7 +882,7 @@ namespace Raven.Server.Web.System
         }
 
         // Get Info about a specific task - For Edit View in studio - Each task should return its own specific object
-        [RavenAction("/databases/*/task", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/task", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetOngoingTaskInfo()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -1074,7 +1074,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/databases/*/tasks/pull-replication/hub", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/tasks/pull-replication/hub", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetHubTasksInfo()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -1137,7 +1137,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/databases/*/subscription-tasks/state", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/subscription-tasks/state", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task ToggleSubscriptionTaskState()
         {
             // Note: Only Subscription task needs User authentication, All other tasks need Admin authentication
@@ -1151,7 +1151,7 @@ namespace Raven.Server.Web.System
             await ToggleTaskState();
         }
 
-        [RavenAction("/databases/*/admin/tasks/state", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/tasks/state", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ToggleTaskState()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -1183,7 +1183,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdateExternalReplication()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -1209,7 +1209,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/databases/*/subscription-tasks", "DELETE", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/subscription-tasks", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task DeleteSubscriptionTask()
         {
             // Note: Only Subscription task needs User authentication, All other tasks need Admin authentication
@@ -1223,7 +1223,7 @@ namespace Raven.Server.Web.System
             await DeleteOngoingTask();
         }
 
-        [RavenAction("/databases/*/admin/tasks", "DELETE", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/tasks", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task DeleteOngoingTask()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)

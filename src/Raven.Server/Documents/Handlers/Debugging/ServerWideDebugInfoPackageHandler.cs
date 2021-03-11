@@ -199,7 +199,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node [{ServerStore.NodeTag}].zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             HttpContext.Response.Headers["Content-Type"] = "application/zip";
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 using (var ms = new MemoryStream())

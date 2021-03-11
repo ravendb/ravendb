@@ -34,7 +34,7 @@ namespace Raven.Server.Web.Operations
             return NoContent();
         }
 
-        [RavenAction("/operations/state", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/operations/state", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task State()
         {
             var id = GetLongQueryString("id");
@@ -51,7 +51,7 @@ namespace Raven.Server.Web.Operations
                 if (await IsOperatorAsync() == false)
                     return;
             }
-            else if (await CanAccessDatabaseAsync(operation.Database.Name, requireAdmin: false) == false)
+            else if (await CanAccessDatabaseAsync(operation.Database.Name, requireAdmin: false, requireWrite: false) == false)
             {
                 return;
             }

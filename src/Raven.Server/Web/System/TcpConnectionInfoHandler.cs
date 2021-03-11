@@ -17,7 +17,7 @@ namespace Raven.Server.Web.System
 {
     public class TcpConnectionInfoHandler : RequestHandler
     {
-        [RavenAction("/info/tcp", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/info/tcp", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -110,7 +110,7 @@ namespace Raven.Server.Web.System
 
                 case RavenServer.AuthenticationStatus.Allowed:
                     // check that the certificate is allowed for this database.
-                    if (feature.CanAccess(database, requireAdmin: false))
+                    if (feature.CanAccess(database, requireAdmin: false, requireWrite: false))
                         return true;
 
                     await RequestRouter.UnlikelyFailAuthorizationAsync(httpContext, database, feature, AuthorizationStatus.RestrictedAccess);

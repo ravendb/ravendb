@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.Dashboard;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -30,7 +31,7 @@ namespace Raven.Server.NotificationCenter
             _resourceShutdown = resourceShutdown;
         }
 
-        public async Task WriteNotifications(Func<string, bool> shouldWriteByDb)
+        public async Task WriteNotifications(CanAccessDatabase shouldWriteByDb)
         {
             var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
             var receive = _webSocket.ReceiveAsync(receiveBuffer, _resourceShutdown);

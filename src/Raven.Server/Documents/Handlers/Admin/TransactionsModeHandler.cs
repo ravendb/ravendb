@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class TransactionsModeHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/transactions-mode", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/transactions-mode", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task CommitNonLazyTx()
         {
             var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");

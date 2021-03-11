@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.ETL.Handlers
 {
     public class EtlHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/etl/stats", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/etl/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetStats()
         {
             var etlStats = GetProcessesToReportOn().Select(x => new EtlTaskStats
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.ETL.Handlers
             }
         }
 
-        [RavenAction("/databases/*/etl/debug/stats", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/etl/debug/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetDebugStats()
         {
             var debugStats = GetProcessesToReportOn().Select(x => new DynamicJsonValue()
@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.ETL.Handlers
             }
         }
 
-        [RavenAction("/databases/*/etl/performance", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/etl/performance", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Performance()
         {
             var stats = GetProcessesToReportOn().Select(x => new EtlTaskPerformanceStats
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.ETL.Handlers
             }
         }
 
-        [RavenAction("/databases/*/etl/performance/live", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
+        [RavenAction("/databases/*/etl/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task PerformanceLive()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.ETL.Handlers
             }
         }
 
-        [RavenAction("/databases/*/etl/progress", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/etl/progress", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task Progress()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

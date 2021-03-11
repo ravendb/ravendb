@@ -25,7 +25,7 @@ namespace Raven.Server.Web.Studio
         private const string ArrayStubsKey = "$a";
         private const string TrimmedValueKey = "$t";
 
-        [RavenAction("/databases/*/studio/collections/preview", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/studio/collections/preview", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PreviewCollection()
         {
             var start = GetStart();
@@ -138,7 +138,7 @@ namespace Raven.Server.Web.Studio
                 {
                     unsafe
                     {
-                        document.Data.GetPropertyByIndex(buffers.Properties[i], ref prop);
+                    document.Data.GetPropertyByIndex(buffers.Properties[i], ref prop);
                     }
 
                     var sendFull = fullPropertiesToSend.Contains(prop.Name);
@@ -307,7 +307,7 @@ namespace Raven.Server.Web.Studio
             columns.Remove(metadataField);
         }
 
-        [RavenAction("/databases/*/studio/collections/docs", "DELETE", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/studio/collections/docs", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Delete()
         {
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);

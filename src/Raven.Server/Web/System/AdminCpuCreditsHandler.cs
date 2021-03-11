@@ -33,7 +33,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/debug/cpu-credits", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/debug/cpu-credits", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetCpuCredits()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

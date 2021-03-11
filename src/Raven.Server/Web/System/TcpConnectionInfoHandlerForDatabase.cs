@@ -8,7 +8,7 @@ namespace Raven.Server.Web.System
 {
     public class TcpConnectionInfoHandlerForDatabase : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/info/tcp", "GET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/info/tcp", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task Get()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))

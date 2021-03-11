@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class DocumentsCompressionHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/documents-compression/config", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/documents-compression/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetDocumentsCompressionConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

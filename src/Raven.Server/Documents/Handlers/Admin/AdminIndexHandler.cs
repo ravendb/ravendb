@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             await PutInternal(validatedAsAdmin: true);
         }
 
-        [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task PutJavaScript()
         {
             await PutInternal(validatedAsAdmin: false);

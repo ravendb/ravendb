@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class CollectionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/collections/stats", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/collections/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetCollectionStats()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/collections/stats/detailed", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/collections/stats/detailed", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetDetailedCollectionStats()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Handlers
             return stats;
         }
 
-        [RavenAction("/databases/*/collections/docs", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/collections/docs", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetCollectionDocuments()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

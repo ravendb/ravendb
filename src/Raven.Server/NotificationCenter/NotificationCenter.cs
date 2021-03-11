@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Dashboard;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
@@ -35,7 +36,6 @@ namespace Raven.Server.NotificationCenter
             OutOfMemory = new OutOfMemoryNotifications(this);
         }
 
-
         public bool IsInitialized { get; set; }
 
         public void Initialize(DocumentDatabase database = null)
@@ -54,7 +54,7 @@ namespace Raven.Server.NotificationCenter
         public readonly EtlNotifications EtlNotifications;
         public readonly SlowWriteNotifications SlowWrites;
         public readonly OutOfMemoryNotifications OutOfMemory;
-        
+
         public readonly NotificationCenterOptions Options;
         private readonly RavenConfiguration _config;
 
@@ -99,11 +99,11 @@ namespace Raven.Server.NotificationCenter
 
                 foreach (var watcher in Watchers)
                 {
-                    if (watcher.Filter != null && watcher.Filter(notification.Database) == false)
+                    if (watcher.Filter != null && watcher.Filter(notification.Database, false) == false)
                     {
                         continue;
                     }
-                    
+
                     // serialize to avoid race conditions
                     // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
                     watcher.NotificationsQueue.Enqueue(notification.ToJson());
@@ -157,7 +157,7 @@ namespace Raven.Server.NotificationCenter
         {
             _notificationsStorage.Delete(id);
 
-            // send this notification even when notification doesn't exist 
+            // send this notification even when notification doesn't exist
             // we don't persist all notifications
             Add(NotificationUpdated.Create(id, NotificationUpdateType.Dismissed));
         }
@@ -189,6 +189,6 @@ namespace Raven.Server.NotificationCenter
 
         public IWebsocketWriter Writer;
 
-        public Func<string, bool> Filter;
+        public CanAccessDatabase Filter;
     }
 }

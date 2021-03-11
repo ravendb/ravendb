@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class SortersHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/sorters", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/sorters", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -32,16 +32,16 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WriteArray(context, "Sorters", sorters.Values, (w, c, sorter) =>
                     {
-                         w.WriteStartObject();
+                        w.WriteStartObject();
 
-                         w.WritePropertyName(nameof(SorterDefinition.Name));
-                         w.WriteString(sorter.Name);
-                         w.WriteComma();
+                        w.WritePropertyName(nameof(SorterDefinition.Name));
+                        w.WriteString(sorter.Name);
+                        w.WriteComma();
 
-                         w.WritePropertyName(nameof(SorterDefinition.Code));
-                         w.WriteString(sorter.Code);
+                        w.WritePropertyName(nameof(SorterDefinition.Code));
+                        w.WriteString(sorter.Code);
 
-                         w.WriteEndObject();
+                        w.WriteEndObject();
                     });
 
                     writer.WriteEndObject();

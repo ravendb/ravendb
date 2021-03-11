@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class RefreshHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/refresh/config", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/refresh/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRefreshConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

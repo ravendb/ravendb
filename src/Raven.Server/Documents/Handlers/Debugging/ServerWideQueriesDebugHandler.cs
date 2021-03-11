@@ -11,10 +11,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class ServerWideQueriesDebugHandler : RequestHandler
     {
-        [RavenAction("/debug/queries/running/live", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/debug/queries/running/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task RunningQueriesLive()
         {
-            var allowedDbs = await GetAllowedDbsAsync(null, requireAdmin: false);
+            var allowedDbs = await GetAllowedDbsAsync(null, requireAdmin: false, requireWrite: false);
 
             if (allowedDbs.HasAccess == false)
                 return;
@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 dbNames = allowedDbs.AuthorizedDatabases.Keys.ToHashSet();
             }
-            
+
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
                 var receiveBuffer = new ArraySegment<byte>(new byte[1024]);

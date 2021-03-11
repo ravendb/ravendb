@@ -94,53 +94,53 @@ namespace Raven.Client.Documents.Commands.MultiGet
                             var cacheKey = GetCacheKey(command, out string _);
                             var release = _cache.Get(ctx, cacheKey, out string cachedChangeVector, out var item);
                             _cachedValues.Add((release, item));
-                            
-                                var headers = new Dictionary<string, string>();
-                                if (cachedChangeVector != null)
-                                    headers["If-None-Match"] = $"\"{cachedChangeVector}\"";
 
-                                foreach (var header in command.Headers)
-                                    headers[header.Key] = header.Value;
+                            var headers = new Dictionary<string, string>();
+                            if (cachedChangeVector != null)
+                                headers["If-None-Match"] = $"\"{cachedChangeVector}\"";
 
-                                writer.WriteStartObject();
+                            foreach (var header in command.Headers)
+                                headers[header.Key] = header.Value;
 
-                                writer.WritePropertyName(nameof(GetRequest.Url));
-                                writer.WriteString($"/databases/{node.Database}{command.Url}");
-                                writer.WriteComma();
+                            writer.WriteStartObject();
 
-                                writer.WritePropertyName(nameof(GetRequest.Query));
-                                writer.WriteString(command.Query);
-                                writer.WriteComma();
+                            writer.WritePropertyName(nameof(GetRequest.Url));
+                            writer.WriteString($"/databases/{node.Database}{command.Url}");
+                            writer.WriteComma();
 
-                                writer.WritePropertyName(nameof(GetRequest.Method));
-                                writer.WriteString(command.Method?.Method);
-                                writer.WriteComma();
+                            writer.WritePropertyName(nameof(GetRequest.Query));
+                            writer.WriteString(command.Query);
+                            writer.WriteComma();
 
-                                writer.WritePropertyName(nameof(GetRequest.Headers));
-                                writer.WriteStartObject();
+                            writer.WritePropertyName(nameof(GetRequest.Method));
+                            writer.WriteString(command.Method?.Method);
+                            writer.WriteComma();
 
-                                var firstInner = true;
-                                foreach (var kvp in headers)
-                                {
-                                    if (firstInner == false)
-                                        writer.WriteComma();
+                            writer.WritePropertyName(nameof(GetRequest.Headers));
+                            writer.WriteStartObject();
 
-                                    firstInner = false;
-                                    writer.WritePropertyName(kvp.Key);
-                                    writer.WriteString(kvp.Value);
-                                }
+                            var firstInner = true;
+                            foreach (var kvp in headers)
+                            {
+                                if (firstInner == false)
+                                    writer.WriteComma();
 
-                                writer.WriteEndObject();
-                                writer.WriteComma();
-
-                                writer.WritePropertyName(nameof(GetRequest.Content));
-                                if (command.Content != null)
-                                    command.Content.WriteContent(writer, ctx);
-                                else
-                                    writer.WriteNull();
-
-                                writer.WriteEndObject();
+                                firstInner = false;
+                                writer.WritePropertyName(kvp.Key);
+                                writer.WriteString(kvp.Value);
                             }
+
+                            writer.WriteEndObject();
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(nameof(GetRequest.Content));
+                            if (command.Content != null)
+                                command.Content.WriteContent(writer, ctx);
+                            else
+                                writer.WriteNull();
+
+                            writer.WriteEndObject();
+                        }
                         writer.WriteEndArray();
 
                         writer.WriteEndObject();
@@ -193,7 +193,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                         var command = _commands[i];
 
                         MaybeSetCache(getResponse, command);
-                            MaybeReadFromCache(getResponse, i, command, context);
+                        MaybeReadFromCache(getResponse, i, command, context);
 
                         Result.Add(getResponse);
 
@@ -313,7 +313,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 return;
 
             getResponse.Result = _cachedValues[index].Item2;
-            }
+        }
 
         private void MaybeSetCache(GetResponse getResponse, GetRequest command)
         {

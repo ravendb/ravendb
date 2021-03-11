@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class BatchHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/bulk_docs", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/bulk_docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task BulkDocs()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -1155,7 +1155,7 @@ namespace Raven.Server.Documents.Handlers
 
             private void EtlGetDocIdFromPrefixIfNeeded(ref string docId, BatchRequestParser.CommandData cmd, DocumentsStorage.PutOperationResults? lastPutResult)
             {
-                if (!cmd.FromEtl || docId[^1] != Database.IdentityPartsSeparator) 
+                if (!cmd.FromEtl || docId[^1] != Database.IdentityPartsSeparator)
                     return;
                 // counter/time-series sent by Raven ETL, only prefix is defined
 
@@ -1165,7 +1165,7 @@ namespace Raven.Server.Documents.Handlers
                 Debug.Assert(lastPutResult.HasValue && lastPutResult.Value.Id.StartsWith(docId));
                 docId = lastPutResult.Value.Id;
             }
-            
+
             public void Dispose()
             {
                 if (ParsedCommands.Count == 0)

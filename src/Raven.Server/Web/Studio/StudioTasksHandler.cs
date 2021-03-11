@@ -270,7 +270,7 @@ namespace Raven.Server.Web.Studio
             public string ErrorMessage { get; set; }
         }
 
-        [RavenAction("/studio-tasks/periodic-backup/test-credentials", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/studio-tasks/periodic-backup/test-credentials", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task TestPeriodicBackupCredentials()
         {
             var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
@@ -353,7 +353,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        [RavenAction("/studio-tasks/is-valid-name", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/studio-tasks/is-valid-name", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task IsValidName()
         {
             if (Enum.TryParse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("type").Trim(), out ItemType elementType) == false)
@@ -407,7 +407,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        [RavenAction("/studio-tasks/format", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/studio-tasks/format", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Format()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -469,7 +469,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        [RavenAction("/studio-tasks/next-cron-expression-occurrence", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/studio-tasks/next-cron-expression-occurrence", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetNextCronExpressionOccurrence()
         {
             var expression = GetQueryStringValueAndAssertIfSingleAndNotEmpty("expression");

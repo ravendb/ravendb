@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
 {
     public class SqlEtlHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/etl/sql/test-connection", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/etl/sql/test-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetTestSqlConnection()
         {
             try
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/etl/sql/test", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/etl/sql/test", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task PostScriptTest()
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

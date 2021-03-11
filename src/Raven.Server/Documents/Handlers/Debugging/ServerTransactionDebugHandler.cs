@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class ServerTransactionDebugHandler : RequestHandler
     {
-        [RavenAction("/admin/debug/txinfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/debug/txinfo", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task TxInfo()
         {
             var results = new List<TransactionDebugHandler.TransactionInfo>();

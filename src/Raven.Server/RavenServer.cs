@@ -1433,7 +1433,11 @@ namespace Raven.Server
             public CertificateDefinition Definition;
             public int WrittenToAuditLog;
 
-            public bool CanAccess(string db, bool requireAdmin)
+            public AuthenticateConnection()
+            {
+            }
+
+            public bool CanAccess(string database, bool requireAdmin, bool requireWrite)
             {
                 if (Status == AuthenticationStatus.Expired || Status == AuthenticationStatus.NotYetValid)
                     return false;
@@ -1441,16 +1445,16 @@ namespace Raven.Server
                 if (Status == AuthenticationStatus.Operator || Status == AuthenticationStatus.ClusterAdmin)
                     return true;
 
-                if (db == null)
+                if (database == null)
                     return false;
 
                 if (Status != AuthenticationStatus.Allowed)
                     return false;
 
-                if (_caseSensitiveAuthorizedDatabases.TryGetValue(db, out var mode))
-                    return mode == DatabaseAccess.Admin || !requireAdmin;
+                if (_caseSensitiveAuthorizedDatabases.TryGetValue(database, out var mode))
+                    return CheckAccess(mode, requireAdmin, requireWrite);
 
-                if (AuthorizedDatabases.TryGetValue(db, out mode) == false)
+                if (AuthorizedDatabases.TryGetValue(database, out mode) == false)
                     return false;
 
                 // Technically speaking, since this is per connection, this is single threaded. But I'm
@@ -1459,10 +1463,29 @@ namespace Raven.Server
                 // is pretty small for most cases anyway
                 _caseSensitiveAuthorizedDatabases = new Dictionary<string, DatabaseAccess>(_caseSensitiveAuthorizedDatabases)
                 {
-                    {db, mode}
+                    {database, mode}
                 };
 
-                return mode == DatabaseAccess.Admin || !requireAdmin;
+                return CheckAccess(mode, requireAdmin, requireWrite);
+
+                static bool CheckAccess(DatabaseAccess mode, bool requireAdmin, bool requireWrite)
+                {
+                    if (requireAdmin)
+                        return mode == DatabaseAccess.Admin;
+
+                    switch (mode)
+                    {
+                        case DatabaseAccess.Read:
+                            return requireWrite == false;
+
+                        case DatabaseAccess.ReadWrite:
+                        case DatabaseAccess.Admin:
+                            return true;
+
+                        default:
+                            throw new NotImplementedException($"Unknown database access mode '{mode}'.");
+                    }
+                }
             }
 
             ClaimsPrincipal IHttpAuthenticationFeature.User { get; set; }
@@ -2382,7 +2405,7 @@ namespace Raven.Server
                                 msg = "Cannot allow access. Database name is empty.";
                                 return false;
                             }
-                            if (auth.CanAccess(header.DatabaseName, requireAdmin: false))
+                            if (auth.CanAccess(header.DatabaseName, requireAdmin: false, requireWrite: false))
                                 return true;
                             msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName}";
                             return false;

@@ -8,7 +8,7 @@ namespace Raven.Server.Web.System
 {
     public sealed class DebugHandler : RequestHandler
     {
-        [RavenAction("/debug/routes", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/debug/routes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Routes()
         {
             var debugRoutes = Server.Router.AllRoutes

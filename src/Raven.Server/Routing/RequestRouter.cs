@@ -188,8 +188,8 @@ namespace Raven.Server.Routing
 
                             if (database == null)
                                 return (true, authenticationStatus);
-                            ;
-                            if (feature.CanAccess(database.Name, route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin))
+
+                            if (feature.CanAccess(database.Name, route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin, route.EndpointType == EndpointType.Write))
                                 return (true, authenticationStatus);
 
                             goto case RavenServer.AuthenticationStatus.None;
@@ -197,7 +197,6 @@ namespace Raven.Server.Routing
                             if (route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
                                 goto case RavenServer.AuthenticationStatus.None;
                             return (true, authenticationStatus);
-                            ;
 
                         case RavenServer.AuthenticationStatus.ClusterAdmin:
                             return (true, authenticationStatus);

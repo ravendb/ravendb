@@ -21,7 +21,7 @@ namespace Raven.Server.Web.System
         public async Task TestConnection()
         {
             var url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
-            var database = GetStringQueryString("database", required:false); // can be null
+            var database = GetStringQueryString("database", required: false); // can be null
             var bidirectional = GetBoolValueQueryString("bidirectional", required: false);
 
             url = UrlHelper.TryGetLeftPart(url);
@@ -48,7 +48,7 @@ namespace Raven.Server.Web.System
         {
             TcpClient tcpClient;
             string url;
-            (tcpClient, url) =  await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, log);
+            (tcpClient, url) = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, log);
             var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, server.Certificate.Certificate, server.CipherSuitesPolicy, timeout);
             using (tcpClient)
             {
@@ -64,10 +64,12 @@ namespace Raven.Server.Web.System
                             case TcpConnectionStatus.Ok:
                                 result.Success = true;
                                 break;
+
                             case TcpConnectionStatus.AuthorizationFailed:
                                 result.Success = false;
                                 result.Error = $"Connection to {url} failed because of authorization failure: {headerResponse.Message}";
                                 break;
+
                             case TcpConnectionStatus.TcpVersionMismatch:
                                 result.Success = false;
                                 result.Error = $"Connection to {url} failed because of mismatching tcp version: {headerResponse.Message}";

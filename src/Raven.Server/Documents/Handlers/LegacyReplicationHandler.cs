@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class LegacyReplicationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/replication/lastEtag", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/replication/lastEtag", "GET", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task LastEtag()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/replication/replicateDocs", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/replication/replicateDocs", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Documents()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/replication/replicateAttachments", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/replication/replicateAttachments", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Attachments()
         {
             var destination = new DatabaseDestination(Database);
@@ -182,21 +182,21 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/replication/heartbeat", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/replication/heartbeat", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public Task Heartbeat()
         {
             // nothing to do here
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes/last-queried", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/indexes/last-queried", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public Task LastQueried()
         {
             // nothing to do here
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/side-by-side-indexes", "PUT", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/side-by-side-indexes", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public Task SideBySideIndexes()
         {
             // nothing to do here

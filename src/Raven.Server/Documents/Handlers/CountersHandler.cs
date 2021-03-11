@@ -587,7 +587,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/counters", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/counters", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
             var docId = GetStringValuesQueryString("docId");
@@ -624,7 +624,7 @@ namespace Raven.Server.Documents.Handlers
             return result;
         }
 
-        [RavenAction("/databases/*/counters", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/counters", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Batch()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

@@ -608,14 +608,14 @@ namespace Raven.Server.Web
             public Dictionary<string, DatabaseAccess> AuthorizedDatabases { get; set; }
         }
 
-        protected async Task<bool> CanAccessDatabaseAsync(string dbName, bool requireAdmin)
+        protected async Task<bool> CanAccessDatabaseAsync(string dbName, bool requireAdmin, bool requireWrite)
         {
-            var result = await GetAllowedDbsAsync(dbName, requireAdmin);
+            var result = await GetAllowedDbsAsync(dbName, requireAdmin, requireWrite);
 
             return result.HasAccess;
         }
 
-        protected async Task<AllowedDbs> GetAllowedDbsAsync(string dbName, bool requireAdmin)
+        protected async Task<AllowedDbs> GetAllowedDbsAsync(string dbName, bool requireAdmin, bool requireWrite)
         {
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
@@ -638,7 +638,7 @@ namespace Raven.Server.Web
                 case RavenServer.AuthenticationStatus.Operator:
                     return new AllowedDbs { HasAccess = true };
                 case RavenServer.AuthenticationStatus.Allowed:
-                    if (dbName != null && feature.CanAccess(dbName, requireAdmin) == false)
+                    if (dbName != null && feature.CanAccess(dbName, requireAdmin, requireWrite) == false)
                     {
                         await RequestRouter.UnlikelyFailAuthorizationAsync(HttpContext, dbName, feature, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
                         return new AllowedDbs { HasAccess = false };
