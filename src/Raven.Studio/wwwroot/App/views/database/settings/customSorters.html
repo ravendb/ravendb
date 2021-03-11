@@ -8,11 +8,9 @@
                     </a>
                 </div>
             </div>
-
-            <div class="hr-title">
+            <div class="hr-title margin-top">
                 <h5 class="no-text-transform"><span>Current custom sorters</span></h5><hr>
             </div>
-            
             <div data-bind="foreach: sorters">
                 <div class="panel item">
                     <div class="padding padding-sm">
@@ -39,12 +37,11 @@
                                 <label>Enter test RQL:</label>
                                 <pre class="form-control margin-top" placeholder="Enter query to test sorter"
                                      data-bind="aceEditor: { code: testRql, lang:'ace/mode/rql', completer: $root.queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: testRql" style="height: 160px;">
-                            </pre>
+                                </pre>
                                 <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: testRql">
                                     <div class="help-block" data-bind="validationMessage: testRql"></div>
                                 </div>
                             </div>
-
                             <div class="flex-horizontal toolbar">
                                 <div class="flex-separator"></div>
                                 <div>
@@ -62,12 +59,11 @@
                     </div>
                 </div>
             </div>
-            
-            <div data-bind="visible: sorters().length === 0">
-                <h3 class="text-center text-muted">No custom sorters have been defined.</h3>
+            <div class="text-center text-muted margin-top" data-bind="visible: sorters().length === 0">
+                <i class="icon-lg icon-empty-set"></i>
+                <h2 class="margin-top margin-top-sm">No custom sorters have been defined</h2>
             </div>
         </div>
-
         <div class="col-sm-12 col-lg-6 flex-vertical" data-bind="visible: testResultsVisible">
             <div class="panel padding flex-vertical flex-grow fixed">
                 <div class="flex-header">

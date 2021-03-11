@@ -61,6 +61,8 @@ class indexDefinition {
 
     priority = ko.observable<Raven.Client.Documents.Indexes.IndexPriority>();
 
+    customAnalyzers = ko.observableArray<string>();
+
     validationGroup: KnockoutValidationGroup;
 
     constructor(dto: Raven.Client.Documents.Indexes.IndexDefinition) {
@@ -311,15 +313,21 @@ class indexDefinition {
 
     addField() {
         const field = indexFieldOptions.empty();
+        
+        field.addCustomAnalyzers(this.customAnalyzers());
+        
         if (this.defaultFieldOptions()) {
             field.parent(this.defaultFieldOptions());
         }
+        
         this.fields.unshift(field);
     }
 
     addDefaultField() {
         const fieldOptions = indexFieldOptions.defaultFieldOptions();
         this.defaultFieldOptions(fieldOptions);
+        
+        this.defaultFieldOptions().addCustomAnalyzers(this.customAnalyzers());
 
         this.fields().forEach(field => {
             field.parent(fieldOptions);

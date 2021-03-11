@@ -137,7 +137,8 @@ class customSorters extends viewModelBase {
     }
     
     confirmRemoveSorter(sorter: sorterListItem) {
-        this.confirmationMessage("Delete Custom Sorter", "You're deleting custom sorter with name: " + generalUtils.escapeHtml(sorter.name), {
+        this.confirmationMessage("Delete Custom Sorter", 
+            `You're deleting custom sorter:  <br><ul><li>${generalUtils.escapeHtml(sorter.name)}</li></ul>`, {
             buttons: ["Cancel", "Delete"],
             html: true
         })

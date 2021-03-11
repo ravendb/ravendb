@@ -25,6 +25,8 @@ namespace Raven.Server.Documents.Handlers
                 {
                     analyzers = new Dictionary<string, AnalyzerDefinition>();
                 }
+                
+                var namesOnly = GetBoolValueQueryString("namesOnly", false) ?? false;
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -36,10 +38,13 @@ namespace Raven.Server.Documents.Handlers
 
                         w.WritePropertyName(nameof(AnalyzerDefinition.Name));
                         w.WriteString(analyzer.Name);
-                        w.WriteComma();
 
-                        w.WritePropertyName(nameof(AnalyzerDefinition.Code));
-                        w.WriteString(analyzer.Code);
+                        if (namesOnly == false)
+                        {
+                            w.WriteComma();
+                            w.WritePropertyName(nameof(AnalyzerDefinition.Code));
+                            w.WriteString(analyzer.Code);
+                        }
 
                         w.WriteEndObject();
                     });

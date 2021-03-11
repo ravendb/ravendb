@@ -58,6 +58,8 @@ interface computedAppUrls {
     refresh: KnockoutComputed<string>;
     customSorters: KnockoutComputed<string>;
     editCustomSorter: KnockoutComputed<string>;
+    customAnalyzers: KnockoutComputed<string>;
+    editCustomAnalyzer: KnockoutComputed<string>;
     connectionStrings: KnockoutComputed<string>;
     conflictResolution: KnockoutComputed<string>;
 
