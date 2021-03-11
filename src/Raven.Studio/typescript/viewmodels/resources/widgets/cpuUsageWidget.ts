@@ -6,10 +6,6 @@ class cpuUsageWidget extends widget<Raven.Server.ClusterDashboard.Widgets.CpuUsa
         return "CpuUsage";
     }
     
-    attached() {
-        console.log(arguments); //TODO :
-    }
-    
     compositionComplete() {
         console.log("it works!"); //TODO: please remember you can use such methods!
     }
