@@ -56,13 +56,13 @@ namespace SlowTests.Issues
             }
         }
 
-        public class MainDocument
+        private class MainDocument
         {
             public string Name { get; set; }
             public string Id => $"main/{Name}";
         }
 
-        public class RelatedDocument
+        private class RelatedDocument
         {
             public string Name { get; set; }
             public decimal Value { get; set; }
@@ -70,7 +70,7 @@ namespace SlowTests.Issues
             public string Id => $"related/{Name}";
         }
 
-        public class MyIndex : AbstractIndexCreationTask<MainDocument>
+        private class MyIndex : AbstractIndexCreationTask<MainDocument>
         {
             public class Result
             {
