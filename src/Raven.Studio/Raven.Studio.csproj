@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <RuntimeFrameworkVersion>5.0.3</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>5.0.4</RuntimeFrameworkVersion>
     <PreserveCompilationContext>true</PreserveCompilationContext>
     <AssemblyName>Raven.Studio</AssemblyName>
     <OutputType>Exe</OutputType>
