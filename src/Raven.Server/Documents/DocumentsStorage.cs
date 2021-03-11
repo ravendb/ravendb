@@ -526,7 +526,7 @@ namespace Raven.Server.Documents
             var val = tree.Read(GlobalFullChangeVectorSlice);
             if (val == null)
             {
-                return string.Empty;
+                return GetDatabaseChangeVector(context);
             }
             return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
 
