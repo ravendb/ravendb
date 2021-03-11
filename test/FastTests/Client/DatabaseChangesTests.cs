@@ -18,7 +18,6 @@ namespace FastTests.Client
         {
         }
 
-
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
@@ -28,8 +27,8 @@ namespace FastTests.Client
             var server = GetNewServer();
             using var store = new DocumentStore
             {
-                Database = database, 
-                Urls = new[] {server.WebUrl},
+                Database = database,
+                Urls = new[] { server.WebUrl },
                 Conventions = new DocumentConventions { DisableTopologyUpdates = disableTopologyUpdates }
             }.Initialize();
 
@@ -42,7 +41,11 @@ namespace FastTests.Client
                 {
                     await obs.EnsureSubscribedNow();
                 }
-                catch (AggregateException e) when(e.InnerException is DatabaseDoesNotExistException)
+                catch (DatabaseDoesNotExistException)
+                {
+                    //ignore
+                }
+                catch (AggregateException e) when (e.InnerException is DatabaseDoesNotExistException)
                 {
                     //ignore
                 }
