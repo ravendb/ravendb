@@ -31,7 +31,7 @@ namespace Raven.Server.Web.System
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("Server");
 
-        [RavenAction("/databases", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Databases()
         {
             // if Studio requested information about single resource - handle it
@@ -53,7 +53,7 @@ namespace Raven.Server.Web.System
 
                     var items = ServerStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, GetStart(), GetPageSize());
 
-                    var allowedDbs = await GetAllowedDbsAsync(null, requireAdmin: false);
+                    var allowedDbs = await GetAllowedDbsAsync(null, requireAdmin: false, requireWrite: false);
 
                     if (allowedDbs.HasAccess == false)
                         return;
@@ -79,7 +79,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/topology", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/topology", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetTopology()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -95,7 +95,7 @@ namespace Raven.Server.Web.System
                 using (context.OpenReadTransaction())
                 using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, name))
                 {
-                    if (await CanAccessDatabaseAsync(name, requireAdmin: false) == false)
+                    if (await CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
                         return;
 
                     if (rawRecord == null)
@@ -200,14 +200,14 @@ namespace Raven.Server.Web.System
 
         // we can't use '/database/is-loaded` because that conflict with the `/databases/<db-name>`
         // route prefix
-        [RavenAction("/debug/is-loaded", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/debug/is-loaded", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task IsDatabaseLoaded()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-            if (await CanAccessDatabaseAsync(name, requireAdmin: false) == false)
+            if (await CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
                 return;
 
             var isLoaded = ServerStore.DatabasesLandlord.IsDatabaseLoaded(name);

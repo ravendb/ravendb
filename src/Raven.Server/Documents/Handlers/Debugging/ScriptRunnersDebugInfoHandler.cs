@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class ScriptRunnersDebugInfoHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/script-runners", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/debug/script-runners", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetJSDebugInfo()
         {
             var detailed = GetBoolValueQueryString("detailed", required: false) ?? false;

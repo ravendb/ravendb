@@ -14,7 +14,7 @@ namespace Raven.Server.Web.Studio
 {
     public class StudioIndexHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/studio/index-type", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/studio/index-type", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PostIndexType()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -46,7 +46,7 @@ namespace Raven.Server.Web.Studio
             public IndexSourceType IndexSourceType { get; set; }
         }
 
-        [RavenAction("/databases/*/studio/index-fields", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/studio/index-fields", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PostIndexFields()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -120,7 +120,7 @@ namespace Raven.Server.Web.Studio
                 return null;
 
             var result = new HashSet<AdditionalAssembly>();
-           
+
             foreach (BlittableJsonReaderObject assemblyJson in jsonArray)
             {
                 var assembly = GetAssembly(assemblyJson);
@@ -140,10 +140,10 @@ namespace Raven.Server.Web.Studio
             json.TryGet(nameof(AdditionalAssembly.PackageName), out string packageName);
             json.TryGet(nameof(AdditionalAssembly.PackageVersion), out string packageVersion);
             json.TryGet(nameof(AdditionalAssembly.PackageSourceUrl), out string packageSourceUrl);
-                
+
             var usings = new HashSet<string>();
             json.TryGet(nameof(AdditionalAssembly.Usings), out BlittableJsonReaderArray usingsArray);
-            
+
             if (usingsArray != null)
             {
                 foreach (var item in usingsArray)
@@ -166,7 +166,7 @@ namespace Raven.Server.Web.Studio
             {
                 return AdditionalAssembly.FromNuGet(packageName, packageVersion, packageSourceUrl, usings);
             }
-            
+
             return null;
         }
     }

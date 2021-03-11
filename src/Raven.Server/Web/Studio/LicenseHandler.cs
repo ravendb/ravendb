@@ -12,7 +12,7 @@ namespace Raven.Server.Web.Studio
 {
     public class LicenseHandler : RequestHandler
     {
-        [RavenAction("/license/eula", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/license/eula", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Eula()
         {
             HttpContext.Response.ContentType = "text/plain; charset=utf-8";
@@ -37,7 +37,7 @@ namespace Raven.Server.Web.Studio
             NoContentStatus();
         }
 
-        [RavenAction("/license/status", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/license/status", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Status()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -47,7 +47,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        [RavenAction("/license/configuration", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/license/configuration", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetLicenseConfigurationSettings()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -100,7 +100,7 @@ namespace Raven.Server.Web.Studio
             NoContentStatus();
         }
 
-        [RavenAction("/license/support", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/license/support", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task LicenseSupport()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

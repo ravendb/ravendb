@@ -50,7 +50,7 @@ namespace Raven.Server.Documents
            Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
            HttpStatusCode statusCode = HttpStatusCode.OK)
         {
-            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true) == false)
+            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true, requireWrite: true) == false)
                 return;
 
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)

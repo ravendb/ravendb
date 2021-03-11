@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class ConfigurationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/configuration/studio", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/configuration/studio", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetStudioConfiguration()
         {
             var configuration = Database.StudioConfiguration;
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/configuration/client", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/configuration/client", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetClientConfiguration()
         {
             var inherit = GetBoolValueQueryString("inherit", required: false) ?? true;

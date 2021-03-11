@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class RevisionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/revisions/config", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/revisions/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/revisions/conflicts/config", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/revisions/conflicts/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetConflictRevisionsConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/revisions/count", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/revisions/count", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsCountFor()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/revisions", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/revisions", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsFor()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/revisions/revert", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/revisions/revert", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task Revert()
         {
             RevertRevisionsRequest configuration;
@@ -358,7 +358,7 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext.Request.QueryString.Value, loadedRevisionsCount, pageSize, sw.ElapsedMilliseconds);
         }
 
-        [RavenAction("/databases/*/revisions/resolved", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/revisions/resolved", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetResolvedConflictsSince()
         {
             var since = GetStringQueryString("since", required: false);
@@ -376,7 +376,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/revisions/bin", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/revisions/bin", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsBin()
         {
             var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;

@@ -64,27 +64,27 @@ namespace Raven.Server.Web.Studio
                     var operationDescription = "Importing " + collectionsCount + " " + (collectionsCount == 1 ? "collection" : "collections") + " from SQL database: " + schema.CatalogName;
 
                     _ = Database.Operations.AddOperation(Database, operationDescription, Documents.Operations.Operations.OperationType.MigrationFromSql, onProgress =>
-                     {
-                         return Task.Run(async () =>
-                         {
-                             try
-                             {
-                                 // allocate new context as we executed this async
-                                 using (ContextPool.AllocateOperationContext(out DocumentsOperationContext migrationContext))
-                                 {
+                    {
+                        return Task.Run(async () =>
+                        {
+                            try
+                            {
+                                // allocate new context as we executed this async
+                                using (ContextPool.AllocateOperationContext(out DocumentsOperationContext migrationContext))
+                                {
                                      await dbDriver.Migrate(migrationRequest.Settings, schema, Database, migrationContext, result, onProgress, token.Token);
-                                 }
-                             }
-                             catch (Exception e)
-                             {
-                                 result.AddError($"Error occurred during import. Exception: {e.Message}");
-                                 onProgress.Invoke(result.Progress);
-                                 throw;
-                             }
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                result.AddError($"Error occurred during import. Exception: {e.Message}");
+                                onProgress.Invoke(result.Progress);
+                                throw;
+                            }
 
                              return (IOperationResult)result;
-                         });
-                     }, operationId, token: token);
+                        });
+                    }, operationId, token: token);
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {

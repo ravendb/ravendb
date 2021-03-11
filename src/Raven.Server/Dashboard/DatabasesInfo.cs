@@ -8,7 +8,7 @@ namespace Raven.Server.Dashboard
     public class DatabasesInfo : AbstractDashboardNotification
     {
         public override DashboardNotificationType Type => DashboardNotificationType.DatabasesInfo;
-        
+
         public List<DatabaseInfoItem> Items { get; set; }
 
         public DatabasesInfo()
@@ -23,40 +23,40 @@ namespace Raven.Server.Dashboard
             return json;
         }
 
-        public override DynamicJsonValue ToJsonWithFilter(Func<string, bool> filter)
+        public override DynamicJsonValue ToJsonWithFilter(CanAccessDatabase filter)
         {
             var items = new DynamicJsonArray();
             foreach (var databaseInfoItem in Items)
             {
-                if (filter(databaseInfoItem.Database))
+                if (filter(databaseInfoItem.Database, requiresWrite: false))
                 {
                     items.Add(databaseInfoItem.ToJson());
                 }
             }
-            
+
             if (items.Count == 0)
                 return null;
-            
+
             var json = base.ToJson();
             json[nameof(Items)] = items;
             return json;
         }
     }
-    
+
     public class DatabaseInfoItem : IDynamicJson
     {
         public string Database { get; set; }
-        
+
         public long DocumentsCount { get; set; }
-        
+
         public long IndexesCount { get; set; }
-        
+
         public long ErroredIndexesCount { get; set; }
-        
+
         public long AlertsCount { get; set; }
-        
+
         public int ReplicationFactor { get; set; }
-        
+
         public bool Online { get; set; }
 
         public bool Disabled { get; set; }

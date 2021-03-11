@@ -17,6 +17,8 @@ namespace Raven.Server.Routing
     public class RouteInformation
     {
         public AuthorizationStatus AuthorizationStatus;
+        public readonly EndpointType? EndpointType;
+
         public readonly string Method;
         public readonly string Path;
 
@@ -37,14 +39,22 @@ namespace Raven.Server.Routing
             Databases
         }
 
-        public RouteInformation(string method, string path, AuthorizationStatus authorizationStatus, bool skipUsagesCount, bool skipLastRequestTimeUpdate, CorsMode corsMode,
-            bool isDebugInformationEndpoint = false, 
+        public RouteInformation(
+            string method,
+            string path,
+            AuthorizationStatus authorizationStatus,
+            EndpointType? endpointType,
+            bool skipUsagesCount,
+            bool skipLastRequestTimeUpdate,
+            CorsMode corsMode,
+            bool isDebugInformationEndpoint = false,
             bool disableOnCpuCreditsExhaustion = false)
         {
             DisableOnCpuCreditsExhaustion = disableOnCpuCreditsExhaustion;
             AuthorizationStatus = authorizationStatus;
             IsDebugInformationEndpoint = isDebugInformationEndpoint;
             Method = method;
+            EndpointType = endpointType;
             Path = path;
             SkipUsagesCount = skipUsagesCount;
             SkipLastRequestTimeUpdate = skipLastRequestTimeUpdate;
@@ -78,7 +88,7 @@ namespace Raven.Server.Routing
             // .Handle();
             _request = Expression.Lambda<HandleRequest>(block, currentRequestContext).Compile();
         }
-        
+
         public Task CreateDatabase(RequestHandlerContext context)
         {
             var databaseName = context.RouteMatch.GetCapture();
@@ -105,7 +115,6 @@ namespace Raven.Server.Routing
                     {
                         if (etag > 0)
                             hasChanges = true;
-
                     }
 
                     if (hasChanges == false)

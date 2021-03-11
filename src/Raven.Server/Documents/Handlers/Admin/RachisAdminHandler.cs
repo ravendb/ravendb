@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/rachis/waitfor", "Get", AuthorizationStatus.ValidUser)]
+        [RavenAction("/rachis/waitfor", "Get", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task WaitForIndex()
         {
             var index = GetLongQueryString("index");
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/cluster/node-info", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/cluster/node-info", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetNodeInfo()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/cluster/topology", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/cluster/topology", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetClusterTopology()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

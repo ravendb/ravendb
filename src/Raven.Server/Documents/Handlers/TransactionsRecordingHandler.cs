@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TransactionsRecordingHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/transactions/replay", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/transactions/replay", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task ReplayRecording()
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/transactions/start-recording", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/databases/*/admin/transactions/start-recording", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task StartRecording()
         {
             if (Database.TxMerger.RecordingEnabled)
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/transactions/stop-recording", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/databases/*/admin/transactions/stop-recording", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task StopRecording()
         {
             var command = new StopTransactionsRecordingCommand(Database.TxMerger);

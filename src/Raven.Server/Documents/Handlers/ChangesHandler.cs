@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers
     {
         private static readonly string StudioMarker = "fromStudio";
 
-        [RavenAction("/databases/*/changes", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/changes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetChanges()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/changes/debug", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/changes/debug", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetConnectionsDebugInfo()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Handlers
             await sendTask;
         }
 
-        [RavenAction("/databases/*/changes", "DELETE", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/changes", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public Task DeleteConnections()
         {
             var ids = GetStringValuesQueryString("id");

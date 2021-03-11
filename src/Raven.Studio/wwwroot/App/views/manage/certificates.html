@@ -363,6 +363,11 @@
                                                        data-bind="checked: accessLevel, attr: { id: 'accessLevel_rw_' + $index(), name: 'accessLevel_' + $index() }">
                                                 <label data-bind="attr: { for: 'accessLevel_rw_' + $index() }"> Read/Write </label>
                                             </div>
+                                            <div class="radio radio-default radio-inline">
+                                                <input type="radio" value="Read"
+                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_r_' + $index(), name: 'accessLevel_' + $index() }">
+                                                <label data-bind="attr: { for: 'accessLevel_r_' + $index() }"> Read </label>
+                                            </div>
                                         </div>
                                         <a href="#" data-bind="click: _.partial($root.deletePermission, $data)">
                                             <i class="icon-trash"></i>

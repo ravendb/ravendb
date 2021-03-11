@@ -12,11 +12,11 @@ namespace Raven.Server.Web.System
 {
     public sealed class BackupDatabaseHandler : RequestHandler
     {
-        [RavenAction("/periodic-backup", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/periodic-backup", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetPeriodicBackup()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (await CanAccessDatabaseAsync(name, requireAdmin: false) == false)
+            if (await CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
                 return;
 
             var taskId = GetLongQueryString("taskId", required: true).Value;
@@ -36,12 +36,12 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/periodic-backup/status", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/periodic-backup/status", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetPeriodicBackupStatus()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            if (await CanAccessDatabaseAsync(name, requireAdmin: false) == false)
+            if (await CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
                 return;
 
             var taskId = GetLongQueryString("taskId", required: true);

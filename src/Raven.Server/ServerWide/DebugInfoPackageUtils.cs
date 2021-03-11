@@ -57,18 +57,21 @@ namespace Raven.Server.ServerWide
                     case RavenServer.AuthenticationStatus.ClusterAdmin:
                         authorized = true;
                         break;
+
                     case RavenServer.AuthenticationStatus.Operator:
                         if (route.AuthorizationStatus != AuthorizationStatus.ClusterAdmin)
                             authorized = true;
                         break;
+
                     case RavenServer.AuthenticationStatus.Allowed:
                         if (route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin || route.AuthorizationStatus == AuthorizationStatus.Operator)
                             break;
                         if (route.TypeOfRoute == RouteInformation.RouteType.Databases
-                            && (db == null || authenticateConnection.CanAccess(db, route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin) == false))
+                            && (db == null || authenticateConnection.CanAccess(db, requireAdmin: route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin, requireWrite: route.EndpointType == EndpointType.Write) == false))
                             break;
                         authorized = true;
                         break;
+
                     default:
                         if (route.AuthorizationStatus == AuthorizationStatus.UnauthenticatedClients)
                             authorized = true;

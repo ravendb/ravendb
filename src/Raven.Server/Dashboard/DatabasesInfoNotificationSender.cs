@@ -113,7 +113,7 @@ namespace Raven.Server.Dashboard
             public DateTime NextDiskSpaceCheck;
         }
 
-        public static IEnumerable<AbstractDashboardNotification> FetchDatabasesInfo(ServerStore serverStore, Func<string, bool> isValidFor, CancellationTokenSource cts)
+        public static IEnumerable<AbstractDashboardNotification> FetchDatabasesInfo(ServerStore serverStore, CanAccessDatabase isValidFor, CancellationTokenSource cts)
         {
             var databasesInfo = new DatabasesInfo();
             var indexingSpeed = new IndexingSpeed();
@@ -132,7 +132,7 @@ namespace Raven.Server.Dashboard
                     if (cts.IsCancellationRequested)
                         yield break;
 
-                    if (isValidFor != null && isValidFor(databaseName) == false)
+                    if (isValidFor != null && isValidFor(databaseName, false) == false)
                         continue;
 
                     if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out var databaseTask) == false)

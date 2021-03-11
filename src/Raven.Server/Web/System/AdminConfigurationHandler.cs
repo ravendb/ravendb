@@ -70,7 +70,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/configuration/studio", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/configuration/studio", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetStudioConfiguration()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -109,7 +109,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/configuration/client", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/configuration/client", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetClientConfiguration()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

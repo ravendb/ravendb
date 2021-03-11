@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class ExpirationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/expiration/config", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/expiration/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetExpirationConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

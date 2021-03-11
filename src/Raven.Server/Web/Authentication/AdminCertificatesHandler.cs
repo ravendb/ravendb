@@ -575,7 +575,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        [RavenAction("/certificates/whoami", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/certificates/whoami", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task WhoAmI()
         {
             var clientCert = GetCurrentCertificate();
@@ -1152,8 +1152,16 @@ namespace Raven.Server.Web.Authentication
                 if (ResourceNameValidator.IsValidResourceName(kvp.Key, serverStore.Configuration.Core.DataDirectory.FullPath, out var errorMessage) == false)
                     throw new ArgumentException("Error in permissions in the certificate definition:" + errorMessage);
 
-                if (kvp.Value != DatabaseAccess.ReadWrite && kvp.Value != DatabaseAccess.Admin)
-                    throw new ArgumentException($"Error in permissions in the certificate definition, invalid access {kvp.Value} for database {kvp.Key}");
+                switch (kvp.Value)
+                {
+                    case DatabaseAccess.ReadWrite:
+                    case DatabaseAccess.Admin:
+                    case DatabaseAccess.Read:
+                        break;
+
+                    default:
+                        throw new ArgumentException($"Error in permissions in the certificate definition, invalid access {kvp.Value} for database {kvp.Key}");
+                }
             }
         }
     }

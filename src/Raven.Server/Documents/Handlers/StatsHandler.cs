@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StatsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/stats/detailed", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/stats/detailed", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task DetailedStats()
         {
             using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/stats", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task Stats()
         {
             using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/healthcheck", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/healthcheck", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task DatabaseHealthCheck()
         {
             NoContentStatus();
@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/metrics", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/metrics", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Metrics()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/metrics/puts", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/metrics/puts", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PutsMetrics()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/metrics/bytes", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/metrics/bytes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task BytesMetrics()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))

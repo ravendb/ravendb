@@ -15,7 +15,7 @@ namespace Raven.Server.Web.Studio
     {
         private const int MaxArrayItemsToFetch = 16;
 
-        [RavenAction("/databases/*/studio/collections/fields", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/studio/collections/fields", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetCollectionFields()
         {
             var collection = GetStringQueryString("collection", required: false);

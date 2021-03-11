@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Handlers
             return Math.Max(32, lastSize);
         }
 
-        [RavenAction("/databases/*/hilo/next", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/hilo/next", "GET", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task GetNextHiLo()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/hilo/return", "PUT", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/hilo/return", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task HiLoReturn()
         {
             var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");

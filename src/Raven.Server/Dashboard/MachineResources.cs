@@ -7,7 +7,7 @@ namespace Raven.Server.Dashboard
     public class MachineResources : AbstractDashboardNotification
     {
         public override DashboardNotificationType Type => DashboardNotificationType.MachineResources;
-        
+
         public double MachineCpuUsage { get; set; } // 0 - 100
 
         public double ProcessCpuUsage { get; set; } // 0 - 100
@@ -52,11 +52,10 @@ namespace Raven.Server.Dashboard
             return json;
         }
 
-        public override DynamicJsonValue ToJsonWithFilter(Func<string, bool> filter)
+        public override DynamicJsonValue ToJsonWithFilter(CanAccessDatabase filter)
         {
             // nothing to filter
             return ToJson();
         }
     }
-    
 }

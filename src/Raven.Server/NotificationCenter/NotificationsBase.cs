@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Background;
+using Raven.Server.Dashboard;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
@@ -55,7 +56,7 @@ namespace Raven.Server.NotificationCenter
             BackgroundWorkers = new List<BackgroundWorkBase>();
         }
 
-        public IDisposable TrackActions(AsyncQueue<DynamicJsonValue> notificationsQueue, IWebsocketWriter webSocketWriter, Func<string, bool> shouldWriteByDb = null)
+        public IDisposable TrackActions(AsyncQueue<DynamicJsonValue> notificationsQueue, IWebsocketWriter webSocketWriter, CanAccessDatabase shouldWriteByDb = null)
         {
             var watcher = new ConnectedWatcher
             {

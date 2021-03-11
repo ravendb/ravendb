@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class MultiGetHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/multi_get", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/multi_get", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PostMultiGet()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))

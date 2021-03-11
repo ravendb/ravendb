@@ -27,7 +27,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
-using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -1015,12 +1014,12 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/replication/conflicts/solver", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/admin/replication/conflicts/solver", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task UpdateConflictSolver()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            if (await CanAccessDatabaseAsync(name, requireAdmin: true) == false)
+            if (await CanAccessDatabaseAsync(name, requireAdmin: true, requireWrite: true) == false)
                 return;
 
             await ServerStore.EnsureNotPassiveAsync();
