@@ -7,11 +7,23 @@ class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Serv
     readonly nodeTag: string;
     private readonly onData: (data: Raven.Server.ClusterDashboard.WidgetMessage) => void;
     loading = ko.observable<boolean>(true);
+    private readonly onConnection: () => void;
+    private readonly onDisconnect: () => void;
 
-    constructor(nodeTag: string, onData: (data: Raven.Server.ClusterDashboard.WidgetMessage) => void) {
+    constructor(nodeTag: string, onData: (data: Raven.Server.ClusterDashboard.WidgetMessage) => void, onConnection: () => void, onDisconnect: () => void) {
         super(null);
         this.nodeTag = nodeTag;
         this.onData = onData;
+        this.onConnection = onConnection;
+        this.onDisconnect = onDisconnect;
+        
+        this.isConnected.subscribe(connected => {
+            if (connected) {
+                this.onConnection();
+            } else {
+                this.onDisconnect();
+            }
+        });
     }
     
     public sendCommand(data: Raven.Server.ClusterDashboard.WidgetRequest) {
