@@ -70,7 +70,9 @@ class editCustomSorter extends viewModelBase {
                 fileName = fileName.substr(0, fileName.length - 3);
             }
 
-            this.editedSorter().name(fileName);
+            if (this.isAddingNewSorter()) {
+                this.editedSorter().name(fileName);
+            }
         });
     }
     

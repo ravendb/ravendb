@@ -36,6 +36,7 @@ import fileImporter = require("common/fileImporter");
 import popoverUtils = require("common/popoverUtils");
 import generalUtils = require("common/generalUtils");
 import documentHelpers = require("common/helpers/database/documentHelpers");
+import getCustomAnalyzersCommand = require("commands/database/settings/getCustomAnalyzersCommand");
 
 class editIndex extends viewModelBase {
 
@@ -192,6 +193,7 @@ class editIndex extends viewModelBase {
         this.initValidation();
         
         this.fetchIndexes();
+        this.fetchCustomAnalyzers();
         
         if (!this.editedIndex().isAutoIndex() && !!indexToEditName) {
             this.showIndexHistory(true);
@@ -264,6 +266,24 @@ class editIndex extends viewModelBase {
             .execute()
             .done((indexesNames) => {
                 this.indexesNames(indexesNames);
+            });
+    }
+
+    private fetchCustomAnalyzers() {
+        const db = this.activeDatabase();
+        
+        new getCustomAnalyzersCommand(db, true)
+            .execute()
+            .done((customAnalyzers) => {
+                const analyzerNames = customAnalyzers.map(x => x.Name);
+                this.editedIndex().customAnalyzers(analyzerNames);
+                
+                this.editedIndex().fields().forEach(x => x.addCustomAnalyzers(analyzerNames));
+                
+                const defaultFieldOptions = this.editedIndex().defaultFieldOptions();
+                if (defaultFieldOptions) {
+                    defaultFieldOptions.addCustomAnalyzers(analyzerNames);
+                }
             });
     }
 

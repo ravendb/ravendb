@@ -9,6 +9,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -250,6 +251,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexErrors));
             scripter.AddType(typeof(StudioTasksHandler.FormattedExpression));
             scripter.AddType(typeof(StudioIndexHandler.IndexTypeInfo));
+            scripter.AddType(typeof(AdminIndexHandler.DumpIndexResult));
 
             // cluster
             scripter.AddType(typeof(ClusterTopology));
@@ -520,6 +522,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(ServerWideStudioConfiguration));
             scripter.AddType(typeof(StudioConfiguration));
 
+            // custom sorters & analyzers
+            scripter.AddType(typeof(SorterDefinition));
+            scripter.AddType(typeof(AnalyzerDefinition));
+            
             scripter.AddType(typeof(StudioTasksHandler.OfflineMigrationValidation));
 
             scripter.AddType(typeof(StartTransactionsRecordingOperation.Parameters));
@@ -529,8 +535,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DataDirectoryResult));
 
             scripter.AddType(typeof(LiveRunningQueriesCollector.ExecutingQueryCollection));
-            scripter.AddType(typeof(SorterDefinition));
-            scripter.AddType(typeof(AdminIndexHandler.DumpIndexResult));
 
             return scripter;
         }

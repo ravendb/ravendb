@@ -4,24 +4,24 @@
             <i class="icon-save"></i>
             <span>Save</span>
         </button>
-        <button class="btn btn-default" data-bind="click: cancelOperation" title="Return to Custom Sorters View">
+        <button class="btn btn-default" data-bind="click: cancelOperation" title="Return to Custom Analyzers View">
             <i class="icon-cancel"></i>
             <span>Cancel</span>
         </button>
-        <label for="importFilePicker" class="btn btn-default pull-right" title="Upload custom sorter from file">
+        <label for="importFilePicker" class="btn btn-default pull-right" title="Upload custom analyzer from file">
             <i class="icon-import"></i><span>Load from file</span>
         </label>
         <div class="input-group file-input">
             <input type="file" id="importFilePicker" data-bind="event: { change: _.partial(fileSelected, $element) }" tabindex="-1" accept=".cs">
         </div>
     </div>
-    <div class="panel padding flex-grow flex-vertical" data-bind="with: editedSorter">
-        <h3 data-bind="text: $parent.isAddingNewSorter() ? `New Custom Sorter` : `Edit Custom Sorter`"></h3>
+    <div class="panel padding flex-grow flex-vertical" data-bind="with: editedAnalyzer">
+        <h3 data-bind="text: $parent.isAddingNewAnalyzer() ? `New Custom Analyzer` : `Edit Custom Analyzer`"></h3>
         <div class="form-group margin-top" data-bind="validationElement: name">
-            <label class="control-label" for="sorterName">Sorter Name</label>
+            <label class="control-label" for="analyzerName">Analyzer Name</label>
             <div class="flex-grow">
-                <input type="text" class="form-control" id="sorterName" placeholder="Enter sorter name"
-                       data-bind="textInput: name, enable: $root.isAddingNewSorter" autocomplete="off" >
+                <input type="text" class="form-control" id="analyzerName" placeholder="Enter analyzer name"
+                       data-bind="textInput: name, enable: $root.isAddingNewAnalyzer" autocomplete="off" >
             </div>
         </div>
         <label>Code:</label>

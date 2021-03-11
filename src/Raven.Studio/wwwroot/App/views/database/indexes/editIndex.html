@@ -696,9 +696,9 @@
                                     <input class="form-control"
                                            data-bind="textInput: analyzer, disable: !!disabledAnalyzerText(),
                                                       attr: { id: 'analyzerName' + (isDefaultFieldOptions() ? '' : $index()), placeholder: analyzerPlaceHolder }" />
-                                    <ul class="dropdown-menu" role="menu"
+                                    <ul class="dropdown-menu analyzer-dropdown" role="menu"
                                         data-bind="autoComplete: '#analyzerName' + (isDefaultFieldOptions() ? '' : $index()), foreach: createAnalyzerNameAutocompleter($data.analyzer()),
-                                                       css: { 'list-dropup' : $root.shouldDropupMenu($data, isDefaultFieldOptions() ? 0 : $index())() }">
+                                                   css: { 'list-dropup' : $root.shouldDropupMenu($data, isDefaultFieldOptions() ? 0 : $index())() }">
                                         <li role="presentation" data-bind="click: $parent.analyzer.bind($parent, $data)" >
                                             <a role="menuitem" tabindex="-1" href="#">
                                                 <span data-bind="text: $data"></span>

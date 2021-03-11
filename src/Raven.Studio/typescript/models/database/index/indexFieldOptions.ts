@@ -21,8 +21,7 @@ interface analyzerName {
 }
 
 class indexFieldOptions {
-
-    analyzersNamesDictionary: analyzerName[] = [
+    analyzersNamesDictionary = ko.observableArray<analyzerName>([
         // default analyzer for Indexing.Exact
         { studioName: "Keyword Analyzer", serverName: "KeywordAnalyzer" },
         
@@ -38,11 +37,11 @@ class indexFieldOptions {
         
         { studioName: "Stop Analyzer", serverName: "StopAnalyzer" },
         { studioName: "Whitespace Analyzer", serverName:"WhitespaceAnalyzer" }
-    ];
+    ]);
     
     analyzersNames = ko.pureComputed(() => {
-        return this.analyzersNamesDictionary.map(a => a.studioName)
-            // exclude the default analyzer from dropdown list (shown only for Indexing.Default is selected)
+        return this.analyzersNamesDictionary().map(a => a.studioName)
+            // exclude the default analyzer from dropdown list (shown only when Indexing.Default is selected)
             .filter(x => x !== "LowerCase Keyword Analyzer");
     })
 
@@ -145,7 +144,7 @@ class indexFieldOptions {
         
         const analyzerPositionInName = dto.Analyzer ? dto.Analyzer.lastIndexOf(".") : 0;
         const analyzerNameInDto = analyzerPositionInName !== -1 && dto.Analyzer ? dto.Analyzer.substring(analyzerPositionInName + 1) : dto.Analyzer;
-        const analyzerInDictionary = this.analyzersNamesDictionary.find(x => x.serverName === analyzerNameInDto);
+        const analyzerInDictionary = this.analyzersNamesDictionary().find(x => x.serverName === analyzerNameInDto);
         
         let analyzerNameForStudio = null;
         
@@ -520,11 +519,21 @@ class indexFieldOptions {
         });
     }
 
+    addCustomAnalyzers(customAnalyzers: string[]) {
+        customAnalyzers.forEach(name => {
+            if (!this.analyzersNamesDictionary().find(x => x.studioName === name)) {
+                const customAnalyzerEntry = { studioName: name, serverName: name } as analyzerName;
+                this.analyzersNamesDictionary.push(customAnalyzerEntry);
+                this.analyzersNamesDictionary().sort((a, b) => a.studioName > b.studioName ? 1 : -1);
+            }
+        });
+    }
+    
     toDto(): Raven.Client.Documents.Indexes.IndexFieldOptions {
         let analyzerToSend = null;
         
         if (this.analyzer()) {
-            const selectedAnalyzer = this.analyzersNamesDictionary.find(x => x.studioName === this.analyzer());
+            const selectedAnalyzer = this.analyzersNamesDictionary().find(x => x.studioName === this.analyzer());
             analyzerToSend = selectedAnalyzer ? selectedAnalyzer.serverName : this.analyzer();
         }
         

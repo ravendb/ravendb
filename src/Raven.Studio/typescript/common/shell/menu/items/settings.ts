@@ -107,12 +107,28 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.customSorters
         }),
         new leafMenuItem({
+            route: 'databases/settings/customAnalyzers',
+            moduleId: 'viewmodels/database/settings/customAnalyzers',
+            title: 'Custom Analyzers',
+            nav: true,
+            css: 'icon-custom-analyzers',
+            dynamicHash: appUrls.customAnalyzers
+        }),
+        new leafMenuItem({
             route: 'databases/settings/editCustomSorter',
             moduleId: 'viewmodels/database/settings/editCustomSorter',
             title: 'Custom Sorter',
             nav: false,
             dynamicHash: appUrls.editCustomSorter, 
             itemRouteToHighlight: 'databases/settings/customSorters'
+        }),
+        new leafMenuItem({
+            route: 'databases/settings/editCustomAnalyzer',
+            moduleId: 'viewmodels/database/settings/editCustomAnalyzer',
+            title: 'Custom Analyzer',
+            nav: false,
+            dynamicHash: appUrls.editCustomAnalyzer,
+            itemRouteToHighlight: 'databases/settings/customAnalyzers'
         }),
         new leafMenuItem({
             route: 'databases/manageDatabaseGroup',

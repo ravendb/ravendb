@@ -320,7 +320,7 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
         }
-
+        
         [RavenAction("/databases/*/subscriptions/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task PerformanceLive()
         {

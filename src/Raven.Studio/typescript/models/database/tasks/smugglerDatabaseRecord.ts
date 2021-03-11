@@ -24,6 +24,7 @@ class smugglerDatabaseRecord {
     includeSqlEtls = ko.observable<boolean>(true);
     includeClient = ko.observable<boolean>(true);
     includeSorters = ko.observable<boolean>(true);
+    includeAnalyzers = ko.observable<boolean>(true);
     includeHubReplications = ko.observable<boolean>(true);
     includeSinkReplications = ko.observable<boolean>(true);
 
@@ -100,6 +101,9 @@ class smugglerDatabaseRecord {
         }
         if (this.includeSorters()) {
             result.push("Sorters");
+        }
+        if (this.includeAnalyzers()) {
+            result.push("Analyzers");
         }
         if (this.includeHubReplications()) {
             result.push("HubPullReplications");
