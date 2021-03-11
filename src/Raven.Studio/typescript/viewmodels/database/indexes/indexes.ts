@@ -190,8 +190,8 @@ class indexes extends viewModelBase {
     }
 
     private initObservables() {
-        this.localNodeTag(this.clusterManager.localNodeTag());
-        this.isCluster = ko.pureComputed(() => this.clusterManager.topology().nodes().length > 1);
+        this.localNodeTag = this.clusterManager.localNodeTag;
+        this.isCluster = ko.pureComputed(() => this.clusterManager.nodesCount() > 1);
         
         this.searchText.throttle(200).subscribe(() => this.filterIndexes(false));
         this.indexStatusFilter.subscribe(() => this.filterIndexes(false));
