@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
+using Jint.Native.Date;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Native.RegExp;
@@ -31,6 +32,9 @@ namespace Raven.Server.Documents.Patch
 
         [ThreadStatic]
         private static HashSet<object> _recursive;
+
+        private static readonly double MaxJsDateMs = (DateTime.MaxValue - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
+        private static readonly double MinJsDateMs = -(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc) - DateTime.MinValue).TotalMilliseconds;
 
         static JsBlittableBridge()
         {
@@ -69,7 +73,17 @@ namespace Raven.Server.Documents.Patch
                 else if (js.IsString())
                     _writer.WriteValue(js.AsString());
                 else if (js.IsDate())
-                    _writer.WriteValue(js.AsDate().ToDateTime().ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
+                {
+                    var jsDate = js.AsDate();
+                    if (double.IsNaN(jsDate.PrimitiveValue) ||
+                        jsDate.PrimitiveValue > MaxJsDateMs ||
+                        jsDate.PrimitiveValue < MinJsDateMs)
+                        // not a valid Date. 'ToDateTime()' will throw
+                        throw new InvalidOperationException($"Invalid '{nameof(DateInstance)}' on property '{propertyName}'. Date value : '{jsDate.PrimitiveValue}'. " +
+                                                            "Note that JavaScripts 'Date' measures time as the number of milliseconds that have passed since the Unix epoch.");
+                    
+                    _writer.WriteValue(jsDate.ToDateTime().ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
+                }
                 else if (js.IsNumber())
                     WriteNumber(parent, propertyName, js.AsNumber());
                 else if (js.IsArray())
