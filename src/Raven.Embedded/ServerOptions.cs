@@ -11,7 +11,7 @@ namespace Raven.Embedded
 
         internal static string AltServerDirectory = Path.Combine(AppContext.BaseDirectory, "bin", "RavenDBServer");
 
-        public string FrameworkVersion { get; set; } = "5.0.3";
+        public string FrameworkVersion { get; set; } = "5.0.4";
 
         public string LogsPath { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDB", "Logs");
 
