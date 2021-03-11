@@ -3374,13 +3374,7 @@ namespace Raven.Server.Documents.Indexes
             if (Collections.Count == 0)
                 return false;
 
-            foreach (var collection in collections)
-            {
-                if (Collections.Contains(collection))
-                    return true;
-            }
-
-            return false;
+            return Collections.Overlaps(collections);
         }
 
         private int? _minBatchSize;
