@@ -41,6 +41,10 @@ namespace FastTests.Client
                 {
                     await obs.EnsureSubscribedNow();
                 }
+                catch (DatabaseDoesNotExistException)
+                {
+                    //ignore
+                }
                 catch (AggregateException e) when (e.InnerException is DatabaseDoesNotExistException)
                 {
                     //ignore

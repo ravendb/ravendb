@@ -19,6 +19,7 @@ import indexProgress = require("models/database/index/indexProgress");
 import indexStalenessReasons = require("viewmodels/database/indexes/indexStalenessReasons");
 import generalUtils = require("common/generalUtils");
 import shell = require("viewmodels/shell");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 type indexGroup = {
     entityName: string;
@@ -44,6 +45,10 @@ class indexes extends viewModelBase {
     requestedIndexingInProgress = false;
     indexesCount: KnockoutComputed<number>;
     searchCriteriaDescription: KnockoutComputed<string>;
+
+    private clusterManager = clusterTopologyManager.default;
+    localNodeTag = ko.observable<string>();
+    isCluster: KnockoutComputed<boolean>;
 
     spinners = {
         globalStartStop: ko.observable<boolean>(false),
@@ -185,6 +190,9 @@ class indexes extends viewModelBase {
     }
 
     private initObservables() {
+        this.localNodeTag = this.clusterManager.localNodeTag;
+        this.isCluster = ko.pureComputed(() => this.clusterManager.nodesCount() > 1);
+        
         this.searchText.throttle(200).subscribe(() => this.filterIndexes(false));
         this.indexStatusFilter.subscribe(() => this.filterIndexes(false));
         this.showOnlyIndexesWithIndexingErrors.subscribe(() => this.filterIndexes(false));
@@ -684,17 +692,19 @@ class indexes extends viewModelBase {
             });
     }
 
-    disableSelectedIndexes() {
-        this.toggleDisableSelectedIndexes(false);
+    disableSelectedIndexes(clusterWide: boolean) {
+        this.toggleDisableSelectedIndexes(false, clusterWide);
     }
 
-    enableSelectedIndexes() {
-        this.toggleDisableSelectedIndexes(true);
+    enableSelectedIndexes(clusterWide: boolean) {
+        this.toggleDisableSelectedIndexes(true, clusterWide);
     }
 
-    private toggleDisableSelectedIndexes(start: boolean) {
-        const status = start ? "enable" : "disable";
-        this.confirmationMessage("Are you sure?", `Do you want to <strong>${generalUtils.escapeHtml(status)}</strong> selected indexes?`, {
+    private toggleDisableSelectedIndexes(enableIndex: boolean, clusterWide: boolean) {
+        const status = enableIndex ? "Enable" : "Disable";
+        const location = clusterWide ? "cluster wide" : "on node " + this.localNodeTag();
+        
+        this.confirmationMessage(status + " indexes", `<strong>${status}</strong> selected indexes ${location}? `, {
             html: true
         })
             .done(can => {
@@ -704,12 +714,11 @@ class indexes extends viewModelBase {
                     this.spinners.globalLockChanges(true);
 
                     const indexes = this.getSelectedIndexes();
-                    indexes.forEach(i => start ? this.enableIndex(i) : this.disableIndex(i));
+                    indexes.forEach(i => enableIndex ? this.enableIndex(i, clusterWide) : this.disableIndex(i, clusterWide));
                 }
             })
             .always(() => this.spinners.globalLockChanges(false));
     }
-
 
     pauseSelectedIndexes() {
         this.togglePauseSelectedIndexes(false);
@@ -720,8 +729,8 @@ class indexes extends viewModelBase {
     }
 
     private togglePauseSelectedIndexes(resume: boolean) {
-        const status = resume ? "resume" : "pause";
-        this.confirmationMessage("Are you sure?", `Do you want to <strong>${generalUtils.escapeHtml(status)}</strong> selected indexes?`, {
+        const status = resume ? "Resume" : "Pause";
+        this.confirmationMessage(status + " indexes", `<strong>${status}</strong> selected indexes on node ${this.localNodeTag()}?`, {
             html: true
         })
             .done(can => {
@@ -816,13 +825,13 @@ class indexes extends viewModelBase {
         }
     }
 
-    enableIndex(idx: index) {
+    enableIndex(idx: index, enableClusterWide: boolean) {
         eventsCollector.default.reportEvent("indexes", "set-state", "enabled");
 
-        if (idx.canBeEnabled()) {
+        if (idx.canBeEnabled() || enableClusterWide) {
             this.spinners.localState.push(idx.name);
 
-            new enableIndexCommand(idx.name, this.activeDatabase())
+            new enableIndexCommand(idx.name, this.activeDatabase(), enableClusterWide)
                 .execute()
                 .done(() => {
                     idx.state("Normal");
@@ -832,13 +841,13 @@ class indexes extends viewModelBase {
         }
     }
 
-    disableIndex(idx: index) {
+    disableIndex(idx: index, disableClusterWide: boolean) {
         eventsCollector.default.reportEvent("indexes", "set-state", "disabled");
 
-        if (idx.canBeDisabled()) {
+        if (idx.canBeDisabled() || disableClusterWide) {
             this.spinners.localState.push(idx.name);
 
-            new disableIndexCommand(idx.name, this.activeDatabase())
+            new disableIndexCommand(idx.name, this.activeDatabase(), disableClusterWide)
                 .execute()
                 .done(() => {
                     idx.state("Disabled");
