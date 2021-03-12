@@ -1,0 +1,56 @@
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
+            <h4 class="modal-title">Add widget</h4>
+        </div>
+        <div class="modal-body">
+            <div class="cluster-widgets-list">
+                <div class="widget-item" data-bind="click: _.partial(addWidget, 'License')">
+                    <img src="Content/img/widgets/text-icon.svg">
+                    <div class="widget-name">License info</div>
+                </div>
+                <!-- TODO
+                <div class="widget-item">
+                    <img src="Content/img/widgets/topology-icon.svg">
+                    <div class="widget-name">Topology</div>
+                </div>
+                -->
+                <div class="widget-item" data-bind="click: _.partial(addWidget, 'CpuUsage')">
+                    <img src="Content/img/widgets/graph-icon.svg">
+                    <div class="widget-name">CPU</div>
+                </div>
+                <div class="widget-item" data-bind="click: _.partial(addWidget, 'MemoryUsage')">
+                    <img src="Content/img/widgets/graph-icon.svg">
+                    <div class="widget-name">Memory</div>
+                </div>
+                <!-- TODO
+                <div class="widget-item">
+                    <img src="Content/img/widgets/graph-icon.svg">
+                    <div class="widget-name">Traffic</div>
+                </div>
+                <div class="widget-item">
+                    <img src="Content/img/widgets/chart-icon.svg">
+                    <div class="widget-name">Traffic</div>
+                </div>
+                <div class="widget-item">
+                    <img src="Content/img/widgets/list-icon.svg">
+                    <div class="widget-name">Databases overview</div>
+                </div>
+                <div class="widget-item">
+                    <img src="Content/img/widgets/list-icon.svg">
+                    <div class="widget-name">Indexing per database</div>
+                </div>
+                <div class="widget-item">
+                    <img src="Content/img/widgets/list-icon.svg">
+                    <div class="widget-name">Storage per database</div>
+                </div>
+                <div class="widget-item">
+                    <img src="Content/img/widgets/list-icon.svg">
+                    <div class="widget-name">Traffic per database</div>
+                </div>
+                -->
+            </div>
+        </div>
+    </div>
+</div>

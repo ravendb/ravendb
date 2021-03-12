@@ -3,12 +3,7 @@ import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase"); 
 
-
 class createOngoingTask extends dialogViewModelBase {
-
-    compositionComplete() {
-        super.compositionComplete();
-    }
 
     newReplicationTask() {
         eventsCollector.default.reportEvent("ExternalReplication", "new");
