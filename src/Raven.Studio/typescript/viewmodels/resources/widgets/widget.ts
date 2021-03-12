@@ -33,7 +33,9 @@ abstract class widget<TData, TConfig = void> {
     
     attached(view: Element, container: Element) {
         this.container = container;
-        
+    }
+
+    compositionComplete() {
         this.controller.layoutNewWidget(this);
     }
 

@@ -7,6 +7,7 @@ class cpuUsageWidget extends widget<Raven.Server.ClusterDashboard.Widgets.CpuUsa
     }
     
     compositionComplete() {
+        super.compositionComplete();
         console.log("it works!"); //TODO: please remember you can use such methods!
     }
     

@@ -1,9 +1,11 @@
+import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import cpuUsageWidget = require("viewmodels/resources/widgets/cpuUsageWidget");
 import licenseWidget = require("viewmodels/resources/widgets/licenseWidget");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 import widget = require("viewmodels/resources/widgets/widget");
 import memoryUsageWidget = require("viewmodels/resources/widgets/memoryUsageWidget");
+import addWidgetModal = require("viewmodels/resources/addWidgetModal");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class clusterDashboard extends viewModelBase {
@@ -115,8 +117,9 @@ class clusterDashboard extends viewModelBase {
 
         const draggie = new Draggabilly(widget.container);
         this.packery.bindDraggabillyEvents(draggie);
+        
+        this.layout(false);
     }
-    
  
     private onData(nodeTag: string, msg: Raven.Server.ClusterDashboard.WidgetMessage) {
         const targetWidget = this.widgets().find(x => x.id === msg.Id);
@@ -124,6 +127,31 @@ class clusterDashboard extends viewModelBase {
         if (targetWidget) {
             targetWidget.onData(nodeTag, msg.Data as any);
         }
+    }
+    
+    addWidgetModal() {
+        const addWidgetView = new addWidgetModal(type => this.spawnWidget(type));
+        app.showBootstrapDialog(addWidgetView);
+    }
+    
+    spawnWidget(type: Raven.Server.ClusterDashboard.WidgetType) {
+        let widget: widget<any>;
+        
+        switch (type) {
+            case "CpuUsage":
+                widget = new cpuUsageWidget(this);
+                break;
+            case "License":
+                widget = new licenseWidget(this);
+                break;
+            case "MemoryUsage":
+                widget = new memoryUsageWidget(this);
+                break;
+            default:
+                throw new Error("Unsupported widget type = " + type);
+        }
+        
+        this.addWidget(widget);
     }
 }
 

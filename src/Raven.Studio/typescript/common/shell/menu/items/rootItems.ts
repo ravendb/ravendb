@@ -32,7 +32,7 @@ function clusterDashboard() {
         title: 'Cluster Dashboard',
         tooltip: "Cluster Dashboard",
         nav: true,
-        css: 'icon-cluster', //TODO: check icon!
+        css: 'icon-cluster-dashbaord',
         dynamicHash: appUrl.forClusterDashboard
     }); 
 }
