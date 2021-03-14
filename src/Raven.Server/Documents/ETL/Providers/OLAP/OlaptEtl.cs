@@ -28,28 +28,18 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private Timer _timer;
         private const long MinTimeToWait = 1000;
-        private readonly string _tmpFilePath;
         private readonly S3Settings _s3Settings;
 
         public OlaptEtl(Transformation transformation, OlapEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, OlaptEtlTag)
         {
             Metrics = OlapMetrics;
+            Name = $"{Configuration.Name}_{Transformation.Name}";
 
-            var connection = configuration.Connection;
-
-            var localSettings = BackupTask.GetBackupConfigurationFromScript(connection.LocalSettings, x => JsonDeserializationServer.LocalSettings(x),
-                Database, updateServerWideSettingsFunc: null, serverWide: false);
-
-            _s3Settings = BackupTask.GetBackupConfigurationFromScript(connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
+            _s3Settings = BackupTask.GetBackupConfigurationFromScript(configuration.Connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
                     Database, updateServerWideSettingsFunc: null, serverWide: false);
 
-            _tmpFilePath = localSettings?.FolderPath ?? 
-                           (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).FullPath;
-
-            var dueTime = GetDueTime(configuration.RunFrequency);
-
-            _timer = new Timer(_ => _waitForChanges.Set(), null, dueTime, configuration.RunFrequency);
+            _timer = new Timer(_ => _waitForChanges.Set(), state: null, dueTime: GetDueTime(configuration.RunFrequency), period: configuration.RunFrequency);
         }
 
         private TimeSpan GetDueTime(TimeSpan etlFrequency)
@@ -132,7 +122,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         protected override EtlTransformer<ToOlapItem, OlapTransformedItems> GetTransformer(DocumentsOperationContext context)
         {
-            return new OlapDocumentTransformer(Transformation, Database, context, Configuration);
+            return new OlapDocumentTransformer(Transformation, Database, context, Configuration, Name, Logger);
         }
 
         protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context)
@@ -141,8 +131,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             foreach (var transformed in records)
             {
-                var localPath = GetPath(transformed, out var remotePath);
-                count += transformed.GenerateFileFromItems(localPath, Logger);
+                var localPath = transformed.GenerateFileFromItems(out var remotePath);
+                count += transformed.Count;
 
                 using (Stream fileStream = File.OpenRead(localPath))
                 {
@@ -188,15 +178,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 prefix = $"{prefix}/{Configuration.CustomPrefix}";
 
             return $"{prefix}/{path}";
-        }
-
-
-        private string GetPath(OlapTransformedItems transformed, out string remotePath)
-        {
-            var fileName = $"{Database.Name}_{Guid.NewGuid()}.{transformed.Format}";
-            remotePath = $"{transformed.Prefix}/{fileName}";
-
-            return Path.Combine(_tmpFilePath, fileName);
         }
     }
 }

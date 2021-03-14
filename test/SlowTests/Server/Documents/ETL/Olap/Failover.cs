@@ -141,10 +141,10 @@ loadToOrders(key,
                     await session.SaveChangesAsync();
                 }
 
-                WaitForUserToContinueTheTest(store2);
+                //WaitForUserToContinueTheTest(store2);
 
 
-                etlDone.Wait(TimeSpan.FromMinutes(2));
+                etlDone.Wait(TimeSpan.FromMinutes(1));
 /*
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 */

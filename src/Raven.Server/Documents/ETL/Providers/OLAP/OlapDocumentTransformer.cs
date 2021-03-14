@@ -8,9 +8,12 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
@@ -22,13 +25,25 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private EtlStatsScope _stats;
 
         private const string DateFormat = "yyyy-MM-dd-HH-mm";
+        private string _tmpFilePath, _fileNamePrefix;
+        private Logger _logger;
 
-        public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config)
+
+        public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config, string processName, Logger logger)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.OlapEtl), null)
         {
             _config = config;
             _tables = new Dictionary<string, OlapTransformedItems>();
+            _logger = logger;
             LoadToDestinations = transformation.GetCollectionsFromScript();
+
+            var localSettings = BackupTask.GetBackupConfigurationFromScript(_config.Connection.LocalSettings, x => JsonDeserializationServer.LocalSettings(x),
+                database, updateServerWideSettingsFunc: null, serverWide: false);
+
+            _tmpFilePath = localSettings?.FolderPath ??
+                           (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).FullPath;
+
+            _fileNamePrefix = $"{Database.Name}_{processName}";
         }
 
         public override void Initialize(bool debugMode)
@@ -103,29 +118,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             if (_tables.TryGetValue(name, out var table) == false)
             {
-                switch (_config.Format)
+                _tables[name] = _config.Format switch
                 {
-                    case OlapEtlFileFormat.Parquet:
-                        string partitionColumn = default, idColumn = default;
-
-                        if (_config.OlapTables != null)
-                        {
-                            foreach (var olapTable in _config.OlapTables)
-                            {
-                                if (olapTable.TableName != tableName) 
-                                    continue;
-                                
-                                partitionColumn = olapTable.PartitionColumn;
-                                idColumn = olapTable.DocumentIdColumn;
-                                break;
-                            }
-                        }
-                        _tables[name] = table = new ParquetTransformedItems(tableName, key, idColumn, partitionColumn);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(OlapEtlConfiguration.Format));
-                        break;
-                }
+                    OlapEtlFileFormat.Parquet => (table = new ParquetTransformedItems(tableName, key, _tmpFilePath, _fileNamePrefix, _config, _logger)),
+                    _ => throw new ArgumentOutOfRangeException(nameof(OlapEtlConfiguration.Format))
+                };
             }
 
             return table;

@@ -211,7 +211,7 @@ loadToOrders(key,
             }
         }
 
-        [Fact]
+        [AmazonS3Fact]
         public async Task CanLoadToMultipleTables()
         {
             const string salesTableName = "Sales";
