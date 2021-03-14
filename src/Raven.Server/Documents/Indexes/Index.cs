@@ -2125,6 +2125,9 @@ namespace Raven.Server.Documents.Indexes
                 var oldState = State;
                 State = state;
 
+                if (State == IndexState.Normal && (oldState == IndexState.Disabled || oldState == IndexState.Error))
+                    Start();
+
                 if (inMemoryOnly)
                     return;
 
