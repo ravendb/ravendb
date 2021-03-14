@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.ServerWide.Context;
@@ -56,6 +57,8 @@ namespace Raven.Server.Documents.Indexes.Auto
                 .ToHashSet();
 
             var dynamicEntries = GetDynamicEntriesFields(staticEntries);
+
+            staticEntries.Add(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
 
             return (staticEntries, dynamicEntries);
         }
