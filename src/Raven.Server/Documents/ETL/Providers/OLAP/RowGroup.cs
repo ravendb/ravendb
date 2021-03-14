@@ -18,7 +18,14 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         public List<long> LastModified { get; }
 
-
         public int Count { get; internal set; }
+
+        public void Clear()
+        {
+            Data.Clear();
+            Ids.Clear();
+            LastModified.Clear();
+            Count = 0;
+        }
     }
 }

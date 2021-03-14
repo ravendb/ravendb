@@ -23,44 +23,91 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         public const string DefaultIdColumn = "_id";
         public const string DefaultPartitionColumn = "_dt";
         public const string LastModifiedColumn = "_lastModifiedTicks";
+        public const int DefaultMaxItemsInGroup = 50_000;
 
-        private static readonly string UrlEscapedEqualsSign = System.Net.WebUtility.UrlEncode("="); 
+        private static readonly string UrlEscapedEqualsSign = System.Net.WebUtility.UrlEncode("=");
 
-        public ParquetTransformedItems(string name, string key, string idColumn, string partitionColumn) : base(OlapEtlFileFormat.Parquet)
+        public ParquetTransformedItems(string name, string key, string tmpPath, string fileNamePrefix, OlapEtlConfiguration configuration, Logger logger) : base(OlapEtlFileFormat.Parquet)
         {
-            CollectionName = name;
-            PartitionKey = key;
-            Groups = new List<RowGroup>();
-
+            _collectionName = name;
+            _partitionKey = key;
+            _logger = logger;
+            _maxItemsPerGroup = DefaultMaxItemsInGroup; // todo make configurable
             _dataFields = new Dictionary<string, DataType>();
+
+            string partitionColumn = default, idColumn = default;
+            if (configuration.OlapTables != null)
+            {
+                foreach (var olapTable in configuration.OlapTables)
+                {
+                    if (olapTable.TableName != name)
+                        continue;
+
+                    partitionColumn = olapTable.PartitionColumn;
+                    idColumn = olapTable.DocumentIdColumn;
+                    break;
+                }
+            }
 
             if (string.IsNullOrEmpty(partitionColumn))
                 partitionColumn = DefaultPartitionColumn;
 
-            DocumentIdColumn = string.IsNullOrEmpty(idColumn)
+            _documentIdColumn = string.IsNullOrEmpty(idColumn)
                 ? DefaultIdColumn
                 : idColumn;
 
-            Prefix = $"{CollectionName}/{partitionColumn}{UrlEscapedEqualsSign}{PartitionKey}";
+            _prefix = $"{_collectionName}/{partitionColumn}{UrlEscapedEqualsSign}{_partitionKey}";
+
+            SetPath(tmpPath, fileNamePrefix);
+
         }
 
-        public override string Prefix { get; }
-
-        public string CollectionName { get; }
-
-        public string PartitionKey { get; }
-
-        public string DocumentIdColumn { get; }
-
         public Dictionary<string, DataField> Fields => _fields ??= GenerateDataFields();
+        public override int Count => _count;
 
-        public List<RowGroup> Groups { get; }
+        private RowGroup _group;
 
         private readonly Dictionary<string, DataType> _dataFields;
 
         private Dictionary<string, DataField> _fields;
 
-        private const int MaxItemsPerGroup = 50_000;
+        private readonly int _maxItemsPerGroup;
+
+        private readonly string _collectionName, _partitionKey, _documentIdColumn, _prefix;
+        private string _localPath, _remotePath;
+        private int _count;
+
+        private readonly Logger _logger;
+
+        public override string GenerateFileFromItems(out string remotePath)
+        {
+            remotePath = _remotePath;
+            WriteToFile();
+            _group.Clear();
+            
+            return _localPath;
+        }
+
+        private void WriteToFile()
+        {
+            var append = File.Exists(_localPath);
+            using (Stream fileStream = File.Open(_localPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
+            using (var parquetWriter = new ParquetWriter(new Schema(Fields.Values), fileStream, append: append))
+            {
+                WriteGroup(parquetWriter);
+                LogStats();
+                _count += _group.Count;
+            }
+
+        }
+
+        private void SetPath(string tmpFilePath, string fileNamePrefix)
+        {
+            var fileName = $"{fileNamePrefix}_{Guid.NewGuid()}.{Format}";
+
+            _localPath = Path.Combine(tmpFilePath, fileName);
+            _remotePath = $"{_prefix}/{fileName}";
+        }
 
         private Dictionary<string, DataField> GenerateDataFields()
         {
@@ -74,39 +121,20 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 fields[kvp.Key] = new DataField(kvp.Key, kvp.Value);
             }
 
-            fields[DocumentIdColumn] = new DataField(DocumentIdColumn, DataType.String);
+            fields[_documentIdColumn] = new DataField(_documentIdColumn, DataType.String);
             fields[LastModifiedColumn] = new DataField(LastModifiedColumn, DataType.Int64);
 
             return fields;
         }
 
-        public override int GenerateFileFromItems(string path, Logger logger = null)
+
+        private void WriteGroup(ParquetWriter parquetWriter)
         {
-            var count = 0;
-
-            using (Stream fileStream = File.OpenWrite(path))
-            {
-                using (var parquetWriter = new ParquetWriter(new Schema(Fields.Values), fileStream))
-                {
-                    foreach (var group in Groups)
-                    {
-                        WriteGroup(parquetWriter, group);
-                        LogStats(group, logger);
-                        count += group.Count;
-                    }
-                }
-            }
-
-            return count;
-        }
-
-        private void WriteGroup(ParquetWriter parquetWriter, RowGroup group)
-        {
-            AddMandatoryFields(group);
+            AddMandatoryFields();
 
             using (ParquetRowGroupWriter groupWriter = parquetWriter.CreateRowGroup())
             {
-                foreach (var kvp in group.Data)
+                foreach (var kvp in _group.Data)
                 {
                     if (Fields.TryGetValue(kvp.Key, out var field) == false)
                         continue;
@@ -155,10 +183,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _tsArr = null;
         }
 
-        private void AddMandatoryFields(RowGroup group)
+        private void AddMandatoryFields()
         {
-            group.Data[DocumentIdColumn] = group.Ids;
-            group.Data[LastModifiedColumn] = group.LastModified;
+            _group.Data[_documentIdColumn] = _group.Ids;
+            _group.Data[LastModifiedColumn] = _group.LastModified;
         }
 
         public override void AddItem(ToOlapItem item)
@@ -343,15 +371,21 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private RowGroup GetCurrentGroup()
         {
-            if (Groups.Count == 0 || Groups[^1].Count == MaxItemsPerGroup)
-                return AddNewGroup();
+            if (_group == null || _group.Count == _maxItemsPerGroup)
+                AddNewGroup();
 
-            return Groups[^1];
+            return _group;
         }
 
-        private RowGroup AddNewGroup()
+        private void AddNewGroup()
         {
-            var group = new RowGroup();
+            _group ??= new RowGroup();
+
+            if (_group.Count == _maxItemsPerGroup)
+            {
+                WriteToFile();
+                _group.Clear();
+            }
 
             foreach (var kvp in _dataFields)
             {
@@ -380,15 +414,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                         break;
                     default:
                         ThrowUnsupportedDataType(kvp.Value);
-                        return null;
+                        return;
                 }
 
-                group.Data.Add(kvp.Key, data);
+                _group.Data.Add(kvp.Key, data);
             }
-
-            Groups.Add(group);
-
-            return group;
         }
 
         private static void AddDefaultData<T>(IList data, long count)
@@ -399,12 +429,12 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
         }
 
-        private void LogStats(RowGroup group, Logger logger)
+        private void LogStats()
         {
-            if (logger?.IsInfoEnabled ?? false)
+            if (_logger?.IsInfoEnabled ?? false)
             {
-                logger.Info($"Inserted {group.Count} records to '{CollectionName}/{PartitionKey}' table " +
-                            $"from the following documents: {string.Join(", ", group.Ids)}");
+                _logger.Info($"Inserted {_group.Count} records to '{_collectionName}/{_partitionKey}' table " +
+                            $"from the following documents: {string.Join(", ", _group.Ids)}");
             }
         }
 

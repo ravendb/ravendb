@@ -14,9 +14,9 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         public abstract void AddItem(ToOlapItem item);
 
-        public abstract int GenerateFileFromItems(string path, Logger logger = null);
+        public abstract string GenerateFileFromItems(out string remotePath);
 
-        public abstract string Prefix { get; }
 
+        public abstract int Count { get; }
     }
 }

@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             else
             {
                 type = nameof(RestoreType.Local);
-                destination = $"{LocalSettings.FolderPath ?? "Temp"}";
+                destination = $"{LocalSettings?.FolderPath ?? "Temp"}";
             }
 
             return $"{type}-destination@{destination}";
