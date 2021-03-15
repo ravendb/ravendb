@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Documents.ETL;
 using Tests.Infrastructure;
@@ -27,11 +28,8 @@ namespace SlowTests.Server.Documents.ETL.Olap
         }
 
         [Fact]
-        public async Task FailOverTest()
+        public async Task OlapTaskShouldBeHighlyAvailable()
         {
-
-            NoTimeouts();
-
             var nodes = await CreateRaftCluster(3, watcherCluster: true);
             var leader = nodes.Leader;
             var dbName = GetDatabaseName();
@@ -88,22 +86,25 @@ loadToOrders(key,
 ";
 
                 var connectionStringName = $"{store.Database} to S3";
-
-                AddEtl(store,
-                    new OlapEtlConfiguration
+                var configName = "olap-s3";
+                var transformationName = "MonthlyOrders";
+                
+                var configuration = new OlapEtlConfiguration
+                {
+                    Name = configName,
+                    ConnectionStringName = connectionStringName,
+                    RunFrequency = TimeSpan.FromSeconds(10),
+                    Transforms = {new Transformation
                     {
-                        Name = connectionStringName,
-                        ConnectionStringName = connectionStringName,
-                        RunFrequency = TimeSpan.FromSeconds(10),
-                        Transforms = {new Transformation
-                        {
-                            Name = "MonthlyOrders", 
-                            Collections = new List<string> {"Orders"}, 
-                            Script = script
-                        }},
-                        MentorNode = server.ServerStore.NodeTag,
-                        KeepFilesOnDisk = true
-                    },
+                        Name = transformationName, 
+                        Collections = new List<string> {"Orders"}, 
+                        Script = script
+                    }},
+                    MentorNode = server.ServerStore.NodeTag,
+                    KeepFilesOnDisk = true
+                };
+                AddEtl(store,
+                    configuration,
                     new OlapConnectionString
                     {
                         Name = connectionStringName, 
@@ -113,15 +114,11 @@ loadToOrders(key,
                         }
                     });
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
-                //Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                 var files = Directory.GetFiles(path);
                 Assert.Equal(1, files.Length);
 
-
-                //WaitForUserToContinueTheTest(store);
-                etlDone.Reset();
                 DisposeServerAndWaitForFinishOfDisposal(server);
 
                 var store2 = stores.First(s => s != store);
@@ -141,13 +138,7 @@ loadToOrders(key,
                     await session.SaveChangesAsync();
                 }
 
-                //WaitForUserToContinueTheTest(store2);
-
-
                 etlDone.Wait(TimeSpan.FromMinutes(1));
-/*
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
-*/
                 files = Directory.GetFiles(path);
                 Assert.Equal(2, files.Length);
             }

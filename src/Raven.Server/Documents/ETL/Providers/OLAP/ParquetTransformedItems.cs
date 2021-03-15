@@ -27,10 +27,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private readonly Dictionary<string, DataType> _dataFields;
         private Dictionary<string, DataField> _fields;
         private readonly int _maxItemsPerGroup;
-        private readonly string _collectionName, _partitionKey;
-        private string _documentIdColumn;
-        private string _prefix;
-        private string _localPath, _remotePath;
+        private readonly string _tableName, _partitionKey;
+        private string _folder, _documentIdColumn, _localPath, _fileName;
         private int _count;
         private bool[] _boolArr;
         private string[] _strArr;
@@ -42,23 +40,23 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         public ParquetTransformedItems(string name, string key, string tmpPath, string fileNamePrefix, OlapEtlConfiguration configuration, Logger logger) : base(OlapEtlFileFormat.Parquet)
         {
-            _collectionName = name;
+            _tableName = name;
             _partitionKey = key;
             _logger = logger;
             _maxItemsPerGroup = configuration.MaxNumberOfItemsInRowGroup ?? DefaultMaxItemsInGroup;
             _dataFields = new Dictionary<string, DataType>();
 
-            SetPrefixAndPath(configuration, tmpPath, fileNamePrefix);
+            SetPath(configuration, tmpPath, fileNamePrefix);
         }
 
-        private void SetPrefixAndPath(OlapEtlConfiguration configuration, string tmpFilePath, string fileNamePrefix)
+        private void SetPath(OlapEtlConfiguration configuration, string tmpFilePath, string fileNamePrefix)
         {
             string partitionColumn = default, idColumn = default;
             if (configuration.OlapTables != null)
             {
                 foreach (var olapTable in configuration.OlapTables)
                 {
-                    if (olapTable.TableName != _collectionName)
+                    if (olapTable.TableName != _tableName)
                         continue;
 
                     partitionColumn = olapTable.PartitionColumn;
@@ -74,19 +72,19 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 ? DefaultIdColumn
                 : idColumn;
 
-            _prefix = $"{_collectionName}/{partitionColumn}{UrlEscapedEqualsSign}{_partitionKey}";
-
-            var fileName = $"{fileNamePrefix}_{Guid.NewGuid()}.{Format}";
-
-            _localPath = Path.Combine(tmpFilePath, fileName);
-            _remotePath = $"{_prefix}/{fileName}";
+            _folder = $"{_tableName}/{partitionColumn}{UrlEscapedEqualsSign}{_partitionKey}";
+            _fileName = $"{fileNamePrefix}_{Guid.NewGuid()}.{Format}";
+            _localPath = Path.Combine(tmpFilePath, _fileName);
         }
 
 
-        public override string GenerateFileFromItems(out string remotePath)
+        public override string GenerateFileFromItems(out string folderName, out string fileName)
         {
-            remotePath = _remotePath;
+            fileName = _fileName;
+            folderName = _folder;
+
             WriteToFile();
+            
             _group.Clear();
             
             return _localPath;
@@ -105,13 +103,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         }
 
-        private void SetPath(string tmpFilePath, string fileNamePrefix)
-        {
-            var fileName = $"{fileNamePrefix}_{Guid.NewGuid()}.{Format}";
-
-            _localPath = Path.Combine(tmpFilePath, fileName);
-            _remotePath = $"{_prefix}/{fileName}";
-        }
 
         private Dictionary<string, DataField> GenerateDataFields()
         {
@@ -437,7 +428,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             if (_logger?.IsInfoEnabled ?? false)
             {
-                _logger.Info($"Inserted {_group.Count} records to '{_collectionName}/{_partitionKey}' table " +
+                _logger.Info($"Inserted {_group.Count} records to '{_tableName}/{_partitionKey}' table " +
                             $"from the following documents: {string.Join(", ", _group.Ids)}");
             }
         }
