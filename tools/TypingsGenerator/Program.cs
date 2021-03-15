@@ -309,8 +309,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(WidgetRequest));
             scripter.AddType(typeof(WidgetMessage));
             scripter.AddType(typeof(CpuUsagePayload));
-            scripter.AddType(typeof(MemoryBasicUsagePayload));
-            scripter.AddType(typeof(MemoryExtendedUsagePayload));
+            scripter.AddType(typeof(MemoryUsagePayload));
 
             // expiration
             scripter.AddType(typeof(ExpirationConfiguration));

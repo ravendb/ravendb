@@ -9,6 +9,7 @@ namespace Raven.Server.ClusterDashboard
     public enum WidgetType
     {
         Unknown,
+        Debug, // TODO: fake widget used for debugging studio
         CpuUsage,
         License,
         MemoryUsage,

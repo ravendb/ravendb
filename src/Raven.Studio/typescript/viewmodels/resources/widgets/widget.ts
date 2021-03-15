@@ -3,11 +3,6 @@
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 
-interface nodeConnectionStatus {
-    nodeTag: string;
-    connected: KnockoutObservable<boolean>;
-} 
-
 abstract class widget<TData, TConfig = void> {
     static nextWidgetId = 1;
 
@@ -15,8 +10,6 @@ abstract class widget<TData, TConfig = void> {
     container: Element;
 
     fullscreen = ko.observable<boolean>(false);
-    
-    readonly nodesStatus = ko.observableArray<nodeConnectionStatus>();
     
     configuredFor = ko.observableArray<clusterDashboardWebSocketClient>([]);
 
@@ -59,15 +52,22 @@ abstract class widget<TData, TConfig = void> {
     
     onClientConnected(ws: clusterDashboardWebSocketClient) {
         if (this.supportedOnNode(ws.nodeTag, this.controller.currentServerNodeTag)) {
-            ws.sendCommand({
-                Command: "watch",
-                Config: this.getConfiguration(),
-                Id: this.id,
-                Type: this.getType()
-            });
-            
-            this.configuredFor.push(ws);
+            const command = this.createWatchCommand();
+            if (command) {
+                ws.sendCommand(command);
+
+                this.configuredFor.push(ws);
+            }
         }
+    }
+    
+    protected createWatchCommand() {
+        return {
+            Command: "watch",
+            Config: this.getConfiguration(),
+            Id: this.id,
+            Type: this.getType()
+        };
     }
     
     onClientDisconnected(ws: clusterDashboardWebSocketClient) {

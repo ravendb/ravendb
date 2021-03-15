@@ -235,7 +235,7 @@ class genUtils {
     /***  Size Methods ***/
 
     // Format bytes to human size string
-    static formatBytesToSize(bytes: number, digitsAfterDecimalPoint = 2) : string {
+    static formatBytesToSize(bytes: number, digitsAfterDecimalPoint = 2): string {
         const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
         if (bytes === 0) {
             return "0 Bytes";

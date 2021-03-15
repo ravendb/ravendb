@@ -20,7 +20,7 @@ namespace Raven.Server.ClusterDashboard.Widgets
     public class MemoryUsageWidget : Widget
     {
         private readonly RavenServer _server;
-        private readonly LowMemoryMonitor _lowMemoryMonitor = new LowMemoryMonitor();
+        private readonly LowMemoryMonitor _lowMemoryMonitor = new();
         private readonly Action<IDynamicJson> _onMessage;
         private readonly TimeSpan _defaultInterval = TimeSpan.FromSeconds(5);
 
@@ -34,36 +34,14 @@ namespace Raven.Server.ClusterDashboard.Widgets
 
         protected override async Task DoWork()
         {
-            var extendedData = PrepareExtendedData();
+            var data = PrepareData();
 
-            // send all data at the beginning 
-            _onMessage(extendedData);
+            _onMessage(data);
 
-            for (var i = 0; i < 8; i++)
-            {
-                await WaitOrThrowOperationCanceled(_defaultInterval);
-                // minor update - send only basic info - to avoid costly calculation 
-                var baseData = PrepareBasicData();
-                _onMessage(baseData);
-            }
-            
             await WaitOrThrowOperationCanceled(_defaultInterval);
         }
 
-        private MemoryBasicUsagePayload PrepareBasicData()
-        {
-            var memoryInfo = _server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfo);
-            
-            return new MemoryBasicUsagePayload()
-            {
-                LowMemorySeverity = LowMemoryNotification.Instance.IsLowMemory(memoryInfo, _lowMemoryMonitor, out _),
-                PhysicalMemory = memoryInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
-                WorkingSet = memoryInfo.WorkingSet.GetValue(SizeUnit.Bytes),
-                AvailableMemory = memoryInfo.AvailableMemory.GetValue(SizeUnit.Bytes),
-            };
-        }
-        
-        private MemoryExtendedUsagePayload PrepareExtendedData()
+        private MemoryUsagePayload PrepareData()
         {
             var memoryInfo = _server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
             long managedMemoryInBytes = AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
@@ -78,7 +56,7 @@ namespace Raven.Server.ClusterDashboard.Widgets
                 totalMapping += singleMapping.Value;
             }
             
-            return new MemoryExtendedUsagePayload
+            return new MemoryUsagePayload
             {
                 LowMemorySeverity = LowMemoryNotification.Instance.IsLowMemory(memoryInfo, _lowMemoryMonitor, out _),
                 PhysicalMemory = memoryInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
@@ -94,11 +72,5 @@ namespace Raven.Server.ClusterDashboard.Widgets
                 AvailableMemoryForProcessing = memoryInfo.AvailableMemoryForProcessing.GetValue(SizeUnit.Bytes)
             };
         }
-    }
-
-    public enum MemoryUsageType
-    {
-        Basic,
-        Extended
     }
 }

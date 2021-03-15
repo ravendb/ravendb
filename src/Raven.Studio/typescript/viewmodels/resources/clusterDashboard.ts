@@ -7,6 +7,8 @@ import widget = require("viewmodels/resources/widgets/widget");
 import memoryUsageWidget = require("viewmodels/resources/widgets/memoryUsageWidget");
 import addWidgetModal = require("viewmodels/resources/addWidgetModal");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import debugWidget = require("viewmodels/resources/widgets/debugWidget");
+import clusterNode = require("models/database/cluster/clusterNode");
 
 class clusterDashboard extends viewModelBase {
     
@@ -14,7 +16,9 @@ class clusterDashboard extends viewModelBase {
     
     readonly currentServerNodeTag: string;
     
-    widgets = ko.observableArray([]);  
+    widgets = ko.observableArray([]);
+    
+    nodes: KnockoutComputed<clusterNode[]>;
     
     liveClients = ko.observableArray<clusterDashboardWebSocketClient>([]);
     
@@ -24,6 +28,14 @@ class clusterDashboard extends viewModelBase {
         const topologyManager = clusterTopologyManager.default;
 
         this.currentServerNodeTag = topologyManager.localNodeTag();
+        
+        this.nodes = ko.pureComputed(() => {
+            const topology = topologyManager.topology();
+            if (!topology) {
+                return [];
+            }
+            return topologyManager.topology().nodes();
+        });
     }
     
     private initPackery() {
@@ -34,6 +46,21 @@ class clusterDashboard extends viewModelBase {
             gutter: ".gutter-sizer",
             transitionDuration: '0',
         });
+        
+        const throttledLayout = _.debounce(() => {
+            //TODO: 
+            console.log("About to persist layout", this.packery.getItemElements().map(x => {
+
+                return {
+                    left: x.style.left,
+                    top: x.style.top,
+                    widgetId: x.getAttribute("data-widget-id"),
+                    fullscreen: x.classList.contains("fullscreen")
+                }
+            }));
+        }, 5_000);
+        
+        this.packery.on("layoutComplete", throttledLayout);
     }
 
     compositionComplete() {
@@ -47,6 +74,7 @@ class clusterDashboard extends viewModelBase {
         this.addWidget(new cpuUsageWidget(this));
         this.addWidget(new memoryUsageWidget(this));
         this.addWidget(new licenseWidget(this));
+        this.addWidget(new debugWidget(this));
     }
 
     private enableLiveView() {
@@ -83,7 +111,7 @@ class clusterDashboard extends viewModelBase {
         this.liveClients([]);
     }
     
-    deleteWidget(widget: widget<any>) {
+    deleteWidget(widget: widget<any, any>) {
         this.packery.remove(widget.container);
         this.packery.shiftLayout();
         
@@ -102,17 +130,21 @@ class clusterDashboard extends viewModelBase {
         }
     }
 
-    layout(withDelay: boolean = true) {
+    layout(withDelay: boolean = true, mode: "shift" | "full" = "full") {
+        const layoutAction = () => {
+            mode === "full" ? this.packery.layout() : this.packery.shiftLayout();
+        }
+        
         if (withDelay) {
             setTimeout(() => {
-                this.packery.layout();
-            }, 300);
+                layoutAction();
+            }, 600);
         } else {
-            this.packery.layout();
+            layoutAction();
         }
     }
     
-    layoutNewWidget(widget: widget<any>) {
+    layoutNewWidget(widget: widget<any, any>) {
         this.packery.appended([widget.container]);
 
         const draggie = new Draggabilly(widget.container);

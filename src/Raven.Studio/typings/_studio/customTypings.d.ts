@@ -183,6 +183,10 @@ class PackeryStatic {
     
     remove(elements: Element[] | Element): void;
 
+    getItemElements(): HTMLElement[];
+    
+    on(event: "layoutComplete", callback: () => void);
+
     shiftLayout(): void;
 }
 
