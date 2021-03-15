@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//  <copyright file="MemoryExtendedUsagePayload.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="MemoryUsagePayload.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -9,7 +9,7 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.ClusterDashboard.Widgets
 {
-    public class MemoryExtendedUsagePayload : IDynamicJson
+    public class MemoryUsagePayload : IDynamicJson
     {
         public LowMemorySeverity LowMemorySeverity { get; set; }
         public long PhysicalMemory { get; set; }
@@ -23,7 +23,6 @@ namespace Raven.Server.ClusterDashboard.Widgets
         public long DirtyMemory { get; set; }
         public long AvailableMemory { get; set; }
         public long AvailableMemoryForProcessing { get; set; }
-        public MemoryUsageType Type => MemoryUsageType.Extended;
 
         public DynamicJsonValue ToJson()
         {
@@ -41,7 +40,6 @@ namespace Raven.Server.ClusterDashboard.Widgets
                 [nameof(DirtyMemory)] = DirtyMemory,
                 [nameof(AvailableMemory)] = AvailableMemory,
                 [nameof(AvailableMemoryForProcessing)] = AvailableMemoryForProcessing,
-                [nameof(Type)] = Type
             };
         }
     }

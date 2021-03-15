@@ -21,7 +21,8 @@ abstract class abstractWebSocketClient<T> {
         this.connectToWebSocketTask = $.Deferred<void>();
 
         if ("WebSocket" in window) {
-            this.connect(() => this.connectWebSocket(connectArgs));
+            // let children classes to fully initialize  //TODO: check if this doesn't break other ws!
+            setTimeout(() => this.connect(() => this.connectWebSocket(connectArgs)), 0);
         } else {
             //The browser doesn't support websocket
             //or we are in IE10 or IE11 and the server doesn't support WebSockets.
@@ -60,12 +61,16 @@ abstract class abstractWebSocketClient<T> {
         return true;
     }
     
+    protected hostname() { //TODO: remove me!
+        return window.location.host;
+    }
+    
     private connectWebSocket(connectArgs: any) {
         
         const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
         const queryString = this.webSocketUrlFactory(connectArgs);
         const queryStringWithStudioMarker = queryString.includes("?") ? queryString + "&fromStudio=true" : queryString + "?fromStudio=true";
-        const url = wsProtocol + window.location.host + this.resourcePath + queryStringWithStudioMarker;
+        const url = wsProtocol + this.hostname() + this.resourcePath + queryStringWithStudioMarker;
         this.webSocket = new WebSocket(url);
 
         if (this.isJsonBasedClient()) {
