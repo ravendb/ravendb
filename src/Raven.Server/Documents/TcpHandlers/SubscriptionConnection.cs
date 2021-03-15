@@ -348,13 +348,12 @@ namespace Raven.Server.Documents.TcpHandlers
                                     }
                                 }
                             }
-                            catch (SubscriptionInUseException e)
-                            {
-                                connection._connectionScope.RecordException(SubscriptionError.ConnectionRejected, e.Message);
-                            }
                             catch (Exception e)
                             {
-                                connection._connectionScope.RecordException(SubscriptionError.Error, e.Message);
+                                if (e is SubscriptionInUseException)
+                                    connection._connectionScope.RecordException(SubscriptionError.ConnectionRejected, e.Message);
+                                else
+                                    connection._connectionScope.RecordException(SubscriptionError.Error, e.Message);
                                 
                                 var errorMessage = $"Failed to process subscription {connection.SubscriptionId} / from client {remoteEndPoint}";
                                 connection.AddToStatusDescription($"{errorMessage}. Sending response to client");
@@ -1149,7 +1148,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 RecentSubscriptionStatuses?.Clear();
                 
-                _activeConnectionScope.Dispose();
+                _activeConnectionScope?.Dispose();
                 _connectionScope.Dispose();
             }
         }
