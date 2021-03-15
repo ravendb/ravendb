@@ -14,6 +14,8 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
         
         public string PartitionFieldName { get; set;  }
 
+        public int? MaxNumberOfItemsInRowGroup { get; set; }
+
         public string CustomPrefix { get; set; }
 
         public List<OlapEtlTable> OlapTables { get; set; }
