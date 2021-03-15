@@ -4,13 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
-using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Documents.PeriodicBackup.Retention;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private Timer _timer;
         private const long MinTimeToWait = 1000;
         private readonly S3Settings _s3Settings;
+        private readonly OperationCancelToken _operationCancelToken;
 
         public OlapEtl(Transformation transformation, OlapEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, OlaptEtlTag)
@@ -38,6 +39,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             _s3Settings = BackupTask.GetBackupConfigurationFromScript(configuration.Connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
                     Database, updateServerWideSettingsFunc: null, serverWide: false);
+
+            _operationCancelToken = new OperationCancelToken(Database.DatabaseShutdown, CancellationToken);
 
             _timer = new Timer(_ => _waitForChanges.Set(), state: null, dueTime: GetDueTime(configuration.RunFrequency), period: configuration.RunFrequency);
         }
@@ -131,13 +134,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             foreach (var transformed in records)
             {
-                var localPath = transformed.GenerateFileFromItems(out var remotePath);
+                var localPath = transformed.GenerateFileFromItems(out var folderName, out var fileName);
                 count += transformed.Count;
 
-                using (Stream fileStream = File.OpenRead(localPath))
-                {
-                    UploadToDestination(fileStream, remotePath);
-                }
+                UploadToServer(localPath, folderName, fileName);
 
                 if (Configuration.KeepFilesOnDisk)
                     continue;
@@ -148,36 +148,36 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return count;
         }
 
-        private void UploadToDestination(Stream stream, string path)
+        private void UploadToServer(string localPath, string folderName, string fileName)
         {
-            if (_s3Settings != null)
-            {
-                var key = GetKey(_s3Settings, path);
-                UploadToS3(_s3Settings, stream, key);
-            }
-        }
+            CancellationToken.ThrowIfCancellationRequested();
 
-        private void UploadToS3(S3Settings s3Settings, Stream stream, string key)
-        {
-            using (var client = new RavenAwsS3Client(s3Settings, progress: null, Logger, CancellationToken))
+            var uploaderSettings = new UploaderSettings
             {
-                client.PutObject(key, stream, new Dictionary<string, string>
+                S3Settings = _s3Settings,
+                FilePath = localPath,
+                FolderName = folderName,
+                FileName = fileName,
+                DatabaseName = Database.Name,
+                TaskName = Name
+            };
+
+            var uploadResult = new BackupResult
+            {
+                S3Backup = new UploadToS3
                 {
-                    {"Description", $"OLAP ETL {Name} to S3 for db {Database.Name} at {SystemTime.UtcNow}"}
-                });
-            }
+                    Skipped = true // will be set later, if needed
+                }
+            };
+
+            var backupUploader = new BackupUploader(uploaderSettings, new RetentionPolicyBaseParameters(), Logger, uploadResult, onProgress: ProgressNotification, _operationCancelToken);
+            backupUploader.Execute();
         }
 
-        private string GetKey(S3Settings s3Settings, string path)
+        private static void ProgressNotification(IOperationProgress progress)
         {
-            var prefix = string.IsNullOrWhiteSpace(s3Settings.RemoteFolderName)
-                ? string.Empty
-                : $"{s3Settings.RemoteFolderName}";
-
-            if (string.IsNullOrWhiteSpace(Configuration.CustomPrefix) == false)
-                prefix = $"{prefix}/{Configuration.CustomPrefix}";
-
-            return $"{prefix}/{path}";
+            // todo RavenDB-16341
         }
+
     }
 }
