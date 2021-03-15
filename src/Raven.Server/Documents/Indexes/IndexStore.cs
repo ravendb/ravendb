@@ -861,7 +861,17 @@ namespace Raven.Server.Documents.Indexes
                 existingIndex.SetPriority(definition.Priority.Value);
 
             if (definition.State.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.State) != 0)
-                existingIndex.SetState(definition.State.Value);
+            {
+                if ((definition.State == IndexState.Normal) && (existingIndex.State == IndexState.Disabled || existingIndex.State == IndexState.Error))
+                {
+                    existingIndex.SetState(definition.State.Value);
+                    existingIndex.Start();
+                }
+                else
+                {
+                    existingIndex.SetState(definition.State.Value);
+                }
+            }
         }
 
         private static void UpdateAutoIndexDefinition(AutoIndexDefinition definition, Index existingIndex, IndexDefinitionCompareDifferences indexDifferences)
@@ -870,7 +880,17 @@ namespace Raven.Server.Documents.Indexes
                 existingIndex.SetPriority(definition.Priority.Value);
 
             if (definition.State.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.State) != 0)
-                existingIndex.SetState(definition.State.Value);
+            {
+                if ((definition.State == IndexState.Normal) && (existingIndex.State == IndexState.Disabled || existingIndex.State == IndexState.Error))
+                {
+                    existingIndex.SetState(definition.State.Value);
+                    existingIndex.Start();
+                }
+                else
+                {
+                    existingIndex.SetState(definition.State.Value);
+                }
+            }
         }
 
 

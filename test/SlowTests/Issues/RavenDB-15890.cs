@@ -87,9 +87,11 @@ namespace SlowTests.Issues
                     await WaitForValueAsync(async () =>
                     {
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                        return documentDatabase.IndexStore.GetIndex(indexName).State;
-                    }, IndexState.Normal);
-                    Assert.Equal(IndexState.Normal, documentDatabase.IndexStore.GetIndex(indexName).State);
+                        return documentDatabase.IndexStore.GetIndex(indexName).Status;
+                    }, IndexRunningStatus.Running);
+                    var index = documentDatabase.IndexStore.GetIndex(indexName);
+                    Assert.Equal(IndexState.Normal, index.State);
+                    Assert.Equal(IndexRunningStatus.Running, index.Status);
                 }
             }
         }
@@ -247,10 +249,12 @@ namespace SlowTests.Issues
                     await WaitForValueAsync(async () =>
                     {
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                        return documentDatabase.IndexStore.GetIndex(indexName).State;
-                    }, IndexState.Normal);
+                        return documentDatabase.IndexStore.GetIndex(indexName).Status;
+                    }, IndexRunningStatus.Running);
+                    var autoIndex = documentDatabase.IndexStore.GetIndex(indexName);
+                    Assert.Equal(IndexState.Normal, autoIndex.State);
+                    Assert.Equal(IndexRunningStatus.Running, autoIndex.Status);
 
-                    Assert.Equal(IndexState.Normal, documentDatabase.IndexStore.GetIndex(indexName).State);
                 }
 
                 var (index, _) = await leader.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString()));
