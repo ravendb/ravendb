@@ -23,6 +23,55 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class MemoryDebugHandler : RequestHandler
     {
+        [RavenAction("/admin/debug/memory/gc", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public async Task GcInfo()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var djv = new DynamicJsonValue
+                {
+                    [nameof(GCKind.Any)] = ToJson(GC.GetGCMemoryInfo(GCKind.Any)),
+                    [nameof(GCKind.Background)] = ToJson(GC.GetGCMemoryInfo(GCKind.Background)),
+                    [nameof(GCKind.Ephemeral)] = ToJson(GC.GetGCMemoryInfo(GCKind.Ephemeral)),
+                    [nameof(GCKind.FullBlocking)] = ToJson(GC.GetGCMemoryInfo(GCKind.FullBlocking)),
+                };
+
+                await using (var write = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(write, djv);
+                }
+            }
+
+            static DynamicJsonValue ToJson(GCMemoryInfo info)
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(info.Compacted)] = info.Compacted,
+                    [nameof(info.Concurrent)] = info.Concurrent,
+                    [nameof(info.FinalizationPendingCount)] = info.FinalizationPendingCount,
+                    [nameof(info.FragmentedBytes)] = info.FragmentedBytes,
+                    [nameof(info.Generation)] = info.Generation,
+                    [nameof(info.GenerationInfo)] = new DynamicJsonArray(info.GenerationInfo.ToArray().Select(x => new DynamicJsonValue
+                    {
+                        [nameof(x.FragmentationAfterBytes)] = x.FragmentationAfterBytes,
+                        [nameof(x.FragmentationBeforeBytes)] = x.FragmentationBeforeBytes,
+                        [nameof(x.SizeAfterBytes)] = x.SizeAfterBytes,
+                        [nameof(x.SizeBeforeBytes)] = x.SizeBeforeBytes
+                    })),
+                    [nameof(info.HeapSizeBytes)] = info.HeapSizeBytes,
+                    [nameof(info.HighMemoryLoadThresholdBytes)] = info.HighMemoryLoadThresholdBytes,
+                    [nameof(info.Index)] = info.Index,
+                    [nameof(info.MemoryLoadBytes)] = info.MemoryLoadBytes,
+                    [nameof(info.PauseDurations)] = new DynamicJsonArray(info.PauseDurations.ToArray().Cast<object>()),
+                    [nameof(info.PauseTimePercentage)] = info.PauseTimePercentage,
+                    [nameof(info.PinnedObjectsCount)] = info.PinnedObjectsCount,
+                    [nameof(info.PromotedBytes)] = info.PromotedBytes,
+                    [nameof(info.TotalAvailableMemoryBytes)] = info.TotalAvailableMemoryBytes,
+                    [nameof(info.TotalCommittedBytes)] = info.TotalCommittedBytes
+                };
+            }
+        }
+
         [RavenAction("/admin/debug/memory/low-mem-log", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task LowMemLog()
         {
