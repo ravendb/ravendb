@@ -13,34 +13,52 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
     public class ParquetTransformedItems : OlapTransformedItems
     {
+        public const string DefaultIdColumn = "_id";
+        public const string DefaultPartitionColumn = "_dt";
+        public const string LastModifiedColumn = "_lastModifiedTicks";
+
+        public Dictionary<string, DataField> Fields => _fields ??= GenerateDataFields();
+
+        public override int Count => _count;
+
+        private static readonly string UrlEscapedEqualsSign = System.Net.WebUtility.UrlEncode("=");
+        private const int DefaultMaxItemsInGroup = 50_000;
+        private RowGroup _group;
+        private readonly Dictionary<string, DataType> _dataFields;
+        private Dictionary<string, DataField> _fields;
+        private readonly int _maxItemsPerGroup;
+        private readonly string _collectionName, _partitionKey;
+        private string _documentIdColumn;
+        private string _prefix;
+        private string _localPath, _remotePath;
+        private int _count;
         private bool[] _boolArr;
         private string[] _strArr;
         private double[] _doubleArr;
         private long[] _longArr;
         private DateTimeOffset[] _dtoArr;
         private TimeSpan[] _tsArr;
-
-        public const string DefaultIdColumn = "_id";
-        public const string DefaultPartitionColumn = "_dt";
-        public const string LastModifiedColumn = "_lastModifiedTicks";
-        public const int DefaultMaxItemsInGroup = 50_000;
-
-        private static readonly string UrlEscapedEqualsSign = System.Net.WebUtility.UrlEncode("=");
+        private readonly Logger _logger;
 
         public ParquetTransformedItems(string name, string key, string tmpPath, string fileNamePrefix, OlapEtlConfiguration configuration, Logger logger) : base(OlapEtlFileFormat.Parquet)
         {
             _collectionName = name;
             _partitionKey = key;
             _logger = logger;
-            _maxItemsPerGroup = DefaultMaxItemsInGroup; // todo make configurable
+            _maxItemsPerGroup = configuration.MaxNumberOfItemsInRowGroup ?? DefaultMaxItemsInGroup;
             _dataFields = new Dictionary<string, DataType>();
 
+            SetPrefixAndPath(configuration, tmpPath, fileNamePrefix);
+        }
+
+        private void SetPrefixAndPath(OlapEtlConfiguration configuration, string tmpFilePath, string fileNamePrefix)
+        {
             string partitionColumn = default, idColumn = default;
             if (configuration.OlapTables != null)
             {
                 foreach (var olapTable in configuration.OlapTables)
                 {
-                    if (olapTable.TableName != name)
+                    if (olapTable.TableName != _collectionName)
                         continue;
 
                     partitionColumn = olapTable.PartitionColumn;
@@ -58,26 +76,12 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             _prefix = $"{_collectionName}/{partitionColumn}{UrlEscapedEqualsSign}{_partitionKey}";
 
-            SetPath(tmpPath, fileNamePrefix);
+            var fileName = $"{fileNamePrefix}_{Guid.NewGuid()}.{Format}";
 
+            _localPath = Path.Combine(tmpFilePath, fileName);
+            _remotePath = $"{_prefix}/{fileName}";
         }
 
-        public Dictionary<string, DataField> Fields => _fields ??= GenerateDataFields();
-        public override int Count => _count;
-
-        private RowGroup _group;
-
-        private readonly Dictionary<string, DataType> _dataFields;
-
-        private Dictionary<string, DataField> _fields;
-
-        private readonly int _maxItemsPerGroup;
-
-        private readonly string _collectionName, _partitionKey, _documentIdColumn, _prefix;
-        private string _localPath, _remotePath;
-        private int _count;
-
-        private readonly Logger _logger;
 
         public override string GenerateFileFromItems(out string remotePath)
         {

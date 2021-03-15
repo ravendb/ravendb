@@ -19,15 +19,12 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
     internal class OlapDocumentTransformer : EtlTransformer<ToOlapItem, OlapTransformedItems>
     {
+        private const string DateFormat = "yyyy-MM-dd-HH-mm";
         private readonly OlapEtlConfiguration _config;
         private readonly Dictionary<string, OlapTransformedItems> _tables;
-
+        private readonly string _fileNamePrefix, _tmpFilePath;
         private EtlStatsScope _stats;
-
-        private const string DateFormat = "yyyy-MM-dd-HH-mm";
-        private string _tmpFilePath, _fileNamePrefix;
-        private Logger _logger;
-
+        private readonly Logger _logger;
 
         public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config, string processName, Logger logger)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.OlapEtl), null)
@@ -35,7 +32,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _config = config;
             _tables = new Dictionary<string, OlapTransformedItems>();
             _logger = logger;
-            LoadToDestinations = transformation.GetCollectionsFromScript();
 
             var localSettings = BackupTask.GetBackupConfigurationFromScript(_config.Connection.LocalSettings, x => JsonDeserializationServer.LocalSettings(x),
                 database, updateServerWideSettingsFunc: null, serverWide: false);
@@ -44,6 +40,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                            (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).FullPath;
 
             _fileNamePrefix = $"{Database.Name}_{processName}";
+
+            LoadToDestinations = transformation.GetCollectionsFromScript();
         }
 
         public override void Initialize(bool debugMode)
