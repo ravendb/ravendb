@@ -270,21 +270,10 @@ class editIndex extends viewModelBase {
     }
 
     private fetchCustomAnalyzers() {
-        const db = this.activeDatabase();
-        
-        new getCustomAnalyzersCommand(db, true)
+        new getCustomAnalyzersCommand(this.activeDatabase(), true)
             .execute()
-            .done((customAnalyzers) => {
-                const analyzerNames = customAnalyzers.map(x => x.Name);
-                this.editedIndex().customAnalyzers(analyzerNames);
-                
-                this.editedIndex().fields().forEach(x => x.addCustomAnalyzers(analyzerNames));
-                
-                const defaultFieldOptions = this.editedIndex().defaultFieldOptions();
-                if (defaultFieldOptions) {
-                    defaultFieldOptions.addCustomAnalyzers(analyzerNames);
-                }
-            });
+            .done((customAnalyzers) =>
+                this.editedIndex().registerCustomAnalyzers(customAnalyzers.map(x => x.Name)));
     }
 
     private fetchIndexHistory() {

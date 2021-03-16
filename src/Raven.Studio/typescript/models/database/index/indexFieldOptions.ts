@@ -520,13 +520,16 @@ class indexFieldOptions {
     }
 
     addCustomAnalyzers(customAnalyzers: string[]) {
+        const analyzers = this.analyzersNamesDictionary();
+
         customAnalyzers.forEach(name => {
             if (!this.analyzersNamesDictionary().find(x => x.studioName === name)) {
-                const customAnalyzerEntry = { studioName: name, serverName: name } as analyzerName;
-                this.analyzersNamesDictionary.push(customAnalyzerEntry);
-                this.analyzersNamesDictionary().sort((a, b) => a.studioName > b.studioName ? 1 : -1);
+                const customAnalyzerEntry: analyzerName = { studioName: name, serverName: name };
+                analyzers.push(customAnalyzerEntry);
             }
         });
+        
+        this.analyzersNamesDictionary(analyzers.sort());
     }
     
     toDto(): Raven.Client.Documents.Indexes.IndexFieldOptions {
