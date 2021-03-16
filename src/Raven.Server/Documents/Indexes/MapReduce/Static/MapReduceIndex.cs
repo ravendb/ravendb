@@ -452,6 +452,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return _compiled.ReferencedCollections;
         }
 
+        public override bool WorksOnAnyCollection(HashSet<string> collections)
+        {
+            if (base.WorksOnAnyCollection(collections))
+                return true;
+
+            if (_referencedCollections == null)
+                return false;
+
+            return _referencedCollections.Overlaps(collections);
+        }
+
         public class AnonymousObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>
         {
             private IEnumerable _items;
