@@ -325,9 +325,8 @@ class indexDefinition {
 
     addDefaultField() {
         const fieldOptions = indexFieldOptions.defaultFieldOptions();
+        fieldOptions.addCustomAnalyzers(this.customAnalyzers());
         this.defaultFieldOptions(fieldOptions);
-        
-        this.defaultFieldOptions().addCustomAnalyzers(this.customAnalyzers());
 
         this.fields().forEach(field => {
             field.parent(fieldOptions);
@@ -364,6 +363,17 @@ class indexDefinition {
     setMapsAndReduce(maps: string[], reduce: string) {
         this.maps(maps.map(x => new mapItem(x)));
         this.reduce(reduce);
+    }
+
+    registerCustomAnalyzers(analyzerNames: string[]) {
+        this.customAnalyzers(analyzerNames);
+        
+        this.fields().forEach(x => x.addCustomAnalyzers(analyzerNames));
+
+        const defaultFieldOptions = this.defaultFieldOptions();
+        if (defaultFieldOptions) {
+            defaultFieldOptions.addCustomAnalyzers(analyzerNames);
+        }
     }
     
     static empty(): indexDefinition {
