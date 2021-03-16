@@ -312,8 +312,8 @@ function map(name, lambda) {
             if (reduceObj != null && reduceObj.IsObject())
             {
                 var reduceAsObj = reduceObj.AsObject();
-                var groupByKey = reduceAsObj.GetProperty(KeyProperty).Value.As<ArrowFunctionInstance>();
-                var reduce = reduceAsObj.GetProperty(AggregateByProperty).Value.As<ArrowFunctionInstance>();
+                var groupByKey = reduceAsObj.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
+                var reduce = reduceAsObj.GetProperty(AggregateByProperty).Value.As<ScriptFunctionInstance>();
                 ReduceOperation = new JavaScriptReduceOperation(reduce, groupByKey, _engine, resolver) { ReduceString = definition.Reduce };
                 GroupByFields = ReduceOperation.GetReduceFieldsNames();
                 Reduce = ReduceOperation.IndexingFunction;
@@ -410,7 +410,7 @@ function map(name, lambda) {
             }
 
             var item = args[0];
-            var func = args[1] as ArrowFunctionInstance;
+            var func = args[1] as ScriptFunctionInstance;
 
             if (func == null)
                 throw new ArgumentException("The second argument in recurse(item, func) must be an arrow function.");
