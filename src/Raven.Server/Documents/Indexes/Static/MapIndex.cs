@@ -146,6 +146,17 @@ namespace Raven.Server.Documents.Indexes.Static
             return _compiled.ReferencedCollections;
         }
 
+        public override bool WorksOnAnyCollection(HashSet<string> collections)
+        {
+            if (base.WorksOnAnyCollection(collections))
+                return true;
+
+            if (_referencedCollections == null)
+                return false;
+
+            return _referencedCollections.Overlaps(collections);
+        }
+
         public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
             return new StaticIndexItemEnumerator<DynamicBlittableJson>(items, filter: null, _compiled.Maps[collection], collection, stats, type);

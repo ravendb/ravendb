@@ -367,7 +367,7 @@ namespace Raven.Server.Documents.Replication
                 using (documentsOperationContext.OpenReadTransaction())
                 using (configurationContext.OpenReadTransaction())
                 {
-                    var changeVector = DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext);
+                    var changeVector = DocumentsStorage.GetFullDatabaseChangeVector(documentsOperationContext);
 
                     var lastEtagFromSrc = DocumentsStorage.GetLastReplicatedEtagFrom(
                         documentsOperationContext, getLatestEtagMessage.SourceDatabaseId);

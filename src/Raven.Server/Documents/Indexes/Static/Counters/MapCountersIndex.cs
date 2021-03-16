@@ -147,6 +147,17 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             return _compiled.ReferencedCollections;
         }
 
+        public override bool WorksOnAnyCollection(HashSet<string> collections)
+        {
+            if (base.WorksOnAnyCollection(collections))
+                return true;
+
+            if (_referencedCollections == null)
+                return false;
+
+            return _referencedCollections.Overlaps(collections);
+        }
+
         protected override long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext, QueryMetadata query, bool isStale)
         {
             if (_handleReferences == null && _handleCompareExchangeReferences == null)
@@ -237,7 +248,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 
             _mre.Set();
         }
-        
+
         internal override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName)
         {
             progressStats.NumberOfItemsToProcess +=

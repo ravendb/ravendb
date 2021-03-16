@@ -22,7 +22,7 @@ namespace SlowTests.Issues
                 Map = rows => from row in rows
                                   // the below are not working
                                   // let doc = LoadDocument<Data>(row.DataId, $"{nameof(Data)}s")
-                              let doc = LoadDocument<Data>(row.DataId, $"Datas")
+                              let doc = LoadDocument<Data>(row.DataId, $"Datas{3}")
 
                               // the below works as expected
                               // let doc = LoadDocument<Data>(row.DataId)
