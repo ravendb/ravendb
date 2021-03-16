@@ -19,7 +19,8 @@
                 </button>
 
                 <div class="nodes-container" data-bind="foreach: nodeStats">
-                    <div class="nodes-item node-warning">
+                    <div class="nodes-item" data-toggle="tooltip" data-placement="top" 
+                         data-bind="css: { 'node-warning': lowMemorySeverity() === 'Low', 'node-danger': lowMemorySeverity() === 'ExtremelyLow' }, tooltipText: lowMemoryTitle()">
                         <div class="nodes-item-header">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
@@ -57,8 +58,7 @@
                 </div>
             </div>
 
-            <div class="graph-container">
-                <img src="./graph.svg" width="100%" />
+            <div class="graph-container ravendb-line-chart">
             </div>
         </div>
 
@@ -101,8 +101,7 @@
                 </div>
             </div>
 
-            <div class="graph-container">
-                <img src="./graph.svg" width="100%" />
+            <div class="graph-container machine-line-chart">
             </div>
         </div>
 

@@ -1,6 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
-import d3 = require('d3');
+import d3 = require("d3");
 
 type chartItemData = {
     x: Date,
@@ -13,13 +13,15 @@ type chartData = {
 }
 
 type chartOpts = {
+    grid?: boolean;
+    fill?: boolean;
     yMaxProvider?: () => number | null;
     useSeparateYScales?: boolean;
     topPaddingProvider?: (key: string) => number;
     tooltipProvider?: (data: dashboardChartTooltipProviderArgs) => string;
 }
 
-class dashboardChart {
+class lineChart {
     
     static readonly defaultTopPadding = 5;
     
@@ -38,17 +40,17 @@ class dashboardChart {
     
     private xScale: d3.time.Scale<number, number>;
     
-    private readonly containerSelector: string;
+    private containerSelector: string | EventTarget;
     
-    constructor(containerSelector: string, opts?: chartOpts) {
+    constructor(containerSelector: string | EventTarget, opts?: chartOpts) {
         this.opts = opts || {} as any;
         this.containerSelector = containerSelector;
         
         if (!this.opts.topPaddingProvider) {
-            this.opts.topPaddingProvider = () => dashboardChart.defaultTopPadding;
+            this.opts.topPaddingProvider = () => lineChart.defaultTopPadding;
         }
         
-        const container = d3.select(containerSelector);
+        const container = d3.select(containerSelector as string);
         
         const $container = $(containerSelector);
         
@@ -60,16 +62,17 @@ class dashboardChart {
             .attr("width", this.width)
             .attr("height", this.height);
         
-        const gridContainer = this.svg
-            .append("g")
-            .attr("transform", "translate(-0.5, 0)")
-            .attr("class", "grid");
+        if (this.opts.grid) {
+            const gridContainer = this.svg
+                .append("g")
+                .attr("transform", "translate(-0.5, 0)")
+                .attr("class", "grid");
+            this.drawGrid(gridContainer);
+        }
         
         this.svg
             .append("g")
             .attr("class", "series");
-        
-        this.drawGrid(gridContainer);
         
         const pointer = this.svg
             .append("g")
@@ -112,7 +115,7 @@ class dashboardChart {
     }
     
     onResize() {
-        const container = d3.select(this.containerSelector);
+        const container = d3.select(this.containerSelector as string);
         
         const $container = $(this.containerSelector);
         
@@ -123,6 +126,8 @@ class dashboardChart {
             .select("svg")
             .attr("width", this.width)
             .attr("height", this.height);
+        
+        //TODO: add viewport? 
         
         const gridContainer = this.svg.select(".grid");
         gridContainer.selectAll("line").remove();
@@ -238,7 +243,7 @@ class dashboardChart {
         this.lastXPosition = null;
     }
     
-    onData(time: Date, data: { key: string,  value: number }[] ) {
+    onData(time: Date, data: { key: string, value: number }[] ) {
         if (!this.minDate) {
             this.minDate = time;
         }
@@ -300,7 +305,7 @@ class dashboardChart {
                 maxValue = 1;
             }
             return d3.scale.linear()
-                .range([topPadding != null ? topPadding : dashboardChart.defaultTopPadding, this.height])
+                .range([topPadding != null ? topPadding : lineChart.defaultTopPadding, this.height])
                 .domain([maxValue, 0]);
         };
         
@@ -363,18 +368,22 @@ class dashboardChart {
             .attr("class", "line")
             .attr("d", d => lineFunctions.get(d.id)(d.values));
 
-        enteringSerie
-            .append("path")
-            .attr("class", "fill")
-            .attr("d", d => lineFunctions.get(d.id)(dashboardChart.closedPath(d.values)));
+        if (this.opts.fill) {
+            enteringSerie
+                .append("path")
+                .attr("class", "fill")
+                .attr("d", d => lineFunctions.get(d.id)(lineChart.closedPath(d.values)));
+        }
         
         series
             .select(".line")
             .attr("d", d => lineFunctions.get(d.id)(d.values));
 
-        series
-            .select(".fill")
-            .attr("d", d => lineFunctions.get(d.id)(dashboardChart.closedPath(d.values)));
+        if (this.opts.fill) {
+            series
+                .select(".fill")
+                .attr("d", d => lineFunctions.get(d.id)(lineChart.closedPath(d.values)));
+        }
     }
     
     private static closedPath(input: chartItemData[]): chartItemData[] {
@@ -396,4 +405,4 @@ class dashboardChart {
     } 
 }
 
-export = dashboardChart;
+export = lineChart;

@@ -7,6 +7,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Util;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
@@ -58,6 +59,7 @@ namespace Raven.Server.ClusterDashboard.Widgets
             
             return new MemoryUsagePayload
             {
+                Time = SystemTime.UtcNow,
                 LowMemorySeverity = LowMemoryNotification.Instance.IsLowMemory(memoryInfo, _lowMemoryMonitor, out _),
                 PhysicalMemory = memoryInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
                 WorkingSet = memoryInfo.WorkingSet.GetValue(SizeUnit.Bytes),

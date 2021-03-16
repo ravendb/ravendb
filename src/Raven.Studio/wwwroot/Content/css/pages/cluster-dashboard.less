@@ -494,8 +494,54 @@
             }
 
             .graph-container {
-                //position: sticky;
-                //left: 0;
+                height: 100px;
+
+                .grid-line {
+                    stroke: @hr-border;
+                    stroke-width: 1px;
+                }
+                
+                // TODO: those are TEMPORARY STYLES!!!
+                .line {
+                    fill: none;
+                    stroke-width: 2;
+                }
+
+                .fill {
+                    fill-opacity: 0.3;
+                    stroke: none;
+                }
+
+                .node-a {
+                    .line {
+                        stroke: @color-4;
+                    }
+                }
+
+                .node-b {
+                    .line {
+                        stroke: @color-5;
+                    }
+                }
+
+                .node-c {
+                    .line {
+                        stroke: @color-1;
+                    }
+                }
+
+                .node-d {
+                    .line {
+                        stroke: @color-2;
+                    }
+                }
+
+                .node-e {
+                    .line {
+                        stroke: @color-3;
+                    }
+                }
+                // TODO: temporary styles end!
             }
         }
 
