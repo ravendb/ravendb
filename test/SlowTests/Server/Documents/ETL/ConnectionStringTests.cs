@@ -5,7 +5,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
-using SlowTests.Server.Documents.ETL.SQL;
+using Tests.Infrastructure.ConnectionString;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -34,7 +34,7 @@ namespace SlowTests.Server.Documents.ETL
                 var sqlConnectionString = new SqlConnectionString
                 {
                     Name = "SqlConnectionString",
-                    ConnectionString = SqlEtlTests.GetConnectionString(store),
+                    ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
                 };
 
                 var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -90,7 +90,7 @@ namespace SlowTests.Server.Documents.ETL
                 var sqlConnectionString = new SqlConnectionString
                 {
                     Name = "SqlConnectionString",
-                    ConnectionString = SqlEtlTests.GetConnectionString(store),
+                    ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
                 };
 
                 var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -142,7 +142,7 @@ namespace SlowTests.Server.Documents.ETL
                     var sqlConnectionStr = new SqlConnectionString
                     {
                         Name = $"SqlConnectionString{i}",
-                        ConnectionString = SqlEtlTests.GetConnectionString(store)
+                        ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
                     };
 
                     ravenConnectionStrings.Add(ravenConnectionStr);
@@ -187,7 +187,7 @@ namespace SlowTests.Server.Documents.ETL
                 var sqlConnectionStr = new SqlConnectionString
                 {
                     Name = "SqlConnectionString",
-                    ConnectionString = SqlEtlTests.GetConnectionString(store)
+                    ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
                 };
 
                 ravenConnectionStrings.Add(ravenConnectionStr);
