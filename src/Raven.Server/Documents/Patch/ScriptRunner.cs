@@ -1682,7 +1682,7 @@ namespace Raven.Server.Documents.Patch
                 if (firstParam.IsObject() && args[0].AsObject() is BlittableObjectInstance selfInstance)
                 {
                     JsValue secondParam = args[1];
-                    if (secondParam.IsObject() && secondParam.AsObject() is ArrowFunctionInstance lambda)
+                    if (secondParam.IsObject() && secondParam.AsObject() is ScriptFunctionInstance lambda)
                     {
                         var functionAst = lambda.FunctionDeclaration;
                         var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
