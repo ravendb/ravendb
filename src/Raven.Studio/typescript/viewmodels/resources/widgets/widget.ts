@@ -1,10 +1,12 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
-import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
+import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 
 abstract class widget<TData, TConfig = void> {
     static nextWidgetId = 1;
+    
+    private initialized: boolean = false;
 
     controller: clusterDashboard;
     container: Element;
@@ -29,7 +31,8 @@ abstract class widget<TData, TConfig = void> {
     }
 
     compositionComplete() {
-        this.controller.layoutNewWidget(this);
+        this.initialized = true;
+        this.controller.onWidgetReady(this);
     }
 
     abstract getType(): Raven.Server.ClusterDashboard.WidgetType;
@@ -51,6 +54,11 @@ abstract class widget<TData, TConfig = void> {
     }
     
     onClientConnected(ws: clusterDashboardWebSocketClient) {
+        if (!this.initialized) {
+            // ignore calls when widget is not yet ready - we send command after compositionComplete
+            return;
+        }
+        
         if (this.supportedOnNode(ws.nodeTag, this.controller.currentServerNodeTag)) {
             const command = this.createWatchCommand();
             if (command) {
@@ -71,9 +79,12 @@ abstract class widget<TData, TConfig = void> {
     }
     
     onClientDisconnected(ws: clusterDashboardWebSocketClient) {
-        this.configuredFor.remove(ws);
+        if (!this.initialized) {
+            // ignore calls when widget is not yet ready - we send command after compositionComplete
+            return;
+        }
         
-        //TODO: 
+        this.configuredFor.remove(ws);
     }
     
     abstract onData(nodeTag: string, data: TData): void;

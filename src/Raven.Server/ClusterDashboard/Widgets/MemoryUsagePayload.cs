@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 
@@ -11,6 +12,7 @@ namespace Raven.Server.ClusterDashboard.Widgets
 {
     public class MemoryUsagePayload : IDynamicJson
     {
+        public DateTime Time { get; set; }
         public LowMemorySeverity LowMemorySeverity { get; set; }
         public long PhysicalMemory { get; set; }
         public long WorkingSet { get; set; }
@@ -28,6 +30,7 @@ namespace Raven.Server.ClusterDashboard.Widgets
         {
             return new DynamicJsonValue
             {
+                [nameof(Time)] = Time,
                 [nameof(LowMemorySeverity)] = LowMemorySeverity,
                 [nameof(PhysicalMemory)] = PhysicalMemory,
                 [nameof(WorkingSet)] = WorkingSet,

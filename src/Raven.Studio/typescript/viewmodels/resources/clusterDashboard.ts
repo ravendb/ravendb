@@ -50,7 +50,6 @@ class clusterDashboard extends viewModelBase {
         const throttledLayout = _.debounce(() => {
             //TODO: 
             console.log("About to persist layout", this.packery.getItemElements().map(x => {
-
                 return {
                     left: x.style.left,
                     top: x.style.top,
@@ -65,6 +64,7 @@ class clusterDashboard extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+        //TODO: what if cluster is not bootstraped?
 
         this.initPackery();
 
@@ -76,7 +76,7 @@ class clusterDashboard extends viewModelBase {
         this.addWidget(new licenseWidget(this));
         this.addWidget(new debugWidget(this));
     }
-
+    
     private enableLiveView() {
         const nodes = clusterTopologyManager.default.topology().nodes();
 
@@ -122,12 +122,6 @@ class clusterDashboard extends viewModelBase {
     
     addWidget(widget: widget<any>) {
         this.widgets.push(widget);
-        
-        for (const ws of this.liveClients()) {
-            if (ws.isConnected()) {
-                widget.onClientConnected(ws);
-            }
-        }
     }
 
     layout(withDelay: boolean = true, mode: "shift" | "full" = "full") {
@@ -143,8 +137,18 @@ class clusterDashboard extends viewModelBase {
             layoutAction();
         }
     }
+
+    onWidgetReady(widget: widget<any, any>) {
+        this.layoutNewWidget(widget);
+
+        for (const ws of this.liveClients()) {
+            if (ws.isConnected()) {
+                widget.onClientConnected(ws);
+            }
+        }
+    }
     
-    layoutNewWidget(widget: widget<any, any>) {
+    private layoutNewWidget(widget: widget<any, any>) {
         this.packery.appended([widget.container]);
 
         const draggie = new Draggabilly(widget.container);

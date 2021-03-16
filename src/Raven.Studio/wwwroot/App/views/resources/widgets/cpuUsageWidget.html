@@ -13,42 +13,20 @@
         <h4>RavenDB CPU usage</h4>
         <div class="property">
             <div class="flex-horizontal">
-                <div class="nodes-container">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
                     <div class="nodes-item">
                         <div class="nodes-item-header">
-                            <div class="node-label">A</div>
+                            <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
-                                <span>10%</span>
-                                <span class="supplementary-info">3/4 Cores</span>
-                            </div>
-                        </div>
-                    </div>
-
-
-                    <div class="nodes-item">
-                        <div class="nodes-item-header">
-                            <div class="node-label">B</div>
-                            <div class="node-value">
-                                <span>10%</span>
-                                <span class="supplementary-info">3/4 Cores</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="nodes-item">
-                        <div class="nodes-item-header">
-                            <div class="node-label">C</div>
-                            <div class="node-value">
-                                <span>10%</span>
-                                <span class="supplementary-info">3/4 Cores</span>
+                                <span data-bind="text: processCpuUsage() + '%'"></span>
+                                <span class="supplementary-info" data-bind="text: coresInfo"></span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="graph-container">
-                <img src="./graph.svg" width="100%" />
+            <div class="graph-container ravendb-line-chart">
             </div>
         </div>
 
@@ -58,43 +36,21 @@
         <h4>Machine CPU usage</h4>
         <div class="property">
             <div class="flex-horizontal">
-                <div class="nodes-container">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
                     <div class="nodes-item">
                         <div class="nodes-item-header">
-                            <div class="node-label">A</div>
+                            <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
-                                <span>10%</span>
-                                <span class="supplementary-info">3/4 Cores</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="nodes-item">
-                        <div class="nodes-item-header">
-                            <div class="node-label">B</div>
-                            <div class="node-value">
-                                <span>10%</span>
-                                <span class="supplementary-info">3/4 Cores</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="nodes-item">
-                        <div class="nodes-item-header">
-                            <div class="node-label">C</div>
-                            <div class="node-value">
-                                <span>10%</span>
-                                <span class="supplementary-info">3/4 Cores</span>
+                                <span data-bind="text: machineCpuUsage() + '%'"></span>
+                                <span class="supplementary-info" data-bind="text: coresInfo"></span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="graph-container">
-                <img src="./graph.svg" width="100%" />
+            <div class="graph-container machine-line-chart">
             </div>
         </div>
-
     </div>
 </div>
