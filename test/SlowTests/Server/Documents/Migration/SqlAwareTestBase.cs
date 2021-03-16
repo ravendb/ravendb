@@ -124,7 +124,7 @@ namespace SlowTests.Server.Documents.Migration
             }
         }
 
-        protected DisposableAction WithSqlDatabase(MigrationProvider provider, out string connectionString, out string schemaName, string dataSet = "northwind", bool includeData = true)
+        internal static DisposableAction WithSqlDatabase(MigrationProvider provider, out string connectionString, out string schemaName, string dataSet = "northwind", bool includeData = true)
         {
             switch (provider)
             {
@@ -143,7 +143,7 @@ namespace SlowTests.Server.Documents.Migration
             }
         }
 
-        private DisposableAction WithMsSqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
+        private static DisposableAction WithMsSqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
             databaseName = "SqlTest_" + Guid.NewGuid();
             connectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={databaseName}";
@@ -221,7 +221,7 @@ namespace SlowTests.Server.Documents.Migration
             });
         }
 
-        protected DisposableAction WithMySqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
+        private static DisposableAction WithMySqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
             databaseName = "sql_test_" + Guid.NewGuid();
             var rawConnectionString = MySqlConnectionString.Instance.VerifiedConnectionString.Value;
@@ -291,7 +291,7 @@ namespace SlowTests.Server.Documents.Migration
             });
         }
 
-        protected DisposableAction WithNpgSqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
+        private static DisposableAction WithNpgSqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
             databaseName = "npgSql_test_" + Guid.NewGuid();
             var rawConnectionString = NpgSqlConnectionString.Instance.VerifiedConnectionString.Value;
@@ -366,7 +366,7 @@ namespace SlowTests.Server.Documents.Migration
             });
         }
 
-        protected DisposableAction WithOracleDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
+        private static DisposableAction WithOracleDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
             databaseName = "C##" + Guid.NewGuid();
             var pass = "pass";

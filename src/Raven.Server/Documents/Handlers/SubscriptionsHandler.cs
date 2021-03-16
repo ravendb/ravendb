@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Handlers
             var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
 
             await Database.SubscriptionStorage.DeleteSubscription(subscriptionName, GetRaftRequestIdFromQuery());
-            
+
             Database.SubscriptionStorage.RaiseNotificationForTaskRemoved(subscriptionName);
 
             await NoContent();
@@ -320,8 +320,8 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
         }
-        
-        [RavenAction("/databases/*/subscriptions/performance/live", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
+
+        [RavenAction("/databases/*/subscriptions/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task PerformanceLive()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())

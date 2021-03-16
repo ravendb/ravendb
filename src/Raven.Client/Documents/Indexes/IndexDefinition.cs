@@ -200,7 +200,18 @@ namespace Raven.Client.Documents.Indexes
             }
 
             if (DictionaryExtensions.ContentEquals(AdditionalSources, other.AdditionalSources) == false)
-                result |= IndexDefinitionCompareDifferences.AdditionalSources;
+            {
+                var additionalSources = new Dictionary<string, string>();
+                foreach (var kvp in AdditionalSources)
+                    additionalSources[kvp.Key] = Normalize(kvp.Value);
+
+                var otherAdditionalSources = new Dictionary<string, string>();
+                foreach (var kvp in other.AdditionalSources)
+                    otherAdditionalSources[kvp.Key] = Normalize(kvp.Value);
+
+                if (DictionaryExtensions.ContentEquals(additionalSources, otherAdditionalSources) == false)
+                    result |= IndexDefinitionCompareDifferences.AdditionalSources;
+            }
 
             bool additionalAssembliesEquals;
             if (AdditionalAssemblies == null && other.AdditionalAssemblies == null)
