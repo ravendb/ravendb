@@ -1266,7 +1266,7 @@ class ongoingTasksStats extends viewModelBase {
                     this.drawActiveSubscriptionConnectionStripe(context, x1ForActive, stripesYStart, yOffset, dxForActive, perfWithCache, trackName);
 
                     // Draw a separating line between adjacent connection items if needed 
-                    const connectedAtDate = new Date(startActiveConnectionDateAsInt);                    
+                    const connectedAtDate = new Date(startActiveConnectionDateAsInt);
                     if (perfIdx >= 1 && connectionPerfCompleted && connectionPerfCompleted.getTime() === connectedAtDate.getTime()) {
                         context.fillStyle = this.colors.separatorLine;
                         context.fillRect(x1ForActive, yStart + (isOpened ? yOffset : 0), 1, ongoingTasksStats.trackHeight);
@@ -1511,10 +1511,10 @@ class ongoingTasksStats extends viewModelBase {
         
         let errorIcon;
         if (errorType === "ConnectionRejected") {
-            errorIcon = "\ue909"; // todo - replace icon - issue RavenDB-16331
+            errorIcon = "\uea45";
             context.fillStyle = this.colors.tracks.ConnectionRejected;
         } else {
-            errorIcon = "\ue920";
+            errorIcon = "\uea44";
             context.fillStyle = this.colors.tracks.ConnectionAborted;
         }
         
@@ -1756,7 +1756,7 @@ class ongoingTasksStats extends viewModelBase {
             const type = context.rootStats.Type;
             const isReplication = type === "OutgoingPull" || type === "OutgoingPush" || type === "IncomingPull" || type === "IncomingPush";
             const isEtl = type === "Raven" || type === "Sql";
-            const isSubscription = type === "SubscriptionConnection" || "SubscriptionBatch" || "AggregatedBatchesInfo";
+            const isSubscription = type === "SubscriptionConnection" || type === "SubscriptionBatch" || type === "AggregatedBatchesInfo";
             const isRootItem = context.rootStats.Details === context.item;
             
             let sectionName = context.item.Name;
