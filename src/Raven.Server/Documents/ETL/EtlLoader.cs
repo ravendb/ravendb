@@ -262,7 +262,7 @@ namespace Raven.Server.Documents.ETL
                     if (ravenConfig != null)
                         process = new RavenEtl(transform, ravenConfig, _database, _serverStore); 
                     if (olapConfig != null)
-                        process = new OlaptEtl(transform, olapConfig, _database, _serverStore);
+                        process = new OlapEtl(transform, olapConfig, _database, _serverStore);
 
                     yield return process;
                 }
@@ -500,7 +500,7 @@ namespace Raven.Server.Documents.ETL
 
                         break;
                     }
-                    case OlaptEtl olapEtl:
+                    case OlapEtl olapEtl:
                     {
                         OlapEtlConfiguration existing = null;
 

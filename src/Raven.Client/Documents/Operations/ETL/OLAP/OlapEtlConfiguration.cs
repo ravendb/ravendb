@@ -12,8 +12,6 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public bool KeepFilesOnDisk { get; set; }
         
-        public string PartitionFieldName { get; set;  }
-
         public int? MaxNumberOfItemsInRowGroup { get; set; }
 
         public string CustomPrefix { get; set; }
