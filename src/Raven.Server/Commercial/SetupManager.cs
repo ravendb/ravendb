@@ -1331,7 +1331,9 @@ namespace Raven.Server.Commercial
                 onProgress(progress);
             }
 
-            var certPath = Path.Combine(AppContext.BaseDirectory, certificateFileName);
+            var certPath = serverStore.Configuration.GetSetting(
+                                   RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) 
+                    ?? Path.Combine(AppContext.BaseDirectory, certificateFileName);
 
             try
             {
@@ -1575,10 +1577,12 @@ namespace Raven.Server.Commercial
                         }
 
                         var certificateFileName = $"cluster.server.certificate.{name}.pfx";
+                        var certPath = serverStore.Configuration.GetSetting(
+                                               RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) 
+                                ?? Path.Combine(AppContext.BaseDirectory, certificateFileName);
 
                         if (setupInfo.ModifyLocalServer)
                         {
-                            var certPath = Path.Combine(AppContext.BaseDirectory, certificateFileName);
                             using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
                             {
                                 certFile.Write(serverCertBytes, 0, serverCertBytes.Length);
@@ -1586,7 +1590,7 @@ namespace Raven.Server.Commercial
                             }// we'll be flushing the directory when we'll write the settings.json
                         }
 
-                        settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certificateFileName;
+                        settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certPath;
                         if (string.IsNullOrEmpty(setupInfo.Password) == false)
                             settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = setupInfo.Password;
 
