@@ -107,6 +107,48 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Server encryption buffers memory being in pool in MB")]
             public const string EncryptionBuffersMemoryInPool = "1.6.10";
 
+            [Description("GC information. Specifies if this is a compacting GC or not.")]
+            public const string GcCompacted = "1.6.11.{0}.1";
+
+            [Description("GC information. Specifies if this is a concurrent GC or not.")]
+            public const string GcConcurrent = "1.6.11.{0}.2";
+
+            [Description("GC information. Gets the number of objects ready for finalization this GC observed.")]
+            public const string GcFinalizationPendingCount = "1.6.11.{0}.3";
+
+            [Description("GC information. Gets the total fragmentation (in MB) when the last garbage collection occurred.")]
+            public const string GcFragmented = "1.6.11.{0}.4";
+
+            [Description("GC information. Gets the generation this GC collected.")]
+            public const string GcGeneration = "1.6.11.{0}.5";
+
+            [Description("GC information. Gets the total heap size (in MB) when the last garbage collection occurred.")]
+            public const string GcHeapSize = "1.6.11.{0}.6";
+
+            [Description("GC information. Gets the high memory load threshold (in MB) when the last garbage collection occurred.")]
+            public const string GcHighMemoryLoadThreshold = "1.6.11.{0}.7";
+
+            [Description("GC information. The index of this GC.")]
+            public const string GcIndex = "1.6.11.{0}.8";
+
+            [Description("GC information. Gets the memory load (in MB) when the last garbage collection occurred.")]
+            public const string GcMemoryLoad = "1.6.11.{0}.9";
+
+            [Description("GC information. Gets the pause time percentage in the GC so far.")]
+            public const string GcPauseTimePercentage = "1.6.11.{0}.10";
+
+            [Description("GC information. Gets the number of pinned objects this GC observed.")]
+            public const string GcPinnedObjectsCount = "1.6.11.{0}.11";
+
+            [Description("GC information. Gets the promoted MB for this GC.")]
+            public const string GcPromoted = "1.6.11.{0}.12";
+
+            [Description("GC information. Gets the total available memory (in MB) for the garbage collector to use when the last garbage collection occurred.")]
+            public const string GcTotalAvailableMemory = "1.6.11.{0}.13";
+
+            [Description("GC information. Gets the total committed MB of the managed heap.")]
+            public const string GcTotalCommitted = "1.6.11.{0}.14";
+
             [Description("Number of concurrent requests")]
             public const string ConcurrentRequests = "1.7.1";
 

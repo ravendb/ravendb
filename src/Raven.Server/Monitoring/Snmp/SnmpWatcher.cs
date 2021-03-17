@@ -415,7 +415,30 @@ namespace Raven.Server.Monitoring.Snmp
 
             store.Add(new TcpActiveConnections());
 
+            AddGc(GCKind.Any);
+            AddGc(GCKind.Background);
+            AddGc(GCKind.Ephemeral);
+            AddGc(GCKind.FullBlocking);
+
             return store;
+
+            void AddGc(GCKind gcKind)
+            {
+                store.Add(new ServerGcCompacted(server.MetricCacher, gcKind));
+                store.Add(new ServerGcConcurrent(server.MetricCacher, gcKind));
+                store.Add(new ServerGcFinalizationPendingCount(server.MetricCacher, gcKind));
+                store.Add(new ServerGcFragmented(server.MetricCacher, gcKind));
+                store.Add(new ServerGcGeneration(server.MetricCacher, gcKind));
+                store.Add(new ServerGcHeapSize(server.MetricCacher, gcKind));
+                store.Add(new ServerGcHighMemoryLoadThreshold(server.MetricCacher, gcKind));
+                store.Add(new ServerGcIndex(server.MetricCacher, gcKind));
+                store.Add(new ServerGcMemoryLoad(server.MetricCacher, gcKind));
+                store.Add(new ServerGcPauseTimePercentage(server.MetricCacher, gcKind));
+                store.Add(new ServerGcPinnedObjectsCount(server.MetricCacher, gcKind));
+                store.Add(new ServerGcPromoted(server.MetricCacher, gcKind));
+                store.Add(new ServerGcTotalAvailableMemory(server.MetricCacher, gcKind));
+                store.Add(new ServerGcTotalCommitted(server.MetricCacher, gcKind));
+            }
         }
 
         private async Task AddDatabases()
