@@ -14,7 +14,8 @@ type chartData = {
 
 type chartOpts = {
     grid?: boolean;
-    fill?: boolean;
+    fillArea?: boolean;
+    fillData?: boolean;
     yMaxProvider?: () => number | null;
     useSeparateYScales?: boolean;
     topPaddingProvider?: (key: string) => number;
@@ -243,7 +244,7 @@ class lineChart {
         this.lastXPosition = null;
     }
     
-    onData(time: Date, data: { key: string, value: number }[] ) {
+    onData(time: Date, data: { key: string, value: number }[]) {
         if (!this.minDate) {
             this.minDate = time;
         }
@@ -268,8 +269,6 @@ class lineChart {
         
         this.maybeTrimData();
        
-        this.draw();
-        
         this.updateTooltip(true);
     }
     
@@ -366,24 +365,42 @@ class lineChart {
         enteringSerie
             .append("path")
             .attr("class", "line")
-            .attr("d", d => lineFunctions.get(d.id)(d.values));
+            .attr("d", d => lineFunctions.get(d.id)(this.applyFill(d.values)));
 
-        if (this.opts.fill) {
+        if (this.opts.fillArea) {
             enteringSerie
                 .append("path")
                 .attr("class", "fill")
-                .attr("d", d => lineFunctions.get(d.id)(lineChart.closedPath(d.values)));
+                .attr("d", d => lineFunctions.get(d.id)(lineChart.closedPath(this.applyFill(d.values))));
         }
         
         series
             .select(".line")
-            .attr("d", d => lineFunctions.get(d.id)(d.values));
+            .attr("d", d => lineFunctions.get(d.id)(this.applyFill(d.values)));
 
-        if (this.opts.fill) {
+        if (this.opts.fillArea) {
             series
                 .select(".fill")
-                .attr("d", d => lineFunctions.get(d.id)(lineChart.closedPath(d.values)));
+                .attr("d", d => lineFunctions.get(d.id)(lineChart.closedPath(this.applyFill(d.values))));
         }
+    }
+    
+    private applyFill(items: chartItemData[]) {
+        if (!this.opts.fillData) {
+            return items;
+        }
+
+        if (!items || items.length === 0) {
+            return items;
+        }
+        
+        const lastItem = items[items.length - 1];
+        
+        // fill up to max value with last seen value
+        return [...items, {
+            x: this.maxDate,
+            y: lastItem.y
+        }];
     }
     
     private static closedPath(input: chartItemData[]): chartItemData[] {

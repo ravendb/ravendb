@@ -6,12 +6,19 @@ import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 abstract class widget<TData, TConfig = void> {
     static nextWidgetId = 1;
     
+    static resizeAnimationDuration = 300;
+    
     private initialized: boolean = false;
 
     controller: clusterDashboard;
     container: Element;
-
+    
     fullscreen = ko.observable<boolean>(false);
+
+    syncUpdatesEnabled = false;
+    firstSyncUpdateTaskId: number = -1;
+    syncUpdateTaskId: number = -1;
+    pendingUpdates = [] as Array<() => void>;
     
     configuredFor = ko.observableArray<clusterDashboardWebSocketClient>([]);
 
@@ -26,6 +33,22 @@ abstract class widget<TData, TConfig = void> {
         });
     }
     
+    scheduleSyncUpdate(action: () => void) {
+        if (!this.syncUpdatesEnabled) {
+            throw new Error("Sync updates wasn't enabled for this widget");
+        }
+        this.pendingUpdates.push(action);
+    }
+    
+    protected enableSyncUpdates() {
+        // align first execution to second
+        const firstInvocationIn = new Date().getTime() % 1000;
+        this.firstSyncUpdateTaskId = setTimeout(() => {
+            this.syncUpdateTaskId = setInterval(() => this.syncUpdate(), 1000);
+        }, firstInvocationIn);
+        this.syncUpdatesEnabled = true;
+    }
+    
     attached(view: Element, container: Element) {
         this.container = container;
     }
@@ -33,6 +56,10 @@ abstract class widget<TData, TConfig = void> {
     compositionComplete() {
         this.initialized = true;
         this.controller.onWidgetReady(this);
+
+        this.fullscreen.subscribe(
+            () => setTimeout(
+                () => this.afterComponentResized(), widget.resizeAnimationDuration));
     }
 
     abstract getType(): Raven.Server.ClusterDashboard.WidgetType;
@@ -51,6 +78,21 @@ abstract class widget<TData, TConfig = void> {
     
     remove() {
         this.controller.deleteWidget(this);
+    }
+    
+    private syncUpdate() {
+        const updatesCount = this.pendingUpdates.length;
+        this.pendingUpdates.forEach(action => action());
+        this.pendingUpdates = [];
+        this.afterSyncUpdate(updatesCount);
+    }
+    
+    protected afterSyncUpdate(updatesCount: number) {
+        // empty by default
+    }
+    
+    protected afterComponentResized() {
+        // empty by default
     }
     
     onClientConnected(ws: clusterDashboardWebSocketClient) {
@@ -90,6 +132,16 @@ abstract class widget<TData, TConfig = void> {
     abstract onData(nodeTag: string, data: TData): void;
     
     dispose() {
+        if (this.syncUpdateTaskId > 0) {
+            clearInterval(this.syncUpdateTaskId);
+            this.syncUpdateTaskId = -1;
+        }
+        
+        if (this.firstSyncUpdateTaskId > 0) {
+            clearTimeout(this.firstSyncUpdateTaskId);
+            this.firstSyncUpdateTaskId = -1;
+        }
+        
         for (const ws of this.configuredFor()) {
             ws.sendCommand({
                 Command: "unwatch",

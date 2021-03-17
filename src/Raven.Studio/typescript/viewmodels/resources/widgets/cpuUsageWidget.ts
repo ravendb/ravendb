@@ -7,6 +7,8 @@ class perNodeCpuStats {
     readonly tag: string;
     loading = ko.observable<boolean>(true);
     disconnected = ko.observable<boolean>(false);
+    
+    hasData = ko.observable<boolean>(false);
 
     machineCpuUsage = ko.observable<number>();
     processCpuUsage = ko.observable<number>();
@@ -28,6 +30,8 @@ class perNodeCpuStats {
     }
     
     update(data: Raven.Server.ClusterDashboard.Widgets.CpuUsagePayload) {
+        this.hasData(true);
+        
         this.machineCpuUsage(data.MachineCpuUsage);
         this.processCpuUsage(data.ProcessCpuUsage);
 
@@ -58,6 +62,7 @@ class cpuUsageWidget extends widget<Raven.Server.ClusterDashboard.Widgets.CpuUsa
     
     compositionComplete() {
         super.compositionComplete();
+        this.enableSyncUpdates();
         
         this.initCharts();
     }
@@ -75,31 +80,38 @@ class cpuUsageWidget extends widget<Raven.Server.ClusterDashboard.Widgets.CpuUsa
             yMaxProvider: () => 100,
             topPaddingProvider: () => 2
         });
-
-        this.fullscreen.subscribe(() => {
-            //TODO: throttle + wait for animation to complete?
-            setTimeout(() => {
-                this.ravenChart.onResize();
-                this.serverChart.onResize();
-            }, 500);
-        });
     }
     
     onData(nodeTag: string, data: Raven.Server.ClusterDashboard.Widgets.CpuUsagePayload) {
-        this.withStats(nodeTag, x => x.update(data));
+        this.scheduleSyncUpdate(() => this.withStats(nodeTag, x => x.update(data)));
 
         const date = moment.utc(data.Time).toDate();
         const key = "node-" + nodeTag.toLocaleLowerCase();
+        
+        this.scheduleSyncUpdate(() => {
+            this.ravenChart.onData(date, [{
+                key,
+                value: data.ProcessCpuUsage
+            }]);
 
-        this.ravenChart.onData(date, [{
-            key,
-            value: data.ProcessCpuUsage
-        }]);
+            this.serverChart.onData(date, [{
+                key,
+                value: data.MachineCpuUsage
+            }]);
+        });
+    }
 
-        this.serverChart.onData(date, [{
-            key,
-            value: data.MachineCpuUsage
-        }])
+    protected afterSyncUpdate(updatesCount: number) {
+        this.ravenChart.draw();
+        this.serverChart.draw();
+    }
+
+    protected afterComponentResized() {
+        this.ravenChart.onResize();
+        this.serverChart.onResize();
+
+        this.ravenChart.draw();
+        this.serverChart.draw();
     }
 
     onClientConnected(ws: clusterDashboardWebSocketClient) {

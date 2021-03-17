@@ -133,6 +133,7 @@ class memoryUsageWidget extends widget<MemoryWidgetPayload> {
         super.compositionComplete();
         
         this.initCharts();
+        this.enableSyncUpdates();
     }
 
     initTooltip() {
@@ -142,37 +143,46 @@ class memoryUsageWidget extends widget<MemoryWidgetPayload> {
     private initCharts() {
         const ravenChartContainer = this.container.querySelector(".ravendb-line-chart");
         this.ravenChart = new lineChart(ravenChartContainer, {
-            grid: true
+            grid: true,
+            fillData: true
         });
         const serverChartContainer = this.container.querySelector(".machine-line-chart");
         this.serverChart = new lineChart(serverChartContainer, {
-            grid: true
-        });
-        
-        this.fullscreen.subscribe(() => {
-            //TODO: throttle + wait for animation to complete?
-            setTimeout(() => {
-                this.ravenChart.onResize();
-                this.serverChart.onResize();
-            }, 500);
+            grid: true, 
+            fillData: true
         });
     }
 
     onData(nodeTag: string, data: MemoryWidgetPayload) {
-        this.withStats(nodeTag, x => x.update(data));
+        this.scheduleSyncUpdate(() => this.withStats(nodeTag, x => x.update(data)));
         
         const date = moment.utc(data.Time).toDate();
         const key = "node-" + nodeTag.toLocaleLowerCase();
         
-        this.ravenChart.onData(date, [{
-            key,
-            value: data.WorkingSet
-        }]);
+        this.scheduleSyncUpdate(() => {
+            this.ravenChart.onData(date, [{
+                key,
+                value: data.WorkingSet
+            }]);
+
+            this.serverChart.onData(date, [{
+                key,
+                value: data.PhysicalMemory - data.AvailableMemory
+            }]);
+        });
+    }
+
+    protected afterSyncUpdate(updatesCount: number) {
+        this.serverChart.draw();
+        this.ravenChart.draw();
+    }
+
+    protected afterComponentResized() {
+        this.ravenChart.onResize();
+        this.serverChart.onResize();
         
-        this.serverChart.onData(date, [{
-            key,
-            value: data.PhysicalMemory - data.AvailableMemory
-        }])
+        this.ravenChart.draw();
+        this.serverChart.draw();
     }
 
     onClientConnected(ws: clusterDashboardWebSocketClient) {
