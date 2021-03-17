@@ -30,23 +30,38 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
             Type objectType = value.GetType();
             if (_cache.TryGetValue(objectType, out var converter))
             {
+                if (converter == null)
+                    ThrowConverterIsNullException(objectType);
+
                 converter.WriteJson(writer, value, serializer);
                 return;
             }
+
             // can happen if the cache was replaced by another copy without the right converter
             // this can happen if we lost the race, UpdateCache return the right converter, so no issue here
-            UpdateCache(objectType).WriteJson(writer, value, serializer);
+            converter = UpdateCache(objectType);
+            if (converter == null)
+                ThrowConverterIsNullException(objectType);
+            converter.WriteJson(writer, value, serializer);
         }
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             if (_cache.TryGetValue(objectType, out var converter))
             {
+                if (converter == null)
+                    ThrowConverterIsNullException(objectType);
+
                 return converter.ReadJson(reader, objectType, existingValue, serializer);
             }
+
             // can happen if the cache was replaced by another copy without the right converter
             // this can happen if we lost the race, UpdateCache return the right converter, so no issue here
-            return UpdateCache(objectType).ReadJson(reader, objectType, existingValue, serializer);
+            converter = UpdateCache(objectType);
+            if (converter == null)
+                ThrowConverterIsNullException(objectType);
+
+            return converter.ReadJson(reader, objectType, existingValue, serializer);
         }
 
         public override bool CanConvert(Type objectType)
@@ -67,6 +82,11 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
             }
             _cache = new Dictionary<Type, JsonConverter>(_cache) { [objectType] = null };
             return null;
+        }
+        
+        private void ThrowConverterIsNullException(Type objectType)
+        {
+            throw new InvalidOperationException($"Could not find the right converter from cache for '{objectType.FullName}'.");
         }
     }
 }

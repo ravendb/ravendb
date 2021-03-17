@@ -120,7 +120,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
         {
             if (objectType.IsGenericType == false)
                 return false;
-            if (objectType.GetGenericTypeDefinition() != typeof(Dictionary<,>))
+            if (objectType.GetGenericTypeDefinition() != typeof(Dictionary<,>) && objectType.GetGenericTypeDefinition() != typeof(IDictionary<,>))
                 return false;
 
             var keyType = objectType.GetGenericArguments()[0];
