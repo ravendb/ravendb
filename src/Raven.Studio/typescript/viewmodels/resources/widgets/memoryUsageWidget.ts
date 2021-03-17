@@ -98,7 +98,12 @@ class perNodeMemoryStats {
     }
 }
 
-class memoryUsageWidget extends widget<MemoryWidgetPayload> {
+interface memoryUsageState {
+    showProcessDetails: boolean;
+    showMachineDetails: boolean;
+}
+
+class memoryUsageWidget extends widget<MemoryWidgetPayload, void, memoryUsageState> {
 
     showProcessDetails = ko.observable<boolean>(false);
     showMachineDetails = ko.observable<boolean>(false);
@@ -108,8 +113,8 @@ class memoryUsageWidget extends widget<MemoryWidgetPayload> {
     
     nodeStats = ko.observableArray<perNodeMemoryStats>([]);
     
-    constructor(controller: clusterDashboard) {
-        super(controller);
+    constructor(controller: clusterDashboard, state: memoryUsageState = undefined) {
+        super(controller, undefined, state);
         
         _.bindAll(this, "toggleProcessDetails", "toggleMachineDetails");
 
@@ -123,7 +128,19 @@ class memoryUsageWidget extends widget<MemoryWidgetPayload> {
         return "MemoryUsage";
     }
     
-    attached(view: Element, container: Element) {
+    getState(): memoryUsageState {
+        return {
+            showMachineDetails: this.showMachineDetails(),
+            showProcessDetails: this.showProcessDetails()
+        }
+    }
+
+    restoreState(state: memoryUsageState) {
+        this.showProcessDetails(state.showProcessDetails);
+        this.showMachineDetails(state.showMachineDetails);
+    }
+
+    attached(view: Element, container: HTMLElement) {
         super.attached(view, container);
         
         this.initTooltip();

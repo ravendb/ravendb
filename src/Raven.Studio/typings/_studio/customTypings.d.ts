@@ -179,6 +179,8 @@ class PackeryStatic {
 
     bindDraggabillyEvents(events: any): void;
 
+    reloadItems(): void;
+
     appended(elements: Element[] | Element): void;
     
     remove(elements: Element[] | Element): void;

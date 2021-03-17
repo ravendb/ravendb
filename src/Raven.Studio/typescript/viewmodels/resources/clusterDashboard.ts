@@ -10,13 +10,22 @@ import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import debugWidget = require("viewmodels/resources/widgets/debugWidget");
 import clusterNode = require("models/database/cluster/clusterNode");
 
+interface savedWidget {
+    type: Raven.Server.ClusterDashboard.WidgetType;
+    left: string;
+    top: string;
+    fullscreen: boolean;
+    config: any;
+    state: any;
+}
+
 class clusterDashboard extends viewModelBase {
     
     private packery: PackeryStatic;
     
     readonly currentServerNodeTag: string;
     
-    widgets = ko.observableArray([]);
+    widgets = ko.observableArray<widget<any>>([]);
     
     nodes: KnockoutComputed<clusterNode[]>;
     
@@ -48,15 +57,18 @@ class clusterDashboard extends viewModelBase {
         });
         
         const throttledLayout = _.debounce(() => {
-            //TODO: 
-            console.log("About to persist layout", this.packery.getItemElements().map(x => {
+            const layout: savedWidget[] = this.widgets().map(x => {
                 return {
-                    left: x.style.left,
-                    top: x.style.top,
-                    widgetId: x.getAttribute("data-widget-id"),
-                    fullscreen: x.classList.contains("fullscreen")
+                    type: x.getType(),
+                    left: x.container.style.left,
+                    top: x.container.style.top,
+                    fullscreen: x.fullscreen(),
+                    config: x.getConfiguration(),
+                    state: x.getState()
                 }
-            }));
+            });
+            
+            localStorage.setObject("cluster-dashboard-layout", layout);
         }, 5_000);
         
         this.packery.on("layoutComplete", throttledLayout);
@@ -66,15 +78,34 @@ class clusterDashboard extends viewModelBase {
         super.compositionComplete();
         //TODO: what if cluster is not bootstraped?
 
+        
+        //todo on menu resize
         this.initPackery();
 
         this.enableLiveView();
         
-        // TODO: this is default list!
-        this.addWidget(new cpuUsageWidget(this));
-        this.addWidget(new memoryUsageWidget(this));
-        this.addWidget(new licenseWidget(this));
-        this.addWidget(new debugWidget(this));
+        const savedLayout: savedWidget[] = localStorage.getObject("cluster-dashboard-layout");
+        if (savedLayout) {
+            const sortedWidgets = _.sortBy(savedLayout, x => parseFloat(x.top), x => parseFloat(x.left));
+            
+            for (const item of sortedWidgets) {
+                this.spawnWidget(item.type, item.fullscreen, item.config, item.state);
+            }
+        } else {
+            // TODO: this is default list!
+            this.addWidget(new cpuUsageWidget(this));
+            this.addWidget(new memoryUsageWidget(this));
+            this.addWidget(new licenseWidget(this));
+            this.addWidget(new debugWidget(this));
+        }
+    }
+    
+    printElementsInfo(extra: string) {
+        const items = this.packery.getItemElements();
+        
+        console.log(extra, items.map(x => {
+            return $(x).attr("data-widget-id") + " => " + $(x).outerHeight();
+        }).join(", "));
     }
     
     private enableLiveView() {
@@ -154,7 +185,10 @@ class clusterDashboard extends viewModelBase {
         const draggie = new Draggabilly(widget.container);
         this.packery.bindDraggabillyEvents(draggie);
         
-        this.layout(false);
+        //TODO: with set timeout?
+        setTimeout(() => {
+            this.layout(false);    
+        }, 100);
     }
  
     private onData(nodeTag: string, msg: Raven.Server.ClusterDashboard.WidgetMessage) {
@@ -170,7 +204,7 @@ class clusterDashboard extends viewModelBase {
         app.showBootstrapDialog(addWidgetView);
     }
     
-    spawnWidget(type: Raven.Server.ClusterDashboard.WidgetType) {
+    spawnWidget(type: Raven.Server.ClusterDashboard.WidgetType, fullscreen: boolean = false, config: any = undefined, state: any = undefined) {
         let widget: widget<any>;
         
         switch (type) {
@@ -183,8 +217,20 @@ class clusterDashboard extends viewModelBase {
             case "MemoryUsage":
                 widget = new memoryUsageWidget(this);
                 break;
+            case "Debug":
+                widget = new debugWidget(this);
+                break;
             default:
                 throw new Error("Unsupported widget type = " + type);
+        }
+        
+        widget.fullscreen(fullscreen);
+        
+        if (config) {
+            widget.restoreConfiguration(config);
+        }
+        if (state) {
+            widget.restoreState(state);
         }
         
         this.addWidget(widget);

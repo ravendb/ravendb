@@ -20,7 +20,7 @@ namespace Raven.Server.NotificationCenter.Handlers
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ClusterDashboardHandler>("Server");
 
-        [RavenAction("/cluster-dashboard/watch", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/cluster-dashboard/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true, DisableOnCpuCreditsExhaustion = true)]
         public async Task Get()
         {
             //TODO: access control

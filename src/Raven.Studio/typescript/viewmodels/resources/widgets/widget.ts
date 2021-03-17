@@ -3,7 +3,7 @@
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 
-abstract class widget<TData, TConfig = void> {
+abstract class widget<TData, TConfig = unknown, TState = unknown> {
     static nextWidgetId = 1;
     
     static resizeAnimationDuration = 300;
@@ -11,7 +11,7 @@ abstract class widget<TData, TConfig = void> {
     private initialized: boolean = false;
 
     controller: clusterDashboard;
-    container: Element;
+    container: HTMLElement;
     
     fullscreen = ko.observable<boolean>(false);
 
@@ -24,7 +24,7 @@ abstract class widget<TData, TConfig = void> {
 
     id: number;
 
-    constructor(controller: clusterDashboard) {
+    constructor(controller: clusterDashboard, config: TConfig = undefined, state: TState = undefined) {
         this.id = widget.nextWidgetId++;
         this.controller = controller;
         
@@ -49,7 +49,7 @@ abstract class widget<TData, TConfig = void> {
         this.syncUpdatesEnabled = true;
     }
     
-    attached(view: Element, container: Element) {
+    attached(view: Element, container: HTMLElement) {
         this.container = container;
     }
 
@@ -65,6 +65,10 @@ abstract class widget<TData, TConfig = void> {
     abstract getType(): Raven.Server.ClusterDashboard.WidgetType;
     
     getConfiguration(): TConfig {
+        return undefined;
+    }
+    
+    getState(): TState {
         return undefined;
     }
     
@@ -92,6 +96,14 @@ abstract class widget<TData, TConfig = void> {
     }
     
     protected afterComponentResized() {
+        // empty by default
+    }
+    
+    restoreState(state: TState) {
+        // empty by default
+    }
+    
+    restoreConfiguration(config: TConfig) {
         // empty by default
     }
     
