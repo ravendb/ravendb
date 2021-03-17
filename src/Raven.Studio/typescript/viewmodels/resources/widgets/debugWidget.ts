@@ -3,7 +3,7 @@ import widget = require("viewmodels/resources/widgets/widget");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 
 class debugWidget extends widget<any> {
-    
+
     log = ko.observableArray<string>();
 
     getType(): Raven.Server.ClusterDashboard.WidgetType {

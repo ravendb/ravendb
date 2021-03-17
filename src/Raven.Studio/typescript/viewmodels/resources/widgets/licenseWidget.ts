@@ -3,6 +3,7 @@ import widget = require("viewmodels/resources/widgets/widget");
 //TODO: avoid any
 class licenseWidget extends widget<any> {
 
+
     getType(): Raven.Server.ClusterDashboard.WidgetType {
         return "License";
     }
