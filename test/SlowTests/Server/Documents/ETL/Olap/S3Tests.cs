@@ -541,10 +541,13 @@ loadToOrders(key,
             if (s3Settings == null)
                 return null;
 
-            var remoteFolderName = $"{s3Settings.RemoteFolderName}/{S3TestsPrefix}";
-
+            var remoteFolderName = S3TestsPrefix;
             if (string.IsNullOrEmpty(caller) == false)
                 remoteFolderName = $"{remoteFolderName}/{caller}";
+
+            if (string.IsNullOrEmpty(s3Settings.RemoteFolderName) == false)
+                remoteFolderName = $"{s3Settings.RemoteFolderName}/{remoteFolderName}";
+
 
             return new S3Settings
             {

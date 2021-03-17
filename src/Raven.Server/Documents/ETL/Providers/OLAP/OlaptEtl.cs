@@ -20,7 +20,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    public class OlaptEtl : EtlProcess<ToOlapItem, OlapTransformedItems, OlapEtlConfiguration, OlapConnectionString>
+    public class OlapEtl : EtlProcess<ToOlapItem, OlapTransformedItems, OlapEtlConfiguration, OlapConnectionString>
     {
         public const string OlaptEtlTag = "OLAP ETL";
 
@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private const long MinTimeToWait = 1000;
         private readonly S3Settings _s3Settings;
 
-        public OlaptEtl(Transformation transformation, OlapEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
+        public OlapEtl(Transformation transformation, OlapEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, OlaptEtlTag)
         {
             Metrics = OlapMetrics;
