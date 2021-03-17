@@ -66,6 +66,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(SetupMode.None)]
         [ConfigurationEntry("Setup.Mode", ConfigurationEntryScope.ServerWideOnly)]
         public SetupMode SetupMode { get; set; }
+        
+        [Description("Determines where to save the initial server certificate during setup.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Setup.Certificate.Path", ConfigurationEntryScope.ServerWideOnly)]
+        public string SetupResultingServerCertificatePath { get; set; }
 
         [Description("The URLs which the server should contact when requesting certificates with the ACME protocol.")]
         [DefaultValue("https://acme-v02.api.letsencrypt.org/directory")]
