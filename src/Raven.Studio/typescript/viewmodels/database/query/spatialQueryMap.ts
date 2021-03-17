@@ -83,7 +83,7 @@ class spatialQueryMap extends viewModelBase {
         })
         
         const polyArray = this.polygonsLayer().map((poly, index) => L.polygon(poly.vertices,
-            { color: spatialPolygonModel.colors[index % spatialPolygonModel.colors.length] }));
+            { color: spatialPolygonModel.colors[index % spatialPolygonModel.colors.length], fillOpacity: 0.2 }));
 
         const circleArray = this.circlesLayer().map((circle, index) => L.circle([circle.latitude, circle.longitude],
             { color: spatialCircleModel.colors[index % spatialCircleModel.colors.length], fillOpacity: 0.2, radius: circle.radius }));
