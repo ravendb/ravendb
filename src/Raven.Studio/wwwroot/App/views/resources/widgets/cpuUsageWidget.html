@@ -15,10 +15,10 @@
             <div class="flex-horizontal">
                 <div class="nodes-container" data-bind="foreach: nodeStats">
                     <div class="nodes-item">
-                        <div class="nodes-item-header">
+                        <div class="nodes-item-header" data-bind="css: { 'loading': loading, 'disconnected': disconnected }">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
-                                <span data-bind="text: processCpuUsage() + '%'"></span>
+                                <span data-bind="text: processCpuUsageFormatted"></span>
                                 <span class="supplementary-info" data-bind="text: coresInfo"></span>
                             </div>
                         </div>
@@ -38,10 +38,10 @@
             <div class="flex-horizontal">
                 <div class="nodes-container" data-bind="foreach: nodeStats">
                     <div class="nodes-item">
-                        <div class="nodes-item-header">
+                        <div class="nodes-item-header" data-bind="css: { 'loading': loading, 'disconnected': disconnected }">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
-                                <span data-bind="text: machineCpuUsage() + '%'"></span>
+                                <span data-bind="text: machineCpuUsageFormatted"></span>
                                 <span class="supplementary-info" data-bind="text: coresInfo"></span>
                             </div>
                         </div>

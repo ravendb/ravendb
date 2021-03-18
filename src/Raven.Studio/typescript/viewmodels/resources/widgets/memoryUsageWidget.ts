@@ -9,7 +9,9 @@ type MemoryWidgetPayload = Raven.Server.ClusterDashboard.Widgets.MemoryUsagePayl
 class perNodeMemoryStats {
     readonly tag: string;
     loading = ko.observable<boolean>(true);
-    disconnected = ko.observable<boolean>(false);
+    disconnected = ko.observable<boolean>(true);
+
+    hasData = ko.observable<boolean>(false);
     
     availableMemory = ko.observable<number>();
     lowMemorySeverity = ko.observable<Sparrow.LowMemory.LowMemorySeverity>();
@@ -75,6 +77,7 @@ class perNodeMemoryStats {
     }
     
     update(data: MemoryWidgetPayload) {
+        this.hasData(true);
         this.availableMemory(data.AvailableMemory);
         this.lowMemorySeverity(data.LowMemorySeverity);
         this.physicalMemory(data.PhysicalMemory);
@@ -92,6 +95,10 @@ class perNodeMemoryStats {
     
     valueAndUnitFormatter(value: KnockoutObservable<number>): KnockoutComputed<[string, string]> {
         return ko.pureComputed(() => {
+            if (this.loading() || this.disconnected() || !this.hasData()) {
+                return ["Connecting...", "-"];
+            }
+            
             const formatted = generalUtils.formatBytesToSize(value());
             return formatted.split(" ", 2) as [string, string];
         });
@@ -208,7 +215,7 @@ class memoryUsageWidget extends widget<MemoryWidgetPayload, void, memoryUsageSta
         //TODO: send info to line chart!
 
         this.withStats(ws.nodeTag, x => {
-            x.loading(true);
+            x.loading(false);
             x.disconnected(false);
         });
     }

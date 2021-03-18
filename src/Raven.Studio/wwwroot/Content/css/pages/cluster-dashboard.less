@@ -246,7 +246,9 @@
                 padding: @gutter-xs/2 @gutter-sm/2;
                 flex-grow: 1;
 
-
+                .disconnected {
+                    opacity: 0.4;
+                }
 
                 .nodes-item {
                     transition: transform .3s cubic-bezier(0, 2, 0.5, 1);
@@ -255,7 +257,7 @@
                     flex-grow: 1;
                     color: @text-muted;
                     width: 20%;
-
+                    
                     .nodes-item-header {
                         display: flex;
                         align-items: center;
