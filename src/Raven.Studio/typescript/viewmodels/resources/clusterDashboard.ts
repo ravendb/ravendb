@@ -183,7 +183,9 @@ class clusterDashboard extends viewModelBase {
     private layoutNewWidget(widget: widget<any, any>) {
         this.packery.appended([widget.container]);
 
-        const draggie = new Draggabilly(widget.container);
+        const draggie = new Draggabilly(widget.container, {
+            handle: ".cluster-dashboard-item-header"
+        });
         this.packery.bindDraggabillyEvents(draggie);
         
         //TODO: with set timeout?
