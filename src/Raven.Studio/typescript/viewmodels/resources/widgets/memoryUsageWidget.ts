@@ -1,4 +1,4 @@
-import widget = require("viewmodels/resources/widgets/widget");
+import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBasedWidget");
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 import generalUtils = require("common/generalUtils");
@@ -109,7 +109,7 @@ interface memoryUsageState {
     showMachineDetails: boolean;
 }
 
-class memoryUsageWidget extends widget<MemoryWidgetPayload, void, memoryUsageState> {
+class memoryUsageWidget extends websocketBasedWidget<MemoryWidgetPayload, void, memoryUsageState> {
 
     showProcessDetails = ko.observable<boolean>(false);
     showMachineDetails = ko.observable<boolean>(false);
@@ -154,6 +154,10 @@ class memoryUsageWidget extends widget<MemoryWidgetPayload, void, memoryUsageSta
     
     compositionComplete() {
         super.compositionComplete();
+
+        for (let ws of this.controller.getConnectedLiveClients()) {
+            this.onClientConnected(ws);
+        }
         
         this.initCharts();
         this.enableSyncUpdates();
@@ -196,8 +200,10 @@ class memoryUsageWidget extends widget<MemoryWidgetPayload, void, memoryUsageSta
     }
 
     protected afterSyncUpdate(updatesCount: number) {
-        this.serverChart.draw();
-        this.ravenChart.draw();
+        if (updatesCount) {
+            this.serverChart.draw();
+            this.ravenChart.draw();
+        }
     }
 
     protected afterComponentResized() {

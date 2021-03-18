@@ -1,5 +1,5 @@
 import generalUtils = require("common/generalUtils");
-import widget = require("viewmodels/resources/widgets/widget");
+import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBasedWidget");
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 
@@ -102,7 +102,7 @@ class perNodeStorageStats {
     }
 }
 
-class storageWidget extends widget<Raven.Server.ClusterDashboard.Widgets.StoragePayload> {
+class storageWidget extends websocketBasedWidget<Raven.Server.ClusterDashboard.Widgets.StoragePayload> {
     nodeStats = ko.observableArray<perNodeStorageStats>([]);
 
     sizeFormatter = generalUtils.formatBytesToSize;
@@ -166,6 +166,10 @@ class storageWidget extends widget<Raven.Server.ClusterDashboard.Widgets.Storage
     compositionComplete() {
         super.compositionComplete();
         this.enableSyncUpdates();
+
+        for (let ws of this.controller.getConnectedLiveClients()) {
+            this.onClientConnected(ws);
+        }
         
         this.initTooltips();
     }
