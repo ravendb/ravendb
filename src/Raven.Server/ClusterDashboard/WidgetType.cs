@@ -12,6 +12,7 @@ namespace Raven.Server.ClusterDashboard
         Debug, // TODO: fake widget used for debugging studio
         CpuUsage,
         License,
+        Storage, 
         MemoryUsage,
         Traffic,
     }

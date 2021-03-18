@@ -310,6 +310,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(WidgetMessage));
             scripter.AddType(typeof(CpuUsagePayload));
             scripter.AddType(typeof(MemoryUsagePayload));
+            scripter.AddType(typeof(StoragePayload));
 
             // expiration
             scripter.AddType(typeof(ExpirationConfiguration));

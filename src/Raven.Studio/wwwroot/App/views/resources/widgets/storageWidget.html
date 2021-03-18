@@ -1,0 +1,87 @@
+<div>
+    <div class="cluster-dashboard-item-header">
+        <h3> <i class="icon-storage"></i> <span>Storage</span></h3>
+        <button class="btn btn-warning btn-sm" data-bind="click: remove">
+            <i class="icon-trash"></i>
+        </button>
+        <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
+            <i class="icon-fullscreen"></i>
+        </button>
+    </div>
+
+    <div class="property-container" id="storageStats">
+        <div class="property">
+            <div class="flex-horizontal">
+
+                <div class="nodes-container nodes-storage">
+                    <div class="nodes-item">
+                        <div class="nodes-item-header">
+                            <div class="node-label">A</div>
+                        </div>
+                        <div class="details-list">
+                            <div class="mount">/data</div>
+                            <div class="storage-legend">
+                                <div class="storage-ravendb" data-toggle="tooltip" data-placement="top" title="RavenDB">1GB</div>
+                                <div class="storage-used" data-toggle="tooltip" data-placement="top" title="Storage Used">2GB</div>
+                                <div class="storage-free" data-toggle="tooltip" data-placement="top" title="Free">77GB</div>
+                                <div class="flex-grow"></div>
+                                <div class="storage-total" data-toggle="tooltip" data-placement="top" title="Storage Available">80GB</div>
+                            </div>
+                            <div class="storage-chart">
+
+                                <div class="storage-used" style="width: 15%">
+                                    <div class="storage-ravendb" style="width: 45%" ></div>
+                                </div>
+                                <div class="storage-free">
+                                </div>
+                            </div>
+                            <div class="mount">/other</div>
+                            <div class="storage-legend">
+                                <div class="storage-ravendb" data-toggle="tooltip" data-placement="top" title="RavenDB">1GB</div>
+                                <div class="storage-used" data-toggle="tooltip" data-placement="top" title="Storage Used">2GB</div>
+                                <div class="storage-free" data-toggle="tooltip" data-placement="top" title="Free">77GB</div>
+                                <div class="flex-grow"></div>
+                                <div class="storage-total" data-toggle="tooltip" data-placement="top" title="Storage Available">80GB</div>
+                            </div>
+                            <div class="storage-chart">
+
+                                <div class="storage-used" style="width: 15%">
+                                    <div class="storage-ravendb" style="width: 45%" ></div>
+                                </div>
+                                <div class="storage-free">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nodes-item">
+                        <div class="nodes-item-header">
+                            <div class="node-label">B</div>
+                        </div>
+                        <div class="details-list">
+                            <div class="storage-legend">
+                                <div class="storage-ravendb" data-toggle="tooltip" data-placement="top" title="RavenDB">1GB</div>
+                                <div class="storage-used" data-toggle="tooltip" data-placement="top" title="Storage Used">2GB</div>
+                                <div class="storage-free" data-toggle="tooltip" data-placement="top" title="Free">77GB</div>
+                                <div class="flex-grow"></div>
+                                <div class="storage-total" data-toggle="tooltip" data-placement="top" title="Storage Available">80GB</div>
+                            </div>
+                            <div class="storage-chart">
+
+                                <div class="storage-used" style="width: 15%">
+                                    <div class="storage-ravendb" style="width: 45%" ></div>
+                                </div>
+                                <div class="storage-free">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="legend">
+            <div class="ravendb"></div>
+            <div class="used"></div>
+        </div>
+    </div>
+</div>
