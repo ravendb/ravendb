@@ -8,7 +8,6 @@ type MemoryWidgetPayload = Raven.Server.ClusterDashboard.Widgets.MemoryUsagePayl
 
 class perNodeMemoryStats {
     readonly tag: string;
-    loading = ko.observable<boolean>(true);
     disconnected = ko.observable<boolean>(true);
 
     hasData = ko.observable<boolean>(false);
@@ -95,7 +94,7 @@ class perNodeMemoryStats {
     
     valueAndUnitFormatter(value: KnockoutObservable<number>): KnockoutComputed<[string, string]> {
         return ko.pureComputed(() => {
-            if (this.loading() || this.disconnected() || !this.hasData()) {
+            if (this.disconnected() || !this.hasData()) {
                 return ["Connecting...", "-"];
             }
             
@@ -214,10 +213,7 @@ class memoryUsageWidget extends widget<MemoryWidgetPayload, void, memoryUsageSta
         
         //TODO: send info to line chart!
 
-        this.withStats(ws.nodeTag, x => {
-            x.loading(false);
-            x.disconnected(false);
-        });
+        this.withStats(ws.nodeTag, x => x.disconnected(false));
     }
 
     onClientDisconnected(ws: clusterDashboardWebSocketClient) {
