@@ -198,6 +198,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         lastEtag = referencedItem.Etag;
                                         inMemoryStats.UpdateLastEtag(lastEtag, actionType == ActionType.Tombstone);
 
+                                        token.ThrowIfCancellationRequested();
+
                                         if (CanContinueReferenceBatch() == false)
                                             break;
 
