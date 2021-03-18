@@ -8,7 +8,7 @@ abstract class widget<TData, TConfig = unknown, TState = unknown> {
     
     static resizeAnimationDuration = 300;
     
-    private initialized: boolean = false;
+    protected initialized: boolean = false;
 
     controller: clusterDashboard;
     container: HTMLElement;
@@ -55,7 +55,7 @@ abstract class widget<TData, TConfig = unknown, TState = unknown> {
 
     compositionComplete() {
         this.initialized = true;
-        this.controller.onWidgetReady(this);
+        this.controller.onWidgetAdded(this);
 
         this.fullscreen.subscribe(
             () => setTimeout(
@@ -70,10 +70,6 @@ abstract class widget<TData, TConfig = unknown, TState = unknown> {
     
     getState(): TState {
         return undefined;
-    }
-    
-    supportedOnNode(targetNodeTag: string, currentServerNodeTag: string): boolean {
-        return true;
     }
     
     toggleFullscreen() {
@@ -107,42 +103,6 @@ abstract class widget<TData, TConfig = unknown, TState = unknown> {
         // empty by default
     }
     
-    onClientConnected(ws: clusterDashboardWebSocketClient) {
-        if (!this.initialized) {
-            // ignore calls when widget is not yet ready - we send command after compositionComplete
-            return;
-        }
-        
-        if (this.supportedOnNode(ws.nodeTag, this.controller.currentServerNodeTag)) {
-            const command = this.createWatchCommand();
-            if (command) {
-                ws.sendCommand(command);
-
-                this.configuredFor.push(ws);
-            }
-        }
-    }
-    
-    protected createWatchCommand() {
-        return {
-            Command: "watch",
-            Config: this.getConfiguration(),
-            Id: this.id,
-            Type: this.getType()
-        };
-    }
-    
-    onClientDisconnected(ws: clusterDashboardWebSocketClient) {
-        if (!this.initialized) {
-            // ignore calls when widget is not yet ready - we send command after compositionComplete
-            return;
-        }
-        
-        this.configuredFor.remove(ws);
-    }
-    
-    abstract onData(nodeTag: string, data: TData): void;
-    
     dispose() {
         if (this.syncUpdateTaskId > 0) {
             clearInterval(this.syncUpdateTaskId);
@@ -152,13 +112,6 @@ abstract class widget<TData, TConfig = unknown, TState = unknown> {
         if (this.firstSyncUpdateTaskId > 0) {
             clearTimeout(this.firstSyncUpdateTaskId);
             this.firstSyncUpdateTaskId = -1;
-        }
-        
-        for (const ws of this.configuredFor()) {
-            ws.sendCommand({
-                Command: "unwatch",
-                Id: this.id
-            } as Raven.Server.ClusterDashboard.WidgetRequest);
         }
     }
 }

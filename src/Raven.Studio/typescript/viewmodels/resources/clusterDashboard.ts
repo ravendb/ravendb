@@ -78,7 +78,6 @@ class clusterDashboard extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         //TODO: what if cluster is not bootstraped?
-
         
         //todo on menu resize
         this.initPackery();
@@ -169,18 +168,16 @@ class clusterDashboard extends viewModelBase {
             layoutAction();
         }
     }
-
-    onWidgetReady(widget: widget<any, any>) {
-        this.layoutNewWidget(widget);
-
-        for (const ws of this.liveClients()) {
-            if (ws.isConnected()) {
-                widget.onClientConnected(ws);
-            }
-        }
+    
+    getConnectedLiveClients() {
+        return this.liveClients().filter(x => x.isConnected());
     }
     
-    private layoutNewWidget(widget: widget<any, any>) {
+    getConnectedCurrentNodeLiveClient() {
+        return this.getConnectedLiveClients().find(x => x.nodeTag === this.currentServerNodeTag);
+    }
+    
+    onWidgetAdded(widget: widget<any, any>) {
         this.packery.appended([widget.container]);
 
         const draggie = new Draggabilly(widget.container, {
@@ -242,6 +239,5 @@ class clusterDashboard extends viewModelBase {
         this.addWidget(widget);
     }
 }
-
 
 export = clusterDashboard;

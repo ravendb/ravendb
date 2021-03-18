@@ -1,4 +1,4 @@
-import widget = require("viewmodels/resources/widgets/widget");
+import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBasedWidget");
 import lineChart = require("models/resources/clusterDashboard/lineChart");
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
@@ -55,7 +55,7 @@ class perNodeCpuStats {
     }
 }
 
-class cpuUsageWidget extends widget<Raven.Server.ClusterDashboard.Widgets.CpuUsagePayload> {
+class cpuUsageWidget extends websocketBasedWidget<Raven.Server.ClusterDashboard.Widgets.CpuUsagePayload> {
    
     ravenChart: lineChart;
     serverChart: lineChart;
@@ -78,6 +78,10 @@ class cpuUsageWidget extends widget<Raven.Server.ClusterDashboard.Widgets.CpuUsa
     compositionComplete() {
         super.compositionComplete();
         this.enableSyncUpdates();
+
+        for (let ws of this.controller.getConnectedLiveClients()) {
+            this.onClientConnected(ws);
+        }
         
         this.initCharts();
     }

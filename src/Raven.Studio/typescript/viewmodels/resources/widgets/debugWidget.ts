@@ -1,8 +1,7 @@
-
-import widget = require("viewmodels/resources/widgets/widget");
+import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBasedWidget");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 
-class debugWidget extends widget<any> {
+class debugWidget extends websocketBasedWidget<any> {
 
     log = ko.observableArray<string>();
 
