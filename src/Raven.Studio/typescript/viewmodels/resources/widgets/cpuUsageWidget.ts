@@ -6,26 +6,42 @@ import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSock
 class perNodeCpuStats {
     readonly tag: string;
     loading = ko.observable<boolean>(true);
-    disconnected = ko.observable<boolean>(false);
+    disconnected = ko.observable<boolean>(true);
     
     hasData = ko.observable<boolean>(false);
 
-    machineCpuUsage = ko.observable<number>();
-    processCpuUsage = ko.observable<number>();
+    machineCpuUsage = ko.observable<number>(0);
+    processCpuUsage = ko.observable<number>(0);
 
     numberOfCores = ko.observable<number>();
     utilizedCores = ko.observable<number>();
     
     coresInfo: KnockoutComputed<string>;
+    processCpuUsageFormatted: KnockoutComputed<string>;
+    machineCpuUsageFormatted: KnockoutComputed<string>;
     
     constructor(tag: string) {
         this.tag = tag;
         
         this.coresInfo = ko.pureComputed(() => {
-            if (!this.utilizedCores() && !this.numberOfCores()) {
-                return "";
+            if (this.loading() || this.disconnected() || !this.hasData()) {
+                return "-/- Cores";
             }
             return this.utilizedCores() + "/" + this.numberOfCores() + " Cores";
+        });
+        
+        this.processCpuUsageFormatted = ko.pureComputed(() => {
+            if (this.loading() || this.disconnected() || !this.hasData()) {
+                return "Connecting...";
+            }
+            return this.processCpuUsage() + "%";
+        });
+
+        this.machineCpuUsageFormatted = ko.pureComputed(() => {
+            if (this.loading() || this.disconnected() || !this.hasData()) {
+                return "Connecting...";
+            }
+            return this.machineCpuUsage() + "%";
         });
     }
     
@@ -120,7 +136,7 @@ class cpuUsageWidget extends widget<Raven.Server.ClusterDashboard.Widgets.CpuUsa
         //TODO: send info to line chart!
 
         this.withStats(ws.nodeTag, x => {
-            x.loading(true);
+            x.loading(false);
             x.disconnected(false);
         });
     }
