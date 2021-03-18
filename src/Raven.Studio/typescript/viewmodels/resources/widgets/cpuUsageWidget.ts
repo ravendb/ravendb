@@ -5,7 +5,6 @@ import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSock
 
 class perNodeCpuStats {
     readonly tag: string;
-    loading = ko.observable<boolean>(true);
     disconnected = ko.observable<boolean>(true);
     
     hasData = ko.observable<boolean>(false);
@@ -24,21 +23,21 @@ class perNodeCpuStats {
         this.tag = tag;
         
         this.coresInfo = ko.pureComputed(() => {
-            if (this.loading() || this.disconnected() || !this.hasData()) {
+            if (!this.hasData()) {
                 return "-/- Cores";
             }
             return this.utilizedCores() + "/" + this.numberOfCores() + " Cores";
         });
         
         this.processCpuUsageFormatted = ko.pureComputed(() => {
-            if (this.loading() || this.disconnected() || !this.hasData()) {
+            if (this.disconnected() || !this.hasData()) {
                 return "Connecting...";
             }
             return this.processCpuUsage() + "%";
         });
 
         this.machineCpuUsageFormatted = ko.pureComputed(() => {
-            if (this.loading() || this.disconnected() || !this.hasData()) {
+            if (this.disconnected() || !this.hasData()) {
                 return "Connecting...";
             }
             return this.machineCpuUsage() + "%";
@@ -135,10 +134,7 @@ class cpuUsageWidget extends widget<Raven.Server.ClusterDashboard.Widgets.CpuUsa
 
         //TODO: send info to line chart!
 
-        this.withStats(ws.nodeTag, x => {
-            x.loading(false);
-            x.disconnected(false);
-        });
+        this.withStats(ws.nodeTag, x => x.disconnected(false));
     }
 
     onClientDisconnected(ws: clusterDashboardWebSocketClient) {

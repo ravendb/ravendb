@@ -9,67 +9,32 @@
         </button>
     </div>
 
-    <div class="property-container" id="storageStats">
+    <div>TODO: THIS IS FAKE DATA!</div>
+    <div class="property-container">
         <div class="property">
             <div class="flex-horizontal">
-
-                <div class="nodes-container nodes-storage">
+                <div class="nodes-container nodes-storage" data-bind="foreach: nodeStats">
                     <div class="nodes-item">
                         <div class="nodes-item-header">
-                            <div class="node-label">A</div>
+                            <div class="node-label" data-bind="text: tag"></div>
                         </div>
-                        <div class="details-list">
-                            <div class="mount">/data</div>
+                        <div class="global-spinner spinner-sm" data-bind="visible: !hasData()"></div>
+                        <div class="details-list" data-bind="foreach: mountPoints">
+                            <div class="mount" data-bind="text: mountPointLabel, visible: $parent.mountPoints().length > 1"></div>
                             <div class="storage-legend">
-                                <div class="storage-ravendb" data-toggle="tooltip" data-placement="top" title="RavenDB">1GB</div>
-                                <div class="storage-used" data-toggle="tooltip" data-placement="top" title="Storage Used">2GB</div>
-                                <div class="storage-free" data-toggle="tooltip" data-placement="top" title="Free">77GB</div>
+                                <div class="storage-ravendb" data-toggle="tooltip" data-placement="top" title="RavenDB" 
+                                     data-bind="text: $root.sizeFormatter(ravenSize())"></div>
+                                <div class="storage-used" data-toggle="tooltip" data-placement="top" title="Storage Used"
+                                    data-bind="text: $root.sizeFormatter(usedSpace())"></div>
+                                <div class="storage-free" data-toggle="tooltip" data-placement="top" title="Free"
+                                    data-bind="text: $root.sizeFormatter(freeSpace())"></div>
                                 <div class="flex-grow"></div>
-                                <div class="storage-total" data-toggle="tooltip" data-placement="top" title="Storage Available">80GB</div>
+                                <div class="storage-total" data-toggle="tooltip" data-placement="top" title="Storage Available"
+                                    data-bind="text: $root.sizeFormatter(totalCapacity())"></div>
                             </div>
                             <div class="storage-chart">
-
-                                <div class="storage-used" style="width: 15%">
-                                    <div class="storage-ravendb" style="width: 45%" ></div>
-                                </div>
-                                <div class="storage-free">
-                                </div>
-                            </div>
-                            <div class="mount">/other</div>
-                            <div class="storage-legend">
-                                <div class="storage-ravendb" data-toggle="tooltip" data-placement="top" title="RavenDB">1GB</div>
-                                <div class="storage-used" data-toggle="tooltip" data-placement="top" title="Storage Used">2GB</div>
-                                <div class="storage-free" data-toggle="tooltip" data-placement="top" title="Free">77GB</div>
-                                <div class="flex-grow"></div>
-                                <div class="storage-total" data-toggle="tooltip" data-placement="top" title="Storage Available">80GB</div>
-                            </div>
-                            <div class="storage-chart">
-
-                                <div class="storage-used" style="width: 15%">
-                                    <div class="storage-ravendb" style="width: 45%" ></div>
-                                </div>
-                                <div class="storage-free">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="nodes-item">
-                        <div class="nodes-item-header">
-                            <div class="node-label">B</div>
-                        </div>
-                        <div class="details-list">
-                            <div class="storage-legend">
-                                <div class="storage-ravendb" data-toggle="tooltip" data-placement="top" title="RavenDB">1GB</div>
-                                <div class="storage-used" data-toggle="tooltip" data-placement="top" title="Storage Used">2GB</div>
-                                <div class="storage-free" data-toggle="tooltip" data-placement="top" title="Free">77GB</div>
-                                <div class="flex-grow"></div>
-                                <div class="storage-total" data-toggle="tooltip" data-placement="top" title="Storage Available">80GB</div>
-                            </div>
-                            <div class="storage-chart">
-
-                                <div class="storage-used" style="width: 15%">
-                                    <div class="storage-ravendb" style="width: 45%" ></div>
+                                <div class="storage-used" data-bind="style: { width: usedSpacePercentage() + '%' }">
+                                    <div class="storage-ravendb" data-bind="style: { width: ravendbToUsedSpacePercentage() + '%' }"></div>
                                 </div>
                                 <div class="storage-free">
                                 </div>
