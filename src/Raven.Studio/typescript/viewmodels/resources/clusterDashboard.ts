@@ -1,13 +1,14 @@
 import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
-import cpuUsageWidget = require("viewmodels/resources/widgets/cpuUsageWidget");
-import licenseWidget = require("viewmodels/resources/widgets/licenseWidget");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 import widget = require("viewmodels/resources/widgets/widget");
-import memoryUsageWidget = require("viewmodels/resources/widgets/memoryUsageWidget");
 import addWidgetModal = require("viewmodels/resources/addWidgetModal");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import memoryUsageWidget = require("viewmodels/resources/widgets/memoryUsageWidget");
 import debugWidget = require("viewmodels/resources/widgets/debugWidget");
+import cpuUsageWidget = require("viewmodels/resources/widgets/cpuUsageWidget");
+import licenseWidget = require("viewmodels/resources/widgets/licenseWidget");
+import storageWidget = require("viewmodels/resources/widgets/storageWidget");
 import clusterNode = require("models/database/cluster/clusterNode");
 
 interface savedWidget {
@@ -219,6 +220,9 @@ class clusterDashboard extends viewModelBase {
                 break;
             case "Debug":
                 widget = new debugWidget(this);
+                break;
+            case "Storage":
+                widget = new storageWidget(this);
                 break;
             default:
                 throw new Error("Unsupported widget type = " + type);

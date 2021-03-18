@@ -115,6 +115,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                 case WidgetType.License:
                     widget = new LicenseWidget(widgetId, _server, msg => EnqueueMessage(widgetId, msg), _disposeToken);
                     break;
+                case WidgetType.Storage:
+                    widget = new StorageWidget(widgetId, _server, msg => EnqueueMessage(widgetId, msg), _disposeToken);
+                    break;
                 case WidgetType.Debug:
                     // ignore this command
                     return;
