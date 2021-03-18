@@ -1101,14 +1101,6 @@ namespace Raven.Server.Documents.Indexes
                                     if (_logger.IsOperationsEnabled)
                                         _logger.Operations($"Failed to open write transaction, indexing will be retried", te);
                                 }
-                                catch (OutOfMemoryException oome)
-                                {
-                                    HandleOutOfMemoryException(oome, scope);
-                                }
-                                catch (EarlyOutOfMemoryException eoome)
-                                {
-                                    HandleOutOfMemoryException(eoome, scope);
-                                }
                                 catch (VoronUnrecoverableErrorException ide)
                                 {
                                     HandleIndexCorruption(scope, ide);
@@ -1144,6 +1136,10 @@ namespace Raven.Server.Documents.Indexes
                                     // We are here only in the case of indexing process cancellation.
                                     scope.RecordMapCompletedReason("Operation canceled.");
                                     return;
+                                }
+                                catch (Exception e) when (e.IsOutOfMemory())
+                                {
+                                    HandleOutOfMemoryException(e, scope);
                                 }
                                 catch (Exception e)
                                 {
