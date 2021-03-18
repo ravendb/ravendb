@@ -197,6 +197,10 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         // the referenced item will be indexed in the map step
                                         lastEtag = referencedItem.Etag;
                                         inMemoryStats.UpdateLastEtag(lastEtag, actionType == ActionType.Tombstone);
+
+                                        if (CanContinueReferenceBatch() == false)
+                                            break;
+
                                         continue;
                                     }
 
