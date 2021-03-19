@@ -12,7 +12,9 @@ namespace Sparrow.Json
         protected readonly ListCache<int> _positionsCache;
         protected readonly ListCache<BlittableJsonToken> _tokensCache;
 
-        protected readonly FastStack<BuildingState> _continuationState = new FastStack<BuildingState>();
+        private static readonly ObjectPool<FastStack<BuildingState>> ContinuationPool = new (() => new FastStack<BuildingState>(32));
+
+        protected readonly FastStack<BuildingState> _continuationState;
 
         protected AbstractBlittableJsonDocumentBuilder()
         {
@@ -21,11 +23,16 @@ namespace Sparrow.Json
             _propertiesCache = _cacheItem.PropertyCache;
             _positionsCache = _cacheItem.PositionsCache;
             _tokensCache = _cacheItem.TokensCache;
+            _continuationState = ContinuationPool.Allocate();
         }
 
         public virtual void Dispose()
         {
             GlobalCache.TryPush(_cacheItem);
+
+            // PERF: We are clearing the array without removing the references because the type is an struct.
+            _continuationState.WeakClear();
+            ContinuationPool.Free(_continuationState);
         }
 
         protected void ClearState()
