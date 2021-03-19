@@ -5,7 +5,7 @@ using Sparrow.Extensions;
 
 namespace Sparrow.Json
 {
-    public class LazyNumberValue : IComparable, IConvertible
+    public sealed class LazyNumberValue : IComparable, IConvertible
     {
         public readonly LazyStringValue Inner;
         private double? _val;
