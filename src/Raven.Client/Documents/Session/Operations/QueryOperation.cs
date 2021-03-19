@@ -331,7 +331,7 @@ namespace Raven.Client.Documents.Session.Operations
                     parameters.Append(") ");
                 }
 
-                Logger.Info($"Query '{_indexQuery.Query}' {parameters}returned {result.Results.Items.Count()} {isStale}results (total index results: {result.TotalResults})");
+                Logger.Info($"Query '{_indexQuery.Query}' {parameters}returned {result.Results.Length} {isStale}results (total index results: {result.TotalResults})");
             }
         }
 

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
@@ -78,7 +79,7 @@ namespace Sparrow.Json
                 builder.Reset(usageMode);
                 builder.StartArrayDocument();
                 builder.StartWriteArray();
-                using (var itr = GetEnumerator())
+                using (var itr = new BlittableJsonArrayEnumerator(this))
                 {
                     while (itr.MoveNext())
                     {
@@ -230,29 +231,58 @@ namespace Sparrow.Json
             return result;
         }
 
-        public IEnumerable<object> Items
+        public BlittableJsonArrayEnumerator Items
         {
             get
             {
                 AssertContextNotDisposed();
-
-                for (int i = 0; i < _count; i++)
-                    yield return this[i];
+                return new BlittableJsonArrayEnumerator(this);
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerator<object> GetEnumerator()
+        public struct BlittableJsonArrayEnumerator : IEnumerator<object>
+        {
+            private readonly BlittableJsonReaderArray _reader;
+            private int _counter;
+
+            public BlittableJsonArrayEnumerator(BlittableJsonReaderArray reader)
+            {
+                _reader = reader;
+                _counter = -1;
+            }
+
+            public bool MoveNext()
+            {
+                _counter++;
+                return _counter < _reader._count;
+            }
+
+            public void Reset()
+            {
+                _counter = -1;
+            }
+
+            public object Current { get { return _reader[_counter]; } }
+
+            object IEnumerator.Current => Current;
+
+            public void Dispose() {}
+        }
+
+
+        IEnumerator<object> IEnumerable<object>.GetEnumerator()
         {
             AssertContextNotDisposed();
 
-            return Items.GetEnumerator();
+            return new BlittableJsonArrayEnumerator(this);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return GetEnumerator();
+            AssertContextNotDisposed();
+
+            return new BlittableJsonArrayEnumerator(this);
         }
 
         public override bool Equals(object obj)
@@ -266,7 +296,6 @@ namespace Sparrow.Json
                 return true;
 
             var array = obj as BlittableJsonReaderArray;
-
             if (array != null)
                 return Equals(array);
 

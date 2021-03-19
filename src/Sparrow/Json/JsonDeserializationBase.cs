@@ -686,7 +686,7 @@ namespace Sparrow.Json
             if (json.TryGet(name, out BlittableJsonReaderArray array) == false || array == null)
                 return hashset;
 
-            foreach (BlittableJsonReaderObject item in array.Items)
+            foreach (BlittableJsonReaderObject item in array)
             {
                 if (item == null)
                 {
@@ -707,7 +707,7 @@ namespace Sparrow.Json
             if (json.TryGet(name, out BlittableJsonReaderArray array) == false || array == null)
                 return list;
 
-            foreach (BlittableJsonReaderObject item in array.Items)
+            foreach (BlittableJsonReaderObject item in array)
             {
                 if (item == null)
                 {
@@ -728,7 +728,7 @@ namespace Sparrow.Json
             if (json.TryGet(name, out BlittableJsonReaderArray array) == false || array == null)
                 return list.ToArray();
 
-            foreach (object item in array.Items)
+            foreach (object item in array)
             {
                 if (item is BlittableJsonReaderObject bjro)
                 {
