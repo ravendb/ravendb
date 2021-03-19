@@ -96,6 +96,41 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        public class MetadataFieldCache
+        {
+            public readonly LazyStringValue Id;
+            public readonly LazyStringValue Key;
+            public readonly LazyStringValue Collection;
+
+            public MetadataFieldCache(LazyStringValue id, LazyStringValue key, LazyStringValue collection )
+            {
+                Id = id;
+                Key = key;
+                Collection = collection;
+            }
+        }
+
+        private MetadataFieldCache _metadataFields;
+        
+        public MetadataFieldCache MetadataFields
+        {
+            get
+            {
+                if (_metadataFields == null)
+                {
+                    var context = this.IndexContext;
+                    _metadataFields = new MetadataFieldCache(
+                        id: context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Id),
+                        key: context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key),
+                        collection: context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Collection)
+                    );
+                }
+
+                return _metadataFields;
+            }
+        }
+
+
         public unsafe dynamic LoadAttachments(DynamicBlittableJson document)
         {
             if (document == null)

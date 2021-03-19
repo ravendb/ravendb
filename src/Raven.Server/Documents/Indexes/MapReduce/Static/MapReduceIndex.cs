@@ -519,6 +519,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 private readonly Dictionary<string, CompiledIndexField> _groupByFields;
                 private readonly ReduceKeyProcessor _reduceKeyProcessor;
                 private readonly Queue<(string PropertyName, object PropertyValue)> _propertyQueue = new Queue<(string PropertyName, object PropertyValue)>();
+                private readonly CurrentIndexingScope.MetadataFieldCache _metadataFields;
 
                 public Enumerator(IEnumerator enumerator, AnonymousObjectToBlittableMapResultsEnumerableWrapper parent, IndexingStatsScope createBlittableResult)
                 {
@@ -527,6 +528,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     _createBlittableResult = createBlittableResult;
                     _groupByFields = _parent._groupByFields;
                     _reduceKeyProcessor = _parent._reduceKeyProcessor;
+
+                    _metadataFields = CurrentIndexingScope.Current.MetadataFields;
                 }
 
                 public bool MoveNext()
@@ -566,7 +569,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                         _parent._indexContext.CachedProperties.NewDocument();
 
-                        using (var writer = new BlittableJsonWriter(_parent._indexContext))
+                        using (var writer = new BlittableJsonWriter(_parent._indexContext, 
+                            idField: _metadataFields.Id, 
+                            keyField: _metadataFields.Key, 
+                            collectionField: _metadataFields.Collection))
                         {
                             writer.WriteStartObject();
 
