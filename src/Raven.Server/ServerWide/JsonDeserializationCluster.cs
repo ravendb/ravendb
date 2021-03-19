@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
@@ -11,7 +10,6 @@ using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -120,8 +118,6 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, IndexHistoryEntry> IndexHistoryEntry = GenerateJsonDeserializationRoutine<IndexHistoryEntry>();
         public static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
         public static readonly Func<BlittableJsonReaderObject, AutoIndexDefinition> AutoIndexDefinition = GenerateJsonDeserializationRoutine<AutoIndexDefinition>();
-        public static readonly Func<BlittableJsonReaderObject, SorterDefinition> SorterDefinition = GenerateJsonDeserializationRoutine<SorterDefinition>();
-        public static readonly Func<BlittableJsonReaderObject, AnalyzerDefinition> AnalyzerDefinition = GenerateJsonDeserializationRoutine<AnalyzerDefinition>();
 
         public static readonly Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {
@@ -211,7 +207,9 @@ namespace Raven.Server.ServerWide
             [nameof(ToggleDatabasesStateCommand)] = GenerateJsonDeserializationRoutine<ToggleDatabasesStateCommand>(),
             [nameof(PutServerWideExternalReplicationCommand)] = GenerateJsonDeserializationRoutine<PutServerWideExternalReplicationCommand>(),
             [nameof(DeleteServerWideTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideTaskCommand>(),
-            [nameof(ToggleServerWideTaskStateCommand)] = GenerateJsonDeserializationRoutine<ToggleServerWideTaskStateCommand>()
+            [nameof(ToggleServerWideTaskStateCommand)] = GenerateJsonDeserializationRoutine<ToggleServerWideTaskStateCommand>(),
+            [nameof(PutServerWideAnalyzerCommand)] = GenerateJsonDeserializationRoutine<PutServerWideAnalyzerCommand>(),
+            [nameof(DeleteServerWideAnalyzerCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideAnalyzerCommand>()
         };
     }
 }

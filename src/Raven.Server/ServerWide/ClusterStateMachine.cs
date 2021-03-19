@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -327,6 +328,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(DeleteValueCommand):
+                    case nameof(DeleteServerWideAnalyzerCommand):
                         DeleteValue(context, type, cmd, index);
                         break;
 
@@ -543,6 +545,10 @@ namespace Raven.Server.ServerWide
                         PutValue<ServerWideStudioConfiguration>(context, type, cmd, index);
                         break;
 
+                    case nameof(PutServerWideAnalyzerCommand):
+                        PutValue<AnalyzerDefinition>(context, type, cmd, index);
+                        break;
+
                     case nameof(AddDatabaseCommand):
                         var addedNodes = AddDatabase(context, cmd, index, leader);
                         if (addedNodes != null)
@@ -571,7 +577,7 @@ namespace Raven.Server.ServerWide
             catch (Exception e)
             {
                 // IMPORTANT
-                // Other exceptions MUST be consistent across the cluster (meaning: if it occured on one node it must occur on the rest also).
+                // Other exceptions MUST be consistent across the cluster (meaning: if it occurred on one node it must occur on the rest also).
                 // the exceptions here are machine specific and will cause a jam in the state machine until the exception will be resolved.
                 if (_parent.Log.IsInfoEnabled)
                     _parent.Log.Info($"Unrecoverable exception on database '{DatabaseName}' at command type '{type}', execution will be retried later.", e);
@@ -1658,9 +1664,11 @@ namespace Raven.Server.ServerWide
             DeleteValueCommand delCmd = null;
             try
             {
-                delCmd = JsonDeserializationCluster.DeleteValueCommand(cmd);
+                delCmd = (DeleteValueCommand)CommandBase.CreateFrom(cmd);
                 if (delCmd.Name.StartsWith("db/"))
                     throw new RachisApplyException("Cannot delete " + delCmd.Name + " using DeleteValueCommand, only via dedicated database calls");
+
+                delCmd.DeleteValue(context);
 
                 DeleteItem(context, delCmd.Name);
             }
@@ -1855,7 +1863,7 @@ namespace Raven.Server.ServerWide
                 if (command.Name.StartsWith(Constants.Documents.Prefix))
                     throw new RachisApplyException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls");
 
-                command.UpdateValue(index);
+                command.UpdateValue(context, index);
 
                 using (Slice.From(context.Allocator, command.Name, out Slice valueName))
                 using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out Slice valueNameLowered))
