@@ -54,7 +54,9 @@ namespace FastTests.Client
                 "BackupCommand", "GetReplicationHubAccessCommand", "GetServerWideExternalReplicationCommand", "GetServerWideExternalReplicationsCommand", 
                 "PutServerWideBackupConfigurationCommand", "PutServerWideExternalReplicationCommand", "ConditionalGetDocumentsCommand",
                 "DeleteServerWideTaskCommand", "RegisterReplicationHubAccessCommand", "ToggleServerWideTaskStateCommand", "UnregisterReplicationHubAccessCommand", "GetRevisionsCountCommand",
-                "DeleteAnalyzerCommand", "PutAnalyzersCommand"
+                "DeleteAnalyzerCommand", "PutAnalyzersCommand",
+                "DeleteServerWideAnalyzerCommand", "PutServerWideAnalyzersCommand",
+                "DeleteServerWideSorterCommand", "PutServerWideSortersCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);
