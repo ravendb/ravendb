@@ -6,7 +6,7 @@
 
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.ClusterDashboard
+namespace Raven.Server.Dashboard.Cluster
 {
     public class WidgetMessage
     {

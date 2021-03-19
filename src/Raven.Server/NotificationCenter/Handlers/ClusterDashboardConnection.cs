@@ -1,186 +1,72 @@
-// -----------------------------------------------------------------------
-//  <copyright file="ClusterDashboardConnection.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.ClusterDashboard;
-using Raven.Server.ClusterDashboard.Widgets;
-using Raven.Server.Utils;
+using Raven.Server.Dashboard;
+using Raven.Server.Dashboard.Cluster;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Server.Collections;
-using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
-    public class ClusterDashboardConnection : IDisposable
+    public class ClusterDashboardConnection : NotificationCenterWebSocketWriter
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ClusterDashboardConnection>("Server");
-
-        private const string _watchCommand = "watch";
-        private const string _unwatchCommand = "unwatch";
-
-        private readonly JsonOperationContext _writeContext;
-        private readonly JsonOperationContext _readContext;
-        
-        private readonly CancellationTokenSource _cts;
-        private readonly CancellationToken _disposeToken;
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ClusterDashboardConnection>(nameof(ClusterDashboardConnection));
 
         private readonly RavenServer _server;
-        private readonly WebSocket _webSocket;
-        private readonly AsyncQueue<DynamicJsonValue> _sendQueue = new AsyncQueue<DynamicJsonValue>();
-        private readonly ConcurrentDictionary<int, Widget> _widgets = new ConcurrentDictionary<int, Widget>();
+        private readonly CanAccessDatabase _canAccessDatabase;
+        private readonly ClusterDashboardNotifications _clusterDashboardNotifications;
+        private readonly JsonOperationContext _readContext;
+        private readonly IDisposable _returnReadContext;
+        private readonly ConcurrentDictionary<int, AbstractClusterDashboardNotificationSender> _activeNotificationSenders = new ConcurrentDictionary<int, AbstractClusterDashboardNotificationSender>();
 
         private Task _receiveTask;
-        private readonly MemoryStream _ms = new MemoryStream();
-        
-        public ClusterDashboardConnection(
-            RavenServer server,
-            WebSocket webSocket, 
-            JsonOperationContext writeContext, 
-            JsonOperationContext readContext, 
-            CancellationToken token)
+
+        public ClusterDashboardConnection(RavenServer server, WebSocket webSocket, CanAccessDatabase canAccessDatabase, ClusterDashboardNotifications clusterDashboardNotifications,
+            IMemoryContextPool contextPool, CancellationToken resourceShutdown)
+            : base(webSocket, clusterDashboardNotifications, contextPool, resourceShutdown)
         {
             _server = server;
-            _webSocket = webSocket;
-            _writeContext = writeContext;
-            _readContext = readContext;
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
-            _disposeToken = _cts.Token;
+            _canAccessDatabase = canAccessDatabase;
+            _clusterDashboardNotifications = clusterDashboardNotifications;
+            _returnReadContext = contextPool.AllocateOperationContext(out _readContext);
         }
 
         public async Task Handle()
         {
             _receiveTask = ListenForCommands();
-            await StartSendingNotifications();
+
+            await WriteNotifications(_canAccessDatabase, taskHandlingReceiveOfData: _receiveTask);
+
             await _receiveTask;
-        }
-        
-        private async Task StartSendingNotifications()
-        {
-            try
-            {
-                while (_disposeToken.IsCancellationRequested == false)
-                {
-                    // we use this to detect client-initialized closure
-                    if (_receiveTask != null && _receiveTask.IsCompleted)
-                    {
-                        break;
-                    }
-
-                    var tuple = await _sendQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
-                    if (tuple.Item1 == false)
-                    {
-                        await SendHeartbeat();
-                        continue;
-                    }
-
-                    await WriteToWebSocket(tuple.Item2);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }
-        
-        private async Task SendHeartbeat()
-        {
-            await _webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, _disposeToken);
-        }
-
-        private void WatchCommand(int widgetId, WidgetType type, BlittableJsonReaderObject configuration)
-        {
-            Widget widget;
-            switch (type)
-            {
-                //TODO: refactor to avoid repeats?
-                case WidgetType.CpuUsage:
-                    widget = new CpuUsageWidget(widgetId, _server, msg => EnqueueMessage(widgetId, msg), _disposeToken);
-                    break;
-                case WidgetType.Traffic:
-                    //TODO: widget = new TrafficWidget(widgetId, OnMessage, _disposeToken);
-                    widget = null; //TODO:
-                    break;
-                case WidgetType.MemoryUsage:
-                    widget = new MemoryUsageWidget(widgetId, _server, msg => EnqueueMessage(widgetId, msg), _disposeToken);
-                    break;
-                case WidgetType.Storage:
-                    widget = new StorageWidget(widgetId, _server, msg => EnqueueMessage(widgetId, msg), _disposeToken);
-                    break;
-                case WidgetType.Debug:
-                    // ignore this command
-                    return;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-
-            widget.Start();
-
-            if (_widgets.TryAdd(widgetId, widget) == false)
-            {
-                throw new ArgumentException($"Widget with id = {widgetId} already exists.");
-            }
-        }
-
-        private void EnqueueMessage<T>(int widgetId, T data) where T : IDynamicJson
-        {
-            _sendQueue.Enqueue(new DynamicJsonValue
-            {
-                [nameof(WidgetMessage.Id)] = widgetId,
-                [nameof(WidgetMessage.Data)] = data.ToJson()
-            });
-        }
-
-        private void UnwatchCommand(int widgetId)
-        {
-            if (_widgets.TryRemove(widgetId, out var widget)) 
-            {
-                widget.Dispose();
-            }
-        }
-
-        public void Dispose()
-        {
-            _cts.Cancel();
-            using (_ms)
-            using (_cts)
-            {
-            }
-
-            foreach (Widget widget in _widgets.Values)
-            {
-                widget.Dispose();
-            }
-            _widgets.Clear();
         }
 
         private async Task ListenForCommands()
         {
+            await _clusterDashboardNotifications.EnsureWatcher(); // TODO arek
+
             using (_readContext.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer segment1))
             using (_readContext.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer segment2))
             {
                 try
                 {
-                    var segments = new[] {segment1, segment2};
+                    var segments = new[] { segment1, segment2 };
                     int index = 0;
-                    var receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory.Memory, _disposeToken);
+                    var receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory.Memory, _resourceShutdown);
                     var jsonParserState = new JsonParserState();
                     using (var parser = new UnmanagedJsonParser(_readContext, jsonParserState, "cluster-dashboard"))
                     {
                         var result = await receiveAsync;
-                        _disposeToken.ThrowIfCancellationRequested();
+                        _resourceShutdown.ThrowIfCancellationRequested();
 
                         parser.SetBuffer(segments[index], 0, result.Count);
                         index++;
-                        receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory.Memory, _disposeToken);
+                        receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory.Memory, _resourceShutdown);
 
                         while (true)
                         {
@@ -194,19 +80,20 @@ namespace Raven.Server.NotificationCenter.Handlers
                                 while (builder.Read() == false)
                                 {
                                     result = await receiveAsync;
-                                    _disposeToken.ThrowIfCancellationRequested();
+                                    _resourceShutdown.ThrowIfCancellationRequested();
 
                                     parser.SetBuffer(segments[index], 0, result.Count);
                                     if (++index >= segments.Length)
                                         index = 0;
-                                    receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory.Memory, _disposeToken);
+
+                                    receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory.Memory, _resourceShutdown);
                                 }
 
                                 builder.FinalizeDocument();
 
                                 using (var reader = builder.CreateReader())
                                 {
-                                    HandleCommand(reader);
+                                    await HandleCommand(reader);
                                 }
                             }
                         }
@@ -233,48 +120,63 @@ namespace Raven.Server.NotificationCenter.Handlers
                     }
                 }
             }
-
-            _disposeToken.ThrowIfCancellationRequested();
         }
 
-        private Task WriteToWebSocket(DynamicJsonValue notification)
-        {
-            _writeContext.Reset();
-            _writeContext.Renew();
-
-            _ms.SetLength(0);
-
-            using (var writer = new BlittableJsonTextWriter(_writeContext, _ms))
-            {
-                _writeContext.Write(writer, notification);
-            }
-
-            _ms.TryGetBuffer(out ArraySegment<byte> bytes);
-
-            return _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _disposeToken);
-        }
-
-        private void HandleCommand(BlittableJsonReaderObject reader)
+        private async Task HandleCommand(BlittableJsonReaderObject reader)
         {
             if (reader.TryGet(nameof(WidgetRequest.Command), out string command) == false)
                 throw new ArgumentNullException(nameof(command), "Command argument is mandatory");
             if (reader.TryGet(nameof(WidgetRequest.Id), out int id) == false)
                 throw new ArgumentNullException(nameof(command), "Id argument is mandatory");
 
-            switch (command)
+            switch (command.ToLower())
             {
-                case _watchCommand:
-                    if (reader.TryGet(nameof(WidgetRequest.Type), out WidgetType type) == false)
+                case "watch":
+                    if (reader.TryGet(nameof(WidgetRequest.Type), out ClusterDashboardNotificationType type) == false)
                         throw new ArgumentNullException(nameof(command), "Type argument is mandatory");
                     reader.TryGet(nameof(WidgetRequest.Config), out BlittableJsonReaderObject configuration);
-                    WatchCommand(id, type, configuration);
+                    await WatchCommand(id, type, configuration);
                     break;
-                case _unwatchCommand:
+                case "unwatch":
                     UnwatchCommand(id);
                     break;
                 default:
                     throw new NotSupportedException($"Unhandled command: {command}");
             }
+        }
+
+        private async Task WatchCommand(int widgetId, ClusterDashboardNotificationType type, BlittableJsonReaderObject configuration)
+        {
+            var notificationSender = await _clusterDashboardNotifications.CreateNotificationSender(widgetId, type);
+
+            notificationSender.Start();
+
+            if (_activeNotificationSenders.TryAdd(widgetId, notificationSender) == false)
+            {
+                throw new ArgumentException($"Widget with id = {widgetId} already exists.");
+            }
+        }
+
+        private void UnwatchCommand(int widgetId)
+        {
+            if (_activeNotificationSenders.TryRemove(widgetId, out var widget))
+            {
+                widget.Dispose();
+            }
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+
+            foreach (AbstractClusterDashboardNotificationSender sender in _activeNotificationSenders.Values)
+            {
+                sender.Dispose();
+            }
+
+            _activeNotificationSenders.Clear();
+
+            _returnReadContext.Dispose();
         }
     }
 }

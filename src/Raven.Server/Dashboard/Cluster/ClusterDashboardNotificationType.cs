@@ -4,16 +4,21 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-namespace Raven.Server.ClusterDashboard
+namespace Raven.Server.Dashboard.Cluster
 {
-    public enum WidgetType
+    public enum ClusterDashboardNotificationType
     {
         Unknown,
         Debug, // TODO: fake widget used for debugging studio
         CpuUsage,
         License,
-        Storage, 
+        StorageUsage, 
         MemoryUsage,
         Traffic,
+        Indexing,
+        
+        DatabaseStorageUsage,
+        DatabaseTraffic,
+        DatabaseIndexing
     }
 }

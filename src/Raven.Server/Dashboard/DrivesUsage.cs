@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json.Parsing;
 
@@ -56,6 +55,10 @@ namespace Raven.Server.Dashboard
 
         public bool IsLowSpace { get; set; }
 
+        public long RavenSize { get; set; }
+
+        public long RavenTempBuffersSize { get; set; }
+
         public List<DatabaseDiskUsage> Items { get; set; }
 
         public MountPointUsage()
@@ -71,14 +74,18 @@ namespace Raven.Server.Dashboard
                 [nameof(VolumeLabel)] = VolumeLabel,
                 [nameof(TotalCapacity)] = TotalCapacity,
                 [nameof(FreeSpace)] = FreeSpace,
-                [nameof(IsLowSpace)] = IsLowSpace
+                [nameof(IsLowSpace)] = IsLowSpace,
             };
         }
 
         public DynamicJsonValue ToJson()
         {
             var json = ToJsonInternal();
+
             json[nameof(Items)] = new DynamicJsonArray(Items.Select(x => x.ToJson()));
+            json[nameof(RavenSize)] = Items.Sum(x => x.Size);
+            json[nameof(RavenTempBuffersSize)] = Items.Sum(x => x.TempBuffersSize);
+
             return json;
         }
 
@@ -86,12 +93,17 @@ namespace Raven.Server.Dashboard
         {
             var json = ToJsonInternal();
 
+            var ravenSize = 0L;
+            var ravenTempBuffersSize = 0L;
+
             var items = new DynamicJsonArray();
             foreach (var databaseDiskUsage in Items)
             {
                 if (filter(databaseDiskUsage.Database, requiresWrite: false))
                 {
                     items.Add(databaseDiskUsage.ToJson());
+                    ravenSize += databaseDiskUsage.Size;
+                    ravenTempBuffersSize += databaseDiskUsage.TempBuffersSize;
                 }
             }
 
@@ -99,6 +111,9 @@ namespace Raven.Server.Dashboard
                 return null;
 
             json[nameof(Items)] = items;
+            json[nameof(RavenSize)] = ravenSize;
+            json[nameof(RavenTempBuffersSize)] = ravenTempBuffersSize;
+
             return json;
         }
     }
