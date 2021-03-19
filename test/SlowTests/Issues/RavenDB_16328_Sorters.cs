@@ -15,7 +15,9 @@ using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Sorters;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations.Sorters;
+using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -134,6 +136,77 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new DeleteSorterOperation(sorterName));
 
+                CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True", sorterName);
+            }
+        }
+
+        [Fact]
+        public void CanUseCustomAnalyzer_Restart()
+        {
+            var serverPath = NewDataPath();
+            var databasePath = NewDataPath();
+
+            IOExtensions.DeleteDirectory(serverPath);
+            IOExtensions.DeleteDirectory(databasePath);
+
+            var sorterName = GetDatabaseName();
+
+            using (var server = GetNewServer(new ServerCreationOptions
+            {
+                DataDirectory = serverPath,
+                RunInMemory = false
+            }))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = _ => sorterName,
+                Path = databasePath,
+                RunInMemory = false,
+                Server = server,
+                DeleteDatabaseOnDispose = false
+            }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "C1" });
+                    session.Store(new Company { Name = "C2" });
+
+                    session.SaveChanges();
+                }
+
+                CanUseSorterInternal<SorterDoesNotExistException>(store, $"There is no sorter with '{sorterName}' name", $"There is no sorter with '{sorterName}' name", sorterName);
+
+                var sorterCode = GetSorter("RavenDB_8355.MySorter.cs", "MySorter", sorterName);
+
+                store.Maintenance.Server.Send(new PutServerWideSortersOperation(new SorterDefinition
+                {
+                    Name = sorterName,
+                    Code = sorterCode
+                }));
+
+                CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True", sorterName);
+
+                server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
+
+                CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True", sorterName);
+            }
+
+            SorterCompilationCache.Instance.RemoveServerWideItem(sorterName);
+
+            using (var server = GetNewServer(new ServerCreationOptions
+            {
+                DataDirectory = serverPath,
+                RunInMemory = false,
+                DeletePrevious = false
+            }))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = _ => sorterName,
+                Path = databasePath,
+                RunInMemory = false,
+                Server = server,
+                CreateDatabase = false
+            }))
+            {
                 CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True", sorterName);
             }
         }
