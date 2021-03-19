@@ -81,11 +81,10 @@ namespace Sparrow.Utils
             else
             {
                 newBucket = new FastList<Tuple<Type, T>>(storage.Count + 1);
-                
                 storage.CopyTo(newBucket);
-                newBucket.Add(new Tuple<Type, T>(type, value));
             }
 
+            newBucket.Add(new Tuple<Type, T>(type, value));
             _buckets[bucket] = newBucket;
         }
     }
