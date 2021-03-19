@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Indexes
         {
             try
             {
-                SorterCompilationCache.AddSorters(record);
+                SorterCompilationCache.Instance.AddItems(record);
             }
             catch (Exception e)
             {
@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Indexes
         {
             try
             {
-                AnalyzerCompilationCache.AddAnalyzers(record);
+                AnalyzerCompilationCache.Instance.AddItems(record);
             }
             catch (Exception e)
             {
@@ -1301,8 +1301,8 @@ namespace Raven.Server.Documents.Indexes
                 exceptionAggregator.Execute(index.Dispose);
             });
 
-            exceptionAggregator.Execute(() => SorterCompilationCache.Clear(_documentDatabase.Name));
-            exceptionAggregator.Execute(() => AnalyzerCompilationCache.Clear(_documentDatabase.Name));
+            exceptionAggregator.Execute(() => SorterCompilationCache.Instance.Clear(_documentDatabase.Name));
+            exceptionAggregator.Execute(() => AnalyzerCompilationCache.Instance.Clear(_documentDatabase.Name));
 
             exceptionAggregator.ThrowIfNeeded();
         }

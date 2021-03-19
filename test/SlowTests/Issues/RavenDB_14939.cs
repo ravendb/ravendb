@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                 AssertCount<MyIndex>(store);
             }
 
-            foreach (var key in AnalyzerCompilationCache.AnalyzersPerDatabaseCache.ForceEnumerateInThreadSafeManner())
+            foreach (var key in AnalyzerCompilationCache.Instance.PerDatabaseCache.ForceEnumerateInThreadSafeManner())
                 Assert.NotEqual(analyzerName, key.Key.ResourceName);
         }
 

@@ -209,7 +209,9 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteServerWideTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideTaskCommand>(),
             [nameof(ToggleServerWideTaskStateCommand)] = GenerateJsonDeserializationRoutine<ToggleServerWideTaskStateCommand>(),
             [nameof(PutServerWideAnalyzerCommand)] = GenerateJsonDeserializationRoutine<PutServerWideAnalyzerCommand>(),
-            [nameof(DeleteServerWideAnalyzerCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideAnalyzerCommand>()
+            [nameof(DeleteServerWideAnalyzerCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideAnalyzerCommand>(),
+            [nameof(PutServerWideSorterCommand)] = GenerateJsonDeserializationRoutine<PutServerWideSorterCommand>(),
+            [nameof(DeleteServerWideSorterCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideSorterCommand>()
         };
     }
 }

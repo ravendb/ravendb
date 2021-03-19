@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                Type.GetType("Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers." + analyzerTypeAsString) ??
                                LuceneAssembly.GetType("Lucene.Net.Analysis." + analyzerTypeAsString) ??
                                LuceneAssembly.GetType("Lucene.Net.Analysis.Standard." + analyzerTypeAsString) ??
-                               AnalyzerCompilationCache.GetAnalyzerType(analyzerTypeAsString, databaseName);
+                               AnalyzerCompilationCache.Instance.GetItemType(analyzerTypeAsString, databaseName);
 
             if (analyzerType == null)
                 throw new InvalidOperationException($"Cannot find analyzer type '{analyzerTypeAsString}' for field: {name}");

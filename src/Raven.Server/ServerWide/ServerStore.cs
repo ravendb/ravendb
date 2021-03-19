@@ -42,6 +42,7 @@ using Raven.Server.Dashboard;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Analysis;
+using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TcpHandlers;
@@ -722,7 +723,8 @@ namespace Raven.Server.ServerWide
             var myUrl = GetNodeHttpServerUrl();
             _engine.Initialize(_env, Configuration, clusterChanges, myUrl, out _lastClusterTopologyIndex);
 
-            AnalyzerCompilationCache.AddServerWideAnalyzers(this);
+            SorterCompilationCache.Instance.AddServerWideItems(this);
+            AnalyzerCompilationCache.Instance.AddServerWideItems(this);
 
             LicenseManager.Initialize(_env, ContextPool);
             LatestVersionCheck.Instance.Check(this);

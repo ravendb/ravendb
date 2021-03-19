@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -329,6 +330,7 @@ namespace Raven.Server.ServerWide
 
                     case nameof(DeleteValueCommand):
                     case nameof(DeleteServerWideAnalyzerCommand):
+                    case nameof(DeleteServerWideSorterCommand):
                         DeleteValue(context, type, cmd, index);
                         break;
 
@@ -547,6 +549,10 @@ namespace Raven.Server.ServerWide
 
                     case nameof(PutServerWideAnalyzerCommand):
                         PutValue<AnalyzerDefinition>(context, type, cmd, index);
+                        break;
+
+                    case nameof(PutServerWideSorterCommand):
+                        PutValue<SorterDefinition>(context, type, cmd, index);
                         break;
 
                     case nameof(AddDatabaseCommand):

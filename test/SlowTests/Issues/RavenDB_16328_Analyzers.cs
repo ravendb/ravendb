@@ -16,9 +16,9 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_16328 : RavenTestBase
+    public class RavenDB_16328_Analyzers : RavenTestBase
     {
-        public RavenDB_16328(ITestOutputHelper output) : base(output)
+        public RavenDB_16328_Analyzers(ITestOutputHelper output) : base(output)
         {
         }
 
@@ -169,7 +169,7 @@ namespace SlowTests.Issues
                 AssertCount<MyIndex>(store);
             }
 
-            AnalyzerCompilationCache.RemoveServerWideAnalyzer(analyzerName);
+            AnalyzerCompilationCache.Instance.RemoveServerWideItem(analyzerName);
 
             using (var server = GetNewServer(new ServerCreationOptions
             {
