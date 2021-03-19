@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Sorters
 {
-    public class DeleteServerWideSorterOperation : IMaintenanceOperation
+    public class DeleteServerWideSorterOperation : IServerOperation
     {
         private readonly string _sorterName;
 

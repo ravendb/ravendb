@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -10,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Sorters
 {
-    public class PutServerWideSortersOperation : IMaintenanceOperation
+    public class PutServerWideSortersOperation : IServerOperation
     {
         private readonly SorterDefinition[] _sortersToAdd;
 
