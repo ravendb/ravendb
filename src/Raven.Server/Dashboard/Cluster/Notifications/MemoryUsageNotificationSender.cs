@@ -6,57 +6,45 @@
 
 using System;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Util;
+using Raven.Server.NotificationCenter;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Server.LowMemory;
 using Sparrow.Utils;
 using Voron.Impl;
 
-namespace Raven.Server.ClusterDashboard.Widgets
+namespace Raven.Server.Dashboard.Cluster.Notifications
 {
-    public class MemoryUsageWidget : Widget
+    public class MemoryUsageNotificationSender : AbstractClusterDashboardNotificationSender
     {
         private readonly RavenServer _server;
         private readonly LowMemoryMonitor _lowMemoryMonitor = new();
-        private readonly Action<IDynamicJson> _onMessage;
         private readonly TimeSpan _defaultInterval = TimeSpan.FromSeconds(5);
 
-        public MemoryUsageWidget(int id, RavenServer server, Action<IDynamicJson> onMessage, CancellationToken shutdown) : base(id, shutdown)
+        public MemoryUsageNotificationSender(int widgetId, RavenServer server, ConnectedWatcher watcher, CancellationToken shutdown) : base(widgetId, watcher, shutdown)
         {
             _server = server;
-            _onMessage = onMessage;
         }
 
-        public override WidgetType Type => WidgetType.MemoryUsage;
+        protected override TimeSpan NotificationInterval => _defaultInterval;
 
-        protected override async Task DoWork()
-        {
-            var data = PrepareData();
-
-            _onMessage(data);
-
-            await WaitOrThrowOperationCanceled(_defaultInterval);
-        }
-
-        private MemoryUsagePayload PrepareData()
+        protected override AbstractClusterDashboardNotification CreateNotification()
         {
             var memoryInfo = _server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
             long managedMemoryInBytes = AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
             long totalUnmanagedAllocations = NativeMemory.TotalAllocatedMemory;
             var encryptionBuffers = EncryptionBuffersPool.Instance.GetStats();
             var dirtyMemoryState = MemoryInformation.GetDirtyMemoryState();
-            
+
             long totalMapping = 0;
             foreach (var mapping in NativeMemory.FileMapping)
             foreach (var singleMapping in mapping.Value.Value.Info)
             {
                 totalMapping += singleMapping.Value;
             }
-            
+
             return new MemoryUsagePayload
             {
                 Time = SystemTime.UtcNow,

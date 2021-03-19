@@ -46,11 +46,11 @@ using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
-using Raven.Server.ClusterDashboard;
-using Raven.Server.ClusterDashboard.Widgets;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Dashboard;
+using Raven.Server.Dashboard.Cluster;
+using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
@@ -310,7 +310,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(WidgetMessage));
             scripter.AddType(typeof(CpuUsagePayload));
             scripter.AddType(typeof(MemoryUsagePayload));
-            scripter.AddType(typeof(StoragePayload));
+            scripter.AddType(typeof(StorageUsagePayload));
 
             // expiration
             scripter.AddType(typeof(ExpirationConfiguration));

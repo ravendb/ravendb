@@ -6,28 +6,24 @@
 
 using System;
 using System.Threading;
-using System.Threading.Tasks;
-using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.NotificationCenter;
 using Raven.Server.Utils;
 
-namespace Raven.Server.ClusterDashboard.Widgets
+namespace Raven.Server.Dashboard.Cluster.Notifications
 {
-    public class CpuUsageWidget : Widget
+    public class CpuUsageNotificationSender : AbstractClusterDashboardNotificationSender
     {
         private readonly RavenServer _server;
-        private readonly Action<CpuUsagePayload> _onMessage;
 
         private readonly TimeSpan _defaultInterval = TimeSpan.FromSeconds(1);
         private DetailsPerNode _nodeLicenseLimits;
-        
-        public CpuUsageWidget(int id, RavenServer server, Action<CpuUsagePayload> onMessage, CancellationToken shutdown) : base(id, shutdown)
+
+
+        public CpuUsageNotificationSender(int widgetId, RavenServer server, ConnectedWatcher watcher, CancellationToken shutdown) : base(widgetId, watcher, shutdown)
         {
             _server = server;
-            _onMessage = onMessage;
         }
-
-        public override WidgetType Type => WidgetType.CpuUsage;
 
         protected override void InitializeWork()
         {
@@ -40,19 +36,11 @@ namespace Raven.Server.ClusterDashboard.Widgets
             }
         }
 
-        protected override async Task DoWork()
+        protected override TimeSpan NotificationInterval => _defaultInterval;
+
+        protected override AbstractClusterDashboardNotification CreateNotification()
         {
-            var data = PrepareData();
-
-            _onMessage(data);
-
-            await WaitOrThrowOperationCanceled(_defaultInterval);
-        }
-
-        private CpuUsagePayload PrepareData()
-        {
-            var metricCacher = _server.MetricCacher;
-            var cpuInfo = metricCacher.GetValue<(double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait)>(
+            var cpuInfo = _server.MetricCacher.GetValue<(double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait)>(
                 MetricCacher.Keys.Server.CpuUsage);
 
             var utilizedCores = _nodeLicenseLimits?.UtilizedCores ?? -1;
@@ -64,7 +52,6 @@ namespace Raven.Server.ClusterDashboard.Widgets
                 MachineCpuUsage = (int)cpuInfo.MachineCpuUsage,
                 UtilizedCores = utilizedCores,
                 NumberOfCores = numberOfCores,
-                Time = SystemTime.UtcNow
             };
         }
     }

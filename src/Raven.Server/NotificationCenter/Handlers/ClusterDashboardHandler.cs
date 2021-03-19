@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
+using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Routing;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -20,28 +21,27 @@ namespace Raven.Server.NotificationCenter.Handlers
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ClusterDashboardHandler>("Server");
 
-        [RavenAction("/cluster-dashboard/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/cluster-dashboard/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task Get()
         {
             //TODO: access control
             //TODO: check for param - withProxy?
-            
+
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
-                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext writeContext))
-                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext readContext))
+                var canAccessDatabase = GetDatabaseAccessValidationFunc();
+
+                using (var notifications = new ClusterDashboardNotifications(Server, canAccessDatabase, ServerStore.ServerShutdown))
+                using (var connection = new ClusterDashboardConnection(Server, webSocket, canAccessDatabase, notifications, 
+                    ServerStore.ContextPool, ServerStore.ServerShutdown))
                 {
                     try
                     {
-                        using (var connection = new ClusterDashboardConnection(
-                            Server, webSocket, writeContext, readContext, ServerStore.ServerShutdown))
-                        {
-                            await connection.Handle();
-                        }
+                        await connection.Handle();
                     }
                     catch (OperationCanceledException)
                     {
-
+                        // ignored 
                     }
                     catch (Exception ex)
                     {
@@ -50,11 +50,12 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                         try
                         {
+                            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                             using (var ms = new MemoryStream())
                             {
-                                using (var writer = new BlittableJsonTextWriter(writeContext, ms))
+                                using (var writer = new BlittableJsonTextWriter(context, ms))
                                 {
-                                    writeContext.Write(writer, new DynamicJsonValue
+                                    context.Write(writer, new DynamicJsonValue
                                     {
                                         ["Type"] = "Error",
                                         ["Exception"] = ex.ToString()
@@ -71,6 +72,8 @@ namespace Raven.Server.NotificationCenter.Handlers
                                 Logger.Info("Failed to send the error in cluster dashboard handler to the client", ex);
                         }
                     }
+
+
                 }
             }
         }

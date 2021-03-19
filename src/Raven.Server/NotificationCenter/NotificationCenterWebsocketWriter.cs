@@ -14,10 +14,10 @@ namespace Raven.Server.NotificationCenter
 {
     public class NotificationCenterWebSocketWriter : IWebsocketWriter, IDisposable
     {
-        private readonly WebSocket _webSocket;
+        protected readonly WebSocket _webSocket;
         private readonly NotificationsBase _notificationsBase;
         private readonly JsonOperationContext _context;
-        private readonly CancellationToken _resourceShutdown;
+        protected readonly CancellationToken _resourceShutdown;
 
         private readonly MemoryStream _ms = new MemoryStream();
         public Action AfterTrackActionsRegistration;
@@ -31,10 +31,10 @@ namespace Raven.Server.NotificationCenter
             _resourceShutdown = resourceShutdown;
         }
 
-        public async Task WriteNotifications(CanAccessDatabase shouldWriteByDb)
+        public async Task WriteNotifications(CanAccessDatabase shouldWriteByDb, Task taskHandlingReceiveOfData = null)
         {
             var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
-            var receive = _webSocket.ReceiveAsync(receiveBuffer, _resourceShutdown);
+            var receive = taskHandlingReceiveOfData ?? _webSocket.ReceiveAsync(receiveBuffer, _resourceShutdown);
 
             var asyncQueue = new AsyncQueue<DynamicJsonValue>();
 
@@ -102,7 +102,7 @@ namespace Raven.Server.NotificationCenter
             throw new NotSupportedException($"Not supported notification type: {notification.GetType()}");
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             using (_returnContext)
             using (_ms)

@@ -4,13 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-namespace Raven.Server.ClusterDashboard
+namespace Raven.Server.Dashboard.Cluster
 {
     public class WidgetRequest
     {
         public string Command { get; set; }
         public int Id { get; set; }
-        public WidgetType Type { get; set; }
+        public ClusterDashboardNotificationType Type { get; set; }
         public object Config { get; set; }
     }
 }
