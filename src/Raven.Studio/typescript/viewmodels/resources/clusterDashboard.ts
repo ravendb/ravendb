@@ -10,6 +10,7 @@ import cpuUsageWidget = require("viewmodels/resources/widgets/cpuUsageWidget");
 import licenseWidget = require("viewmodels/resources/widgets/licenseWidget");
 import storageWidget = require("viewmodels/resources/widgets/storageWidget");
 import clusterNode = require("models/database/cluster/clusterNode");
+import websocketBasedWidget = require("./widgets/websocketBasedWidget");
 
 interface savedWidget {
     type: Raven.Server.ClusterDashboard.WidgetType;
@@ -120,13 +121,17 @@ class clusterDashboard extends viewModelBase {
 
     private onWebSocketConnected(ws: clusterDashboardWebSocketClient) {
         for (const widget of this.widgets()) {
-            widget.onClientConnected(ws);
+            if (widget instanceof websocketBasedWidget) {
+                widget.onClientConnected(ws);
+            }
         }
     }
 
     private onWebSocketDisconnected(ws: clusterDashboardWebSocketClient) {
         for (const widget of this.widgets()) {
-            widget.onClientDisconnected(ws);
+            if (widget instanceof websocketBasedWidget) {
+                widget.onClientDisconnected(ws);
+            }
         }
     }
 
@@ -195,7 +200,11 @@ class clusterDashboard extends viewModelBase {
         const targetWidget = this.widgets().find(x => x.id === msg.Id);
         // target widget might be in removal state but 'unwatch' wasn't delivered yet.
         if (targetWidget) {
-            targetWidget.onData(nodeTag, msg.Data as any);
+            if (targetWidget instanceof websocketBasedWidget) {
+                targetWidget.onData(nodeTag, msg.Data as any);
+            } else {
+                console.error("Tried to deliver message to widget which doesn't support messages. Id = " + msg.Id);
+            }
         }
     }
     

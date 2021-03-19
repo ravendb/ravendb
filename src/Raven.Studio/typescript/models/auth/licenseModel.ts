@@ -2,6 +2,7 @@
 
 import getLicenseStatusCommand = require("commands/licensing/getLicenseStatusCommand");
 import buildInfo = require("models/resources/buildInfo");
+import generalUtils = require("common/generalUtils");
 import licenseSupportInfoCommand = require("commands/licensing/licenseSupportInfoCommand");
 
 class licenseModel {
@@ -10,6 +11,51 @@ class licenseModel {
 
     private static baseUrl = "https://ravendb.net/license/request";
 
+    static licenseTypeText = ko.pureComputed(() => {
+        const licenseStatus = licenseModel.licenseStatus();
+        if (!licenseStatus || licenseStatus.Type === "None") {
+            return "No license - AGPLv3 Restrictions Applied";
+        }
+
+        let licenseType = licenseStatus.Type;
+        if (licenseType === "Invalid") {
+            return "Invalid license";
+        }
+
+        if (licenseStatus.IsCloud) {
+            licenseType += " (Cloud)";
+        }
+
+        if (licenseStatus.IsIsv) {
+            licenseType += " (ISV)";
+        }
+
+        return licenseType;
+    });
+
+    static formattedExpiration = ko.pureComputed(() => {
+        const licenseStatus = licenseModel.licenseStatus();
+        if (!licenseStatus || !licenseStatus.Expiration) {
+            return null;
+        }
+
+        const dateFormat = "YYYY MMMM Do";
+        const expiration = moment(licenseStatus.Expiration);
+        const now = moment();
+        const nextMonth = moment().add(1, 'month');
+        if (now.isBefore(expiration)) {
+            const relativeDurationClass = nextMonth.isBefore(expiration) ? "" : "text-warning";
+
+            const fromDuration = generalUtils.formatDurationByDate(expiration, true);
+            return `${expiration.format(dateFormat)} <br /><small class="${relativeDurationClass}">(${fromDuration})</small>`;
+        }
+
+        const expiredClass = licenseStatus.Expired ? "text-danger" : "";
+        const duration = generalUtils.formatDurationByDate(expiration, true);
+        return `${expiration.format(dateFormat)} <br /><Small class="${expiredClass}">(${duration} ago)</Small>`;
+    });
+    
+        
     static generateLicenseRequestUrl(limitType: Raven.Client.Exceptions.Commercial.LimitType = null): string {
         let url = `${licenseModel.baseUrl}?`;
 

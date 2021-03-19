@@ -6,24 +6,22 @@
         </button>
     </div>
 
-    <div>TODO: THIS IS FAKE DATA!</div>
     <div class="license-information">
-
         <div class="license-item">
             <i class="icon-license"></i>
             <div>
                 <h4>License type</h4>
-                <div class="license-item-value">Enterprise</div>
+                <div class="license-item-value" data-bind="text: licenseTypeText"></div>
             </div>
         </div>
 
         <div class="license-item">
             <i class="icon-calendar"></i>
             <div>
-                <h4>License Expiration</h4>
-                <div class="license-item-value">
-                    2021 November 17th<br/>
-                    <small>in 9 months 17 days</small>
+                <h4 data-bind="text: expiresText"></h4>
+                <div class="license-item-value" data-bind="visible: formattedExpiration">
+                    <strong data-bind="html: formattedExpiration"></strong>
+                    <small data-bind="text: automaticRenewText"></small>
                 </div>
             </div>
         </div>
@@ -32,23 +30,27 @@
             <i class="icon-support"></i>
             <div>
                 <h4>Support type</h4>
-                <div class="license-item-value">Community</div>
+                <div class="license-item-value" data-bind="text: supportLabel"></div>
             </div>
         </div>
 
-        <div class="license-item">
+        <div class="license-item" data-bind="visible: usingHttps">
             <i class="icon-certificate"></i>
             <div>
+                
                 <h4>Server Certificate Expiration</h4>
-                <div class="license-item-value">2021 February 27th<br/>
-                    <small class="text-warning">11 days</small>
+                <div class="global-spinner spinner-sm" data-bind="visible: spinners.serverCertificate"></div>
+                
+                <div data-bind="with: serverCertificateInfo">
+                    <div class="license-item-value">
+                        <span data-bind="text: dateFormatted"></span>
+                        <br/>
+                        <small data-bind="text: durationFormatted, attr: { class: expirationClass }"></small>
+                    </div>    
                 </div>
             </div>
         </div>
 
-
-        <a href="#" class="btn btn-sm margin-left">License details</a>
-
+        <a data-bind="attr: { href: aboutPageUrl }" class="btn btn-sm margin-left">License details</a>
     </div>
-
 </div>

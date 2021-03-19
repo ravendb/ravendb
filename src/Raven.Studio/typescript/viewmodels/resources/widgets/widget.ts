@@ -3,7 +3,7 @@
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 
-abstract class widget<TData, TConfig = unknown, TState = unknown> {
+abstract class widget<TConfig = unknown, TState = unknown> {
     static nextWidgetId = 1;
     
     static resizeAnimationDuration = 300;
