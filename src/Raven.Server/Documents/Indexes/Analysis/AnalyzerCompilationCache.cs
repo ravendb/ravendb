@@ -3,37 +3,83 @@ using System.Collections.Concurrent;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
+using Raven.Server.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.Analyzers;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes.Analysis
 {
     public static class AnalyzerCompilationCache
     {
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<Type>> AnalyzersCache = new ConcurrentDictionary<CacheKey, Lazy<Type>>();
+        private static readonly ConcurrentDictionary<CacheKey, Lazy<Type>> AnalyzersCompilationCache = new ConcurrentDictionary<CacheKey, Lazy<Type>>();
+
+        internal static readonly ConcurrentDictionary<CacheKey, Lazy<Type>> AnalyzersServerWideCache = new ConcurrentDictionary<CacheKey, Lazy<Type>>();
 
         internal static readonly ConcurrentDictionary<CacheKey, Lazy<Type>> AnalyzersPerDatabaseCache = new ConcurrentDictionary<CacheKey, Lazy<Type>>();
 
         public static Type GetAnalyzerType(string name, string databaseName)
         {
-            var key = new CacheKey(databaseName, name, null);
+            var key = CacheKey.ForDatabase(databaseName, name);
 
-            if (AnalyzersPerDatabaseCache.TryGetValue(key, out var result) == false)
-                return null;
+            if (TryGetAnalyzerType(AnalyzersPerDatabaseCache, key, out var type))
+                return type;
+
+            key = CacheKey.ForServerWide(name);
+
+            if (TryGetAnalyzerType(AnalyzersServerWideCache, key, out type))
+                return type;
+
+            return null;
+        }
+
+        private static bool TryGetAnalyzerType(ConcurrentDictionary<CacheKey, Lazy<Type>> cache, CacheKey key, out Type type)
+        {
+            type = null;
+
+            if (cache.TryGetValue(key, out var result) == false)
+                return false;
 
             try
             {
-                return result.Value;
+                type = result.Value;
+                return true;
             }
             catch (Exception)
             {
-                AnalyzersPerDatabaseCache.TryRemove(key, out _);
+                cache.TryRemove(key, out _);
                 throw;
             }
         }
 
-        public static void AddAnalyzer(AnalyzerDefinition definition, string databaseName)
+        public static void AddServerWideAnalyzers(ServerStore serverStore)
         {
-            AddAnalyzerInternal(definition.Name, definition.Code, databaseName);
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                foreach (var kvp in serverStore.Cluster.ItemsStartingWith(context, PutServerWideAnalyzerCommand.Prefix, 0, long.MaxValue))
+                {
+                    var analyzerDefinition = JsonDeserializationServer.AnalyzerDefinition(kvp.Value);
+                    analyzerDefinition.Validate();
+
+                    var key = CacheKey.ForServerWide(analyzerDefinition.Name);
+
+                    AddAnalyzerInternal(AnalyzersServerWideCache, key, analyzerDefinition.Name, analyzerDefinition.Code);
+                }
+            }
+        }
+
+        public static void AddServerWideAnalyzer(AnalyzerDefinition definition)
+        {
+            var key = CacheKey.ForServerWide(definition.Name);
+            AddAnalyzerInternal(AnalyzersServerWideCache, key, definition.Name, definition.Code);
+        }
+
+        public static void RemoveServerWideAnalyzer(string name)
+        {
+            var key = CacheKey.ForServerWide(name);
+            AnalyzersServerWideCache.TryRemove(key, out _);
         }
 
         public static void AddAnalyzers(DatabaseRecord databaseRecord)
@@ -41,7 +87,7 @@ namespace Raven.Server.Documents.Indexes.Analysis
             foreach (var kvp in AnalyzersPerDatabaseCache.ForceEnumerateInThreadSafeManner())
             {
                 var key = kvp.Key;
-                if (string.Equals(key.DatabaseName, databaseRecord.DatabaseName, StringComparison.OrdinalIgnoreCase) == false)
+                if (string.Equals(key.ResourceName, databaseRecord.DatabaseName, StringComparison.OrdinalIgnoreCase) == false)
                     continue;
 
                 if (databaseRecord.Analyzers != null && databaseRecord.Analyzers.ContainsKey(key.AnalyzerName))
@@ -59,7 +105,11 @@ namespace Raven.Server.Documents.Indexes.Analysis
             {
                 aggregator.Execute(() =>
                 {
-                    AddAnalyzerInternal(kvp.Value.Name, kvp.Value.Code, databaseRecord.DatabaseName);
+                    var analyzerName = kvp.Value.Name;
+                    var analyzerCode = kvp.Value.Code;
+                    var key = CacheKey.ForDatabase(databaseRecord.DatabaseName, analyzerName);
+
+                    AddAnalyzerInternal(AnalyzersPerDatabaseCache, key, analyzerName, analyzerCode);
                 });
             }
 
@@ -71,18 +121,16 @@ namespace Raven.Server.Documents.Indexes.Analysis
             foreach (var kvp in AnalyzersPerDatabaseCache.ForceEnumerateInThreadSafeManner())
             {
                 var key = kvp.Key;
-                if (string.Equals(key.DatabaseName, databaseName, StringComparison.OrdinalIgnoreCase) == false)
+                if (string.Equals(key.ResourceName, databaseName, StringComparison.OrdinalIgnoreCase) == false)
                     continue;
 
                 AnalyzersPerDatabaseCache.TryRemove(key, out _);
             }
         }
 
-        private static void AddAnalyzerInternal(string name, string analyzerCode, string databaseName)
+        private static void AddAnalyzerInternal(ConcurrentDictionary<CacheKey, Lazy<Type>> cache, CacheKey key, string name, string analyzerCode)
         {
-            var key = new CacheKey(databaseName, name, analyzerCode);
-
-            var result = AnalyzersPerDatabaseCache.GetOrAdd(key, _ => new Lazy<Type>(() => CompileAnalyzer(name, analyzerCode)));
+            var result = cache.GetOrAdd(key, _ => new Lazy<Type>(() => CompileAnalyzer(name, analyzerCode)));
             if (result.IsValueCreated)
                 return;
 
@@ -93,15 +141,15 @@ namespace Raven.Server.Documents.Indexes.Analysis
             }
             catch (Exception)
             {
-                AnalyzersPerDatabaseCache.TryRemove(key, out _);
+                cache.TryRemove(key, out _);
                 throw;
             }
         }
 
         private static Type CompileAnalyzer(string name, string analyzerCode)
         {
-            var key = new CacheKey(null, name, analyzerCode);
-            var result = AnalyzersCache.GetOrAdd(key, _ => new Lazy<Type>(() => AnalyzerCompiler.Compile(name, analyzerCode)));
+            var key = CacheKey.ForCompilation(name, analyzerCode);
+            var result = AnalyzersCompilationCache.GetOrAdd(key, _ => new Lazy<Type>(() => AnalyzerCompiler.Compile(name, analyzerCode)));
 
             try
             {
@@ -109,22 +157,37 @@ namespace Raven.Server.Documents.Indexes.Analysis
             }
             catch (Exception)
             {
-                AnalyzersCache.TryRemove(key, out _);
+                AnalyzersCompilationCache.TryRemove(key, out _);
                 throw;
             }
         }
 
         internal class CacheKey : IEquatable<CacheKey>
         {
-            public readonly string DatabaseName;
+            public readonly string ResourceName;
             public readonly string AnalyzerName;
             private readonly string _analyzerCode;
 
-            public CacheKey(string databaseName, string analyzerName, string analyzerCode)
+            private CacheKey(string resourceName, string analyzerName, string analyzerCode)
             {
-                DatabaseName = databaseName;
+                ResourceName = resourceName;
                 AnalyzerName = analyzerName;
                 _analyzerCode = analyzerCode;
+            }
+
+            public static CacheKey ForDatabase(string databaseName, string analyzerName)
+            {
+                return new(databaseName, analyzerName, analyzerCode: null);
+            }
+
+            public static CacheKey ForServerWide(string analyzerName)
+            {
+                return new(resourceName: null, analyzerName, analyzerCode: null);
+            }
+
+            public static CacheKey ForCompilation(string analyzerName, string analyzerCode)
+            {
+                return new(resourceName: null, analyzerName, analyzerCode);
             }
 
             public bool Equals(CacheKey other)
@@ -134,7 +197,7 @@ namespace Raven.Server.Documents.Indexes.Analysis
                 if (ReferenceEquals(this, other))
                     return true;
 
-                var equals = string.Equals(DatabaseName, other.DatabaseName, StringComparison.OrdinalIgnoreCase)
+                var equals = string.Equals(ResourceName, other.ResourceName, StringComparison.OrdinalIgnoreCase)
                              && string.Equals(AnalyzerName, other.AnalyzerName, StringComparison.OrdinalIgnoreCase);
 
                 if (equals == false)
@@ -161,7 +224,7 @@ namespace Raven.Server.Documents.Indexes.Analysis
             {
                 unchecked
                 {
-                    var hashCode = (DatabaseName != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(DatabaseName) : 0);
+                    var hashCode = (ResourceName != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(ResourceName) : 0);
                     hashCode = (hashCode * 397) ^ (AnalyzerName != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(AnalyzerName) : 0);
                     return hashCode;
                 }

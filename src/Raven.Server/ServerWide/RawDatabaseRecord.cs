@@ -15,6 +15,7 @@ using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
+using Raven.Server.Json;
 using Sparrow.Json;
 
 namespace Raven.Server.ServerWide
@@ -641,7 +642,7 @@ namespace Raven.Server.ServerWide
                                 continue;
 
                             if (propertyDetails.Value is BlittableJsonReaderObject bjro)
-                                _sorters[propertyDetails.Name] = JsonDeserializationCluster.SorterDefinition(bjro);
+                                _sorters[propertyDetails.Name] = JsonDeserializationServer.SorterDefinition(bjro);
                         }
                     }
                 }
@@ -673,7 +674,7 @@ namespace Raven.Server.ServerWide
                                 continue;
 
                             if (propertyDetails.Value is BlittableJsonReaderObject bjro)
-                                _analyzers[propertyDetails.Name] = JsonDeserializationCluster.AnalyzerDefinition(bjro);
+                                _analyzers[propertyDetails.Name] = JsonDeserializationServer.AnalyzerDefinition(bjro);
                         }
                     }
                 }

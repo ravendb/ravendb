@@ -1,27 +1,29 @@
-﻿using System.Net;
+﻿using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Json;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 
-namespace Raven.Server.Documents.Handlers.Admin
+namespace Raven.Server.Web.System.Analyzers
 {
-    public class AdminAnalyzersHandler : DatabaseRequestHandler
+    public class AdminAnalyzersHandler : ServerRequestHandler
     {
-        [RavenAction("/databases/*/admin/analyzers", "PUT", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/admin/analyzers", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task Put()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var input = await context.ReadForMemoryAsync(RequestBodyStream(), "Analyzers");
                 if (input.TryGet("Analyzers", out BlittableJsonReaderArray analyzers) == false)
                     ThrowRequiredPropertyNameInRequest("Analyzers");
 
-                var command = new PutAnalyzersCommand(Database.Name, GetRaftRequestIdFromQuery());
+                var commands = new List<PutServerWideAnalyzerCommand>();
                 foreach (var analyzerToAdd in analyzers)
                 {
                     var analyzerDefinition = JsonDeserializationServer.AnalyzerDefinition((BlittableJsonReaderObject)analyzerToAdd);
@@ -31,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     {
                         var clientCert = GetCurrentCertificate();
 
-                        var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
+                        var auditLog = LoggingSource.AuditLog.GetLogger("Server", "Audit");
                         auditLog.Info($"Analyzer {analyzerDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {analyzerToAdd}");
                     }
 
@@ -40,18 +42,22 @@ namespace Raven.Server.Documents.Handlers.Admin
                     // check if analyzer is compilable
                     AnalyzerCompiler.Compile(analyzerDefinition.Name, analyzerDefinition.Code);
 
-                    command.Analyzers.Add(analyzerDefinition);
+                    var command = new PutServerWideAnalyzerCommand(analyzerDefinition, GetRaftRequestIdFromQuery());
+
+                    commands.Add(command);
                 }
 
-                var index = (await ServerStore.SendToLeaderAsync(command)).Index;
+                var index = 0L;
+                foreach (var command in commands)
+                    index = (await ServerStore.SendToLeaderAsync(command)).Index;
 
-                await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
+                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
 
                 NoContentStatus(HttpStatusCode.Created);
             }
         }
 
-        [RavenAction("/databases/*/admin/analyzers", "DELETE", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/admin/analyzers", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task Delete()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -60,14 +66,14 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 var clientCert = GetCurrentCertificate();
 
-                var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
+                var auditLog = LoggingSource.AuditLog.GetLogger("Server", "Audit");
                 auditLog.Info($"Analyzer {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
             }
 
-            var command = new DeleteAnalyzerCommand(name, Database.Name, GetRaftRequestIdFromQuery());
+            var command = new DeleteServerWideAnalyzerCommand(name, GetRaftRequestIdFromQuery());
             var index = (await ServerStore.SendToLeaderAsync(command)).Index;
 
-            await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
+            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
 
             NoContentStatus();
         }

@@ -22,6 +22,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -285,7 +286,7 @@ namespace Raven.Server.Smuggler.Documents
                                 continue;
                             }
 
-                            databaseRecord.Sorters[sorterName] = JsonDeserializationCluster.SorterDefinition(sorter);
+                            databaseRecord.Sorters[sorterName] = JsonDeserializationServer.SorterDefinition(sorter);
                         }
                     }
                     catch (Exception e)
@@ -312,7 +313,7 @@ namespace Raven.Server.Smuggler.Documents
                                 continue;
                             }
 
-                            databaseRecord.Analyzers[analyzerName] = JsonDeserializationCluster.AnalyzerDefinition(analyzer);
+                            databaseRecord.Analyzers[analyzerName] = JsonDeserializationServer.AnalyzerDefinition(analyzer);
                         }
                     }
                     catch (Exception e)
