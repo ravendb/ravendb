@@ -1,48 +1,48 @@
 ﻿using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Server.Documents.Indexes.Analysis;
+using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Commands.Analyzers;
+using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 
-namespace Raven.Server.Web.System.Analyzers
+namespace Raven.Server.Web.System.Sorters
 {
-    public class AdminAnalyzersHandler : ServerRequestHandler
+    public class AdminSortersHandler : ServerRequestHandler
     {
-        [RavenAction("/admin/analyzers", "PUT", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/sorters", "PUT", AuthorizationStatus.Operator)]
         public async Task Put()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var input = await context.ReadForMemoryAsync(RequestBodyStream(), "Analyzers");
-                if (input.TryGet("Analyzers", out BlittableJsonReaderArray analyzers) == false)
-                    ThrowRequiredPropertyNameInRequest("Analyzers");
+                var input = await context.ReadForMemoryAsync(RequestBodyStream(), "Sorters");
+                if (input.TryGet("Sorters", out BlittableJsonReaderArray analyzers) == false)
+                    ThrowRequiredPropertyNameInRequest("Sorters");
 
-                var commands = new List<PutServerWideAnalyzerCommand>();
-                foreach (var analyzerToAdd in analyzers)
+                var commands = new List<PutServerWideSorterCommand>();
+                foreach (var sorterToAdd in analyzers)
                 {
-                    var analyzerDefinition = JsonDeserializationServer.AnalyzerDefinition((BlittableJsonReaderObject)analyzerToAdd);
-                    analyzerDefinition.Name = analyzerDefinition.Name?.Trim();
+                    var sorterDefinition = JsonDeserializationServer.SorterDefinition((BlittableJsonReaderObject)sorterToAdd);
+                    sorterDefinition.Name = sorterDefinition.Name?.Trim();
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
                         var clientCert = GetCurrentCertificate();
 
                         var auditLog = LoggingSource.AuditLog.GetLogger("Server", "Audit");
-                        auditLog.Info($"Analyzer {analyzerDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {analyzerToAdd}");
+                        auditLog.Info($"Sorter {sorterDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {sorterToAdd}");
                     }
 
-                    analyzerDefinition.Validate();
+                    sorterDefinition.Validate();
 
-                    // check if analyzer is compilable
-                    AnalyzerCompiler.Compile(analyzerDefinition.Name, analyzerDefinition.Code);
+                    // check if sorter is compilable
+                    SorterCompiler.Compile(sorterDefinition.Name, sorterDefinition.Code);
 
-                    var command = new PutServerWideAnalyzerCommand(analyzerDefinition, GetRaftRequestIdFromQuery());
+                    var command = new PutServerWideSorterCommand(sorterDefinition, GetRaftRequestIdFromQuery());
 
                     commands.Add(command);
                 }
@@ -57,7 +57,7 @@ namespace Raven.Server.Web.System.Analyzers
             }
         }
 
-        [RavenAction("/admin/analyzers", "DELETE", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/sorters", "DELETE", AuthorizationStatus.Operator)]
         public async Task Delete()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -67,10 +67,10 @@ namespace Raven.Server.Web.System.Analyzers
                 var clientCert = GetCurrentCertificate();
 
                 var auditLog = LoggingSource.AuditLog.GetLogger("Server", "Audit");
-                auditLog.Info($"Analyzer {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
+                auditLog.Info($"Sorter {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
             }
 
-            var command = new DeleteServerWideAnalyzerCommand(name, GetRaftRequestIdFromQuery());
+            var command = new DeleteServerWideSorterCommand(name, GetRaftRequestIdFromQuery());
             var index = (await ServerStore.SendToLeaderAsync(command)).Index;
 
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);

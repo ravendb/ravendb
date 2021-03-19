@@ -1,20 +1,20 @@
-﻿using Raven.Client.Documents.Indexes.Analysis;
-using Raven.Server.Documents.Indexes.Analysis;
+﻿using Raven.Client.Documents.Queries.Sorting;
+using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.ServerWide.Commands.Analyzers
+namespace Raven.Server.ServerWide.Commands.Sorters
 {
-    internal class PutServerWideAnalyzerCommand : PutValueCommand<AnalyzerDefinition>
+    internal class PutServerWideSorterCommand : PutValueCommand<SorterDefinition>
     {
-        public const string Prefix = "analyzer/";
+        public const string Prefix = "sorter/";
 
-        public PutServerWideAnalyzerCommand()
+        public PutServerWideSorterCommand()
         {
             // for deserialization
         }
 
-        public PutServerWideAnalyzerCommand(AnalyzerDefinition value, string uniqueRequestId)
+        public PutServerWideSorterCommand(SorterDefinition value, string uniqueRequestId)
             : base(uniqueRequestId)
         {
             if (value is null)
@@ -26,7 +26,7 @@ namespace Raven.Server.ServerWide.Commands.Analyzers
 
         public override void UpdateValue(ClusterOperationContext context, long index)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ => AnalyzerCompilationCache.Instance.AddServerWideItem(Value.Name, Value.Code);
+            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ => SorterCompilationCache.Instance.AddServerWideItem(Value.Name, Value.Code);
         }
 
         public override DynamicJsonValue ValueToJson()

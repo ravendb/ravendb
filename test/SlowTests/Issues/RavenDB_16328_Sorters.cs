@@ -8,14 +8,12 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Sorters;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Sorters;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Server.Documents.Indexes.Sorting;
+using Raven.Client.ServerWide.Operations.Sorters;
 using Raven.Server.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
@@ -23,47 +21,14 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_8355 : RavenTestBase
+    public class RavenDB_16328_Sorters : RavenTestBase
     {
-        public RavenDB_8355(ITestOutputHelper output) : base(output)
+        public RavenDB_16328_Sorters(ITestOutputHelper output) : base(output)
         {
         }
 
         [Fact]
         public void CanUseCustomSorter()
-        {
-            var sorterName = GetDatabaseName();
-
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = _ => sorterName,
-                ModifyDatabaseRecord = record => record.Sorters = new Dictionary<string, SorterDefinition>
-                {
-                    { "MySorter", new SorterDefinition
-                    {
-                        Name = sorterName,
-                        Code = GetSorter("RavenDB_8355.MySorter.cs", "MySorter", sorterName)
-                    }}
-                }
-            }))
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Company { Name = "C1" });
-                    session.Store(new Company { Name = "C2" });
-
-                    session.SaveChanges();
-                }
-
-                CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True", sorterName);
-            }
-
-            foreach (var key in SorterCompilationCache.Instance.PerDatabaseCache.ForceEnumerateInThreadSafeManner())
-                Assert.NotEqual(sorterName, key.Key.ResourceName);
-        }
-
-        [Fact]
-        public void CanUseCustomSorterWithOperations()
         {
             var sorterName = GetDatabaseName();
             using (var store = GetDocumentStore(new Options
@@ -83,14 +48,14 @@ namespace SlowTests.Issues
 
                 var sorterCode = GetSorter("RavenDB_8355.MySorter.cs", "MySorter", sorterName);
 
-                store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
+                store.Maintenance.Send(new PutServerWideSortersOperation(new SorterDefinition
                 {
                     Name = sorterName,
                     Code = sorterCode
                 }));
 
                 // checking if we can send again same sorter
-                store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
+                store.Maintenance.Send(new PutServerWideSortersOperation(new SorterDefinition
                 {
                     Name = sorterName,
                     Code = sorterCode
@@ -101,7 +66,7 @@ namespace SlowTests.Issues
                 sorterCode = sorterCode.Replace("Catch me", "Catch me 2");
 
                 // checking if we can update sorter
-                store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
+                store.Maintenance.Send(new PutServerWideSortersOperation(new SorterDefinition
                 {
                     Name = sorterName,
                     Code = sorterCode
@@ -110,7 +75,7 @@ namespace SlowTests.Issues
                 var e = Assert.Throws<SorterCompilationException>(() =>
                 {
                     // We should not be able to add sorter with non-matching name
-                    store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
+                    store.Maintenance.Send(new PutServerWideSortersOperation(new SorterDefinition
                     {
                         Name = $"{sorterName}_OtherName",
                         Code = sorterCode
@@ -121,7 +86,7 @@ namespace SlowTests.Issues
 
                 CanUseSorterInternal<RavenException>(store, "Catch me 2: Name:2:0:False", "Catch me 2: Name:2:0:True", sorterName);
 
-                store.Maintenance.Send(new DeleteSorterOperation(sorterName));
+                store.Maintenance.Send(new DeleteServerWideSorterOperation(sorterName));
 
                 CanUseSorterInternal<SorterDoesNotExistException>(store, $"There is no sorter with '{sorterName}' name", $"There is no sorter with '{sorterName}' name", sorterName);
             }
@@ -144,7 +109,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
+                store.Maintenance.Send(new PutServerWideSortersOperation(new SorterDefinition
                 {
                     Name = $"{sorterName}_WithDiagnostics",
                     Code = GetSorter("RavenDB_8355.MySorterWithDiagnostics.cs", "MySorterWithDiagnostics", $"{sorterName}_WithDiagnostics")

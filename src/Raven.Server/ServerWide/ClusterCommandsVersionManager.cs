@@ -127,7 +127,10 @@ namespace Raven.Server.ServerWide
             [nameof(PutAnalyzersCommand)] = 52_000,
             [nameof(DeleteAnalyzerCommand)] = 52_000,
             [nameof(PutServerWideAnalyzerCommand)] = 52_000,
-            [nameof(DeleteServerWideAnalyzerCommand)] = 52_000
+            [nameof(DeleteServerWideAnalyzerCommand)] = 52_000,
+
+            [nameof(PutServerWideSorterCommand)] = 52_000,
+            [nameof(DeleteServerWideSorterCommand)] = 52_000
         };
 
         public static bool CanPutCommand(string command)

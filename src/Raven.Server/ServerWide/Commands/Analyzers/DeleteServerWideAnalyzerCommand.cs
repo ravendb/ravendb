@@ -18,7 +18,7 @@ namespace Raven.Server.ServerWide.Commands.Analyzers
 
         public override void DeleteValue(ClusterOperationContext context)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ => AnalyzerCompilationCache.RemoveServerWideAnalyzer(PutServerWideAnalyzerCommand.ExtractName(Name));
+            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ => AnalyzerCompilationCache.Instance.RemoveServerWideItem(PutServerWideAnalyzerCommand.ExtractName(Name));
         }
     }
 }

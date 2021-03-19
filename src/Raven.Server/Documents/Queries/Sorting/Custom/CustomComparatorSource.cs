@@ -1,4 +1,5 @@
 ﻿using Lucene.Net.Search;
+using Raven.Client.Exceptions.Documents.Sorters;
 using Raven.Server.Documents.Indexes.Sorting;
 
 namespace Raven.Server.Documents.Queries.Sorting.Custom
@@ -11,7 +12,9 @@ namespace Raven.Server.Documents.Queries.Sorting.Custom
         public CustomComparatorSource(string sorterName, string databaseName, IndexQueryServerSide query)
         {
             _query = query;
-            _activator = SorterCompilationCache.GetSorter(sorterName, databaseName);
+            _activator = SorterCompilationCache.Instance.GetItemType(sorterName, databaseName);
+            if (_activator == null)
+                SorterDoesNotExistException.ThrowFor(sorterName);
         }
 
         public override FieldComparator NewComparator(string fieldName, int numHits, int sortPos, bool reversed)

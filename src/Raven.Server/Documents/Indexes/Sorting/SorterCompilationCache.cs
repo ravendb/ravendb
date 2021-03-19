@@ -1,172 +1,49 @@
-﻿using System;
-using System.Collections.Concurrent;
-using Raven.Client.Documents.Queries.Sorting;
-using Raven.Client.Exceptions.Documents.Sorters;
-using Raven.Client.Extensions;
+﻿using System.Collections.Generic;
 using Raven.Client.ServerWide;
-using Raven.Server.Utils;
+using Raven.Server.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.Sorters;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Sorting
 {
-    public static class SorterCompilationCache
+    public class SorterCompilationCache : AbstractCompilationCache<CreateSorter>
     {
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<CreateSorter>> SortersCache = new ConcurrentDictionary<CacheKey, Lazy<CreateSorter>>();
+        public static readonly SorterCompilationCache Instance = new();
 
-        internal static readonly ConcurrentDictionary<CacheKey, Lazy<CreateSorter>> SortersPerDatabaseCache = new ConcurrentDictionary<CacheKey, Lazy<CreateSorter>>();
-
-        public static CreateSorter GetSorter(string name, string databaseName)
+        private SorterCompilationCache()
         {
-            var key = new CacheKey(databaseName, name, null);
-
-            if (SortersPerDatabaseCache.TryGetValue(key, out var result) == false)
-                SorterDoesNotExistException.ThrowFor(name);
-
-            try
-            {
-                return result.Value;
-            }
-            catch (Exception)
-            {
-                SortersPerDatabaseCache.TryRemove(key, out _);
-                throw;
-            }
         }
 
-        public static void AddSorter(SorterDefinition definition, string databaseName)
+
+        protected override bool DatabaseRecordContainsItem(DatabaseRecord databaseRecord, string name)
         {
-            AddSorterInternal(definition.Name, definition.Code, databaseName);
+            return databaseRecord.Sorters != null && databaseRecord.Sorters.ContainsKey(name);
         }
 
-        public static void AddSorters(DatabaseRecord databaseRecord)
+        protected override IEnumerable<(string Name, string Code)> GetItemsFromDatabaseRecord(DatabaseRecord databaseRecord)
         {
-            foreach (var kvp in SortersPerDatabaseCache.ForceEnumerateInThreadSafeManner())
-            {
-                var key = kvp.Key;
-                if (string.Equals(key.DatabaseName, databaseRecord.DatabaseName, StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
-
-                if (databaseRecord.Sorters != null && databaseRecord.Sorters.ContainsKey(key.SorterName))
-                    continue;
-
-                SortersPerDatabaseCache.TryRemove(key, out _);
-            }
-
             if (databaseRecord.Sorters == null || databaseRecord.Sorters.Count == 0)
-                return;
-
-            var aggregator = new ExceptionAggregator("Could not update sorters cache");
+                yield break;
 
             foreach (var kvp in databaseRecord.Sorters)
-            {
-                aggregator.Execute(() =>
-                {
-                    AddSorterInternal(kvp.Value.Name, kvp.Value.Code, databaseRecord.DatabaseName);
-                });
-            }
-
-            aggregator.ThrowIfNeeded();
+                yield return (kvp.Value.Name, kvp.Value.Code);
         }
 
-        public static void Clear(string databaseName)
+        protected override IEnumerable<(string Name, string Code)> GetItemsFromCluster(ServerStore serverStore, TransactionOperationContext context)
         {
-            foreach (var kvp in SortersPerDatabaseCache.ForceEnumerateInThreadSafeManner())
+            foreach (var kvp in serverStore.Cluster.ItemsStartingWith(context, PutServerWideSorterCommand.Prefix, 0, long.MaxValue))
             {
-                var key = kvp.Key;
-                if (string.Equals(key.DatabaseName, databaseName, StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
+                var sorterDefinition = JsonDeserializationServer.SorterDefinition(kvp.Value);
+                sorterDefinition.Validate();
 
-                SortersPerDatabaseCache.TryRemove(key, out _);
+                yield return (sorterDefinition.Name, sorterDefinition.Code);
             }
         }
 
-        private static void AddSorterInternal(string name, string sorterCode, string databaseName)
+        protected override CreateSorter CompileItem(string name, string code)
         {
-            var key = new CacheKey(databaseName, name, sorterCode);
-
-            var result = SortersPerDatabaseCache.GetOrAdd(key, _ => new Lazy<CreateSorter>(() => CompileSorter(name, sorterCode)));
-            if (result.IsValueCreated)
-                return;
-
-            try
-            {
-                // compile sorter
-                var value = result.Value;
-            }
-            catch (Exception)
-            {
-                SortersPerDatabaseCache.TryRemove(key, out _);
-                throw;
-            }
-        }
-
-        private static CreateSorter CompileSorter(string name, string sorterCode)
-        {
-            var key = new CacheKey(null, name, sorterCode);
-            var result = SortersCache.GetOrAdd(key, _ => new Lazy<CreateSorter>(() => SorterCompiler.Compile(name, sorterCode)));
-
-            try
-            {
-                return result.Value;
-            }
-            catch (Exception)
-            {
-                SortersCache.TryRemove(key, out _);
-                throw;
-            }
-        }
-
-        internal class CacheKey : IEquatable<CacheKey>
-        {
-            public readonly string DatabaseName;
-            public readonly string SorterName;
-            private readonly string _sorterCode;
-
-            public CacheKey(string databaseName, string sorterName, string sorterCode)
-            {
-                DatabaseName = databaseName;
-                SorterName = sorterName;
-                _sorterCode = sorterCode;
-            }
-
-            public bool Equals(CacheKey other)
-            {
-                if (ReferenceEquals(null, other))
-                    return false;
-                if (ReferenceEquals(this, other))
-                    return true;
-
-                var equals = string.Equals(DatabaseName, other.DatabaseName, StringComparison.OrdinalIgnoreCase)
-                             && string.Equals(SorterName, other.SorterName, StringComparison.OrdinalIgnoreCase);
-
-                if (equals == false)
-                    return false;
-
-                if (_sorterCode == null || other._sorterCode == null)
-                    return true;
-
-                return string.Equals(_sorterCode, other._sorterCode);
-            }
-
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj))
-                    return false;
-                if (ReferenceEquals(this, obj))
-                    return true;
-                if (obj.GetType() != GetType())
-                    return false;
-                return Equals((CacheKey)obj);
-            }
-
-            public override int GetHashCode()
-            {
-                unchecked
-                {
-                    var hashCode = (DatabaseName != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(DatabaseName) : 0);
-                    hashCode = (hashCode * 397) ^ (SorterName != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(SorterName) : 0);
-                    return hashCode;
-                }
-            }
+            return SorterCompiler.Compile(name, code);
         }
     }
 }
