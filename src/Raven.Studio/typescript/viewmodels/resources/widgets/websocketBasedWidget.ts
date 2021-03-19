@@ -1,8 +1,8 @@
 import widget = require("viewmodels/resources/widgets/widget");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 
-abstract class websocketBasedWidget<TData, TConfig = unknown, TState = unknown> extends widget<TData, TConfig, TState> {
-    abstract onData(nodeTag: string, data: TData): void; //TODO: consider refactor to websocket based widget
+abstract class websocketBasedWidget<TData, TConfig = unknown, TState = unknown> extends widget<TConfig, TState> {
+    abstract onData(nodeTag: string, data: TData): void;
 
     supportedOnNode(targetNodeTag: string, currentServerNodeTag: string): boolean {
         return true;
