@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public abstract void AddResult(T result);
+        public abstract ValueTask AddResultAsync(T result, CancellationToken token);
 
         public abstract void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings);
 
