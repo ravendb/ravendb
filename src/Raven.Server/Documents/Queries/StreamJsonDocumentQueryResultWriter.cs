@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Session;
 using Raven.Server.Json;
@@ -41,7 +42,7 @@ namespace Raven.Server.Documents.Queries
             _writer.WriteEndArray();
         }
 
-        public void AddResult(Document res)
+        public async ValueTask AddResultAsync(Document res, CancellationToken token)
         {
             if (_first == false)
             {
@@ -51,7 +52,9 @@ namespace Raven.Server.Documents.Queries
             {
                 _first = false;
             }
+            
             _writer.WriteDocument(_context, res, metadataOnly: false);
+            await _writer.MaybeFlushAsync(token);
         }
 
         public void EndResponse()

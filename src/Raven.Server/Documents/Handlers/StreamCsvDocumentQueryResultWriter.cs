@@ -1,4 +1,6 @@
 ﻿using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Json;
@@ -8,7 +10,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StreamCsvDocumentQueryResultWriter : StreamCsvResultWriter<Document>
     {
-        public override void AddResult(Document res)
+        public override ValueTask AddResultAsync(Document res, CancellationToken token)
         {
             // add @id property if res.Id != null, res.Id is null in map-reduce index
             WriteCsvHeaderIfNeeded(res.Data, res.Id != null);
@@ -26,6 +28,7 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
             GetCsvWriter().NextRecord();
+            return default;
         }
 
         public StreamCsvDocumentQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null,

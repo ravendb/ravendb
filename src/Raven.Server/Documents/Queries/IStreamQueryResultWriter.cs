@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -10,7 +12,7 @@ namespace Raven.Server.Documents.Queries
 
         void EndResults();
 
-        void AddResult(T res);
+        ValueTask AddResultAsync(T res, CancellationToken token);
 
         void EndResponse();
 

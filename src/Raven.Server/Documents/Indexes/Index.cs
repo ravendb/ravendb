@@ -2793,7 +2793,7 @@ namespace Raven.Server.Documents.Indexes
                                                 );
                                             }
 
-                                            resultToFill.AddResult(document.Result);
+                                            await resultToFill.AddResultAsync(document.Result, token.Token);
 
                                             if (document.Highlightings != null)
                                                 resultToFill.AddHighlightings(document.Highlightings);
@@ -2933,7 +2933,7 @@ namespace Raven.Server.Documents.Indexes
                             foreach (var indexEntry in reader.IndexEntries(query, totalResults, queryContext.Documents, GetOrAddSpatialField, token.Token))
                             {
                                 resultToFill.TotalResults = totalResults.Value;
-                                resultToFill.AddResult(indexEntry);
+                                await resultToFill.AddResultAsync(indexEntry, token.Token);
                             }
                         }
                         return;
