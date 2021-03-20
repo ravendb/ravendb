@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -14,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
+using Org.BouncyCastle.Asn1.Cms;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
@@ -95,9 +95,9 @@ namespace Raven.Server.Web
             if (_requestBodyStream != null)
                 return _requestBodyStream;
             _requestBodyStream = new StreamWithTimeout(GetDecompressedStream(HttpContext.Request.Body, HttpContext.Request.Headers));
-            
+
             _context.HttpContext.Response.RegisterForDispose(_requestBodyStream);
-            
+
             return _requestBodyStream;
         }
 
@@ -264,9 +264,9 @@ namespace Raven.Server.Web
                 return _responseStream;
 
             _responseStream = new StreamWithTimeout(HttpContext.Response.Body);
-            
+
             _context.HttpContext.Response.RegisterForDispose(_responseStream);
-            
+
             return _responseStream;
         }
 
@@ -686,12 +686,6 @@ namespace Raven.Server.Web
 
             return false;
         }
-
-        protected void SetupCORSHeaders(CorsMode mode)
-        {
-            SetupCORSHeaders(HttpContext, ServerStore, mode);
-        }
-
         protected void RedirectToLeader()
         {
             if (ServerStore.LeaderTag == null)
@@ -717,6 +711,14 @@ namespace Raven.Server.Web
             HttpContext.Response.Headers.Add("Location", leaderLocation);
         }
 
-   
+        protected virtual OperationCancelToken CreateOperationToken()
+        {
+            return new OperationCancelToken(ServerStore.ServerShutdown, HttpContext.RequestAborted);
+        }
+
+        protected virtual OperationCancelToken CreateOperationToken(TimeSpan cancelAfter)
+        {
+            return new OperationCancelToken(cancelAfter, ServerStore.ServerShutdown, HttpContext.RequestAborted);
+        }
     }
 }

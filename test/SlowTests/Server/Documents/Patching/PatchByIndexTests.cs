@@ -74,7 +74,7 @@ namespace SlowTests.Server.Documents.Patching
                         query.QueryParameters,
                         context,
                         p => { },
-                        new OperationCancelToken(CancelAfter, CancellationToken.None));
+                        new OperationCancelToken(CancelAfter, CancellationToken.None, CancellationToken.None));
                     var after = context.AllocatedMemory;
 
                     //In a case of fragmentation, we don't immediately freeing memory so the memory can be a little bit higher

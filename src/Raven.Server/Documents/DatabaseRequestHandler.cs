@@ -106,27 +106,32 @@ namespace Raven.Server.Documents
 
         protected OperationCancelToken CreateTimeLimitedOperationToken()
         {
-            return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+            return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
         protected OperationCancelToken CreateTimeLimitedQueryToken()
         {
-            return new OperationCancelToken(Database.Configuration.Databases.QueryTimeout.AsTimeSpan, Database.DatabaseShutdown);
+            return new OperationCancelToken(Database.Configuration.Databases.QueryTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
         protected OperationCancelToken CreateTimeLimitedCollectionOperationToken()
         {
-            return new OperationCancelToken(Database.Configuration.Databases.CollectionOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+            return new OperationCancelToken(Database.Configuration.Databases.CollectionOperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
         protected OperationCancelToken CreateTimeLimitedQueryOperationToken()
         {
-            return new OperationCancelToken(Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+            return new OperationCancelToken(Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
-        protected OperationCancelToken CreateOperationToken()
+        protected override OperationCancelToken CreateOperationToken()
         {
-            return new OperationCancelToken(Database.DatabaseShutdown);
+            return new OperationCancelToken(Database.DatabaseShutdown, HttpContext.RequestAborted);
+        }
+
+        protected override OperationCancelToken CreateOperationToken(TimeSpan cancelAfter)
+        {
+            return new OperationCancelToken(cancelAfter, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
         protected void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, int numberOfResults, int pageSize, long duration)

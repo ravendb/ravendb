@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -244,7 +245,7 @@ namespace Raven.Server.Smuggler.Migration
         public long StartMigratingSingleDatabase(DatabaseMigrationSettings databaseMigrationSettings, DocumentDatabase database)
         {
             var operationId = database.Operations.GetNextOperationId();
-            var cancelToken = new OperationCancelToken(database.DatabaseShutdown);
+            var cancelToken = new OperationCancelToken(database.DatabaseShutdown, CancellationToken.None);
             var result = new SmugglerResult();
 
             var databaseName = databaseMigrationSettings.DatabaseName;
