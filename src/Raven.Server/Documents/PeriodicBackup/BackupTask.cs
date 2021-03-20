@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly long _operationId;
         private readonly PathSetting _tempBackupPath;
         private readonly Logger _logger;
-        private readonly CancellationToken _databaseShutdownCancellationToken;
+        private readonly CancellationToken _databaseShutdown;
         public readonly OperationCancelToken TaskCancelToken;
         private readonly BackupResult _backupResult;
         private readonly bool _isServerWide;
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             long operationId,
             PathSetting tempBackupPath,
             Logger logger,
-            CancellationToken databaseShutdownCancellationToken,
+            CancellationToken databaseShutdown,
             PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
             _serverStore = serverStore;
@@ -82,10 +82,10 @@ namespace Raven.Server.Documents.PeriodicBackup
             _operationId = operationId;
             _tempBackupPath = tempBackupPath;
             _logger = logger;
-            _databaseShutdownCancellationToken = databaseShutdownCancellationToken;
+            _databaseShutdown = databaseShutdown;
             _forTestingPurposes = forTestingPurposes;
 
-            TaskCancelToken = new OperationCancelToken(_databaseShutdownCancellationToken);
+            TaskCancelToken = new OperationCancelToken(_databaseShutdown, CancellationToken.None);
             _backupResult = GenerateBackupResult();
 
             _retentionPolicyParameters = new RetentionPolicyBaseParameters
@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             catch (OperationCanceledException)
             {
                 operationCanceled = TaskCancelToken.Token.IsCancellationRequested &&
-                                    _databaseShutdownCancellationToken.IsCancellationRequested;
+                                    _databaseShutdown.IsCancellationRequested;
                 throw;
             }
             catch (ObjectDisposedException)
