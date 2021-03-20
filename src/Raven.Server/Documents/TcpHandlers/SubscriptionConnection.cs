@@ -831,7 +831,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                         if (includeTimeSeriesCommand != null)
                         {
-                        writer.WriteStartObject();
+                            writer.WriteStartObject();
 
                             writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
                             writer.WriteValue(BlittableJsonToken.String, docsContext.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
@@ -1098,18 +1098,18 @@ namespace Raven.Server.Documents.TcpHandlers
                             switch (includeType)
                             {
                                 case MethodType.Counters:
-                            QueryValidator.ValidateIncludeCounter(me.Arguments, q.QueryText, null);
+                                    QueryValidator.ValidateIncludeCounter(me.Arguments, q.QueryText, null);
 
-                            if (counterIncludes == null)
-                                counterIncludes = new List<string>();
+                                    if (counterIncludes == null)
+                                        counterIncludes = new List<string>();
 
-                            if (me.Arguments.Count > 0)
-                            {
-                                var argument = me.Arguments[0];
+                                    if (me.Arguments.Count > 0)
+                                    {
+                                        var argument = me.Arguments[0];
 
                                         counterIncludes.Add(ExtractPathFromExpression(argument, q));
-                            }
-                            break;
+                                    }
+                                    break;
                                 case MethodType.TimeSeries:
                                     QueryValidator.ValidateIncludeTimeseries(me.Arguments, q.QueryText, null);
 
@@ -1140,7 +1140,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                                             break;
                                                         }
-                        default:
+                                                    default:
                                                         throw new InvalidQueryException($"Got invalid arguments count '{methodExpression.Arguments.Count}' in '{methodExpression.Name}' method.", q.QueryText);
                                                 }
                                             }

@@ -75,11 +75,12 @@ namespace Raven.Server.Documents.Handlers
                 var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), pageSize);
 
                 long numberOfResults;
+                using (var token = CreateOperationToken())
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
-                    writer.WriteDocuments(context, documents, metadataOnly: false, out numberOfResults);
+                    numberOfResults = await writer.WriteDocumentsAsync(context, documents, metadataOnly: false, token.Token);
                     writer.WriteEndObject();
                 }
 
