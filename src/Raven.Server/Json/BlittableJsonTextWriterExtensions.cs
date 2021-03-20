@@ -1225,29 +1225,6 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        private static void WriteDocuments(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerator<Document> documents, bool metadataOnly,
-            out long numberOfResults)
-        {
-            numberOfResults = 0;
-
-            writer.WriteStartArray();
-
-            var first = true;
-
-            while (documents.MoveNext())
-            {
-                numberOfResults++;
-
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
-
-                WriteDocument(writer, context, documents.Current, metadataOnly);
-            }
-
-            writer.WriteEndArray();
-        }
-
         public static Task<int> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, CancellationToken token)
         {
             return WriteDocumentsAsync(writer, context, documents.GetEnumerator(), metadataOnly, token);
@@ -1350,36 +1327,6 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
 
             writer.WriteEndObject();
-        }
-
-        private static void WriteObjects(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects, out long numberOfResults)
-        {
-            numberOfResults = 0;
-
-            writer.WriteStartArray();
-
-            var first = true;
-            foreach (var o in objects)
-            {
-                numberOfResults++;
-
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
-
-                if (o == null)
-                {
-                    writer.WriteNull();
-                    continue;
-                }
-
-                using (o)
-                {
-                    writer.WriteObject(o);
-                }
-            }
-
-            writer.WriteEndArray();
         }
 
         private static async Task<int> WriteObjectsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects, CancellationToken token)
