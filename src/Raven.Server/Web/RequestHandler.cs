@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -15,6 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
+using Org.BouncyCastle.Asn1.Cms;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
@@ -724,12 +724,6 @@ namespace Raven.Server.Web
 
             return false;
         }
-
-        protected void SetupCORSHeaders(CorsMode mode)
-        {
-            SetupCORSHeaders(HttpContext, ServerStore, mode);
-        }
-
         protected void RedirectToLeader()
         {
             if (ServerStore.LeaderTag == null)
@@ -755,6 +749,14 @@ namespace Raven.Server.Web
             HttpContext.Response.Headers.Add("Location", leaderLocation);
         }
 
+        protected virtual OperationCancelToken CreateOperationToken()
+        {
+            return new OperationCancelToken(ServerStore.ServerShutdown, HttpContext.RequestAborted);
+        }
 
+        protected virtual OperationCancelToken CreateOperationToken(TimeSpan cancelAfter)
+        {
+            return new OperationCancelToken(cancelAfter, ServerStore.ServerShutdown, HttpContext.RequestAborted);
     }
+}
 }

@@ -21,7 +21,7 @@ namespace Raven.Server.Utils
 
         public static bool IsOutOfMemory(this Exception e)
         {
-            return e is OutOfMemoryException || e is EarlyOutOfMemoryException || e is Win32Exception win32Exception && win32Exception.IsOutOfMemory();
+            return e is OutOfMemoryException || e is EarlyOutOfMemoryException || e.IsPageFileTooSmall();
         }
 
         public static bool IsOutOfDiskSpaceException(this Exception ioe)
@@ -36,9 +36,9 @@ namespace Raven.Server.Utils
             return e is DiskFullException;
         }
 
-        public static bool IsOutOfMemory(this Win32Exception e)
+        public static bool IsPageFileTooSmall(this Exception e)
         {
-            return e.NativeErrorCode == ERROR_COMMITMENT_LIMIT;
+            return e is Win32Exception win32Exception && win32Exception.NativeErrorCode == ERROR_COMMITMENT_LIMIT;
         }
     }
 }

@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Handlers
             long numberOfResults;
             await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
             {
-                writer.WriteFacetedQueryResult(queryContext.Documents, result, out numberOfResults);
+                numberOfResults = await writer.WriteFacetedQueryResultAsync(queryContext.Documents, result, token.Token);
             }
 
             Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Handlers
             long numberOfResults;
             await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
             {
-                writer.WriteSuggestionQueryResult(queryContext.Documents, result, out numberOfResults);
+                numberOfResults = await writer.WriteSuggestionQueryResultAsync(queryContext.Documents, result, token.Token);
             }
 
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
@@ -598,7 +598,7 @@ namespace Raven.Server.Documents.Handlers
 
             await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
             {
-                writer.WriteIndexEntriesQueryResult(queryContext.Documents, result);
+                await writer.WriteIndexEntriesQueryResultAsync(queryContext.Documents, result, token.Token);
             }
         }
 

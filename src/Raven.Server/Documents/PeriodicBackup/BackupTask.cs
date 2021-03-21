@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -73,7 +74,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _isBackupEncrypted = IsBackupEncrypted(_database, _configuration);
             _forTestingPurposes = forTestingPurposes;
             _backupResult = GenerateBackupResult();
-            TaskCancelToken = new OperationCancelToken(_database.DatabaseShutdown);
+            TaskCancelToken = new OperationCancelToken(_database.DatabaseShutdown, CancellationToken.None);
 
             _retentionPolicyParameters = new RetentionPolicyBaseParameters
             {
@@ -259,7 +260,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         runningBackupStatus.Version = ++_previousBackupStatus.Version;
                         // save the backup status
                         AddInfo("Saving backup status");
-                    SaveBackupStatus(runningBackupStatus, _database, _logger, _backupResult);
+                        SaveBackupStatus(runningBackupStatus, _database, _logger, _backupResult);
                     }
                 }
             }

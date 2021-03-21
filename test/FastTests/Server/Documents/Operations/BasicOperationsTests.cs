@@ -23,7 +23,7 @@ namespace FastTests.Server.Documents.Operations
         {
             using (var db = CreateDocumentDatabase())
             {
-                var token = new OperationCancelToken(TimeSpan.FromMinutes(2), CancellationToken.None);
+                var token = new OperationCancelToken(TimeSpan.FromMinutes(2), CancellationToken.None, CancellationToken.None);
 
                 var notifications = new BlockingCollection<OperationStatusChange>();
                 var mre = new ManualResetEventSlim(false);
@@ -125,7 +125,7 @@ namespace FastTests.Server.Documents.Operations
         {
             using (var db = CreateDocumentDatabase())
             {
-                var token = new OperationCancelToken(TimeSpan.Zero, CancellationToken.None);
+                var token = new OperationCancelToken(TimeSpan.Zero, CancellationToken.None, CancellationToken.None);
                 token.Cancel();
 
                 var notifications = new BlockingCollection<OperationStatusChange>();

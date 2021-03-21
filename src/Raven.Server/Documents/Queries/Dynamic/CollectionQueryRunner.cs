@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
         }
 
-        public override Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
             var result = new DocumentQueryResult();
 
@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
             {
                 if (result.ResultEtag == existingResultEtag)
-                    return Task.FromResult(DocumentQueryResult.NotModifiedResult);
+                    return DocumentQueryResult.NotModifiedResult;
             }
 
             var collection = GetCollectionName(query.Metadata.CollectionName, out var indexName);
@@ -48,13 +48,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 result.IndexName = indexName;
 
-                ExecuteCollectionQuery(result, query, collection, queryContext, pulseReadingTransaction: false, token.Token);
+                await ExecuteCollectionQueryAsync(result, query, collection, queryContext, pulseReadingTransaction: false, token.Token);
 
-                return Task.FromResult(result);
+                return result;
             }
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<Document> writer,
+        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<Document> writer,
             OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, token);
@@ -69,13 +69,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     result.IndexName = indexName;
 
-                    ExecuteCollectionQuery(result, query, collection, queryContext, pulseReadingTransaction: true, token.Token);
+                    await ExecuteCollectionQueryAsync(result, query, collection, queryContext, pulseReadingTransaction: true, token.Token);
 
                     result.Flush();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
@@ -114,7 +112,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             throw new NotSupportedException("Collection query is handled directly by documents storage so suggestions aren't supported");
         }
 
-        private void ExecuteCollectionQuery(QueryResultServerSide<Document> resultToFill, IndexQueryServerSide query, string collection, QueryOperationContext context, bool pulseReadingTransaction, CancellationToken cancellationToken)
+        private async ValueTask ExecuteCollectionQueryAsync(QueryResultServerSide<Document> resultToFill, IndexQueryServerSide query, string collection, QueryOperationContext context, bool pulseReadingTransaction, CancellationToken cancellationToken)
         {
             using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
             {
@@ -195,7 +193,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                             cancellationToken.ThrowIfCancellationRequested();
 
-                            resultToFill.AddResult(document);
+                            await resultToFill.AddResultAsync(document, cancellationToken);
 
                             using (gatherScope?.Start())
                             {

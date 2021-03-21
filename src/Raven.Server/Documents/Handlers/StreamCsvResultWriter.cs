@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using CsvHelper;
 using Microsoft.AspNetCore.Http;
@@ -91,7 +92,7 @@ namespace Raven.Server.Documents.Handlers
         {
         }
 
-        public abstract void AddResult(T res);
+        public abstract ValueTask AddResultAsync(T res, CancellationToken token);
 
         public CsvWriter GetCsvWriter()
         {
