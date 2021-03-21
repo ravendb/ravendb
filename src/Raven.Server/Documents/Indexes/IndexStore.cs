@@ -237,7 +237,9 @@ namespace Raven.Server.Documents.Indexes
                         // and if local state is disabled or error
                         // then we are ignoring this change
                         if (existingIndex.State == IndexState.Normal || existingIndex.State == IndexState.Idle)
+                        {
                             existingIndex.SetState(definition.State);
+                        }
                     }
 
                     existingIndex.Update(definition, existingIndex.Configuration);
@@ -413,7 +415,7 @@ namespace Raven.Server.Documents.Indexes
                     return null;
                 }
 
-                UpdateStaticIndexDefinition(definition, currentIndex, currentDifferences);
+                UpdateIndexDefinition(definition, currentIndex, currentDifferences);
 
                 var prefixesOfDocumentsToDelete = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -795,7 +797,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void UpdateIndex(IndexDefinition definition, Index existingIndex, IndexDefinitionCompareDifferences indexDifferences)
         {
-            UpdateStaticIndexDefinition(definition, existingIndex, indexDifferences);
+            UpdateIndexDefinition(definition, existingIndex, indexDifferences);
 
             switch (definition.SourceType)
             {
@@ -852,47 +854,20 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private static void UpdateStaticIndexDefinition(IndexDefinition definition, Index existingIndex, IndexDefinitionCompareDifferences indexDifferences)
+        private static void UpdateIndexDefinition(ClientIndexDefinitionBase definition, Index existingIndex, IndexDefinitionCompareDifferences indexDifferences)
         {
-            if (definition.LockMode.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.LockMode) != 0)
-                existingIndex.SetLock(definition.LockMode.Value);
+            if (definition is IndexDefinition def)
+            {
+                if (def.LockMode.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.LockMode) != 0)
+                    existingIndex.SetLock(def.LockMode.Value);
+            }
 
             if (definition.Priority.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.Priority) != 0)
                 existingIndex.SetPriority(definition.Priority.Value);
 
             if (definition.State.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.State) != 0)
-            {
-                if ((definition.State == IndexState.Normal) && (existingIndex.State == IndexState.Disabled || existingIndex.State == IndexState.Error))
-                {
-                    existingIndex.SetState(definition.State.Value);
-                    existingIndex.Start();
-                }
-                else
-                {
-                    existingIndex.SetState(definition.State.Value);
-                }
-            }
+                existingIndex.SetState(definition.State.Value);
         }
-
-        private static void UpdateAutoIndexDefinition(AutoIndexDefinition definition, Index existingIndex, IndexDefinitionCompareDifferences indexDifferences)
-        {
-            if (definition.Priority.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.Priority) != 0)
-                existingIndex.SetPriority(definition.Priority.Value);
-
-            if (definition.State.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.State) != 0)
-            {
-                if ((definition.State == IndexState.Normal) && (existingIndex.State == IndexState.Disabled || existingIndex.State == IndexState.Error))
-                {
-                    existingIndex.SetState(definition.State.Value);
-                    existingIndex.Start();
-                }
-                else
-                {
-                    existingIndex.SetState(definition.State.Value);
-                }
-            }
-        }
-
 
         internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex, out IndexDefinitionCompareDifferences differences)
         {
@@ -903,14 +878,11 @@ namespace Raven.Server.Documents.Indexes
             differences = IndexDefinitionCompareDifferences.None;
 
             var indexDef = indexDefinition as IndexDefinition;
+
             if (indexDef != null)
             {
                 differences = existingIndex.Definition.Compare(indexDef);
-                //We need to check differences between old and new definition
-                //and also need to check differences between new index definition state to 
-                //in memory index state ( can be different from current definition state).
-                if ((indexDef.State != null) && (existingIndex.State != indexDef.State))
-                    differences |= IndexDefinitionCompareDifferences.State;
+
             }
 
             var indexDefBase = indexDefinition as IndexDefinitionBase;
@@ -1168,8 +1140,8 @@ namespace Raven.Server.Documents.Indexes
                 {
                     try
                     {
-                    index.Start();
-                }
+                        index.Start();
+                    }
                     catch (ObjectDisposedException)
                     {
                         // this can happen if we replaced or removed the index
@@ -1439,7 +1411,7 @@ namespace Raven.Server.Documents.Indexes
                     var sp = Stopwatch.StartNew();
 
                     addToInitLog($"Initializing static index: `{name}`");
-                    OpenIndex(path, indexPath, exceptions, name, staticIndexDefinition: definition, autoIndexDefinition: null);
+                    OpenIndex(path, indexPath, exceptions, name, definition);
 
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Initialized static index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
@@ -1461,7 +1433,7 @@ namespace Raven.Server.Documents.Indexes
                     var sp = Stopwatch.StartNew();
 
                     addToInitLog($"Initializing auto index: `{name}`");
-                    OpenIndex(path, indexPath, exceptions, name, staticIndexDefinition: null, autoIndexDefinition: definition);
+                    OpenIndex(path, indexPath, exceptions, name, definition);
 
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Initialized auto index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
@@ -1490,7 +1462,7 @@ namespace Raven.Server.Documents.Indexes
             var indexPath = path.Combine(safeName).FullPath;
             var exceptions = new List<Exception>();
 
-            OpenIndex(path, indexPath, exceptions, index.Name, index.GetIndexDefinition(), null);
+            OpenIndex(path, indexPath, exceptions, index.Name, index.GetIndexDefinition());
 
             if (exceptions.Count > 0)
             {
@@ -1506,7 +1478,7 @@ namespace Raven.Server.Documents.Indexes
                 });
         }
 
-        private void OpenIndex(PathSetting path, string indexPath, List<Exception> exceptions, string name, IndexDefinition staticIndexDefinition, AutoIndexDefinition autoIndexDefinition)
+        private void OpenIndex(PathSetting path, string indexPath, List<Exception> exceptions, string name, ClientIndexDefinitionBase indexDefinition)
         {
             Index index = null;
 
@@ -1515,34 +1487,22 @@ namespace Raven.Server.Documents.Indexes
                 index = Index.Open(indexPath, _documentDatabase);
 
                 var differences = IndexDefinitionCompareDifferences.None;
-
-                if (staticIndexDefinition != null)
+                if (indexDefinition is IndexDefinition def)
                 {
-                    if (staticIndexDefinition.LockMode != null && index.Definition.LockMode != staticIndexDefinition.LockMode)
+                    if (def.LockMode != null && index.Definition.LockMode != def.LockMode)
                         differences |= IndexDefinitionCompareDifferences.LockMode;
-
-                    if (staticIndexDefinition.Priority != null && index.Definition.Priority != staticIndexDefinition.Priority)
-                        differences |= IndexDefinitionCompareDifferences.Priority;
-
-                    if (staticIndexDefinition.State != null && index.Definition.State != staticIndexDefinition.State)
-                        differences |= IndexDefinitionCompareDifferences.State;
                 }
-                else if (autoIndexDefinition != null)
-                {
-                    if (autoIndexDefinition.Priority != index.Definition.Priority)
-                        differences |= IndexDefinitionCompareDifferences.Priority;
+                if (indexDefinition.Priority != null && index.Definition.Priority != indexDefinition.Priority)
+                    differences |= IndexDefinitionCompareDifferences.Priority;
 
-                    if (autoIndexDefinition.State != index.Definition.State)
-                        differences |= IndexDefinitionCompareDifferences.State;
-                }
+                if (indexDefinition.State != null && index.Definition.State != indexDefinition.State)
+                    differences |= IndexDefinitionCompareDifferences.State;
 
+                index.Definition.LastStateRaftId = indexDefinition.LastStateRaftId;
                 if (differences != IndexDefinitionCompareDifferences.None)
                 {
                     // database record has different lock mode / priority / state setting than persisted locally
-                    if (staticIndexDefinition != null)
-                        UpdateStaticIndexDefinition(staticIndexDefinition, index, differences);
-                    else
-                        UpdateAutoIndexDefinition(autoIndexDefinition, index, differences);
+                    UpdateIndexDefinition(indexDefinition, index, differences);
                 }
 
                 var startIndex = true;
@@ -1582,9 +1542,9 @@ namespace Raven.Server.Documents.Indexes
 
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
 
-                var fakeIndex = autoIndexDefinition != null
-                    ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition(autoIndexDefinition))
-                    : new FaultyInMemoryIndex(e, name, configuration, staticIndexDefinition);
+                var fakeIndex = (indexDefinition is AutoIndexDefinition)
+                    ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition((AutoIndexDefinition)indexDefinition))
+                    : new FaultyInMemoryIndex(e, name, configuration, (IndexDefinition)indexDefinition);
 
                 var message = $"Could not open index at '{indexPath}'. Created in-memory, fake instance: {fakeIndex.Name}";
 
