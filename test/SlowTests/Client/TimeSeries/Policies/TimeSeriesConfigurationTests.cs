@@ -1378,11 +1378,11 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.Store(new User {Name = "Karmel"}, "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15)));
                 }
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                await Task.Delay((TimeSpan)(p4.RetentionTime + TimeValue.FromSeconds(10)));
+                await Task.Delay((TimeSpan)(p4.RetentionTime * 2));
                 // nothing should be left
 
                 foreach (var node in cluster.Nodes)

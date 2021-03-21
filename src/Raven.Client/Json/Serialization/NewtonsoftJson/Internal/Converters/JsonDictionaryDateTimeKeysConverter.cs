@@ -126,7 +126,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 
             if (!_canConvertCache.TryGetValue(objectType, out bool canConvert))
             {                
-                if (objectType.GetGenericTypeDefinition() != typeof(Dictionary<,>))
+                if (objectType.GetGenericTypeDefinition() != typeof(Dictionary<,>) && objectType.GetGenericTypeDefinition() != typeof(IDictionary<,>))
                 {
                     canConvert = false;
                 }
