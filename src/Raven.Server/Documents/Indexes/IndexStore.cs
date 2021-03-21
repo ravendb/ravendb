@@ -524,6 +524,9 @@ namespace Raven.Server.Documents.Indexes
                         throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
                 }
 
+                if (currentIndex != null)
+                    index._indexDisabled = currentIndex._indexDisabled;
+
                 return index;
             }
         }
@@ -882,6 +885,12 @@ namespace Raven.Server.Documents.Indexes
             if (indexDef != null)
             {
                 differences = existingIndex.Definition.Compare(indexDef);
+
+                if (indexDef.LastStateRaftId != existingIndex.Definition.LastStateRaftId)
+                {
+                    differences |= IndexDefinitionCompareDifferences.State;
+                    existingIndex.Definition.LastStateRaftId = indexDef.LastStateRaftId;
+                }
 
             }
 

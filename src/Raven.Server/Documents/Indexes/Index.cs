@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Indexes
         /// </summary>
         private CancellationTokenSource _indexingProcessCancellationTokenSource;
 
-        private bool _indexDisabled;
+        internal bool _indexDisabled;
 
         private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryIndexProgress =
             new ConcurrentDictionary<string, IndexProgress.CollectionStats>();
@@ -511,7 +511,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexState State { get; protected set; }
 
-        public IndexDefinitionBase Definition { get; private set; }
+    public IndexDefinitionBase Definition { get; private set; }
 
         public string Name => Definition?.Name;
 
@@ -913,7 +913,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _priorityChanged.Raise();
 
-                if (status == IndexRunningStatus.Running)
+                if ((status == IndexRunningStatus.Running) || ((status == IndexRunningStatus.Paused) && (_indexDisabled == false)) )
                     Start();
             }
         }
@@ -2161,7 +2161,8 @@ namespace Raven.Server.Documents.Indexes
 
                 var oldState = State;
                 State = state;
-
+                if (State == IndexState.Normal)
+                    _indexDisabled = false;
                 if (inMemoryOnly)
                     return;
 
