@@ -752,8 +752,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         return;
                     }
                 }
-                
-                var token = new OperationCancelToken(Database.DatabaseShutdown);
+
+                var token = CreateOperationToken();
                 var result = new SmugglerResult();
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
                 var collection = GetStringQueryString("collection", false);
