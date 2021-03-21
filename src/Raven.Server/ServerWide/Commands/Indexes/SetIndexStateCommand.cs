@@ -32,12 +32,12 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             if (record.AutoIndexes.TryGetValue(IndexName, out AutoIndexDefinition autoIndex))
             {
                 autoIndex.State = State;
-                autoIndex.LastStateRaftId = etag;
+                autoIndex.LastStateChangeRaftIndex = etag;
             }
             else if (record.Indexes.TryGetValue(IndexName, out IndexDefinition indexDefinition))
             {
                 indexDefinition.State = State;
-                indexDefinition.LastStateRaftId = etag;
+                indexDefinition.LastStateChangeRaftIndex = etag;
             }
 
             return null;

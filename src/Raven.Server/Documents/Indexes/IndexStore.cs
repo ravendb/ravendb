@@ -524,9 +524,6 @@ namespace Raven.Server.Documents.Indexes
                         throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
                 }
 
-                if (currentIndex != null)
-                    index._indexDisabled = currentIndex._indexDisabled;
-
                 return index;
             }
         }
@@ -867,9 +864,6 @@ namespace Raven.Server.Documents.Indexes
 
             if (definition.Priority.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.Priority) != 0)
                 existingIndex.SetPriority(definition.Priority.Value);
-
-            if (definition.State.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.State) != 0)
-                existingIndex.SetState(definition.State.Value);
         }
 
         internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex, out IndexDefinitionCompareDifferences differences)
@@ -886,10 +880,10 @@ namespace Raven.Server.Documents.Indexes
             {
                 differences = existingIndex.Definition.Compare(indexDef);
 
-                if (indexDef.LastStateRaftId != existingIndex.Definition.LastStateRaftId)
+                if (indexDef.LastStateChangeRaftIndex != existingIndex.Definition.LastStateChangeRaftIndex)
                 {
                     differences |= IndexDefinitionCompareDifferences.State;
-                    existingIndex.Definition.LastStateRaftId = indexDef.LastStateRaftId;
+                    existingIndex.Definition.LastStateChangeRaftIndex = indexDef.LastStateChangeRaftIndex;
                 }
 
             }
@@ -1507,7 +1501,7 @@ namespace Raven.Server.Documents.Indexes
                 if (indexDefinition.State != null && index.Definition.State != indexDefinition.State)
                     differences |= IndexDefinitionCompareDifferences.State;
 
-                index.Definition.LastStateRaftId = indexDefinition.LastStateRaftId;
+                index.Definition.LastStateChangeRaftIndex = indexDefinition.LastStateChangeRaftIndex;
                 if (differences != IndexDefinitionCompareDifferences.None)
                 {
                     // database record has different lock mode / priority / state setting than persisted locally

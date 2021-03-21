@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Indexes
         /// </summary>
         private CancellationTokenSource _indexingProcessCancellationTokenSource;
 
-        internal bool _indexDisabled;
+        private bool _indexDisabled;
 
         private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryIndexProgress =
             new ConcurrentDictionary<string, IndexProgress.CollectionStats>();
@@ -897,7 +897,7 @@ namespace Raven.Server.Documents.Indexes
         public virtual void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
         {
             Debug.Assert(Type.IsStatic());
-
+            var stateChanged = false;
             using (DrainRunningQueries())
             {
                 var status = Status;
@@ -906,6 +906,19 @@ namespace Raven.Server.Documents.Indexes
 
                 _indexStorage.WriteDefinition(definition);
 
+                if (definition.LastStateChangeRaftIndex != Definition.LastStateChangeRaftIndex)
+                {
+                    if (definition.State == IndexState.Normal)
+                    {
+                        SetState(IndexState.Normal);
+                        stateChanged = true;
+                    }
+                    else
+                    {
+                        SetState(definition.State);
+                    }
+                }
+
                 Definition = definition;
                 Configuration = configuration;
 
@@ -913,7 +926,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _priorityChanged.Raise();
 
-                if ((status == IndexRunningStatus.Running) || ((status == IndexRunningStatus.Paused) && (_indexDisabled == false)) )
+                if ((status == IndexRunningStatus.Running) || ((stateChanged) && (definition.State == IndexState.Normal)))
                     Start();
             }
         }
@@ -2161,8 +2174,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var oldState = State;
                 State = state;
-                if (State == IndexState.Normal)
-                    _indexDisabled = false;
+
                 if (inMemoryOnly)
                     return;
 

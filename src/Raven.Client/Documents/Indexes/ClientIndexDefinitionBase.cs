@@ -21,6 +21,6 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public IndexState? State { get; set; }
 
-        public long LastStateRaftId { get; set; }
+        public long LastStateChangeRaftIndex { get; set; }
     }
 }

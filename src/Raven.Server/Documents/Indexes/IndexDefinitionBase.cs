@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexState State { get; set; }
 
-        internal long LastStateRaftId { get; set; }
+        internal long LastStateChangeRaftIndex { get; set; }
 
         public virtual bool HasDynamicFields => false;
 
