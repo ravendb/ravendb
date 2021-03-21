@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client;
@@ -173,7 +174,7 @@ namespace FastTests.Server.Documents.Revisions
                 await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
-                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
 
                 for (int i = 0; i < 10; i++)
@@ -194,7 +195,7 @@ namespace FastTests.Server.Documents.Revisions
                 configuration.Default.MinimumRevisionsToKeep = 0;
                 await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
-                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
 
                 for (int i = 0; i < 10; i++)
@@ -267,7 +268,7 @@ namespace FastTests.Server.Documents.Revisions
                 await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
-                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
 
                 for (int i = 0; i < 10; i++)
@@ -283,7 +284,7 @@ namespace FastTests.Server.Documents.Revisions
                 configuration.Default.PurgeOnDelete = true;
                 await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
-                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
 
                 for (int i = 0; i < 10; i++)
@@ -332,7 +333,7 @@ namespace FastTests.Server.Documents.Revisions
                 await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
-                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
 
                 using (var session = store.OpenAsyncSession())

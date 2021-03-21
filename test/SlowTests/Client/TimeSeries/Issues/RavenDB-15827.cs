@@ -24,7 +24,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday.AddHours(2);
                 var total = TimeSpan.FromDays(10).TotalHours;
 
                 using (var session = store.OpenSession())

@@ -443,7 +443,7 @@ namespace Raven.Server.Web.System
                 try
                 {
                     var operationId = ServerStore.Operations.GetNextOperationId();
-                    var cancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
+                    var cancelToken = CreateOperationToken();
                     var backupParameters = new BackupParameters
                     {
                         RetentionPolicy = null,

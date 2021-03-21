@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
@@ -47,7 +48,7 @@ namespace SlowTests.Issues
                 ClientCertificate = certificates.ServerCertificate.Value,
                 AdminCertificate = certificates.ServerCertificate.Value
             });
-            
+
             using (var s = hooper.OpenAsyncSession())
             {
                 await s.StoreAsync(new { Type = "Eggs" }, "menus/breakfast");
@@ -75,11 +76,11 @@ namespace SlowTests.Issues
                 {
                     Name = "Franchises",
                     CertificateBase64 = Convert.ToBase64String(certificates.ClientCertificate1.Value.Export(X509ContentType.Cert)),
-                    AllowedSinkToHubPaths = new[] {"orders/bert/*"},
-                    AllowedHubToSinkPaths = new[] {"menus/*", "prices/eastus/*", "recipes/*"}
+                    AllowedSinkToHubPaths = new[] { "orders/bert/*" },
+                    AllowedHubToSinkPaths = new[] { "menus/*", "prices/eastus/*", "recipes/*" }
                 }));
-            
-            
+
+
             await bert.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
                 Database = hooper.Database,
@@ -255,14 +256,14 @@ namespace SlowTests.Issues
             {
                 var op = await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
                 {
-                    Name = "pull" +i,
+                    Name = "pull" + i,
                     Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
                     WithFiltering = true
                 }));
 
                 ids[i] = op.TaskId;
-                
-                await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull" +i, new ReplicationHubAccess
+
+                await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull" + i, new ReplicationHubAccess
                 {
                     Name = "Arava",
                     AllowedHubToSinkPaths = new[]
@@ -275,7 +276,7 @@ namespace SlowTests.Issues
             }
 
             await storeA.Maintenance.SendAsync(new DeleteOngoingTaskOperation(ids[1], OngoingTaskType.PullReplicationAsHub));
-            
+
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "pull1",
@@ -285,13 +286,13 @@ namespace SlowTests.Issues
 
             var accesses = await storeA.Maintenance.SendAsync(new GetReplicationHubAccessOperation("pull1"));
             Assert.Empty(accesses);
-            
+
             accesses = await storeA.Maintenance.SendAsync(new GetReplicationHubAccessOperation("pull0"));
             Assert.NotEmpty(accesses);
             accesses = await storeA.Maintenance.SendAsync(new GetReplicationHubAccessOperation("pull2"));
             Assert.NotEmpty(accesses);
         }
-        
+
         [Fact]
         public async Task Can_pull_via_filtered_replication()
         {
@@ -743,7 +744,9 @@ namespace SlowTests.Issues
 
             await sinkStore1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
-                Database = hubStore.Database, Name = hubStore.Database + "ConStr", TopologyDiscoveryUrls = hubStore.Urls
+                Database = hubStore.Database,
+                Name = hubStore.Database + "ConStr",
+                TopologyDiscoveryUrls = hubStore.Urls
             }));
 
             var sinkTask = new PullReplicationAsSink
@@ -752,8 +755,8 @@ namespace SlowTests.Issues
                 Mode = PullReplicationMode.HubToSink,
                 CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
                 HubName = "both",
-                AllowedHubToSinkPaths = new[] {"*",},
-                AllowedSinkToHubPaths = new[] {"*"}
+                AllowedHubToSinkPaths = new[] { "*", },
+                AllowedSinkToHubPaths = new[] { "*" }
             };
 
             var result2 = await sinkStore1.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sinkTask));
@@ -767,7 +770,7 @@ namespace SlowTests.Issues
                 WithFiltering = true,
                 TaskId = result.TaskId
             }));
-            
+
             sinkTask.Mode = PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub;
             sinkTask.TaskId = result2.TaskId;
 
@@ -827,13 +830,13 @@ namespace SlowTests.Issues
             await SetupSink(sinkStore2);
 
             EnsureReplicating(hubStore, sinkStore1);
-            EnsureReplicating(sinkStore1,hubStore);
-            
+            EnsureReplicating(sinkStore1, hubStore);
+
             EnsureReplicating(hubStore, sinkStore2);
-            EnsureReplicating(sinkStore2,hubStore);
+            EnsureReplicating(sinkStore2, hubStore);
 
             EnsureReplicating(sinkStore1, sinkStore2);
-            EnsureReplicating(sinkStore2,sinkStore1);
+            EnsureReplicating(sinkStore2, sinkStore1);
 
             using (var s = hubStore.OpenAsyncSession())
             {
@@ -908,7 +911,9 @@ namespace SlowTests.Issues
             {
                 await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
-                    Database = hubStore.Database, Name = hubStore.Database + "ConStr", TopologyDiscoveryUrls = hubStore.Urls
+                    Database = hubStore.Database,
+                    Name = hubStore.Database + "ConStr",
+                    TopologyDiscoveryUrls = hubStore.Urls
                 }));
                 await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
                 {
@@ -916,8 +921,8 @@ namespace SlowTests.Issues
                     Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
                     CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
                     HubName = "both",
-                    AllowedHubToSinkPaths = new[] {"*",},
-                    AllowedSinkToHubPaths = new[] {"*"}
+                    AllowedHubToSinkPaths = new[] { "*", },
+                    AllowedSinkToHubPaths = new[] { "*" }
                 }));
             }
         }
@@ -967,8 +972,8 @@ namespace SlowTests.Issues
             await SetupSink(sinkStore1);
 
             EnsureReplicating(hubStore, sinkStore1);
-            EnsureReplicating(sinkStore1,hubStore);
-            
+            EnsureReplicating(sinkStore1, hubStore);
+
             using (var s = hubStore.OpenAsyncSession())
             {
                 await s.StoreAsync(new Propagation
@@ -1012,7 +1017,7 @@ namespace SlowTests.Issues
 
             using (var s = sinkStore1.OpenAsyncSession())
             {
-                await using (var ms = new MemoryStream(new byte[]{1,2,3,4,5}))
+                await using (var ms = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
                     s.Advanced.Attachments.Store("common", "test", ms);
                     await s.SaveChangesAsync();
@@ -1071,7 +1076,9 @@ namespace SlowTests.Issues
             {
                 await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
-                    Database = hubStore.Database, Name = hubStore.Database + "ConStr", TopologyDiscoveryUrls = hubStore.Urls
+                    Database = hubStore.Database,
+                    Name = hubStore.Database + "ConStr",
+                    TopologyDiscoveryUrls = hubStore.Urls
                 }));
                 await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
                 {
@@ -1079,8 +1086,8 @@ namespace SlowTests.Issues
                     Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
                     CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
                     HubName = "both",
-                    AllowedHubToSinkPaths = new[] {"*",},
-                    AllowedSinkToHubPaths = new[] {"*"}
+                    AllowedHubToSinkPaths = new[] { "*", },
+                    AllowedSinkToHubPaths = new[] { "*" }
                 }));
             }
         }
@@ -1124,16 +1131,16 @@ namespace SlowTests.Issues
             var access1 = new ReplicationHubAccess
             {
                 Name = "both",
-                AllowedSinkToHubPaths = new[] {"foo"},
-                AllowedHubToSinkPaths = new[] {"foo"},
+                AllowedSinkToHubPaths = new[] { "foo" },
+                AllowedHubToSinkPaths = new[] { "foo" },
                 CertificateBase64 = Convert.ToBase64String(fooCert.Export(X509ContentType.Cert)),
             };
 
             var access2 = new ReplicationHubAccess
             {
                 Name = "both",
-                AllowedSinkToHubPaths = new[] {"bar"},
-                AllowedHubToSinkPaths = new[] {"bar"},
+                AllowedSinkToHubPaths = new[] { "bar" },
+                AllowedHubToSinkPaths = new[] { "bar" },
                 CertificateBase64 = Convert.ToBase64String(barCert.Export(X509ContentType.Cert)),
             };
 
@@ -1161,8 +1168,8 @@ namespace SlowTests.Issues
                 var baseline = DateTime.Today;
                 for (int i = 0; i < 150; i++)
                 {
-                    s.TimeSeriesFor("foo","test").Append(baseline.AddHours(i), 1);
-                    s.TimeSeriesFor("bar","test").Append(baseline.AddHours(i), 1);
+                    s.TimeSeriesFor("foo", "test").Append(baseline.AddHours(i), 1);
+                    s.TimeSeriesFor("bar", "test").Append(baseline.AddHours(i), 1);
                 }
                 await s.SaveChangesAsync();
             }
@@ -1212,7 +1219,7 @@ namespace SlowTests.Issues
             Assert.True(WaitForDocument<Propagation>(sinkStore2, "bar", x => x.Completed == true));
             Assert.True(WaitForDocument<Propagation>(sinkStore1, "foo", x => x.Completed == true));
 
-            using (var token = new OperationCancelToken(hubDb.Configuration.Databases.OperationTimeout.AsTimeSpan, hubDb.DatabaseShutdown))
+            using (var token = new OperationCancelToken(hubDb.Configuration.Databases.OperationTimeout.AsTimeSpan, hubDb.DatabaseShutdown, CancellationToken.None))
                 await hubDb.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
 
             using (var s = hubStore.OpenAsyncSession())
@@ -1274,7 +1281,9 @@ namespace SlowTests.Issues
             {
                 await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
-                    Database = hubStore.Database, Name = hubStore.Database + "ConStr", TopologyDiscoveryUrls = hubStore.Urls
+                    Database = hubStore.Database,
+                    Name = hubStore.Database + "ConStr",
+                    TopologyDiscoveryUrls = hubStore.Urls
                 }));
                 await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
                 {
@@ -1403,17 +1412,17 @@ namespace SlowTests.Issues
             await SetupSink(sinkStore2);
 
             EnsureReplicating(hubStore, sinkStore1);
-            EnsureReplicating(sinkStore1,hubStore);
-            
+            EnsureReplicating(sinkStore1, hubStore);
+
             EnsureReplicating(hubStore, sinkStore2);
-            EnsureReplicating(sinkStore2,hubStore);
+            EnsureReplicating(sinkStore2, hubStore);
 
             EnsureReplicating(sinkStore1, sinkStore2);
-            EnsureReplicating(sinkStore2,sinkStore1);
-            
+            EnsureReplicating(sinkStore2, sinkStore1);
+
             Assert.True(WaitForDocument<Propagation>(hubStore, "common", x => x.Source == "Hub"));
-            Assert.True(WaitForDocument<Propagation>(sinkStore1, "common", x => x.Source  == "Hub"));
-            Assert.True(WaitForDocument<Propagation>(sinkStore2, "common", x => x.Source  == "Hub"));
+            Assert.True(WaitForDocument<Propagation>(sinkStore1, "common", x => x.Source == "Hub"));
+            Assert.True(WaitForDocument<Propagation>(sinkStore2, "common", x => x.Source == "Hub"));
 
             var hubDb = await GetDocumentDatabaseInstanceFor(hubStore);
             var sink1Db = await GetDocumentDatabaseInstanceFor(sinkStore1);
@@ -1448,7 +1457,9 @@ namespace SlowTests.Issues
             {
                 await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
-                    Database = hubStore.Database, Name = hubStore.Database + "ConStr", TopologyDiscoveryUrls = hubStore.Urls
+                    Database = hubStore.Database,
+                    Name = hubStore.Database + "ConStr",
+                    TopologyDiscoveryUrls = hubStore.Urls
                 }));
                 await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
                 {
@@ -1456,8 +1467,8 @@ namespace SlowTests.Issues
                     Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
                     CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
                     HubName = "both",
-                    AllowedHubToSinkPaths = new[] {"*",},
-                    AllowedSinkToHubPaths = new[] {"*"}
+                    AllowedHubToSinkPaths = new[] { "*", },
+                    AllowedSinkToHubPaths = new[] { "*" }
                 }));
             }
         }
@@ -1552,13 +1563,13 @@ namespace SlowTests.Issues
             await SetupSink(sinkStore2);
 
             EnsureReplicating(hubStore, sinkStore1);
-            EnsureReplicating(sinkStore1,hubStore);
-            
+            EnsureReplicating(sinkStore1, hubStore);
+
             EnsureReplicating(hubStore, sinkStore2);
-            EnsureReplicating(sinkStore2,hubStore);
+            EnsureReplicating(sinkStore2, hubStore);
 
             EnsureReplicating(sinkStore1, sinkStore2);
-            EnsureReplicating(sinkStore2,sinkStore1);
+            EnsureReplicating(sinkStore2, sinkStore1);
 
             await WaitForConflict(hubStore, "common");
             await WaitForConflict(sinkStore1, "common");
@@ -1567,8 +1578,8 @@ namespace SlowTests.Issues
             await UpdateConflictResolver(hubStore, resolveToLatest: true);
 
             Assert.True(WaitForDocument<Propagation>(hubStore, "common", x => x.Source == "Hub"));
-            Assert.True(WaitForDocument<Propagation>(sinkStore1, "common", x => x.Source  == "Hub"));
-            Assert.True(WaitForDocument<Propagation>(sinkStore2, "common", x => x.Source  == "Hub"));
+            Assert.True(WaitForDocument<Propagation>(sinkStore1, "common", x => x.Source == "Hub"));
+            Assert.True(WaitForDocument<Propagation>(sinkStore2, "common", x => x.Source == "Hub"));
 
             var hubDb = await GetDocumentDatabaseInstanceFor(hubStore);
             var sink1Db = await GetDocumentDatabaseInstanceFor(sinkStore1);
@@ -1603,7 +1614,9 @@ namespace SlowTests.Issues
             {
                 await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
-                    Database = hubStore.Database, Name = hubStore.Database + "ConStr", TopologyDiscoveryUrls = hubStore.Urls
+                    Database = hubStore.Database,
+                    Name = hubStore.Database + "ConStr",
+                    TopologyDiscoveryUrls = hubStore.Urls
                 }));
                 await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
                 {
@@ -1611,8 +1624,8 @@ namespace SlowTests.Issues
                     Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
                     CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
                     HubName = "both",
-                    AllowedHubToSinkPaths = new[] {"*",},
-                    AllowedSinkToHubPaths = new[] {"*"}
+                    AllowedHubToSinkPaths = new[] { "*", },
+                    AllowedSinkToHubPaths = new[] { "*" }
                 }));
             }
         }
@@ -1687,7 +1700,7 @@ namespace SlowTests.Issues
             Assert.NotEmpty(accessResults);
             Assert.Equal("Arava", accessResults[0].Name);
         }
-        
+
         [Fact]
         public async Task Cannot_use_access_paths_if_filtering_is_not_set()
         {
@@ -1702,27 +1715,27 @@ namespace SlowTests.Issues
                 ClientCertificate = adminCert,
                 ModifyDatabaseName = s => dbNameA
             });
-            
+
             var pullCert = certificates.ClientCertificate2.Value;
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "pull",
                 WithFiltering = false
             }));
-            
-            var ex = await Assert.ThrowsAsync<RavenException>( async () => 
-                await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull",
-                    new ReplicationHubAccess
-                    {
-                        Name = "Arava",
-                        CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
-                        AllowedHubToSinkPaths = new[] {"users/ayende", "users/ayende/*"}
-                    })
-            ));
-            
-            Assert.Contains("Filtering replication is not set for this Replication Hub task. AllowedSinkToHubPaths and AllowedHubToSinkPaths cannot have a value.",  ex.InnerException.Message);
+
+            var ex = await Assert.ThrowsAsync<RavenException>(async () =>
+               await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull",
+                   new ReplicationHubAccess
+                   {
+                       Name = "Arava",
+                       CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                       AllowedHubToSinkPaths = new[] { "users/ayende", "users/ayende/*" }
+                   })
+           ));
+
+            Assert.Contains("Filtering replication is not set for this Replication Hub task. AllowedSinkToHubPaths and AllowedHubToSinkPaths cannot have a value.", ex.InnerException.Message);
         }
-        
+
         [Fact]
         public async Task Must_use_access_paths_if_filtering_is_set()
         {
@@ -1737,24 +1750,24 @@ namespace SlowTests.Issues
                 ClientCertificate = adminCert,
                 ModifyDatabaseName = s => dbNameA
             });
-            
+
             var pullCert = certificates.ClientCertificate2.Value;
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "pull",
                 WithFiltering = true
             }));
-            
-            var ex = await Assert.ThrowsAsync<RavenException>( async () => 
-                await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull",
-                    new ReplicationHubAccess
-                    {
-                        Name = "Arava",
-                        CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
-                    })
-                ));
-            
-            Assert.Contains("Either AllowedSinkToHubPaths or AllowedHubToSinkPaths must have a value, but both were null or empty",  ex.InnerException.Message);
+
+            var ex = await Assert.ThrowsAsync<RavenException>(async () =>
+               await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull",
+                   new ReplicationHubAccess
+                   {
+                       Name = "Arava",
+                       CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                   })
+               ));
+
+            Assert.Contains("Either AllowedSinkToHubPaths or AllowedHubToSinkPaths must have a value, but both were null or empty", ex.InnerException.Message);
         }
     }
 }
