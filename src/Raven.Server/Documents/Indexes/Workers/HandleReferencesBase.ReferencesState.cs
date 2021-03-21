@@ -41,11 +41,12 @@ namespace Raven.Server.Documents.Indexes.Workers
             {
                 var dictionary = GetDictionary(actionType);
                 var referencedItemId = (string)reference.Key;
+                var referenceEtag = reference.Etag;
 
                 indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
                 {
                     // we update this only after the transaction was committed
-                    dictionary[collection] = new ReferenceState(referencedItemId, reference.Etag, itemId, lastIndexedParentEtag);
+                    dictionary[collection] = new ReferenceState(referencedItemId, referenceEtag, itemId, lastIndexedParentEtag);
 
 #if DEBUG
                     if (_setCollections.Add((actionType, collection)) == false)

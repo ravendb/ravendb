@@ -192,70 +192,80 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 {
                                     hasChanges = true;
 
-                                    if (ItemsAndReferencesAreUsingSameEtagPool && _index._indexStorage.LowerThanLastDatabaseEtagOnIndexCreation(referencedItem.Etag))
+                                    using (referencedItem)
                                     {
-                                        // the referenced item will be indexed in the map step
-                                        lastEtag = referencedItem.Etag;
-                                        inMemoryStats.UpdateLastEtag(lastEtag, actionType == ActionType.Tombstone);
-                                        continue;
-                                    }
-
-                                    var items = GetItemsFromCollectionThatReference(queryContext, indexContext, collection, referencedItem, lastIndexedEtag, indexed, referenceState);
-                                    using (var itemsEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
-                                    {
-                                        long lastIndexedParentEtag = 0;
-                                        while (itemsEnumerator.MoveNext(queryContext.Documents, out IEnumerable mapResults, out var etag))
+                                        if (ItemsAndReferencesAreUsingSameEtagPool && _index._indexStorage.LowerThanLastDatabaseEtagOnIndexCreation(referencedItem.Etag))
                                         {
+                                            // the referenced item will be indexed in the map step
+                                            lastEtag = referencedItem.Etag;
+                                            inMemoryStats.UpdateLastEtag(lastEtag, actionType == ActionType.Tombstone);
+                                            totalProcessedCount++;
+
                                             token.ThrowIfCancellationRequested();
 
-                                            var current = itemsEnumerator.Current;
-                                            indexWriter ??= writeOperation.Value;
-
                                             if (CanContinueReferenceBatch() == false)
-                                            {
-                                                _referencesState.Set(actionType, collection, referencedItem, current.LowerSourceDocumentId ?? current.Id, lastIndexedParentEtag, indexContext);
-                                                earlyExit = true;
                                                 break;
-                                            }
 
-                                            lastIndexedParentEtag = current.Etag;
-                                            totalProcessedCount++;
-                                            collectionStats.RecordMapReferenceAttempt();
-                                            stats.RecordDocumentSize(current.Size);
-
-                                            try
-                                            {
-                                                var numberOfResults = _index.HandleMap(current, mapResults, indexWriter, indexContext, collectionStats);
-
-                                                resultsCount += numberOfResults;
-                                                collectionStats.RecordMapReferenceSuccess();
-                                                _index.MapsPerSec?.MarkSingleThreaded(numberOfResults);
-                                            }
-                                            catch (Exception e) when (e.IsIndexError())
-                                            {
-                                                itemsEnumerator.OnError();
-                                                _index.ErrorIndexIfCriticalException(e);
-
-                                                collectionStats.RecordMapReferenceError();
-                                                if (_logger.IsInfoEnabled)
-                                                    _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
-
-                                                collectionStats.AddMapReferenceError(current.Id,
-                                                    $"Failed to execute mapping function on {current.Id}. Exception: {e}");
-                                            }
-
-                                            _index.UpdateThreadAllocations(indexContext, indexWriter, stats, updateReduceStats: false);
+                                            continue;
                                         }
+
+                                        var items = GetItemsFromCollectionThatReference(queryContext, indexContext, collection, referencedItem, lastIndexedEtag, indexed, referenceState);
+                                        using (var itemsEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
+                                        {
+                                            long lastIndexedParentEtag = 0;
+                                            while (itemsEnumerator.MoveNext(queryContext.Documents, out IEnumerable mapResults, out var etag))
+                                            {
+                                                token.ThrowIfCancellationRequested();
+
+                                                var current = itemsEnumerator.Current;
+                                                indexWriter ??= writeOperation.Value;
+
+                                                if (CanContinueReferenceBatch() == false)
+                                                {
+                                                    _referencesState.Set(actionType, collection, referencedItem, current.LowerSourceDocumentId ?? current.Id, lastIndexedParentEtag, indexContext);
+                                                    earlyExit = true;
+                                                    break;
+                                                }
+
+                                                lastIndexedParentEtag = current.Etag;
+                                                totalProcessedCount++;
+                                                collectionStats.RecordMapReferenceAttempt();
+                                                stats.RecordDocumentSize(current.Size);
+
+                                                try
+                                                {
+                                                    var numberOfResults = _index.HandleMap(current, mapResults, indexWriter, indexContext, collectionStats);
+
+                                                    resultsCount += numberOfResults;
+                                                    collectionStats.RecordMapReferenceSuccess();
+                                                    _index.MapsPerSec?.MarkSingleThreaded(numberOfResults);
+                                                }
+                                                catch (Exception e) when (e.IsIndexError())
+                                                {
+                                                    itemsEnumerator.OnError();
+                                                    _index.ErrorIndexIfCriticalException(e);
+
+                                                    collectionStats.RecordMapReferenceError();
+                                                    if (_logger.IsInfoEnabled)
+                                                        _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
+
+                                                    collectionStats.AddMapReferenceError(current.Id,
+                                                        $"Failed to execute mapping function on {current.Id}. Exception: {e}");
+                                                }
+
+                                                _index.UpdateThreadAllocations(indexContext, indexWriter, stats, updateReduceStats: false);
+                                            }
+                                        }
+
+                                        if (earlyExit)
+                                            break;
+
+                                        lastEtag = referencedItem.Etag;
+                                        inMemoryStats.UpdateLastEtag(lastEtag, actionType == ActionType.Tombstone);
+
+                                        if (CanContinueReferenceBatch() == false)
+                                            break;
                                     }
-
-                                    if (earlyExit)
-                                        break;
-
-                                    lastEtag = referencedItem.Etag;
-                                    inMemoryStats.UpdateLastEtag(lastEtag, actionType == ActionType.Tombstone);
-
-                                    if (CanContinueReferenceBatch() == false)
-                                        break;
                                 }
 
                                 if (hasChanges == false)
@@ -388,11 +398,16 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        public class Reference
+        public class Reference : IDisposable
         {
             public LazyStringValue Key;
 
             public long Etag;
+
+            public void Dispose()
+            {
+                Key?.Dispose();
+            }
         }
 
         public enum ActionType

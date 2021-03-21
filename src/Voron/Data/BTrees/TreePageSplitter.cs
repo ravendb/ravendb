@@ -66,6 +66,40 @@ namespace Voron.Data.BTrees
         {
             using (DisableFreeSpaceUsageIfSplittingRootTree())
             {
+                if (_page.IsLeaf)
+                {
+                    _tree.ClearPagesCache();
+                }
+
+                if (_page.IsCompressed)
+                {
+                    _pageDecompressed = _tree.DecompressPage(_page);
+                    _pageDecompressed.Search(_tx, _newKey);
+
+                    if (_pageDecompressed.LastMatch == 0)
+                    {
+                        // we are going to insert the value in a bit, but it might have 
+                        // been in the compressed portion and not removed by the calling
+                        // code
+                        _tree.RemoveLeafNode(_pageDecompressed);
+
+                        if (_pageDecompressed.NumberOfEntries == 0)
+                        {
+                            // we have just removed the last node that we wanted to update
+                            // there is no need to do any split - copy the value to the current (empty) page
+
+                            using (_pageDecompressed)
+                            {
+                                RecompressPageIfNeeded(wasModified: true);
+
+                                var pos = InsertNewKey(_page);
+                                return pos;
+                            }
+                        }
+                    }
+                    _page = _pageDecompressed;
+                }
+                
                 TreePage rightPage = _tree.NewPage(_page.TreeFlags, _page.PageNumber);
 
                 if (_cursor.PageCount == 0) // we need to do a root split
@@ -87,25 +121,6 @@ namespace Voron.Data.BTrees
                     _parentPage = _tree.ModifyPage(_cursor.CurrentPage);
 
                     _cursor.Update(_cursor.Pages, _parentPage);
-                }
-
-                if (_page.IsLeaf)
-                {
-                    _tree.ClearPagesCache();
-                }
-
-                if (_page.IsCompressed)
-                {
-                    _pageDecompressed = _tree.DecompressPage(_page);
-                    _pageDecompressed.Search(_tx, _newKey);
-                    if (_pageDecompressed.LastMatch == 0)
-                    {
-                        // we are going to insert the value in a bit, but it might have 
-                        // been in the compressed portion and not removed by the calling
-                        // code
-                        _tree.RemoveLeafNode(_pageDecompressed);
-                    }
-                    _page = _pageDecompressed;
                 }
 
                 using (_pageDecompressed)
