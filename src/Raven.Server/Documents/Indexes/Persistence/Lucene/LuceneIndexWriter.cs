@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.ComponentModel;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
@@ -90,10 +89,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public static void TryThrowingBetterException(SystemException e, LuceneVoronDirectory directory)
         {
             if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
-                ThrowOutOfMemoryException();
-
-            if (e is Win32Exception win32Exception && win32Exception.IsOutOfMemory())
-                ThrowOutOfMemoryException();
+                throw new OutOfMemoryException("Index writer hit OOM during commit", e);
 
             if (e.InnerException is VoronUnrecoverableErrorException)
                 VoronUnrecoverableErrorException.Raise("Index data is corrupted", e);
@@ -106,11 +102,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
                 throw new DiskFullException($"There isn't enough space to commit the index to {fullPath}. " +
                                             $"Currently available space: {freeSpace}", e);
-            }
-
-            void ThrowOutOfMemoryException()
-            {
-                throw new OutOfMemoryException("Index writer hit OOM during commit", e);
             }
         }
 

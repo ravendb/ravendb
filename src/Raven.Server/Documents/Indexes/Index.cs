@@ -1252,14 +1252,6 @@ namespace Raven.Server.Documents.Indexes
                                     if (_logger.IsOperationsEnabled)
                                         _logger.Operations($"Failed to open write transaction, indexing will be retried", te);
                                 }
-                                catch (OutOfMemoryException oome)
-                                {
-                                    HandleOutOfMemoryException(oome, scope);
-                                }
-                                catch (EarlyOutOfMemoryException eoome)
-                                {
-                                    HandleOutOfMemoryException(eoome, scope);
-                                }
                                 catch (VoronUnrecoverableErrorException ide)
                                 {
                                     HandleIndexCorruption(scope, ide);
@@ -1295,6 +1287,10 @@ namespace Raven.Server.Documents.Indexes
                                     // We are here only in the case of indexing process cancellation.
                                     scope.RecordMapCompletedReason("Operation canceled.");
                                     return;
+                                }
+                                catch (Exception e) when (e.IsOutOfMemory())
+                                {
+                                    HandleOutOfMemoryException(e, scope);
                                 }
                                 catch (Exception e)
                                 {
@@ -1743,6 +1739,12 @@ namespace Raven.Server.Documents.Indexes
         {
             try
             {
+                if (exception.IsPageFileTooSmall())
+                {
+                    // throw a better exception
+                    exception = new OutOfMemoryException("The paging file is too small for this operation to complete, consider increasing the size of the page file", exception);
+                }
+
                 scope.AddMemoryError(exception);
                 Interlocked.Add(ref _lowMemoryPressure, LowMemoryPressure);
                 _lowMemoryFlag.Raise();

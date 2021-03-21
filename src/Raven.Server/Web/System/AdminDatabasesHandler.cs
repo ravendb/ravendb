@@ -636,7 +636,7 @@ namespace Raven.Server.Web.System
                     restoreType = RestoreType.Local;
                 }
                 var operationId = ServerStore.Operations.GetNextOperationId();
-                var cancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
+                var cancelToken = CreateOperationToken();
                 RestoreBackupTaskBase restoreBackupTask;
                 switch (restoreType)
                 {
@@ -1078,7 +1078,7 @@ namespace Raven.Server.Web.System
 
                 var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(compactSettings.DatabaseName).ConfigureAwait(false);
 
-                var token = new OperationCancelToken(ServerStore.ServerShutdown);
+                var token = CreateOperationToken();
                 var compactDatabaseTask = new CompactDatabaseTask(
                     ServerStore,
                     compactSettings.DatabaseName,
@@ -1235,7 +1235,7 @@ namespace Raven.Server.Web.System
             }
             var (commandline, tmpFile) = configuration.GenerateExporterCommandLine();
             var processStartInfo = new ProcessStartInfo(dataExporter, commandline);
-            var token = new OperationCancelToken(database.DatabaseShutdown);
+            var token = new OperationCancelToken(database.DatabaseShutdown, HttpContext.RequestAborted);
             Task timeout = null;
             if (configuration.Timeout.HasValue)
             {
