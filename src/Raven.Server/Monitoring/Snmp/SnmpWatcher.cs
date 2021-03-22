@@ -433,6 +433,8 @@ namespace Raven.Server.Monitoring.Snmp
                 store.Add(new ServerGcHighMemoryLoadThreshold(server.MetricCacher, gcKind));
                 store.Add(new ServerGcIndex(server.MetricCacher, gcKind));
                 store.Add(new ServerGcMemoryLoad(server.MetricCacher, gcKind));
+                store.Add(new ServerGcPauseDurations1(server.MetricCacher, gcKind));
+                store.Add(new ServerGcPauseDurations2(server.MetricCacher, gcKind));
                 store.Add(new ServerGcPauseTimePercentage(server.MetricCacher, gcKind));
                 store.Add(new ServerGcPinnedObjectsCount(server.MetricCacher, gcKind));
                 store.Add(new ServerGcPromoted(server.MetricCacher, gcKind));
