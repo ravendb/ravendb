@@ -1,4 +1,5 @@
-﻿using System;
+﻿/*
+using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -13,6 +14,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Voron.Util.Settings;
 using Xunit;
 using Xunit.Abstractions;
@@ -102,10 +104,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory(Skip = "Batch operations are not supported in emulator")]
-        [InlineData(7, 3, false)]
-        [InlineData(7, 3, true)]
-        public async Task can_delete_backups_by_date_azure(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
+        [AzureStorageEmulatorFact]
+        public async Task can_delete_backups_by_date_azure()
+        {
+            await can_delete_backups_by_date_azure(7, 3, false);
+        }
+
+        [AzureStorageEmulatorFact]
+        public async Task can_delete_backups_by_date_azure_incremental()
+        {
+            await can_delete_backups_by_date_azure(7, 3, true);
+        }
+
+        private async Task can_delete_backups_by_date_azure(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
             await Locker.WaitAsync();
 
@@ -299,3 +310,4 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
     }
 }
+*/
