@@ -100,7 +100,7 @@ namespace Raven.Server.Smuggler.Migration
                                                     $"error: {responseString}");
             }
 
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
+            await using (var responseStream = await response.Content.ReadAsStreamAsync())
             using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var buildInfo = await context.ReadForMemoryAsync(responseStream, "build-version-info");

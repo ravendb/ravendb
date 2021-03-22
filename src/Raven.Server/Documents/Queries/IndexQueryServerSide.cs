@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Queries
                             case "query":
                                 continue;
                             case "parameters":
-                                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(item.Value[0])))
+                                await using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(item.Value[0])))
                                 {
                                     result.QueryParameters = await context.ReadForMemoryAsync(stream, "query parameters");
                                 }

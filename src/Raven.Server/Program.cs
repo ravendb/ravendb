@@ -289,7 +289,7 @@ namespace Raven.Server
                 finally
                 {
                     if (Logger.IsOperationsEnabled)
-                        Logger.OperationsAsync("Server has shut down").Wait(TimeSpan.FromSeconds(15));
+                        Logger.OperationsWithWait("Server has shut down").Wait(TimeSpan.FromSeconds(15));
                     ShutdownCompleteMre.Set();
                 }
             } while (rerun);
@@ -486,7 +486,7 @@ namespace Raven.Server
                 try
                 {
                     if (Logger.IsOperationsEnabled)
-                        Logger.OperationsAsync("Server is about to shut down (interactive mode)").Wait(TimeSpan.FromSeconds(15));
+                        Logger.OperationsWithWait("Server is about to shut down (interactive mode)").Wait(TimeSpan.FromSeconds(15));
                     server.Dispose();
                     Console.WriteLine("Shutdown completed (interactive mode)");
                 }

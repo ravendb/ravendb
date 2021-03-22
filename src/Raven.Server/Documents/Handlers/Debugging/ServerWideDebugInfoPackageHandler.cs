@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
             using (transactionOperationContext.OpenReadTransaction())
             {
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
@@ -69,13 +69,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
             using (transactionOperationContext.OpenReadTransaction())
             {
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
                         var localEndpointClient = new LocalEndpointClient(Server);
 
-                        using (var localMemoryStream = new MemoryStream())
+                        await using (var localMemoryStream = new MemoryStream())
                         {
                             //assuming that if the name tag is empty
                             var nodeName = $"Node - [{ServerStore.NodeTag ?? "Empty node tag"}]";
@@ -91,10 +91,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             var entry = archive.CreateEntry($"{nodeName}.zip");
                             entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                            using (var entryStream = entry.Open())
+                            await using (var entryStream = entry.Open())
                             {
-                                localMemoryStream.CopyTo(entryStream);
-                                entryStream.Flush();
+                                await localMemoryStream.CopyToAsync(entryStream);
+                                await entryStream.FlushAsync();
                             }
                         }
                         var databaseNames = ServerStore.Cluster.GetDatabaseNames(transactionOperationContext);
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 catch (Exception e)
                                 {
                                     var entryName = $"Node - [{tagWithUrl.Key}]";
-                                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
+                                    await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, entryName);
                                 }
                             }
                         }
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 catch (Exception e)
                                 {
                                     var entryName = $"Node - [{urlToDatabaseNamesMap.Value.Item2}]";
-                                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
+                                    await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, entryName);
                                 }
                             }
                         }
@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 requestExecutor.DefaultTimeout = timeout;
 
-                using (var responseStream = await GetDebugInfoFromNodeAsync(
+                await using (var responseStream = await GetDebugInfoFromNodeAsync(
                     context,
                     requestExecutor,
                     databaseNames ?? EmptyStringArray))
@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     var entry = archive.CreateEntry($"Node - [{tag}].zip");
                     entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                    using (var entryStream = entry.Open())
+                    await using (var entryStream = entry.Open())
                     {
                         await responseStream.CopyToAsync(entryStream);
                         await entryStream.FlushAsync();
@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var entry = archive.CreateEntry(prefix, CompressionLevel.Optimal);
                 entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                using (var entryStream = entry.Open())
+                await using (var entryStream = entry.Open())
                 {
                     LoggingSource.Instance.AttachPipeSink(entryStream);
 
@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             catch (Exception e)
             {
                 LoggingSource.Instance.DetachPipeSink();
-                DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, prefix);
+                await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, prefix);
             }
         }
 
@@ -293,7 +293,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
                 catch (Exception e)
                 {
-                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryRoute);
+                    await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, entryRoute);
                 }
             }
         }
@@ -358,7 +358,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
                 catch (Exception e)
                 {
-                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, path ?? databaseName);
+                    await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, path ?? databaseName);
                 }
             }
         }

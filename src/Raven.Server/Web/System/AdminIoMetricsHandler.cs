@@ -32,7 +32,7 @@ namespace Raven.Server.Web.System
                 var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
                 var receive = webSocket.ReceiveAsync(receiveBuffer, ServerStore.ServerShutdown);
 
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 using (var collector = new ServerStoreLiveIoStatsCollector(ServerStore))
                 {
                     // 1. Send data to webSocket without making UI wait upon opening webSocket

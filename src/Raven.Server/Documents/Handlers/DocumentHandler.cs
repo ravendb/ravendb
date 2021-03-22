@@ -616,7 +616,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/docs/class", "GET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
-        public Task GenerateClassFromDocument()
+        public async Task GenerateClassFromDocument()
         {
             var id = GetStringQueryString("id");
             var lang = (GetStringQueryString("lang", required: false) ?? "csharp")
@@ -629,7 +629,7 @@ namespace Raven.Server.Documents.Handlers
                 if (document == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.CompletedTask;
+                    return;
                 }
 
                 switch (lang)
@@ -641,14 +641,12 @@ namespace Raven.Server.Documents.Handlers
                         throw new NotImplementedException($"Document code generator isn't implemented for {lang}");
                 }
 
-                using (var writer = new StreamWriter(ResponseBodyStream()))
+                await using (var writer = new StreamWriter(ResponseBodyStream()))
                 {
                     var codeGenerator = new JsonClassGenerator(lang);
                     var code = codeGenerator.Execute(document);
-                    writer.Write(code);
+                    await writer.WriteAsync(code);
                 }
-
-                return Task.CompletedTask;
             }
         }
     }

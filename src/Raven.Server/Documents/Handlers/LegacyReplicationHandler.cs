@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task Documents()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var stream = new ArrayStream(RequestBodyStream(), "Docs"))
+            await using (var stream = new ArrayStream(RequestBodyStream(), "Docs"))
             using (var source = new StreamSource(stream, context, Database))
             {
                 var destination = new DatabaseDestination(Database);
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Handlers
 
             await using (destination.InitializeAsync(options, null, buildVersion: default))
             await using (var documentActions = destination.Documents())
-            using (var buffered = new BufferedStream(RequestBodyStream()))
+            await using (var buffered = new BufferedStream(RequestBodyStream()))
 #pragma warning disable CS0618 // Type or member is obsolete
             using (var reader = new BsonReader(buffered))
 #pragma warning restore CS0618 // Type or member is obsolete
@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Handlers
                     if (!(dataObject is byte[] data))
                         throw new InvalidDataException($"{dataProperty} isn't of type byte[]");
 
-                    using (var dataStream = new MemoryStream(data))
+                    await using (var dataStream = new MemoryStream(data))
                     {
                         var attachment = new DocumentItem.AttachmentStream
                         {

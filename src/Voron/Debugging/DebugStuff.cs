@@ -130,7 +130,7 @@ namespace Voron.Debugging
 }";
 
         [Conditional("DEBUG")]
-        public unsafe static void RenderAndShow_FixedSizeTree(LowLevelTransaction tx, FixedSizeTree fst)
+        public static void RenderAndShow_FixedSizeTree(LowLevelTransaction tx, FixedSizeTree fst)
         {
             var name = fst.Name;
             var tree = fst.Parent;

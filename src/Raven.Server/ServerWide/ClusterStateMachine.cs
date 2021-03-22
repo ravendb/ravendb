@@ -3354,7 +3354,8 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception)
             {
-                stream?.Dispose();
+                if (stream != null)
+                    await stream.DisposeAsync();
                 tcpClient?.Dispose();
                 throw;
             }

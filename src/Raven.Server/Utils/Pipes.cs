@@ -83,14 +83,14 @@ namespace Raven.Server.Utils
                         var restart = cli.Start(ravenServer, writer, reader, false, true);
                         if (restart)
                         {
-                            writer.WriteLine("Restarting Server...<DELIMETER_RESTART>");
+                            await writer.WriteLineAsync("Restarting Server...<DELIMETER_RESTART>");
                             Program.RestartServerMre.Set();
                             Program.ShutdownServerMre.Set();
                             // server restarting
                             return;
                         }
 
-                        writer.WriteLine("Shutting Down Server...<DELIMETER_RESTART>");
+                        await writer.WriteLineAsync("Shutting Down Server...<DELIMETER_RESTART>");
                         Program.ShutdownServerMre.Set();
                         // server shutting down
                         return;
