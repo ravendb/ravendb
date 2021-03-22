@@ -96,8 +96,8 @@ namespace Raven.Server.SqlMigration
 
             string CollectionNameProvider(string tableSchema, string tableName) => settings.Collections.Single(x => x.SourceTableSchema == tableSchema && x.SourceTableName == tableName).Name;
 
-            using (var enumerationConnection = OpenConnection())
-            using (var referencesConnection = OpenConnection())
+            await using (var enumerationConnection = OpenConnection())
+            await using (var referencesConnection = OpenConnection())
             using (var writer = new SqlMigrationWriter(context, settings.BatchSize))
             {
                 foreach (var collectionToImport in settings.Collections)

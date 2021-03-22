@@ -688,7 +688,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (response.IsSuccessStatusCode == false)
                 ThrowError(response);
 
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
+            await using (var responseStream = await response.Content.ReadAsStreamAsync())
             {
                 var listBucketResult = XDocument.Load(responseStream);
                 var ns = listBucketResult.Root.Name.Namespace;

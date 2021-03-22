@@ -94,17 +94,17 @@ namespace Raven.Server.Smuggler.Migration
                                                     $"error: {responseString}");
             }
 
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
+            await using (var responseStream = await response.Content.ReadAsStreamAsync())
             using (var reader = new StreamReader(responseStream, Encoding.UTF8))
             {
-                var jsonStr = reader.ReadToEnd();
+                var jsonStr = await reader.ReadToEndAsync();
                 return JsonConvert.DeserializeObject<List<string>>(jsonStr);
             }
         }
 
         protected async ValueTask WriteDocumentWithAttachmentAsync(IDocumentActions documentActions, DocumentsOperationContext context, Stream dataStream, string key, BlittableJsonReaderObject metadata)
         {
-            using (dataStream)
+            await using (dataStream)
             {
                 var attachment = new DocumentItem.AttachmentStream
                 {
@@ -163,10 +163,10 @@ namespace Raven.Server.Smuggler.Migration
                 {
                     if (++retries >= 3)
                     {
-                        using (var responseStream = await response.Content.ReadAsStreamAsync())
+                        await using (var responseStream = await response.Content.ReadAsStreamAsync())
                         using (var reader = new StreamReader(responseStream, Encoding.UTF8))
                         {
-                            var str = reader.ReadToEnd();
+                            var str = await reader.ReadToEndAsync();
                             throw new InvalidOperationException(str);
                         }
                     }

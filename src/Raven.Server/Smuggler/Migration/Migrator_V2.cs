@@ -71,7 +71,7 @@ namespace Raven.Server.Smuggler.Migration
                                                     $"error: {responseString}");
             }
 
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
+            await using (var responseStream = await response.Content.ReadAsStreamAsync())
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(responseStream, context, Parameters.Database))
             {
@@ -187,8 +187,8 @@ namespace Raven.Server.Smuggler.Migration
             }
 
             const string propertyName = "Attachments";
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
-            using (var attachmentsListStream = new ArrayStream(responseStream, propertyName))
+            await using (var responseStream = await response.Content.ReadAsStreamAsync())
+            await using (var attachmentsListStream = new ArrayStream(responseStream, propertyName))
             {
                 var attachmentsList = await context.ReadForMemoryAsync(attachmentsListStream, "attachments-list");
                 if (attachmentsList.TryGet(propertyName, out BlittableJsonReaderArray attachments) == false)
@@ -243,8 +243,8 @@ namespace Raven.Server.Smuggler.Migration
                                                     $"error: {responseString}");
             }
 
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
-            using (var indexesStream = new ArrayStream(responseStream, "Indexes")) // indexes endpoint returns an array
+            await using (var responseStream = await response.Content.ReadAsStreamAsync())
+            await using (var indexesStream = new ArrayStream(responseStream, "Indexes")) // indexes endpoint returns an array
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(indexesStream, context, Parameters.Database))
             {

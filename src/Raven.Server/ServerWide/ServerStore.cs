@@ -1007,7 +1007,7 @@ namespace Raven.Server.ServerWide
                     {
                         if (Logger.IsInfoEnabled)
                         {
-                            await Logger.InfoAsync("Unable to notify about cluster topology change", e);
+                            await Logger.InfoWithWait("Unable to notify about cluster topology change", e);
                         }
                     }
                 }
@@ -1382,7 +1382,7 @@ namespace Raven.Server.ServerWide
 
                         try
                         {
-                            using (var certStream = File.Create(certPath))
+                            await using (var certStream = File.Create(certPath))
                             {
                                 certStream.Write(bytesToSave, 0, bytesToSave.Length);
                                 certStream.Flush(true);

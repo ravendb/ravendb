@@ -1007,9 +1007,9 @@ namespace Raven.Server.Web.System
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                using (var textWriter = new StreamWriter(ResponseBodyStream()))
+                await using (var textWriter = new StreamWriter(ResponseBodyStream()))
                 {
-                    textWriter.Write(result);
+                    await textWriter.WriteAsync(result);
                     await textWriter.FlushAsync();
                 }
             }
@@ -1270,7 +1270,7 @@ namespace Raven.Server.Web.System
             var operationId = ServerStore.Operations.GetNextOperationId();
 
             // send new line to avoid issue with read key
-            process.StandardInput.WriteLine();
+            await process.StandardInput.WriteLineAsync();
 
             // don't await here - this operation is async - all we return is operation id
             var t = ServerStore.Operations.AddOperation(null, $"Migration of {dataDir} to {databaseName}",
@@ -1328,8 +1328,8 @@ namespace Raven.Server.Web.System
                                 result.AddInfo("Starting the import phase of the migration");
                                 onProgress(overallProgress);
                                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                                using (var reader = File.OpenRead(configuration.OutputFilePath))
-                                using (var stream = new GZipStream(reader, CompressionMode.Decompress))
+                                await using (var reader = File.OpenRead(configuration.OutputFilePath))
+                                await using (var stream = new GZipStream(reader, CompressionMode.Decompress))
                                 using (var source = new StreamSource(stream, context, database))
                                 {
                                     var destination = new DatabaseDestination(database);

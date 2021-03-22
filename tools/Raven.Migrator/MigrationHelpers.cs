@@ -82,7 +82,7 @@ namespace Raven.Migrator
             }
 
             using (GetStream(configuration, stream, out var outStream))
-            using (var streamWriter = new StreamWriter(outStream))
+            await using (var streamWriter = new StreamWriter(outStream))
             using (var jsonTextWriter = new JsonTextWriter(streamWriter))
             {
                 if (configuration.ConsoleExport == false)

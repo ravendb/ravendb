@@ -31,8 +31,9 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
-        public override void HandleException(Exception e)
+        public override ValueTask HandleExceptionAsync(Exception e, CancellationToken token)
         {
+            return default;
         }
 
         public override void AddCounterIncludes(IncludeCountersCommand includeCountersCommand)

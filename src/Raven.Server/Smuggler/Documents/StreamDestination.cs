@@ -69,7 +69,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _writer.WriteEndObject();
                 await _writer.DisposeAsync();
-                _gzipStream.Dispose();
+                await _gzipStream.DisposeAsync();
             });
         }
 
@@ -970,7 +970,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (_attachmentStreamsAlreadyExported.Add(hash))
                     {
-                        using (var stream = _source.GetAttachmentStream(hash, out string tag))
+                        await using (var stream = _source.GetAttachmentStream(hash, out string tag))
                         {
                             if (stream == null)
                             {

@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Queries
 
         public abstract void AddExplanation(ExplanationResult explanationResult);
 
-        public abstract void HandleException(Exception e);
+        public abstract ValueTask HandleExceptionAsync(Exception e, CancellationToken token);
 
         public abstract bool SupportsExceptionHandling { get; }
 

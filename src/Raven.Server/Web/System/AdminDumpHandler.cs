@@ -35,8 +35,8 @@ namespace Raven.Server.Web.System
 
                 Execute($"dump --type {type}", process.Id, path);
 
-                using (var file = File.OpenRead(path))
-                using (var gzipStream = new GZipStream(ResponseBodyStream(), CompressionMode.Compress))
+                await using (var file = File.OpenRead(path))
+                await using (var gzipStream = new GZipStream(ResponseBodyStream(), CompressionMode.Compress))
                 {
                     HttpContext.Response.Headers["Content-Disposition"] = "attachment; filename=" + Uri.EscapeDataString(fileNames.GzipFileName);
 
@@ -62,8 +62,8 @@ namespace Raven.Server.Web.System
 
                 Execute($"gcdump --timeout {timeout}", process.Id, path);
 
-                using (var file = File.OpenRead(path))
-                using (var gzipStream = new GZipStream(ResponseBodyStream(), CompressionMode.Compress))
+                await using (var file = File.OpenRead(path))
+                await using (var gzipStream = new GZipStream(ResponseBodyStream(), CompressionMode.Compress))
                 {
                     HttpContext.Response.Headers["Content-Disposition"] = "attachment; filename=" + Uri.EscapeDataString(fileNames.GzipFileName);
 

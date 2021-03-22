@@ -258,7 +258,7 @@ namespace Raven.Server.Smuggler.Migration
                                                     $"error: {responseString}");
             }
 
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
+            await using (var responseStream = await response.Content.ReadAsStreamAsync())
             {
                 var headersList = await context.ReadForMemoryAsync(responseStream, "ravenfs-headers-list");
                 if (headersList.TryGet("Results", out BlittableJsonReaderArray headers) == false)
@@ -317,8 +317,8 @@ namespace Raven.Server.Smuggler.Migration
                                                     $"error: {responseString}");
             }
 
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
-            using (var stream = new GZipStream(responseStream, mode: CompressionMode.Decompress))
+            await using (var responseStream = await response.Content.ReadAsStreamAsync())
+            await using (var stream = new GZipStream(responseStream, mode: CompressionMode.Decompress))
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(stream, context, Parameters.Database))
             {

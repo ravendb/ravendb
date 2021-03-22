@@ -209,7 +209,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 {
                     if (string.Equals(zipEntry.FullName, RestoreSettings.SettingsFileName, StringComparison.OrdinalIgnoreCase))
                     {
-                        using (var entryStream = zipEntry.Open())
+                        await using (var entryStream = zipEntry.Open())
                         {
                             var json = await _context.ReadForMemoryAsync(entryStream, "read database settings");
                             json.BlittableValidation();

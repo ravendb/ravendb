@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (resultToFill.SupportsExceptionHandling == false)
                         throw;
 
-                    resultToFill.HandleException(e);
+                    await resultToFill.HandleExceptionAsync(e, cancellationToken);
                 }
 
                 using (fillScope?.Start())

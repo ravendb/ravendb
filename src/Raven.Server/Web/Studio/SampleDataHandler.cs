@@ -74,10 +74,10 @@ namespace Raven.Server.Web.Studio
                     await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, Database.ServerStore.Engine.OperationTimeout);
                 }
 
-                using (var sampleData = typeof(SampleDataHandler).Assembly
+                await using (var sampleData = typeof(SampleDataHandler).Assembly
                     .GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.Northwind.ravendbdump"))
                 {
-                    using (var stream = new GZipStream(sampleData, CompressionMode.Decompress))
+                    await using (var stream = new GZipStream(sampleData, CompressionMode.Decompress))
                     using (var source = new StreamSource(stream, context, Database))
                     {
                         var destination = new DatabaseDestination(Database);
@@ -120,8 +120,8 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/studio/sample-data/classes", "GET", AuthorizationStatus.ValidUser)]
         public async Task GetSampleDataClasses()
         {
-            using (var sampleData = typeof(SampleDataHandler).Assembly.GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.NorthwindModel.cs"))
-            using (var responseStream = ResponseBodyStream())
+            await using (var sampleData = typeof(SampleDataHandler).Assembly.GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.NorthwindModel.cs"))
+            await using (var responseStream = ResponseBodyStream())
             {
                 HttpContext.Response.ContentType = "text/plain";
                 await sampleData.CopyToAsync(responseStream);

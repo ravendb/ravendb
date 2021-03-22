@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
             try
             {
                 var factoryName = GetStringQueryString("factoryName");
-                var connectionString = new StreamReader(HttpContext.Request.Body).ReadToEnd();
+                var connectionString = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
                 RelationalDatabaseWriter.TestConnection(factoryName, connectionString);
 
                 DynamicJsonValue result = new DynamicJsonValue

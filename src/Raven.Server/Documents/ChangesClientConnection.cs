@@ -530,7 +530,7 @@ namespace Raven.Server.Documents
         {
             using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 {
                     var sp = Stopwatch.StartNew();
                     while (true)

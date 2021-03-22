@@ -126,16 +126,16 @@ namespace Raven.Server.Web.Authentication
                 // The permissions go into the most significant 16 bits of an int
                 entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                using (var s = entry.Open())
-                    s.Write(certBytes, 0, certBytes.Length);
+                await using (var s = entry.Open())
+                    await s.WriteAsync(certBytes, 0, certBytes.Length);
 
-                WriteCertificateAsPem(certificate.Name, clientCertBytes, certificate.Password, archive);
+                await WriteCertificateAsPemAsync(certificate.Name, clientCertBytes, certificate.Password, archive);
             }
 
             return ms.ToArray();
         }
 
-        public static void WriteCertificateAsPem(string name, byte[] rawBytes, string exportPassword, ZipArchive archive)
+        public static async Task WriteCertificateAsPemAsync(string name, byte[] rawBytes, string exportPassword, ZipArchive archive)
         {
             var a = new Pkcs12Store();
             a.Load(new MemoryStream(rawBytes), Array.Empty<char>());
@@ -161,8 +161,8 @@ namespace Raven.Server.Web.Authentication
             var zipEntryCrt = archive.CreateEntry(name + ".crt");
             zipEntryCrt.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-            using (var stream = zipEntryCrt.Open())
-            using (var writer = new StreamWriter(stream))
+            await using (var stream = zipEntryCrt.Open())
+            await using (var writer = new StreamWriter(stream))
             {
                 var pw = new PemWriter(writer);
                 pw.WriteObject(entry.Certificate);
@@ -171,8 +171,8 @@ namespace Raven.Server.Web.Authentication
             var zipEntryKey = archive.CreateEntry(name + ".key");
             zipEntryKey.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-            using (var stream = zipEntryKey.Open())
-            using (var writer = new StreamWriter(stream))
+            await using (var stream = zipEntryKey.Open())
+            await using (var writer = new StreamWriter(stream))
             {
                 var pw = new PemWriter(writer);
 
@@ -193,7 +193,7 @@ namespace Raven.Server.Web.Authentication
 
                 pw.WriteObject(privateKey);
 
-                writer.Flush();
+                await writer.FlushAsync();
             }
         }
 

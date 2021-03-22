@@ -62,18 +62,20 @@ namespace Raven.Server.Documents.Queries
             _writer.WriteEndObject();
         }
 
-        public void WriteError(Exception e)
+        public ValueTask WriteErrorAsync(Exception e)
         {
             _writer.WriteComma();
 
             _writer.WritePropertyName("Error");
             _writer.WriteString(e.ToString());
+            return default;
         }
 
-        public void WriteError(string error)
+        public ValueTask WriteErrorAsync(string error)
         {
             _writer.WritePropertyName("Error");
             _writer.WriteString(error);
+            return default;
         }
 
         public void WriteQueryStatistics(long resultEtag, bool isStale, string indexName, long totalResults, DateTime timestamp)
