@@ -42,9 +42,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         private const long TotalBlocksSizeLimitInBytes = 475L * 1024 * 1024 * 1024 * 1024L / 100; // 4.75TB
         private readonly Logger _logger;
 
-        public static bool TestMode;
-
-
         public string RemoteFolderName { get; }
 
         public RavenAzureClient(AzureSettings azureSettings, Progress progress = null, Logger logger = null, CancellationToken? cancellationToken = null)
@@ -85,9 +82,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             _accountName = azureSettings.AccountName;
             _containerName = azureSettings.StorageContainer;
 
+            _serverUrlForContainer = $"https://{_accountName}.blob.core.windows.net/{_containerName.ToLower()}";
+            _serverUrlForAccountName = $"https://{_accountName}.blob.core.windows.net";
             _logger = logger;
-            _serverUrlForContainer = GetUrlForContainer();
-            _serverUrlForAccountName = GetUrlForAccountName();
         }
 
         private static byte[] GetAccountKeyBytes(string accountKey)
@@ -121,18 +118,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             {
                 throw new ArgumentException($"{nameof(AzureSettings.SasToken)} isn't in the correct format", e);
             }
-        }
-
-        private string GetUrlForContainer()
-        {
-            var template = TestMode == false ? "https://{0}.blob.core.windows.net/{1}" : "http://localhost:10000/{0}/{1}";
-            return string.Format(template, _accountName, _containerName.ToLower());
-        }
-
-        private string GetUrlForAccountName()
-        {
-            var template = TestMode == false ? "https://{0}.blob.core.windows.net" : "http://localhost:10000/{0}";
-            return string.Format(template, _accountName);
         }
 
         private string GetUrl(string baseUrl, string parameters = null)

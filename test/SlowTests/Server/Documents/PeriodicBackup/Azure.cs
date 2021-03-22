@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using FastTests;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Tests.Infrastructure;
 using Xunit;
@@ -19,23 +17,40 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
         }
 
-        internal const string AzureAccountName = "devstoreaccount1";
-        internal const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+        [AzureFact]
+        public void list_blobs()
+        {
+            var blobNames = GenerateBlobNames(2, out var prefix);
 
-        [AzureStorageEmulatorFact]
+            using (var client = new RavenAzureClient(AzureFactAttribute.AzureSettings))
+            {
+                try
+                {
+                    foreach (var blob in blobNames)
+                    {
+                        client.PutBlob(blob, new MemoryStream(Encoding.UTF8.GetBytes("abc")), new Dictionary<string, string>());
+                    }
+
+                    var blobsCount = client.ListBlobs(prefix, delimiter: null, listFolders: false).List.Count();
+                    Assert.Equal(blobsCount, 2);
+                }
+                finally
+                {
+                    DeleteBlobs(client, blobNames, prefix);
+                }
+            }
+        }
+
+        [AzureFact]
         public void CanRemoveBlobsInBatch()
         {
-            var containerName = Guid.NewGuid().ToString();
             var blobKey = Guid.NewGuid().ToString();
 
-            using var client = new RavenAzureClient(GetAzureSettings(containerName));
+            using var client = new RavenAzureClient(AzureFactAttribute.AzureSettings);
             var blobs = new List<string>();
 
             try
             {
-                client.DeleteContainer();
-                client.PutContainer();
-
                 const string perfix = nameof(CanRemoveBlobsInBatch);
 
                 for (int i = 0; i < 10; i++)
@@ -59,17 +74,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
             finally
             {
-                client.DeleteContainer();
+                //TODO: delete blobs
             }
         }
 
-        [AzureStorageEmulatorFact]
+        [AzureFact]
         public void RemoveNonExistingBlobsInBatchShouldThrow()
         {
             var containerName = Guid.NewGuid().ToString();
             var blobKey = Guid.NewGuid().ToString();
 
-            using var client = new RavenAzureClient(GetAzureSettings(containerName));
+            using var client = new RavenAzureClient(AzureFactAttribute.AzureSettings);
             var blobs = new List<string>();
             try
             {
@@ -104,23 +119,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
             finally
             {
-                client.DeleteContainer();
+                //TODO: delete blobs
             }
         }
 
-        [AzureStorageEmulatorFact]
+        [AzureFact]
         public void put_blob()
         {
-            var containerName = Guid.NewGuid().ToString();
             var blobKey = Guid.NewGuid().ToString();
 
-            using (var client = new RavenAzureClient(GetAzureSettings(containerName)))
+            using (var client = new RavenAzureClient(AzureFactAttribute.AzureSettings))
             {
                 try
                 {
-                    client.DeleteContainer();
-                    client.PutContainer();
-
                     client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
                     {
                         {"property1", "value1"},
@@ -140,28 +151,24 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
                 finally
                 {
-                    client.DeleteContainer();
+                    DeleteBlobs(client, new List<string> { blobKey }, blobKey);
                 }
             }
         }
 
-        [AzureStorageEmulatorFact]
+        [AzureFact]
         public void put_blob_in_folder()
         {
-            var containerName = Guid.NewGuid().ToString();
-            var blobKey = Guid.NewGuid() + "/" + Guid.NewGuid();
+            var blobNames = GenerateBlobNames(1, out var prefix);
 
-            using (var client = new RavenAzureClient(GetAzureSettings(containerName)))
+            using (var client = new RavenAzureClient(AzureFactAttribute.AzureSettings))
             {
                 try
                 {
-                    client.DeleteContainer();
-                    client.PutContainer();
-
-                    client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")),
+                    client.PutBlob(blobNames[0], new MemoryStream(Encoding.UTF8.GetBytes("123")),
                         new Dictionary<string, string> { { "property1", "value1" }, { "property2", "value2" } });
 
-                    var blob = client.GetBlob(blobKey);
+                    var blob = client.GetBlob(blobNames[0]);
                     Assert.NotNull(blob);
 
                     using (var reader = new StreamReader(blob.Data))
@@ -175,18 +182,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
                 finally
                 {
-                    client.DeleteContainer();
+                    DeleteBlobs(client, blobNames, prefix);
                 }
             }
         }
 
-        [AzureStorageEmulatorFact]
+        [AzureFact]
         public void put_blob_without_sas_token()
         {
             PutBlobs(5, false);
         }
 
-        [AzureStorageEmulatorFact(Skip = "Azure Storage Emulator doesn't support SAS tokens")]
+        [AzureSasTokenFact]
         public void put_blob_with_sas_token()
         {
             PutBlobs(5, true);
@@ -194,114 +201,68 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         private static void PutBlobs(int blobsCount, bool useSasToken)
         {
-            var containerName = Guid.NewGuid().ToString();
-            var blobNamesToPut = new List<string>();
+            var blobNames = GenerateBlobNames(blobsCount, out var prefix);
+
+            using (var client = new RavenAzureClient(useSasToken ? AzureSasTokenFactAttribute.AzureSettings : AzureFactAttribute.AzureSettings))
+            {
+                for (var i = 0; i < blobsCount; i++)
+                {
+                    client.PutBlob(blobNames[i], new MemoryStream(Encoding.UTF8.GetBytes("123")),
+                        new Dictionary<string, string> { { "property1", "value1" }, { "property2", "value2" } });
+                }
+
+                for (var i = 0; i < blobsCount; i++)
+                {
+                    var blob = client.GetBlob(blobNames[i]);
+                    Assert.NotNull(blob);
+
+                    using (var reader = new StreamReader(blob.Data))
+                        Assert.Equal("123", reader.ReadToEnd());
+
+                    var property1 = blob.Metadata.Keys.Single(x => x.Contains("property1"));
+                    var property2 = blob.Metadata.Keys.Single(x => x.Contains("property2"));
+
+                    Assert.Equal("value1", blob.Metadata[property1]);
+                    Assert.Equal("value2", blob.Metadata[property2]);
+                }
+
+                var listBlobs = client.ListBlobs(prefix, null, listFolders: false);
+                Assert.Equal(blobsCount, listBlobs.List.Count());
+
+                // delete all blobs
+                client.DeleteBlobs(blobNames);
+
+                listBlobs = client.ListBlobs(prefix, null, listFolders: false);
+                Assert.Equal(0, listBlobs.List.Select(b => b.Name).Count());
+
+                for (var i = 0; i < blobsCount; i++)
+                {
+                    var blob = client.GetBlob(blobNames[i]);
+                    Assert.Null(blob);
+                }
+            }
+        }
+
+        private static void DeleteBlobs(RavenAzureClient client, List<string> blobsToDelete, string prefix)
+        {
+            client.DeleteBlobs(blobsToDelete);
+
+            var blobsCount = client.ListBlobs(prefix, delimiter: null, listFolders: false).List.Count();
+            Assert.Equal(blobsCount, 0);
+        }
+
+        private static List<string> GenerateBlobNames(int blobsCount, out string prefix)
+        {
+            var blobNames = new List<string>();
+
+            prefix = Guid.NewGuid().ToString();
             for (var i = 0; i < blobsCount; i++)
             {
-                blobNamesToPut.Add($"azure/{Guid.NewGuid()}/{i}");
+                blobNames.Add($"{prefix}/{i}");
             }
 
-            var sasToken = useSasToken ? GetSasTokenAndCreateTheContainer(containerName) : null;
-            using (var client = new RavenAzureClient(GetAzureSettings(containerName, sasToken)))
-            {
-                try
-                {
-                    if (useSasToken == false)
-                    {
-                        client.DeleteContainer();
-                        client.PutContainer();
-                    }
-
-                    for (var i = 0; i < blobsCount; i++)
-                    {
-                        client.PutBlob(blobNamesToPut[i], new MemoryStream(Encoding.UTF8.GetBytes("123")),
-                            new Dictionary<string, string> { { "property1", "value1" }, { "property2", "value2" } });
-                    }
-
-                    for (var i = 0; i < blobsCount; i++)
-                    {
-                        var blob = client.GetBlob(blobNamesToPut[i]);
-                        Assert.NotNull(blob);
-
-                        using (var reader = new StreamReader(blob.Data))
-                            Assert.Equal("123", reader.ReadToEnd());
-
-                        var property1 = blob.Metadata.Keys.Single(x => x.Contains("property1"));
-                        var property2 = blob.Metadata.Keys.Single(x => x.Contains("property2"));
-
-                        Assert.Equal("value1", blob.Metadata[property1]);
-                        Assert.Equal("value2", blob.Metadata[property2]);
-                    }
-
-                    var listBlobs = client.ListBlobs("azure", null, listFolders: false);
-                    var blobNames = listBlobs.List.Select(b => b.Name).ToList();
-                    Assert.Equal(blobsCount, blobNames.Count);
-
-                    // delete all blobs
-                    client.DeleteBlobs(blobNames);
-
-                    listBlobs = client.ListBlobs("azure", null, listFolders: false);
-                    blobNames = listBlobs.List.Select(b => b.Name).ToList();
-                    Assert.Equal(0, blobNames.Count);
-
-                    for (var i = 0; i < blobsCount; i++)
-                    {
-                        var blob = client.GetBlob(blobNamesToPut[i]);
-                        Assert.Null(blob);
-                    }
-                }
-                finally
-                {
-                    client.DeleteContainer();
-                }
-            }
-        }
-
-        private static string GetSasTokenAndCreateTheContainer(string containerName)
-        {
-            var command =
-                @$"$context = New-AzStorageContext -Local
-New-AzStorageContainer {containerName} -Permission Off -Context $context
-$now = Get-Date
-New-AzStorageContainerSASToken -Name {containerName} -Permission rwdl -ExpiryTime $now.AddDays(1.0) -Context $context
-";
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                Arguments = $"-c \"{command}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            var process = new Process {StartInfo = startInfo};
-            process.Start();
-
-            while (true)
-            {
-                if (process.StandardOutput.EndOfStream)
-                    break;
-
-                var line = process.StandardOutput.ReadLine();
-                if (line.StartsWith("?") == false)
-                    continue;
-
-                return line.Substring(1, line.Length - 2);
-            }
-
-            throw new InvalidOperationException($"Failed to get the SasToken from the emulator, error: {process.StandardError.ReadToEnd()}");
-        }
-
-        public static AzureSettings GetAzureSettings(string containerName, string sasToken = null)
-        {
-            return new AzureSettings
-            {
-                AccountName = AzureAccountName,
-                AccountKey = sasToken == null ? AzureAccountKey : null,
-                SasToken = sasToken,
-                StorageContainer = containerName
-            };
+            return blobNames;
         }
     }
 }
+

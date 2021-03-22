@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿/*
+using System.Threading.Tasks;
 using FastTests;
 using Tests.Infrastructure;
 using Xunit;
@@ -65,3 +66,4 @@ namespace StressTests.Server.Documents.PeriodicBackup
         }
     }
 }
+*/
