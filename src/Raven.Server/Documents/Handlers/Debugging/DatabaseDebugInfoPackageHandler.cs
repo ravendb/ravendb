@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             }
                             catch (Exception e)
                             {
-                                DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName.Replace(".json", string.Empty));
+                                await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, entryName.Replace(".json", string.Empty));
                             }
                         }
                     }

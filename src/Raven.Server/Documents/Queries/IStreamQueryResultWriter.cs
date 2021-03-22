@@ -16,9 +16,9 @@ namespace Raven.Server.Documents.Queries
 
         void EndResponse();
 
-        void WriteError(Exception e);
+        ValueTask WriteErrorAsync(Exception e);
 
-        void WriteError(string error);
+        ValueTask WriteErrorAsync(string error);
 
         void WriteQueryStatistics(long resultEtag, bool isStale, string indexName, long totalResults, DateTime timestamp);
 

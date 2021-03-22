@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                             catch (IndexDoesNotExistException)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                                writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                                await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
                             }
                         }
                     }
@@ -193,13 +193,13 @@ namespace Raven.Server.Documents.Handlers.Streaming
                         catch (IndexDoesNotExistException)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                            await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
                         }
                         catch (Exception e)
                         {
                             try
                             {
-                                writer.WriteError($"Failed to execute stream query. Error: {e}");
+                                await writer.WriteErrorAsync($"Failed to execute stream query. Error: {e}");
                             }
                             catch (Exception ie)
                             {
@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                             catch (IndexDoesNotExistException)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                                writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                                await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
                             }
                         }
                     }
@@ -281,7 +281,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                         catch (IndexDoesNotExistException)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                            await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
                         }
                     }
                 }

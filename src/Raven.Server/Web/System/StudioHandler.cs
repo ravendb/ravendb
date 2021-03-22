@@ -600,7 +600,7 @@ namespace Raven.Server.Web.System
             }
 
             // We have the file in the zip, so fetch it
-            using (var fileStream = SafeFileStream.Create(_zipFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            await using (var fileStream = SafeFileStream.Create(_zipFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
             using (var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Read, false))
             {
                 var zipEntry = zipArchive.Entries.FirstOrDefault(a => a.FullName.Equals(serverRelativeFileName, StringComparison.OrdinalIgnoreCase));
@@ -615,14 +615,14 @@ namespace Raven.Server.Web.System
                 HttpContext.Response.ContentType = FileExtensionToContentTypeMapping[fileInfo.Extension];
                 HttpContext.Response.Headers[Constants.Headers.Etag] = fileETag;
 
-                using (var entry = zipEntry.Open())
-                using (var responseStream = ResponseBodyStream())
+                await using (var entry = zipEntry.Open())
+                await using (var responseStream = ResponseBodyStream())
                 {
                     await entry.CopyToAsync(responseStream, BufferSize);
                 }
 
                 // The zip entry stream is not seekable, so we have to reopen it
-                using (var entry = zipEntry.Open())
+                await using (var entry = zipEntry.Open())
                 {
                     var cacheEntry = BuildForCache(serverRelativeFileName, fileETag, fileInfo, entry);
                     StaticContentCache.TryAdd(serverRelativeFileName, new Lazy<CachedStaticFile>(cacheEntry));

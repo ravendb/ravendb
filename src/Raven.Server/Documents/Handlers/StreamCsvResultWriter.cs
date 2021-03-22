@@ -141,14 +141,14 @@ namespace Raven.Server.Documents.Handlers
         {
         }
 
-        public void WriteError(Exception e)
+        public async ValueTask WriteErrorAsync(Exception e)
         {
-            _writer.WriteLine(e.ToString());
+            await _writer.WriteLineAsync(e.ToString());
         }
 
-        public void WriteError(string error)
+        public async ValueTask WriteErrorAsync(string error)
         {
-            _writer.WriteLine(error);
+            await _writer.WriteLineAsync(error);
         }
 
         public void WriteQueryStatistics(long resultEtag, bool isStale, string indexName, long totalResults, DateTime timestamp)

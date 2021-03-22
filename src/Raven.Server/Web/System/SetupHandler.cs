@@ -259,7 +259,7 @@ namespace Raven.Server.Web.System
                     {
                         try
                         {
-                            subDomain.Ips = Dns.GetHostAddresses(subDomain.SubDomain + "." + rootDomain).Select(ip => ip.ToString()).ToList();
+                            subDomain.Ips = (await Dns.GetHostAddressesAsync(subDomain.SubDomain + "." + rootDomain)).Select(ip => ip.ToString()).ToList();
                         }
                         catch (Exception)
                         {
@@ -511,7 +511,7 @@ namespace Raven.Server.Web.System
                 var setupInfo = JsonDeserializationServer.UnsecuredSetupInfo(setupInfoJson);
 
                 BlittableJsonReaderObject settingsJson;
-                using (var fs = new FileStream(ServerStore.Configuration.ConfigPath, FileMode.Open, FileAccess.Read))
+                await using (var fs = new FileStream(ServerStore.Configuration.ConfigPath, FileMode.Open, FileAccess.Read))
                 {
                     settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
                 }
@@ -679,7 +679,7 @@ namespace Raven.Server.Web.System
                 {
                     var urlByTag = new Dictionary<string, string>();
 
-                    using (var ms = new MemoryStream(zipBytes))
+                    await using (var ms = new MemoryStream(zipBytes))
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Read, false))
                     {
                         foreach (var entry in archive.Entries)

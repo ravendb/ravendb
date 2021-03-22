@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         private async Task HandleLegacyIndexesAsync()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var stream = new ArrayStream(RequestBodyStream(), nameof(DatabaseItemType.Indexes)))
+            await using (var stream = new ArrayStream(RequestBodyStream(), nameof(DatabaseItemType.Indexes)))
             using (var source = new StreamSource(stream, context, Database))
             {
                 var destination = new DatabaseDestination(Database);

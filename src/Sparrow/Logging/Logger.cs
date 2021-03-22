@@ -57,7 +57,7 @@ namespace Sparrow.Logging
             _parent.Log(ref _logEntry);
         }
 
-        public Task InfoAsync(string msg, Exception ex = null)
+        public Task InfoWithWait(string msg, Exception ex = null)
         {
             _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;
@@ -84,7 +84,7 @@ namespace Sparrow.Logging
             _parent.Log(ref _logEntry);
         }
 
-        public Task OperationsAsync(string msg, Exception ex = null)
+        public Task OperationsWithWait(string msg, Exception ex = null)
         {
             _logEntry.At = GetLogDate();
             _logEntry.Exception = ex;

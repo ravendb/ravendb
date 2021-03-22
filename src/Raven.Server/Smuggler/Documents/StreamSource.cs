@@ -1606,7 +1606,7 @@ namespace Raven.Server.Smuggler.Documents
                 size -= read.BytesRead;
             }
 
-            attachment.Stream.Flush();
+            await attachment.Stream.FlushAsync();
 
             return attachment;
         }

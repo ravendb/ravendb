@@ -1794,7 +1794,7 @@ namespace Raven.Client.Http
                     {
                         Url = request.RequestUri.ToString(),
                         Message = "Got unrecognized response from the server",
-                        Error = new StreamReader(ms).ReadToEnd(),
+                        Error = await new StreamReader(ms).ReadToEndAsync().ConfigureAwait(false),
                         Type = "Unparseable Server Response"
                     }, response.StatusCode, e);
                 }

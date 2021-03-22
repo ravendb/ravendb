@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var sp = Stopwatch.StartNew();
             var threadsUsage = new ThreadsUsage();
 
-            using (var sw = new StringWriter())
+            await using (var sw = new StringWriter())
             {
                 OutputResultToStream(sw, threadIds.ToHashSet(), includeStackObjects);
 

@@ -145,24 +145,32 @@ namespace Raven.Server.Monitoring.Snmp
             public const string GcMemoryLoad = "1.6.11.{0}.9";
 
             [SnmpIndex(typeof(GCKind))]
+            [Description("GC information for {0}. Gets the pause durations. First item in the array.")]
+            public const string GcPauseDurations1 = "1.6.11.{0}.10.1";
+
+            [SnmpIndex(typeof(GCKind))]
+            [Description("GC information for {0}. Gets the pause durations. Second item in the array.")]
+            public const string GcPauseDurations2 = "1.6.11.{0}.10.2";
+
+            [SnmpIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the pause time percentage in the GC so far.")]
-            public const string GcPauseTimePercentage = "1.6.11.{0}.10";
+            public const string GcPauseTimePercentage = "1.6.11.{0}.11";
 
             [SnmpIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the number of pinned objects this GC observed.")]
-            public const string GcPinnedObjectsCount = "1.6.11.{0}.11";
+            public const string GcPinnedObjectsCount = "1.6.11.{0}.12";
 
             [SnmpIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the promoted MB for this GC.")]
-            public const string GcPromoted = "1.6.11.{0}.12";
+            public const string GcPromoted = "1.6.11.{0}.13";
 
             [SnmpIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the total available memory (in MB) for the garbage collector to use when the last garbage collection occurred.")]
-            public const string GcTotalAvailableMemory = "1.6.11.{0}.13";
+            public const string GcTotalAvailableMemory = "1.6.11.{0}.14";
 
             [SnmpIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the total committed MB of the managed heap.")]
-            public const string GcTotalCommitted = "1.6.11.{0}.14";
+            public const string GcTotalCommitted = "1.6.11.{0}.15";
 
             [Description("Number of concurrent requests")]
             public const string ConcurrentRequests = "1.7.1";

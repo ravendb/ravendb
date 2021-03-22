@@ -310,8 +310,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         }
 
                         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                        using (var file = await getFile())
-                        using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
+                        await using (var file = await getFile())
+                        await using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                         using (var source = new StreamSource(stream, context, Database))
                         {
                             var destination = new DatabaseDestination(Database);
@@ -541,7 +541,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     try
                     {
                         var line = await outputReadTask.ConfigureAwait(false);
-                        using (var sw = new StreamWriter(ResponseBodyStream()))
+                        await using (var sw = new StreamWriter(ResponseBodyStream()))
                         {
                             await sw.WriteAsync(line);
                         }
@@ -691,7 +691,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                         BlittableJsonReaderObject blittableJson;
                                         if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
                                         {
-                                            using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
+                                            await using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
                                             {
                                                 blittableJson = await context.ReadForMemoryAsync(gzipStream, Constants.Smuggler.ImportOptions);
                                             }
@@ -785,7 +785,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                         BlittableJsonReaderObject blittableJson;
                                         if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
                                         {
-                                            using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
+                                            await using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
                                             {
                                                 blittableJson = await context.ReadForMemoryAsync(gzipStream, Constants.Smuggler.CsvImportOptions);
                                             }
@@ -872,7 +872,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
         private async Task DoImportInternalAsync(DocumentsOperationContext context, Stream stream, DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            using (stream)
+            await using (stream)
             using (token)
             using (var source = new StreamSource(stream, context, Database))
             {

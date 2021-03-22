@@ -540,14 +540,14 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/indexes/c-sharp-index-definition", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public Task GenerateCSharpIndexDefinition()
+        public async Task GenerateCSharpIndexDefinition()
         {
             var indexName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var index = Database.IndexStore.GetIndex(indexName);
             if (index == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
+                return;
             }
 
             if (index.Type.IsAuto())
@@ -555,13 +555,11 @@ namespace Raven.Server.Documents.Handlers
 
             var indexDefinition = index.GetIndexDefinition();
 
-            using (var writer = new StreamWriter(ResponseBodyStream()))
+            await using (var writer = new StreamWriter(ResponseBodyStream()))
             {
                 var text = new IndexDefinitionCodeGenerator(indexDefinition).Generate();
-                writer.Write(text);
+                await writer.WriteAsync(text);
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/indexes/status", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -900,7 +898,7 @@ namespace Raven.Server.Documents.Handlers
                 var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
                 var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
 
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 using (var collector = new LiveIndexingPerformanceCollector(Database, indexNames))
                 {
                     // 1. Send data to webSocket without making UI wait upon opening webSocket

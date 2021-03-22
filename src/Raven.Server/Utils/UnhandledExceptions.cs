@@ -17,12 +17,12 @@ namespace Raven.Server.Utils
                 Task task;
                 if (args.ExceptionObject is Exception ex)
                 {
-                    task = logger.OperationsAsync("UnhandledException occurred.", ex);
+                    task = logger.OperationsWithWait("UnhandledException occurred.", ex);
                 }
                 else
                 {
                     var exceptionString = $"UnhandledException: { args.ExceptionObject?.ToString()  ?? "null" }.";
-                    task = logger.OperationsAsync(exceptionString);
+                    task = logger.OperationsWithWait(exceptionString);
                 }
 
                 Console.Error.WriteLine("UnhandledException occured");
@@ -40,7 +40,7 @@ namespace Raven.Server.Utils
                 if (args.Observed)
                     return;
 
-                logger.InfoAsync("UnobservedTaskException occurred.", args.Exception).Wait(TimeToWaitForLog);
+                logger.InfoWithWait("UnobservedTaskException occurred.", args.Exception).Wait(TimeToWaitForLog);
             };
         }
     }

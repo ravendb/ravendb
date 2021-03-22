@@ -72,7 +72,7 @@ namespace Raven.Server.Documents
                 throw new InvalidOperationException($"Task with the id '{id}' was not found.");
             }
 
-            using (token.Register(() => task.TrySetCanceled()))
+            await using (token.Register(() => task.TrySetCanceled()))
             {
                 return await task.Task.ConfigureAwait(false);
             }

@@ -2854,7 +2854,7 @@ namespace Raven.Server.Documents.Indexes
                                     if (resultToFill.SupportsExceptionHandling == false)
                                         throw;
 
-                                    resultToFill.HandleException(e);
+                                    await resultToFill.HandleExceptionAsync(e, token.Token);
                                 }
 
                                 using (fillScope?.Start())

@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Handlers
                     var responseStream = ResponseBodyStream();
                     foreach (var stream in attachmentsStreams)
                     {
-                        using (var tmpStream = stream)
+                        await using (var tmpStream = stream)
                         {
                             var count = await tmpStream.ReadAsync(buffer.Memory.Memory);
                             while (count > 0)
@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.Handlers
                 HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
 
                 using (context.GetMemoryBuffer(out var buffer))
-                using (var stream = attachment.Stream)
+                await using (var stream = attachment.Stream)
                 {
                     var responseStream = ResponseBodyStream();
                     var count = stream.Read(buffer.Memory.Memory.Span); // can never wait, so no need for async
@@ -283,7 +283,7 @@ namespace Raven.Server.Documents.Handlers
 
                 AttachmentDetails result;
                 using (var streamsTempFile = Database.DocumentsStorage.AttachmentsStorage.GetTempFile("put"))
-                using (var stream = streamsTempFile.StartNewStream())
+                await using (var stream = streamsTempFile.StartNewStream())
                 {
                     Stream requestBodyStream = RequestBodyStream();
                     string hash;
@@ -298,7 +298,7 @@ namespace Raven.Server.Documents.Handlers
                             // if we failed to read the entire request body stream, we might leave
                             // data in the pipe still, this will cause us to read and discard the
                             // rest of the attachment stream and return the actual error to the caller
-                            requestBodyStream.CopyTo(Stream.Null);
+                            await requestBodyStream.CopyToAsync(Stream.Null);
                         }
                         catch (Exception)
                         {
@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Handlers
                         Hash = hash,
                         ContentType = contentType
                     };
-                    stream.Flush();
+                    await stream.FlushAsync();
                     await Database.TxMerger.Enqueue(cmd);
                     cmd.ExceptionDispatchInfo?.Throw();
                     result = cmd.Result;

@@ -1335,7 +1335,7 @@ namespace Raven.Server.Commercial
                 progress.AddInfo($"Saving server certificate at {certPath}.");
                 onProgress(progress);
 
-                using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
+                await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
                 {
                     var certBytes = serverCertBytes;
                     certFile.Write(certBytes, 0, certBytes.Length);
@@ -1404,7 +1404,7 @@ namespace Raven.Server.Commercial
             try
             {
                 var settingsPath = serverStore.Configuration.ConfigPath;
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1510,12 +1510,12 @@ namespace Raven.Server.Commercial
                             // The permissions go into the most significant 16 bits of an int
                             entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                            using (var entryStream = entry.Open())
+                            await using (var entryStream = entry.Open())
                             {
                                 var export = clientCert.Export(X509ContentType.Pfx);
                                 entryStream.Write(export, 0, export.Length);
                             }
-                            AdminCertificatesHandler.WriteCertificateAsPem($"admin.client.certificate.{name}", certBytes, null, archive);
+                            await AdminCertificatesHandler.WriteCertificateAsPemAsync($"admin.client.certificate.{name}", certBytes, null, archive);
                         }
                         catch (Exception e)
                         {
@@ -1523,7 +1523,7 @@ namespace Raven.Server.Commercial
                         }
 
                         BlittableJsonReaderObject settingsJson;
-                        using (var fs = SafeFileStream.Create(settingsPath, FileMode.Open, FileAccess.Read))
+                        await using (var fs = SafeFileStream.Create(settingsPath, FileMode.Open, FileAccess.Read))
                         {
                             settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
                         }
@@ -1541,11 +1541,11 @@ namespace Raven.Server.Commercial
                                 var entry = archive.CreateEntry("license.json");
                                 entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                                using (var entryStream = entry.Open())
-                                using (var writer = new StreamWriter(entryStream))
+                                await using (var entryStream = entry.Open())
+                                await using (var writer = new StreamWriter(entryStream))
                                 {
-                                    writer.Write(licenseString);
-                                    writer.Flush();
+                                    await writer.WriteAsync(licenseString);
+                                    await writer.FlushAsync();
                                 }
                             }
                             catch (Exception e)
@@ -1576,7 +1576,7 @@ namespace Raven.Server.Commercial
                         if (setupInfo.ModifyLocalServer)
                         {
                             var certPath = Path.Combine(AppContext.BaseDirectory, certificateFileName);
-                            using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
+                            await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
                             {
                                 certFile.Write(serverCertBytes, 0, serverCertBytes.Length);
                                 certFile.Flush(true);
@@ -1637,11 +1637,11 @@ namespace Raven.Server.Commercial
                                 var entry = archive.CreateEntry($"{node.Key}/settings.json");
                                 entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                                using (var entryStream = entry.Open())
-                                using (var writer = new StreamWriter(entryStream))
+                                await using (var entryStream = entry.Open())
+                                await using (var writer = new StreamWriter(entryStream))
                                 {
-                                    writer.Write(indentedJson);
-                                    writer.Flush();
+                                    await writer.WriteAsync(indentedJson);
+                                    await writer.FlushAsync();
                                 }
 
                                 // we save this multiple times on each node, to make it easier
@@ -1649,9 +1649,9 @@ namespace Raven.Server.Commercial
                                 entry = archive.CreateEntry($"{node.Key}/{certificateFileName}");
                                 entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                                using (var entryStream = entry.Open())
+                                await using (var entryStream = entry.Open())
                                 {
-                                    entryStream.Write(serverCertBytes, 0, serverCertBytes.Length);
+                                    await entryStream.WriteAsync(serverCertBytes, 0, serverCertBytes.Length);
                                 }
                             }
                             catch (Exception e)
@@ -1670,11 +1670,11 @@ namespace Raven.Server.Commercial
                             var entry = archive.CreateEntry("readme.txt");
                             entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                            using (var entryStream = entry.Open())
-                            using (var writer = new StreamWriter(entryStream))
+                            await using (var entryStream = entry.Open())
+                            await using (var writer = new StreamWriter(entryStream))
                             {
-                                writer.Write(readmeString);
-                                writer.Flush();
+                                await writer.WriteAsync(readmeString);
+                                await writer.FlushAsync();
                                 await entryStream.FlushAsync(token);
                             }
                         }
@@ -1703,11 +1703,11 @@ namespace Raven.Server.Commercial
                             var entry = archive.CreateEntry("setup.json");
                             entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                            using (var entryStream = entry.Open())
-                            using (var writer = new StreamWriter(entryStream))
+                            await using (var entryStream = entry.Open())
+                            await using (var writer = new StreamWriter(entryStream))
                             {
-                                writer.Write(indentedJson);
-                                writer.Flush();
+                                await writer.WriteAsync(indentedJson);
+                                await writer.FlushAsync();
                                 await entryStream.FlushAsync(token);
                             }
                         }

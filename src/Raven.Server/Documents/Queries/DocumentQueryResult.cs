@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public override void HandleException(Exception e)
+        public override ValueTask HandleExceptionAsync(Exception e, CancellationToken token)
         {
             throw new NotSupportedException();
         }

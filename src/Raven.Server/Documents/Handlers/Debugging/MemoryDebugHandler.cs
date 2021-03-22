@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         private async Task WriteFile(string file)
         {
             HttpContext.Response.ContentType = "text/plain";
-            using (var fileStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+            await using (var fileStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 await fileStream.CopyToAsync(ResponseBodyStream());
             }

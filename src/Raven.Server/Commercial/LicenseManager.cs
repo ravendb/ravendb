@@ -1577,7 +1577,7 @@ namespace Raven.Server.Commercial
                 {
                     BlittableJsonReaderObject settingsJson;
 
-                    using (var fs = SafeFileStream.Create(settingsPath, FileMode.Open, FileAccess.Read))
+                    await using (var fs = SafeFileStream.Create(settingsPath, FileMode.Open, FileAccess.Read))
                     {
                         settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
                         settingsJson.Modifications = new DynamicJsonValue(settingsJson);
