@@ -749,7 +749,8 @@ class ongoingTasksStats extends viewModelBase {
     }
 
     private draw(workData: workData[], maxConcurrentActions: number, resetFilter: boolean) {
-        this.hasAnyData(this.replicationData.length > 0 || this.etlData.length > 0 || this.subscriptionData.length > 0);
+        const anySubscriptionData = this.subscriptionData.some(x => x.BatchPerformance.length || x.ConnectionPerformance.length);
+        this.hasAnyData(this.replicationData.length > 0 || this.etlData.length > 0 || anySubscriptionData);
 
         this.prepareBrushSection(workData, maxConcurrentActions);
         this.prepareMainSection(resetFilter);
