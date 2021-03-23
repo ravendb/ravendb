@@ -226,29 +226,39 @@ namespace Raven.Server.Documents.TcpHandlers
 
             _connectionScope.RecordConnectionInfo(SubscriptionState, ClientUri, _options.Strategy);
             
-            do
+            _connectionState.PendingConnections.Add(this);
+
+            try
             {
-                try
+                do
                 {
-                    DisposeOnDisconnect = await _connectionState.RegisterSubscriptionConnection(this, timeout);
-                    shouldRetry = false;
-                }
-                catch (TimeoutException)
-                {
-                    if (timeout == InitialConnectionTimeout && _logger.IsInfoEnabled)
+                    try
                     {
-                        _logger.Info(
-                            $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
+
+                        DisposeOnDisconnect = await _connectionState.RegisterSubscriptionConnection(this, timeout);
+                        shouldRetry = false;
+                    }
+                    catch (TimeoutException)
+                    {
+                        if (timeout == InitialConnectionTimeout && _logger.IsInfoEnabled)
+                        {
+                            _logger.Info(
+                                $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
+                        }
+
+                        timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
+                        await SendHeartBeat(
+                            $"Client from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} waiting for subscription that is serving IP {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} to be released");
+                        shouldRetry = true;
                     }
 
-                    timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
-                    await SendHeartBeat(
-                        $"Client from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} waiting for subscription that is serving IP {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} to be released");
-                    shouldRetry = true;
-                }
-                
-            } while (shouldRetry);
-            
+                } while (shouldRetry);
+            }
+            finally
+            {
+                _connectionState.PendingConnections.TryRemove(this);
+            }
+
             _pendingConnectionScope.Dispose();
 
             try

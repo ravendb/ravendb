@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
+using Sparrow.Collections;
 using Sparrow.Server;
 using Sparrow.Threading;
 
@@ -32,6 +33,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         private SubscriptionConnection _currentConnection;
 
+        private readonly ConcurrentSet<SubscriptionConnection> _pendingConnections = new ConcurrentSet<SubscriptionConnection>();
         private readonly ConcurrentQueue<SubscriptionConnection> _recentConnections = new ConcurrentQueue<SubscriptionConnection>();
         private readonly ConcurrentQueue<SubscriptionConnection> _rejectedConnections = new ConcurrentQueue<SubscriptionConnection>();
 
@@ -116,6 +118,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public IEnumerable<SubscriptionConnection> RecentConnections => _recentConnections;
         public IEnumerable<SubscriptionConnection> RecentRejectedConnections => _rejectedConnections;
+        public ConcurrentSet<SubscriptionConnection> PendingConnections => _pendingConnections;
 
         public string SubscriptionName { get; }
 
