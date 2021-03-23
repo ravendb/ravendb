@@ -145,7 +145,7 @@ class liveSubscriptionStatsWebSocketClient extends abstractWebSocketClient<resul
                                 const aggregatedDuration = aggregatedCompleted - activeStarted;
                                 const details = { Name: "AggregatedBatchesInfo", DurationInMs: aggregatedDuration };
 
-                                var aggregatedBatchesPerf = {
+                                const aggregatedBatchesPerf = {
                                     BatchId: 0,
                                     ConnectionId: connId,
                                     Started: activeStartedAsDate,
