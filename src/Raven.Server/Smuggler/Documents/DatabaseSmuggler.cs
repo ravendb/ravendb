@@ -192,7 +192,7 @@ namespace Raven.Server.Smuggler.Documents
                     counts = ProcessRevisionDocuments(result);
                     break;
                 case DatabaseItemType.Tombstones:
-                    counts = ProcessTombstones(result);
+                    counts = ProcessTombstones(result, buildType);
                     break;
                 case DatabaseItemType.Conflicts:
                     counts = ProcessConflicts(result);
@@ -648,7 +648,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
-                    SetDocumentFlags(item, buildType);
+                    SetDocumentOrTombstoneFlags(ref item.Document.Flags, ref item.Document.NonPersistentFlags, buildType);
 
                     if (SkipDocument(buildType, isPreV4Revision, item, result, ref legacyIdsToDelete))
                         continue;
@@ -688,24 +688,24 @@ namespace Raven.Server.Smuggler.Documents
             _onProgress.Invoke(result.Progress);
         }
 
-        private void SetDocumentFlags(DocumentItem item, BuildVersionType buildType)
+        private void SetDocumentOrTombstoneFlags(ref DocumentFlags flags, ref NonPersistentDocumentFlags nonPersistentFlags, BuildVersionType buildType)
         {
-            item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.FromReplication);
-            item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+            flags = flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.FromReplication);
+            nonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
             if (_options.SkipRevisionCreation)
-                item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreationForSmuggler;
+                nonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreationForSmuggler;
 
             if (buildType == BuildVersionType.V4 || buildType == BuildVersionType.GreaterThanCurrent)
             {
                 if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
-                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasRevisions);
+                    flags = flags.Strip(DocumentFlags.HasRevisions);
 
                 if (_options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups) == false)
-                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasCounters);
+                    flags = flags.Strip(DocumentFlags.HasCounters);
 
                 if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false)
-                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasAttachments);
+                    flags = flags.Strip(DocumentFlags.HasAttachments);
             }
         }
 
@@ -888,7 +888,7 @@ namespace Raven.Server.Smuggler.Documents
             return counts;
         }
 
-        private SmugglerProgressBase.Counts ProcessTombstones(SmugglerResult result)
+        private SmugglerProgressBase.Counts ProcessTombstones(SmugglerResult result, BuildVersionType buildType)
         {
             using (var actions = _destination.Tombstones())
             {
@@ -909,7 +909,15 @@ namespace Raven.Server.Smuggler.Documents
                     if (tombstone.LowerId == null)
                         ThrowInvalidData();
 
-                    tombstone.Flags = tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
+
+                    if (_options.IncludeArtificial == false && tombstone.Flags.HasFlag(DocumentFlags.Artificial))
+                    {
+                        continue;
+                    }
+
+                    var _ = NonPersistentDocumentFlags.None;
+                    SetDocumentOrTombstoneFlags(ref tombstone.Flags, ref _, buildType);
+
                     actions.WriteTombstone(tombstone, result.Tombstones);
 
                     result.Tombstones.LastEtag = tombstone.Etag;
