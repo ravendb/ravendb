@@ -297,9 +297,9 @@ namespace SlowTests.Issues
 
                 AssertCount<MyIndex>(store);
 
+                // can go back to server analyzer
                 store.Maintenance.Send(new DeleteAnalyzerOperation(analyzerName));
 
-                // can go back to server analyzer
                 store.Maintenance.Send(new ResetIndexOperation(new MyIndex(analyzerName).IndexName));
 
                 AssertErrors(store);

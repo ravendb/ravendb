@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Text;
 using System.Text.RegularExpressions;
-using Lucene.Net.Search;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
@@ -16,11 +15,9 @@ using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes.Sorting
 {
-    public delegate FieldComparator CreateSorter(string fieldName, int numHits, int sortPos, bool reversed, List<string> diagnostics);
-
     public static class SorterCompiler
     {
-        public static CreateSorter Compile(string name, string sorterCode)
+        public static SorterFactory Compile(string name, string sorterCode)
         {
             var originalName = name;
             name = GetCSharpSafeName(name) + "." + Guid.NewGuid() + ".sorter";
@@ -107,14 +104,12 @@ namespace Raven.Server.Documents.Indexes.Sorting
             if (type == null)
                 throw new SorterCompilationException($"Could not find type '{originalName}' in given assembly.");
 
-            return (fieldName, numHits, sortPos, reversed, diagnostics) =>
-            {
-                var instance = Activator.CreateInstance(type, fieldName, numHits, sortPos, reversed, diagnostics) as FieldComparator;
-                if (instance == null)
-                    throw new InvalidOperationException($"Created sorter does not inherit from '{nameof(FieldComparator)}' class.");
+            var factory = new SorterFactory(type);
 
-                return instance;
-            };
+            // check if we can create that analyzer
+            factory.CreateInstance("@compile", 0, 0, false, null);
+
+            return factory;
         }
 
         private static string GetCSharpSafeName(string name)

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Client.ServerWide;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -7,7 +8,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Sorting
 {
-    public class SorterCompilationCache : AbstractCompilationCache<CreateSorter>
+    public class SorterCompilationCache : AbstractCompilationCache<SorterFactory>
     {
         public static readonly SorterCompilationCache Instance = new();
 
@@ -41,9 +42,16 @@ namespace Raven.Server.Documents.Indexes.Sorting
             }
         }
 
-        protected override CreateSorter CompileItem(string name, string code)
+        protected override SorterFactory CompileItem(string name, string code)
         {
-            return SorterCompiler.Compile(name, code);
+            try
+            {
+                return SorterCompiler.Compile(name, code);
+            }
+            catch (Exception e)
+            {
+                return new FaultySorterFactory(name, e);
+            }
         }
     }
 }

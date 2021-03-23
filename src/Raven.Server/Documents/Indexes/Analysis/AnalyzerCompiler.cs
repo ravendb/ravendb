@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Indexes.Analysis
 {
     public static class AnalyzerCompiler
     {
-        public static Type Compile(string name, string analyzerCode)
+        public static AnalyzerFactory Compile(string name, string analyzerCode)
         {
             var originalName = name;
             name = GetCSharpSafeName(name) + "." + Guid.NewGuid() + ".analyzer";
@@ -105,12 +105,14 @@ namespace Raven.Server.Documents.Indexes.Analysis
             if (type == null)
                 throw new AnalyzerCompilationException($"Could not find type '{originalName}' in given assembly.");
 
-            using (IndexingExtensions.CreateAnalyzerInstance("@compile", type))
+            var factory = new AnalyzerFactory(type);
+
+            using (factory.CreateInstance("@compile"))
             {
                 // check if we can create that analyzer
             }
 
-            return type;
+            return factory;
         }
 
         private static string GetCSharpSafeName(string name)
