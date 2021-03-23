@@ -912,7 +912,7 @@ namespace Raven.Server.Smuggler.Documents
                             switch (tombstone.Type)
                             {
                                 case Tombstone.TombstoneType.Document:
-                                    _database.DocumentsStorage.Delete(context, key, tombstone.LowerId, null, tombstone.LastModified.Ticks, tombstone.ChangeVector, new CollectionName(tombstone.Collection));
+                                    _database.DocumentsStorage.Delete(context, key, tombstone.LowerId, null, tombstone.LastModified.Ticks, tombstone.ChangeVector, new CollectionName(tombstone.Collection), documentFlags: tombstone.Flags);
                                     break;
                                 case Tombstone.TombstoneType.Attachment:
                                     var idEnd = key.Content.IndexOf(SpecialChars.RecordSeparator);
