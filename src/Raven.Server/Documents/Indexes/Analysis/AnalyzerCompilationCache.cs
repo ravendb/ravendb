@@ -8,7 +8,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Analysis
 {
-    public class AnalyzerCompilationCache : AbstractCompilationCache<Type>
+    public class AnalyzerCompilationCache : AbstractCompilationCache<AnalyzerFactory>
     {
         public static readonly AnalyzerCompilationCache Instance = new();
 
@@ -41,9 +41,18 @@ namespace Raven.Server.Documents.Indexes.Analysis
             }
         }
 
-        protected override Type CompileItem(string name, string code)
+        protected override AnalyzerFactory CompileItem(string name, string code)
         {
-            return AnalyzerCompiler.Compile(name, code);
+            try
+            {
+                var type = AnalyzerCompiler.Compile(name, code);
+
+                return new AnalyzerFactory(type);
+            }
+            catch (Exception e)
+            {
+                return new FaultyAnalyzerFactory(name, e);
+            }
         }
     }
 }

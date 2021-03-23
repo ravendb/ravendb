@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -8,8 +9,13 @@ using Raven.Client.Documents.Operations.Analyzers;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.ServerWide.Operations.Analyzers;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Analysis;
+using Raven.Server.Rachis;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.Analyzers;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Xunit;
 using Xunit.Abstractions;
@@ -191,6 +197,135 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
 
                 AssertCount<MyIndex>(store);
+            }
+        }
+
+        [Fact]
+        public void CanUseCustomAnalyzer_Restart_Faulty()
+        {
+            var serverPath = NewDataPath();
+            var databasePath = NewDataPath();
+
+            IOExtensions.DeleteDirectory(serverPath);
+            IOExtensions.DeleteDirectory(databasePath);
+
+            var analyzerName = GetDatabaseName();
+
+            using (var server = GetNewServer(new ServerCreationOptions
+            {
+                DataDirectory = serverPath,
+                RunInMemory = false
+            }))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = _ => analyzerName,
+                Path = databasePath,
+                RunInMemory = false,
+                Server = server,
+                DeleteDatabaseOnDispose = false
+            }))
+            {
+                var e = Assert.Throws<IndexCompilationException>(() => store.ExecuteIndex(new MyIndex(analyzerName)));
+                Assert.Contains($"Cannot find analyzer type '{analyzerName}' for field: Name", e.Message);
+
+                var analyzerCode = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", analyzerName);
+
+                store.Maintenance.Server.Send(new PutServerWideAnalyzersOperation(new AnalyzerDefinition
+                {
+                    Name = analyzerName,
+                    Code = analyzerCode
+                }));
+
+                store.ExecuteIndex(new MyIndex(analyzerName));
+
+                Fill(store);
+
+                WaitForIndexing(store);
+
+                AssertCount<MyIndex>(store);
+
+                server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
+
+                // skipping compilation on purpose
+                using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var command = new PutServerWideAnalyzerCommand(
+                        new AnalyzerDefinition { Name = analyzerName, Code = analyzerCode.Replace(analyzerName, "MyAnalyzer") },
+                        RaftIdGenerator.NewId());
+
+                    using (var json = context.ReadObject(command.ValueToJson(), command.Name))
+                    {
+                        ClusterStateMachine.PutValueDirectly(context, command.Name, json, 1);
+                    }
+
+                    tx.Commit();
+                }
+            }
+
+            AnalyzerCompilationCache.Instance.RemoveServerWideItem(analyzerName);
+
+            using (var server = GetNewServer(new ServerCreationOptions
+            {
+                DataDirectory = serverPath,
+                RunInMemory = false,
+                DeletePrevious = false
+            }))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = _ => analyzerName,
+                Path = databasePath,
+                RunInMemory = false,
+                Server = server,
+                CreateDatabase = false
+            }))
+            {
+                store.Maintenance.Send(new ResetIndexOperation(new MyIndex(analyzerName).IndexName));
+
+                AssertErrors(store);
+
+                // can override with database analyzer
+                store.Maintenance.Send(new PutAnalyzersOperation(new AnalyzerDefinition
+                {
+                    Name = analyzerName,
+                    Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", analyzerName)
+                }));
+
+                store.Maintenance.Send(new ResetIndexOperation(new MyIndex(analyzerName).IndexName));
+
+                WaitForIndexing(store);
+
+                AssertCount<MyIndex>(store);
+
+                store.Maintenance.Send(new DeleteAnalyzerOperation(analyzerName));
+
+                // can go back to server analyzer
+                store.Maintenance.Send(new ResetIndexOperation(new MyIndex(analyzerName).IndexName));
+
+                AssertErrors(store);
+
+                // can fix server analyzer
+                store.Maintenance.Server.Send(new PutServerWideAnalyzersOperation(new AnalyzerDefinition
+                {
+                    Name = analyzerName,
+                    Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", analyzerName)
+                }));
+
+                store.Maintenance.Send(new ResetIndexOperation(new MyIndex(analyzerName).IndexName));
+
+                WaitForIndexing(store);
+
+                AssertCount<MyIndex>(store);
+            }
+
+            static void AssertErrors(IDocumentStore store)
+            {
+                var errors = WaitForIndexingErrors(store);
+
+                Assert.Equal(1, errors.Length);
+                Assert.Equal(1, errors[0].Errors.Length);
+                Assert.Contains("is an implementation of a faulty analyzer", errors[0].Errors[0].Error);
+                Assert.Contains("Could not find type", errors[0].Errors[0].Error);
             }
         }
 
