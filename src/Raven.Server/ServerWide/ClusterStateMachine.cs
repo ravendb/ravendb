@@ -1891,7 +1891,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void PutValueDirectly(ClusterOperationContext context, string key, BlittableJsonReaderObject value, long index)
+        internal static void PutValueDirectly(ClusterOperationContext context, string key, BlittableJsonReaderObject value, long index)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             using (Slice.From(context.Allocator, key, out Slice keySlice))

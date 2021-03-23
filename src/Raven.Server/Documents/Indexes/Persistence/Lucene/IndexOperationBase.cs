@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     switch (value.Indexing)
                     {
                         case FieldIndexing.Exact:
-                            defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields, index.Configuration.DefaultExactAnalyzerType.Value, CreateKeywordAnalyzer);
+                            defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer);
                             break;
 
                         case FieldIndexing.Search:
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                 defaultAnalyzerToUse = GetAnalyzer(Constants.Documents.Indexing.Fields.AllFields, value.Analyzer, analyzers, forQuerying, index.DocumentDatabase.Name);
 
                             if (defaultAnalyzerToUse == null)
-                                defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields, index.Configuration.DefaultSearchAnalyzerType.Value, CreateStandardAnalyzer);
+                                defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
                             break;
 
                         default:
@@ -75,15 +75,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (defaultAnalyzerToUse == null)
             {
-                defaultAnalyzerToUse = defaultAnalyzer = CreateDefaultAnalyzer(Constants.Documents.Indexing.Fields.AllFields, index.Configuration.DefaultAnalyzerType.Value);
+                defaultAnalyzerToUse = defaultAnalyzer = CreateDefaultAnalyzer(Constants.Documents.Indexing.Fields.AllFields, index.Configuration.DefaultAnalyzerType.Value.Type);
                 analyzers.Add(defaultAnalyzerToUse.GetType(), defaultAnalyzerToUse);
             }
 
             var perFieldAnalyzerWrapper = forQuerying == false && indexDefinition.HasDynamicFields
                 ? new RavenPerFieldAnalyzerWrapper(
                         defaultAnalyzerToUse,
-                        fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value, CreateStandardAnalyzer),
-                        fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value, CreateKeywordAnalyzer))
+                        fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer),
+                        fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer))
                 : new RavenPerFieldAnalyzerWrapper(defaultAnalyzerToUse);
 
             foreach (var field in indexDefinition.IndexFields)
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 switch (field.Value.Indexing)
                 {
                     case FieldIndexing.Exact:
-                        var keywordAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value, CreateKeywordAnalyzer);
+                        var keywordAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer);
 
                         perFieldAnalyzerWrapper.AddAnalyzer(fieldName, keywordAnalyzer);
                         break;
@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             // if we have default field options then we need to take into account overrides for regular fields
 
                             if (defaultAnalyzer == null)
-                                defaultAnalyzer = CreateDefaultAnalyzer(fieldName, index.Configuration.DefaultAnalyzerType.Value);
+                                defaultAnalyzer = CreateDefaultAnalyzer(fieldName, index.Configuration.DefaultAnalyzerType.Value.Type);
 
                             perFieldAnalyzerWrapper.AddAnalyzer(fieldName, defaultAnalyzer);
                             continue;
@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             void AddStandardAnalyzer(string fieldName)
             {
-                var standardAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value, CreateStandardAnalyzer);
+                var standardAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
 
                 perFieldAnalyzerWrapper.AddAnalyzer(fieldName, standardAnalyzer);
             }
@@ -172,19 +172,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (string.IsNullOrWhiteSpace(analyzer))
                 return null;
 
-            var analyzerType = IndexingExtensions.GetAnalyzerType(fieldName, analyzer, databaseName);
+            var createAnalyzer = IndexingExtensions.GetAnalyzerType(fieldName, analyzer, databaseName);
 
             if (forQuerying)
             {
                 var notForQuerying = NotForQuerying
-                    .GetOrAdd(analyzerType, t => t.GetCustomAttributes<NotForQueryingAttribute>(false).Any());
+                    .GetOrAdd(createAnalyzer.Type, t => t.GetCustomAttributes<NotForQueryingAttribute>(false).Any());
 
                 if (notForQuerying)
                     return null;
             }
 
-            if (analyzers.TryGetValue(analyzerType, out var analyzerInstance) == false)
-                analyzers[analyzerType] = analyzerInstance = IndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
+            if (analyzers.TryGetValue(createAnalyzer.Type, out var analyzerInstance) == false)
+                analyzers[createAnalyzer.Type] = analyzerInstance = createAnalyzer.CreateInstance(fieldName);
 
             return analyzerInstance;
         }

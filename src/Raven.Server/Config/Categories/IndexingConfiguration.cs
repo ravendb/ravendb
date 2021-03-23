@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Raven.Client;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide;
@@ -294,11 +295,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Throttling.TimeIntervalInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting? ThrottlingTimeInterval { get; protected set; }
 
-        public Lazy<Type> DefaultAnalyzerType { get; private set; }
+        public Lazy<AnalyzerFactory> DefaultAnalyzerType { get; private set; }
 
-        public Lazy<Type> DefaultExactAnalyzerType { get; private set; }
+        public Lazy<AnalyzerFactory> DefaultExactAnalyzerType { get; private set; }
 
-        public Lazy<Type> DefaultSearchAnalyzerType { get; private set; }
+        public Lazy<AnalyzerFactory> DefaultSearchAnalyzerType { get; private set; }
 
         protected override void ValidateProperty(PropertyInfo property)
         {
@@ -318,9 +319,9 @@ namespace Raven.Server.Config.Categories
 
         public void InitializeAnalyzers(string resourceName)
         {
-            DefaultAnalyzerType = new Lazy<Type>(() => IndexingExtensions.GetAnalyzerType("@default", DefaultAnalyzer, resourceName));
-            DefaultExactAnalyzerType = new Lazy<Type>(() => IndexingExtensions.GetAnalyzerType("@default", DefaultExactAnalyzer, resourceName));
-            DefaultSearchAnalyzerType = new Lazy<Type>(() => IndexingExtensions.GetAnalyzerType("@default", DefaultSearchAnalyzer, resourceName));
+            DefaultAnalyzerType = new Lazy<AnalyzerFactory>(() => IndexingExtensions.GetAnalyzerType("@default", DefaultAnalyzer, resourceName));
+            DefaultExactAnalyzerType = new Lazy<AnalyzerFactory>(() => IndexingExtensions.GetAnalyzerType("@default", DefaultExactAnalyzer, resourceName));
+            DefaultSearchAnalyzerType = new Lazy<AnalyzerFactory>(() => IndexingExtensions.GetAnalyzerType("@default", DefaultSearchAnalyzer, resourceName));
         }
 
         public enum IndexStartupBehavior
