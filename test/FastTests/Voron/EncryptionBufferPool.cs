@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
@@ -194,20 +195,29 @@ namespace FastTests.Voron
         {
             var encryptionBuffersPool = new EncryptionBuffersPool(registerLowMemory: false, registerCleanup: false);
 
-            var threadStats = NativeMemory.ThreadAllocations.Value;
-            var before = threadStats.Allocations;
+            var ptr = encryptionBuffersPool.Get(1, out var initialSize, out var threadStats);
 
-            var ptr = encryptionBuffersPool.Get(1, out var size, out threadStats);
-
-            Assert.Equal(before + size, threadStats.TotalAllocated);
-
+            var size = initialSize;
+            var free4KbAlignedMemoryCount = 0;
+            var updateMemoryStatsForThreadCount = 0;
             var testingStuff = encryptionBuffersPool.ForTestingPurposesOnly();
             testingStuff.CanAddToPerCorePool = false;
             testingStuff.CanAddToGlobalPool = false;
+            testingStuff.OnFree4KbAlignedMemory = s =>
+            {
+                free4KbAlignedMemoryCount++;
+                size -= s;
+            };
+            testingStuff.OnUpdateMemoryStatsForThread = s =>
+            {
+                updateMemoryStatsForThreadCount++;
+            };
 
-            encryptionBuffersPool.Return(ptr, size, threadStats, encryptionBuffersPool.Generation);
+            encryptionBuffersPool.Return(ptr, initialSize, threadStats, encryptionBuffersPool.Generation);
 
-            Assert.Equal(before, threadStats.TotalAllocated);
+            Assert.Equal(1, free4KbAlignedMemoryCount);
+            Assert.Equal(0, size);
+            Assert.Equal(0, updateMemoryStatsForThreadCount);
         }
 
         private static void ClearMemory(EncryptionBuffersPool encryptionBuffersPool)
