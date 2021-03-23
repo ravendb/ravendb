@@ -260,6 +260,7 @@ class ongoingTasksStats extends viewModelBase {
     static readonly brushSectionHeight = 40;
     private static readonly brushSectionTrackWorkHeight = 22;
     private static readonly brushSectionLineWidth = 1;
+    private static readonly startConnectionLineExtraHeight = 10; // amount of pixels start connection should grow over track height
     private static readonly trackHeight = 18; // height used for callstack item
     private static readonly stackPadding = 1; // space between call stacks
     private static readonly trackMargin = 4;
@@ -1238,8 +1239,6 @@ class ongoingTasksStats extends viewModelBase {
             const connectionPerfLength = connectionPerformance.length;
             const batchPerfLength = batchPerformance.length;
             
-            let connectionPerfCompleted: Date = null;
-
             // Draw connections
             for (let perfIdx = 0; perfIdx < connectionPerfLength; perfIdx++) {
                 const connPerf = connectionPerformance[perfIdx];
@@ -1265,16 +1264,7 @@ class ongoingTasksStats extends viewModelBase {
                     const dxForActive = extentFunc(perfWithCache.Details.Operations[1].DurationInMs);
 
                     this.drawActiveSubscriptionConnectionStripe(context, x1ForActive, stripesYStart, yOffset, dxForActive, perfWithCache, trackName);
-
-                    // Draw a separating line between adjacent connection items if needed 
-                    const connectedAtDate = new Date(startActiveConnectionDateAsInt);
-                    if (perfIdx >= 1 && connectionPerfCompleted && connectionPerfCompleted.getTime() === connectedAtDate.getTime()) {
-                        context.fillStyle = this.colors.separatorLine;
-                        context.fillRect(x1ForActive, yStart + (isOpened ? yOffset : 0), 1, ongoingTasksStats.trackHeight);
-                    }
-
-                    connectionPerfCompleted = connectedAtDate;
-
+                    
                     if (!connPerf.Completed) {
                         const activeInfo = perfWithCache.Details.Operations[1];
                         this.findInProgressAction([activeInfo], extentFunc, x1ForActive, stripesYStart, yOffset);
@@ -1284,7 +1274,7 @@ class ongoingTasksStats extends viewModelBase {
                 // Draw errors on top of connection stripe
                 if (perfWithCache.Exception) {
                     const xForCompleted = xScale(perfWithCache.CompletedAsDate);
-                    this.drawConnectionError(context, xForCompleted, stripesYStart - ongoingTasksStats.trackHeight + 10, 8, perfWithCache.ErrorType);
+                    this.drawConnectionError(context, xForCompleted, stripesYStart - ongoingTasksStats.trackHeight + 10, perfWithCache.ErrorType);
                     
                     const iconWidth = 16;
                     this.hitTest.registerSubscriptionExceptionItem(xForCompleted - iconWidth/2, stripesYStart - ongoingTasksStats.trackHeight, iconWidth, ongoingTasksStats.trackHeight,
@@ -1300,7 +1290,7 @@ class ongoingTasksStats extends viewModelBase {
                 const pendingInfo = perfWithCache.Details.Operations[0];
                 const dxForPending = extentFunc(pendingInfo.DurationInMs);
                 
-                if (dxForPending >= 0.8) {
+                if (dxForPending >= 5) {
                     const x1ForPending = xScale(perfWithCache.StartedAsDate);
                     this.drawPendingConnection(context, x1ForPending, stripesYStart - ongoingTasksStats.trackHeight + 12, dxForPending);
                     this.hitTest.registerSubscriptionPendingItem(x1ForPending, stripesYStart - ongoingTasksStats.trackHeight, dxForPending, ongoingTasksStats.trackHeight,
@@ -1360,6 +1350,34 @@ class ongoingTasksStats extends viewModelBase {
                 }
             }
             
+            // draw start lines - the reason we do that in separate loop is we want them to be in front
+            for (let perfIdx = 0; perfIdx < connectionPerfLength; perfIdx++) {
+                const connPerf = connectionPerformance[perfIdx];
+                const perfWithCache = connPerf as SubscriptionConnectionPerformanceStatsWithCache;
+
+                const startDateAsInt = perfWithCache.StartedAsDate.getTime();
+                const endDateAsInt = startDateAsInt + connPerf.DurationInMs;
+
+                if (endDateAsInt < visibleStartDateAsInt || visibleEndDateAsInt < startDateAsInt)
+                    continue;
+
+                context.save();
+
+                // Draw connection items (but only if we have actual connection (not just 'trying to connect')
+                if (perfWithCache.Details.Operations.length > 1) {
+                    const pendingDuration = perfWithCache.Details.Operations[0].DurationInMs;
+                    const startActiveConnectionDateAsInt = startDateAsInt + pendingDuration;
+
+                    const x1ForActive = xScale(new Date(startActiveConnectionDateAsInt)); //TODO: put into cache?
+
+                    // draw start yellow line
+                    context.fillStyle = "yellow"; //TODO: use variable
+                    context.fillRect(x1ForActive, yStart - ongoingTasksStats.startConnectionLineExtraHeight, 1, ongoingTasksStats.trackHeight + ongoingTasksStats.startConnectionLineExtraHeight);
+                }
+
+                context.restore();
+            }
+
             // Draw query text
             const extraPadding = isOpened ? ongoingTasksStats.trackHeight : 0;
             this.drawQuery(context, yStart + extraPadding, {
@@ -1505,27 +1523,32 @@ class ongoingTasksStats extends viewModelBase {
         return "";
     }
 
-    private drawConnectionError(context: CanvasRenderingContext2D, x: number, y: number, dyForLine: number,
+    private drawConnectionError(context: CanvasRenderingContext2D, x: number, y: number,
                                 errorType: Raven.Server.Documents.TcpHandlers.SubscriptionError) {
-        context.strokeStyle = this.colors.tracks.ConnectionAborted;
-        graphHelper.drawLine(context, x, y, dyForLine);
-        
-        let errorIcon;
+        let dyForLine: number = 8;
+       
+        let errorIcon: string;
+        let iconStyle: string;
         if (errorType === "ConnectionRejected") {
             errorIcon = "\uea45";
-            context.fillStyle = this.colors.tracks.ConnectionRejected;
+            iconStyle = this.colors.tracks.ConnectionRejected;
+            dyForLine = 5;
         } else {
             errorIcon = "\uea44";
-            context.fillStyle = this.colors.tracks.ConnectionAborted;
+            iconStyle = this.colors.tracks.ConnectionAborted;
         }
+
+        context.strokeStyle = this.colors.tracks.ConnectionAborted;
+        graphHelper.drawLine(context, Math.round(x) + 0.5, y, dyForLine);
         
+        context.fillStyle = iconStyle;
         context.font = "16px icomoon";
         context.fillText(errorIcon, x - 8, y);
     }
 
     private drawPendingConnection(context: CanvasRenderingContext2D, x: number, y: number, dx: number) {
         context.strokeStyle = this.colors.tracks.ConnectionPending;
-        graphHelper.drawDashLine(context, x, y, dx);
+        graphHelper.drawDashLine(context, x, y + 0.5, dx);
     }
     
     private drawStripes(context: CanvasRenderingContext2D, operations: Array<taskOperation>,
@@ -1982,6 +2005,7 @@ class ongoingTasksStats extends viewModelBase {
             } else {
                 this.replicationData = importedData.Replication;
                 this.etlData = importedData.Etl;
+                this.subscriptionData = importedData.Subscription;
 
                 this.fillCache();
                 this.prepareBrush(); 
