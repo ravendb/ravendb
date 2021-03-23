@@ -90,7 +90,7 @@ class timeSeriesEntryModel {
             this.values(dto.Values.map(x => new timeSeriesValue(x)));
         }
         
-        this.canEditName = !name;
+        this.canEditName = !timeSeriesName;
         this.initValidation();
         
         this.maxNumberOfValuesReachedWarning = ko.pureComputed(() => {
