@@ -76,9 +76,10 @@ namespace Raven.Server.Documents.Subscriptions
                         // add history aggregators
                         connectionAggregators.AddRange(connectionState.RecentConnections.Select(x => x.GetPerformanceStats()));
                         connectionAggregators.AddRange(connectionState.RecentRejectedConnections.Select(x => x.GetPerformanceStats()));
+                        connectionAggregators.AddRange(connectionState.PendingConnections.Select(x => x.GetPerformanceStats()));
 
                         // add connection stats to results 
-                        var subscriptionItem = results.Find(x => x.TaskId == kvp.Value.Handler.Connection?.SubscriptionId);
+                        var subscriptionItem = results.Find(x => x.TaskId == kvp.Value.Handler.SubscriptionId);
                         if (subscriptionItem != null)
                         {
                             var connectionPerformance = connectionAggregators.Select(x => x.ToConnectionPerformanceLiveStatsWithDetails());
@@ -110,12 +111,11 @@ namespace Raven.Server.Documents.Subscriptions
                         {
                             batchesAggregators.AddRange(recentRejectedConnection.GetBatchesPerformanceStats());
                         }
-                       
+
                         // add batch stats to results
-                        var subscriptionItem = results.Find(x => x.TaskId == kvp.Value.Handler.Connection?.SubscriptionId);
+                        var subscriptionItem = results.Find(x => x.TaskId == kvp.Value.Handler.SubscriptionId);
                         if (subscriptionItem != null)
                         {
-                            var batchPerformance = batchesAggregators.Select(x => x.ToBatchPerformanceLiveStatsWithDetails());
                             subscriptionItem.BatchPerformance = batchesAggregators.Select(x => x.ToBatchPerformanceLiveStatsWithDetails()).ToArray();
                         }
                     }
@@ -163,27 +163,38 @@ namespace Raven.Server.Documents.Subscriptions
 
                     var connectionsAggregators = new List<SubscriptionConnectionStatsAggregator>(performance.Count);
 
-                    // 1. get 'closed' connections info
                     while (performance.TryTake(out SubscriptionConnectionStatsAggregator stat))
                     {
                         connectionsAggregators.Add(stat);
                     }
 
-                    // 2. get 'inProgress' connection info
                     using (context.OpenReadTransaction())
                     {
-                        var inProgressConnection = Database.SubscriptionStorage.GetSubscriptionConnection(context, subscriptionName);
-                        var inProgressStats = inProgressConnection?.Connection?.GetPerformanceStats();
-
-                        if (inProgressStats != null &&
-                            inProgressStats.Completed == false &&
-                            connectionsAggregators.Contains(inProgressStats) == false)
+                        // check for 'in progress' connection info
+                        var subscriptionConnectionState = Database.SubscriptionStorage.GetSubscriptionConnection(context, subscriptionName);
+                        if (subscriptionConnectionState != null)
                         {
-                            connectionsAggregators.Add(inProgressStats);
+                            var inProgressStats = subscriptionConnectionState.Connection?.GetPerformanceStats();
+
+                            if (inProgressStats != null &&
+                                inProgressStats.Completed == false &&
+                                connectionsAggregators.Contains(inProgressStats) == false)
+                            {
+                                connectionsAggregators.Add(inProgressStats);
+                            }
+                        
+                            // ... and for any pending connections (waiting for free, etc)
+                            foreach (SubscriptionConnection pendingConnection in subscriptionConnectionState.PendingConnections)
+                            {
+                                var pendingConnectionStats = pendingConnection.GetPerformanceStats();
+                                if (connectionsAggregators.Contains(pendingConnectionStats) == false)
+                                {
+                                    connectionsAggregators.Add(pendingConnectionStats);
+                                }
+                            }
                         }
                     }
 
-                    // 3. add to results
                     connectionPerformance.AddRange(connectionsAggregators.Select(x => x.ToConnectionPerformanceLiveStatsWithDetails()));
                     preparedStats.Add(new SubscriptionTaskPerformanceStats
                     {
