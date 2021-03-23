@@ -209,7 +209,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = storeA.OpenSession())
                 {
