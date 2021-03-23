@@ -45,9 +45,7 @@ namespace Raven.Server.Documents.Indexes.Analysis
         {
             try
             {
-                var type = AnalyzerCompiler.Compile(name, code);
-
-                return new AnalyzerFactory(type);
+                return AnalyzerCompiler.Compile(name, code);
             }
             catch (Exception e)
             {
