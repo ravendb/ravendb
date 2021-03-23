@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Subscriptions.Stats
         public SubscriptionOpeningStrategy Strategy { get; set; }
 
         public string Exception { get; set; }
-        public SubscriptionError ErrorType { get; set; }
+        public SubscriptionError? ErrorType { get; set; }
 
         public long BatchCount { get; set; }
         public long TotalBatchSizeInBytes { get; set; }

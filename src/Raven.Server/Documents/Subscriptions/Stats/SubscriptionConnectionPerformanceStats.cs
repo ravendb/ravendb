@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Subscriptions.Stats
         public long TotalBatchSizeInBytes { get; set; }
 
         public string Exception { get; set; }
-        public SubscriptionError ErrorType { get; set; }
+        public SubscriptionError? ErrorType { get; set; }
 
         public DateTime Started { get; set; }
         public DateTime? Completed { get; set; }
