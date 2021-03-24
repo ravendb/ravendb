@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly Index _index;
 
-        private bool _supportsTimeFields;
+        private readonly bool _supportsTimeFields;
         private HashSet<string> _timeFields;
         private HashSet<string> _timeFieldsToWrite;
 

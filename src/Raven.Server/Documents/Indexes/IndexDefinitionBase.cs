@@ -132,10 +132,12 @@ namespace Raven.Server.Documents.Indexes
 
             public const long Analyzers = 52_000;
 
+            public const long TimeRanges = 52_001;
+
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = Analyzers;
+            public const long CurrentVersion = TimeRanges;
         }
     }
 

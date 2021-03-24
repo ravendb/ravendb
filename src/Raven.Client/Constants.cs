@@ -279,6 +279,12 @@ namespace Raven.Client
 
                     internal const string TimeFieldSuffix = "_Time";
 
+                    internal const string TimeYearFieldSuffix = "_Time_YYYY";
+
+                    internal const string TimeYearMonthFieldSuffix = "_Time_YYYY_MM";
+
+                    internal const string TimeYearMonthDayFieldSuffix = "_Time_YYYY_MM_DD";
+
                     public const string NullValue = "NULL_VALUE";
 
                     public const string EmptyString = "EMPTY_STRING";

@@ -317,6 +317,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, dateTime.Ticks, Field.Store.NO));
                 newFields++;
 
+                instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeYearFieldSuffix, dateTime.Year, Field.Store.NO));
+                newFields++;
+
+                var dateTimeYearMonth = new DateTime(dateTime.Year, dateTime.Month, 1, 0, 0, 0, dateTime.Kind);
+
+                instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeYearMonthFieldSuffix, dateTimeYearMonth.Ticks, Field.Store.NO));
+                newFields++;
+
+                var dateTimeYearMonthDay = dateTime.Date;
+
+                instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeYearMonthDayFieldSuffix, dateTimeYearMonthDay.Ticks, Field.Store.NO));
+                newFields++;
+
                 _index.IndexFieldsPersistence.MarkHasTimeValue(path);
 
                 return newFields;
@@ -331,9 +344,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     dateAsString = dateTimeOffset.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture);
                 else
                 {
-                    dateAsString = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
+                    var dateTime = dateTimeOffset.UtcDateTime;
+                    dateAsString = dateTime.GetDefaultRavenFormat(isUtc: true);
 
-                    instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, dateTimeOffset.UtcDateTime.Ticks, Field.Store.NO));
+                    instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, dateTime.Ticks, Field.Store.NO));
+                    newFields++;
+
+                    instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeYearFieldSuffix, dateTime.Year, Field.Store.NO));
+                    newFields++;
+
+                    var dateTimeYearMonth = new DateTime(dateTime.Year, dateTime.Month, 1, 0, 0, 0, dateTime.Kind);
+
+                    instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeYearMonthFieldSuffix, dateTimeYearMonth.Ticks, Field.Store.NO));
+                    newFields++;
+
+                    var dateTimeYearMonthDay = dateTime.Date;
+
+                    instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeYearMonthDayFieldSuffix, dateTimeYearMonthDay.Ticks, Field.Store.NO));
                     newFields++;
 
                     _index.IndexFieldsPersistence.MarkHasTimeValue(path);
