@@ -260,7 +260,7 @@ class ongoingTasksStats extends viewModelBase {
     static readonly brushSectionHeight = 40;
     private static readonly brushSectionTrackWorkHeight = 22;
     private static readonly brushSectionLineWidth = 1;
-    private static readonly startConnectionLineExtraHeight = 10; // amount of pixels start connection should grow over track height
+    private static readonly startConnectionLineExtraHeight = 6; // amount of pixels start connection should grow over track height
     private static readonly trackHeight = 18; // height used for callstack item
     private static readonly stackPadding = 1; // space between call stacks
     private static readonly trackMargin = 4;
@@ -758,8 +758,8 @@ class ongoingTasksStats extends viewModelBase {
 
         const canvas = this.canvas.node() as HTMLCanvasElement;
         const context = canvas.getContext("2d");
-
-        context.clearRect(0, 0, this.totalWidth, ongoingTasksStats.brushSectionHeight);
+        
+        context.clearRect(0, 0, this.totalWidth + 2 /* aliasing */, ongoingTasksStats.brushSectionHeight);
         context.drawImage(this.brushSection, 0, 0);
         this.drawMainSection();
     }
@@ -1098,7 +1098,7 @@ class ongoingTasksStats extends viewModelBase {
         context.save();
         try {
             context.translate(0, ongoingTasksStats.brushSectionHeight);
-            context.clearRect(0, 0, this.totalWidth, this.totalHeight - ongoingTasksStats.brushSectionHeight);
+            context.clearRect(0, 0, this.totalWidth + 2 /* aliasing */, this.totalHeight - ongoingTasksStats.brushSectionHeight);
 
             this.drawTracksBackground(context);
 
@@ -1239,6 +1239,8 @@ class ongoingTasksStats extends viewModelBase {
             const connectionPerfLength = connectionPerformance.length;
             const batchPerfLength = batchPerformance.length;
             
+            let lastErrorPosition = -1000;
+            
             // Draw connections
             for (let perfIdx = 0; perfIdx < connectionPerfLength; perfIdx++) {
                 const connPerf = connectionPerformance[perfIdx];
@@ -1274,33 +1276,47 @@ class ongoingTasksStats extends viewModelBase {
                 // Draw errors on top of connection stripe
                 if (perfWithCache.Exception) {
                     const xForCompleted = xScale(perfWithCache.CompletedAsDate);
-                    this.drawConnectionError(context, xForCompleted, stripesYStart - ongoingTasksStats.trackHeight + 10, perfWithCache.ErrorType);
-                    
-                    const iconWidth = 16;
-                    this.hitTest.registerSubscriptionExceptionItem(xForCompleted - iconWidth/2, stripesYStart - ongoingTasksStats.trackHeight, iconWidth, ongoingTasksStats.trackHeight,
-                        {
-                            title: perfWithCache.ErrorType === "ConnectionRejected" ? "Connection rejected" : "Connection aborted",
-                            exceptionText: perfWithCache.Exception,
-                            clientUri: perfWithCache.ClientUri,
-                            strategy: perfWithCache.Strategy
-                        });
+                    // don't draw errors more often than every 5 pixels
+                    if (Math.abs(lastErrorPosition - xForCompleted) > 5) {
+                        this.drawConnectionError(context, xForCompleted, stripesYStart - ongoingTasksStats.trackHeight + 10, perfWithCache.ErrorType);
+
+                        const iconWidth = 16;
+                        this.hitTest.registerSubscriptionExceptionItem(xForCompleted - iconWidth/2, stripesYStart - ongoingTasksStats.trackHeight, iconWidth, ongoingTasksStats.trackHeight,
+                            {
+                                title: perfWithCache.ErrorType === "ConnectionRejected" ? "Connection rejected" : "Connection aborted",
+                                exceptionText: perfWithCache.Exception,
+                                clientUri: perfWithCache.ClientUri,
+                                strategy: perfWithCache.Strategy
+                            });
+                        
+                        lastErrorPosition = xForCompleted;
+                    }
                 }
                 
-                // Draw pending duration on top of connection stripe
-                const pendingInfo = perfWithCache.Details.Operations[0];
-                const dxForPending = extentFunc(pendingInfo.DurationInMs);
-                
-                if (dxForPending >= 5) {
+                // Draw pending duration on top of connection stripe - but only when 'WaitForFree' strategy
+                if (perfWithCache.Strategy === "WaitForFree") {
+                    const pendingInfo = perfWithCache.Details.Operations[0];
+                    const dxForPending = extentFunc(pendingInfo.DurationInMs);
+
+                    context.strokeStyle = this.colors.tracks.ConnectionPending;
+                    context.fillStyle = context.strokeStyle;
                     const x1ForPending = xScale(perfWithCache.StartedAsDate);
-                    this.drawPendingConnection(context, x1ForPending, stripesYStart - ongoingTasksStats.trackHeight + 12, dxForPending);
-                    this.hitTest.registerSubscriptionPendingItem(x1ForPending, stripesYStart - ongoingTasksStats.trackHeight, dxForPending, ongoingTasksStats.trackHeight,
-                        {
-                            title: "Pending Connection",
-                            clientUri: perfWithCache.ClientUri,
-                            duration: pendingInfo.DurationInMs
-                        });
+                    const yForPending = stripesYStart - ongoingTasksStats.trackHeight + 12;
+
+                    context.beginPath();
+                    context.arc(x1ForPending, yForPending, 3, 0, 2 * Math.PI);
+                    context.fill();
+
+                    if (dxForPending >= 4) {
+                        graphHelper.drawDashLine(context, x1ForPending, yForPending + 0.5, dxForPending);
+                        this.hitTest.registerSubscriptionPendingItem(x1ForPending, stripesYStart - ongoingTasksStats.trackHeight, dxForPending, ongoingTasksStats.trackHeight,
+                            {
+                                title: "Pending Connection",
+                                clientUri: perfWithCache.ClientUri,
+                                duration: pendingInfo.DurationInMs
+                            });
+                    }
                 }
-                
                 context.restore();
             }
             
@@ -1368,10 +1384,10 @@ class ongoingTasksStats extends viewModelBase {
                     const pendingDuration = perfWithCache.Details.Operations[0].DurationInMs;
                     const startActiveConnectionDateAsInt = startDateAsInt + pendingDuration;
 
-                    const x1ForActive = xScale(new Date(startActiveConnectionDateAsInt)); //TODO: put into cache?
+                    const x1ForActive = xScale(new Date(startActiveConnectionDateAsInt));
 
-                    // draw start yellow line
-                    context.fillStyle = "yellow"; //TODO: use variable
+                    // draw start connection start line
+                    context.fillStyle = this.colors.tracks.ConnectionPending; 
                     context.fillRect(x1ForActive, yStart - ongoingTasksStats.startConnectionLineExtraHeight, 1, ongoingTasksStats.trackHeight + ongoingTasksStats.startConnectionLineExtraHeight);
                 }
 
@@ -1546,11 +1562,6 @@ class ongoingTasksStats extends viewModelBase {
         context.fillText(errorIcon, x - 8, y);
     }
 
-    private drawPendingConnection(context: CanvasRenderingContext2D, x: number, y: number, dx: number) {
-        context.strokeStyle = this.colors.tracks.ConnectionPending;
-        graphHelper.drawDashLine(context, x, y + 0.5, dx);
-    }
-    
     private drawStripes(context: CanvasRenderingContext2D, operations: Array<taskOperation>,
         xStart: number, yStart: number, yOffset: number, extentFunc: (duration: number) => number,
         perfItemWithCache: performanceBaseWithCache, trackName: string) {
@@ -1595,6 +1606,19 @@ class ongoingTasksStats extends viewModelBase {
             currentX += dx;
         }
     }
+    
+    private mapItemToRegister(perfItemWithCache: SubscriptionConnectionPerformanceStatsWithCache, duration: number) {
+        return {
+            title: "Client Connection",
+            strategy: perfItemWithCache.Strategy,
+            batchCount: perfItemWithCache.BatchCount,
+            totalBatchSize: perfItemWithCache.TotalBatchSizeInBytes,
+            connectionId: perfItemWithCache.ConnectionId,
+            duration: duration,
+            exceptionText: perfItemWithCache.Exception,
+            clientUri: perfItemWithCache.ClientUri
+        };
+    }
 
     private drawActiveSubscriptionConnectionStripe(context: CanvasRenderingContext2D,
                                     xStart: number, yStart: number, yOffset: number, dx: number,
@@ -1606,28 +1630,16 @@ class ongoingTasksStats extends viewModelBase {
         // Draw item
         context.fillStyle = this.getColorForOperation(activeConnectionInfo.Name);
         context.fillRect(xStart, yStart, dx, ongoingTasksStats.trackHeight);
-
-        // Register items
-        const itemToRegister = {
-            title: "Client Connection",
-            strategy: perfItemWithCache.Strategy,
-            batchCount: perfItemWithCache.BatchCount,
-            totalBatchSize: perfItemWithCache.TotalBatchSizeInBytes,
-            connectionId: perfItemWithCache.ConnectionId,
-            duration: operationDuration,
-            exceptionText:  perfItemWithCache.Exception,
-            clientUri: perfItemWithCache.ClientUri
-        }
-
+        
         // Track is open
         if (yOffset !== 0) {
             if (dx >= 0.8) { // Don't show tooltip for very small items
-                this.hitTest.registerSubscriptionConnectionItem(xStart, yStart, dx, ongoingTasksStats.trackHeight, itemToRegister);
+                this.hitTest.registerSubscriptionConnectionItem(xStart, yStart, dx, ongoingTasksStats.trackHeight, this.mapItemToRegister(perfItemWithCache, operationDuration));
             }
         }
         // Track is closed
         else if (dx >= 0.8) {
-            this.hitTest.registerSubscriptionConnectionItem(xStart, yStart, dx, ongoingTasksStats.trackHeight, itemToRegister);
+            this.hitTest.registerSubscriptionConnectionItem(xStart, yStart, dx, ongoingTasksStats.trackHeight, this.mapItemToRegister(perfItemWithCache, operationDuration));
             this.hitTest.registerToggleTrack(xStart, yStart, dx, ongoingTasksStats.trackHeight, trackName);
         }
     }
