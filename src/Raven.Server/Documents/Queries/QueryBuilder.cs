@@ -202,8 +202,8 @@ namespace Raven.Server.Documents.Queries
                                             var booleanQuery = new RavenBooleanQuery(OperatorType.And);
 
                                             var ticksQuery = ToLong(where.Operator, fieldName + Constants.Documents.Indexing.Fields.TimeFieldSuffix, date.Ticks);
-                                            var yearMonthQuery = ToYearMonthQuery(where.Operator, fieldName, date);
                                             var yearMonthDayQuery = ToYearMonthDayQuery(where.Operator, fieldName, date);
+                                            var yearMonthQuery = ToYearMonthQuery(where.Operator, fieldName, date);
                                             var yearQuery = ToYearQuery(where.Operator, fieldName, date);
 
                                             booleanQuery.TryAnd(ticksQuery, buildSteps);
@@ -215,11 +215,13 @@ namespace Raven.Server.Documents.Queries
 
                                             static Lucene.Net.Search.Query ToYearQuery(OperatorType operatorType, string fieldName, DateTime date)
                                             {
+                                                operatorType = AdjustOperator(operatorType);
                                                 return ToLong(operatorType, fieldName + Constants.Documents.Indexing.Fields.TimeYearFieldSuffix, date.Year);
                                             }
 
                                             static Lucene.Net.Search.Query ToYearMonthQuery(OperatorType operatorType, string fieldName, DateTime date)
                                             {
+                                                operatorType = AdjustOperator(operatorType);
                                                 var yearMonth = new DateTime(date.Year, date.Month, 1, 0, 0, 0, date.Kind);
 
                                                 return ToLong(operatorType, fieldName + Constants.Documents.Indexing.Fields.TimeYearMonthFieldSuffix, yearMonth.Ticks);
@@ -227,9 +229,28 @@ namespace Raven.Server.Documents.Queries
 
                                             static Lucene.Net.Search.Query ToYearMonthDayQuery(OperatorType operatorType, string fieldName, DateTime date)
                                             {
+                                                operatorType = AdjustOperator(operatorType);
                                                 var yearMonthDay = date.Date;
       
                                                 return ToLong(operatorType, fieldName + Constants.Documents.Indexing.Fields.TimeYearMonthDayFieldSuffix, yearMonthDay.Ticks);
+                                            }
+
+                                            static OperatorType AdjustOperator(OperatorType operatorType)
+                                            {
+                                                switch (operatorType)
+                                                {
+                                                    case OperatorType.Equal:
+                                                    case OperatorType.NotEqual:
+                                                    case OperatorType.LessThanEqual:
+                                                    case OperatorType.GreaterThanEqual:
+                                                        return operatorType;
+                                                    case OperatorType.LessThan:
+                                                        return OperatorType.LessThanEqual;
+                                                    case OperatorType.GreaterThan:
+                                                        return OperatorType.GreaterThanEqual;
+                                                    default:
+                                                        throw new NotSupportedException("Should not happen!");
+                                                }
                                             }
                                         }
                                     }
@@ -537,8 +558,8 @@ namespace Raven.Server.Documents.Queries
                             var booleanQuery = new RavenBooleanQuery(OperatorType.And);
 
                             var ticksQuery = LuceneQueryHelper.Between(fieldName + Constants.Documents.Indexing.Fields.TimeFieldSuffix, dateFirst.Ticks, be.MinInclusive, dateSecond.Ticks, be.MaxInclusive);
-                            var yearMonthQuery = ToYearMonthQuery(fieldName, dateFirst, dateSecond);
                             var yearMonthDayQuery = ToYearMonthDayQuery(fieldName, dateFirst, dateSecond);
+                            var yearMonthQuery = ToYearMonthQuery(fieldName, dateFirst, dateSecond);
                             var yearQuery = ToYearQuery(fieldName, dateFirst, dateSecond);
 
                             booleanQuery.TryAnd(ticksQuery, buildSteps);
