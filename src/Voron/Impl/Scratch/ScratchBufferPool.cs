@@ -53,6 +53,8 @@ namespace Voron.Impl.Scratch
         private readonly ScratchSpaceUsageMonitor _scratchSpaceMonitor; // it tracks total size of all scratches (active and recycled)
         private readonly Logger _logger;
 
+        public long NumberOfScratchBuffers => _scratchBuffers.Count;
+
         public ScratchBufferPool(StorageEnvironment env)
         {
             _logger = LoggingSource.Instance.GetLogger<ScratchBufferPool>(Path.GetFileName(env.ToString()));
