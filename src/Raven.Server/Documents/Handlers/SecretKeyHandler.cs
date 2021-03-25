@@ -77,20 +77,18 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/admin/secrets", "POST", AuthorizationStatus.Operator)]
-        public Task PutKey()
+        public async Task PutKey()
         {
             var name = GetStringQueryString("name");
             var overwrite = GetBoolValueQueryString("overwrite", required: false) ?? false;
 
             using (var reader = new StreamReader(HttpContext.Request.Body))
             {
-                var base64 = reader.ReadToEnd();
+                var base64 = await reader.ReadToEndAsync();
                 ServerStore.PutSecretKey(base64, name, overwrite);
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/secrets/distribute", "POST", AuthorizationStatus.Operator)]
