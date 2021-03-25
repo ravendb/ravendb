@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             foreach (var collection in _index.Collections)
             {
-                var shouldExtraLogs = collection.Equals("executiontasks", StringComparison.OrdinalIgnoreCase);
+                var shouldExtraLogs = _logger.IsOperationsEnabled && collection.Equals("executiontasks", StringComparison.OrdinalIgnoreCase);
 
                 using (var collectionStats = stats.For("Collection_" + collection))
                 {
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         _logger.Info(
                             $"Executing cleanup for '{_index} ({_index.Name})'. Processed {count} tombstones in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
                     }
-                    else if (_logger.IsInfoEnabled)
+                    else if (shouldExtraLogs)
                     {
                         _logger.Operations(
                             $"Executing cleanup for '{_index} ({_index.Name})'. Processed {count} tombstones in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");

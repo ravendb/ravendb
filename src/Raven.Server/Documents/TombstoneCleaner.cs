@@ -136,13 +136,13 @@ namespace Raven.Server.Documents
 
                         if (tombstones.TryGetValue(tombstone.Key, out var item) == false)
                         {
-                            if (tombstone.Key.Equals("executiontasks", StringComparison.OrdinalIgnoreCase))
+                            if (_logger.IsOperationsEnabled && tombstone.Key.Equals("executiontasks", StringComparison.OrdinalIgnoreCase))
                                 _logger.Operations($"{subscription}, {tombstone.Key}, {subscription.TombstoneCleanerIdentifier}, {tombstone.Value}");
                             tombstones[tombstone.Key] = (subscription.TombstoneCleanerIdentifier, tombstone.Value);
                         }
                         else if (tombstone.Value < item.Value)
                         {
-                            if (tombstone.Key.Equals("executiontasks", StringComparison.OrdinalIgnoreCase))
+                            if (_logger.IsOperationsEnabled && tombstone.Key.Equals("executiontasks", StringComparison.OrdinalIgnoreCase))
                                 _logger.Operations($"{subscription}, {tombstone.Key}, prev:({item.Component}, {item.Value}) , current:({subscription.TombstoneCleanerIdentifier}, {tombstone.Value})");
                             tombstones[tombstone.Key] = (subscription.TombstoneCleanerIdentifier, tombstone.Value);
                         }

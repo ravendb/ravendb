@@ -1799,7 +1799,7 @@ namespace Raven.Server.Documents
                     tvb.Add(lastModifiedTicks);
                     table.Insert(tvb);
 
-                    if (collectionName.Name.Equals("executiontasks", StringComparison.OrdinalIgnoreCase))
+                    if (_logger.IsOperationsEnabled && collectionName.Name.Equals("executiontasks", StringComparison.OrdinalIgnoreCase))
                         _logger.Operations($"{nameof(CreateTombstone)} - doc:{{Id:{lowerId}, Etag:{documentEtag}}}, tombstone:{{Id:{nonConflictedLowerId}, Etag:{newEtag}}}");
                 }
             }
