@@ -260,7 +260,7 @@ class ongoingTasksStats extends viewModelBase {
     static readonly brushSectionHeight = 40;
     private static readonly brushSectionTrackWorkHeight = 22;
     private static readonly brushSectionLineWidth = 1;
-    private static readonly startConnectionLineExtraHeight = 6; // amount of pixels start connection should grow over track height
+    private static readonly startConnectionLineExtraHeight = 6; // number of pixels to grow above track height 
     private static readonly trackHeight = 18; // height used for callstack item
     private static readonly stackPadding = 1; // space between call stacks
     private static readonly trackMargin = 4;
@@ -1293,7 +1293,7 @@ class ongoingTasksStats extends viewModelBase {
                     }
                 }
                 
-                // Draw pending duration on top of connection stripe - but only when 'WaitForFree' strategy
+                // Draw pending duration on top of connection stripe - but only when strategy is 'WaitForFree'
                 if (perfWithCache.Strategy === "WaitForFree") {
                     const pendingInfo = perfWithCache.Details.Operations[0];
                     const dxForPending = extentFunc(pendingInfo.DurationInMs);
@@ -1386,7 +1386,7 @@ class ongoingTasksStats extends viewModelBase {
 
                     const x1ForActive = xScale(new Date(startActiveConnectionDateAsInt));
 
-                    // draw start connection start line
+                    // draw the 'start connection line'
                     context.fillStyle = this.colors.tracks.ConnectionPending; 
                     context.fillRect(x1ForActive, yStart - ongoingTasksStats.startConnectionLineExtraHeight, 1, ongoingTasksStats.trackHeight + ongoingTasksStats.startConnectionLineExtraHeight);
                 }
@@ -1545,6 +1545,7 @@ class ongoingTasksStats extends viewModelBase {
        
         let errorIcon: string;
         let iconStyle: string;
+        
         if (errorType === "ConnectionRejected") {
             errorIcon = "\uea45";
             iconStyle = this.colors.tracks.ConnectionRejected;
