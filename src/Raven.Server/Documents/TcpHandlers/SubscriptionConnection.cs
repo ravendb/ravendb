@@ -175,10 +175,10 @@ namespace Raven.Server.Documents.TcpHandlers
                 var subscriptionItemKey = SubscriptionState.GenerateSubscriptionItemKeyName(TcpConnection.DocumentDatabase.Name, _options.SubscriptionName);
                 var translation = TcpConnection.DocumentDatabase.ServerStore.Cluster.Read(context, subscriptionItemKey);
                 if (translation == null)
-                    throw new SubscriptionDoesNotExistException("Cannot find any subscription with the name " + _options.SubscriptionName);
+                    throw new SubscriptionDoesNotExistException("Cannot find any Subscription Task with name: " + _options.SubscriptionName);
 
                 if (translation.TryGet(nameof(Client.Documents.Subscriptions.SubscriptionState.SubscriptionId), out long id) == false)
-                    throw new SubscriptionClosedException("Could not figure out the subscription id for subscription named " + _options.SubscriptionName);
+                    throw new SubscriptionClosedException("Could not figure out the Subscription Task ID for subscription named: " + _options.SubscriptionName);
 
                 SubscriptionId = id;
             }
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             await ParseSubscriptionOptionsAsync();
 
-            var message = $"Subscription connection for subscription ID: {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}";
+            var message = $"A connection for subscription ID {SubscriptionId} was received from remote IP {TcpConnection.TcpClient.Client.RemoteEndPoint}";
             AddToStatusDescription(message);
             if (_logger.IsInfoEnabled)
             {
@@ -202,19 +202,19 @@ namespace Raven.Server.Documents.TcpHandlers
             if (_supportedFeatures.Subscription.Includes == false)
             {
                 if (Subscription.Includes != null && Subscription.Includes.Length > 0)
-                    throw new SubscriptionInvalidStateException($"Subscription with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Includes.");
+                    throw new SubscriptionInvalidStateException($"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Includes.");
             }
 
             if (_supportedFeatures.Subscription.CounterIncludes == false)
             {
                 if (Subscription.CounterIncludes != null && Subscription.CounterIncludes.Length > 0)
-                    throw new SubscriptionInvalidStateException($"Subscription with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Counter Includes.");
+                    throw new SubscriptionInvalidStateException($"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Counter Includes.");
             }
 
             if (_supportedFeatures.Subscription.TimeSeriesIncludes == false)
             {
                 if (Subscription.TimeSeriesIncludes != null && Subscription.TimeSeriesIncludes.TimeSeries.Count > 0)
-                    throw new SubscriptionInvalidStateException($"Subscription with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support TimeSeries Includes.");
+                    throw new SubscriptionInvalidStateException($"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support TimeSeries Includes.");
             }
 
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
@@ -243,12 +243,14 @@ namespace Raven.Server.Documents.TcpHandlers
                         if (timeout == InitialConnectionTimeout && _logger.IsInfoEnabled)
                         {
                             _logger.Info(
-                                $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
+                                $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is starting to wait until previous connection from " +
+                                $"{_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
                         }
 
                         timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
                         await SendHeartBeat(
-                            $"Client from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} waiting for subscription that is serving IP {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} to be released");
+                            $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is waiting for Subscription Task that is serving a connection from IP " +
+                            $"{_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} to be released");
                         shouldRetry = true;
                     }
 
