@@ -195,7 +195,7 @@ namespace Raven.Server.Documents
                     try
                     {
                         var numberOfEntriesDeleted = _database.DocumentsStorage.DeleteTombstonesBefore(context, tombstone.Key, minTombstoneValue, numberOfTombstonesToDeleteInBatch);
-                        if (tombstone.Key.Equals("executiontasks", StringComparison.OrdinalIgnoreCase))
+                        if (_logger.IsOperationsEnabled && tombstone.Key.Equals("executiontasks", StringComparison.OrdinalIgnoreCase))
                             _logger.Operations($"{nameof(_database.DocumentsStorage.DeleteTombstonesBefore)} - {tombstone.Key}, minTombstoneValue:{minTombstoneValue}, numberOfTombstonesToDeleteInBatch:{numberOfTombstonesToDeleteInBatch}, numberOfEntriesDeleted:{numberOfEntriesDeleted}");
                         numberOfTombstonesToDeleteInBatch -= numberOfEntriesDeleted;
                         NumberOfTombstonesDeleted += numberOfEntriesDeleted;
