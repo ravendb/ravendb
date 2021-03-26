@@ -1338,8 +1338,8 @@ namespace Raven.Server.Commercial
                 await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
                 {
                     var certBytes = serverCertBytes;
-                    certFile.Write(certBytes, 0, certBytes.Length);
-                    certFile.Flush(true);
+                    await certFile.WriteAsync(certBytes, 0, certBytes.Length);
+                    await certFile.FlushAsync();
                 }
             }
             catch (Exception e)
@@ -1513,7 +1513,7 @@ namespace Raven.Server.Commercial
                             await using (var entryStream = entry.Open())
                             {
                                 var export = clientCert.Export(X509ContentType.Pfx);
-                                entryStream.Write(export, 0, export.Length);
+                                await entryStream.WriteAsync(export, 0, export.Length, token);
                             }
                             await AdminCertificatesHandler.WriteCertificateAsPemAsync($"admin.client.certificate.{name}", certBytes, null, archive);
                         }
@@ -1578,8 +1578,8 @@ namespace Raven.Server.Commercial
                             var certPath = Path.Combine(AppContext.BaseDirectory, certificateFileName);
                             await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
                             {
-                                certFile.Write(serverCertBytes, 0, serverCertBytes.Length);
-                                certFile.Flush(true);
+                                await certFile.WriteAsync(serverCertBytes, 0, serverCertBytes.Length, token);
+                                await certFile.FlushAsync(token);
                             }// we'll be flushing the directory when we'll write the settings.json
                         }
 

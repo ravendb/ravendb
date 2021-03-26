@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StreamCsvBlittableQueryResultWriter : StreamCsvResultWriter<BlittableJsonReaderObject>
     {
-        public override ValueTask AddResultAsync(BlittableJsonReaderObject res, CancellationToken token)
+        public override async ValueTask AddResultAsync(BlittableJsonReaderObject res, CancellationToken token)
         {
             WriteCsvHeaderIfNeeded(res, false);
 
@@ -19,8 +19,7 @@ namespace Raven.Server.Documents.Handlers
                 GetCsvWriter().WriteField(o?.ToString());
             }
 
-            GetCsvWriter().NextRecord();
-            return default;
+            await GetCsvWriter().NextRecordAsync();
         }
 
         public StreamCsvBlittableQueryResultWriter(HttpResponse response, Stream stream, string[] properties = null,

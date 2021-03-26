@@ -69,5 +69,10 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(DefaultValueSetInConstructor)]
         [ConfigurationEntry("Http.Protocols", ConfigurationEntryScope.ServerWideOnly)]
         public HttpProtocols Protocols { get; set; }
+
+        [Description("Sets a value that controls whether synchronous IO is allowed for the Request and Response")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Http.AllowSynchronousIO", ConfigurationEntryScope.ServerWideOnly)]
+        public bool AllowSynchronousIo { get; set; }
     }
 }

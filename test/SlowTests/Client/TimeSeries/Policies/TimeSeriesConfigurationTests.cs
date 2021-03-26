@@ -1360,7 +1360,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
 
-                var now = DateTime.UtcNow;
+                var now = RavenTestHelper.UtcToday;
                 var baseline = now.AddSeconds(-15 * 3);
                 var total = ((TimeSpan)TimeValue.FromSeconds(15 * 3)).TotalMilliseconds;
 

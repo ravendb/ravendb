@@ -140,6 +140,7 @@ namespace Voron.Impl
             {
                 // - don't want to pool large buffers
                 // - release all the buffers that were created before we got the low memory event
+                ForTestingPurposes?.OnFree4KbAlignedMemory?.Invoke(size);
                 PlatformSpecific.NativeMemory.Free4KbAlignedMemory(ptr, size, allocatingThread);
                 return;
             }
@@ -158,6 +159,7 @@ namespace Voron.Impl
             if (success)
             {
                 // updating the thread allocations since we released the memory back to the pool
+                ForTestingPurposes?.OnUpdateMemoryStatsForThread?.Invoke(size);
                 NativeMemory.UpdateMemoryStatsForThread(allocatingThread, size);
                 return;
             }
@@ -168,11 +170,13 @@ namespace Voron.Impl
             if (addToGlobalPool && currentGlobalStack.Count < _maxNumberOfAllocationsToKeepInGlobalStackPerSlot)
             {
                 // updating the thread allocations since we released the memory back to the pool
+                ForTestingPurposes?.OnUpdateMemoryStatsForThread?.Invoke(size);
                 NativeMemory.UpdateMemoryStatsForThread(allocatingThread, size);
                 currentGlobalStack.Push(allocation);
                 return;
             }
 
+            ForTestingPurposes?.OnFree4KbAlignedMemory?.Invoke(size);
             PlatformSpecific.NativeMemory.Free4KbAlignedMemory(ptr, size, allocatingThread);
         }
 
@@ -406,6 +410,10 @@ namespace Voron.Impl
             public bool CanAddToPerCorePool = true;
 
             public bool CanAddToGlobalPool = true;
+
+            public Action<long> OnFree4KbAlignedMemory;
+
+            public Action<long> OnUpdateMemoryStatsForThread;
         }
     }
 
