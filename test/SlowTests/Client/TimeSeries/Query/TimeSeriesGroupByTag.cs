@@ -673,7 +673,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
         private static DateTime PopulateCanGroupByLoadedTag(DocumentStore store)
         {
-            var baseline = DateTime.Today.ToUniversalTime();
+            var baseline = RavenTestHelper.UtcToday;
 
             using (var session = store.OpenSession())
             {
@@ -704,7 +704,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
         private static DateTime PopulateCanGroupByTagWithInterpolation(DocumentStore store)
         {
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             using (var session = store.OpenSession())
             {

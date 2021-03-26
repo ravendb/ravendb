@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/tcp", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public Task Delete()
+        public async Task Delete()
         {
             var id = GetLongQueryString("id");
 
@@ -55,14 +55,14 @@ namespace Raven.Server.Documents.Handlers
             if (connection == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
+                return;
             }
 
             // force a disconnection
-            connection.Stream.Dispose();
+            await connection.Stream.DisposeAsync();
             connection.TcpClient.Dispose();
 
-            return NoContent();
+            NoContentStatus();
         }
     }
 }
