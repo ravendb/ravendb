@@ -3864,7 +3864,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 Assert.Equal(nameof(StockPrice.Low), stock[3]);
                 Assert.Equal(nameof(StockPrice.Volume), stock[4]);
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {

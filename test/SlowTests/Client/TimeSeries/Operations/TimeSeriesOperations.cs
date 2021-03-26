@@ -262,7 +262,7 @@ namespace SlowTests.Client.TimeSeries.Operations
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.AddSeconds(-1);
+                var baseline = RavenTestHelper.UtcToday.AddSeconds(-1);
 
                 using (var session = store.OpenSession())
                 {
@@ -912,7 +912,7 @@ namespace SlowTests.Client.TimeSeries.Operations
             using (var store = GetDocumentStore())
             {
                 var documentId = "users/ayende";
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
