@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StreamCsvDocumentQueryResultWriter : StreamCsvResultWriter<Document>
     {
-        public override ValueTask AddResultAsync(Document res, CancellationToken token)
+        public override async ValueTask AddResultAsync(Document res, CancellationToken token)
         {
             // add @id property if res.Id != null, res.Id is null in map-reduce index
             WriteCsvHeaderIfNeeded(res.Data, res.Id != null);
@@ -27,8 +27,8 @@ namespace Raven.Server.Documents.Handlers
                     GetCsvWriter().WriteField(o?.ToString());
                 }
             }
-            GetCsvWriter().NextRecord();
-            return default;
+
+            await GetCsvWriter().NextRecordAsync();
         }
 
         public StreamCsvDocumentQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null,
