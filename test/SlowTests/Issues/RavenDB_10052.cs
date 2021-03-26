@@ -26,7 +26,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var now = DateTime.Now;
+                    var now = RavenTestHelper.UtcToday;
                     session.Store(new User
                     {
                         Name = "Grisha",
@@ -80,7 +80,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var now = DateTime.Now;
+                    var now = RavenTestHelper.UtcToday;
                     session.Store(new User
                     {
                         Name = "Grisha",
@@ -136,7 +136,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var now = DateTime.Now;
+                    var now = RavenTestHelper.UtcToday;
                     session.Store(new User
                     {
                         Name = "Grisha",
@@ -188,7 +188,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var now = DateTime.Now;
+                    var now = RavenTestHelper.UtcToday;
                     session.Store(new User
                     {
                         Name = "Grisha"
