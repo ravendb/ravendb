@@ -1089,7 +1089,7 @@ namespace Raven.Server.Web.Authentication
         }
 
         [RavenAction("/admin/certificates/local-state/apply", "POST", AuthorizationStatus.ClusterAdmin)]
-        public Task LocalStateApply()
+        public async Task LocalStateApply()
         {
             if (ServerStore.CurrentRachisState == RachisState.Passive)
                 throw new AuthorizationException("RavenDB is in passive state. Cannot apply certificates to the cluster.");
@@ -1098,6 +1098,7 @@ namespace Raven.Server.Web.Authentication
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
+                long? index = null;
                 List<string> localStateKeys;
                 using (ctx.OpenReadTransaction())
                 {
@@ -1114,11 +1115,14 @@ namespace Raven.Server.Web.Authentication
                             if (certificateDefinition.Thumbprint == ServerStore.Server.Certificate.Certificate.Thumbprint)
                                 continue;
 
-                            ServerStore.PutValueInClusterAsync(new PutCertificateCommand(localStateKey, certificateDefinition, $"{raftRequestId}/{localStateKey}"))
-                                .Wait(ServerStore.ServerShutdown);
+                            var (newIndex, _) = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(localStateKey, certificateDefinition, $"{raftRequestId}/{localStateKey}"));
+                            index = newIndex;
                         }
                     }
                 }
+
+                if (index.HasValue)
+                    await ServerStore.Cluster.WaitForIndexNotification(index.Value);
 
                 // Delete from local state
                 using (var tx = ctx.OpenWriteTransaction())
@@ -1128,7 +1132,7 @@ namespace Raven.Server.Web.Authentication
                 }
             }
 
-            return NoContent();
+            NoContentStatus();
         }
 
         public static void ValidateCertificateDefinition(CertificateDefinition certificate, ServerStore serverStore)

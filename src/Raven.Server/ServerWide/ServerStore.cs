@@ -1384,8 +1384,8 @@ namespace Raven.Server.ServerWide
                         {
                             await using (var certStream = File.Create(certPath))
                             {
-                                certStream.Write(bytesToSave, 0, bytesToSave.Length);
-                                certStream.Flush(true);
+                                await certStream.WriteAsync(bytesToSave, 0, bytesToSave.Length, ServerShutdown);
+                                await certStream.FlushAsync(ServerShutdown);
                             }
                         }
                         catch (Exception e)
