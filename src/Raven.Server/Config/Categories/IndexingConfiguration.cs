@@ -202,7 +202,7 @@ namespace Raven.Server.Config.Categories
         public Size? TransactionSizeLimit { get; protected set; }
 
         [Description("Transaction size limit, for encrypted database only, after which an index will stop and complete the current batch")]
-        [DefaultValue(96)]
+        [DefaultValue(256)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Encrypted.TransactionSizeLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
