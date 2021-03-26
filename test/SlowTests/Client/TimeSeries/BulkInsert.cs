@@ -36,7 +36,7 @@ namespace SlowTests.Client.TimeSeries
             using (var store = GetDocumentStore())
             {
                 var baseline = DateTime.Today.EnsureMilliseconds();
-             
+
                 const string documentId = "users/ayende";
 
                 using (var bulkInsert = store.BulkInsert())
@@ -65,7 +65,7 @@ namespace SlowTests.Client.TimeSeries
         [Fact]
         public void CanParseUnixTimeFormat()
         {
-            using (var ctx = new JsonOperationContext(4096,4096,32, SharedMultipleUseFlag.None))
+            using (var ctx = new JsonOperationContext(4096, 4096, 32, SharedMultipleUseFlag.None))
             {
                 var djv = new DynamicJsonValue
                 {
@@ -75,7 +75,7 @@ namespace SlowTests.Client.TimeSeries
                     {
                         new DynamicJsonArray
                         {
-                            1588464000021 
+                            1588464000021
                             ,3,1,2,3,
                             "SomeTag"
                         }
@@ -85,7 +85,7 @@ namespace SlowTests.Client.TimeSeries
                 var op = TimeSeriesOperation.ParseForBulkInsert(input);
                 Assert.Equal("CanParseUnixTimeFormat", op.Name);
                 Assert.Equal("SomeTag", op.Appends[0].Tag);
-                Assert.Equal(new double[] {1, 2, 3}, op.Appends[0].Values);
+                Assert.Equal(new double[] { 1, 2, 3 }, op.Appends[0].Values);
                 Assert.Equal(new DateTime(2020, 5, 3, 0, 0, 0, 21), op.Appends[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
 
@@ -97,7 +97,7 @@ namespace SlowTests.Client.TimeSeries
                     {
                         new DynamicJsonArray
                         {
-                            1257894000000000000 
+                            1257894000000000000
                             ,3,3,2,1,
                             "SomeTag2"
                         }
@@ -107,7 +107,7 @@ namespace SlowTests.Client.TimeSeries
                 op = TimeSeriesOperation.ParseForBulkInsert(input);
                 Assert.Equal("CanParseUnixTimeFormat", op.Name);
                 Assert.Equal("SomeTag2", op.Appends[0].Tag);
-                Assert.Equal(new double[] {3, 2, 1}, op.Appends[0].Values);
+                Assert.Equal(new double[] { 3, 2, 1 }, op.Appends[0].Values);
                 Assert.Equal(new DateTime(2009, 11, 10, 23, 0, 0), op.Appends[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
             }
         }
@@ -128,7 +128,7 @@ namespace SlowTests.Client.TimeSeries
 
                     using (var bulkInsert = store.BulkInsert())
                     {
-                        bulkInsert.Store(new {Name = "Oren"}, documentId);
+                        bulkInsert.Store(new { Name = "Oren" }, documentId);
 
                         using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "Heartrate"))
                         {
@@ -142,7 +142,7 @@ namespace SlowTests.Client.TimeSeries
                             .Get(DateTime.MinValue, DateTime.MaxValue)
                             .Single();
 
-                        Assert.Equal(new[] {59.5}, val.Values);
+                        Assert.Equal(new[] { 59.5 }, val.Values);
                         Assert.Equal("watches/fitbit", val.Tag);
                         Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     }
@@ -960,7 +960,7 @@ namespace SlowTests.Client.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var vals = session.TimeSeriesFor(documentId, "Heartrate")
-                        .Get(DateTime.MinValue, DateTime.MaxValue, start: 5, pageSize :20)
+                        .Get(DateTime.MinValue, DateTime.MaxValue, start: 5, pageSize: 20)
                         .ToList();
 
                     Assert.Equal(20, vals.Count);
@@ -1009,7 +1009,7 @@ namespace SlowTests.Client.TimeSeries
                     {
                         timeSeriesBulkInsert.Append(baseline.AddMinutes(2), new[] { 61d }, "watches/fitbit");
                     }
-                    
+
                     using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId1, "Heartrate"))
                     {
                         timeSeriesBulkInsert.Append(baseline.AddMinutes(3), new[] { 62d }, "watches/apple-watch");
@@ -1056,8 +1056,8 @@ namespace SlowTests.Client.TimeSeries
         [Theory]
         [InlineData(128)]
         [InlineData(1024)]
-        [InlineData(10*1024)]
-        [InlineData(100*1024)]
+        [InlineData(10 * 1024)]
+        [InlineData(100 * 1024)]
         public void CanAppendALotOfTimeSeries(int numberOfTimeSeries)
         {
             using (var store = GetDocumentStore())
@@ -1115,14 +1115,14 @@ namespace SlowTests.Client.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 const string documentId = "users/ayende";
                 var numberOfMeasures = 10_000;
                 var numberOfTimeSeries = 10;
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new {Name = "Oren"}, documentId);
+                    session.Store(new { Name = "Oren" }, documentId);
                     session.SaveChanges();
                 }
                 var count = new CountdownEvent(numberOfTimeSeries);
@@ -1219,20 +1219,20 @@ namespace SlowTests.Client.TimeSeries
                 }
             }
         }
-        
+
         [Fact]
         public async Task CanHaveBulkInsertWithDocumentsAndAttachmentAndCountersAndTimeSeries()
         {
             int count = 100;
             int size = 64 * 1024;
-            
+
             using (var store = GetDocumentStore())
             {
                 var baseline = DateTime.Today.EnsureUtc();
                 var streams = new Dictionary<string, Dictionary<string, MemoryStream>>();
                 var counters = new Dictionary<string, string>();
                 var bulks = new Dictionary<string, BulkInsertOperation.AttachmentsBulkInsert>();
-                
+
                 using (var bulkInsert = store.BulkInsert())
                 {
                     for (int i = 0; i < count; i++)
@@ -1241,7 +1241,7 @@ namespace SlowTests.Client.TimeSeries
                         streams[id] = new Dictionary<string, MemoryStream>();
 
                         // insert Documents
-                        bulkInsert.Store(new User {Name = $"Name_{i}" }, id);
+                        bulkInsert.Store(new User { Name = $"Name_{i}" }, id);
 
                         bulks[id] = bulkInsert.AttachmentsFor(id);
                     }
@@ -1253,13 +1253,13 @@ namespace SlowTests.Client.TimeSeries
                         rnd.NextBytes(bArr);
                         var name = $"{bulk.Key}_{rnd.Next(100)}";
                         var stream = new MemoryStream(bArr);
-                        
+
                         // insert Attachments
                         await bulk.Value.StoreAsync(name, stream);
 
                         stream.Position = 0;
                         streams[bulk.Key][name] = stream;
-                        
+
                         // insert Counters
                         await bulkInsert.CountersFor(bulk.Key).IncrementAsync(name);
                         counters[bulk.Key] = name;
@@ -1276,7 +1276,7 @@ namespace SlowTests.Client.TimeSeries
                 {
                     using (var session = store.OpenSession())
                     {
-                        
+
                         var timeSeriesVal = session.TimeSeriesFor(id, "HeartRate")
                             .Get(DateTime.MinValue, DateTime.MaxValue)
                             .FirstOrDefault();
@@ -1284,17 +1284,17 @@ namespace SlowTests.Client.TimeSeries
                         Assert.Equal(new[] { 59d }, timeSeriesVal.Values);
                         Assert.Equal("watches/fitBit", timeSeriesVal.Tag);
                         Assert.Equal(baseline.AddMinutes(1), timeSeriesVal.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-                        
+
                         var attachmentsNames = streams.Select(x => new AttachmentRequest(id, x.Key));
                         var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
-                
+
                         while (attachmentsEnumerator.MoveNext())
                         {
                             Assert.NotNull(attachmentsEnumerator.Current != null);
                             Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[id][attachmentsEnumerator.Current.Details.Name]));
                         }
                     }
-                
+
                     var val = store.Operations
                         .Send(new GetCountersOperation(id, new[] { counters[id] }))
                         .Counters[0]?.TotalValue;
