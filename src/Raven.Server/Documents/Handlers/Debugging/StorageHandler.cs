@@ -18,6 +18,52 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class StorageHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/admin/storage/manual-flush", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task ManualFlush()
+        {
+            var name = GetStringQueryString("name");
+            var typeAsString = GetStringQueryString("type");
+
+            if (Enum.TryParse(typeAsString, out StorageEnvironmentWithType.StorageEnvironmentType type) == false)
+                throw new InvalidOperationException("Query string value 'type' is not a valid environment type: " + typeAsString);
+
+            var env = Database.GetAllStoragesEnvironment()
+                .FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase) && x.Type == type);
+
+            if (env == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
+            }
+
+            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(env.Environment);
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/admin/storage/manual-sync", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task ManualSync()
+        {
+            var name = GetStringQueryString("name");
+            var typeAsString = GetStringQueryString("type");
+
+            if (Enum.TryParse(typeAsString, out StorageEnvironmentWithType.StorageEnvironmentType type) == false)
+                throw new InvalidOperationException("Query string value 'type' is not a valid environment type: " + typeAsString);
+
+            var env = Database.GetAllStoragesEnvironment()
+                .FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase) && x.Type == type);
+
+            if (env == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
+            }
+
+            env.Environment.SuggestSyncDataFile();
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/debug/storage/trees", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = false)]
         public Task Trees()
         {
