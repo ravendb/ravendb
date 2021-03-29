@@ -55,7 +55,7 @@ namespace Raven.Server.Dashboard.Cluster
                 if (Watchers.Count >= 1)
                     return Watchers.First();
 
-                await Task.Delay(200);
+                await Task.Delay(200, _shutdown);
             }
         }
     }

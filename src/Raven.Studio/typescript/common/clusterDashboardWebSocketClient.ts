@@ -2,15 +2,15 @@
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
 
-class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Server.ClusterDashboard.WidgetMessage> {
+class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Server.Dashboard.Cluster.WidgetMessage> {
 
     readonly nodeTag: string;
-    private readonly onData: (data: Raven.Server.ClusterDashboard.WidgetMessage) => void;
+    private readonly onData: (data: Raven.Server.Dashboard.Cluster.WidgetMessage) => void;
     loading = ko.observable<boolean>(true);
     private readonly onConnection: () => void;
     private readonly onDisconnect: () => void;
 
-    constructor(nodeTag: string, onData: (data: Raven.Server.ClusterDashboard.WidgetMessage) => void, onConnection: () => void, onDisconnect: () => void) {
+    constructor(nodeTag: string, onData: (data: Raven.Server.Dashboard.Cluster.WidgetMessage) => void, onConnection: () => void, onDisconnect: () => void) {
         super(null);
         this.nodeTag = nodeTag;
         this.onData = onData;
@@ -26,7 +26,7 @@ class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Serv
         });
     }
     
-    public sendCommand(data: Raven.Server.ClusterDashboard.WidgetRequest) {
+    public sendCommand(data: Raven.Server.Dashboard.Cluster.WidgetRequest) {
         const payload = JSON.stringify(data, null, 0);
         this.webSocket.send(payload);
     }
@@ -59,7 +59,7 @@ class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Serv
         this.loading(false);
     }
 
-    protected onMessage(e: Raven.Server.ClusterDashboard.WidgetMessage) {
+    protected onMessage(e: Raven.Server.Dashboard.Cluster.WidgetMessage) {
         this.loading(false);
 
         this.onData(e);

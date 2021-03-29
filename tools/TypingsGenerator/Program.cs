@@ -311,6 +311,11 @@ namespace TypingsGenerator
             scripter.AddType(typeof(CpuUsagePayload));
             scripter.AddType(typeof(MemoryUsagePayload));
             scripter.AddType(typeof(StorageUsagePayload));
+            scripter.AddType(typeof(DatabaseIndexingSpeedPayload));
+            scripter.AddType(typeof(DatabaseStorageUsagePayload));
+            scripter.AddType(typeof(IndexingSpeedPayload));
+            scripter.AddType(typeof(TrafficWatchPayload));
+            scripter.AddType(typeof(DatabaseTrafficWatchPayload));
 
             // expiration
             scripter.AddType(typeof(ExpirationConfiguration));

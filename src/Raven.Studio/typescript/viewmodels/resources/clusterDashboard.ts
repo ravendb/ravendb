@@ -13,7 +13,7 @@ import clusterNode = require("models/database/cluster/clusterNode");
 import websocketBasedWidget = require("./widgets/websocketBasedWidget");
 
 interface savedWidget {
-    type: Raven.Server.ClusterDashboard.WidgetType;
+    type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType;
     left: string;
     top: string;
     fullscreen: boolean;
@@ -196,12 +196,12 @@ class clusterDashboard extends viewModelBase {
         }, 100);
     }
  
-    private onData(nodeTag: string, msg: Raven.Server.ClusterDashboard.WidgetMessage) {
+    private onData(nodeTag: string, msg: Raven.Server.Dashboard.Cluster.WidgetMessage) {
         const targetWidget = this.widgets().find(x => x.id === msg.Id);
         // target widget might be in removal state but 'unwatch' wasn't delivered yet.
         if (targetWidget) {
             if (targetWidget instanceof websocketBasedWidget) {
-                targetWidget.onData(nodeTag, msg.Data as any);
+                targetWidget.onData(nodeTag, msg.Data);
             } else {
                 console.error("Tried to deliver message to widget which doesn't support messages. Id = " + msg.Id);
             }
@@ -213,7 +213,7 @@ class clusterDashboard extends viewModelBase {
         app.showBootstrapDialog(addWidgetView);
     }
     
-    spawnWidget(type: Raven.Server.ClusterDashboard.WidgetType, fullscreen: boolean = false, config: any = undefined, state: any = undefined) {
+    spawnWidget(type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType, fullscreen: boolean = false, config: any = undefined, state: any = undefined) {
         let widget: widget<any>;
         
         switch (type) {
@@ -229,7 +229,7 @@ class clusterDashboard extends viewModelBase {
             case "Debug":
                 widget = new debugWidget(this);
                 break;
-            case "Storage":
+            case "StorageUsage":
                 widget = new storageWidget(this);
                 break;
             default:

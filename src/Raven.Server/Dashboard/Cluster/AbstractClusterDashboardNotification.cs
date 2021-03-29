@@ -1,4 +1,6 @@
-﻿using Sparrow.Json.Parsing;
+﻿using System;
+using Raven.Client.Util;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard.Cluster
 {
@@ -6,9 +8,16 @@ namespace Raven.Server.Dashboard.Cluster
     {
         public abstract ClusterDashboardNotificationType Type { get; }
 
+        public DateTime Date { get; } = SystemTime.UtcNow;
+
         public virtual DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue { [nameof(Type)] = Type };
+            return new()
+            {
+                [nameof(Type)] = Type,
+                [nameof(Date)] = Date
+            };
+            
         }
 
         /// <summary>
