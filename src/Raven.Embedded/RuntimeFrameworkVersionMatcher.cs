@@ -90,7 +90,7 @@ namespace Raven.Embedded
             {
                 line = line.Trim();
 
-                if (line.StartsWith(".NET runtimes installed:"))
+                if (line.StartsWith(".NET runtimes installed:") || line.StartsWith(".NET Core runtimes installed:"))
                 {
                     insideRuntimes = true;
                     return Task.FromResult(false);
