@@ -119,16 +119,12 @@ class memoryUsageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clus
     onClientConnected(ws: clusterDashboardWebSocketClient) {
         super.onClientConnected(ws);
         
-        //TODO: send info to line chart!
-
         this.withStats(ws.nodeTag, x => x.disconnected(false));
     }
 
     onClientDisconnected(ws: clusterDashboardWebSocketClient) {
         super.onClientDisconnected(ws);
 
-        //TODO: send info to line chart!
-        
         this.withStats(ws.nodeTag, x => x.disconnected(true));
     }
     
