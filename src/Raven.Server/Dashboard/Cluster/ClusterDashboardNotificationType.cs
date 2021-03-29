@@ -11,7 +11,7 @@ namespace Raven.Server.Dashboard.Cluster
         Unknown,
         Debug, // TODO: fake widget used for debugging studio
         CpuUsage,
-        License,
+        License, // used by studio w/o websockets
         StorageUsage, 
         MemoryUsage,
         Traffic,
