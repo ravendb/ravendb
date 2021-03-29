@@ -101,7 +101,7 @@ namespace Voron.Global
                 Slice.From(ctx, MetadataTreeName, ByteStringType.Immutable, out MetadataTreeNameSlice);
                 Slice.From(ctx, DatabaseFilename, ByteStringType.Immutable, out DatabaseFilenameSlice);
             }
-           }
+        }
 
         public static void Assert(Func<bool> condition, Func<string> reason)
         {
