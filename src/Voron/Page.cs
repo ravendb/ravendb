@@ -3,7 +3,7 @@ using Voron.Data;
 
 namespace Voron
 {
-    public unsafe struct Page
+    public readonly unsafe struct Page
     {
         public readonly byte* Pointer;
 
