@@ -12,7 +12,7 @@ class memoryUsage {
     workingSet = ko.observable<number>();
     managedAllocations = ko.observable<number>();
     dirtyMemory = ko.observable<number>();
-    encryptionBuffersInUse = ko.observable<number>(); //TODO: consider hiding if encryption not used on server?
+    encryptionBuffersInUse = ko.observable<number>();
     encryptionBuffersPool = ko.observable<number>();
     memoryMapped = ko.observable<number>();
     unmanagedAllocations = ko.observable<number>();
@@ -23,12 +23,17 @@ class memoryUsage {
     machineMemoryUsage: KnockoutComputed<string>;
     machineMemoryUsagePercentage: KnockoutComputed<string>;
     lowMemoryTitle: KnockoutComputed<string>;
+    showEncryptionBuffers: KnockoutComputed<boolean>;
 
     sizeFormatter = generalUtils.formatBytesToSize;
 
     constructor(tag: string) {
         this.tag = tag;
 
+        this.showEncryptionBuffers = ko.pureComputed(() => {
+            return location.protocol === "https:";
+        });
+        
         this.workingSetFormatted = this.valueAndUnitFormatter(this.workingSet);
 
         this.machineMemoryUsage = ko.pureComputed(() => {
