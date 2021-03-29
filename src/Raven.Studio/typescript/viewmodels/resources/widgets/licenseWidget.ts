@@ -87,7 +87,7 @@ class licenseWidget extends widget {
         return this.isCloud() ? "Cloud licenses are automatically renewed" : "";
     });
 
-    getType(): Raven.Server.ClusterDashboard.WidgetType {
+    getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
         return "License";
     }
     

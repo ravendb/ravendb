@@ -5,7 +5,7 @@ class debugWidget extends websocketBasedWidget<any> {
 
     log = ko.observableArray<string>();
 
-    getType(): Raven.Server.ClusterDashboard.WidgetType {
+    getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
         return "Debug";
     }
 
