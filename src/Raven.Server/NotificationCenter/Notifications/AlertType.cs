@@ -36,6 +36,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         WarnIndexOutputsPerDocument,
         ErrorSavingReduceOutputDocuments,
         CatastrophicDatabaseFailure,
+        RecoverableVoronFailure,
         NonDurableFileSystem,
         RecoveryError,
         RestoreError,

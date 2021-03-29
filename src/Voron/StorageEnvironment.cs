@@ -99,6 +99,9 @@ namespace Voron
         private EndOfDiskSpaceEvent _endOfDiskSpace;
         internal int SizeOfUnflushedTransactionsInJournalFile;
 
+        private int _idleFlushTimerFailures = 0;
+        private Task _idleFlushTimer = Task.CompletedTask;
+
         internal DateTime LastFlushTime;
 
         public DateTime LastWorkTime;
@@ -158,9 +161,6 @@ namespace Voron
                 else // existing db, let us load it
                     LoadExistingDatabase();
 
-                if (_options.ManualFlushing == false)
-                    Task.Run(IdleFlushTimer);
-
                 if (isNew == false && _options.ManualSyncing == false)
                     SuggestSyncDataFile(); // let's suggest syncing data file after the recovery
 
@@ -176,38 +176,61 @@ namespace Voron
 
         private async Task IdleFlushTimer()
         {
-            var cancellationToken = _cancellationTokenSource.Token;
-
-            while (cancellationToken.IsCancellationRequested == false)
+            try
             {
-                if (Disposed)
-                    return;
+                var cancellationToken = _cancellationTokenSource.Token;
 
-                if (Options.ManualFlushing)
-                    return;
+                while (cancellationToken.IsCancellationRequested == false)
+                {
+                    if (Disposed)
+                        return;
+
+                    if (Options.ManualFlushing)
+                        return;
+
+                    try
+                    {
+                        if (await _writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(Options.IdleFlushTimeout)) == false)
+                        {
+                            if (SizeOfUnflushedTransactionsInJournalFile != 0)
+                                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+
+                            else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
+                                SuggestSyncDataFile();
+                        }
+                        else
+                        {
+                            await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(1000), cancellationToken).ConfigureAwait(false);
+                        }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        return;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                int numberOfFailures = Interlocked.Increment(ref _idleFlushTimerFailures);
+
+                string message = $"{nameof(IdleFlushTimer)} failed (numberOfFailures: {numberOfFailures}), unable to schedule flush / syncs of data file. Will be restarted on new write transaction";
+
+                if (_log.IsOperationsEnabled)
+                {
+                    _log.Operations(message, e);
+                }
 
                 try
                 {
-                    if (await _writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(Options.IdleFlushTimeout)) == false)
-                    {
-                        if (SizeOfUnflushedTransactionsInJournalFile != 0)
-                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-
-                        else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
-                            SuggestSyncDataFile();
-                    }
-                    else
-                    {
-                        await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(1000), cancellationToken).ConfigureAwait(false);
-                    }
+                    _options.InvokeRecoverableFailure(message, e);
                 }
-                catch (ObjectDisposedException)
+                catch
                 {
-                    return;
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
+                    // ignored 
                 }
             }
         }
@@ -634,8 +657,12 @@ namespace Voron
                         _endOfDiskSpace.AssertCanContinueWriting();
 
                         _endOfDiskSpace = null;
-                        Task.Run(IdleFlushTimer);
                         GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                    }
+
+                    if (Options.ManualFlushing == false && _idleFlushTimer.IsCompleted)
+                    {
+                        _idleFlushTimer = Task.Run(IdleFlushTimer); // on storage environment creation or if the task has failed
                     }
                 }
 
