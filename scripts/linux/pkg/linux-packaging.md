@@ -63,6 +63,23 @@ When installed and run the first time we start in `SetupMode` `Initial`. During 
 
 `ravendb` user group can read and write the configuration in case the server needs to overwrite the settings file on Setup or renew the certificate.
 
+#### Setup 
+
+RavenDB is set up using RavenDB Setup Wizard running on http://localhost:53700. 
+You can read more on setting up the server here: https://ravendb.net/docs/article-page/5.1/csharp/start/installation/setup-wizard
+
+##### On a headless server / SSH-only
+
+If you only have SSH access please open up port `53700` (RavenDB setup), `443` (RavenDB HTTPS server) and `38888` (RavenDB TCP server) on the target machine. 
+Then set up port tunneling through SSH - tunnel port `53700` from `localhost` of the target machine to `localhost:8080` of the SSH client machine:
+```
+ssh -N -L localhost:8080:localhost:53700 ubuntu@target.machine.com
+```
+
+If you connect using the key, you'll need to supply it with `-i` option.
+
+This will allow you to open the RavenDB Setup Wizard on http://localhost:8080 and proceed with setting up RavenDB server on a target machine.
+
 ### Removal
 
 On a regular package removal (e.g. `apt-get rm`) only the binaries are going to be deleted. Configuration and the data are not touched.

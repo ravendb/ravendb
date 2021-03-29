@@ -78,10 +78,12 @@ chown -R root:ravendb /etc/ravendb
 
 if grep -e '"Setup.Mode": "Initial"' /etc/ravendb/settings.json >&/dev/null; then
     rvnServerAddr=$(egrep -e '"ServerUrl"' /etc/ravendb/settings.json | egrep -o -e 'http:[^"]+')
-    echo "="
-    echo "= RavenDB server is going to listen on $rvnServerAddr."
-    echo "= Please navigate there in your web browser to complete the setup process."
-    echo "="
+    echo "###"
+    echo "#"
+    echo "#  Please navigate to $rvnServerAddr in your web browser to complete setting up RavenDB."
+    echo "#  If you set up the server through SSH, you can tunnel RavenDB setup port and proceed with the setup on your local e.g."
+    echo "#  ssh -N -L localhost:8080:localhost:53700 user@target-machine.com"
+    echo "###"
 fi
 
 exit 0
