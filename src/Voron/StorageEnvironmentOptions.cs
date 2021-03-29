@@ -165,6 +165,8 @@ namespace Voron
 
         public ScratchSpaceUsageMonitor ScratchSpaceUsage { get; }
 
+        public TimeSpan LongRunningFlushingWarning = TimeSpan.FromMinutes(5);
+
         public long MaxScratchBufferSize
         {
             get => _maxScratchBufferSize;
