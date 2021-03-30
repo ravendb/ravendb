@@ -70,13 +70,13 @@ namespace Raven.Client.Documents.Session
         public class YieldStream<T> : AbstractYieldStream<StreamResult<T>>
         {
             private readonly AsyncDocumentSession _parent;
-            private readonly AsyncDocumentQuery<T> _query;
+            private readonly IAbstractDocumentQueryImpl<T> _query;
             private readonly FieldsToFetchToken _fieldsToFetch;
 
             internal YieldStream(
-                AsyncDocumentSession parent,
+                AsyncDocumentSession parent, 
                 StreamOperation.YieldStreamResults enumerator,
-                AsyncDocumentQuery<T> query,
+                IAbstractDocumentQueryImpl<T> query, 
                 FieldsToFetchToken fieldsToFetch,
                 CancellationToken token) :
                 base(enumerator, token)
@@ -89,7 +89,8 @@ namespace Raven.Client.Documents.Session
             internal override StreamResult<T> ResultCreator(StreamOperation.YieldStreamResults asyncEnumerator)
             {
                 var current = asyncEnumerator.Current;
-                _query?.InvokeAfterStreamExecuted(current);
+                if (_query is IAsyncDocumentQuery<T> q)
+                    q.InvokeAfterStreamExecuted(current);
                 return _parent.CreateStreamResult<T>(current, _fieldsToFetch, _query?.IsProjectInto ?? false);
             }
         }
@@ -170,7 +171,7 @@ namespace Raven.Client.Documents.Session
         {
             using (AsyncTaskHolder())
             {
-                var documentQuery = (AsyncDocumentQuery<T>)query;
+                var documentQuery = (IAbstractDocumentQueryImpl<T>)query;
                 var fieldsToFetch = documentQuery.FieldsToFetchToken;
                 var indexQuery = query.GetIndexQuery();
 
@@ -181,7 +182,7 @@ namespace Raven.Client.Documents.Session
 
                 var result = await streamOperation.SetResultAsync(command.Result, token).ConfigureAwait(false);
 
-                var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
+                var queryOperation = documentQuery.InitializeQueryOperation();
                 queryOperation.NoTracking = true;
                 return new YieldStream<T>(this, result, documentQuery, fieldsToFetch, token);
             }

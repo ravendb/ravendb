@@ -23,8 +23,8 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// A query against a Raven index
     /// </summary>
-    public partial class AsyncDocumentQuery<T> : AbstractDocumentQuery<T, AsyncDocumentQuery<T>>, IAsyncDocumentQuery<T>,
-        IAsyncRawDocumentQuery<T>, IAsyncGraphQuery<T>, IDocumentQueryGenerator
+    public partial class AsyncDocumentQuery<T> : AbstractDocumentQuery<T, AsyncDocumentQuery<T>>, IAbstractDocumentQueryImpl<T>,
+        IAsyncRawDocumentQuery<T>, IAsyncGraphQuery<T>, IDocumentQueryGenerator, IAsyncDocumentQuery<T>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.

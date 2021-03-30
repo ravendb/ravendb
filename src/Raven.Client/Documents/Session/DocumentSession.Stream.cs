@@ -66,7 +66,7 @@ namespace Raven.Client.Documents.Session
         {
             using (enumerator)
             {
-                var documentQuery = ((DocumentQuery<T>)query);
+                var documentQuery = (IAbstractDocumentQueryImpl<T>)query;
                 var fieldsToFetch = documentQuery.FieldsToFetchToken;
                 var isProjectInto = documentQuery.IsProjectInto;
 
