@@ -8,9 +8,9 @@ namespace SlowTests.Issues
     {
         private class Doc
         {
-#pragma warning disable CS0649
+#pragma warning disable 649
             public string StrVal1, StrVal2, StrVal3;
-#pragma warning restore CS0649
+#pragma warning restore 649
         }
 
         [Fact]

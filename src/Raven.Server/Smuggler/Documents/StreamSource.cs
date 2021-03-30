@@ -1365,6 +1365,23 @@ namespace Raven.Server.Smuggler.Documents
                         }
 
                         tombstone.Type = tombstoneType;
+
+                        if (data.TryGet(nameof(Tombstone.Flags), out string flags))
+                        {
+                            if (Enum.TryParse<DocumentFlags>(flags, out var tombstoneFlags) == false)
+                            {
+                                var msg = $"Ignoring a tombstone because it couldn't parse its flags: {flags}";
+                                if (_log.IsOperationsEnabled)
+                                    _log.Operations(msg);
+
+                                _result.Tombstones.ErroredCount++;
+                                _result.AddWarning(msg);
+                                continue;
+                            }
+
+                            tombstone.Flags = tombstoneFlags;
+                        }
+
                         yield return tombstone;
                     }
                     else

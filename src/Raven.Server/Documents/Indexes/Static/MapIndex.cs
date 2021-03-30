@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
@@ -109,6 +110,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
         {
             var staticEntries = _compiled.OutputFields.ToHashSet();
+            staticEntries.Add(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
 
             var dynamicEntries = GetDynamicEntriesFields(staticEntries);
 

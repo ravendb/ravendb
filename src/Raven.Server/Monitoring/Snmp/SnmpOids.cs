@@ -509,6 +509,15 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Time since oldest backup")]
                 public const string TimeSinceOldestBackup = "5.1.3";
 
+                [Description("Number of disabled databases")]
+                public const string DisabledCount = "5.1.4";
+
+                [Description("Number of encrypted databases")]
+                public const string EncryptedCount = "5.1.5";
+
+                [Description("Number of databases for current node")]
+                public const string NodeCount = "5.1.6";
+
                 public static DynamicJsonArray ToJson()
                 {
                     var array = new DynamicJsonArray();
