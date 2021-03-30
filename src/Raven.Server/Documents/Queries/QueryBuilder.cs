@@ -49,6 +49,9 @@ namespace Raven.Server.Documents.Queries
             {
                 var luceneQuery = ToLuceneQuery(serverContext, context, metadata.Query, whereExpression, metadata, index, parameters, analyzer, factories, buildSteps: buildSteps);
 
+                if (luceneQuery != null)
+                    Console.WriteLine(luceneQuery.ToString());
+
                 // The parser already throws parse exception if there is a syntax error.
                 // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
                 return luceneQuery ?? new BooleanQuery();
@@ -553,85 +556,80 @@ namespace Raven.Server.Documents.Queries
 
                     if (CanUseTimeRanges(index))
                     {
-                        if (TryUseTimeRanges(index, fieldName, valueFirst, valueSecond, exact, out var dateFirst, out var dateSecond))
+                        if (TryUseTimeRanges(index, fieldName, valueFirst, valueSecond, exact, out var start, out var end))
                         {
                             var booleanQuery = new RavenBooleanQuery(OperatorType.Or);
 
-                            var ticksQuery = LuceneQueryHelper.Between(fieldName + Constants.Documents.Indexing.Fields.TimeFieldSuffix, dateFirst.Ticks, be.MinInclusive, dateSecond.Ticks, be.MaxInclusive);
-
                             if (false) // apply only if e.g. range is more than 7 days
                             {
-                                betweenQuery = ticksQuery;
+                                //betweenQuery = ticksQuery;
                                 break;
                             }
 
-                            var yearMonthDayQuery = ToYearMonthDayQuery(fieldName, dateFirst, dateSecond);
-                            var yearMonthQuery = ToYearMonthQuery(fieldName, dateFirst, dateSecond);
-                            var yearQuery = ToYearQuery(fieldName, dateFirst, dateSecond);
-
-                            if (yearQuery == null && yearMonthQuery == null && yearMonthDayQuery == null)
-                            {
-                                betweenQuery = ticksQuery;
-                                break;
-                            }
-
-                            booleanQuery.TryOr(ticksQuery, buildSteps);
-
-                            if (yearMonthDayQuery != null)
-                                booleanQuery.TryOr(yearMonthDayQuery, buildSteps);
-
-                            if (yearMonthQuery != null)
-                                booleanQuery.TryOr(yearMonthQuery, buildSteps);
-
-                            if (yearQuery != null)
-                                booleanQuery.TryOr(yearQuery, buildSteps);
+                            var rangeEnd = start.AddDays(1).Date; // the first day
+                            booleanQuery.TryOr(LuceneQueryHelper.Between(fieldName + Constants.Documents.Indexing.Fields.TimeFieldSuffix, start.Ticks, be.MinInclusive, rangeEnd.Ticks, toInclusive: true), buildSteps);
+                            AddDays();
+                            AddMonths();
+                            AddYears();
+                            AddMonths();
+                            AddDays();
+                            booleanQuery.TryOr(LuceneQueryHelper.Between(fieldName + Constants.Documents.Indexing.Fields.TimeFieldSuffix, start.Ticks, be.MinInclusive, end.Ticks, be.MaxInclusive), buildSteps);
 
                             betweenQuery = booleanQuery;
                             break;
 
-                            static Lucene.Net.Search.Query ToYearQuery(string fieldName, DateTime dateFirst, DateTime dateSecond)
+                            void AddDays()
                             {
-                                var yearFirst = dateFirst.Year + 1;
-                                var yearSecond = dateSecond.Year - 1;
-
-                                if (yearFirst > yearSecond)
-                                    return null;
-
-                                if (yearFirst == yearSecond)
-                                    return LuceneQueryHelper.Equal(fieldName + Constants.Documents.Indexing.Fields.TimeYearFieldSuffix, yearFirst);
-
-                                return LuceneQueryHelper.Between(fieldName + Constants.Documents.Indexing.Fields.TimeYearFieldSuffix, yearFirst, fromInclusive: true, yearSecond, toInclusive: true);
+                                var last = new DateTime(rangeEnd.Year, rangeEnd.Month, 1).AddMonths(1).AddDays(-1);
+                                if (last.Year == end.Year && last.Month == end.Month)
+                                {
+                                    last = end.Date.AddDays(-1);
+                                }
+                                if (last >= start)
+                                {
+                                    rangeEnd = last;
+                                    if (last == start)
+                                    {
+                                        booleanQuery.TryOr(LuceneQueryHelper.Equal(fieldName + Constants.Documents.Indexing.Fields.TimeYearMonthDayFieldSuffix, last.Ticks), buildSteps);
+                                    }
+                                    else
+                                    {
+                                        booleanQuery.TryOr(LuceneQueryHelper.Between(fieldName + Constants.Documents.Indexing.Fields.TimeYearMonthDayFieldSuffix, start.Date.Ticks, fromInclusive: true, rangeEnd.Ticks, toInclusive: true), buildSteps);
+                                    }
+                                    start = rangeEnd = rangeEnd.AddDays(1); // place at start of next day
+                                }
                             }
 
-                            static Lucene.Net.Search.Query ToYearMonthQuery(string fieldName, DateTime dateFirst, DateTime dateSecond)
+                            void AddMonths()
                             {
-                                var yearMonthFirst = new DateTime(dateFirst.Year, dateFirst.Month, 1, 0, 0, 0, dateFirst.Kind);
-                                yearMonthFirst = yearMonthFirst.AddMonths(1);
-
-                                var yearMonthSecond = new DateTime(dateSecond.Year, dateSecond.Month, 1, 0, 0, 0, dateSecond.Kind);
-                                yearMonthSecond = yearMonthSecond.AddMonths(-1);
-
-                                if (yearMonthFirst > yearMonthSecond)
-                                    return null;
-
-                                if (yearMonthFirst == yearMonthSecond)
-                                    return LuceneQueryHelper.Equal(fieldName + Constants.Documents.Indexing.Fields.TimeYearMonthFieldSuffix, yearMonthFirst.Ticks);
-
-                                return LuceneQueryHelper.Between(fieldName + Constants.Documents.Indexing.Fields.TimeYearMonthFieldSuffix, yearMonthFirst.Ticks, fromInclusive: true, yearMonthSecond.Ticks, toInclusive: true);
+                                var last = new DateTime(rangeEnd.Year, 12, 1);
+                                if (last.Year == end.Year)
+                                {
+                                    last = new DateTime(end.Year, end.Month,1).AddMonths(-1);
+                                }
+                                if (last >= start) // to the end of the year
+                                {
+                                    rangeEnd = last;
+                                    if (start == rangeEnd)
+                                    {
+                                        booleanQuery.TryOr(LuceneQueryHelper.Equal(fieldName + Constants.Documents.Indexing.Fields.TimeYearMonthFieldSuffix, last.Ticks), buildSteps);
+                                    }
+                                    else
+                                    {
+                                        booleanQuery.TryOr(LuceneQueryHelper.Between(fieldName + Constants.Documents.Indexing.Fields.TimeYearMonthFieldSuffix, start.Date.Ticks, fromInclusive: true, rangeEnd.Ticks, toInclusive: true), buildSteps);
+                                    }
+                                    start = rangeEnd = rangeEnd.AddMonths(1); // place on start of next month
+                                }
                             }
 
-                            static Lucene.Net.Search.Query ToYearMonthDayQuery(string fieldName, DateTime dateFirst, DateTime dateSecond)
+                            void AddYears()
                             {
-                                var yearMonthDayFirst = dateFirst.Date.AddDays(1);
-                                var yearMonthDaySecond = dateSecond.Date.AddDays(-1);
-
-                                if (yearMonthDayFirst > yearMonthDaySecond)
-                                    return null;
-
-                                if (yearMonthDayFirst == yearMonthDaySecond)
-                                    return LuceneQueryHelper.Equal(fieldName + Constants.Documents.Indexing.Fields.TimeYearMonthDayFieldSuffix, yearMonthDayFirst.Ticks);
-
-                                return LuceneQueryHelper.Between(fieldName + Constants.Documents.Indexing.Fields.TimeYearMonthDayFieldSuffix, yearMonthDayFirst.Ticks, fromInclusive: true, yearMonthDaySecond.Ticks, toInclusive: true);
+                                if (start.Year < end.Year - 1) // need to cover the range in years
+                                {
+                                    rangeEnd = new DateTime(end.Year-1, 1, 1);
+                                    booleanQuery.TryOr(LuceneQueryHelper.Between(fieldName + Constants.Documents.Indexing.Fields.TimeYearFieldSuffix, start.Year, fromInclusive: true, rangeEnd.Year, toInclusive: true), buildSteps);
+                                    start = rangeEnd = rangeEnd.AddYears(1); // place on start of next year
+                                }
                             }
                         }
                     }
@@ -672,6 +670,7 @@ namespace Raven.Server.Documents.Queries
 
         private static bool CanUseTimeTicks(Index index)
         {
+
             if (index == null)
                 return false;
 
