@@ -62,16 +62,18 @@ namespace Raven.Server.Documents
             await ExecuteCleanup();
         }
 
-        internal async Task ExecuteCleanup(long? numberOfTombstonesToDeleteInBatch = null)
+        internal async Task<long> ExecuteCleanup(long? numberOfTombstonesToDeleteInBatch = null)
         {
+            var numberOfTombstonesDeleted = 0L;
+
             try
             {
                 if (CancellationToken.IsCancellationRequested)
-                    return;
+                    return numberOfTombstonesDeleted;
 
                 var state = GetStateInternal();
                 if (state.Tombstones.Count == 0)
-                    return;
+                    return numberOfTombstonesDeleted;
 
                 var batchSize = numberOfTombstonesToDeleteInBatch ?? _numberOfTombstonesToDeleteInBatch;
 
@@ -79,6 +81,8 @@ namespace Raven.Server.Documents
                 {
                     var command = new DeleteTombstonesCommand(state.Tombstones, state.MinAllDocsEtag, batchSize, _documentDatabase, Logger);
                     await _documentDatabase.TxMerger.Enqueue(command);
+
+                    numberOfTombstonesDeleted += command.NumberOfTombstonesDeleted;
 
                     if (command.NumberOfTombstonesDeleted < batchSize)
                         break;
@@ -89,17 +93,19 @@ namespace Raven.Server.Documents
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to execute tombstone cleanup on {_documentDatabase.Name}", e);
             }
+
+            return numberOfTombstonesDeleted;
         }
 
-        internal Dictionary<string, (string Component, long Value)> GetState()
+        internal Dictionary<string, (string Component, long Etag)> GetState()
         {
             return GetStateInternal().Tombstones;
         }
 
-        private (Dictionary<string, (string Component, long Value)> Tombstones, long MinAllDocsEtag) GetStateInternal()
+        private (Dictionary<string, (string Component, long Etag)> Tombstones, long MinAllDocsEtag) GetStateInternal()
         {
             var minAllDocsEtag = long.MaxValue;
-            var tombstones = new Dictionary<string, (string Component, long Value)>(StringComparer.OrdinalIgnoreCase);
+            var tombstones = new Dictionary<string, (string Component, long Etag)>(StringComparer.OrdinalIgnoreCase);
 
             if (CancellationToken.IsCancellationRequested)
                 return (tombstones, minAllDocsEtag);
@@ -135,7 +141,7 @@ namespace Raven.Server.Documents
 
                         if (tombstones.TryGetValue(tombstone.Key, out var item) == false)
                             tombstones[tombstone.Key] = (subscription.TombstoneCleanerIdentifier, tombstone.Value);
-                        else if (tombstone.Value < item.Value)
+                        else if (tombstone.Value < item.Etag)
                             tombstones[tombstone.Key] = (subscription.TombstoneCleanerIdentifier, tombstone.Value);
                     }
                 }
@@ -150,7 +156,7 @@ namespace Raven.Server.Documents
 
         internal class DeleteTombstonesCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly Dictionary<string, (string Component, long Value)> _tombstones;
+            private readonly Dictionary<string, (string Component, long Etag)> _tombstones;
             private readonly long _minAllDocsEtag;
             private readonly long _numberOfTombstonesToDeleteInBatch;
             private readonly DocumentDatabase _database;
@@ -158,7 +164,7 @@ namespace Raven.Server.Documents
 
             public long NumberOfTombstonesDeleted { get; private set; }
 
-            public DeleteTombstonesCommand(Dictionary<string, (string Component, long Value)> tombstones, long minAllDocsEtag, long numberOfTombstonesToDeleteInBatch, DocumentDatabase database, Logger logger)
+            public DeleteTombstonesCommand(Dictionary<string, (string Component, long Etag)> tombstones, long minAllDocsEtag, long numberOfTombstonesToDeleteInBatch, DocumentDatabase database, Logger logger)
             {
                 _tombstones = tombstones ?? throw new ArgumentNullException(nameof(tombstones));
                 _minAllDocsEtag = minAllDocsEtag;
@@ -176,7 +182,7 @@ namespace Raven.Server.Documents
 
                 foreach (var tombstone in _tombstones)
                 {
-                    var minTombstoneValue = Math.Min(tombstone.Value.Value, _minAllDocsEtag);
+                    var minTombstoneValue = Math.Min(tombstone.Value.Etag, _minAllDocsEtag);
                     if (minTombstoneValue <= 0)
                         continue;
 
@@ -218,7 +224,7 @@ namespace Raven.Server.Documents
 
     internal class DeleteTombstonesCommandDto : TransactionOperationsMerger.IReplayableCommandDto<TombstoneCleaner.DeleteTombstonesCommand>
     {
-        public Dictionary<string, (string Component, long Value)> Tombstones;
+        public Dictionary<string, (string Component, long Etag)> Tombstones;
         public long MinAllDocsEtag;
         public long? NumberOfTombstonesToDeleteInBatch;
 
