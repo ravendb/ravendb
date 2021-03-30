@@ -86,9 +86,9 @@ namespace Raven.Client.Documents.Session
 
         protected readonly List<LoadToken> LoadTokens;
 
-        protected internal FieldsToFetchToken FieldsToFetchToken;
+        public FieldsToFetchToken FieldsToFetchToken { get; set; }
 
-        protected internal readonly bool IsProjectInto;
+        public bool IsProjectInto { get; }
 
         protected LinkedList<QueryToken> WhereTokens = new LinkedList<QueryToken>();
 
@@ -233,7 +233,7 @@ namespace Raven.Client.Documents.Session
             return new LazyQueryOperation<T>(TheSession, QueryOperation, AfterQueryExecutedCallback);
         }
 
-        protected internal QueryOperation InitializeQueryOperation()
+        public QueryOperation InitializeQueryOperation()
         {
             var beforeQueryExecutedEventArgs = new BeforeQueryEventArgs(TheSession, this);
             TheSession.OnBeforeQueryInvoke(beforeQueryExecutedEventArgs);
