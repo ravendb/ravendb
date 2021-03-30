@@ -1,0 +1,294 @@
+<div class="content-margin edit-raven-olap-task" data-bind="css: { 'test-mode': false }">
+    <div class="row flex-row absolute-fill">
+        <div class="col-xs-12 col-lg-6 flex-vertical">
+            <form class="flex-form" data-bind="submit: saveOlapEtl" autocomplete="off" novalidate>
+                <div class="flex-header">
+                    <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
+                        <i class="icon-save"></i><span>Save</span>
+                    </button>
+                    <button data-bind="click: cancelOperation" class="btn btn-default">
+                        <i class="icon-cancel"></i><span>Cancel</span>
+                    </button>
+                </div>
+                <div class="panel">
+                    <div data-bind="with: editedOlapEtl">
+                        <div class="panel-body">
+                            <h3 data-bind="text: $parent.isAddingNewOlapEtlTask() ? 'New OLAP ETL' : 'Edit OLAP ETL'"></h3>
+                            <div class="form-group" data-bind="validationElement: taskName">
+                                <label for="taskName" class="control-label">Task Name</label>
+                                <div class="flex-grow">
+                                    <input type="text" class="form-control" id="taskName"
+                                           placeholder="Enter a descriptive name for the OLAP ETL task (optional)" data-bind="textInput: taskName" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle responsible-node">
+                                    <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor" />
+                                    <label for="responsibleNode">Set preferred responsible node</label>
+                                </div>
+                            </div>
+                            <div data-bind="validationElement: mentorNode, collapse: manualChooseMentor"> 
+                                <div class="form-group">
+                                    <div>
+                                        <label class="control-label">Responsible Node</label>
+                                    </div>
+                                    <div class="flex-grow"> 
+                                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                            <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select preferred responsible node'"></span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
+                                            <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.mentorNode.bind($parent.mentorNode, $data)"></a></li>
+                                        </ul>
+                                        <span class="help-block" data-bind="validationMessage: mentorNode"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle keep-files-on-disk">
+                                    <input id="keepFiles" type="checkbox" data-bind="checked: keepFilesOnDisk" />
+                                    <label for="keepFiles">Keep files on disk</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle custom-prefix">
+                                    <input id="setCustomPrefix" type="checkbox" data-bind="checked: customPrefixEnabled" />
+                                    <label for="setCustomPrefix">Set custom prefix</label>
+                                </div>
+                            </div>
+                            <div data-bind="validationElement: customPrefix, collapse: customPrefixEnabled">
+                                <div class="form-group" data-bind="validationElement: customPrefix">
+                                    <label for="taskName" class="control-label">Custom Prefix</label>
+                                    <div class="flex-grow">
+                                        <input type="text" class="form-control" id="customPrefix"
+                                               placeholder="Enter a custom prefix" data-bind="textInput: customPrefix" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle run-frequency">
+                                    <input id="setFrequency" type="checkbox" data-bind="checked: runFrequencyEnabled" />
+                                    <label for="setFrequency">Set run frequency</label>
+                                </div>
+                            </div>
+                            <div data-bind="validationElement: runFrequency, collapse: runFrequencyEnabled">
+                                <div class="form-group" data-bind="validationElement: runFrequency">
+                                    <label for="taskName" class="control-label">&nbsp;</label>
+                                    <div data-bind="compose: runFrequencyCronEditor, collapse: runFrequencyEnabled"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle">
+                                    <input id="createNewString" type="checkbox" data-bind="checked: $root.createNewConnectionString" />
+                                    <label for="createNewString">Create a new OLAP connection string</label>
+                                </div>
+                            </div>
+                            <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString">
+                                <div class="form-group">
+                                    <div class="flex-grow" data-bind="compose: 'database/settings/connectionStringOlap.html'"></div>
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName, visible: !$root.createNewConnectionString()">
+                                <label class="control-label">Connection String</label>
+                                <div class="flex-grow">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
+                                            data-bind="textInput: connectionStringName, disable: $root.olapEtlConnectionStringsNames().length === 0">
+                                        <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
+                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    </button>
+                                    <ul class="dropdown-menu"
+                                        data-bind="foreach: $root.olapEtlConnectionStringsNames">
+                                        <li data-bind="click: _.partial($root.useConnectionString, $data)">
+                                            <a href="#" data-bind="text: $data"></a>
+                                        </li>
+                                    </ul>
+                                    <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
+                                </div>
+                            </div>
+                            <div class="flex-horizontal">
+                                <div class="flex-grow">
+                                    <button type="button" class="btn btn-info" data-bind="click: $root.toggleAdvancedArea">
+                                            <i class="icon-settings"></i><span>Advanced</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div data-bind="collapse: $root.showAdvancedOptions">
+                            <div class="panel-body">
+                                <div class="form-group max-items-in-row">
+                                    <label for="maxNumber" class="control-label">Max Items in Row</label>
+                                    <div class="flex-grow" data-bind="validationElement: maxNumberOfItemsInRowGroup">
+                                        <div class="input-group">
+                                            <input type="number" min="1" class="form-control" placeholder="Enter a number (or leave empty for null)" id="maxNumber"
+                                                   data-bind="numericInput: maxNumberOfItemsInRowGroup" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-addon" data-bind="visible: $root.olapEtlConnectionStringsNames().length === 0 && !$root.createNewConnectionString()">
+                        <div class="padding bg-warning small">
+                            <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
+                        </div>
+                    </div>
+                </div>
+            </form>
+            <div class="flex-horizontal flex-header">
+                <div class="flex-grow"><h3>OLAP Tables</h3></div>
+                <div><button type="button" class="btn btn-info" data-bind="click: addNewOlapTable, disable: showEditOlapTableArea()"><i class="icon-plus"></i><span>Add Table</span></button></div>
+            </div>
+            <div class="olap-tables-list margin-bottom">
+                <!-- OLAP table edit area -->
+                <div class="panel" data-bind="visible: showEditOlapTableArea()">
+                    <div class="padding padding-sm flex-horizontal item" data-bind="with: editedOlapTableSandbox()">
+                        <div class="flex-grow" data-bind="validationElement: tableName"> 
+                            <!-- todo 1: why not red on the FIRST Time ? only after saving at least once.. -->
+                            <!-- todo 2: where to place the message - if placed it has an offset, so for now msg is removed... -->
+                            <input type="text" class="form-control input-sm" placeholder="Table name"
+                                   data-bind="textInput: tableName" />
+                        </div>
+                        <div class="flex-grow" data-bind="validationElement: documentIdColumn">
+                            <input type="text" class="form-control input-sm" placeholder="Document Id Column Name" data-bind="textInput: documentIdColumn" />
+                        </div>
+                        <div class="flex-grow">
+                            <input type="text" class="form-control input-sm" placeholder="Partition Column Name" data-bind="textInput: partitionColumn" />
+                        </div>
+                        <div class="flex-noshrink">
+                            <button type="button" class="btn btn-success btn-sm" title="Add this OLAP table" data-bind="click: $root.saveEditedOlapTable"><i class="icon-tick"></i></button>
+                            <button type="button" class="btn btn-default btn-sm" title="Cancel" data-bind="click: $root.cancelEditedOlapTable"><i class="icon-cancel"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <!-- The olap tables list -->
+                <div class="text-center text-muted" data-bind="if: editedOlapEtl().olapTables().length === 0 && !showEditOlapTableArea()">
+                    <i class="icon-lg icon-empty-set"></i>
+                    <div data-bind="with: editedOlapEtl()">
+                        <h3 class="margin-top margin-top-sm">No Olap Tables have been defined</h3>
+                    </div>
+                </div>
+                <div data-bind="foreach: editedOlapEtl().olapTables">
+                    <div class="panel panel-hover">
+                        <div class="padding padding-sm flex-horizontal item">
+                            <div class="row flex-grow">
+                                <div class="col-sm-4">
+                                    <div class="widthlabel"><label class="superscript">Table</label><strong data-bind="text: tableName"></strong><span class="text-warning" data-bind="visible: dirtyFlag().isDirty">&nbsp;*</span></div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <div class="widthlabel"><label class="superscript">Document Id Column</label><strong data-bind="text: documentIdColumn"></strong></div>
+                                </div>
+                            </div>
+                            <div class="flex-noshrink">
+                                <button type="button" class="btn btn-default btn-sm" title="Edit this OLAP table" data-bind="click: $root.editOlapTable.bind($data)"><i class="icon-edit"></i></button>
+                                <button type="button" class="btn btn-danger btn-sm" title="Remove this OLAP table" data-bind="click: $root.deleteOlapTable.bind($data)"><i class="icon-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-horizontal flex-header">
+                <div class="flex-grow"><h3>Transform Scripts</h3></div>
+                <div>
+                    <button type="button" class="btn btn-info" data-bind="click: addNewTransformation"><i class="icon-plus"></i><span>Add Transformation Script</span></button>
+                </div> 
+            </div>
+            <!-- The transformation scripts -->
+            <div class="etl-list" data-bind="with: editedOlapEtl">
+                <div class="text-center text-muted" data-bind="visible: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
+                    <i class="icon-lg icon-empty-set"></i>
+                    <h3 class="margin-top margin-top-sm" 
+                        data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No Transformation Scripts have been defined
+                    </h3>
+                </div>
+                <div class="transformation-scripts-list" data-bind="foreach: transformationScripts">
+                    <div class="panel panel-hover item" data-bind="css: { active: $data === $root.transformationScriptSelectedForEdit() }">
+                        <div class="padding padding-sm">
+                            <div class="flex-horizontal">
+                                <div class="flex-grow info">
+                                    <div class="transformer-name" title="Transformation script name">
+                                        <span data-bind="text: name"></span>
+                                        <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
+                                    </div>
+                                    <div class="collections">Collection: <span
+                                        data-bind="text: collection, attr: { class: 'collection-color-' + getCollectionEntry(collection) }"></span>
+                                    </div>
+                                </div>
+                                <div class="actions">
+                                    <button type="button" data-bind="click: $root.editTransformationScript.bind($root, $data)"
+                                            class="btn btn-default"><i class="icon-edit" title="Edit script"></i>
+                                    </button>
+                                    <button type="button" data-bind="click: $root.removeTransformationScript"
+                                            class="btn btn-danger"><i class="icon-trash" title="Delete script"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScriptSandbox()">
+            <div class="flex-grow">
+                <div class="panel" data-bind="if: $root.showEditTransformationArea">
+                    <div class="padding padding-sm">
+                        <div data-bind="visible: !isNew()">
+                            <label>
+                                <strong>Name:</strong> <span data-bind="text: name"></span>
+                            </label>
+                        </div>
+                        <label><strong>Script:</strong></label>
+                        <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
+                        <div data-bind="validationElement: script">
+                            <pre class="form-control editor"
+                                 data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 300px;"></pre>
+                            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
+                                <div class="help-block" data-bind="validationMessage: script"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label><strong>Collection:</strong></label>
+                            <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: collection">
+                                <div class="dropdown btn-block">
+                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" title="Select/enter the collection name"
+                                           data-bind="textInput: collection" placeholder="Select a collection" />
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    <ul class="dropdown-menu"
+                                        data-bind="foreach: $root.createCollectionNameAutocompleter(collection)">
+                                        <li data-bind="click: _.partial($root.useCollection, $data)">
+                                            <a href="#" data-bind="text: $data"></a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <span class="help-block" data-bind="validationMessage: collection"></span>
+                            </div>
+                        </div>
+                         <div class="toggle margin-top margin-bottom" data-bind="visible: !isNew()">
+                            <input id="reset" type="checkbox" data-bind="checked: resetScript" />
+                            <label for="reset">Apply script to documents from beginning of time (Reset)</label>
+                        </div>
+                        <div class="flex-horizontal">
+                            <div>
+                                <button type="button" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') + ' this transformation script' }">
+                                    <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
+                                </button>
+                                <button type="button" title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
+                            </div>
+<!-- todo - add test script in the future -->
+<!--                            <div class="flex-separator"></div>-->
+<!--                            <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()">-->
+<!--                                <i class="icon-rocket"></i> <span>Test script</span>-->
+<!--                            </button>-->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="backdrop" data-bind="click: $root.toggleTestArea"></div>

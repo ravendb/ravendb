@@ -1,7 +1,7 @@
 <div class="content-margin edit-raven-sql-task" data-bind="css: { 'test-mode': enableTestArea }">
     <div class="row flex-row absolute-fill">
         <div class="col-xs-12 col-lg-6 flex-vertical">
-            <form class="flex-form" data-bind="submit: saveSqlEtl">
+            <form class="flex-form" data-bind="submit: saveSqlEtl" autocomplete="off">
                 <div class="flex-header">
                     <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
                         <i class="icon-save"></i><span>Save</span>
@@ -12,31 +12,31 @@
                 </div>
                 <div class="panel">
                     <div data-bind="with: editedSqlEtl">
-                        <div class="panel-body">                       
+                        <div class="panel-body">
                             <h3 data-bind="text: $parent.isAddingNewSqlEtlTask() ? 'New SQL ETL' : 'Edit SQL ETL'"></h3>
                             <div class="form-group" data-bind="validationElement: taskName">
                                 <label for="taskName" class="control-label">Task Name</label>
                                 <div class="flex-grow">
-                                    <input type="text" class="form-control" id="taskName" autocomplete="off"
+                                    <input type="text" class="form-control" id="taskName"
                                            placeholder="Enter a descriptive name for the SQL ETL task (optional)" data-bind="textInput: taskName">
                                 </div>
                             </div>
-                                <div data-bind="if: $root.activeDatabase() && $root.activeDatabase().isEncrypted">
-                                    <div class="form-group">
-                                        <label class="control-label">&nbsp;</label>
-                                        <div class="bg-info inline-block padding padding-xs small">
-                                            <i class="icon-info"></i>
-                                            Note: Database <strong data-bind="text: $root.activeDatabase().name"></strong> is encrypted
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="control-label">&nbsp;</label>
-                                        <div class="toggle">
-                                            <input id="toggle-non-encrypted-channel" type="checkbox" data-bind="checked: allowEtlOnNonEncryptedChannel">
-                                            <label  for="toggle-non-encrypted-channel">Allow ETL on a non-encrypted communication channel</label>
-                                        </div>
+                            <div data-bind="if: $root.activeDatabase() && $root.activeDatabase().isEncrypted">
+                                <div class="form-group">
+                                    <label class="control-label">&nbsp;</label>
+                                    <div class="bg-info inline-block padding padding-xs small">
+                                        <i class="icon-info"></i>
+                                        Note: Database <strong data-bind="text: $root.activeDatabase().name"></strong> is encrypted
                                     </div>
                                 </div>
+                                <div class="form-group">
+                                    <label class="control-label">&nbsp;</label>
+                                    <div class="toggle">
+                                        <input id="toggle-non-encrypted-channel" type="checkbox" data-bind="checked: allowEtlOnNonEncryptedChannel">
+                                        <label for="toggle-non-encrypted-channel">Allow ETL on a non-encrypted communication channel</label>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="form-group">
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle responsible-node">
@@ -66,11 +66,11 @@
                                 <div class="toggle">
                                     <input id="createNewString" type="checkbox" data-bind="checked: $root.createNewConnectionString">
                                     <label for="createNewString">Create a new SQL connection string</label>
-                                </div>                               
+                                </div>
                             </div>
-                            <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString">  
+                            <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString">
                                 <div class="form-group">
-                                    <div class="flex-grow" data-bind="compose: 'database/settings/connectionStringSql.html'"></div>                                    
+                                    <div class="flex-grow" data-bind="compose: 'database/settings/connectionStringSql.html'"></div>
                                 </div>
                             </div>
                             <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName, visible: !$root.createNewConnectionString()">
@@ -135,7 +135,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                
                             </div>
                         </div>
                     </div>
@@ -148,7 +147,7 @@
                             Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
                             <div>
                                 <a href="#" 
-                                   data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'">                                
+                                   data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'">
                                 </a>
                             </div>
                         </div>
@@ -162,7 +161,7 @@
             </form>
             <div class="flex-horizontal flex-header">
                 <div class="flex-grow"><h3>SQL Tables</h3></div>
-                <div><button type="button" class="btn btn-info" data-bind="click: addNewSqlTable, disable: showEditSqlTableArea()"><i class="icon-plus"></i><span>Add Table</span></button></div>                
+                <div><button type="button" class="btn btn-info" data-bind="click: addNewSqlTable, disable: showEditSqlTableArea()"><i class="icon-plus"></i><span>Add Table</span></button></div>
             </div>
             <div class="sql-tables-list margin-bottom">
                 <!-- Sql table edit area -->
@@ -175,7 +174,7 @@
                                    data-bind="textInput: tableName">
                         </div>
                         <div class="flex-grow" data-bind="validationElement: documentIdColumn">
-                            <input type="text" class="form-control input-sm" placeholder="Document Id Column Name"  data-bind="textInput: documentIdColumn">
+                            <input type="text" class="form-control input-sm" placeholder="Document Id Column Name" data-bind="textInput: documentIdColumn">
                         </div>
                         <div class="flex-noshrink toggle input-sm">
                             <input id="toggle1" class="styled" type="checkbox" data-bind="checked: insertOnlyMode">
@@ -187,12 +186,14 @@
                         </div>
                     </div>
                 </div>
-                <!-- The sql tables list -->
-                <div data-bind="if: editedSqlEtl().sqlTables().length === 0 && !showEditSqlTableArea()">
-                    <div data-bind="with: editedSqlEtl()"> 
-                        <h3 class="text-center text-muted" data-bind="css: { 'text-danger': !sqlTables.isValid() && sqlTables.isModified() }">No Sql Tables have been defined.</h3>
+                <div class="text-center text-muted" data-bind="if: editedSqlEtl().sqlTables().length === 0 && !showEditSqlTableArea()">
+                    <i class="icon-lg icon-empty-set"></i>
+                    <div data-bind="with: editedSqlEtl()">
+                        <h3 class="margin-top margin-top-sm" 
+                            data-bind="css: { 'text-danger': !sqlTables.isValid() && sqlTables.isModified() }">No Sql Tables have been defined
+                        </h3>
                     </div>
-                </div>                
+                </div>
                 <div data-bind="foreach: editedSqlEtl().sqlTables">
                     <div class="panel panel-hover">
                         <div class="padding padding-sm flex-horizontal item">
@@ -221,10 +222,11 @@
             </div>
             <!-- The transformation scripts -->
             <div class="etl-list" data-bind="with: editedSqlEtl">
-                <div data-bind="if: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
-                    <div>
-                        <h3 class="text-center text-muted" data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No transformation scripts have been defined.</h3>
-                    </div>
+                <div class="text-center text-muted" data-bind="visible: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
+                    <i class="icon-lg icon-empty-set"></i>
+                    <h3 class="margin-top margin-top-sm"
+                        data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No Transformation Scripts have been defined
+                    </h3>
                 </div>
                 <div class="transformation-scripts-list" data-bind="foreach: transformationScripts">
                     <div class="panel panel-hover item" data-bind="css: { active: $data === $root.transformationScriptSelectedForEdit() }">
@@ -236,7 +238,7 @@
                                         <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
                                     </div>
                                     <div class="collections">Collection: <span
-                                        data-bind="text: collection, attr: { class: 'collection-color-' + getCollectionEntry(collection) }"></span>                                      
+                                        data-bind="text: collection, attr: { class: 'collection-color-' + getCollectionEntry(collection) }"></span>
                                     </div>
                                 </div>
                                 <div class="actions">
@@ -294,7 +296,7 @@
                         </div>
                         <div class="flex-horizontal">
                             <div>
-                                <button type="button" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') +  ' this transformation script' }">
+                                <button type="button" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') + ' this transformation script' }">
                                     <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
                                 </button>
                                 <button type="button" title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
@@ -312,7 +314,7 @@
                             <div class="form-group flex-horizontal">
                                 <label class="control-label">Document ID</label>
                                 <div class="flex-grow" data-bind="validationElement: documentId">
-                                    <input type="text" id="documentId" data-bind="textInput: documentId" class="form-control" placeholder="Document ID"
+                                    <input type="text" id="documentId" data-bind="textInput: documentId" class="form-control" placeholder="Document ID" autocomplete="off"
                                            title="This field is required." data-orig-title=""/><span class="help-block" style="display: none;"></span>
                                     <ul class="documentIdAutocomplete dropdown-menu autocomplete-list" role="menu"
                                         data-bind="autoComplete: '#documentId', foreach: docsIdsAutocompleteResults">
@@ -350,7 +352,7 @@
 Option unchecked: <Br />No execution will take place, only generate the SQL statements. " data-html="true" data-animation="true">
                                         Execute and rollback the test transaction
                                     </label>
-                                </div>    
+                                </div>
                             </div>
                             <div class="flex-horizontal">
                                 <div class="flex-separator"></div>
@@ -363,7 +365,7 @@ Option unchecked: <Br />No execution will take place, only generate the SQL stat
                                 </button>
                             </div>
                         </div>
-                    </div>    
+                    </div>
                 </div>
             </div>
         </div>
@@ -420,7 +422,7 @@ Option unchecked: <Br />No execution will take place, only generate the SQL stat
                     <div data-bind="foreach: slowSqlWarnings">
                         <div class="sql-warning">
                             <div class="duration text-info" data-bind="text: 'Statement took: ' + Duration.toLocaleString() + ' ms'"></div>
-                            <pre data-bind="text: Statement"></pre>    
+                            <pre data-bind="text: Statement"></pre>
                         </div>
                     </div>
                 </div>
@@ -436,7 +438,7 @@ Option unchecked: <Br />No execution will take place, only generate the SQL stat
                             <dt data-bind="text: Key, attr: { title: Key }"></dt>
                             <dd data-bind="text: Value"></dd>
                         </dl>
-                    </div>    
+                    </div>
                 </div>
                 <div data-bind="visible: !testResults().length">
                     <i class="icon-info"></i> <span>Simulation returned empty result.</span>

@@ -698,7 +698,9 @@ interface scrollColorConfig {
 
 type etlScriptDefinitionCacheItem = {
     etlType: Raven.Client.Documents.Operations.ETL.EtlType;
-    task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails | Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails>;
+    task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
+                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
+                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails>;
 }
 
 type addressType = "ipv4" | "ipv6" | "hostname" | "invalid";
@@ -779,7 +781,7 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
     Deletes: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.DeleteOperation[];
 }
 
-type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Olap ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink";
+type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "OLAP ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink";
 
 interface sampleCode {
     title: string;

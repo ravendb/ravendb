@@ -28,6 +28,11 @@
                         <a class="js-warning-sql-etl" tabindex="0" data-bind="visible: includeSqlEtls() && !includeSqlConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
                     </div>
                     <div class="toggle">
+                        <input type="checkbox" data-bind="checked: includeOlapEtls, attr: { id: 'includeOlapEtls_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeOlapEtls_' + instanceCounter }" class="margin-right margin-right-sm">OLAP ETLs</label>
+                        <a class="js-warning-olap-etl" tabindex="0" data-bind="visible: includeOlapEtls() && !includeOlapConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
+                    </div>
+                    <div class="toggle">
                         <input type="checkbox" data-bind="checked: includeHubReplications, attr: { id: 'includeHubReplications_' + instanceCounter }">
                         <label data-bind="attr: { for: 'includeHubReplications_' + instanceCounter }" class="margin-right margin-right-sm">Replication Hubs</label>
                     </div>
@@ -88,6 +93,10 @@
                     <div class="toggle">
                         <input type="checkbox" data-bind="checked: includeSqlConnectionStrings, attr: { id: 'includeSqlConnectionStrings_' + instanceCounter }">
                         <label data-bind="attr: { for: 'includeSqlConnectionStrings_' + instanceCounter }" class="margin-right margin-right-sm">SQL Connection Strings</label>
+                    </div>
+                    <div class="toggle">
+                        <input type="checkbox" data-bind="checked: includeOlapConnectionStrings, attr: { id: 'includeOlapConnectionStrings_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeOlapConnectionStrings_' + instanceCounter }" class="margin-right margin-right-sm">OLAP Connection Strings</label>
                     </div>
                 </div>
             </div>

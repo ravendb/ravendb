@@ -7,6 +7,8 @@ import getBackupLocationCommand = require("commands/database/tasks/getBackupLoca
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import generalUtils = require("common/generalUtils");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
+import database = require("models/resources/database");
+import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 
 class connectionStringOlapEtlModel extends connectionStringModel {
 
@@ -140,6 +142,11 @@ class connectionStringOlapEtlModel extends connectionStringModel {
 
                 this.folderPathOptions(result.List);
             });
+    }
+
+    saveConnectionString(db: database) : JQueryPromise<void> {
+        return new saveConnectionStringCommand(db, this)
+            .execute();
     }
 }
 

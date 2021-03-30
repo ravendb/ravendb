@@ -45,15 +45,17 @@ namespace Raven.Client.Documents.Smuggler
         ExternalReplications = 1 << 6,
         RavenConnectionStrings = 1 << 7,
         SqlConnectionStrings = 1 << 8,
-        RavenEtls = 1 << 9,
-        SqlEtls = 1 << 10,
-        Client = 1 << 11,
-        Sorters = 1 << 12,
-        SinkPullReplications = 1 << 13,
-        HubPullReplications = 1 << 14,
-        TimeSeries = 1 << 15,
-        DocumentsCompression = 1 << 16,
-        Analyzers = 1 << 17,
-        LockMode = 1 << 18
+        OlapConnectionStrings = 1 << 9,
+        RavenEtls = 1 << 10,
+        SqlEtls = 1 << 11,
+        OlapEtls = 1 << 12,
+        Client = 1 << 13,
+        Sorters = 1 << 14,
+        SinkPullReplications = 1 << 15,
+        HubPullReplications = 1 << 16,
+        TimeSeries = 1 << 17,
+        DocumentsCompression = 1 << 18,
+        Analyzers = 1 << 19
+        LockMode = 1 << 20
     }
 }

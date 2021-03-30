@@ -222,7 +222,7 @@
                                         <div class="list-properties">
                                             <div class="property-item">
                                                 <div class="property-name">Task Status:</div>
-                                                <div class="property-value" class="text-details" data-bind="text: badgeText"></div>
+                                                <div class="property-value text-details" data-bind="text: badgeText"></div>
                                             </div>
                                             <div class="property-item" data-bind="visible: connectionStringDefined">
                                                 <div class="property-name">Destination:</div>
@@ -231,6 +231,54 @@
                                                 </div>
                                             </div>
                                             <div class="property-item" data-bind="template: { name: 'connection-string-template' }"></div>
+                                        </div>
+                                        <div data-bind="template: { name: 'etl-progress-template' }"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Olap Etl -->
+
+                <div data-bind="if: showOlapSection">
+                    <div class="hr-title">
+                        <h5 class="tasks-list-item olap-etl no-text-transform">
+                            <i class="icon-sql-etl"></i>  <!-- TODO... replace icon - issue RavenDB-16396 --> 
+                            <span>OLAP ETL</span><span data-bind="text: ' (' + olapTasks().length + ')'"></span>
+                        </h5><hr>
+                    </div>
+                    <div data-bind="foreach: olapTasks">
+                        <div class="panel destination-item olap-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
+                            <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
+                            <div class="padding destination-info flex-vertical">
+                                <div class="flex-horizontal">
+                                    <div class="checkbox panel-checkbox hide">
+                                        <input type="checkbox" class="styled" />
+                                        <label></label>
+                                    </div>
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
+                                    <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template' }"></div>
+                                </div>
+                            </div>
+                            <div class="collapse panel-addon" data-bind="collapse: showDetails">
+                                <div class="padding flex-horizontal">
+                                    <div class="flex-grow">
+                                        <div class="list-properties">
+                                            <div class="property-item">
+                                                <div class="property-name">Task Status:</div>
+                                                <div class="property-value text-details" data-bind="text: badgeText"></div>
+                                            </div>
+                                            <div class="property-item">
+                                                <div class="property-name">Destination:</div>
+                                                <div class="property-value" title="Destinations that are defined the in connection string">
+                                                    <span data-bind="text: destinationDescription"></span>
+                                                </div>
+                                            </div>
+                                            <div class="property-item" data-bind="template: { name: 'connection-string' }"></div>
                                         </div>
                                         <div data-bind="template: { name: 'etl-progress-template' }"></div>
                                     </div>

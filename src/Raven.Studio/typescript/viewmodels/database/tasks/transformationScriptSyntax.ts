@@ -20,10 +20,16 @@ class transformationScriptSyntax extends dialogViewModelBase {
     copySample(sampleTitle?: string) {
         let sampleText;
         
-        if (this.etlType() === "Raven") {
-            sampleText = transformationScriptSyntax.ravenEtlSamples.find(x => x.title === sampleTitle).text;
-        } else {
-            sampleText = transformationScriptSyntax.sqlEtlSampleText;
+        switch (this.etlType()) {
+            case "Raven":
+                sampleText = transformationScriptSyntax.ravenEtlSamples.find(x => x.title === sampleTitle).text;
+                break;
+            case "Sql":
+                sampleText = transformationScriptSyntax.sqlEtlSampleText;
+                break;
+            case "Olap":
+                sampleText = transformationScriptSyntax.olapEtlSampleText;
+                break;
         }
         
         copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
@@ -110,6 +116,40 @@ loadToOrders(orderData);`;
     sqlEtlSampleHtml = ko.pureComputed(() => {
         return Prism.highlight(transformationScriptSyntax.sqlEtlSampleText, (Prism.languages as any).javascript);
     });
+
+    static readonly olapEtlSampleText =
+`var orderData = {
+    Company : this.Company,
+    RequireAt : new Date(this.RequireAt),
+    ItemsCount: this.Lines.length,
+    TotalCost: 0
+};
+
+var orderDate = new Date(this.OrderedAt);
+var year = orderDate.getFullYear();
+var month = orderDate.getMonth();
+var key = new Date(year, month);
+
+for (var i = 0; i < this.Lines.length; i++) {
+    var line = this.Lines[i];
+    orderData.TotalCost += (line.PricePerUnit * line.Quantity);
+    
+    // load to OLAP table 'sales'
+
+    loadToSales(key, {
+        Qty: line.Quantity,
+        Product: line.Product,
+        Cost: line.PricePerUnit
+    });
+}
+
+// load to OLAP table 'orders'
+loadToOrders(key, orderData);`;
+
+    olapEtlSampleHtml = ko.pureComputed(() => {
+        return Prism.highlight(transformationScriptSyntax.olapEtlSampleText, (Prism.languages as any).javascript);
+    });
+    
 }
 
 export = transformationScriptSyntax;

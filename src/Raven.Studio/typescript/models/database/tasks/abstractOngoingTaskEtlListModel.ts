@@ -70,6 +70,7 @@ abstract class abstractOngoingTaskEtlListModel extends ongoingTaskListModel {
     suggestNavigationToResponsibleNodeForProgress = ko.pureComputed(() => this.taskConnectionStatus() === "NotOnThisNode");
     
     connectionStringsUrl: string;
+    connectionStringName = ko.observable<string>();
     
     scriptProgress = ko.observableArray<progressItem>([]);
 

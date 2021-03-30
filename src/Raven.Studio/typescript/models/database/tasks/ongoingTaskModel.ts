@@ -29,12 +29,12 @@ abstract class ongoingTaskModel {
                 return "External Replication" as TasksNamesInUI;
             case "SqlEtl":
                 return "SQL ETL" as TasksNamesInUI;
+            case "OlapEtl":
+                return "OLAP ETL" as TasksNamesInUI;
             case "PullReplicationAsHub":
                 return "Replication Hub" as TasksNamesInUI;
             case "PullReplicationAsSink":
                 return "Replication Sink" as TasksNamesInUI;
-            case "OlapEtl":
-                return "Olap ETL" as TasksNamesInUI; 
             default:
                 return taskType;
         }

@@ -18,13 +18,18 @@ class etlScriptDefinitionCache {
         if (!cachedItem || cachedItem.task.state() === "rejected") {
             // cache item is missing or it failed
 
-            let command: getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails | Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails>;
+            let command: getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
+                                                   Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
+                                                   Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails>;
             switch (etlType) {
                 case "Raven":
                     command = getOngoingTaskInfoCommand.forRavenEtl(this.db, taskId);
                     break;
                 case "Sql":
                     command = getOngoingTaskInfoCommand.forSqlEtl(this.db, taskId);
+                    break;
+                case "Olap":
+                    command = getOngoingTaskInfoCommand.forOlapEtl(this.db, taskId);
                     break;
             }
 
