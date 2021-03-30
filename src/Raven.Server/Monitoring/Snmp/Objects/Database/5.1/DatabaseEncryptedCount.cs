@@ -5,10 +5,10 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseTotalCount : DatabaseBase<Integer32>
+    public class DatabaseEncryptedCount : DatabaseBase<Integer32>
     {
-        public DatabaseTotalCount(ServerStore serverStore)
-            : base(serverStore, SnmpOids.Databases.General.TotalCount)
+        public DatabaseEncryptedCount(ServerStore serverStore)
+            : base(serverStore, SnmpOids.Databases.General.EncryptedCount)
         {
         }
 
@@ -22,7 +22,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                return GetDatabases(context).Count();
+                return GetDatabases(context).Count(x => x.IsEncrypted);
             }
         }
     }
