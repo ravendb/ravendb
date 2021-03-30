@@ -97,12 +97,12 @@ class trafficWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.
 
             this.writesChart.onData(date, [{
                 key,
-                value: data.DocumentWritesPerSecond
+                value: data.DocumentWritesPerSecond + data.AttachmentWritesPerSecond + data.CounterWritesPerSecond + data.TimeSeriesWritesPerSecond
             }]);
 
             this.dataWrittenChart.onData(date, [{
                 key,
-                value: data.DocumentsWriteBytesPerSecond
+                value: data.DocumentsWriteBytesPerSecond + data.AttachmentsWriteBytesPerSecond + data.CountersWriteBytesPerSecond + data.TimeSeriesWriteBytesPerSecond
             }]);
         });
     }
