@@ -1,0 +1,120 @@
+<div>
+    <div class="cluster-dashboard-item-header">
+        <h3> <i class="icon-traffic"></i> <span>Traffic</span></h3>
+        <button class="btn btn-warning btn-sm" data-bind="click: remove">
+            <i class="icon-trash"></i>
+        </button>
+        <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
+            <i class="icon-fullscreen"></i>
+        </button>
+    </div>
+
+    <div class="property-container">
+        <h4>Requests/s</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div class="nodes-item" data-bind="css: { 'disconnected': disconnected }">
+                        <div class="nodes-item-header">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: requestsFormatted"></span>
+                                <span class="supplementary-info"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-container requests-chart">
+            </div>
+        </div>
+    </div>
+
+    <div class="property-container" data-bind="css: { 'property-collapse': !showWritesDetails() }">
+        <h4>Writes/s</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <button class="collapse-arrow property-control" data-bind="click: toggleWritesDetails">
+                    <i class="icon-arrow-down"></i>
+                    <i class="icon-arrow-up"></i>
+                </button>
+
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div class="nodes-item" data-bind="css: { 'disconnected': disconnected }">
+                        <div class="nodes-item-header">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: writesFormatter(documentWritesPerSecond)"></span>
+                            </div>
+                        </div>
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Documents</div>
+                                <div class="details-item-value" data-bind="text: writesFormatter(documentWritesPerSecond)"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Attachments</div>
+                                <div class="details-item-value" data-bind="text: writesFormatter(attachmentWritesPerSecond)"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Counters</div>
+                                <div class="details-item-value" data-bind="text: writesFormatter(counterWritesPerSecond)"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Time Series</div>
+                                <div class="details-item-value" data-bind="text: writesFormatter(timeSeriesWritesPerSecond)"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-container writes-chart">
+            </div>
+        </div>
+    </div>
+
+    <div class="property-container" data-bind="css: { 'property-collapse': !showDataWrittenDetails() }">
+        <h4>Data Written/s</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <button class="collapse-arrow property-control" data-bind="click: toggleDataWrittenDetails">
+                    <i class="icon-arrow-down"></i>
+                    <i class="icon-arrow-up"></i>
+                </button>
+
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div class="nodes-item" data-bind="css: { 'disconnected': disconnected }">
+                        <div class="nodes-item-header">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: dataWrittenFormatter(documentsWriteBytesPerSecond, true)()[0]"></span>
+                                <span class="supplementary-info" data-bind="text: dataWrittenFormatter(documentsWriteBytesPerSecond, true)()[1]"></span>
+                            </div>
+                        </div>
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Documents</div>
+                                <div class="details-item-value" data-bind="text: dataWrittenFormatter(documentsWriteBytesPerSecond)"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Attachments</div>
+                                <div class="details-item-value" data-bind="text: dataWrittenFormatter(attachmentsWriteBytesPerSecond)"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Counters</div>
+                                <div class="details-item-value" data-bind="text: dataWrittenFormatter(countersWriteBytesPerSecond)"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Time Series</div>
+                                <div class="details-item-value" data-bind="text: dataWrittenFormatter(timeSeriesWriteBytesPerSecond)"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="graph-container data-written-chart">
+            </div>
+        </div>
+    </div>
+</div>
