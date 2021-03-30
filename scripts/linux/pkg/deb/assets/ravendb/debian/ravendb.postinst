@@ -77,12 +77,31 @@ chown -R root:ravendb /etc/ravendb
 #DEBHELPER#
 
 if grep -e '"Setup.Mode": "Initial"' /etc/ravendb/settings.json >&/dev/null; then
+    rvnPort="53700"
+    fwdPort="8080"
+    sshTunnelLine="ssh -N -L localhost:${fwdPort}:localhost:${rvnPort}"
     rvnServerAddr=$(egrep -e '"ServerUrl"' /etc/ravendb/settings.json | egrep -o -e 'http:[^"]+')
-    echo "###"
+    user="${SUDO_USER:-username}"
+    publicAddr="target-machine.com"
+    if command -v dig >&/dev/null; then
+        foundPublicAddr=`dig +short myip.opendns.com @resolver1.opendns.com`
+    elif command -v curl >&/dev/null; then
+        foundPublicAddr=`curl -s https://api.ipify.org`
+    fi
+
+    if [ $? -eq 0 ]; then
+        publicAddr="$foundPublicAddr"
+    fi
+
+    echo "### RavenDB Setup ###"
     echo "#"
     echo "#  Please navigate to $rvnServerAddr in your web browser to complete setting up RavenDB."
-    echo "#  If you set up the server through SSH, you can tunnel RavenDB setup port and proceed with the setup on your local e.g."
-    echo "#  ssh -N -L localhost:8080:localhost:53700 user@target-machine.com"
+    echo "#  If you set up the server through SSH, you can tunnel RavenDB setup port and proceed with the setup on your local."
+    echo "#"
+    echo "#  For public address:    $sshTunnelLine ${user}@${publicAddr}"
+    echo "#"
+    echo "#  For internal address:  $sshTunnelLine ${user}@$(hostname)"
+    echo "#"
     echo "###"
 fi
 
