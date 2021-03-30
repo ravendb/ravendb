@@ -34,6 +34,8 @@ namespace Raven.Server.Dashboard
         {
             _serverStore = serverStore;
             _canAccessDatabase = canAccessDatabase;
+
+            Initialize();
         }
 
         public TimeSpan RefreshRate { get; } = TimeSpan.FromSeconds(3);

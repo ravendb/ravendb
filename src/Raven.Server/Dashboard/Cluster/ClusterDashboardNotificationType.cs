@@ -9,7 +9,6 @@ namespace Raven.Server.Dashboard.Cluster
     public enum ClusterDashboardNotificationType
     {
         Unknown,
-        Debug, // TODO: fake widget used for debugging studio
         CpuUsage,
         License, // used by studio w/o websockets
         StorageUsage, 

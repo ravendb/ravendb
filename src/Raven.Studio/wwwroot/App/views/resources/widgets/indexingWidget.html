@@ -1,0 +1,73 @@
+<div>
+    <div class="cluster-dashboard-item-header">
+        <h3> <i class="icon-indexing"></i> <span>Indexing</span></h3>
+        <button class="btn btn-warning btn-sm" data-bind="click: remove">
+            <i class="icon-trash"></i>
+        </button>
+        <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
+            <i class="icon-fullscreen"></i>
+        </button>
+    </div>
+
+    <div class="property-container">
+        <h4>Map Indexes</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div class="nodes-item">
+                        <div class="nodes-item-header" data-bind="css: { 'disconnected': disconnected }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: indexedPerSecondFormatted"></span>
+                                <span class="supplementary-info">Docs<br /> indexed/s</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-container indexed-per-second-chart">
+            </div>
+        </div>
+    </div>
+
+    <div class="property-container">
+        <h4>Map-Reduce Indexes</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div class="nodes-item">
+                        <div class="nodes-item-header" data-bind="css: { 'disconnected': disconnected }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: mappedPerSecondFormatted"></span>
+                                <span class="supplementary-info"># Docs<br /> mapped/s</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="graph-container mapped-per-second-chart">
+            </div>
+        </div>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div class="nodes-item">
+                        <div class="nodes-item-header" data-bind="css: { 'disconnected': disconnected }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: reducedPerSecondFormatted"></span>
+                                <span class="supplementary-info"># Mapped entries reduced/s</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="graph-container reduced-per-second-chart">
+            </div>
+        </div>
+    </div>
+</div>
+

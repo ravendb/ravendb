@@ -5,12 +5,12 @@ import widget = require("viewmodels/resources/widgets/widget");
 import addWidgetModal = require("viewmodels/resources/addWidgetModal");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import memoryUsageWidget = require("viewmodels/resources/widgets/memoryUsageWidget");
-import debugWidget = require("viewmodels/resources/widgets/debugWidget");
 import cpuUsageWidget = require("viewmodels/resources/widgets/cpuUsageWidget");
 import licenseWidget = require("viewmodels/resources/widgets/licenseWidget");
 import storageWidget = require("viewmodels/resources/widgets/storageWidget");
 import clusterNode = require("models/database/cluster/clusterNode");
-import websocketBasedWidget = require("./widgets/websocketBasedWidget");
+import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBasedWidget");
+import indexingWidget = require("viewmodels/resources/widgets/indexingWidget");
 
 interface savedWidget {
     type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType;
@@ -97,7 +97,6 @@ class clusterDashboard extends viewModelBase {
             this.addWidget(new cpuUsageWidget(this));
             this.addWidget(new memoryUsageWidget(this));
             this.addWidget(new licenseWidget(this));
-            this.addWidget(new debugWidget(this));
         }
     }
     
@@ -226,11 +225,11 @@ class clusterDashboard extends viewModelBase {
             case "MemoryUsage":
                 widget = new memoryUsageWidget(this);
                 break;
-            case "Debug":
-                widget = new debugWidget(this);
-                break;
             case "StorageUsage":
                 widget = new storageWidget(this);
+                break;
+            case "Indexing":
+                widget = new indexingWidget(this);
                 break;
             default:
                 throw new Error("Unsupported widget type = " + type);
