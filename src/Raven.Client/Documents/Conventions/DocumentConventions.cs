@@ -184,6 +184,7 @@ namespace Raven.Client.Documents.Conventions
 
             _waitForIndexesAfterSaveChangesTimeout = TimeSpan.FromSeconds(15);
             _waitForReplicationAfterSaveChangesTimeout = TimeSpan.FromSeconds(15);
+            _waitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15);
 
             _sendApplicationIdentifier = true;
             _maxContextSizeToKeep = PlatformDetails.Is32Bits == false
@@ -224,6 +225,7 @@ namespace Raven.Client.Documents.Conventions
         private TimeSpan _firstBroadcastAttemptTimeout;
         private TimeSpan _waitForIndexesAfterSaveChangesTimeout;
         private TimeSpan _waitForReplicationAfterSaveChangesTimeout;
+        private TimeSpan _waitForNonStaleResultsTimeout;
 
         private ReadBalanceBehavior _readBalanceBehavior;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
@@ -335,6 +337,20 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _waitForIndexesAfterSaveChangesTimeout = value;
+            }
+        }
+
+        /// <summary>
+        /// Sets the default timeout for DocumentSession WaitForNonStaleResults methods.
+        /// Default: 15 Seconds.
+        /// </summary>
+        public TimeSpan WaitForNonStaleResultsTimeout
+        {
+            get => _waitForNonStaleResultsTimeout;
+            set
+            {
+                AssertNotFrozen();
+                _waitForNonStaleResultsTimeout = value;
             }
         }
 
