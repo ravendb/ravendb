@@ -111,7 +111,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/editOlapEtlTask',
             moduleId: 'viewmodels/database/tasks/editOlapEtlTask',
-            title: 'Olap ETL Task',
+            title: 'OLAP ETL Task',
             nav: false,
             dynamicHash: appUrls.editOlapEtlTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'

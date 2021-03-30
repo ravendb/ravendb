@@ -2,7 +2,6 @@
     <div class="row">
         <div class="col-sm-4">
             <h5>TASK TYPE</h5>
-            
             <div data-bind="visible: !backupsOnly">
                 <i class="task-rect task-external-replication"></i><span>External Replication</span>
             </div>
@@ -17,6 +16,9 @@
             </div>
             <div data-bind="visible: !backupsOnly">
                 <i class="task-rect task-sql-etl"></i><span>SQL ETL</span>
+            </div>
+            <div data-bind="visible: !backupsOnly">
+                <i class="task-rect task-olap-etl"></i><span>OLAP ETL</span>
             </div>
             <div>
                 <i class="task-rect task-periodic-backup"></i><span>Periodic Backup</span>

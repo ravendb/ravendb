@@ -15,6 +15,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Subscriptions;
@@ -882,6 +883,7 @@ namespace Raven.Server.Commercial
             var timeSeriesRollupsAndRetentionCount = 0;
             var ravenEtlCount = 0;
             var sqlEtlCount = 0;
+            var olapEtlCount = 0;
             var snapshotBackupsCount = 0;
             var cloudBackupsCount = 0;
             var encryptedBackupsCount = 0;
@@ -931,6 +933,10 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.SqlEtls != null &&
                         databaseRecord.SqlEtls.Count > 0)
                         sqlEtlCount++;
+                    
+                    if (databaseRecord.OlapEtls != null &&
+                        databaseRecord.OlapEtls.Count > 0)
+                        olapEtlCount++;
 
                     var backupTypes = GetBackupTypes(databaseRecord.PeriodicBackups);
                     if (backupTypes.HasSnapshotBackup)
@@ -996,6 +1002,12 @@ namespace Raven.Server.Commercial
             {
                 var message = GenerateDetails(sqlEtlCount, "SQL ETL");
                 throw GenerateLicenseLimit(LimitType.SqlEtl, message);
+            }
+            
+            if (olapEtlCount > 0 && newLicenseStatus.HasOlapEtl == false)
+            {
+                var message = GenerateDetails(olapEtlCount, "OLAP ETL");
+                throw GenerateLicenseLimit(LimitType.OlapEtl, message);
             }
 
             if (snapshotBackupsCount > 0 && newLicenseStatus.HasSnapshotBackups == false)

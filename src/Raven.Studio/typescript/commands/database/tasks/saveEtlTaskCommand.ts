@@ -2,14 +2,17 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class saveEtlTaskCommand<T extends Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration | Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration> extends commandBase {
+class saveEtlTaskCommand<T extends Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration | 
+                                   Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration |
+                                   Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration> extends commandBase {
+    
     private constructor(private db: database, private payload: T, private scriptsToReset?: string[]) {
         super();
     }  
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {
         return this.updateEtl()
-            .fail((response: JQueryXHR) => {                         
+            .fail((response: JQueryXHR) => {
                 this.reportError(`Failed to save ${this.payload.EtlType.toUpperCase()} ETL task`, response.responseText, response.statusText);
             })
             .done(() => {
@@ -17,12 +20,12 @@ class saveEtlTaskCommand<T extends Raven.Client.Documents.Operations.ETL.RavenEt
             });
     }
 
-    private updateEtl(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {        
+    private updateEtl(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {
         
         const args = {
             id : this.payload.TaskId || undefined,
             reset: this.scriptsToReset || undefined
-        };       
+        };
         
         const url = endpoints.databases.ongoingTasks.adminEtl + this.urlEncodeArgs(args);
         
@@ -35,8 +38,11 @@ class saveEtlTaskCommand<T extends Raven.Client.Documents.Operations.ETL.RavenEt
 
     static forSqlEtl(db: database, payload: Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration, scriptsToReset?: string[]) {
         return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration>(db, payload, scriptsToReset);
-    }    
+    }
+
+    static forOlapEtl(db: database, payload: Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration, scriptsToReset?: string[]) {
+        return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration>(db, payload, scriptsToReset);
+    }
 }
 
-export = saveEtlTaskCommand; 
-
+export = saveEtlTaskCommand;

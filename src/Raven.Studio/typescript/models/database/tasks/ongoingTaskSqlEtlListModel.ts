@@ -6,18 +6,15 @@ import appUrl = require("common/appUrl");
 class ongoingTaskSqlEtlListModel extends abstractOngoingTaskEtlListModel {
     destinationServer = ko.observable<string>();
     destinationDatabase = ko.observable<string>();
-    connectionStringName = ko.observable<string>();
     
     connectionStringDefined = ko.observable<boolean>();
     destinationDescription: KnockoutComputed<string>;
-    
-    connectionStringsUrl: string;
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView) {
         super();
 
         this.update(dto);
-        this.initializeObservables();        
+        this.initializeObservables();
 
         this.connectionStringsUrl = appUrl.forConnectionStrings(activeDatabaseTracker.default.database(), "sql", this.connectionStringName());
     }

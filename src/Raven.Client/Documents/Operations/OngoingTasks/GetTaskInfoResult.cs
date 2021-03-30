@@ -285,15 +285,15 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
 
         public string ConnectionStringName { get; set; }
-
-        public bool ConnectionStringDefined { get; set; }
+        
+        public string Destination { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
 
             json[nameof(ConnectionStringName)] = ConnectionStringName;
-            json[nameof(ConnectionStringDefined)] = ConnectionStringDefined;
+            json[nameof(Destination)] = Destination;
 
             return json;
         }

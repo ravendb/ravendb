@@ -305,8 +305,7 @@ for (var i = 0; i < this.Lines.length; i++) {
     
     // load to 'sales' table
 
-    loadToSales(noPartition(), {
-        OrderId: id(this),
+    loadToSales(key, {
         Qty: line.Quantity,
         Product: line.Product,
         Cost: line.PricePerUnit

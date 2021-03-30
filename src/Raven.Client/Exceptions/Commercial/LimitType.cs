@@ -36,6 +36,9 @@ namespace Raven.Client.Exceptions.Commercial
 
         [Description("SQL ETL")]
         SqlEtl,
+        
+        [Description("OLAP ETL")]
+        OlapEtl,
 
         [Description("Cores Limit")]
         Cores,

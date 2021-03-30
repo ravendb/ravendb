@@ -15,6 +15,12 @@
                    <pre class="copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: copySample"><i class="icon-copy"></i></a><span data-bind="html: sqlEtlSampleHtml"></span></pre>
                </div>
            </div>
+           <div data-bind="if: etlType() === 'Olap'" class="copy-area">
+               <h3 class="margin-bottom margin-bottom-lg margin-top">Simple OLAP ETL Transformation Script</h3>
+               <div class="margin-bottom">
+                   <pre class="copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: copySample"><i class="icon-copy"></i></a><span data-bind="html: olapEtlSampleHtml"></span></pre>
+               </div>
+           </div>
        </div>
        <div class="modal-footer margin-bottom">
            <div class="text-left bg-info text-info">

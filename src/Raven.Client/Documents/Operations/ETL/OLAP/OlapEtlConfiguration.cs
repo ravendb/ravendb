@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.OLAP
@@ -35,6 +36,19 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
         public override string GetDefaultTaskName()
         {
             return $"OLAP ETL to {ConnectionStringName}";
+        }
+        
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+
+            json[nameof(KeepFilesOnDisk)] = KeepFilesOnDisk;
+            json[nameof(MaxNumberOfItemsInRowGroup)] = MaxNumberOfItemsInRowGroup;
+            json[nameof(CustomPrefix)] = CustomPrefix;
+            json[nameof(RunFrequency)] = RunFrequency;
+            json[nameof(OlapTables)] = new DynamicJsonArray(OlapTables.Select(x => x.ToJson()));
+
+            return json;
         }
     }
 

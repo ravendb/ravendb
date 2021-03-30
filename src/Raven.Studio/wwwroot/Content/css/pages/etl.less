@@ -14,6 +14,10 @@
 @sql-etl-color-dark: darken(@color-4, 10%);
 @sql-etl-color-light: lighten(@color-4, 5%);
 
+@olap-etl-color: @color-1-2;
+@olap-etl-color-dark: darken(@color-1-2, 10%);
+@olap-etl-color-light: lighten(@color-1-2, 5%);
+
 @ravendb-etl-color: @color-2;
 @ravendb-etl-color-dark: darken(@color-2, 10%);
 @ravendb-etl-color-light: lighten(@color-2, 5%);
@@ -47,7 +51,7 @@
 }
 
 .destinationModal {
-    .external-replication, .sql-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink {
+    .external-replication, .sql-etl, .olap-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink {
         display: block;
         padding: 10px;
         transition: background-color .2s ease, color .1s;
@@ -71,6 +75,10 @@
 
     .sql-etl {
         .bigbtn-variant (@sql-etl-color, @sql-etl-color-dark);
+    }
+
+    .olap-etl {
+        .bigbtn-variant (@olap-etl-color, @olap-etl-color-dark);
     }
 
     .ravendb-etl {
@@ -186,6 +194,14 @@
             background-color: @sql-etl-color;
         }
 
+        .olap-etl {
+            color: @olap-etl-color;
+        }
+
+        .task-olap-etl {
+            background-color: @olap-etl-color;
+        }
+
         .subscriptions {
             color: @subscription-color;
         }
@@ -256,6 +272,10 @@
         }
 
         &.sql-etl {
+            .name-variant (@brand-info, @brand-info-light);
+        }
+
+        &.olap-etl {
             .name-variant (@brand-info, @brand-info-light);
         }
 
@@ -351,6 +371,13 @@
 }
 
 .sql-tables-list {
+    min-height: 80px;
+    max-height: 500px;
+    overflow: auto;
+    flex-shrink: 0;
+}
+
+.olap-tables-list {
     min-height: 80px;
     max-height: 500px;
     overflow: auto;
@@ -566,8 +593,6 @@
             font-size: 12px;
         }
     }
-    
-    
 }
 
 #connection-strings {
