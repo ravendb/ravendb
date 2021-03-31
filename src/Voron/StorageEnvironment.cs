@@ -161,6 +161,8 @@ namespace Voron
                 else // existing db, let us load it
                     LoadExistingDatabase();
 
+                Debug.Assert(_options.ManualFlushing || _idleFlushTimer.IsCompleted == false, "_idleFlushTimer.IsCompleted == false"); // initialized by transaction on storage create/open
+
                 if (isNew == false && _options.ManualSyncing == false)
                     SuggestSyncDataFile(); // let's suggest syncing data file after the recovery
 
