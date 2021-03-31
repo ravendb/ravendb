@@ -93,7 +93,7 @@ namespace Raven.Database.FileSystem
                 notificationPublisher = new NotificationPublisher(transportState);
                 synchronizationTask = new SynchronizationTask(storage, sigGenerator, notificationPublisher, configuration);
 
-                FileLock = new FileSynchronizationLock(synchronizationTask);
+                FileLock = new FileSynchronizationLock(synchronizationTask, config);
 
                 metricsCounters = new MetricsCountersManager();
 
@@ -497,11 +497,12 @@ namespace Raven.Database.FileSystem
         {
             private readonly SynchronizationTask task;
 
-            private readonly PutSerialLock fileLock = new PutSerialLock();
+            private readonly PutSerialLock fileLock;
 
-            public FileSynchronizationLock(SynchronizationTask task)
+            public FileSynchronizationLock(SynchronizationTask task, InMemoryRavenConfiguration config)
             {
                 this.task = task;
+                fileLock = new PutSerialLock(config);
             }
 
             public IDisposable Lock()

@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Lucene.Net.Store;
+using Raven.Database.Config;
 
 namespace Raven.Database.Impl
 {
@@ -15,12 +16,18 @@ namespace Raven.Database.Impl
     public class PutSerialLock
     {
         private readonly object locker = new object();
+        private readonly TimeSpan lockDuration;
+
+        public PutSerialLock(InMemoryRavenConfiguration configuration)
+        {
+            lockDuration = configuration.Storage.PutSerialLockDuration;
+        }
 
         public IDisposable Lock()
         {
-            if (Monitor.TryEnter(locker, TimeSpan.FromMinutes(2)))
+            if (Monitor.TryEnter(locker, lockDuration))
                 return new DisposableAction(() => Monitor.Exit(locker));
-            throw new SynchronizationLockException("Could not get the PUT serial lock in (un)reasonable timeframe, aborting operation");
+            throw new SynchronizationLockException("Could not get the PUT serial lock in (un)reasonable timeframe (" + lockDuration + "), aborting operation");
         }
 
         public IDisposable TryLock(int timeoutInMilliseconds)

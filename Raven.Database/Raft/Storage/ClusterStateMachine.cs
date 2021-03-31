@@ -32,7 +32,7 @@ namespace Raven.Database.Raft.Storage
     {
         private readonly ILog log = LogManager.GetCurrentClassLogger();
 
-        private readonly PutSerialLock locker = new PutSerialLock();
+        private readonly PutSerialLock locker;
 
         private readonly DocumentDatabase database;
 
@@ -46,6 +46,8 @@ namespace Raven.Database.Raft.Storage
         {
             if (systemDatabase == null)
                 throw new ArgumentNullException("systemDatabase");
+
+            locker = new PutSerialLock(systemDatabase.Configuration);
 
             DatabaseHelper.AssertSystemDatabase(systemDatabase);
 
