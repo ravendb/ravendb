@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 return Task.CompletedTask;
             }
 
-            env.Environment.SuggestSyncDataFile();
+            env.Environment.ForceSyncDataFile();
 
             return Task.CompletedTask;
         }
