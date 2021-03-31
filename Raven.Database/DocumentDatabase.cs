@@ -106,8 +106,8 @@ namespace Raven.Database
         public DocumentDatabase(InMemoryRavenConfiguration configuration, DocumentDatabase systemDatabase, TransportState recievedTransportState = null, Action<object, Exception> onError = null)
         {
             TimerManager = new ResourceTimerManager();
-            DocumentLock = new PutSerialLock();
-            IdentityLock = new PutSerialLock();
+            DocumentLock = new PutSerialLock(configuration);
+            IdentityLock = new PutSerialLock(configuration);
             Name = configuration.DatabaseName;
             ResourceName = Name;
             Configuration = configuration;

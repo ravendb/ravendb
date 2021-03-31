@@ -123,7 +123,7 @@ namespace Raven.Database.Actions
 
         private IDisposable LockSubscription(long  id)
         {
-            return locks.GetOrAdd(id, new PutSerialLock()).Lock();
+            return locks.GetOrAdd(id, new PutSerialLock(Database.Configuration)).Lock();
         }
 
         public void DeleteSubscription(long id)

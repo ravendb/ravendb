@@ -244,6 +244,7 @@ namespace Raven.Database.Config
             AdditionalStepsForScriptBasedOnDocumentSize = new IntegerSetting(settings["Raven/AdditionalStepsForScriptBasedOnDocumentSize"], 5);
 
             SkipConsistencyCheck = new BooleanSetting(settings["Raven/Storage/SkipConsistencyCheck"], false);
+            PutSerialLockDuration = new TimeSpanSetting(settings["Raven/Storage/PutSerialLockDurationInSeconds"], TimeSpan.FromMinutes(2), TimeSpanArgumentType.FromSeconds);
 
             Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Prefetcher/FetchingDocumentsFromDiskTimeout"], 5);
             Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
@@ -543,6 +544,8 @@ namespace Raven.Database.Config
         public StringSetting TempPath { get; private set; }
 
         public BooleanSetting SkipConsistencyCheck { get; set; }
+        
+        public TimeSpanSetting PutSerialLockDuration { get; set; }
 
         public class VoronConfiguration
         {

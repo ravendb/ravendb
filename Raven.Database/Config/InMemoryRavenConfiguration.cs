@@ -329,6 +329,7 @@ namespace Raven.Database.Config
 
             RejectClientsMode = ravenSettings.RejectClientsModeEnabled.Value;
 
+            Storage.PutSerialLockDuration = ravenSettings.PutSerialLockDuration.Value;
             Storage.SkipConsistencyCheck = ravenSettings.SkipConsistencyCheck.Value;
 
             // Voron settings
@@ -1480,6 +1481,8 @@ namespace Raven.Database.Config
             public bool PreventSchemaUpdate { get; set; }
 
             public bool SkipConsistencyCheck { get; set; }
+            
+            public TimeSpan PutSerialLockDuration { get; set; }
 
             public VoronConfiguration Voron { get; private set; }
 
