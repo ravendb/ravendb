@@ -6,6 +6,8 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.ServerWide;
 using Sparrow;
+using Sparrow.LowMemory;
+using Sparrow.Platform;
 
 namespace Raven.Server.Config.Categories
 {
@@ -20,6 +22,23 @@ namespace Raven.Server.Config.Categories
         public IndexingConfiguration(RavenConfiguration root)
         {
             _root = root;
+
+            var totalMem = MemoryInformation.TotalPhysicalMemory;
+
+            Size defaultEncryptedTransactionSizeLimit;
+
+            if (PlatformDetails.Is32Bits || _root.Storage.ForceUsing32BitsPager || totalMem <= new Size(1, SizeUnit.Gigabytes))
+                defaultEncryptedTransactionSizeLimit = new Size(96, SizeUnit.Megabytes);
+            else if (totalMem <= new Size(4, SizeUnit.Gigabytes))
+                defaultEncryptedTransactionSizeLimit = new Size(128, SizeUnit.Megabytes);
+            else if (totalMem <= new Size(16, SizeUnit.Gigabytes))
+                defaultEncryptedTransactionSizeLimit = new Size(256, SizeUnit.Megabytes);
+            else if (totalMem <= new Size(64, SizeUnit.Gigabytes))
+                defaultEncryptedTransactionSizeLimit = new Size(512, SizeUnit.Megabytes);
+            else
+                defaultEncryptedTransactionSizeLimit = new Size(1024, SizeUnit.Megabytes);
+
+            EncryptedTransactionSizeLimit = defaultEncryptedTransactionSizeLimit;
         }
 
         [Description("Whether the indexes should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
@@ -158,7 +177,7 @@ namespace Raven.Server.Config.Categories
         public Size? TransactionSizeLimit { get; protected set; }
 
         [Description("Transaction size limit, for encrypted database only, after which an index will stop and complete the current batch")]
-        [DefaultValue(256)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Encrypted.TransactionSizeLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
