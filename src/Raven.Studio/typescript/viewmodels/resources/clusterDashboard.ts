@@ -14,6 +14,7 @@ import indexingWidget = require("viewmodels/resources/widgets/indexingWidget");
 import trafficWidget = require("viewmodels/resources/widgets/trafficWidget");
 import databaseIndexingWidget = require("viewmodels/resources/widgets/databaseIndexingWidget");
 import databaseStorageWidget = require("viewmodels/resources/widgets/databaseStorageWidget");
+import databaseTrafficWidget = require("viewmodels/resources/widgets/databaseTrafficWidget");
 
 interface savedWidget {
     type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType;
@@ -242,6 +243,9 @@ class clusterDashboard extends viewModelBase {
                 break;
             case "DatabaseStorageUsage":
                 widget = new databaseStorageWidget(this);
+                break;
+            case "DatabaseTraffic":
+                widget = new databaseTrafficWidget(this);
                 break;
             default:
                 throw new Error("Unsupported widget type = " + type);
