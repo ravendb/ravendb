@@ -2,14 +2,15 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Embedded
 {
-    internal class RavenServerRunner
+    internal static class RavenServerRunner
     {
-        public static Process Run(ServerOptions options)
+        public static async Task<Process> RunAsync(ServerOptions options)
         {
             if (string.IsNullOrWhiteSpace(options.ServerDirectory))
                 throw new ArgumentNullException(nameof(options.ServerDirectory));
@@ -65,7 +66,10 @@ namespace Raven.Embedded
                 commandLineArgs.Insert(0, CommandLineArgumentEscaper.EscapeSingleArg(fstArg));
 
                 if (string.IsNullOrWhiteSpace(options.FrameworkVersion) == false)
-                    commandLineArgs.Insert(0, $"--fx-version {options.FrameworkVersion}");
+                {
+                    var frameworkVersion = await RuntimeFrameworkVersionMatcher.MatchAsync(options).ConfigureAwait(false);
+                    commandLineArgs.Insert(0, $"--fx-version {frameworkVersion}");
+                }
             }
 
             var argumentsString = string.Join(" ", commandLineArgs);

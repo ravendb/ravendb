@@ -1180,20 +1180,25 @@ namespace Raven.Server.Documents.Indexes
 
                         PauseIfCpuCreditsBalanceIsTooLow();
 
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Starting indexing for '{Name}'.");
-
-                        var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
-                        LastIndexingTime = stats.StartTime;
-
-                        AddIndexingPerformance(stats);
-
                         var batchCompleted = false;
 
                         bool didWork = false;
 
+                        IndexingStatsAggregator stats = null;
+                        
+                        DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock?.Acquire(_indexingProcessCancellationTokenSource.Token);
+
                         try
                         {
+                            stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
+
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Starting indexing for '{Name}'.");
+
+                            LastIndexingTime = stats.StartTime;
+
+                            AddIndexingPerformance(stats);
+
                             using (var scope = stats.CreateScope())
                             {
                                 try
@@ -1361,7 +1366,9 @@ namespace Raven.Server.Documents.Indexes
                         }
                         finally
                         {
-                            stats.Complete();
+                            DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock?.Release();
+
+                            stats?.Complete();
                         }
 
                         if (batchCompleted)
