@@ -119,15 +119,27 @@ namespace Raven.Embedded
         {
             private static readonly char[] Separators = { '.' };
 
+            private static readonly string SuffixSeparator = "-";
+
             public int? Major { get; private set; }
 
             public int? Minor { get; private set; }
 
             public int? Patch { get; internal set; }
 
+            public string Suffix { get; set; }
+
             public RuntimeFrameworkVersion(string frameworkVersion)
             {
-                var versions = frameworkVersion.ToLowerInvariant().Split(Separators, StringSplitOptions.RemoveEmptyEntries);
+                frameworkVersion = frameworkVersion.ToLowerInvariant();
+                var suffixes = frameworkVersion.Split(new[] { SuffixSeparator }, StringSplitOptions.RemoveEmptyEntries);
+                if (suffixes.Length != 1)
+                {
+                    frameworkVersion = suffixes[0];
+                    Suffix = string.Join(SuffixSeparator, suffixes.Skip(1));
+                }
+
+                var versions = frameworkVersion.Split(Separators, StringSplitOptions.RemoveEmptyEntries);
                 for (var i = 0; i < versions.Length; i++)
                 {
                     var version = versions[i].Trim();
@@ -147,7 +159,11 @@ namespace Raven.Embedded
 
             public override string ToString()
             {
-                return $"{Major?.ToString() ?? Wildcard}.{Minor?.ToString() ?? Wildcard}.{Patch?.ToString() ?? Wildcard}";
+                var version = $"{Major?.ToString() ?? Wildcard}.{Minor?.ToString() ?? Wildcard}.{Patch?.ToString() ?? Wildcard}";
+                if (Suffix != null)
+                    version = $"{version}{SuffixSeparator}{Suffix}";
+
+                return version;
             }
 
             private static int Parse(string value)
@@ -185,6 +201,9 @@ namespace Raven.Embedded
                     return false;
 
                 if (Patch.HasValue && Patch != version.Patch)
+                    return false;
+
+                if (Suffix != version.Suffix)
                     return false;
 
                 return true;
