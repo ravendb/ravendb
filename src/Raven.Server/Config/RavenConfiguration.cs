@@ -520,7 +520,13 @@ namespace Raven.Server.Config
             if (cfg == null || keyName == null)
                 return false;
 
-            return cfg.AsEnumerable().Any(x => string.Equals(x.Key, keyName, StringComparison.OrdinalIgnoreCase));
+            foreach (var kvp in cfg.AsEnumerable())
+            {
+                if (string.Equals(kvp.Key, keyName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
         }
 #endif
     }
