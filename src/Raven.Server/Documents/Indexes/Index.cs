@@ -202,6 +202,8 @@ namespace Raven.Server.Documents.Indexes
 
         private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
 
+        private static FifoSemaphore _concurrentlyRunningIndexes;
+
         public long? LastTransactionId => _environment?.CurrentReadTransactionId;
 
         internal bool IsLowMemory => _lowMemoryFlag.IsRaised();
@@ -1027,20 +1029,25 @@ namespace Raven.Server.Documents.Indexes
 
                         PauseIfCpuCreditsBalanceIsTooLow();
 
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Starting indexing for '{Name}'.");
-
-                        var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
-                        LastIndexingTime = stats.StartTime;
-
-                        AddIndexingPerformance(stats);
-
                         var batchCompleted = false;
 
                         bool didWork = false;
 
+                        IndexingStatsAggregator stats = null;
+                        
+                        _concurrentlyRunningIndexes?.Acquire(_indexingProcessCancellationTokenSource.Token);
+
                         try
                         {
+                            stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
+
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Starting indexing for '{Name}'.");
+
+                            LastIndexingTime = stats.StartTime;
+
+                            AddIndexingPerformance(stats);
+
                             using (var scope = stats.CreateScope())
                             {
                                 try
@@ -1210,7 +1217,9 @@ namespace Raven.Server.Documents.Indexes
                         }
                         finally
                         {
-                            stats.Complete();
+                            _concurrentlyRunningIndexes?.Release();
+
+                            stats?.Complete();
                         }
 
                         if (batchCompleted)
@@ -4093,6 +4102,11 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_disposeOne.Disposed)
                 ThrowObjectDisposed();
+        }
+
+        public static void LimitNumberOfConcurrentlyRunningIndexes(int maxNumberOfConcurrentlyRunningIndexes)
+        {
+            _concurrentlyRunningIndexes = new FifoSemaphore(maxNumberOfConcurrentlyRunningIndexes);
         }
     }
 }

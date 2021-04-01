@@ -77,6 +77,7 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Constants = Raven.Client.Constants;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.ServerWide
 {
@@ -178,6 +179,9 @@ namespace Raven.Server.ServerWide
             HasFixedPort = Configuration.Core.ServerUrls == null ||
                            Uri.TryCreate(Configuration.Core.ServerUrls[0], UriKind.Absolute, out var uri) == false ||
                            uri.Port != 0;
+
+            if (Configuration.Indexing.MaxNumberOfConcurrentlyRunningIndexes != null)
+                Index.LimitNumberOfConcurrentlyRunningIndexes(Configuration.Indexing.MaxNumberOfConcurrentlyRunningIndexes.Value);
         }
 
         private void OnServerCertificateChanged(object sender, EventArgs e)
