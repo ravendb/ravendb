@@ -19,5 +19,9 @@ namespace Raven.Server.Dashboard.Cluster
         DatabaseStorageUsage,
         DatabaseTraffic,
         DatabaseIndexing
+        
+        //TODO: databases overview
+        //TODO: ongoing tasks
+        //TODO: cluster topology
     }
 }

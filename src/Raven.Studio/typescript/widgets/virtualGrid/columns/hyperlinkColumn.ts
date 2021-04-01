@@ -12,6 +12,7 @@ class hyperlinkColumn<T> extends textColumn<T> {
     private readonly hrefAccessor: (obj: T) => string;
     private readonly customHandler: (obj: T, event: JQueryEventObject) => void;
     private readonly extraClassForLink: (obj: T) => string;
+    private readonly openInNewTab: (obj: T) => boolean;
 
     linkActionUniqueId = _.uniqueId("link-action-");
 
@@ -21,6 +22,7 @@ class hyperlinkColumn<T> extends textColumn<T> {
         this.hrefAccessor = hrefAccessor;
         this.customHandler = opts.handler;
         this.extraClassForLink = opts.extraClassForLink;
+        this.openInNewTab = opts.openInNewTab;
     }
 
     canHandle(actionId: string) {
@@ -47,8 +49,9 @@ class hyperlinkColumn<T> extends textColumn<T> {
 
             const customAction = this.customHandler ? `data-action="${this.linkActionUniqueId}"` : "";
             const extraCssClassesForLink = this.extraClassForLink ? `class="${this.extraClassForLink(item)}"` : "";
+            const hrefTarget = this.openInNewTab ? (this.openInNewTab(item) ? `target="_blank"` : "") : "";
 
-            return `<div ${titleHtml} class="cell text-cell ${preparedValue.typeCssClass} ${extraCssClasses}" style="width: ${this.width}"><a ${extraCssClassesForLink} href="${hyperlinkValue}" ${customAction}>${preparedValue.rawText}</a></div>`;
+            return `<div ${titleHtml} class="cell text-cell ${preparedValue.typeCssClass} ${extraCssClasses}" style="width: ${this.width}"><a ${extraCssClassesForLink} ${hrefTarget} href="${hyperlinkValue}" ${customAction}>${preparedValue.rawText}</a></div>`;
             
         } else {
             // fallback to plain text column

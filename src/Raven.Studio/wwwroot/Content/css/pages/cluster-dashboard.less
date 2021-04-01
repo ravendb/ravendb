@@ -605,6 +605,14 @@
         .list-container {
             position: relative;
             flex-grow: 1;
+
+            .create-database {
+                text-align: center;
+                display: block;
+                .absolute-center;
+                z-index: 1000;
+                margin-top: 12px;
+            }
         }
     }
 
@@ -862,16 +870,6 @@
         &.node-j {
             background-color: @color-3-2;
         }
-    }
-
-    .virtual-grid {
-
-        // DELETE THIS!!!
-        .virtual-row {
-            position: static !important;
-        }
-
-        // /DELETE THIS!!!
     }
 }
 
