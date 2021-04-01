@@ -1,14 +1,13 @@
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
-import databaseIndexingSpeed = require("models/resources/widgets/databaseIndexingSpeed");
 import indexingSpeedItem = require("models/resources/widgets/indexingSpeedItem");
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
-import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import nodeTagColumn = require("widgets/virtualGrid/columns/nodeTagColumn");
 import abstractTableWidget = require("viewmodels/resources/widgets/abstractTableWidget");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import appUrl = require("common/appUrl");
+import perNodeStatItems = require("models/resources/widgets/perNodeStatItems");
 
-class databaseIndexingWidget extends abstractTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseIndexingSpeedPayload, databaseIndexingSpeed, indexingSpeedItem> {
+class databaseIndexingWidget extends abstractTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseIndexingSpeedPayload, perNodeStatItems<indexingSpeedItem>, indexingSpeedItem> {
     
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
         return "DatabaseIndexing";
@@ -20,11 +19,15 @@ class databaseIndexingWidget extends abstractTableWidget<Raven.Server.Dashboard.
         super(controller);
 
         for (const node of this.controller.nodes()) {
-            const stats = new databaseIndexingSpeed(node.tag());
+            const stats = new perNodeStatItems<indexingSpeedItem>(node.tag());
             this.nodeStats.push(stats);
         }
     }
-    
+
+    protected mapItems(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.DatabaseIndexingSpeedPayload): indexingSpeedItem[] {
+        return data.Items.map(x => new indexingSpeedItem(nodeTag, x));
+    }
+
     onData(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.DatabaseIndexingSpeedPayload) {
         super.onData(nodeTag, data);
         

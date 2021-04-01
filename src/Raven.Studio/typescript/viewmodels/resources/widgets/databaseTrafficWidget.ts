@@ -5,10 +5,12 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import appUrl = require("common/appUrl");
 import trafficWatchItem = require("models/resources/widgets/trafficWatchItem");
-import databaseTrafficWatch = require("models/resources/widgets/databaseTrafficWatch");
 import generalUtils = require("common/generalUtils");
+import perNodeStatItems = require("models/resources/widgets/perNodeStatItems");
 
-class databaseTrafficWidget extends abstractTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseTrafficWatchPayload, databaseTrafficWatch, trafficWatchItem> {
+class databaseTrafficWidget extends abstractTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseTrafficWatchPayload, 
+    perNodeStatItems<trafficWatchItem>, trafficWatchItem> {
+    
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
         return "DatabaseTraffic";
     }
@@ -19,9 +21,13 @@ class databaseTrafficWidget extends abstractTableWidget<Raven.Server.Dashboard.C
         super(controller);
 
         for (const node of this.controller.nodes()) {
-            const stats = new databaseTrafficWatch(node.tag());
+            const stats = new perNodeStatItems<trafficWatchItem>(node.tag());
             this.nodeStats.push(stats);
         }
+    }
+
+    protected mapItems(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.DatabaseTrafficWatchPayload): trafficWatchItem[] {
+        return data.Items.map(x => new trafficWatchItem(nodeTag, x));
     }
 
     onData(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.DatabaseTrafficWatchPayload) {

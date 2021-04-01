@@ -4,13 +4,13 @@ import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSock
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 
-interface statsBase<TRaw> {
+interface statsBase<TItem> {
     disconnected: KnockoutObservable<boolean>;
-    update(nodeTag: string, data: TRaw): void;
     tag: string;
+    items: TItem[];
 }
 
-abstract class abstractTableWidget<TRaw, TStats extends statsBase<TRaw>, TTableItem> extends websocketBasedWidget<TRaw> {
+abstract class abstractTableWidget<TRaw, TStats extends statsBase<TTableItem>, TTableItem> extends websocketBasedWidget<TRaw> {
     protected gridController = ko.observable<virtualGridController<TTableItem>>();
     protected clusterManager = clusterTopologyManager.default;
 
@@ -23,9 +23,13 @@ abstract class abstractTableWidget<TRaw, TStats extends statsBase<TRaw>, TTableI
     onData(nodeTag: string, data: TRaw) {
         this.scheduleSyncUpdate(() => {
             this.spinners.loading(false);
-            this.withStats(nodeTag, x => x.update(nodeTag, data));
+            this.withStats(nodeTag, x => {
+                x.items = this.mapItems(nodeTag, data);
+            });
         });
     }
+    
+    protected abstract mapItems(nodeTag: string, data: TRaw): TTableItem[];
     
     compositionComplete() {
         super.compositionComplete();
