@@ -268,7 +268,7 @@
     </li>
 </script>
 
-<div class="prime-container">
+<div class="prime-container" data-bind="css: { 'cloud-cluster-admin': cloudClusterAdmin }">
     <nav id="main-menu" class="main-menu"
          data-bind="with: mainMenu, attr: { 'data-level': mainMenu.level }, style: { 'flex-basis': mainMenu.width() + 'px', width: mainMenu.width() + 'px' }">
         <div class="level-0"

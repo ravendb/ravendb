@@ -80,6 +80,8 @@ class shell extends viewModelBase {
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
     developerLicense = license.developerLicense;
+
+    cloudClusterAdmin: KnockoutObservable<boolean>;
     
     clientCertificate = clientCertificateModel.certificateInfo;
 
@@ -148,6 +150,15 @@ class shell extends viewModelBase {
         
         window.addEventListener("hashchange", e => {
             this.currentUrlHash(location.hash);
+        });
+        
+        this.cloudClusterAdmin = ko.pureComputed(() => {
+            return true; //TODO: forcing TRUE for development time!
+            /* TODO:
+            const isCloud = license.cloudLicense();
+            const isClusterAdmin = accessManager.default.securityClearance() === "ClusterAdmin";
+            return isCloud && isClusterAdmin;
+            */
         });
     }
     
