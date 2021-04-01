@@ -181,8 +181,10 @@ namespace Raven.Server.ServerWide
                            uri.Port != 0;
 
             if (Configuration.Indexing.MaxNumberOfConcurrentlyRunningIndexes != null)
-                Index.LimitNumberOfConcurrentlyRunningIndexes(Configuration.Indexing.MaxNumberOfConcurrentlyRunningIndexes.Value);
+                ServerWideConcurrentlyRunningIndexesLock = new FifoSemaphore(Configuration.Indexing.MaxNumberOfConcurrentlyRunningIndexes.Value);
         }
+
+        internal readonly FifoSemaphore ServerWideConcurrentlyRunningIndexesLock;
 
         private void OnServerCertificateChanged(object sender, EventArgs e)
         {
