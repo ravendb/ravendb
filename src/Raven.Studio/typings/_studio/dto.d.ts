@@ -640,6 +640,7 @@ interface textColumnOpts<T> {
 interface hypertextColumnOpts<T> extends textColumnOpts<T> {
     handler?: (item: T, event: JQueryEventObject) => void;
     extraClassForLink?: (item: T) => string;
+    openInNewTab?: (item: T) => boolean;
 }
 
 type timeSeriesColumnEventType = "plot" | "preview";
@@ -649,7 +650,7 @@ interface timeSeriesColumnOpts<T> extends textColumnOpts<T> {
 }
 
 interface virtualColumnDto {
-    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom" | "timeSeries"
+    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom" | "timeSeries" | "nodeTag";
     width: string;
     header: string;
     serializedValue: string;

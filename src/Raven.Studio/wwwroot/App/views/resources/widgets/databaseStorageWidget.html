@@ -1,0 +1,24 @@
+<div>
+    <div class="cluster-dashboard-item-header">
+        <h3> <i class="icon-database"></i> <span>Storage per database</span></h3>
+        <button class="btn btn-warning btn-sm" data-bind="click: remove">
+            <i class="icon-trash"></i>
+        </button>
+        <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
+            <i class="icon-fullscreen"></i>
+        </button>
+    </div>
+
+    <div class="databases-list" style="position: relative;">
+        <div class="list-container">
+            <div class="create-database" data-bind="visible: $root.noDatabases() && !$root.spinners.loading()">
+                <div><i class="icon-empty-set"></i><span>No data</span></div>
+                <button data-bind="click: $root.newDatabase" class="btn btn-primary btn-xs text-uppercase">Create Database</button>
+            </div>
+            <div class="list absolute-fill">
+                <virtual-grid class="resizable no-margin" params="controller: gridController, condensed: true, disableStripes: true"></virtual-grid>
+                <div class="absolute-center loading" data-bind="visible: $root.spinners.loading"><div class="global-spinner"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
