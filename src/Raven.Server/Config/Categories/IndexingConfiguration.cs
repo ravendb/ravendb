@@ -222,6 +222,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.ErrorIndexStartupBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public IndexStartupBehavior ErrorIndexStartupBehavior { get; set; }
 
+        [Description("Limits the number of concurrently running and processing indexes on the server. Default: null (no limit)")]
+        [DefaultValue(null)]
+        [MinValue(1)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.MaxNumberOfConcurrentlyRunningIndexes", ConfigurationEntryScope.ServerWideOnly)]
+        public int? MaxNumberOfConcurrentlyRunningIndexes { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();
