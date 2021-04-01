@@ -799,3 +799,11 @@ interface databaseAccessInfo {
     dbName: string;
     accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess;
 }
+
+
+interface databaseAndNodeAwareStats {
+    database: string;
+    nodeTag: string;
+    hideDatabaseName: boolean;
+    even: boolean;
+}

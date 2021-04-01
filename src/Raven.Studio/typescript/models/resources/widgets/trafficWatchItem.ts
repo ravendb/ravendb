@@ -1,5 +1,5 @@
 
-class trafficWatchItem {
+class trafficWatchItem implements databaseAndNodeAwareStats {
     database: string;
     nodeTag: string;
 

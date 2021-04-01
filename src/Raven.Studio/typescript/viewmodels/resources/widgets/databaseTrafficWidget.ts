@@ -1,6 +1,6 @@
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import nodeTagColumn = require("widgets/virtualGrid/columns/nodeTagColumn");
-import abstractTableWidget = require("viewmodels/resources/widgets/abstractTableWidget");
+import abstractDatabaseAndNodeAwareTableWidget = require("viewmodels/resources/widgets/abstractDatabaseAndNodeAwareTableWidget");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import appUrl = require("common/appUrl");
@@ -8,14 +8,12 @@ import trafficWatchItem = require("models/resources/widgets/trafficWatchItem");
 import generalUtils = require("common/generalUtils");
 import perNodeStatItems = require("models/resources/widgets/perNodeStatItems");
 
-class databaseTrafficWidget extends abstractTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseTrafficWatchPayload, 
+class databaseTrafficWidget extends abstractDatabaseAndNodeAwareTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseTrafficWatchPayload, 
     perNodeStatItems<trafficWatchItem>, trafficWatchItem> {
     
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
         return "DatabaseTraffic";
     }
-
-    noDatabases = ko.observable<boolean>(true);
 
     constructor(controller: clusterDashboard) {
         super(controller);
@@ -30,18 +28,6 @@ class databaseTrafficWidget extends abstractTableWidget<Raven.Server.Dashboard.C
         return data.Items.map(x => new trafficWatchItem(nodeTag, x));
     }
 
-    onData(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.DatabaseTrafficWatchPayload) {
-        super.onData(nodeTag, data);
-
-        //TODO: what if all items are not relevant on node?
-        //TODO: check offline items! 
-        this.noDatabases(!data.Items);
-    }
-
-    protected customizeGrid() {
-        this.gridController().customRowClassProvider(item => item.even ? ["even"] : []);
-    }
-
     protected prepareColumns(containerWidth: number, results: pagedResult<trafficWatchItem>): virtualColumn[] {
         const grid = this.gridController();
         return [
@@ -53,56 +39,8 @@ class databaseTrafficWidget extends abstractTableWidget<Raven.Server.Dashboard.C
         ];
     }
 
-    protected prepareGridData(): JQueryPromise<pagedResult<trafficWatchItem>> {
-        let items: trafficWatchItem[] = [];
-
-        this.nodeStats().forEach(nodeStat => {
-            items.push(...nodeStat.items);
-        });
-
-        //TODO: alpha numeric sort!
-        items = _.sortBy(items, ["database", "nodeTag"]);
-
-        // leave only first database name in group - we don't want to repeat db name
-        let currentDbName = "";
-        let even = true;
-
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            if (item.database === currentDbName) {
-                item.hideDatabaseName = true;
-            } else {
-                currentDbName = item.database;
-                even = !even;
-            }
-            item.even = even;
-        }
-
-        return $.when({
-            totalResultCount: items.length,
-            items
-        });
-    }
-
-    protected prepareUrl(item: trafficWatchItem): { url: string; openInNewTab: boolean } {
-        const database = item.database;
-        const nodeTag = item.nodeTag;
-        // TODO: what if given database is not relevant on given node?
-        const currentNodeTag = this.clusterManager.localNodeTag();
-        const targetNode = this.clusterManager.getClusterNodeByTag(nodeTag)
-
-        const link = database === "<System>" ? appUrl.forTrafficWatch() : appUrl.forTrafficWatch(database);
-        if (currentNodeTag === nodeTag) {
-            return {
-                url: link,
-                openInNewTab: false
-            }
-        } else {
-            return {
-                url: appUrl.toExternalUrl(targetNode.serverUrl(), link),
-                openInNewTab: true
-            }
-        }
+    protected generateLocalLink(database: string): string {
+        return appUrl.forTrafficWatch(database);
     }
 }
 
