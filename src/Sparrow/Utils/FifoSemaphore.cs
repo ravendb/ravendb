@@ -26,7 +26,7 @@ namespace Sparrow.Utils
     /// this class results in the action performed by the method not occurring.
     /// </para>
     /// </remarks>
-    public class FifoSemaphore
+    internal class FifoSemaphore
     {
         private readonly Queue<OneTimeWaiter> _waitQueue;
 
@@ -36,6 +36,9 @@ namespace Sparrow.Utils
 
         public FifoSemaphore(int tokens)
         {
+            if (tokens <= 0)
+                throw new ArgumentException(nameof(tokens));
+
             _Tokens = tokens;
             _Lock = new object();
             _waitQueue = new Queue<OneTimeWaiter>();
