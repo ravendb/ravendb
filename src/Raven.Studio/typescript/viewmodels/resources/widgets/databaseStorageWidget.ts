@@ -1,14 +1,13 @@
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
-import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import nodeTagColumn = require("widgets/virtualGrid/columns/nodeTagColumn");
 import abstractTableWidget = require("viewmodels/resources/widgets/abstractTableWidget");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
-import databaseStorageUsage = require("models/resources/widgets/databaseStorageUsage");
 import databaseDiskUsage = require("models/resources/widgets/databaseDiskUsage");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import appUrl = require("common/appUrl");
+import perNodeStatItems = require("models/resources/widgets/perNodeStatItems");
 
-class databaseStorageWidget extends abstractTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseStorageUsagePayload, databaseStorageUsage, databaseDiskUsage> {
+class databaseStorageWidget extends abstractTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseStorageUsagePayload, perNodeStatItems<databaseDiskUsage>, databaseDiskUsage> {
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
         return "DatabaseStorageUsage";
     }
@@ -19,9 +18,13 @@ class databaseStorageWidget extends abstractTableWidget<Raven.Server.Dashboard.C
         super(controller);
 
         for (const node of this.controller.nodes()) {
-            const stats = new databaseStorageUsage(node.tag());
+            const stats = new perNodeStatItems<databaseDiskUsage>(node.tag());
             this.nodeStats.push(stats);
         }
+    }
+
+    protected mapItems(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.DatabaseStorageUsagePayload): databaseDiskUsage[] {
+        return data.Items.map(x => new databaseDiskUsage(nodeTag, x));
     }
 
     onData(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.DatabaseStorageUsagePayload) {
