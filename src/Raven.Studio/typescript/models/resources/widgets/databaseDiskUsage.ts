@@ -2,7 +2,7 @@
 
 import generalUtils = require("common/generalUtils");
 
-class databaseDiskUsage {
+class databaseDiskUsage implements databaseAndNodeAwareStats {
     database: string;
     nodeTag: string;
     size: string;

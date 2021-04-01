@@ -1,7 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
 
-class indexingSpeedItem {
+class indexingSpeedItem implements databaseAndNodeAwareStats {
     database: string;
     nodeTag: string;
     indexedPerSecond: number;

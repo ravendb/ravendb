@@ -104,14 +104,6 @@ class clusterDashboard extends viewModelBase {
         }
     }
     
-    printElementsInfo(extra: string) {
-        const items = this.packery.getItemElements();
-        
-        console.log(extra, items.map(x => {
-            return $(x).attr("data-widget-id") + " => " + $(x).outerHeight();
-        }).join(", "));
-    }
-    
     private enableLiveView() {
         const nodes = clusterTopologyManager.default.topology().nodes();
 

@@ -389,6 +389,9 @@ class genUtils {
     }
 
     private static sortAlphaNumericInternal(a: string, b: string): number {
+        if (a === b) {
+            return 0;
+        }
         const aInt = parseInt(a, 10);
         const bInt = parseInt(b, 10);
 

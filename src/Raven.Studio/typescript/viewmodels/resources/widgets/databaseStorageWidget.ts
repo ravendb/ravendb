@@ -1,18 +1,16 @@
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import nodeTagColumn = require("widgets/virtualGrid/columns/nodeTagColumn");
-import abstractTableWidget = require("viewmodels/resources/widgets/abstractTableWidget");
+import abstractDatabaseAndNodeAwareTableWidget = require("viewmodels/resources/widgets/abstractDatabaseAndNodeAwareTableWidget");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import databaseDiskUsage = require("models/resources/widgets/databaseDiskUsage");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import appUrl = require("common/appUrl");
 import perNodeStatItems = require("models/resources/widgets/perNodeStatItems");
 
-class databaseStorageWidget extends abstractTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseStorageUsagePayload, perNodeStatItems<databaseDiskUsage>, databaseDiskUsage> {
+class databaseStorageWidget extends abstractDatabaseAndNodeAwareTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseStorageUsagePayload, perNodeStatItems<databaseDiskUsage>, databaseDiskUsage> {
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
         return "DatabaseStorageUsage";
     }
-
-    noDatabases = ko.observable<boolean>(true);
 
     constructor(controller: clusterDashboard) {
         super(controller);
@@ -27,18 +25,6 @@ class databaseStorageWidget extends abstractTableWidget<Raven.Server.Dashboard.C
         return data.Items.map(x => new databaseDiskUsage(nodeTag, x));
     }
 
-    onData(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.DatabaseStorageUsagePayload) {
-        super.onData(nodeTag, data);
-
-        //TODO: what if all items are not relevant on node?
-        //TODO: check offline items! 
-        this.noDatabases(!data.Items);
-    }
-
-    protected customizeGrid() {
-        this.gridController().customRowClassProvider(item => item.even ? ["even"] : []);
-    }
-
     protected prepareColumns(containerWidth: number, results: pagedResult<databaseDiskUsage>): virtualColumn[] {
         const grid = this.gridController();
         return [
@@ -50,56 +36,8 @@ class databaseStorageWidget extends abstractTableWidget<Raven.Server.Dashboard.C
         ];
     }
 
-    protected prepareGridData(): JQueryPromise<pagedResult<databaseDiskUsage>> {
-        let items: databaseDiskUsage[] = [];
-
-        this.nodeStats().forEach(nodeStat => {
-            items.push(...nodeStat.items);
-        });
-
-        //TODO: alpha numeric sort!
-        items = _.sortBy(items, ["database", "nodeTag"]);
-
-        // leave only first database name in group - we don't want to repeat db name
-        let currentDbName = "";
-        let even = true;
-
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            if (item.database === currentDbName) {
-                item.hideDatabaseName = true;
-            } else {
-                currentDbName = item.database;
-                even = !even;
-            }
-            item.even = even;
-        }
-
-        return $.when({
-            totalResultCount: items.length,
-            items
-        });
-    }
-
-    protected prepareUrl(item: databaseDiskUsage): { url: string; openInNewTab: boolean } {
-        const database = item.database;
-        const nodeTag = item.nodeTag;
-        // TODO: what if given database is not relevant on given node?
-        const currentNodeTag = this.clusterManager.localNodeTag();
-        const targetNode = this.clusterManager.getClusterNodeByTag(nodeTag)
-
-        const link = database === "<System>" ? appUrl.forSystemStorageReport() : appUrl.forStatusStorageReport(database);
-        if (currentNodeTag === nodeTag) {
-            return {
-                url: link,
-                openInNewTab: false
-            }
-        } else {
-            return {
-                url: appUrl.toExternalUrl(targetNode.serverUrl(), link),
-                openInNewTab: true
-            }
-        }
+    protected generateLocalLink(database: string): string {
+        return database === "<System>" ? appUrl.forSystemStorageReport() : appUrl.forStatusStorageReport(database);
     }
 }
 
