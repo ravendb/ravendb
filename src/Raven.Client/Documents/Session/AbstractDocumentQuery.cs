@@ -154,14 +154,14 @@ namespace Raven.Client.Documents.Session
 
         private string _includesAlias;
 
-        private static TimeSpan DefaultTimeout
+        private TimeSpan DefaultTimeout
         {
             get
             {
                 if (Debugger.IsAttached) // increase timeout if we are debugging
                     return TimeSpan.FromMinutes(15);
 
-                return TimeSpan.FromSeconds(15);
+                return _conventions.WaitForNonStaleResultsTimeout;
             }
         }
 
@@ -190,7 +190,7 @@ namespace Raven.Client.Documents.Session
             TheSession = session;
             AfterQueryExecuted(UpdateStatsHighlightingsAndExplanations);
 
-            _conventions = session == null ? new DocumentConventions() : session.Conventions;
+            _conventions = session == null ? DocumentConventions.Default : session.Conventions;
             _linqPathProvider = new LinqPathProvider(_conventions);
 
             IsProjectInto = isProjectInto ?? false;

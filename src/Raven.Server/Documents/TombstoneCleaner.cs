@@ -68,16 +68,18 @@ namespace Raven.Server.Documents
             await ExecuteCleanup();
         }
 
-        internal async Task ExecuteCleanup(long? numberOfTombstonesToDeleteInBatch = null)
+        internal async Task<long> ExecuteCleanup(long? numberOfTombstonesToDeleteInBatch = null)
         {
+            var numberOfTombstonesDeleted = 0L;
+
             try
             {
                 if (CancellationToken.IsCancellationRequested)
-                    return;
+                    return numberOfTombstonesDeleted;
 
                 var state = GetStateInternal();
                 if (state.Tombstones.Count == 0)
-                    return;
+                    return numberOfTombstonesDeleted;
 
                 var batchSize = numberOfTombstonesToDeleteInBatch ?? _numberOfTombstonesToDeleteInBatch;
 
@@ -85,6 +87,8 @@ namespace Raven.Server.Documents
                 {
                     var command = new DeleteTombstonesCommand(state.Tombstones, state.MinAllDocsEtag, state.MinAllTimeSeriesEtag, batchSize, _documentDatabase, Logger);
                     await _documentDatabase.TxMerger.Enqueue(command);
+
+                    numberOfTombstonesDeleted += command.NumberOfTombstonesDeleted;
 
                     if (command.NumberOfTombstonesDeleted < batchSize)
                         break;
@@ -95,6 +99,8 @@ namespace Raven.Server.Documents
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to execute tombstone cleanup on {_documentDatabase.Name}", e);
             }
+
+            return numberOfTombstonesDeleted;
         }
 
         internal Dictionary<string, StateHolder> GetState()
@@ -151,10 +157,10 @@ namespace Raven.Server.Documents
                             }
 
                             var state = GetState(tombstones, tombstone.Key, tombstoneType);
-                            if (tombstone.Value < state.Value)
+                            if (tombstone.Value < state.Etag)
                             {
                                 state.Component = subscription.TombstoneCleanerIdentifier;
-                                state.Value = tombstone.Value;
+                                state.Etag = tombstone.Value;
                             }
                         }
                     }
@@ -202,12 +208,12 @@ namespace Raven.Server.Documents
             public State()
             {
                 Component = null;
-                Value = long.MaxValue;
+                Etag = long.MaxValue;
             }
 
             public string Component;
 
-            public long Value;
+            public long Etag;
         }
 
         internal class DeleteTombstonesCommand : TransactionOperationsMerger.MergedTransactionCommand
@@ -262,7 +268,7 @@ namespace Raven.Server.Documents
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Could not delete tombstones for '{tombstone.Key}' collection before '{Math.Min(tombstone.Value.Documents.Value, _minAllDocsEtag)}' etag for documents and '{Math.Min(tombstone.Value.TimeSeries.Value, _minAllTimeSeriesEtag)}' etag for timeseries.", e);
+                            _logger.Info($"Could not delete tombstones for '{tombstone.Key}' collection before '{Math.Min(tombstone.Value.Documents.Etag, _minAllDocsEtag)}' etag for documents and '{Math.Min(tombstone.Value.TimeSeries.Etag, _minAllTimeSeriesEtag)}' etag for timeseries.", e);
 
                         throw;
                     }
@@ -286,7 +292,7 @@ namespace Raven.Server.Documents
                 if (state == null)
                     return 0;
 
-                var minTombstoneValue = Math.Min(state.Value, _minAllTimeSeriesEtag);
+                var minTombstoneValue = Math.Min(state.Etag, _minAllTimeSeriesEtag);
                 if (minTombstoneValue <= 0)
                     return 0;
 
@@ -298,7 +304,7 @@ namespace Raven.Server.Documents
                 if (state == null)
                     return 0;
 
-                var minTombstoneValue = Math.Min(state.Value, _minAllDocsEtag);
+                var minTombstoneValue = Math.Min(state.Etag, _minAllDocsEtag);
                 if (minTombstoneValue <= 0)
                     return 0;
 

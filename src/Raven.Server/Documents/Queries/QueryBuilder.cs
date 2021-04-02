@@ -844,8 +844,8 @@ namespace Raven.Server.Documents.Queries
                     if (float.TryParse(s, out boost) == false)
                     {
                         throw new InvalidQueryException($"The boost value must be a valid float, but was called with {s}",
-                    metadata.QueryText, parameters);
-            }
+                        metadata.QueryText, parameters);
+                    }
                     break;
                 default:
                     throw new InvalidQueryException($"Unable to find boost value: {val} ({type})",
@@ -968,6 +968,9 @@ namespace Raven.Server.Documents.Queries
 
             if (firstQuery != null)
                 return firstQuery;
+
+            if (q == null)
+                q = new BooleanQuery(); // RavenDB-16439
 
             return q;
 

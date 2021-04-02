@@ -5,7 +5,6 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
-using System.IO;
 
 #if NETSTANDARD2_0
 
@@ -57,8 +56,8 @@ namespace Raven.Embedded
 
             try
             {
-                var (ServerUrl, ServerProcess) = await existingServerTask.Value.ConfigureAwait(false);
-                ShutdownServerProcess(ServerProcess);
+                var (serverUrl, serverProcess) = await existingServerTask.Value.ConfigureAwait(false);
+                ShutdownServerProcess(serverProcess);
             }
             catch
             {
@@ -68,7 +67,7 @@ namespace Raven.Embedded
             if (Interlocked.CompareExchange(ref _serverTask, null, existingServerTask) != existingServerTask)
                 throw new InvalidOperationException("The server changed while restarting it. Are you calling RestartServer() concurrently?");
 
-            await StartServerInternal().ConfigureAwait(false);
+            await StartServerInternalAsync().ConfigureAwait(false);
         }
 
         public void StartServer(ServerOptions? options = null)
@@ -96,11 +95,11 @@ namespace Raven.Embedded
                 }
             }
 
-            var task = StartServerInternal();
+            var task = StartServerInternalAsync();
             GC.KeepAlive(task); // make sure that we aren't allowing to elide the call
         }
 
-        private Task StartServerInternal()
+        private Task StartServerInternalAsync()
         {
             var startServer = new Lazy<Task<(Uri ServerUrl, Process ServerProcess)>>(RunServer);
             if (Interlocked.CompareExchange(ref _serverTask, startServer, null) != null)
@@ -241,7 +240,7 @@ namespace Raven.Embedded
             if (_serverOptions == null)
                 throw new ArgumentNullException(nameof(_serverOptions));
 
-            var process = RavenServerRunner.Run(_serverOptions);
+            var process = await RavenServerRunner.RunAsync(_serverOptions).ConfigureAwait(false);
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Starting global server: { process.Id }");
 
@@ -270,11 +269,11 @@ namespace Raven.Embedded
             string? url = null;
             var startupDuration = Stopwatch.StartNew();
 
-            var outputString = await ReadOutput(process.StandardOutput, startupDuration, _serverOptions, async (line, builder) =>
+            var outputString = await ProcessHelper.ReadOutput(process.StandardOutput, startupDuration, _serverOptions, async (line, builder) =>
             {
                 if (line == null)
                 {
-                    var errorString = await ReadOutput(process.StandardError, startupDuration, _serverOptions, null).ConfigureAwait(false);
+                    var errorString = await ProcessHelper.ReadOutput(process.StandardError, startupDuration, _serverOptions, null).ConfigureAwait(false);
 
                     ShutdownServerProcess(process);
 
@@ -293,7 +292,7 @@ namespace Raven.Embedded
 
             if (url == null)
             {
-                var errorString = await ReadOutput(process.StandardError, startupDuration, _serverOptions, null).ConfigureAwait(false);
+                var errorString = await ProcessHelper.ReadOutput(process.StandardError, startupDuration, _serverOptions, null).ConfigureAwait(false);
 
                 ShutdownServerProcess(process);
 
@@ -318,47 +317,6 @@ namespace Raven.Embedded
             {
                 sb.AppendLine("Output:");
                 sb.AppendLine(outputString);
-            }
-
-            return sb.ToString();
-        }
-
-        private static async Task<string?> ReadOutput(StreamReader output, Stopwatch startupDuration, ServerOptions options, Func<string, StringBuilder, Task<bool>>? onLine)
-        {
-            var sb = new StringBuilder();
-
-            Task<string>? readLineTask = null;
-            while (true)
-            {
-                if (readLineTask == null)
-                    readLineTask = output.ReadLineAsync();
-
-                var hasResult = await readLineTask.WaitWithTimeout(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-
-                if (startupDuration.Elapsed > options.MaxServerStartupTimeDuration)
-                    return null;
-
-                if (hasResult == false)
-                    continue;
-
-                var line = readLineTask.Result;
-
-                readLineTask = null;
-
-                var shouldStop = false;
-                if (line != null)
-                {
-                    sb.AppendLine(line);
-
-                    if (onLine != null)
-                        shouldStop = await onLine(line, sb).ConfigureAwait(false);
-                }
-
-                if (shouldStop)
-                    break;
-
-                if (line == null)
-                    break;
             }
 
             return sb.ToString();
