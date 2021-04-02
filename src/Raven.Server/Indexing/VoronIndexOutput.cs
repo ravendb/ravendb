@@ -1,17 +1,10 @@
 ﻿using System;
-using System.Buffers;
 using System.IO;
-using System.IO.Compression;
-using System.Threading;
-using Lucene.Net.Search;
 using Lucene.Net.Store;
-using Raven.Server.ServerWide;
 using Raven.Server.Utils;
-using Sparrow.Global;
 using Sparrow.Logging;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Utils;
-using Sparrow.Utils;
 using Voron.Impl;
 using Voron;
 
@@ -42,7 +35,6 @@ namespace Raven.Server.Indexing
             _tx = tx;
             _indexOutputFilesSummary = indexOutputFilesSummary;
 
-
             _ms = fileCache.RentMemoryStream();
             _tx.ReadTree(_tree).AddStream(name, Stream.Null); // ensure it's visible by LuceneVoronDirectory.FileExists, the actual write is inside Dispose
         }
@@ -62,7 +54,10 @@ namespace Raven.Server.Indexing
                     }
                     // too big, copy the buffer to the file
                     _file = _fileCache.RentFileStream();
+                    var position = _ms.Position;
+                    _ms.Position = 0;
                     _ms.CopyTo(_file);
+                    _file.Position = position;
                     _fileCache.ReturnMemoryStream(_ms);
                     _ms = null;
                 }
@@ -97,7 +92,7 @@ namespace Raven.Server.Indexing
         {
             try
             {
-                if(_ms != null)
+                if (_ms != null)
                     _ms.SetLength(length);
                 else
                     _file.SetLength(length);
@@ -118,10 +113,10 @@ namespace Raven.Server.Indexing
             }
             finally
             {
-                if(_ms != null)
+                if (_ms != null)
                     _fileCache.ReturnMemoryStream(_ms);
                 _ms = null;
-                if(_file != null)
+                if (_file != null)
                     _fileCache.ReturnFileStream(_file);
                 _file = null;
             }
@@ -143,12 +138,12 @@ namespace Raven.Server.Indexing
                 {
                     if (_ms != null)
                     {
-                        _ms.Position = 0;
+                        _ms.Seek(0, SeekOrigin.Begin);
                         files.AddStream(nameSlice, _ms);
                     }
                     else
                     {
-                        _file.Position = 0;
+                        _file.Seek(0, SeekOrigin.Begin);
                         files.AddStream(nameSlice, _file);
                     }
                 }
@@ -165,7 +160,7 @@ namespace Raven.Server.Indexing
                     // can happen when trying to copy from the file stream
                     ThrowDiskFullException();
                 }
-                
+
                 throw;
             }
         }
