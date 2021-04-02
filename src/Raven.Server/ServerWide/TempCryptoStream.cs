@@ -11,12 +11,12 @@ namespace Raven.Server.ServerWide
     {
         private readonly string _file;
         private bool _ignoreSetLength;
-        private readonly FileStream _stream;
+        private readonly Stream _stream;
         private readonly MemoryStream _authenticationTags = new MemoryStream();
         private readonly MemoryStream _nonces = new MemoryStream();
         private readonly long _startPosition;
 
-        public FileStream InnerStream => _stream; 
+        public Stream InnerStream => _stream; 
         public override bool CanRead => true;
         public override bool CanSeek => true;
         public override bool CanWrite => true;
@@ -54,7 +54,7 @@ namespace Raven.Server.ServerWide
             return this;
         }
 
-        public TempCryptoStream(FileStream stream)
+        public TempCryptoStream(Stream stream)
         {
             _stream = stream;
             _startPosition = stream.Position;
