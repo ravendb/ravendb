@@ -1,28 +1,27 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
-using System.IO.Compression;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Global;
+using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Voron;
-using Voron.Platform.Posix;
 
 namespace Raven.Server.Indexing
 {
     /// <summary>
     /// This assume single threaded and is meant to be used for indexing only
+    /// We need to handle multi threaded from the low memory notifications, though 
     /// </summary>
-    public sealed class TempFileCache : IDisposable
+    public sealed class TempFileCache : IDisposable, ILowMemoryHandler
     {
         private readonly StorageEnvironmentOptions _options;
-        private readonly Queue<FileStream> _files = new Queue<FileStream>();
-        private readonly Queue<MemoryStream> _ms = new Queue<MemoryStream>();
+        private readonly ConcurrentQueue<FileStream> _files = new ConcurrentQueue<FileStream>();
+        private readonly ConcurrentQueue<MemoryStream> _ms = new ConcurrentQueue<MemoryStream>();
 
-        private const long MaxFileSizeToReduce = 16 * Constants.Size.Megabyte;
-        private const int MaxFilesInCache = 32;
+        private const long MaxFileSizeToReduceInBytes = 16 * Constants.Size.Megabyte;
+        private const int MaxFilesToKeepInCache = 32;
 
         public TempFileCache(StorageEnvironmentOptions options)
         {
@@ -30,26 +29,38 @@ namespace Raven.Server.Indexing
             string path = _options.TempPath.FullPath;
             if (Directory.Exists(path) == false)
                 Directory.CreateDirectory(path);
-            foreach (string file in Directory.GetDirectories(path,  "*" + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension))
+            foreach (string file in Directory.GetDirectories(path,  "lucene-*" + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension))
             {
                 var info = new FileInfo(file);
-                if (info.Length > MaxFileSizeToReduce || 
-                    _files.Count >= MaxFilesInCache)
+                if (info.Length > MaxFileSizeToReduceInBytes || 
+                    _files.Count >= MaxFilesToKeepInCache)
                 {
                     File.Delete(file);
                 }
                 else
                 {
-                    _files.Enqueue(new FileStream(file, FileMode.OpenOrCreate));
+                    FileStream fileStream;
+                    try
+                    {
+                        fileStream = new FileStream(file, FileMode.Open);
+                    }
+                    catch (IOException)
+                    {
+                        // if can't open, just ignore it.
+                        continue;
+                    }
+                    _files.Enqueue(fileStream);
                 }
             }
+            
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
         public string FullPath  => _options.TempPath.FullPath;
 
         public MemoryStream RentMemoryStream()
         {
-            return _ms.Count > 0 ? _ms.Dequeue() : new MemoryStream(128 * Constants.Size.Kilobyte);
+            return _ms.TryDequeue(out var ms) ? ms : new MemoryStream(128 * Constants.Size.Kilobyte);
         }
 
         public void ReturnMemoryStream(MemoryStream stream)
@@ -60,15 +71,10 @@ namespace Raven.Server.Indexing
 
         public Stream RentFileStream()
         {
-            FileStream stream;
-            if (_files.Count > 0)
-            {
-                stream = _files.Dequeue();
-            }
-            else
+            if (_files.TryDequeue(out var stream) == false)
             {
                 stream = SafeFileStream.Create(
-                    Path.Combine(_options.TempPath.FullPath, Guid.NewGuid() +  StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension),
+                    GetTempFileName(),
                     FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096,
                     FileOptions.DeleteOnClose);
             }
@@ -76,6 +82,11 @@ namespace Raven.Server.Indexing
             if (_options.Encryption.IsEnabled)
                 resultStream= new TempCryptoStream(stream).IgnoreSetLength();
             return resultStream;
+        }
+
+        public static string GetTempFileName(StorageEnvironmentOptions options)
+        {
+            return Path.Combine(options.TempPath.FullPath, "lucene-" + Guid.NewGuid() +  StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension);
         }
 
         public void ReturnFileStream(Stream stream)
@@ -87,12 +98,10 @@ namespace Raven.Server.Indexing
                 _ => throw new ArgumentOutOfRangeException()
             };
 
-            if (s.Length > MaxFileSizeToReduce || 
-                _files.Count >= MaxFilesInCache)
+            if (s.Length > MaxFileSizeToReduceInBytes || 
+                _files.Count >= MaxFilesToKeepInCache)
             {
-                var fileName = s.Name;
-                s.Dispose();
-                PosixFile.DeleteOnClose(fileName);
+                DisposeFile(s);
                 return;
             }
 
@@ -104,23 +113,44 @@ namespace Raven.Server.Indexing
         {
             foreach (FileStream file in _files)
             {
-                string fileName = null;
-                try
-                {
-                    fileName = file.Name;
-                    file.Dispose();
-                }
-                catch (Exception e)
-                {
-                    // no big deal
-                }
-                finally
-                {
-                    if(file != null)
-                        PosixFile.DeleteOnClose(fileName);
-
-                }
+                DisposeFile(file);
             }
+        }
+
+        private static void DisposeFile(FileStream file)
+        {
+            string fileName = null;
+            try
+            {
+                fileName = file.Name;
+                file.Dispose();
+            }
+            catch (Exception e)
+            {
+                // no big deal
+            }
+            finally
+            {
+                if (file != null)
+                    PosixFile.DeleteOnClose(fileName);
+            }
+        }
+
+        public void LowMemory(LowMemorySeverity lowMemorySeverity)
+        {
+            while (_files.TryDequeue(out var s))
+            {
+                DisposeFile(s);
+            }
+
+            while (_ms.TryDequeue(out var ms))
+            {
+                ms.Dispose();
+            }
+        }
+
+        public void LowMemoryOver()
+        {
         }
     }
 }
