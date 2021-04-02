@@ -10,12 +10,13 @@ namespace Raven.Server.ServerWide
     public unsafe class TempCryptoStream : Stream
     {
         private readonly string _file;
-        private readonly bool _ignoreSetLength;
+        private bool _ignoreSetLength;
         private readonly FileStream _stream;
         private readonly MemoryStream _authenticationTags = new MemoryStream();
         private readonly MemoryStream _nonces = new MemoryStream();
         private readonly long _startPosition;
 
+        public FileStream InnerStream => _stream; 
         public override bool CanRead => true;
         public override bool CanSeek => true;
         public override bool CanWrite => true;
@@ -42,10 +43,15 @@ namespace Raven.Server.ServerWide
         private long _blockNumber;
         private long _maxLength;
 
-        public TempCryptoStream(string file, bool ignoreSetLength = false) : this(SafeFileStream.Create(file, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose))
+        public TempCryptoStream(string file) : this(SafeFileStream.Create(file, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose))
         {
             _file = file;
-            _ignoreSetLength = ignoreSetLength;
+        }
+
+        public TempCryptoStream IgnoreSetLength()
+        {
+            _ignoreSetLength = true;
+            return this;
         }
 
         public TempCryptoStream(FileStream stream)
