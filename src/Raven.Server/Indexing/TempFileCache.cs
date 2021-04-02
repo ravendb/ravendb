@@ -74,7 +74,7 @@ namespace Raven.Server.Indexing
             if (_files.TryDequeue(out var stream) == false)
             {
                 stream = SafeFileStream.Create(
-                    GetTempFileName(),
+                    GetTempFileName(_options),
                     FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096,
                     FileOptions.DeleteOnClose);
             }
