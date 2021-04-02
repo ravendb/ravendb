@@ -17,10 +17,10 @@ namespace Raven.Server.Indexing
     public sealed class TempFileCache : IDisposable, ILowMemoryHandler
     {
         private readonly StorageEnvironmentOptions _options;
-        private readonly ConcurrentQueue<FileStream> _files = new ConcurrentQueue<FileStream>();
+        private readonly ConcurrentQueue<TempFileStream> _files = new ConcurrentQueue<TempFileStream>();
         private readonly ConcurrentQueue<MemoryStream> _ms = new ConcurrentQueue<MemoryStream>();
 
-        private const long MaxFileSizeToReduceInBytes = 16 * Constants.Size.Megabyte;
+        private const long MaxFileSizeToKeepInBytes = 16 * Constants.Size.Megabyte;
         private const int MaxFilesToKeepInCache = 32;
 
         public TempFileCache(StorageEnvironmentOptions options)
@@ -29,20 +29,21 @@ namespace Raven.Server.Indexing
             string path = _options.TempPath.FullPath;
             if (Directory.Exists(path) == false)
                 Directory.CreateDirectory(path);
-            foreach (string file in Directory.GetDirectories(path,  "lucene-*" + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension))
+            foreach (string file in Directory.GetDirectories(path, "lucene-*" + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension))
             {
                 var info = new FileInfo(file);
-                if (info.Length > MaxFileSizeToReduceInBytes || 
+                if (info.Length > MaxFileSizeToKeepInBytes ||
                     _files.Count >= MaxFilesToKeepInCache)
                 {
                     File.Delete(file);
                 }
                 else
                 {
-                    FileStream fileStream;
+                    TempFileStream fileStream;
                     try
                     {
-                        fileStream = new FileStream(file, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
+                        fileStream = new TempFileStream(new FileStream(file, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose));
+                        fileStream.ResetLength();
                     }
                     catch (IOException)
                     {
@@ -52,11 +53,11 @@ namespace Raven.Server.Indexing
                     _files.Enqueue(fileStream);
                 }
             }
-            
+
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
-        public string FullPath  => _options.TempPath.FullPath;
+        public string FullPath => _options.TempPath.FullPath;
 
         public MemoryStream RentMemoryStream()
         {
@@ -73,32 +74,35 @@ namespace Raven.Server.Indexing
         {
             if (_files.TryDequeue(out var stream) == false)
             {
-                stream = SafeFileStream.Create(
+                stream = new TempFileStream(SafeFileStream.Create(
                     GetTempFileName(_options),
                     FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096,
-                    FileOptions.DeleteOnClose);
+                    FileOptions.DeleteOnClose));
             }
+            else
+                stream.ResetLength();
+
             Stream resultStream = stream;
             if (_options.Encryption.IsEnabled)
-                resultStream= new TempCryptoStream(stream).IgnoreSetLength();
+                resultStream = new TempCryptoStream(stream).IgnoreSetLength();
             return resultStream;
         }
 
         public static string GetTempFileName(StorageEnvironmentOptions options)
         {
-            return Path.Combine(options.TempPath.FullPath, "lucene-" + Guid.NewGuid() +  StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension);
+            return Path.Combine(options.TempPath.FullPath, "lucene-" + Guid.NewGuid() + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension);
         }
 
         public void ReturnFileStream(Stream stream)
         {
-            FileStream s = stream switch
+            TempFileStream s = stream switch
             {
-                TempCryptoStream tcs => tcs.InnerStream,
-                FileStream fs => fs,
+                TempCryptoStream tcs => (TempFileStream)tcs.InnerStream,
+                TempFileStream bs => bs,
                 _ => throw new ArgumentOutOfRangeException()
             };
 
-            if (s.Length > MaxFileSizeToReduceInBytes || 
+            if (s.InnerStream.Length > MaxFileSizeToKeepInBytes ||
                 _files.Count >= MaxFilesToKeepInCache)
             {
                 DisposeFile(s);
@@ -108,24 +112,24 @@ namespace Raven.Server.Indexing
             s.Position = 0;
             _files.Enqueue(s);
         }
-        
+
         public void Dispose()
         {
-            foreach (FileStream file in _files)
+            foreach (var file in _files)
             {
                 DisposeFile(file);
             }
         }
 
-        private static void DisposeFile(FileStream file)
+        private static void DisposeFile(TempFileStream file)
         {
             string fileName = null;
             try
             {
-                fileName = file.Name;
+                fileName = file.InnerStream.Name;
                 file.Dispose();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 // no big deal
             }
@@ -151,6 +155,63 @@ namespace Raven.Server.Indexing
 
         public void LowMemoryOver()
         {
+        }
+    }
+
+    public class TempFileStream : Stream
+    {
+        public FileStream InnerStream;
+        private long _length;
+
+        public TempFileStream(FileStream inner)
+        {
+            InnerStream = inner ?? throw new ArgumentNullException(nameof(inner));
+            _length = inner.Length;
+        }
+
+        public override void Flush()
+        {
+            InnerStream.Flush();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var toRead = (int)Math.Min(count, _length - InnerStream.Position);
+            return InnerStream.Read(buffer, offset, toRead);
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            return InnerStream.Seek(offset, origin);
+        }
+
+        public override void SetLength(long value)
+        {
+            InnerStream.SetLength(value);
+            _length = value;
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            InnerStream.Write(buffer, offset, count);
+            _length += count;
+        }
+
+        public override bool CanRead => InnerStream.CanRead;
+        public override bool CanSeek => InnerStream.CanSeek;
+        public override bool CanWrite => InnerStream.CanWrite;
+        public override long Length => _length;
+        public override long Position { get => InnerStream.Position; set => InnerStream.Position = value; }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            InnerStream.Dispose();
+        }
+
+        public void ResetLength()
+        {
+            _length = 0;
         }
     }
 }
