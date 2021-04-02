@@ -419,7 +419,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
             }
 
-            static List<MetadataReference> FromPackage(string packageName, string packageVersion, string packageSourceUrl)
+            static HashSet<MetadataReference> FromPackage(string packageName, string packageVersion, string packageSourceUrl)
             {
                 try
                 {
@@ -429,19 +429,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (string.IsNullOrWhiteSpace(packageVersion))
                         throw new ArgumentException($"'{nameof(packageVersion)}' cannot be null or whitespace", nameof(packageVersion));
 
-                    var paths = AsyncHelpers.RunSync(() => MultiSourceNuGetFetcher.Instance.DownloadAsync(packageName, packageVersion, packageSourceUrl));
-                    if (paths == null)
+                    var package = AsyncHelpers.RunSync(() => MultiSourceNuGetFetcher.Instance.DownloadAsync(packageName, packageVersion, packageSourceUrl));
+                    if (package == null)
                         throw new InvalidOperationException($"NuGet package '{packageName}' version '{packageVersion}' from '{packageSourceUrl ?? MultiSourceNuGetFetcher.Instance.DefaultPackageSourceUrl}' does not exist.");
 
-                    var references = new List<MetadataReference>();
+                    var references = new HashSet<MetadataReference>();
 
-                    foreach (var path in paths)
-                    {
-                        using (DisableMatchingAdditionalAssembliesByName())
-                        {
-                            var assembly = LoadAssembly(path);
-                            references.Add(RegisterAssembly(assembly));
-                        }
+                    RegisterPackage(package, userDefined: true, references);
                     }
 
                     return references;
@@ -466,7 +460,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 AdditionalAssemblies.Value.TryAdd(assemblyName.FullName, additionalAssembly);
 
                 if (additionalAssemblyByName == null || additionalAssemblyByName.AssemblyName.Version < assemblyName.Version)
-                    AdditionalAssemblies.Value.TryAdd(assemblyName.Name, additionalAssembly);
+                AdditionalAssemblies.Value.TryAdd(assemblyName.Name, additionalAssembly);
 
                 return additionalAssembly.AssemblyMetadataReference;
             }
@@ -485,6 +479,24 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
 
                 return Assembly.LoadFile(path);
+            }
+
+            static void RegisterPackage(NuGetFetcher.NuGetPackage package, bool userDefined, HashSet<MetadataReference> references)
+            {
+                if (package == null)
+                    return;
+
+                foreach (string library in package.Libraries)
+                {
+                    var assembly = LoadAssembly(library);
+                    references.Add(RegisterAssembly(assembly));
+                }
+
+                if (userDefined)
+                    NuGetNativeLibraryResolver.RegisterPath(package.NativePath);
+
+                foreach (NuGetFetcher.NuGetPackage dependency in package.Dependencies)
+                    RegisterPackage(dependency, userDefined: false, references);
             }
         }
 
