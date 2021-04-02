@@ -42,7 +42,7 @@ namespace Raven.Server.Indexing
                     FileStream fileStream;
                     try
                     {
-                        fileStream = new FileStream(file, FileMode.Open);
+                        fileStream = new FileStream(file, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
                     }
                     catch (IOException)
                     {
