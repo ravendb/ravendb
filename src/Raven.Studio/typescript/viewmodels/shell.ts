@@ -152,13 +152,10 @@ class shell extends viewModelBase {
             this.currentUrlHash(location.hash);
         });
         
-        this.cloudClusterAdmin = ko.pureComputed(() => {
-            return true; //TODO: forcing TRUE for development time!
-            /* TODO:
+        this.cloudClusterAdmin = ko.pureComputed(() => {            
             const isCloud = license.cloudLicense();
             const isClusterAdmin = accessManager.default.securityClearance() === "ClusterAdmin";
-            return isCloud && isClusterAdmin;
-            */
+            return isCloud && isClusterAdmin;            
         });
     }
     
