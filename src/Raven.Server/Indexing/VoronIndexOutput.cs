@@ -64,6 +64,7 @@ namespace Raven.Server.Indexing
                     _file = _fileCache.RentFileStream();
                     _ms.CopyTo(_file);
                     _fileCache.ReturnMemoryStream(_ms);
+                    _ms = null;
                 }
                 _file.Write(b, offset, len);
             }
