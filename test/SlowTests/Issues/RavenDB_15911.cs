@@ -34,7 +34,7 @@ namespace SlowTests.Issues
 
             }
 
-            string temIndexFile = VoronIndexOutput.GetTempFilePath(Options, "dummy");
+            string temIndexFile = TempFileCache.GetTempFileName(Options);
 
             using (File.Create(temIndexFile))
             {
