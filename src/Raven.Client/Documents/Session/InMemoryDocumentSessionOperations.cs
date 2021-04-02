@@ -1180,7 +1180,7 @@ more responsive application.
         public void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true,
             int replicas = 1, bool majority = false)
         {
-            var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
+            var realTimeout = timeout ?? Conventions.WaitForReplicationAfterSaveChangesTimeout;
             if (_saveChangesOptions == null)
                 _saveChangesOptions = new BatchOptions();
 
@@ -1199,7 +1199,7 @@ more responsive application.
         public void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = false,
             string[] indexes = null)
         {
-            var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
+            var realTimeout = timeout ?? Conventions.WaitForIndexesAfterSaveChangesTimeout;
             if (_saveChangesOptions == null)
                 _saveChangesOptions = new BatchOptions();
 

@@ -121,6 +121,36 @@ namespace EmbeddedTests
             }
         }
 
+        [Fact]
+        public async Task TestEmbedded_RuntimeFrameworkVersionMatcher()
+        {
+            var paths = CopyServer();
+
+            using (var embedded = new EmbeddedServer())
+            {
+                var options = new ServerOptions
+                {
+                    ServerDirectory = paths.ServerDirectory,
+                    DataDirectory = paths.DataDirectory,
+                };
+
+                var frameworkVersion = new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion(options.FrameworkVersion)
+                {
+                    Patch = null
+                };
+
+                options.FrameworkVersion = frameworkVersion.ToString();
+
+                embedded.StartServer(options);
+
+                var pid1 = await embedded.GetServerProcessIdAsync();
+                Assert.True(pid1 > 0);
+            }
+        }
+
+
+
+
         private class Person
         {
             public string Id { get; set; }
