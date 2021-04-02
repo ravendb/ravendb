@@ -6,6 +6,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.ServerWide;
 using Sparrow;
+using Sparrow.LowMemory;
 using Sparrow.Platform;
 
 namespace Raven.Server.Config.Categories
@@ -25,6 +26,23 @@ namespace Raven.Server.Config.Categories
 
             MaximumSizePerSegment = new Size(PlatformDetails.Is32Bits ? 128 : 1024, SizeUnit.Megabytes);
             LargeSegmentSizeToMerge = new Size(PlatformDetails.Is32Bits ? 16 : 32, SizeUnit.Megabytes);
+
+            var totalMem = MemoryInformation.TotalPhysicalMemory;
+
+            Size defaultEncryptedTransactionSizeLimit;
+
+            if (PlatformDetails.Is32Bits || _root.Storage.ForceUsing32BitsPager || totalMem <= new Size(1, SizeUnit.Gigabytes))
+                defaultEncryptedTransactionSizeLimit = new Size(96, SizeUnit.Megabytes);
+            else if (totalMem <= new Size(4, SizeUnit.Gigabytes))
+                defaultEncryptedTransactionSizeLimit = new Size(128, SizeUnit.Megabytes);
+            else if (totalMem <= new Size(16, SizeUnit.Gigabytes))
+                defaultEncryptedTransactionSizeLimit = new Size(256, SizeUnit.Megabytes);
+            else if (totalMem <= new Size(64, SizeUnit.Gigabytes))
+                defaultEncryptedTransactionSizeLimit = new Size(512, SizeUnit.Megabytes);
+            else
+                defaultEncryptedTransactionSizeLimit = new Size(1024, SizeUnit.Megabytes);
+
+            EncryptedTransactionSizeLimit = defaultEncryptedTransactionSizeLimit;
         }
 
         [DefaultValue(false)]
@@ -202,7 +220,7 @@ namespace Raven.Server.Config.Categories
         public Size? TransactionSizeLimit { get; protected set; }
 
         [Description("Transaction size limit, for encrypted database only, after which an index will stop and complete the current batch")]
-        [DefaultValue(256)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Encrypted.TransactionSizeLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
@@ -246,6 +264,13 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.ErrorIndexStartupBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public IndexStartupBehavior ErrorIndexStartupBehavior { get; set; }
+
+        [Description("Limits the number of concurrently running and processing indexes on the server. Default: null (no limit)")]
+        [DefaultValue(null)]
+        [MinValue(1)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.MaxNumberOfConcurrentlyRunningIndexes", ConfigurationEntryScope.ServerWideOnly)]
+        public int? MaxNumberOfConcurrentlyRunningIndexes { get; set; }
 
         [Description("Location of NuGet packages cache")]
         [DefaultValue("Packages/NuGet")]
