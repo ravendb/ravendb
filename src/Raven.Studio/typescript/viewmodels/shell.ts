@@ -82,6 +82,8 @@ class shell extends viewModelBase {
     developerLicense = license.developerLicense;
 
     cloudClusterAdmin: KnockoutObservable<boolean>;
+    colorCustomizationDisabled = ko.observable<boolean>(false);
+    applyColorCustomization: KnockoutObservable<boolean>;
     
     clientCertificate = clientCertificateModel.certificateInfo;
 
@@ -152,11 +154,18 @@ class shell extends viewModelBase {
             this.currentUrlHash(location.hash);
         });
         
-        this.cloudClusterAdmin = ko.pureComputed(() => {            
+        this.cloudClusterAdmin = ko.pureComputed(() => {        
             const isCloud = license.cloudLicense();
             const isClusterAdmin = accessManager.default.securityClearance() === "ClusterAdmin";
-            return isCloud && isClusterAdmin;            
+            return isCloud && isClusterAdmin;
         });
+        
+        this.applyColorCustomization = ko.pureComputed(() => {
+            const cloudClusterAdmin = this.cloudClusterAdmin();
+            const disableColors = this.colorCustomizationDisabled();
+            
+            return !disableColors && cloudClusterAdmin;
+        })
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -494,6 +503,10 @@ class shell extends viewModelBase {
             
             return serverUrl + "/studio/index.html" + hash;
         })
+    }
+
+    disableColorCustomization() {
+        this.colorCustomizationDisabled(true);
     }
 }
 

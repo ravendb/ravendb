@@ -26,6 +26,9 @@
 <aside class="top-alert" data-bind="visible: developerLicense">
     Developer License - Not for Production Use
  </aside>
+<aside class="top-alert" data-bind="visible: applyColorCustomization">
+    !!! Running as Cloud Cluster Admin !!!  <a href="#" data-bind="click: disableColorCustomization">Disable color customization</a>
+</aside>
 <nav class="navbar">
     <div class="navbar-header" data-bind="style: { 'flex-basis': mainMenu.width() + 'px', width: mainMenu.width() + 'px' }">
         <a class="navbar-brand hidden-xs" data-bind="attr: { href: appUrls.serverDashboard }"><i class="icon-logo"></i></a>
@@ -268,7 +271,7 @@
     </li>
 </script>
 
-<div class="prime-container" data-bind="css: { 'cloud-cluster-admin': cloudClusterAdmin }">
+<div class="prime-container" data-bind="css: { 'cloud-cluster-admin': applyColorCustomization }">
     <nav id="main-menu" class="main-menu"
          data-bind="with: mainMenu, attr: { 'data-level': mainMenu.level }, style: { 'flex-basis': mainMenu.width() + 'px', width: mainMenu.width() + 'px' }">
         <div class="level-0"
