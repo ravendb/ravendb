@@ -43,7 +43,7 @@ class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Serv
         } else if (this.nodeTag === "C") {
             return "127.0.0.3:8084";
         } else {
-            throw new Error("Don't expect too much - this is temporary impl!"); //TODOO: 
+            throw new Error("Don't expect too much - this is temporary impl!"); //TODO: : 
         }
     }
 

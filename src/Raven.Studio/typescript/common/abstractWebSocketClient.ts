@@ -21,7 +21,7 @@ abstract class abstractWebSocketClient<T> {
         this.connectToWebSocketTask = $.Deferred<void>();
 
         if ("WebSocket" in window) {
-            // let children classes to fully initialize  //TODO: check if this doesn't break other ws!
+            // let children classes to fully initialize
             setTimeout(() => this.connect(() => this.connectWebSocket(connectArgs)), 0);
         } else {
             //The browser doesn't support websocket
@@ -66,7 +66,6 @@ abstract class abstractWebSocketClient<T> {
     }
     
     private connectWebSocket(connectArgs: any) {
-        
         const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
         const queryString = this.webSocketUrlFactory(connectArgs);
         const queryStringWithStudioMarker = queryString.includes("?") ? queryString + "&fromStudio=true" : queryString + "?fromStudio=true";
@@ -100,7 +99,7 @@ abstract class abstractWebSocketClient<T> {
             }
 
             if (this.autoReconnect) {
-                this.connect(() => this.connectWebSocket(connectArgs));
+                setTimeout(() => this.connect(() => this.connectWebSocket(connectArgs)), 1000);
             }
         };
         

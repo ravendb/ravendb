@@ -7,6 +7,7 @@ import appUrl = require("common/appUrl");
 import trafficWatchItem = require("models/resources/widgets/trafficWatchItem");
 import generalUtils = require("common/generalUtils");
 import perNodeStatItems = require("models/resources/widgets/perNodeStatItems");
+import widget = require("viewmodels/resources/widgets/widget");
 
 class databaseTrafficWidget extends abstractDatabaseAndNodeAwareTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseTrafficWatchPayload, 
     perNodeStatItems<trafficWatchItem>, trafficWatchItem> {
@@ -33,8 +34,8 @@ class databaseTrafficWidget extends abstractDatabaseAndNodeAwareTableWidget<Rave
         return [
             new textColumn<trafficWatchItem>(grid, x => x.hideDatabaseName ? "" : x.database, "Database", "35%"),
             new nodeTagColumn<trafficWatchItem>(grid, item => this.prepareUrl(item)),
-            new textColumn<trafficWatchItem>(grid, x => x.requestsPerSecond.toLocaleString(), "Requests/s", "15%"),
-            new textColumn<trafficWatchItem>(grid, x => x.writesPerSecond.toLocaleString(), "Writes/s", "15%"),
+            new textColumn<trafficWatchItem>(grid, x => widget.formatNumber(x.requestsPerSecond), "Requests/s", "15%"),
+            new textColumn<trafficWatchItem>(grid, x => widget.formatNumber(x.writesPerSecond), "Writes/s", "15%"),
             new textColumn<trafficWatchItem>(grid, x => generalUtils.formatBytesToSize(x.dataWritesPerSecond), "Data written/s", "15%"),
         ];
     }

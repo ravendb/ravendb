@@ -1,3 +1,4 @@
+import app = require("durandal/app");
 import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBasedWidget");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
@@ -5,6 +6,8 @@ import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import appUrl = require("common/appUrl");
 import generalUtils = require("common/generalUtils");
+import createDatabase = require("viewmodels/resources/createDatabase");
+import databasesManager = require("common/shell/databasesManager");
 
 interface statsBase<TItem> {
     disconnected: KnockoutObservable<boolean>;
@@ -15,8 +18,9 @@ interface statsBase<TItem> {
 abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends statsBase<TTableItem>, TTableItem extends databaseAndNodeAwareStats> extends websocketBasedWidget<TRaw> {
     protected gridController = ko.observable<virtualGridController<TTableItem>>();
     protected clusterManager = clusterTopologyManager.default;
+    protected databaseManager = databasesManager.default;
 
-    noDatabases = ko.observable<boolean>(true);
+    noDatabases = ko.pureComputed(() => !this.databaseManager.databases().length);
 
     spinners = {
         loading: ko.observable<boolean>(true)
@@ -27,16 +31,8 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
     onData(nodeTag: string, data: TRaw) {
         this.scheduleSyncUpdate(() => {
             this.spinners.loading(false);
-            this.withStats(nodeTag, x => {
-                x.items = this.mapItems(nodeTag, data);
-                this.checkForNoData();
-            });
+            this.withStats(nodeTag, x => x.items = this.mapItems(nodeTag, data));
         });
-    }
-    
-    private checkForNoData() {
-        const anyData = this.nodeStats().some(x => x.items.length);
-        this.noDatabases(!anyData);
     }
     
     protected abstract mapItems(nodeTag: string, data: TRaw): TTableItem[];
@@ -156,7 +152,8 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
     protected abstract generateLocalLink(database: string): string;
 
     newDatabase() {
-        console.log("TODO"); //TODO:
+        const createDbView = new createDatabase("newDatabase");
+        app.showBootstrapDialog(createDbView);
     }
 }
 
