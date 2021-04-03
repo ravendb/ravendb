@@ -2,6 +2,7 @@
 
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
+import generalUtils = require("common/generalUtils");
 
 abstract class widget<TConfig = unknown, TState = unknown> {
     static nextWidgetId = 1;
@@ -113,6 +114,16 @@ abstract class widget<TConfig = unknown, TState = unknown> {
             clearTimeout(this.firstSyncUpdateTaskId);
             this.firstSyncUpdateTaskId = -1;
         }
+    }
+
+    static formatNumber(input: number): string {
+        if (input === 0) {
+            return "0";
+        }
+        if (input > 1) {
+            return Math.round(input).toLocaleString();
+        }
+        return generalUtils.formatNumberToStringFixed(input, 2);
     }
 }
 

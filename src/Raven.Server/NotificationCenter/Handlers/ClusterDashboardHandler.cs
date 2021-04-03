@@ -24,7 +24,6 @@ namespace Raven.Server.NotificationCenter.Handlers
         [RavenAction("/cluster-dashboard/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task Get()
         {
-            //TODO: access control
             //TODO: check for param - withProxy?
 
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())

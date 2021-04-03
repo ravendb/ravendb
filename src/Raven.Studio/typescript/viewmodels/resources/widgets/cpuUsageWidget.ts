@@ -4,7 +4,6 @@ import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 import cpuUsage = require("models/resources/widgets/cpuUsage");
 
-
 class cpuUsageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.Notifications.CpuUsagePayload> {
    
     ravenChart: lineChart;
