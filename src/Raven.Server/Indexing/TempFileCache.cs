@@ -80,7 +80,9 @@ namespace Raven.Server.Indexing
                     FileOptions.DeleteOnClose));
             }
             else
+            {
                 stream.ResetLength();
+            }
 
             Stream resultStream = stream;
             if (_options.Encryption.IsEnabled)
@@ -182,7 +184,10 @@ namespace Raven.Server.Indexing
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            return InnerStream.Seek(offset, origin);
+            long seek = InnerStream.Seek(offset, origin);
+            if (seek > _length)
+                throw new ArgumentOutOfRangeException($"Cannot seek ({seek}) beyond the end of the file ({_length})");
+            return seek;
         }
 
         public override void SetLength(long value)
@@ -193,15 +198,26 @@ namespace Raven.Server.Indexing
 
         public override void Write(byte[] buffer, int offset, int count)
         {
+            var pos = InnerStream.Position;
             InnerStream.Write(buffer, offset, count);
-            _length += count;
+            _length = Math.Max(_length, pos + count);
         }
 
         public override bool CanRead => InnerStream.CanRead;
         public override bool CanSeek => InnerStream.CanSeek;
         public override bool CanWrite => InnerStream.CanWrite;
         public override long Length => _length;
-        public override long Position { get => InnerStream.Position; set => InnerStream.Position = value; }
+
+        public override long Position
+        {
+            get => InnerStream.Position;
+            set
+            {
+                if(value > _length)
+                    throw new ArgumentOutOfRangeException($"Cannot set position ({value}) beyond the end of the file ({_length})");
+                InnerStream.Position = value;   
+            }
+        }
 
         protected override void Dispose(bool disposing)
         {
@@ -212,6 +228,7 @@ namespace Raven.Server.Indexing
         public void ResetLength()
         {
             _length = 0;
+            InnerStream.Position = 0;
         }
     }
 }
