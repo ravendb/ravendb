@@ -1286,9 +1286,14 @@ namespace Sparrow.Server
 
         public InternalScope From(string value, out ByteString str)
         {
+            return From(value.AsSpan(), ByteStringType.Mutable, out str);
+        }
+
+        public InternalScope From(ReadOnlySpan<char> value, out ByteString str)
+        {
             return From(value, ByteStringType.Mutable, out str);
         }
-        
+
         public InternalScope From(char* value, int charCount, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
@@ -1306,27 +1311,25 @@ namespace Sparrow.Server
 
         public InternalScope From(string value, ByteStringType type, out ByteString str)
         {
+            return From(value.AsSpan(), type, out str);
+        }
+        public InternalScope From(ReadOnlySpan<char> value, ByteStringType type, out ByteString str)
+        {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            var byteCount = value.GetUtf8MaxSize();
+            var byteCount = Encodings.Utf8.GetMaxByteCount(value.Length) + 1;
             str = AllocateInternal(byteCount, type);
-            fixed (char* ptr = value)
-            {
-                int length = Encodings.Utf8.GetBytes(ptr, value.Length, str.Ptr, byteCount);
-
-                // We can do this because it is internal. See if it makes sense to actually give this ability. 
-                str._pointer->Length = length;
-            }
+            str._pointer->Length = Encodings.Utf8.GetBytes(value, new Span<byte>(str.Ptr, byteCount));
 
             RegisterForValidation(str);
             return new InternalScope(this, str);
         }
 
-        public InternalScope From(string value, byte endSeparator, ByteStringType type, out ByteString str)
+        public InternalScope From(ReadOnlySpan<char> value, byte endSeparator, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            var byteCount = value.GetUtf8MaxSize() + 1;
+            var byteCount = Encodings.Utf8.GetMaxByteCount(value.Length) + 1;
             str = AllocateInternal(byteCount, type);
             fixed (char* ptr = value)
             {
@@ -1343,14 +1346,24 @@ namespace Sparrow.Server
 
         public InternalScope From(string value, Encoding encoding, out ByteString str)
         {
+            return From(value.AsSpan(), encoding, ByteStringType.Immutable, out str);
+        }
+
+        public InternalScope From(ReadOnlySpan<char> value, Encoding encoding, out ByteString str)
+        {
             return From(value, encoding, ByteStringType.Immutable, out str);
         }
 
         public InternalScope From(string value, Encoding encoding, ByteStringType type, out ByteString str)
         {
+            return From(value.AsSpan(), encoding, type, out str);
+        }
+
+        public InternalScope From(ReadOnlySpan<char> value, Encoding encoding, ByteStringType type, out ByteString str)
+        {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            var byteCount = value.GetUtf8MaxSize();
+            var byteCount = Encodings.Utf8.GetMaxByteCount(value.Length) + 1;
 
             str = AllocateInternal(byteCount, type);
             fixed (char* ptr = value)
@@ -1365,7 +1378,7 @@ namespace Sparrow.Server
             return new InternalScope(this, str);
         }
 
-        public InternalScope From(byte[] value, int offset, int count, ByteStringType type, out ByteString str)
+        public InternalScope From(ReadOnlySpan<byte> value, int offset, int count, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
@@ -1379,12 +1392,12 @@ namespace Sparrow.Server
             return new InternalScope(this, str);
         }
 
-        public InternalScope From(byte[] value, int offset, int count, out ByteString str)
+        public InternalScope From(ReadOnlySpan<byte> value, int offset, int count, out ByteString str)
         {
             return From(value, offset, count, ByteStringType.Immutable, out str);
         }
 
-        public InternalScope From(byte[] value, int size, ByteStringType type, out ByteString str)
+        public InternalScope From(ReadOnlySpan<byte> value, int size, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
@@ -1398,7 +1411,7 @@ namespace Sparrow.Server
             return new InternalScope(this, str);
         }
 
-        public InternalScope From(byte[] value, int size, out ByteString str)
+        public InternalScope From(ReadOnlySpan<byte> value, int size, out ByteString str)
         {
             return From(value, size, ByteStringType.Immutable, out str);
         }
