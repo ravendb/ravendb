@@ -93,9 +93,23 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext.InternalScope From(ByteStringContext context, ReadOnlySpan<char> value, out Slice str)
+        {
+            return From(context, value, ByteStringType.Mutable, out str);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope From(ByteStringContext context, string value, out Slice str)
         {
             return From(context, value, ByteStringType.Mutable, out str);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext.InternalScope From(ByteStringContext context, ReadOnlySpan<char> value, ByteStringType type, out Slice str)
+        {
+            var scope = context.From(value, type, out ByteString s);
+            str = new Slice(s);
+            return scope;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -115,13 +129,21 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext.InternalScope From(ByteStringContext context, byte[] value, out Slice str)
+        public static ByteStringContext.InternalScope From(ByteStringContext context, ReadOnlySpan<char> value, byte endSeparator, ByteStringType type, out Slice str)
+        {
+            var scope = context.From(value, endSeparator, type, out ByteString s);
+            str = new Slice(s);
+            return scope;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext.InternalScope From(ByteStringContext context, ReadOnlySpan<byte> value, out Slice str)
         {
             return From(context, value, ByteStringType.Immutable, out str);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext.InternalScope From(ByteStringContext context, byte[] value, ByteStringType type, out Slice str)
+        public static ByteStringContext.InternalScope From(ByteStringContext context, ReadOnlySpan<byte> value, ByteStringType type, out Slice str)
         {
             var scope = context.From(value, 0, value.Length, type, out ByteString byteString);
             str = new Slice(byteString);
@@ -129,7 +151,7 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext.InternalScope From(ByteStringContext context, byte[] value, int offset, int count, ByteStringType type, out Slice str)
+        public static ByteStringContext.InternalScope From(ByteStringContext context, ReadOnlySpan<byte> value, int offset, int count, ByteStringType type, out Slice str)
         {
             var scope = context.From(value, offset, count, type, out ByteString byteString);
             str = new Slice(byteString);
