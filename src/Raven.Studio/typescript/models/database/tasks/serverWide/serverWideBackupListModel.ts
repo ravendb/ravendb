@@ -3,7 +3,7 @@ import appUrl = require("common/appUrl");
 import serverWideTaskListModel = require("models/database/tasks/serverWide/serverWideTaskListModel"); 
 import generalUtils = require("common/generalUtils");
 import shell = require("viewmodels/shell");
-import getAllServerWideTasksCommand = require("commands/resources/serverWide/getAllServerWideTasksCommand");
+import getAllServerWideTasksCommand = require("commands/serverWide/tasks/getAllServerWideTasksCommand");
 
 class serverWideBackupListModel extends serverWideTaskListModel {
 

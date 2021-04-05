@@ -16,7 +16,7 @@ class saveCustomAnalyzerCommand extends commandBase {
 
         return this.put<void>(url, JSON.stringify(payload), this.db, { dataType: undefined })
             .fail((response: JQueryXHR) => {
-                this.reportError("Failed to save custom analyhzer", response.responseText, response.statusText);
+                this.reportError("Failed to save custom analyzer", response.responseText, response.statusText);
             })
             .done(() => {
                 this.reportSuccess(`Saved custom analyzer ${this.analyzerDto.Name}`);

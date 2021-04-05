@@ -1,0 +1,46 @@
+<div class="flex-vertical absolute-fill content-margin">
+    <div class="row flex-row flex-grow flex-stretch-items">
+        <div class="col-sm-12 col-lg-6 flex-vertical">
+            <div class="flex-header">
+                <div>
+                    <a class="btn btn-primary" data-bind="attr: { href: addUrl }">
+                        <i class="icon-plus"></i><span>Add a Server-Wide Custom Analyzer</span>
+                    </a>
+                </div>
+            </div>
+            <div class="hr-title margin-top">
+                <h5 class="no-text-transform"><span>Server-wide custom analyzers</span></h5><hr>
+            </div>
+            <div data-bind="foreach: serverWideAnalyzers">
+                <div class="panel item">
+                    <div class="padding padding-sm">
+                        <div class="flex-horizontal">
+                            <div class="flex-grow info">
+                                <span data-bind="text: name"></span>
+                            </div>
+                            <div class="actions">
+                                <button type="button" data-bind="click: _.partial($root.editServerWideAnalyzer, $data)"
+                                        class="btn btn-default"><i class="icon-edit" title="Edit server-wide custom analyzer"></i>
+                                </button>
+                                <button type="button" data-bind="click: _.partial($root.confirmRemoveServerWideAnalyzer, $data)"
+                                        class="btn btn-danger"><i class="icon-trash" title="Delete server-wide custom analyzer"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center text-muted margin-top" data-bind="visible: serverWideAnalyzers().length === 0">
+                <i class="icon-lg icon-empty-set"></i>
+                <h2 class="margin-top margin-top-sm">No Server-Wide Custom Analyzers have been defined</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/html" id="empty-test-results-template">
+    No results found.
+</script>
+
+<div class="tooltip json-preview lg custom-analyzers-tooltip" style="opacity: 0">
+</div>
