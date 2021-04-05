@@ -37,6 +37,7 @@ import popoverUtils = require("common/popoverUtils");
 import generalUtils = require("common/generalUtils");
 import documentHelpers = require("common/helpers/database/documentHelpers");
 import getCustomAnalyzersCommand = require("commands/database/settings/getCustomAnalyzersCommand");
+import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyzers/getServerWideCustomAnalyzersCommand");
 
 class editIndex extends viewModelBase {
 
@@ -270,10 +271,19 @@ class editIndex extends viewModelBase {
     }
 
     private fetchCustomAnalyzers() {
+        let analyzersList = new Array<string>();
+        
         new getCustomAnalyzersCommand(this.activeDatabase(), true)
             .execute()
             .done((customAnalyzers) =>
-                this.editedIndex().registerCustomAnalyzers(customAnalyzers.map(x => x.Name)));
+                analyzersList.push(...customAnalyzers.map(x => x.Name)));
+
+        new getServerWideCustomAnalyzersCommand()
+            .execute()
+            .done((serverWideCustomAnalyzers) =>
+                analyzersList.push(...serverWideCustomAnalyzers.map(x => x.Name)));
+
+        this.editedIndex().registerCustomAnalyzers(analyzersList);
     }
 
     private fetchIndexHistory() {

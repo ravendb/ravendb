@@ -2,60 +2,72 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import getCustomAnalyzersCommand = require("commands/database/settings/getCustomAnalyzersCommand");
 import deleteCustomAnalyzerCommand = require("commands/database/settings/deleteCustomAnalyzerCommand");
+import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyzers/getServerWideCustomAnalyzersCommand");
 import database = require("models/resources/database");
 import router = require("plugins/router");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import generalUtils = require("common/generalUtils");
+import analyzerListItemModel = require("models/database/settings/analyzerListItemModel");
+import accessManager = require("common/shell/accessManager");
 
-class analyzerListItem {
-    
-    definition: Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
-    
-    constructor(dto: Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition) {
-        this.definition = dto;
-    }
-    
-    get name() {
-        return this.definition.Name;
-    }
-}
 
 class customAnalyzers extends viewModelBase {
-    analyzers = ko.observableArray<analyzerListItem>([]);
+    analyzers = ko.observableArray<analyzerListItemModel>([]);
+    serverWideAnalyzers = ko.observableArray<analyzerListItemModel>([]);
     
     addUrl = ko.pureComputed(() => appUrl.forEditCustomAnalyzer(this.activeDatabase()));
     
-    isFirstRun = true;
+    serverWideCustomAnalyzersUrl = appUrl.forServerWideCustomAnalyzers();
+    canNavigateToServerWideCustomAnalyzers: KnockoutComputed<boolean>;
     
     constructor() {
         super();
         
         aceEditorBindingHandler.install();
         this.bindToCurrentInstance("confirmRemoveAnalyzer", "editAnalyzer");
+
+        this.canNavigateToServerWideCustomAnalyzers = accessManager.default.clusterAdminOrClusterNode;
     }
     
     activate(args: any) {
         super.activate(args);
         
-        return this.loadAnalyzers();
+        return $.when<any>(this.loadAnalyzers(), this.loadServerWideAnalyzers())
+            .done(() => {
+                this.analyzers().forEach(analyzer => {
+                    if (_.includes(this.serverWideAnalyzers().map(x => x.name), analyzer.name)) {
+                        analyzer.overrideServerWide(true);
+                    }
+                })
+            })
     }
     
     private loadAnalyzers() {
         return new getCustomAnalyzersCommand(this.activeDatabase())
             .execute()
-            .done(analyzers => {
-                this.analyzers(analyzers.map(x => new analyzerListItem(x)));
-            });
+            .done(analyzers => this.analyzers(analyzers.map(x => new analyzerListItemModel(x))));
+    }
+
+    private loadServerWideAnalyzers() {
+        return new getServerWideCustomAnalyzersCommand()
+            .execute()
+            .done(analyzers => this.serverWideAnalyzers(analyzers.map(x => new analyzerListItemModel(x))));
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+
+        $('.custom-analyzers [data-toggle="tooltip"]').tooltip();
     }
     
-    editAnalyzer(analyzer: analyzerListItem) {
+    editAnalyzer(analyzer: analyzerListItemModel) {
         const url = appUrl.forEditCustomAnalyzer(this.activeDatabase(), analyzer.name);
         router.navigate(url);
     }
     
-    confirmRemoveAnalyzer(analyzer: analyzerListItem) {
+    confirmRemoveAnalyzer(analyzer: analyzerListItemModel) {
         this.confirmationMessage("Delete Custom Analyzer",
-            `You're deleting custom analyzer: <br><ul><li>${generalUtils.escapeHtml(analyzer.name)}</li></ul>`, {
+            `You're deleting custom analyzer: <br><ul><li><strong>${generalUtils.escapeHtml(analyzer.name)}</strong></li></ul>`, {
             buttons: ["Cancel", "Delete"],
             html: true
         })

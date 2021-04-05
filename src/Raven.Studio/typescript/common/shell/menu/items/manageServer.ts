@@ -93,6 +93,42 @@ function getManageServerMenuItem() {
             disableWithReason: accessManager.default.disableIfNotClusterAdminOrClusterNode,
             itemRouteToHighlight: 'admin/settings/serverWideTasks'
         }),
+        new leafMenuItem({
+            route: 'admin/settings/serverWideCustomAnalyzers',
+            moduleId: "viewmodels/manage/serverWideCustomAnalyzers",
+            title: "Server-Wide Analyzers",
+            nav: true,
+            css: 'icon-server-wide-tasks', // todo.. RavenDB-16441
+            dynamicHash: appUrl.forServerWideCustomAnalyzers,
+            disableWithReason: access.disableServerWideCustomAnalyzersMenuItem
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/editServerWideCustomAnalyzer',
+            moduleId: "viewmodels/manage/editServerWideCustomAnalyzer",
+            title: "Edit Server-Wide Custom Analyzer",
+            nav: false,
+            dynamicHash: appUrl.forEditServerWideCustomAnalyzer,
+            disableWithReason: accessManager.default.disableIfNotClusterAdminOrClusterNode,
+            itemRouteToHighlight: 'admin/settings/serverWideCustomAnalyzers'
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/serverWideCustomSorters',
+            moduleId: "viewmodels/manage/serverWideCustomSorters",
+            title: "Server-Wide Sorters",
+            nav: true,
+            css: 'icon-server-wide-tasks', // todo.. RavenDB-16441
+            dynamicHash: appUrl.forServerWideCustomSorters,
+            disableWithReason: access.disableServerWideCustomSortersMenuItem
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/editServerWideCustomSorter',
+            moduleId: "viewmodels/manage/editServerWideCustomSorter",
+            title: "Edit Server-Wide Custom Sorter",
+            nav: false,
+            dynamicHash: appUrl.forEditServerWideCustomSorter,
+            disableWithReason: accessManager.default.disableIfNotClusterAdminOrClusterNode,
+            itemRouteToHighlight: 'admin/settings/serverWideCustomSorters'
+        }),
         new separatorMenuItem(),
         new separatorMenuItem('Debug'),
         new leafMenuItem({

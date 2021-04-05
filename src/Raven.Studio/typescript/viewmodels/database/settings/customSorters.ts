@@ -9,32 +9,17 @@ import router = require("plugins/router");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import queryCompleter = require("common/queryCompleter");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getServerWideCustomSortersCommand = require("commands/serverWide/sorters/getServerWideCustomSortersCommand");
 import queryCommand = require("commands/database/query/queryCommand");
 import queryCriteria = require("models/database/query/queryCriteria");
-
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
-
-class sorterListItem {
-    
-    definition: Raven.Client.Documents.Queries.Sorting.SorterDefinition;
-    
-    testModeEnabled = ko.observable<boolean>(false);
-    testRql = ko.observable<string>();
-    
-    constructor(dto: Raven.Client.Documents.Queries.Sorting.SorterDefinition) {
-        this.definition = dto;
-        this.testRql(`from index <indexName>\r\norder by custom(<fieldName>, "${dto.Name}")`);
-    }
-    
-    get name() {
-        return this.definition.Name;
-    }
-}
+import sorterListItemModel = require("models/database/settings/sorterListItemModel");
+import accessManager = require("common/shell/accessManager");
 
 type testTabName = "results" | "diagnostics";
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -44,9 +29,13 @@ class customSorters extends viewModelBase {
     indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
     queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes, "Select");
     
-    sorters = ko.observableArray<sorterListItem>([]);
+    sorters = ko.observableArray<sorterListItemModel>([]);
+    serverWideSorters = ko.observableArray<sorterListItemModel>([]);
     
     addUrl = ko.pureComputed(() => appUrl.forEditCustomSorter(this.activeDatabase()));
+
+    serverWideCustomSortersUrl = appUrl.forServerWideCustomSorters();
+    canNavigateToServerWideCustomSorters: KnockoutComputed<boolean>;
 
     private gridController = ko.observable<virtualGridController<any>>();
     columnsSelector = new columnsSelector<documentObject>();
@@ -68,16 +57,30 @@ class customSorters extends viewModelBase {
         super();
 
         aceEditorBindingHandler.install();
-        
         this.bindToCurrentInstance("confirmRemoveSorter", "enterTestSorterMode", "editSorter", "runTest");
+
+        this.canNavigateToServerWideCustomSorters = accessManager.default.clusterAdminOrClusterNode;
     }
     
     activate(args: any) {
         super.activate(args);
         
-        return $.when<any>(this.loadSorters(), this.fetchAllIndexes(this.activeDatabase()));
+        return $.when<any>(this.loadSorters(), this.loadServerWideSorters(), this.fetchAllIndexes(this.activeDatabase())
+            .done(() => {
+                 this.sorters().forEach(sorter => {
+                     if (_.includes(this.serverWideSorters().map(x => x.name), sorter.name)) {
+                         sorter.overrideServerWide(true);
+                     }
+                 })
+            }));
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+
+        $('.custom-sorters [data-toggle="tooltip"]').tooltip();
+    }
+    
     private fetchAllIndexes(db: database): JQueryPromise<any> {
         return new getDatabaseStatsCommand(db)
             .execute()
@@ -90,8 +93,14 @@ class customSorters extends viewModelBase {
         return new getCustomSortersCommand(this.activeDatabase())
             .execute()
             .done(sorters => {
-                this.sorters(sorters.map(x => new sorterListItem(x)));
+                this.sorters(sorters.map(x => new sorterListItemModel(x)));
             });
+    }
+
+    private loadServerWideSorters() {
+        return new getServerWideCustomSortersCommand()
+            .execute()
+            .done(sorters => this.serverWideSorters(sorters.map(x => new sorterListItemModel(x))));
     }
 
     goToTab(tabToUse: testTabName) {
@@ -118,7 +127,7 @@ class customSorters extends viewModelBase {
         this.testResultsVisible(false);
     }
     
-    enterTestSorterMode(sorter: sorterListItem) {
+    enterTestSorterMode(sorter: sorterListItemModel) {
         this.closeTestResultsArea();
         
         sorter.testModeEnabled.toggle();
@@ -131,14 +140,14 @@ class customSorters extends viewModelBase {
         }
     }
     
-    editSorter(sorter: sorterListItem) {
+    editSorter(sorter: sorterListItemModel) {
         const url = appUrl.forEditCustomSorter(this.activeDatabase(), sorter.name);
         router.navigate(url);
     }
     
-    confirmRemoveSorter(sorter: sorterListItem) {
+    confirmRemoveSorter(sorter: sorterListItemModel) {
         this.confirmationMessage("Delete Custom Sorter", 
-            `You're deleting custom sorter:  <br><ul><li>${generalUtils.escapeHtml(sorter.name)}</li></ul>`, {
+            `You're deleting custom sorter: <br><ul><li><strong>${generalUtils.escapeHtml(sorter.name)}</strong></li></ul>`, {
             buttons: ["Cancel", "Delete"],
             html: true
         })
@@ -150,7 +159,7 @@ class customSorters extends viewModelBase {
             })
     }
     
-    runTest(sorter: sorterListItem) {
+    runTest(sorter: sorterListItemModel) {
         this.testResultsVisible(true);
         
         this.currentTab("results");
@@ -244,7 +253,6 @@ class customSorters extends viewModelBase {
                 this.loadSorters();
             })
     }
-
 }
 
 export = customSorters;

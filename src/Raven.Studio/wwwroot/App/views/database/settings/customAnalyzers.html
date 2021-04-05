@@ -1,15 +1,15 @@
-<div class="flex-vertical absolute-fill content-margin">
+<div class="flex-vertical absolute-fill content-margin custom-analyzers">
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-header">
                 <div>
                     <a class="btn btn-primary" data-bind="attr: { href: addUrl }">
-                        <i class="icon-plus"></i><span>Add Custom Analyzer</span>
+                        <i class="icon-plus"></i><span>Add a Database Custom Analyzer</span>
                     </a>
                 </div>
             </div>
             <div class="hr-title margin-top">
-                <h5 class="no-text-transform"><span>Current custom analyzers</span></h5><hr>
+                <h5 class="no-text-transform"><span>Database custom analyzers</span></h5><hr>
             </div>
             <div data-bind="foreach: analyzers">
                 <div class="panel item">
@@ -17,6 +17,11 @@
                         <div class="flex-horizontal">
                             <div class="flex-grow info">
                                 <span data-bind="text: name"></span>
+                            </div>
+                            <div class="text-info" data-bind="visible: overrideServerWide">
+                                <span data-placement="left" data-toggle="tooltip" title="Overrides server-wide analyzer" data-animation="true">
+                                   <i class="icon-info"></i>
+                                </span>
                             </div>
                             <div class="actions">
                                 <button type="button" data-bind="click: _.partial($root.editAnalyzer, $data)"
@@ -32,7 +37,28 @@
             </div>
             <div class="text-center text-muted margin-top" data-bind="visible: analyzers().length === 0">
                 <i class="icon-lg icon-empty-set"></i>
-                <h2 class="margin-top margin-top-sm">No custom analyzers have been defined</h2>
+                <h2 class="margin-top margin-top-sm">No database custom analyzers have been defined</h2>
+            </div>
+            <div class="hr-title margin-top margin-top-lg flex-horizontal">
+                <h5 class="no-text-transform"><span>Server-wide custom analyzers</span></h5><hr>
+                <small class="padding padding-xs margin-left" data-bind="if: canNavigateToServerWideCustomAnalyzers" title="Go to the Server-Wide custom analyzers view">
+                    <a target="_blank" data-bind="attr: { href: serverWideCustomAnalyzersUrl }"><i class="icon-link"></i>Server-Wide Custom Analyzers</a>
+                </small>
+            </div>
+            <div data-bind="foreach: serverWideAnalyzers">
+                <div class="panel item">
+                    <div class="padding padding-sm">
+                        <div class="flex-horizontal">
+                            <div class="flex-grow info">
+                                <span data-bind="text: name"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center text-muted margin-top" data-bind="visible: serverWideAnalyzers().length === 0">
+                <i class="icon-lg icon-empty-set"></i>
+                <h2 class="margin-top margin-top-sm">No server-wide custom analyzers have been defined</h2>
             </div>
         </div>
     </div>

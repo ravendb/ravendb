@@ -192,6 +192,24 @@ class appUrl {
         return "#admin/settings/editServerWideExternalReplication" + replicationNamePart;
     }
 
+    static forServerWideCustomAnalyzers(): string {
+        return "#admin/settings/serverWideCustomAnalyzers";
+    }
+
+    static forEditServerWideCustomAnalyzer(serverWideCustomAnalyzerName? : string): string {
+        const analyzerNamePart = serverWideCustomAnalyzerName ? "?&analyzerName=" + encodeURIComponent(serverWideCustomAnalyzerName) : "";
+        return "#admin/settings/editServerWideCustomAnalyzer" + analyzerNamePart;
+    }
+
+    static forServerWideCustomSorters(): string {
+        return "#admin/settings/serverWideCustomSorters";
+    }
+
+    static forEditServerWideCustomSorter(serverWideCustomSorterName? : string): string {
+        const sorterNamePart = serverWideCustomSorterName ? "?&sorterName=" + encodeURIComponent(serverWideCustomSorterName) : "";
+        return "#admin/settings/editServerWideCustomSorter" + sorterNamePart;
+    }
+
     static forDatabases(databasesUrlAction?: "compact" | "restore", databaseToCompact?: string): string {
         let actionPart = "";
         

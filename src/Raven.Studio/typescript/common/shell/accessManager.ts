@@ -79,6 +79,8 @@ class accessManager {
         disableAdminJSConsoleMenuItem: this.disableIfNotClusterAdminOrClusterNode,
         disableCertificatesMenuItem: this.disableIfNotOperatorOrAbove,
         disableServerWideTasksMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableServerWideCustomAnalyzersMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableServerWideCustomSortersMenuItem: this.disableIfNotClusterAdminOrClusterNode,
         disableAdminLogsMenuItem: this.disableIfNotOperatorOrAbove,
         disableTrafficWatchMenuItem: this.disableIfNotOperatorOrAbove,
         disableGatherDebugInfoMenuItem: this.disableIfNotOperatorOrAbove,
