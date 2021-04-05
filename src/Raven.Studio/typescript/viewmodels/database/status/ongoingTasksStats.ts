@@ -1379,16 +1379,18 @@ class ongoingTasksStats extends viewModelBase {
 
                 context.save();
 
-                // Draw connection items (but only if we have actual connection (not just 'trying to connect')
                 if (perfWithCache.Details.Operations.length > 1) {
                     const pendingDuration = perfWithCache.Details.Operations[0].DurationInMs;
                     const startActiveConnectionDateAsInt = startDateAsInt + pendingDuration;
 
                     const x1ForActive = xScale(new Date(startActiveConnectionDateAsInt));
 
+                    const yOffset = isOpened ? ongoingTasksStats.trackHeight * 2 + ongoingTasksStats.stackPadding * 2 : 0;
+                    const yStartLine = yStart + (isOpened ? yOffset : 0);
+                    
                     // draw the 'start connection line'
                     context.fillStyle = this.colors.tracks.ConnectionPending; 
-                    context.fillRect(x1ForActive, yStart - ongoingTasksStats.startConnectionLineExtraHeight, 1, ongoingTasksStats.trackHeight + ongoingTasksStats.startConnectionLineExtraHeight);
+                    context.fillRect(x1ForActive, yStartLine - ongoingTasksStats.startConnectionLineExtraHeight, 1, ongoingTasksStats.trackHeight + ongoingTasksStats.startConnectionLineExtraHeight);
                 }
 
                 context.restore();
