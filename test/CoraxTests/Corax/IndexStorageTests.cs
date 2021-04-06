@@ -5,9 +5,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Corax;
-using Raven.Server.Utils;
+using Sparrow.Server.Utils;
 using Voron;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace CoraxTests
 {
@@ -17,7 +18,7 @@ namespace CoraxTests
         public IndexingEnvironment Env => _indexStorageEnvironment.Value;
         public StorageEnvironmentOptions Options { get; private set; }
 
-        protected readonly string DataDir = RavenTestHelper.NewDataPath(nameof(IndexStorageTests), 0);
+        protected readonly string DataDir = "NewData";//RavenTestHelper.NewDataPath(nameof(IndexStorageTests), 0);
 
 
         protected IndexStorageTests(StorageEnvironmentOptions options, ITestOutputHelper output) : base(output)
@@ -76,28 +77,14 @@ namespace CoraxTests
         {
             base.Dispose();
 
-            var aggregator = new ExceptionAggregator("Could not dispose Index Storage test.");
 
-            aggregator.Execute(() =>
-            {
-                if (_indexStorageEnvironment.IsValueCreated)
-                    _indexStorageEnvironment.Value.Dispose();
+            if (_indexStorageEnvironment.IsValueCreated)
+                _indexStorageEnvironment.Value.Dispose();
 
-                _indexStorageEnvironment = null;
-            });
+            Options?.Dispose();
 
-            aggregator.Execute(() =>
-            {
-                Options?.Dispose();
-                Options = null;
-            });
+            IOExtensions.DeleteDirectory(DataDir);
 
-            aggregator.Execute(() =>
-            {
-                IOExtensions.DeleteDirectory(DataDir);
-            });
-
-            aggregator.ThrowIfNeeded();
 
             GC.Collect(GC.MaxGeneration);
             GC.WaitForPendingFinalizers();

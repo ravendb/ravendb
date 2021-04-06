@@ -27,25 +27,25 @@ namespace Corax
         {
             Storage.Dispose();
         }
-
-        public IndexWriter CreateWriter(ByteStringContext context = null, TimeSpan? timeout = null)
-        {
-            return new (Storage, Storage.WriteTransaction(context, timeout));
-        }
-
-        public IndexWriter CreateWriter(TransactionPersistentContext persistentContext, ByteStringContext context = null, TimeSpan? timeout = null)
-        {
-            return new(Storage, Storage.WriteTransaction(persistentContext, context, timeout));
-        }
-
-        public IndexSearcher CreateSearcher(TransactionPersistentContext persistentContext, ByteStringContext context = null)
-        {
-            return new (Storage, Storage.ReadTransaction(persistentContext, context));
-        }
-        public IndexSearcher CreateSearcher(ByteStringContext context = null)
-        {
-            return new (Storage, Storage.ReadTransaction(context));
-        }
+        //
+        // public IndexWriter CreateWriter(ByteStringContext context = null, TimeSpan? timeout = null)
+        // {
+        //     return new (Storage, Storage.WriteTransaction(context, timeout));
+        // }
+        //
+        // public IndexWriter CreateWriter(TransactionPersistentContext persistentContext, ByteStringContext context = null, TimeSpan? timeout = null)
+        // {
+        //     return new(Storage, Storage.WriteTransaction(persistentContext, context, timeout));
+        // }
+        //
+        // public IndexSearcher CreateSearcher(TransactionPersistentContext persistentContext, ByteStringContext context = null)
+        // {
+        //     return new (Storage, Storage.ReadTransaction(persistentContext, context));
+        // }
+        // public IndexSearcher CreateSearcher(ByteStringContext context = null)
+        // {
+        //     return new (Storage, Storage.ReadTransaction(context));
+        // }
 
         public void Initialize()
         {
