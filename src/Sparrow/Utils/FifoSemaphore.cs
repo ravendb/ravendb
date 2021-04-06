@@ -60,7 +60,10 @@ namespace Sparrow.Utils
                 _waitQueue.Enqueue(waiter);
             }
 
-            return waiter.TryWait(timeout, token);
+            using (waiter)
+            {
+                return waiter.TryWait(timeout, token);
+            }
         }
 
         public void Acquire(CancellationToken token)
@@ -81,10 +84,8 @@ namespace Sparrow.Utils
                 {
                     if (_waitQueue.Count > 0)
                     {
-                        using (var waiter = _waitQueue.Dequeue())
-                        {
-                            waiter.Release();
-                        }
+                        var waiter = _waitQueue.Dequeue();
+                        waiter.Release();
                     }
                     else
                     {
