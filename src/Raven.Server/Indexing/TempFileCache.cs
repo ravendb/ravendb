@@ -192,7 +192,9 @@ namespace Raven.Server.Indexing
 
         public override void SetLength(long value)
         {
-            InnerStream.SetLength(value);
+            if (InnerStream.Length < value)
+                InnerStream.SetLength(value);
+
             _length = value;
         }
 
