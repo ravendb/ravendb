@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Text;
 using Jint.Native;
+using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
@@ -25,6 +26,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private readonly string _fileNamePrefix, _tmpFilePath;
         private EtlStatsScope _stats;
         private readonly Logger _logger;
+
+        private static readonly string UrlEscapedEqualsSign = System.Net.WebUtility.UrlEncode("=");
+        private ObjectInstance _noPartition;
+        private const string PartitionKeys = "$partition_keys";
+
 
         public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config, string processName, Logger logger)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.OlapEtl), null)
@@ -52,8 +58,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             {
                 var name = Transformation.LoadTo + table;
                 DocumentScript.ScriptEngine.SetValue(name, new ClrFunctionInstance(DocumentScript.ScriptEngine, name,
-                    (value, args) => LoadToS3FunctionTranslator(table, value, args)));
+                    (self, args) => LoadToS3FunctionTranslator(table, args)));
             }
+
+            DocumentScript.ScriptEngine.SetValue("partitionBy", new ClrFunctionInstance(DocumentScript.ScriptEngine, "partitionBy", PartitionBy));
+            DocumentScript.ScriptEngine.SetValue("noPartition", new ClrFunctionInstance(DocumentScript.ScriptEngine, "noPartition", NoPartition));
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -62,15 +71,12 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
         }
 
-        private void LoadToFunction(string tableName, ScriptRunnerResult res, string key)
+        private void LoadToFunction( string tableName, string key, ScriptRunnerResult runnerResult)
         {
-            if (tableName == null)
-                ThrowLoadParameterIsMandatory(nameof(tableName));
-
             if (key == null)
                 ThrowLoadParameterIsMandatory(nameof(key));
 
-            var result = res.TranslateToObject(Context);
+            var result = runnerResult.TranslateToObject(Context);
             var props = new List<SqlColumn>(result.Count);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
@@ -112,7 +118,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private OlapTransformedItems GetOrAdd(string tableName, string key)
         {
-            var name = tableName + "_" + key;
+            var name = key;
 
             if (_tables.TryGetValue(name, out var table) == false)
             {
@@ -127,24 +133,102 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         }
 
 
-        private JsValue LoadToS3FunctionTranslator(string name, JsValue self, JsValue[] args)
+        private JsValue LoadToS3FunctionTranslator(string name, JsValue[] args)
         {
+            // todo error messages
+
             if (args.Length != 2)
                 ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) must be called with exactly 2 parameters");
 
-            if (args[0].IsDate() == false)
-                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be a date object");
-            
             if (args[1].IsObject() == false)
                 ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'obj' must be an object");
 
-            var key = args[0].AsDate().ToDateTime().ToString(DateFormat); //todo
-            var result = new ScriptRunnerResult(DocumentScript, args[1].AsObject());
-            LoadToFunction(name, result, key);
+            if (args[0].IsObject() == false)
+                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be a date object");
 
+            var objectInstance = args[0].AsObject();
+            if (objectInstance.HasOwnProperty(PartitionKeys) == false)
+                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be a date object");
+
+            var partitionBy = objectInstance.GetOwnProperty(PartitionKeys).Value;
+            var result = new ScriptRunnerResult(DocumentScript, args[1].AsObject());
+
+            if (partitionBy.IsNull())
+            {
+                // no partition
+                // todo : write test
+                LoadToFunction(name, key: name, result);
+                return result.Instance;
+            }
+
+            if (partitionBy.IsArray() == false)
+                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be a date object");
+
+            StringBuilder sb = new StringBuilder(name);
+            var arr = partitionBy.AsArray();
+            foreach (var item in arr)
+            {
+                if (item.IsArray() == false)
+                    ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be a date object");
+
+                var tuple = item.AsArray();
+                if (tuple.Length != 2)
+                    ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be a date object");
+
+                sb.Append('/').Append(tuple[0]).Append(UrlEscapedEqualsSign);
+                var val = tuple[1].IsDate()
+                    ? tuple[1].AsDate().ToDateTime().ToString(DateFormat)
+                    : tuple[1];
+
+                sb.Append(val);
+
+            }
+
+            LoadToFunction(name, sb.ToString(), result);
             return result.Instance;
         }
 
+        private JsValue PartitionBy(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 1)
+                ThrowInvalidScriptMethodCall("partitionBy(key) must be called with exactly 1 parameter");
+
+            JsValue array;
+            if (args[0].IsArray() == false)
+            {
+                array = JsValue.FromObject(DocumentScript.ScriptEngine, new[]
+                {
+                    JsValue.FromObject(DocumentScript.ScriptEngine, new[]
+                    {
+                        new JsString("_dt"), args[0] //todo
+                    })
+                });
+
+            }
+            else
+            {
+                array = args[0].AsArray();
+            }
+
+            var o = new ObjectInstance(DocumentScript.ScriptEngine);
+            o.FastAddProperty(PartitionKeys, array, false, true, false);
+
+            return o;
+        }
+
+        private JsValue NoPartition(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 0)
+                ThrowInvalidScriptMethodCall("noPartition() must be called with 0 parameters");
+
+            if (_noPartition == null)
+            {
+                _noPartition = new ObjectInstance(DocumentScript.ScriptEngine);
+                _noPartition.FastAddProperty(PartitionKeys, JsValue.Null, false, true, false);
+            }
+
+            return _noPartition;
+        }
 
         public override IEnumerable<OlapTransformedItems> GetTransformedResults()  
         {

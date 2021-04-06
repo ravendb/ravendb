@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Server.Basic.Entities;
@@ -73,7 +74,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(key,
+loadToOrders(partitionBy(key),
     {
         Company : this.Company,
         ShipVia : this.ShipVia
@@ -82,6 +83,8 @@ loadToOrders(key,
                     SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    Thread.Sleep(20000);
 
                     var files = Directory.GetFiles(path);
                     Assert.Equal(2, files.Length);
