@@ -30,9 +30,16 @@ namespace SlowTests.Issues
 
             int numberOfLocksPerTask = 10;
 
-            var verifyLimit = Task.Run(() =>
+            bool tasksRunning = true;
+
+            var verifyLimit = Task.Run(async () =>
             {
-                Assert.True(inUse <= allowed);
+                while (tasksRunning)
+                {
+                    Assert.True(inUse <= allowed);
+
+                    await Task.Delay(13);
+                }
             });
 
             int totalNumberOfLocksTaken = 0;
@@ -60,15 +67,20 @@ namespace SlowTests.Issues
                             @lock.Release();
                         }
                     }
-
                 });
 
                 tasks.Add(task);
             }
 
-            Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(30));
+            var waitResult = Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(30));
 
-            verifyLimit.Wait(TimeSpan.FromSeconds(30));
+            Assert.True(waitResult);
+
+            tasksRunning = false;
+
+            waitResult = verifyLimit.Wait(TimeSpan.FromSeconds(30));
+
+            Assert.True(waitResult);
 
             Assert.Equal(numberOfTasks * numberOfLocksPerTask, totalNumberOfLocksTaken);
         }
