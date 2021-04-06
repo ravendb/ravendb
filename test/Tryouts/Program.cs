@@ -33,7 +33,6 @@ namespace Tryouts
 
                 indexWriter.Index("users/1", entry);
 
-            
                 var entry2 = ctx.ReadObject(
                     new DynamicJsonValue {["Name"] = "Ayende", ["Gender"] = "Male", ["Dogs"] = new DynamicJsonArray {"Arava"}},
                     "indexentry");
@@ -46,7 +45,6 @@ namespace Tryouts
 
                 indexWriter.Index("users/3", entry3);
 
-                
                 indexWriter.Commit();
             }
 
@@ -56,7 +54,8 @@ namespace Tryouts
                     new QueryOp[] {new TermQuery("Dogs", "Arava"), new TermQuery("Gender", "Male"),},
                     BitmapOp.And
                 );
-                var results = searcher.Query(q);
+                using var ctx = JsonOperationContext.ShortTermSingleUse();
+                var results = searcher.Query(ctx, q, 2, "Name");
 
                 foreach (object result in results)
                 {

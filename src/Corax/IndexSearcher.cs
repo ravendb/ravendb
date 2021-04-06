@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -25,27 +26,100 @@ namespace Corax
             _transaction = environment.ReadTransaction();
         }
 
-        public IEnumerable Query(QueryOp q)
+        public IEnumerable<string> Query(JsonOperationContext context, QueryOp q, int take, string sort)
+        {
+            Table entries = _transaction.OpenTable(IndexWriter.IndexEntriesSchema, IndexWriter.IndexEntriesSlice);
+
+            if (take < 1024)  // query "planner"
+            {
+                return FilterByOrder(context, q, take, sort, entries);
+            }
+            
+            return SearchThenSort(context, take, sort,q, entries);
+        }
+
+        private IEnumerable<string> FilterByOrder(JsonOperationContext context, QueryOp q, int take, string sort, Table entries)
+        {
+            Tree sortTree = _transaction.ReadTree(sort);
+            if (sortTree == null)
+                return Enumerable.Empty<string>();
+            using var it = sortTree.Iterate(false);
+            if (it.Seek(Slices.BeforeAllKeys) == false)
+                return Enumerable.Empty<string>();
+            var list = new List<string>(take);
+            do
+            {
+                FixedSizeTree fst = sortTree.FixedTreeFor(it.CurrentKey);
+                using var fstIt = fst.Iterate();
+                if (fstIt.Seek(0) == false)
+                    continue;
+                do
+                {
+                    long entryId = fstIt.CurrentKey;
+                    var bjro = GetBlittable(context, entries, entryId);
+                    if (q.IsMatch(bjro))
+                    {
+                        list.Add(ExtractDocumentId(entries, entryId));
+                        if (list.Count == take)
+                            return list;
+                    }
+                } while (fstIt.MoveNext());
+            } while (it.MoveNext());
+
+            return list;
+        }
+
+        private  IEnumerable<string> SearchThenSort(JsonOperationContext context, int take, string sort, QueryOp q,
+            Table entries)
         {
             var results = new Bitmap();
             q.Apply(_transaction, results, BitmapOp.Or);
 
-            Table entries = _transaction.OpenTable(IndexWriter.IndexEntriesSchema, IndexWriter.IndexEntriesSlice);
-            
+            var heap = new SortedList<string, string>();
+
             foreach (var entryId in results)
             {
-                yield return ExtractDocumentId(entryId);
+                var id = ExtractDocumentId(entries, entryId);
+                string sortField = ExtractField(entryId, context, entries, sort);
+                if (heap.Count < take)
+                {
+                    heap.Add(sortField, id);
+                }
+                else if (string.Compare(heap.Keys[heap.Count - 1], sortField, StringComparison.Ordinal) > 0)
+                {
+                    heap.RemoveAt(heap.Count - 1);
+                    heap.Add(sortField, id);
+                }
             }
 
-            unsafe string ExtractDocumentId(long entryId)
-            {
-                entries.DirectRead(entryId, out TableValueReader tvr);
+            return heap.Values;
+        }
 
-                byte* ptr = tvr.Read((int)IndexWriter.IndexEntriesTable.DocumentId, out var size);
+        private string ExtractField(long entryId, JsonOperationContext context, Table entries, string sort)
+        {
+            var bjro = GetBlittable(context, entries, entryId);
 
-                var str = Encoding.UTF8.GetString(ptr, size);
-                return str;
-            }
+            return bjro[sort].ToString();
+        }
+
+        unsafe string ExtractDocumentId(Table entries, long entryId)
+        {
+            entries.DirectRead(entryId, out TableValueReader tvr);
+
+            byte* ptr = tvr.Read((int) IndexWriter.IndexEntriesTable.DocumentId, out var size);
+
+            var str = Encoding.UTF8.GetString(ptr, size);
+            return str;
+        }
+
+        private static unsafe BlittableJsonReaderObject GetBlittable(JsonOperationContext context, Table entries, long entryId)
+        {
+            entries.DirectRead(entryId, out TableValueReader tvr);
+
+            byte* ptr = tvr.Read((int) IndexWriter.IndexEntriesTable.Entry, out var size);
+
+            var bjro = new BlittableJsonReaderObject(ptr, size, context);
+            return bjro;
         }
 
         public void Dispose()
@@ -79,6 +153,8 @@ namespace Corax
                     throw new ArgumentOutOfRangeException(nameof(op), op, null);
             }
         }
+
+        public abstract bool IsMatch(BlittableJsonReaderObject bjro);
     }
     
     public class BinaryQuery : QueryOp
@@ -108,8 +184,23 @@ namespace Corax
         {
             return string.Join(_mergeOp.ToString(), _queries.Select(x => x.ToString()));
         }
-    }
 
+        public override bool IsMatch(BlittableJsonReaderObject bjro)
+        {
+            var first = _queries[0].IsMatch(bjro);
+            for (int i = 1; i < _queries.Length; i++)
+            {
+                var cur = _queries[i].IsMatch(bjro);
+                if (_mergeOp == BitmapOp.Or)
+                    first |= cur;
+                else
+                    first &= cur;
+            }
+
+            return first;
+        }
+    }
+    // where User = $userId and startsWith(Name, 'a')
     public class TermQuery : QueryOp
     {
         private readonly string _field;
@@ -156,6 +247,31 @@ namespace Corax
         public override string ToString()
         {
             return $"{_field} == '{_term}'";
+        }
+
+        public override bool IsMatch(BlittableJsonReaderObject bjro)
+        {
+            if (bjro.TryGetMember(_field, out object val) == false)
+                return false;
+
+            if (val is string s)
+            {
+                return s == _term;
+            }
+            if (val is LazyStringValue lsv)
+            {
+                return lsv.ToString() == _term;
+            }
+            else if (val is BlittableJsonReaderArray a)
+            {
+                for (int i = 0; i < a.Length; i++)
+                {
+                    if (a.GetByIndex<string>(i) == _term)
+                        return true;
+                }
+            }
+
+            return false;
         }
     }
 
