@@ -66,12 +66,14 @@ class customSorters extends viewModelBase {
         super.activate(args);
         
         return $.when<any>(this.loadSorters(), this.loadServerWideSorters(), this.fetchAllIndexes(this.activeDatabase())
-            .done(() => {
-                 this.sorters().forEach(sorter => {
-                     if (_.includes(this.serverWideSorters().map(x => x.name), sorter.name)) {
-                         sorter.overrideServerWide(true);
-                     }
-                 })
+            .done(() => { 
+                const serverWideSorterNames = this.serverWideSorters().map(x => x.name);
+                
+                this.sorters().forEach(sorter => {
+                    if (_.includes(serverWideSorterNames, sorter.name)) {
+                        sorter.overrideServerWide(true);
+                    }
+                })
             }));
     }
 
