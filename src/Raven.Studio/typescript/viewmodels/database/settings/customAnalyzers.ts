@@ -34,8 +34,10 @@ class customAnalyzers extends viewModelBase {
         
         return $.when<any>(this.loadAnalyzers(), this.loadServerWideAnalyzers())
             .done(() => {
+                const serverWideAnalyzerNames = this.serverWideAnalyzers().map(x => x.name);
+                
                 this.analyzers().forEach(analyzer => {
-                    if (_.includes(this.serverWideAnalyzers().map(x => x.name), analyzer.name)) {
+                    if (_.includes(serverWideAnalyzerNames, analyzer.name)) {
                         analyzer.overrideServerWide(true);
                     }
                 })

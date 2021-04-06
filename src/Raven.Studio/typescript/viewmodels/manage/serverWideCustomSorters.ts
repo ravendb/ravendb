@@ -5,7 +5,7 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import generalUtils = require("common/generalUtils");
 import router = require("plugins/router");
 import getServerWideCustomSortersCommand = require("commands/serverWide/sorters/getServerWideCustomSortersCommand");
-import deleteServerWideCustomSorterCommand = require("../../commands/serverWide/sorters/deleteServerWideCustomSorterCommand");
+import deleteServerWideCustomSorterCommand = require("commands/serverWide/sorters/deleteServerWideCustomSorterCommand");
 
 class serverWideCustomSorters extends viewModelBase {
     serverWideSorters = ko.observableArray<sorterListItemModel>([]);

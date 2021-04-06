@@ -194,11 +194,17 @@ class editIndex extends viewModelBase {
         this.initValidation();
         
         this.fetchIndexes();
-        this.fetchCustomAnalyzers();
         
         if (!this.editedIndex().isAutoIndex() && !!indexToEditName) {
             this.showIndexHistory(true);
         }
+            
+        return $.when<any>(this.fetchCustomAnalyzers(), this.fetchServerWideCustomAnalyzers())
+            .done(([analyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
+                   [serverWideAnalyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>]) => {
+                const analyzersList = [...analyzers.map(x => x.Name), ...serverWideAnalyzers.map(x => x.Name)];
+                this.editedIndex().registerCustomAnalyzers(analyzersList);
+        });
     }
 
     attached() {
@@ -269,21 +275,15 @@ class editIndex extends viewModelBase {
                 this.indexesNames(indexesNames);
             });
     }
+    
+    private fetchCustomAnalyzers(): JQueryPromise<Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>> {
+        return new getCustomAnalyzersCommand(this.activeDatabase(), true)
+            .execute();
+    }
 
-    private fetchCustomAnalyzers() {
-        let analyzersList = new Array<string>();
-        
-        new getCustomAnalyzersCommand(this.activeDatabase(), true)
-            .execute()
-            .done((customAnalyzers) =>
-                analyzersList.push(...customAnalyzers.map(x => x.Name)));
-
-        new getServerWideCustomAnalyzersCommand()
-            .execute()
-            .done((serverWideCustomAnalyzers) =>
-                analyzersList.push(...serverWideCustomAnalyzers.map(x => x.Name)));
-
-        this.editedIndex().registerCustomAnalyzers(analyzersList);
+    private fetchServerWideCustomAnalyzers(): JQueryPromise<Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>> {
+        return new getServerWideCustomAnalyzersCommand()
+            .execute();
     }
 
     private fetchIndexHistory() {
