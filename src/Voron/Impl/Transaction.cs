@@ -147,11 +147,9 @@ namespace Voron.Impl
 
         public Table OpenTable(TableSchema schema, Slice name)
         {
-            if (_tables == null)
-                _tables = new Dictionary<Slice, Table>(SliceStructComparer.Instance);
+            _tables ??= new Dictionary<Slice, Table>(SliceStructComparer.Instance);
 
-            Table value;
-            if (_tables.TryGetValue(name, out value))
+            if (_tables.TryGetValue(name, out Table value))
                 return value;
 
             var clonedName = name.Clone(Allocator);

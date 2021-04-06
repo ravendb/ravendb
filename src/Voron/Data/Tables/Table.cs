@@ -78,8 +78,11 @@ namespace Voron.Data.Tables
             }
         }
 
+        public event Action CORAX_DEBUG_MOVE_DATA;
+
         private void OnDataMoved(long previousId, long newId, byte* data, int size, bool compressed)
         {
+            CORAX_DEBUG_MOVE_DATA?.Invoke();
 #if DEBUG
             if (IsOwned(previousId) == false || IsOwned(newId) == false)
             {
@@ -215,6 +218,12 @@ namespace Voron.Data.Tables
             // read any RawDataSmallSection piece of data, not just something that
             // it exists in its own section, but anything from other sections as well
             return RawDataSection.DirectRead(_tx.LowLevelTransaction, id, out size, out compressed);
+        }
+
+        public void DirectRead(long id, out TableValueReader tvr)
+        {
+            var rawData = DirectRead(id, out int size);
+            tvr = new TableValueReader(id, rawData, size);
         }
 
         public byte* DirectRead(long id, out int size)
@@ -1876,7 +1885,7 @@ namespace Voron.Data.Tables
                         return false;
 
                     var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
-                    var ptr = DirectRead(id, out var size);
+                    var ptr = DirectRead(id, out int size);
 
                     if (tableValueHolder == null)
                         tableValueHolder = new TableValueHolder();
