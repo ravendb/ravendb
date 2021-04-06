@@ -1273,6 +1273,8 @@ namespace Voron.Impl.Journal
 
                     if (_waj._logger.IsInfoEnabled)
                         _waj._logger.Info($"Flushed {pagesToWrite.Count:#,#} pages to { _waj._dataPager.FileName} with {written / Constants.Size.Kilobyte:#,#} kb in {sp.Elapsed}");
+                    else if (_waj._logger.IsOperationsEnabled && sp.Elapsed > _waj._dataPager.Options.LongRunningFlushingWarning)
+                        _waj._logger.Operations($"Very long data flushing. It took {sp.Elapsed} to flush {pagesToWrite.Count:#,#} pages to { _waj._dataPager.FileName} with {written / Constants.Size.Kilobyte:#,#} kb");
 
                     Interlocked.Add(ref _totalWrittenButUnsyncedBytes, written);
                 }
