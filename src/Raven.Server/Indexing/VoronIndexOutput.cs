@@ -47,7 +47,7 @@ namespace Raven.Server.Indexing
                 _indexOutputFilesSummary.Increment(len);
                 if (_ms != null)
                 {
-                    if (_ms.Length + len <= _ms.Capacity)
+                    if (_ms.Capacity - _ms.Position - len >= 0)
                     {
                         _ms.Write(b, offset, len);
                         return;
