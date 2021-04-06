@@ -16,7 +16,7 @@ namespace Raven.Server.ServerWide
         private readonly MemoryStream _nonces = new MemoryStream();
         private readonly long _startPosition;
 
-        public Stream InnerStream => _stream; 
+        public Stream InnerStream => _stream;
         public override bool CanRead => true;
         public override bool CanSeek => true;
         public override bool CanWrite => true;

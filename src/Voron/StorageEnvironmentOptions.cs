@@ -57,6 +57,7 @@ namespace Voron
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
         public event EventHandler<NonDurabilitySupportEventArgs> OnNonDurableFileSystemError;
         public event EventHandler<DataIntegrityErrorEventArgs> OnIntegrityErrorOfAlreadySyncedData;
+        public event EventHandler<RecoverableFailureEventArgs> OnRecoverableFailure;
 
         private long _reuseCounter;
         private long _lastReusedJournalCountOnSync;
@@ -165,6 +166,8 @@ namespace Voron
 
         public ScratchSpaceUsageMonitor ScratchSpaceUsage { get; }
 
+        public TimeSpan LongRunningFlushingWarning = TimeSpan.FromMinutes(5);
+
         public long MaxScratchBufferSize
         {
             get => _maxScratchBufferSize;
@@ -260,9 +263,6 @@ namespace Voron
                     _log.Operations($"Catastrophic failure in {this}, StackTrace:'{stacktrace}'", e);
             });
 
-
-            
-
             PrefetchSegmentSize = 4 * Constants.Size.Megabyte;
             PrefetchResetThreshold = shouldConfigPagersRunInLimitedMemoryEnvironment?256*(long)Constants.Size.Megabyte: 8 * (long)Constants.Size.Gigabyte;
             SyncJournalsCountThreshold = 2;
@@ -275,6 +275,21 @@ namespace Voron
             _catastrophicFailureStack = Environment.StackTrace;
             _catastrophicFailure = exception;
             _catastrophicFailureNotification.RaiseNotificationOnce(_environmentId, ToString(), exception.SourceException, _catastrophicFailureStack);
+        }
+
+        public void InvokeRecoverableFailure(string failureMessage, Exception e)
+        {
+            var handler = OnRecoverableFailure;
+
+            if (handler != null)
+            {
+                handler.Invoke(this, new RecoverableFailureEventArgs(failureMessage, _environmentId, ToString(), e));
+            }
+            else
+            {
+                if (_log.IsOperationsEnabled)
+                    _log.Operations($"Recoverable failure in {this}. Error: {failureMessage}.", e);
+            }
         }
 
         public bool IsCatastrophicFailureSet => _catastrophicFailure != null;
@@ -1143,6 +1158,7 @@ namespace Voron
             OnRecoveryError = null;
             OnNonDurableFileSystemError = null;
             OnIntegrityErrorOfAlreadySyncedData = null;
+            OnRecoverableFailure = null;
         }
 
         protected abstract void Disposing();

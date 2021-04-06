@@ -82,6 +82,10 @@ class shell extends viewModelBase {
     supportStatus = license.supportCssClass;
     developerLicense = license.developerLicense;
     
+    cloudClusterAdmin: KnockoutObservable<boolean>;
+    colorCustomizationDisabled = ko.observable<boolean>(false);
+    applyColorCustomization: KnockoutObservable<boolean>;
+    
     clientCertificate = clientCertificateModel.certificateInfo;
 
     mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
@@ -152,6 +156,19 @@ class shell extends viewModelBase {
         window.addEventListener("hashchange", e => {
             this.currentUrlHash(location.hash);
         });
+        
+        this.cloudClusterAdmin = ko.pureComputed(() => {        
+            const isCloud = license.cloudLicense();
+            const isClusterAdmin = accessManager.default.securityClearance() === "ClusterAdmin";
+            return isCloud && isClusterAdmin;
+        });
+        
+        this.applyColorCustomization = ko.pureComputed(() => {
+            const cloudClusterAdmin = this.cloudClusterAdmin();
+            const disableColors = this.colorCustomizationDisabled();
+            
+            return !disableColors && cloudClusterAdmin;
+        })
 
         this.bindToCurrentInstance("toggleMenu");
     }
@@ -514,6 +531,10 @@ class shell extends viewModelBase {
             return serverUrl + "/studio/index.html" + hash;
         })
     }
+
+    disableColorCustomization() {
+        this.colorCustomizationDisabled(true);
+}
 }
 
 export = shell;
