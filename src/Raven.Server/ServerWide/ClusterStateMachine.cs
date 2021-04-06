@@ -476,12 +476,23 @@ namespace Raven.Server.ServerWide
                         throw new UnknownClusterCommand(massage);
                 }
 
+                if (_parent == null)
+                    throw new InvalidOperationException("TEST");
+
                 _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, result, null);
+
+                DismissUnrecoverableNotification();
             }
             catch (Exception e) when (ExpectedException(e))
             {
                 if (_parent.Log.IsInfoEnabled)
-                    _parent.Log.Info($"Failed to execute command of type '{type}' on database '{DatabaseName}'", e);
+                {
+                    var error = $"Failed to execute command of type '{type}'";
+                    if (cmd.TryGet(DatabaseName, out string databaseName))
+                        error += $"on database '{databaseName}'";
+
+                    _parent.Log.Info(error, e);
+                }
 
                 _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, null, e);
                 NotifyLeaderAboutError(index, leader, e);
@@ -491,11 +502,15 @@ namespace Raven.Server.ServerWide
                 // IMPORTANT
                 // Other exceptions MUST be consistent across the cluster (meaning: if it occured on one node it must occur on the rest also).
                 // the exceptions here are machine specific and will cause a jam in the state machine until the exception will be resolved.
-                var error = $"Unrecoverable exception on database '{DatabaseName}' at command type '{type}', execution will be retried later.";
+                var error = $"Unrecoverable exception at command type '{type}'";
+                if (cmd.TryGet(DatabaseName, out string databaseName))
+                    error += $"on database '{databaseName}'";
+                error += ", execution will be retried later.";
+
                 if (_parent.Log.IsOperationsEnabled)
                     _parent.Log.Operations(error, e);
 
-                AddUnrecoverableNotification(serverStore, error, e);
+                AddUnrecoverableNotification(error, e);
                 NotifyLeaderAboutError(index, leader, e);
                 throw;
             }
@@ -513,22 +528,38 @@ namespace Raven.Server.ServerWide
                 });
             }
 
-            static void AddUnrecoverableNotification(ServerStore serverStore, string error, Exception exception)
+            void DismissUnrecoverableNotification()
             {
                 try
                 {
-                    serverStore.NotificationCenter.Add(AlertRaised.Create(
-                        null,
-                        "Unrecoverable Cluster Error",
-                        error,
-                        AlertType.UnrecoverableClusterError,
-                        NotificationSeverity.Error,
-                        details: new ExceptionDetails(exception)));
+                    serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.UnrecoverableClusterError, null), context.Transaction, false);
                 }
                 catch
                 {
                     // nothing we can do here
                 }
+            }
+
+            void AddUnrecoverableNotification(string error, Exception exception)
+            {
+                // must do it in a separate thread since we are not going to commit this tx anyway
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    try
+                    {
+                        serverStore.NotificationCenter.Add(AlertRaised.Create(
+                            null,
+                            "Unrecoverable Cluster Error",
+                            error,
+                            AlertType.UnrecoverableClusterError,
+                            NotificationSeverity.Error,
+                            details: new ExceptionDetails(exception)));
+                    }
+                    catch
+                    {
+                        // nothing we can do here
+                    }
+                }, null);
             }
         }
 
