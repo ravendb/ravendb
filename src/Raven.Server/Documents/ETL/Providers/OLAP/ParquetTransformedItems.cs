@@ -14,21 +14,21 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
     public class ParquetTransformedItems : OlapTransformedItems
     {
         public const string DefaultIdColumn = "_id";
-        public const string DefaultPartitionColumn = "_dt";
+        //public const string DefaultPartitionColumn = "_dt";
         public const string LastModifiedColumn = "_lastModifiedTicks";
 
         public Dictionary<string, DataField> Fields => _fields ??= GenerateDataFields();
 
         public override int Count => _count;
 
-        private static readonly string UrlEscapedEqualsSign = System.Net.WebUtility.UrlEncode("=");
+        //private static readonly string UrlEscapedEqualsSign = System.Net.WebUtility.UrlEncode("=");
         private const int DefaultMaxItemsInGroup = 50_000;
         private RowGroup _group;
         private readonly Dictionary<string, DataType> _dataFields;
         private Dictionary<string, DataField> _fields;
         private readonly int _maxItemsPerGroup;
-        private readonly string _tableName, _partitionKey;
-        private string _folder, _documentIdColumn, _localPath, _fileName;
+        private readonly string _tableName, _key;
+        private string _documentIdColumn, _localPath, _fileName;
         private int _count;
         private bool[] _boolArr;
         private string[] _strArr;
@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         public ParquetTransformedItems(string name, string key, string tmpPath, string fileNamePrefix, OlapEtlConfiguration configuration, Logger logger) : base(OlapEtlFileFormat.Parquet)
         {
             _tableName = name;
-            _partitionKey = key;
+            _key = key;
             _logger = logger;
             _maxItemsPerGroup = configuration.MaxNumberOfItemsInRowGroup ?? DefaultMaxItemsInGroup;
             _dataFields = new Dictionary<string, DataType>();
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private void SetPath(OlapEtlConfiguration configuration, string tmpFilePath, string fileNamePrefix)
         {
-            string partitionColumn = default, idColumn = default;
+            string idColumn = default;
             if (configuration.OlapTables != null)
             {
                 foreach (var olapTable in configuration.OlapTables)
@@ -59,20 +59,16 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     if (olapTable.TableName != _tableName)
                         continue;
 
-                    partitionColumn = olapTable.PartitionColumn;
                     idColumn = olapTable.DocumentIdColumn;
                     break;
                 }
             }
 
-            if (string.IsNullOrEmpty(partitionColumn))
-                partitionColumn = DefaultPartitionColumn;
-
             _documentIdColumn = string.IsNullOrEmpty(idColumn)
                 ? DefaultIdColumn
                 : idColumn;
 
-            _folder = $"{_tableName}/{partitionColumn}{UrlEscapedEqualsSign}{_partitionKey}";
+            //_folder = $"{_tableName}/{partitionColumn}{UrlEscapedEqualsSign}{_key}";
             _fileName = $"{fileNamePrefix}_{Guid.NewGuid()}.{Format}";
             _localPath = Path.Combine(tmpFilePath, _fileName);
         }
@@ -81,7 +77,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         public override string GenerateFileFromItems(out string folderName, out string fileName)
         {
             fileName = _fileName;
-            folderName = _folder;
+            folderName = _key;
 
             WriteToFile();
             
@@ -428,7 +424,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             if (_logger?.IsInfoEnabled ?? false)
             {
-                _logger.Info($"Inserted {_group.Count} records to '{_tableName}/{_partitionKey}' table " +
+                _logger.Info($"Inserted {_group.Count} records to '{_tableName}/{_key}' table " +
                             $"from the following documents: {string.Join(", ", _group.Ids)}");
             }
         }
