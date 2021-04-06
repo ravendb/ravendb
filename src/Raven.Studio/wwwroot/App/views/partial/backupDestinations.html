@@ -57,7 +57,7 @@
                                                 <small>
                                                     Node Tag: <strong data-bind="text: NodeTag"></strong>
                                                     <br />
-                                                    Path: <strong data-bind="text: $parents[1].isServerWide() ? FullPath + '\\{DATABASE-NAME}\\' : FullPath"></strong><br />
+                                                    Path: <strong data-bind="text: $parents[1].getPathForCreatedBackups($data)"></strong><br />
                                                     <!-- ko if: Error -->
                                                     Error: <strong data-bind="text: Error"></strong>
                                                     <!-- /ko -->
