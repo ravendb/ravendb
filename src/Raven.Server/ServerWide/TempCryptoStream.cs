@@ -16,7 +16,7 @@ namespace Raven.Server.ServerWide
         private readonly MemoryStream _nonces = new MemoryStream();
         private readonly long _startPosition;
 
-        public Stream InnerStream => _stream; 
+        public Stream InnerStream => _stream;
         public override bool CanRead => true;
         public override bool CanSeek => true;
         public override bool CanWrite => true;
@@ -91,7 +91,7 @@ namespace Raven.Server.ServerWide
 
                     EncryptToStream(pInternalBuffer);
 
-                    var positionOfWrite = (_blockNumber +1) * _internalBuffer.Length + _bufferIndex;
+                    var positionOfWrite = (_blockNumber + 1) * _internalBuffer.Length + _bufferIndex;
 
                     if (positionOfWrite >= _maxLength)
                     {
@@ -109,7 +109,7 @@ namespace Raven.Server.ServerWide
                     _needToWrite = true;
                     Sparrow.Memory.Copy(pInternalBuffer + _bufferIndex, pInputBuffer + offset, count);
                     _bufferIndex += count;
-                    _maxLength = Math.Max(_maxLength,  _blockNumber * _internalBuffer.Length + _bufferIndex);
+                    _maxLength = Math.Max(_maxLength, _blockNumber * _internalBuffer.Length + _bufferIndex);
                     _bufferValidIndex = Math.Max(_bufferValidIndex, _bufferIndex);
                 }
             }
@@ -128,9 +128,9 @@ namespace Raven.Server.ServerWide
 
         private void EncryptToStream(byte* pInternalBuffer)
         {
-            if (_bufferValidIndex == 0  || _needToWrite == false)
+            if (_bufferValidIndex == 0 || _needToWrite == false)
                 return;
-            
+
             if (_bufferValidIndex != _internalBuffer.Length)
             {
                 if (_stream.Length != _stream.Position)
@@ -147,11 +147,11 @@ namespace Raven.Server.ServerWide
                 fixed (byte* pAuthTags = _authenticationTags.GetBuffer())
                 fixed (byte* pNonces = _nonces.GetBuffer())
                 {
-                    var mac = pAuthTags + _blockNumber* (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
+                    var mac = pAuthTags + _blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
                     var nonce = pNonces + _blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes();
                     Sodium.randombytes_buf(nonce, Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes());
                     ulong macLen = 0;
-                    var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(pInternalBuffer, mac, &macLen , pInternalBuffer, (ulong)_bufferValidIndex, null,0, null, nonce, k);
+                    var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(pInternalBuffer, mac, &macLen, pInternalBuffer, (ulong)_bufferValidIndex, null, 0, null, nonce, k);
                     if (rc != 0)
                         throw new InvalidOperationException(
                             $"crypto_stream_xchacha20_xor failed in EncryptToStream(). rc={rc}, _bufferIndex={_bufferIndex}, _blockNumber={_blockNumber}");
@@ -173,7 +173,7 @@ namespace Raven.Server.ServerWide
             {
                 _authenticationTags.SetLength(requiredLength);
             }
-            
+
             requiredLength = _blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes() + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes();
             if (_nonces.Length < requiredLength)
             {
@@ -194,7 +194,7 @@ namespace Raven.Server.ServerWide
                 if (ReadIntoBuffer() == 0)
                     return 0;
             }
-            
+
             var toRead = Math.Min(count, _bufferValidIndex - _bufferIndex);
 
             Buffer.BlockCopy(_internalBuffer, _bufferIndex, buffer, offset, toRead);
@@ -278,6 +278,9 @@ namespace Raven.Server.ServerWide
 
         public override void SetLength(long value)
         {
+            if (_ignoreSetLength)
+                return;
+
             throw new NotSupportedException("Cannot set length in TempCryptoStream");
         }
 
