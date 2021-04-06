@@ -1632,6 +1632,31 @@ namespace Raven.Server.Documents
                 key: resourceName));
         }
 
+        internal void HandleRecoverableFailure(object sender, RecoverableFailureEventArgs e)
+        {
+            var title = $"Recoverable Voron error in '{Name}' database";
+            var message = $"Failure {e.FailureMessage} in the following environment: {e.EnvironmentPath}";
+
+            try
+            {
+                _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                    Name,
+                    title,
+                    message,
+                    AlertType.RecoverableVoronFailure,
+                    NotificationSeverity.Warning,
+                    key: e.EnvironmentId.ToString(),
+                    details: new ExceptionDetails(e.Exception)));
+            }
+            catch (Exception)
+            {
+                // exception in raising an alert can't prevent us from unloading a database
+            }
+
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"{title}. {message}", e.Exception);
+        }
+
         public long GetEnvironmentsHash()
         {
             long hash = 0;
