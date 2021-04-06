@@ -40,6 +40,7 @@ namespace Raven.Server.Documents
                 : StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, db.IoChanges, db.CatastrophicFailureNotification);
 
             options.OnNonDurableFileSystemError += db.HandleNonDurableFileSystemError;
+            options.OnRecoverableFailure += db.HandleRecoverableFailure;
             options.OnRecoveryError += db.HandleOnConfigurationRecoveryError;
             options.OnIntegrityErrorOfAlreadySyncedData += db.HandleOnConfigurationIntegrityErrorOfAlreadySyncedData;
             options.CompressTxAboveSizeInBytes = db.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);

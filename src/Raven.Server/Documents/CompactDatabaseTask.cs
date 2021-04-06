@@ -182,6 +182,7 @@ namespace Raven.Server.Documents
             options.ForceUsing32BitsPager = configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = documentDatabase.Configuration.Storage.EnablePrefetching;
             options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
+            options.OnRecoverableFailure += documentDatabase.HandleRecoverableFailure;
             options.OnRecoveryError += documentDatabase.HandleOnDatabaseRecoveryError;
             options.OnIntegrityErrorOfAlreadySyncedData += documentDatabase.HandleOnDatabaseIntegrityErrorOfAlreadySyncedData;
             options.CompressTxAboveSizeInBytes = configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);

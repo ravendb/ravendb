@@ -79,6 +79,12 @@ class licenseModel {
         return true;
     });
     
+    static cloudLicense = ko.pureComputed(() => {
+        const licenseStatus = licenseModel.licenseStatus();
+        
+        return licenseStatus && licenseStatus.IsCloud;
+    });
+    
     static licenseCssClass = ko.pureComputed(() => {
         const status = licenseModel.licenseStatus();
         if (!status || status.Type === "None") {
