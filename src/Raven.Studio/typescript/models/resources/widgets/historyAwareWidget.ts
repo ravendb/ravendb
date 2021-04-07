@@ -9,6 +9,12 @@ class historyAwareWidget<T extends Raven.Server.Dashboard.Cluster.AbstractCluste
     mouseOver = ko.observable<boolean>(false);
     history: cachedDateValue<T>[] = [];
     connectionHistory: [Date, Date][] = [];
+    
+    spinner = ko.pureComputed(() => {
+        const noData = !this.currentItem();
+        const mouseOver = this.mouseOver();
+        return !mouseOver && noData;
+    })
 
     constructor(tag: string) {
         this.tag = tag;

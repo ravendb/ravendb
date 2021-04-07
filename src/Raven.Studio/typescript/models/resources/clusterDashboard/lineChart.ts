@@ -99,7 +99,7 @@ class lineChart {
     }
     
     private drawGrid(gridContainer: d3.Selection<any>) {
-        const gridLocation = _.range(0, this.width, 20)
+        const gridLocation = _.range(0, this.width, 40)
             .map(x => this.width - x);
         
         const lines = gridContainer.selectAll("line")
