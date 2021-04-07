@@ -705,7 +705,9 @@ namespace Raven.Server.Web.System
             await ServerStore.EnsureNotPassiveAsync();
 
             var waitOnRecordDeletion = new List<string>();
-            var deletedDatabases = new List<string>();
+            var pendingDeletes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var databasesToDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
@@ -719,48 +721,61 @@ namespace Raven.Server.Web.System
                     auditLog.Info($"Delete [{string.Join(", ", parameters.DatabaseNames)}] database from ({string.Join(", ", parameters.FromNodes)}) by {clientCert?.Subject} ({clientCert?.Thumbprint})");
                 }
 
-                if (parameters.FromNodes != null && parameters.FromNodes.Length > 0)
+                using (context.OpenReadTransaction())
                 {
-                    using (context.OpenReadTransaction())
-                    {
-                        foreach (var databaseName in parameters.DatabaseNames)
-                        {
-                            DatabaseTopology topology;
-                            using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
-                            {
-                                if (rawRecord == null)
-                                    continue;
+                    var fromNodes = parameters.FromNodes != null && parameters.FromNodes.Length > 0;
 
-                                topology = rawRecord.Topology;
+                    foreach (var databaseName in parameters.DatabaseNames)
+                    {
+                        DatabaseTopology topology = null;
+                        using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+                        {
+                            if (rawRecord == null)
+                                continue;
+
+                            switch (rawRecord.LockMode)
+                            {
+                                case DatabaseLockMode.Unlock:
+                                    databasesToDelete.Add(databaseName);
+                                    break;
+                                case DatabaseLockMode.PreventDeletesIgnore:
+                                    continue;
+                                case DatabaseLockMode.PreventDeletesError:
+                                    throw new InvalidOperationException($"Database '{databaseName}' cannot be deleted because of the set lock mode ('{rawRecord.LockMode}'). Please consider changing the lock mode before deleting the database.");
+                                default:
+                                    throw new ArgumentOutOfRangeException(nameof(rawRecord.LockMode));
                             }
 
+                            if (fromNodes)
+                                topology = rawRecord.Topology;
+                        }
+
+                        if (fromNodes)
+                        {
                             foreach (var node in parameters.FromNodes)
                             {
                                 if (topology.RelevantFor(node) == false)
                                 {
                                     throw new InvalidOperationException($"Database '{databaseName}' doesn't reside on node '{node}' so it can't be deleted from it");
                                 }
-                                deletedDatabases.Add(node);
+                                pendingDeletes.Add(node);
                                 topology.RemoveFromTopology(node);
                             }
 
                             if (topology.Count == 0)
                                 waitOnRecordDeletion.Add(databaseName);
+
+                            continue;
                         }
-                    }
-                }
-                else
-                {
-                    foreach (var databaseName in parameters.DatabaseNames)
-                    {
+
                         waitOnRecordDeletion.Add(databaseName);
                     }
                 }
 
                 long index = -1;
-                foreach (var name in parameters.DatabaseNames)
+                foreach (var databaseName in databasesToDelete)
                 {
-                    var (newIndex, _) = await ServerStore.DeleteDatabaseAsync(name, parameters.HardDelete, parameters.FromNodes, $"{GetRaftRequestIdFromQuery()}/{name}");
+                    var (newIndex, _) = await ServerStore.DeleteDatabaseAsync(databaseName, parameters.HardDelete, parameters.FromNodes, $"{GetRaftRequestIdFromQuery()}/{databaseName}");
                     index = newIndex;
                 }
                 await ServerStore.Cluster.WaitForIndexNotification(index);
@@ -813,7 +828,7 @@ namespace Raven.Server.Web.System
                         // because a node is down, and we don't want to cause the client to wait on an
                         // index that doesn't exists in the Raft log
                         [nameof(DeleteDatabaseResult.RaftCommandIndex)] = actualDeletionIndex,
-                        [nameof(DeleteDatabaseResult.PendingDeletes)] = new DynamicJsonArray(deletedDatabases)
+                        [nameof(DeleteDatabaseResult.PendingDeletes)] = new DynamicJsonArray(pendingDeletes)
                     });
                 }
             }
@@ -1393,6 +1408,51 @@ namespace Raven.Server.Web.System
             {
                 writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
             }
+        }
+
+        [RavenAction("/admin/databases/set-lock", "POST", AuthorizationStatus.Operator)]
+        public async Task SetLockMode()
+        {
+            var raftRequestId = GetRaftRequestIdFromQuery();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/set-lock");
+                var parameters = JsonDeserializationServer.Parameters.SetDatabaseLockParameters(json);
+
+                if (parameters.DatabaseNames == null || parameters.DatabaseNames.Length == 0)
+                    throw new ArgumentNullException(nameof(parameters.DatabaseNames));
+
+                var databasesToUpdate = new List<string>();
+                using (context.OpenReadTransaction())
+                {
+                    foreach (var databaseName in parameters.DatabaseNames)
+                    {
+                        var record = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName, out long index);
+                        if (record == null)
+                            DatabaseDoesNotExistException.Throw(databaseName);
+
+                        if (record.LockMode == parameters.Mode)
+                            continue;
+
+                        databasesToUpdate.Add(databaseName);
+                    }
+                }
+
+                if (databasesToUpdate.Count > 0)
+                {
+                    long index = 0;
+                    foreach (var databaseName in databasesToUpdate)
+                    {
+                        //var result = await ServerStore.WriteDatabaseRecordAsync(kvp.DatabaseRecord.DatabaseName, kvp.DatabaseRecord, kvp.Index, raftRequestId);
+                        var result = await ServerStore.SendToLeaderAsync(new EditLockModeCommand(databaseName, parameters.Mode, raftRequestId));
+                        index = result.Index;
+                    }
+
+                    await ServerStore.Cluster.WaitForIndexNotification(index);
+                }
+            }
+
+            NoContentStatus();
         }
 
         private static async Task<(bool HasTimeout, string Line)> ReadLineOrTimeout(Process process, Task timeout, OfflineMigrationConfiguration configuration, CancellationToken token)

@@ -889,6 +889,16 @@ namespace Raven.Server.Smuggler.Documents
                     progress.UnusedDatabaseIdsUpdated = true;
                 }
 
+                if (databaseRecordItemType.HasFlag(DatabaseRecordItemType.LockMode))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring database lock mode from smuggler");
+
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditLockModeCommand(_database.Name, databaseRecord.LockMode, RaftIdGenerator.DontCareId)));
+
+                    progress.LockModeUpdated = true;
+                }
+
                 if (tasks.Count == 0)
                     return;
 

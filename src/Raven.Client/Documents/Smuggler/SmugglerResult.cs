@@ -266,6 +266,8 @@ namespace Raven.Client.Documents.Smuggler
 
             public bool UnusedDatabaseIdsUpdated { get; set; }
 
+            public bool LockModeUpdated { get; set; }
+
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
@@ -323,6 +325,9 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (UnusedDatabaseIdsUpdated)
                     json[nameof(UnusedDatabaseIdsUpdated)] = UnusedDatabaseIdsUpdated;
+
+                if (LockModeUpdated)
+                    json[nameof(LockModeUpdated)] = LockModeUpdated;
 
                 return json;
             }
@@ -383,6 +388,9 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (DocumentsCompressionConfigurationUpdated)
                     sb.AppendLine("- Documents Compression");
+
+                if (LockModeUpdated)
+                    sb.AppendLine("- Lock Mode");
 
                 if (sb.Length == 0)
                     return string.Empty;

@@ -414,6 +414,7 @@ namespace Raven.Server.ServerWide
                     case nameof(EditDatabaseClientConfigurationCommand):
                     case nameof(EditDocumentsCompressionCommand):
                     case nameof(UpdateUnusedDatabaseIdsCommand):
+                    case nameof(EditLockModeCommand):
                         UpdateDatabase(context, type, cmd, index, leader, serverStore);
                         break;
 
@@ -2238,6 +2239,7 @@ namespace Raven.Server.ServerWide
                 case nameof(EditExpirationCommand):
                 case nameof(EditRefreshCommand):
                 case nameof(EditDatabaseClientConfigurationCommand):
+                case nameof(EditLockModeCommand):
                     databaseRecord.EtagForBackup = index;
                     break;
             }

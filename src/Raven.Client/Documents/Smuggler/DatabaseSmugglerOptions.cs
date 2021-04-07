@@ -31,7 +31,8 @@
                                                                                   DatabaseRecordItemType.SinkPullReplications |
                                                                                   DatabaseRecordItemType.TimeSeries |
                                                                                   DatabaseRecordItemType.DocumentsCompression |
-                                                                                  DatabaseRecordItemType.Analyzers;
+                                                                                  DatabaseRecordItemType.Analyzers |
+                                                                                  DatabaseRecordItemType.LockMode;
 
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 

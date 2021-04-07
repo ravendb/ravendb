@@ -54,5 +54,6 @@ namespace Raven.Client.Documents.Smuggler
         TimeSeries = 1 << 15,
         DocumentsCompression = 1 << 16,
         Analyzers = 1 << 17,
+        LockMode = 1 << 18
     }
 }

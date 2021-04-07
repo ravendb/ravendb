@@ -222,6 +222,13 @@ namespace Raven.Server.Smuggler.Documents
 
                 _writer.WriteArray(nameof(databaseRecord.UnusedDatabaseIds), databaseRecord.UnusedDatabaseIds);
 
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.LockMode))
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.LockMode));
+                    _writer.WriteString(databaseRecord.LockMode.ToString());
+                }
+
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.ConflictSolverConfig))
                 {
                     _writer.WriteComma();
