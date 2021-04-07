@@ -1,24 +1,23 @@
 import generalUtils = require("common/generalUtils");
 
-class memoryUsage {
-    readonly tag: string;
-    disconnected = ko.observable<boolean>(true);
+import historyAwareWidget = require("models/resources/widgets/historyAwareWidget");
 
-    hasData = ko.observable<boolean>(false);
+class memoryUsage extends historyAwareWidget<Raven.Server.Dashboard.Cluster.Notifications.MemoryUsagePayload> {
 
-    availableMemory = ko.observable<number>();
-    lowMemorySeverity = ko.observable<Sparrow.LowMemory.LowMemorySeverity>();
-    physicalMemory = ko.observable<number>();
-    workingSet = ko.observable<number>();
-    managedAllocations = ko.observable<number>();
-    dirtyMemory = ko.observable<number>();
-    encryptionBuffersInUse = ko.observable<number>();
-    encryptionBuffersPool = ko.observable<number>();
-    memoryMapped = ko.observable<number>();
-    unmanagedAllocations = ko.observable<number>();
-    availableMemoryForProcessing = ko.observable<number>();
-    systemCommitLimit = ko.observable<number>();
-
+    availableMemory = this.dataExtractor(x => x.AvailableMemory);
+    lowMemorySeverity = this.dataExtractor(x => x.LowMemorySeverity);
+    physicalMemory = this.dataExtractor(x => x.PhysicalMemory);
+    workingSet = this.dataExtractor(x => x.WorkingSet);
+    managedAllocations = this.dataExtractor(x => x.ManagedAllocations);
+    dirtyMemory = this.dataExtractor(x => x.DirtyMemory);
+    encryptionBuffersInUse = this.dataExtractor(x => x.EncryptionBuffersInUse);
+    encryptionBuffersPool = this.dataExtractor(x => x.EncryptionBuffersPool);
+    memoryMapped = this.dataExtractor(x => x.MemoryMapped);
+    unmanagedAllocations = this.dataExtractor(x => x.UnmanagedAllocations);
+    availableMemoryForProcessing = this.dataExtractor(x => x.AvailableMemoryForProcessing);
+    systemCommitLimit = this.dataExtractor(x => x.SystemCommitLimit);
+    swap = this.dataExtractor(x => x.PhysicalMemory != null && x.SystemCommitLimit != null ? x.SystemCommitLimit - x.PhysicalMemory : undefined);
+    
     workingSetFormatted: KnockoutComputed<[string, string]>;
     machineMemoryUsage: KnockoutComputed<string>;
     machineMemoryUsagePercentage: KnockoutComputed<string>;
@@ -28,7 +27,7 @@ class memoryUsage {
     sizeFormatter = generalUtils.formatBytesToSize;
 
     constructor(tag: string) {
-        this.tag = tag;
+        super(tag);
 
         this.showEncryptionBuffers = ko.pureComputed(() => {
             return location.protocol === "https:";
@@ -36,7 +35,7 @@ class memoryUsage {
         
         this.workingSetFormatted = this.valueAndUnitFormatter(this.workingSet);
 
-        this.machineMemoryUsage = ko.pureComputed(() => {
+        this.machineMemoryUsage = this.conditionalDataExtractor(x => {
             const physical = this.physicalMemory();
             const available = this.availableMemory();
 
@@ -49,11 +48,13 @@ class memoryUsage {
             } else {
                 return usedFormatted[0] + " " + usedFormatted[1] + " / " + totalFormatted[0] + " " + totalFormatted[1];
             }
-        })
+        }, { 
+            customNoData: "-"
+        });
 
-        this.machineMemoryUsagePercentage = ko.pureComputed(() => {
-            const physical = this.physicalMemory();
-            const available = this.availableMemory();
+        this.machineMemoryUsagePercentage = this.conditionalDataExtractor(x => {
+            const physical = x.PhysicalMemory;
+            const available = x.AvailableMemory;
 
             if (!physical) {
                 return "n/a";
@@ -73,28 +74,12 @@ class memoryUsage {
             return null;
         })
     }
-
-    update(data: Raven.Server.Dashboard.Cluster.Notifications.MemoryUsagePayload) {
-        this.hasData(true);
-        this.availableMemory(data.AvailableMemory);
-        this.lowMemorySeverity(data.LowMemorySeverity);
-        this.physicalMemory(data.PhysicalMemory);
-        this.workingSet(data.WorkingSet);
-
-        this.managedAllocations(data.ManagedAllocations);
-        this.dirtyMemory(data.DirtyMemory);
-        this.encryptionBuffersInUse(data.EncryptionBuffersInUse);
-        this.encryptionBuffersPool(data.EncryptionBuffersPool);
-        this.memoryMapped(data.MemoryMapped);
-        this.unmanagedAllocations(data.UnmanagedAllocations);
-        this.availableMemoryForProcessing(data.AvailableMemoryForProcessing);
-        this.systemCommitLimit(data.SystemCommitLimit);
-    }
-
+    
     valueAndUnitFormatter(value: KnockoutObservable<number>): KnockoutComputed<[string, string]> {
         return ko.pureComputed(() => {
-            if (this.disconnected() || !this.hasData()) {
-                return ["Connecting...", "-"];
+            const noData = this.noDataText();
+            if (noData) {
+                return [noData, "-"];
             }
 
             const formatted = generalUtils.formatBytesToSize(value());
