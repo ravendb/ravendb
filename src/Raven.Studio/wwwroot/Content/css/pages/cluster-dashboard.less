@@ -262,15 +262,18 @@
                 padding: @gutter-xs/2 @gutter-sm/2;
                 flex-grow: 1;
 
-                .disconnected {
+                .no-data {
                     opacity: 0.6;
                     position: relative;
                     --node-color: @text-muted !important;
 
                     .node-label {
                         position: relative;
-
-
+                    }
+                }
+                
+                .spinner {
+                    .node-label {
                         &::before {
                             position: absolute;
                             left: -3px;
