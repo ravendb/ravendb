@@ -1,3 +1,13 @@
+@keyframes infinite-spinning {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .cluster-dashboard-container {
     width: 100%;
     padding-bottom: @gutter;
@@ -28,7 +38,7 @@
     }
 
     .cluster-dashboard-item {
-        transition: all .3s cubic-bezier(1, 0, 0, 1);
+        transition: all .3s cubic-bezier(0.2, 1.6, 0.6, 1.00);
         background-color: @panel-bg;
         border-radius: 2px;
         z-index: 10;
@@ -116,7 +126,7 @@
             min-width: 50%;
             padding: @gutter-sm/2;
 
-            &>i {
+            & > i {
                 font-size: 22px;
                 margin-right: @gutter-xs;
                 flex-shrink: 0;
@@ -133,7 +143,7 @@
                 font-size: 16px;
                 font-weight: bold;
                 line-height: 1.2em;
-                color: @gray-100;
+                color: @text-emphasis;
 
                 small {
                     font-size: 13px;
@@ -141,45 +151,51 @@
                 }
             }
 
-            &:nth-of-type(10n+1)>i {
+            &:nth-of-type(10n+1) > i {
                 color: @color-4;
             }
 
-            &:nth-of-type(10n+2)>i {
+            &:nth-of-type(10n+2) > i {
                 color: @color-4-2;
             }
 
-            &:nth-of-type(10n+3)>i {
+            &:nth-of-type(10n+3) > i {
                 color: @color-5;
             }
 
-            &:nth-of-type(10n+4)>i {
+            &:nth-of-type(10n+4) > i {
                 color: @color-5-2;
             }
 
-            &:nth-of-type(10n+5)>i {
+            &:nth-of-type(10n+5) > i {
                 color: @color-1;
             }
 
-            &:nth-of-type(10n+6)>i {
+            &:nth-of-type(10n+6) > i {
                 color: @color-1-2;
             }
 
-            &:nth-of-type(10n+7)>i {
+            &:nth-of-type(10n+7) > i {
                 color: @color-2;
             }
 
-            &:nth-of-type(10n+8)>i {
+            &:nth-of-type(10n+8) > i {
                 color: @color-2-2;
             }
 
-            &:nth-of-type(10n+9)>i {
+            &:nth-of-type(10n+9) > i {
                 color: @color-3;
             }
 
-            &:nth-of-type(10n)>i {
+            &:nth-of-type(10n) > i {
                 color: @color-3-2;
             }
+        }
+
+        .license-link {
+            margin: @gutter/2;
+            margin-bottom: 0;
+            align-self: center;
         }
     }
 
@@ -194,7 +210,7 @@
             padding: @gutter-xxs @gutter-xs;
             padding-bottom: 0;
             font-size: 11px;
-            color: @text-muted;
+            color: @text-color;
         }
 
         .collapse-arrow {
@@ -247,17 +263,35 @@
                 flex-grow: 1;
 
                 .disconnected {
-                    opacity: 0.4;
+                    opacity: 0.6;
+                    position: relative;
+                    --node-color: @text-muted !important;
+
+                    .node-label {
+                        position: relative;
+
+
+                        &::before {
+                            position: absolute;
+                            left: -3px;
+                            top: -3px;
+                            animation: infinite-spinning 3s infinite;
+                            content: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='30px' height='30px'><circle cx='15' cy='15' r='11' style='fill: none; stroke: %23c4ced7; stroke-linecap: round; stroke-miterlimit: 10; stroke-width: 2px; stroke-dasharray: 10px 13px; stroke-dashoffset: 5px;'/></svg>");
+                            width: 30px;
+                            height: 30px;
+                            display: block;
+                        }
+                    }
                 }
 
                 .nodes-item {
-                    transition: transform .3s cubic-bezier(0, 2, 0.5, 1);
+                    transition: transform .3s cubic-bezier(0, 2, 0.5, 1), opacity .2s;
                     transform-origin: left top;
                     padding: @gutter-xs/2 @gutter-sm/2;
                     flex-grow: 1;
                     color: @text-muted;
                     width: 20%;
-                    
+
                     .nodes-item-header {
                         display: flex;
                         align-items: center;
@@ -266,13 +300,14 @@
                             background-color: var(--node-color);
                             color: @well-bg;
                             font-weight: 800;
-                            width: 25px;
-                            height: 25px;
+                            width: 24px;
+                            height: 24px;
                             line-height: 25px;
                             text-align: center;
                             border-radius: 15px;
                             margin-right: @gutter-xxs;
                             flex-shrink: 0;
+                            transition: .2s background-color;
                         }
 
                         .node-value {
@@ -281,6 +316,7 @@
                             margin-right: @gutter-xxs;
                             flex-grow: 1;
                             line-height: 1.1em;
+                            transition: .2s color;
 
                             .supplementary-info {
                                 display: block;
@@ -298,7 +334,7 @@
                         }
 
                         .supplementary-info {
-                            color: @brand-warning  !important;
+                            color: @brand-warning !important;
                         }
                     }
 
@@ -308,13 +344,12 @@
                         }
 
                         .supplementary-info {
-                            color: @brand-danger  !important;
+                            color: @brand-danger !important;
                         }
                     }
 
                     .details-list {
                         overflow: hidden;
-
                         -webkit-animation: @slidein-properties;
                         -moz-animation: @slidein-properties;
                         -ms-animation: @slidein-properties;
@@ -342,6 +377,8 @@
                                 color: var(--node-color);
                                 margin: 0 @gutter-xs/2;
                                 order: 1;
+                                min-width: 65px;
+                                transition: .2s color;
                             }
                         }
                     }
@@ -362,11 +399,11 @@
                         display: flex;
                         font-size: 11px;
 
-                        &>div {
+                        & > div {
                             line-height: 1em;
                             margin-bottom: @gutter-xxs;
 
-                            &+div {
+                            & + div {
                                 margin-left: @gutter-sm;
                             }
                         }
@@ -379,7 +416,8 @@
                             color: @color-2;
                         }
 
-                        .storage-free {}
+                        .storage-free {
+                        }
 
                         .storage-total {
                             text-align: right;
@@ -394,18 +432,18 @@
                         box-shadow: 0 0 0 1px @hr-border inset;
                         font-size: 11px;
 
-                        &+.storage-legend,
-                        &+.mount {
+                        & + .storage-legend,
+                        & + .mount {
                             margin-top: @gutter-xs;
                         }
 
-                        &>div {
+                        & > div {
                             line-height: @gutter-sm;
                             font-weight: bold;
                             overflow: hidden;
                             box-sizing: content-box;
 
-                            &>span {
+                            & > span {
                                 display: block;
                                 padding: 0 @gutter-xxs;
                             }
@@ -497,13 +535,13 @@
 
             .graph-container {
                 height: 100px;
+                overflow: hidden;
 
                 .grid-line {
                     stroke: @hr-border;
                     stroke-width: 1px;
                 }
-                
-                // TODO: those are TEMPORARY STYLES!!!
+
                 .line {
                     fill: none;
                     stroke-width: 2;
@@ -514,36 +552,45 @@
                     stroke: none;
                 }
 
-                .node-a {
-                    .line {
-                        stroke: @color-4;
-                    }
+                .node-a .line {
+                    stroke: @color-4;
                 }
 
-                .node-b {
-                    .line {
-                        stroke: @color-5;
-                    }
+                .node-b .line {
+                    stroke: @color-5;
                 }
 
-                .node-c {
-                    .line {
-                        stroke: @color-1;
-                    }
+                .node-c .line {
+                    stroke: @color-1;
                 }
 
-                .node-d {
-                    .line {
-                        stroke: @color-2;
-                    }
+                .node-d .line {
+                    stroke: @color-2;
                 }
 
-                .node-e {
-                    .line {
-                        stroke: @color-3;
-                    }
+                .node-e .line {
+                    stroke: @color-3;
                 }
-                // TODO: temporary styles end!
+
+                .node-f .line {
+                    stroke: @color-4-2;
+                }
+
+                .node-g .line {
+                    stroke: @color-5-2;
+                }
+
+                .node-h .line {
+                    stroke: @color-1-2;
+                }
+
+                .node-i .line {
+                    stroke: @color-2-2;
+                }
+
+                .node-j .line {
+                    stroke: @color-3-2;
+                }
             }
         }
 
@@ -579,7 +626,7 @@
     }
 
     .header-row {
-        background-color: @panel-bg  !important;
+        background-color: @panel-bg !important;
         border-top: 1px solid @hr-border;
         border-bottom: 1px dashed @hr-border;
     }
@@ -600,6 +647,10 @@
         .virtual-grid,
         .static-grid {
             padding: 0;
+
+            .token {
+                color: @text-color;
+            }
         }
 
         .list-container {
@@ -628,7 +679,7 @@
             padding: @gutter-xxs @gutter-sm;
             color: inherit;
 
-            &:hover {                
+            &:hover {
                 background-color: lighten(@row-bg, 6%);
 
                 .task-name {
@@ -685,7 +736,7 @@
 
         .task-details-item {
             display: flex;
-            font-size: 11px;            
+            font-size: 11px;
             transition: border-color .2s ease;
             padding: 3px @gutter-sm;
             color: inherit;
@@ -693,6 +744,7 @@
             &:first-of-type {
                 border-top: 1px transparent solid;
             }
+
             &:last-of-type {
                 border-bottom: 1px transparent solid;
             }
@@ -731,6 +783,7 @@
 
             &:hover {
                 background-color: lighten(@row-bg, 6%);
+
                 .task-database {
                     color: @text-emphasis;
                 }
@@ -747,7 +800,6 @@
     .topology-container {
         padding: @gutter-xxs;
         font-size: 11px;
-
         display: grid;
         grid-gap: @gutter-sm;
         grid-template:
@@ -819,7 +871,7 @@
 
     .node-label {
         background-color: @gray-300;
-        color: #22252b;
+        color: @well-bg;
         font-size: 10px;
         font-weight: 800;
         display: inline-block;
@@ -922,8 +974,8 @@
         &::before {
             content: 'ADD';
             display: block;
-            background-color: @panel-bg;
-            color: @text-color;
+            background-color: @text-color;
+            color: @panel-bg;
             border-radius: 40px;
             text-align: center;
             font-size: 14px;
@@ -935,7 +987,6 @@
             transform: translateX(-50%) translatey(-50%) scale(.9);
             opacity: 0;
             transition: all .15s cubic-bezier(0, 0.5, 0.5, 1);
-
         }
 
         &:hover {
@@ -947,8 +998,6 @@
                 opacity: 1;
             }
         }
-
-
     }
 }
 
