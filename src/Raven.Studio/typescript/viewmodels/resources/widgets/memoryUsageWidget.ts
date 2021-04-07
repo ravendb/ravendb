@@ -13,6 +13,8 @@ interface memoryUsageState {
 
 class memoryUsageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.Notifications.MemoryUsagePayload, void, memoryUsageState> {
 
+    private readonly throttledShowHistory: (date: Date) => void;
+    
     showProcessDetails = ko.observable<boolean>(false);
     showMachineDetails = ko.observable<boolean>(false);
     
@@ -30,6 +32,8 @@ class memoryUsageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clus
             const stats = new memoryUsage(node.tag());
             this.nodeStats.push(stats);
         }
+
+        this.throttledShowHistory = _.throttle((d: Date) => this.showNodesHistory(d), 100);
     }
     
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
@@ -73,17 +77,43 @@ class memoryUsageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clus
         const ravenChartContainer = this.container.querySelector(".ravendb-line-chart");
         this.ravenChart = new lineChart(ravenChartContainer, {
             grid: true,
-            fillData: true
+            fillData: true,
+            tooltipProvider: date => memoryUsageWidget.tooltipContent(date),
+            onMouseMove: date => this.onMouseMove(date)
         });
         const serverChartContainer = this.container.querySelector(".machine-line-chart");
         this.serverChart = new lineChart(serverChartContainer, {
             grid: true, 
-            fillData: true
+            fillData: true,
+            tooltipProvider: date => memoryUsageWidget.tooltipContent(date),
+            onMouseMove: date => this.onMouseMove(date)
+        });
+    }
+
+    private static tooltipContent(date: Date|null) {
+        if (date) {
+            const dateFormatted = moment(date).format(lineChart.timeFormat);
+            return `<div class="tooltip-inner">Time: <strong>${dateFormatted}</strong></div>`;
+        } else {
+            return null;
+        }
+    }
+
+    onMouseMove(date: Date|null) {
+        this.ravenChart.highlightTime(date);
+        this.serverChart.highlightTime(date);
+
+        this.throttledShowHistory(date);
+    }
+
+    private showNodesHistory(date: Date|null) {
+        this.nodeStats().forEach(nodeStats => {
+            nodeStats.showItemAtDate(date);
         });
     }
 
     onData(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.MemoryUsagePayload) {
-        this.scheduleSyncUpdate(() => this.withStats(nodeTag, x => x.update(data)));
+        this.scheduleSyncUpdate(() => this.withStats(nodeTag, x => x.onData(data)));
         
         const date = moment.utc(data.Time).toDate();
         const key = "node-" + nodeTag.toLocaleLowerCase();
@@ -119,13 +149,13 @@ class memoryUsageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clus
     onClientConnected(ws: clusterDashboardWebSocketClient) {
         super.onClientConnected(ws);
         
-        this.withStats(ws.nodeTag, x => x.disconnected(false));
+        this.withStats(ws.nodeTag, x => x.onConnectionStatusChanged(true));
     }
 
     onClientDisconnected(ws: clusterDashboardWebSocketClient) {
         super.onClientDisconnected(ws);
 
-        this.withStats(ws.nodeTag, x => x.disconnected(true));
+        this.withStats(ws.nodeTag, x => x.onConnectionStatusChanged(false));
     }
     
     private withStats(nodeTag: string, action: (stats: memoryUsage) => void) {

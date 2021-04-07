@@ -1,4 +1,4 @@
-
+/// <reference path="../../../../typings/tsd.d.ts"/>
 
 class historyAwareWidget<T extends Raven.Server.Dashboard.Cluster.AbstractClusterDashboardNotification> {
     readonly tag: string;
@@ -12,16 +12,6 @@ class historyAwareWidget<T extends Raven.Server.Dashboard.Cluster.AbstractCluste
 
     constructor(tag: string) {
         this.tag = tag;
-    }
-
-    protected noDataText(): string|null {
-        const currentItem = this.currentItem();
-        const mouseOver = this.mouseOver();
-        if (currentItem) {
-            return null;
-        } else {
-            return mouseOver ? "No data" : "Connecting...";
-        }
     }
 
     onConnectionStatusChanged(connected: boolean) {
@@ -112,6 +102,33 @@ class historyAwareWidget<T extends Raven.Server.Dashboard.Cluster.AbstractCluste
         if (this.connectionHistory.length > 1000) {
             this.connectionHistory.slice(800);
         }
+    }
+
+    protected noDataText(): string|null {
+        const currentItem = this.currentItem();
+        const mouseOver = this.mouseOver();
+        if (currentItem) {
+            return null;
+        } else {
+            return mouseOver ? "No data" : "Connecting...";
+        }
+    }
+    
+    protected conditionalDataExtractor<S>(accessor: (value: T) => S, opts: { customNoData?: string } = {}) {
+        return ko.pureComputed(() => {
+            const noData = this.noDataText();
+            if (noData) {
+                return opts.customNoData || noData;
+            }
+            return accessor(this.currentItem().value);
+        });
+    }
+
+    protected dataExtractor<S>(accessor: (value: T) => S) {
+        return ko.pureComputed(() => {
+            const item = this.currentItem();
+            return item ? accessor(item.value) : null;
+        });
     }
 }
 

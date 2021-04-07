@@ -19,7 +19,7 @@
                 </button>
                 <div class="nodes-container" data-bind="foreach: nodeStats">
                     <div class="nodes-item" data-toggle="tooltip" data-placement="top" 
-                         data-bind="css: { 'node-warning': lowMemorySeverity() === 'Low', 'node-danger': lowMemorySeverity() === 'ExtremelyLow', 'disconnected': disconnected }, tooltipText: lowMemoryTitle()">
+                         data-bind="css: { 'node-warning': lowMemorySeverity() === 'Low', 'node-danger': lowMemorySeverity() === 'ExtremelyLow', 'disconnected': !currentItem() }, tooltipText: lowMemoryTitle()">
                         <div class="nodes-item-header">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
@@ -73,7 +73,7 @@
                 </button>
 
                 <div class="nodes-container" data-bind="foreach: nodeStats">
-                    <div class="nodes-item" data-bind="css: { 'disconnected': disconnected }">
+                    <div class="nodes-item" data-bind="css: { 'disconnected': !currentItem() }">
                         <div class="nodes-item-header">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
@@ -85,7 +85,7 @@
                         <div class="details-list">
                             <div class="details-item">
                                 <div class="details-item-name">Swap</div>
-                                <div class="details-item-value" data-bind="text: sizeFormatter(systemCommitLimit() - physicalMemory())"></div>
+                                <div class="details-item-value" data-bind="text: sizeFormatter(swap())"></div>
                             </div>
                             <div class="details-item">
                                 <div class="details-item-name">Available</div>
