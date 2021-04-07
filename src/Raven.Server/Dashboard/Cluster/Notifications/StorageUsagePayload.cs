@@ -24,7 +24,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
             {
                 var usageAsJson = x.ToJson();
 
-                usageAsJson.Remove(nameof(MountPointUsage.Items));
+                usageAsJson.RemoveInMemoryPropertyByName(nameof(MountPointUsage.Items));
 
                 return usageAsJson;
             }));
@@ -41,7 +41,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
                 var usageAsJson = mountPointUsage.ToJsonWithFilter(filter);
                 if (usageAsJson != null)
                 {
-                    usageAsJson.Remove(nameof(MountPointUsage.Items));
+                    usageAsJson.RemoveInMemoryPropertyByName(nameof(MountPointUsage.Items));
 
                     items.Add(usageAsJson);
                 }

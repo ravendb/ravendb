@@ -15,7 +15,7 @@
             <div class="flex-horizontal">
                 <div class="nodes-container" data-bind="foreach: nodeStats">
                     <div class="nodes-item">
-                        <div class="nodes-item-header" data-bind="css: { 'disconnected': disconnected }">
+                        <div class="nodes-item-header" data-bind="css: { 'disconnected': !currentItem() }">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
                                 <span data-bind="text: processCpuUsageFormatted"></span>
@@ -38,7 +38,7 @@
             <div class="flex-horizontal">
                 <div class="nodes-container" data-bind="foreach: nodeStats">
                     <div class="nodes-item">
-                        <div class="nodes-item-header" data-bind="css: { 'disconnected': disconnected }">
+                        <div class="nodes-item-header" data-bind="css: { 'disconnected': !currentItem() }">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
                                 <span data-bind="text: machineCpuUsageFormatted"></span>

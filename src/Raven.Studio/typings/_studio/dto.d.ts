@@ -807,3 +807,8 @@ interface databaseAndNodeAwareStats {
     hideDatabaseName: boolean;
     even: boolean;
 }
+
+interface cachedDateValue<T> {
+    date: Date;
+    value: T;
+}

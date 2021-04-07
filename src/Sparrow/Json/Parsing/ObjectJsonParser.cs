@@ -66,6 +66,15 @@ namespace Sparrow.Json.Parsing
             Removals.Add(propertyIndex);
         }
 
+        internal void RemoveInMemoryPropertyByName(string property)
+        {
+            if (_source != null)
+                throw new InvalidOperationException(
+                    "Cannot remove in memory property when setup with a source blittable json object");
+            var index = Properties.FindIndex(x => x.Name == property);
+            Properties.RemoveAt(index);
+        }
+
         public object this[string name]
         {
             set
