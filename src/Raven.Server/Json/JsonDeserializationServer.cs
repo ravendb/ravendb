@@ -225,6 +225,8 @@ namespace Raven.Server.Json
             public static readonly Func<BlittableJsonReaderObject, UpdateUnusedDatabasesOperation.Parameters> UnusedDatabaseParameters = GenerateJsonDeserializationRoutine<UpdateUnusedDatabasesOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, ConfigureTimeSeriesValueNamesOperation.Parameters> TimeSeriesValueNamesParameters = GenerateJsonDeserializationRoutine<ConfigureTimeSeriesValueNamesOperation.Parameters>();
+
+            public static readonly Func<BlittableJsonReaderObject, SetDatabasesLockOperation.Parameters> SetDatabaseLockParameters = GenerateJsonDeserializationRoutine<SetDatabasesLockOperation.Parameters>();
         }
     }
 }

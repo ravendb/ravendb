@@ -464,6 +464,19 @@ namespace Raven.Server.Smuggler.Documents
                             _log.Info("Wasn't able to import the client configuration from smuggler file. Skipping.", e);
                     }
                 }
+
+                if (reader.TryGet(nameof(databaseRecord.LockMode), out string lockMode))
+                {
+                    try
+                    {
+                        databaseRecord.LockMode = Enum.Parse<DatabaseLockMode>(lockMode, ignoreCase: true);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the database lock mode from smuggler file. Skipping.", e);
+                    }
+                }
             });
 
             return databaseRecord;

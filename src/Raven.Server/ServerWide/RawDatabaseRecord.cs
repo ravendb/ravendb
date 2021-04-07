@@ -150,6 +150,22 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private DatabaseLockMode? _lockMode;
+
+        public DatabaseLockMode LockMode
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.LockMode;
+
+                if (_lockMode == null && _record.TryGet(nameof(DatabaseRecord.LockMode), out _lockMode) == false)
+                    _lockMode = DatabaseLockMode.Unlock;
+
+                return _lockMode.Value;
+            }
+        }
+
         private TimeSeriesConfiguration _timeSeriesConfiguration;
 
         public TimeSeriesConfiguration TimeSeriesConfiguration

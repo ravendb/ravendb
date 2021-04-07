@@ -49,6 +49,8 @@ namespace Raven.Client.ServerWide
 
         public DatabaseStateStatus DatabaseState;
 
+        public DatabaseLockMode LockMode;
+
         public DatabaseTopology Topology;
 
         // public OnGoingTasks tasks;  tasks for this node..
@@ -311,6 +313,13 @@ namespace Raven.Client.ServerWide
         public IndexDefinition Definition { get; set; }
         public string Source { get; set; }
         public DateTime CreatedAt { get; set; }
+    }
+
+    public enum DatabaseLockMode
+    {
+        Unlock,
+        PreventDeletesIgnore,
+        PreventDeletesError
     }
 
     public enum DatabaseStateStatus
