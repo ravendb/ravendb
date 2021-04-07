@@ -19,12 +19,14 @@ type chartOpts = {
     yMaxProvider?: () => number | null;
     useSeparateYScales?: boolean;
     topPaddingProvider?: (key: string) => number;
-    tooltipProvider?: (data: dashboardChartTooltipProviderArgs) => string;
+    tooltipProvider?: (date: Date|null) => string;
+    onMouseMove?: (date: Date|null) => void;
 }
 
 class lineChart {
     
     static readonly defaultTopPadding = 5;
+    static readonly timeFormat = "h:mm:ss A";
     
     private width: number;
     private height: number;
@@ -38,10 +40,12 @@ class lineChart {
     private pointer: d3.Selection<void>;
     private lastXPosition: number = null;
     private tooltip: d3.Selection<void>;
+    private mouseOver: boolean = false;
     
     private xScale: d3.time.Scale<number, number>;
     
     private containerSelector: string | EventTarget;
+    private highlightVisible: boolean = false;
     
     constructor(containerSelector: string | EventTarget, opts?: chartOpts) {
         this.opts = opts || {} as any;
@@ -89,7 +93,7 @@ class lineChart {
         
         this.tooltip = d3.select(".tooltip");
         
-        if (this.opts.tooltipProvider) {
+        if (this.opts.tooltipProvider || this.opts.onMouseMove) {
             this.setupValuesPreview();
         }
     }
@@ -136,32 +140,59 @@ class lineChart {
         this.drawGrid(gridContainer);
     }
     
-    private setupValuesPreview() {
-        this.svg
-            .on("mousemove.tip", () => {
-                const node = this.svg.node();
-                const mouseLocation = d3.mouse(node);
-                this.pointer
-                    .attr("x1", mouseLocation[0] + 0.5)
-                    .attr("x2", mouseLocation[0] + 0.5);
-                
-                this.updateTooltip();
-            })
-            .on("mouseenter.tip", () => {
+    highlightTime(date: Date|null) {
+        if (date) {
+            const xToHighlight = this.xScale(date);
+            
+            if (!this.highlightVisible) {
                 this.pointer
                     .transition()
                     .duration(200)
                     .style("stroke-opacity", 1);
-                
-                this.showTooltip();
+                this.highlightVisible = true;
+            }
+            
+            this.pointer
+                .attr("x1", xToHighlight + 0.5)
+                .attr("x2", xToHighlight + 0.5);
+        } else {
+            this.highlightVisible = false;
+            this.pointer
+                .transition()
+                .duration(100)
+                .style("stroke-opacity", 0);
+        }
+    }
+    
+    private setupValuesPreview() {
+        const withTooltip = !!this.opts.tooltipProvider;
+        this.svg
+            .on("mousemove.tip", () => {
+                if (this.xScale) {
+                    const node = this.svg.node();
+                    const mouseLocation = d3.mouse(node);
+
+                    const hoverTime = this.xScale.invert(mouseLocation[0]);
+                    this.opts?.onMouseMove(hoverTime);
+
+                    if (withTooltip) {
+                        this.updateTooltip();
+                    }
+                }
+            })
+            .on("mouseenter.tip", () => {
+                this.mouseOver = true;
+                if (withTooltip) {
+                    this.showTooltip();
+                }
             })
             .on("mouseleave.tip", () => {
-                this.pointer
-                    .transition()
-                    .duration(100)
-                    .style("stroke-opacity", 0);
+                this.mouseOver = false;
+                if (withTooltip) {
+                    this.hideTooltip();
+                }
                 
-                this.hideTooltip();
+                this.opts?.onMouseMove(null);
             });
     }
     
@@ -182,7 +213,7 @@ class lineChart {
             xToUse = d3.mouse(this.svg.node())[0];
             this.lastXPosition = xToUse;
 
-            const globalLocation = d3.mouse(d3.select("#dashboard-container").node());
+            const globalLocation = d3.mouse(d3.select(".cluster-dashboard-container").node());
             const [x, y] = globalLocation;
             this.tooltip
                 .style("left", (x + 10) + "px")
@@ -200,39 +231,12 @@ class lineChart {
             } else {
                 this.tooltip.style("display", "none");
             }
-            
         }
     }
     
-    private findClosestData(xToUse: number): dashboardChartTooltipProviderArgs {
+    private findClosestData(xToUse: number): Date {
         const hoverTime = this.xScale.invert(xToUse);
-
-        if (hoverTime.getTime() < this.minDate.getTime()) {
-            return null;
-        } else {
-            
-            const hoverTicks = hoverTime.getTime();
-            let bestIndex = 0;
-            let bestDistance = 99999;
-            
-            for (let i = 0; i < this.data[0].values.length; i++) {
-                const dx = Math.abs(hoverTicks - this.data[0].values[i].x.getTime());
-                if (dx < bestDistance) {
-                    bestDistance = dx;
-                    bestIndex = i;
-                }
-            }
-            
-            const values = {} as dictionary<number>; 
-                this.data.forEach(d => {
-                values[d.id] = d.values[bestIndex].y;
-            });
-            
-            return {
-                date: this.data[0].values[bestIndex].x,
-                values: values
-            } as dashboardChartTooltipProviderArgs;
-        }
+        return hoverTime.getTime() >= this.minDate.getTime() ? hoverTime : null; 
     }
     
     hideTooltip() {
@@ -268,7 +272,13 @@ class lineChart {
         });
         
         this.maybeTrimData();
-       
+        
+        if (this.lastXPosition && this.opts.onMouseMove) {
+            // noinspection JSSuspiciousNameCombination
+            const hoverTime = this.xScale.invert(this.lastXPosition);
+            this.opts.onMouseMove(hoverTime);
+        }
+        
         this.updateTooltip(true);
     }
     
