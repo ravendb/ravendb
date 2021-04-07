@@ -42,6 +42,8 @@ namespace Raven.Server.Dashboard.Cluster
                     return new IndexingSpeedNotificationSender(topicId, ClusterDashboardPayloadType.Server, _databasesInfoRetriever, watcher, _shutdown);
                 case ClusterDashboardNotificationType.DatabaseIndexing:
                     return new IndexingSpeedNotificationSender(topicId, ClusterDashboardPayloadType.Database, _databasesInfoRetriever, watcher, _shutdown);
+                case ClusterDashboardNotificationType.DatabaseOverview:
+                    return new DatabaseOverviewNotificationSender(topicId, _databasesInfoRetriever, watcher, _shutdown);
                 default:
                     throw new NotSupportedException($"Unsupported cluster dashboard notification type: {type}");
             }

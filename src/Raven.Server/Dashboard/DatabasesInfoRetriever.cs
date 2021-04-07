@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -168,8 +169,11 @@ namespace Raven.Server.Dashboard
                                     DocumentsCount = documentsStorage.GetNumberOfDocuments(documentsContext),
                                     IndexesCount = database.IndexStore.Count,
                                     AlertsCount = database.NotificationCenter.GetAlertCount(),
+                                    PerformanceHintsCount = database.NotificationCenter.GetPerformanceHintCount(),
                                     ReplicationFactor = replicationFactor,
-                                    ErroredIndexesCount = indexStorage.GetIndexes().Count(index => index.GetErrorCount() > 0),
+                                    ErroredIndexesCount = indexStorage.GetIndexes().Count(index => index.State == IndexState.Error),
+                                    IndexingErrorsCount = indexStorage.GetIndexes().Sum(index => index.GetErrorCount()),
+                                    BackupInfo = database.PeriodicBackupRunner?.GetBackupInfo(context),
                                     Online = true
                                 };
                                 databasesInfo.Items.Add(databaseInfoItem);

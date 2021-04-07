@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard
@@ -55,6 +56,8 @@ namespace Raven.Server.Dashboard
 
         public long AlertsCount { get; set; }
 
+        public long PerformanceHintsCount { get; set; }
+
         public int ReplicationFactor { get; set; }
 
         public bool Online { get; set; }
@@ -62,6 +65,10 @@ namespace Raven.Server.Dashboard
         public bool Disabled { get; set; }
 
         public bool Irrelevant { get; set; }
+
+        public long IndexingErrorsCount { get; set; }
+
+        public BackupInfo BackupInfo { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -71,8 +78,11 @@ namespace Raven.Server.Dashboard
                 [nameof(DocumentsCount)] = DocumentsCount,
                 [nameof(IndexesCount)] = IndexesCount,
                 [nameof(ErroredIndexesCount)] = ErroredIndexesCount,
+                [nameof(IndexingErrorsCount)] = IndexingErrorsCount,
                 [nameof(AlertsCount)] = AlertsCount,
+                [nameof(PerformanceHintsCount)] = PerformanceHintsCount,
                 [nameof(ReplicationFactor)] = ReplicationFactor,
+                [nameof(BackupInfo)] = BackupInfo.ToJson()
                 [nameof(Online)] = Online,
                 [nameof(Disabled)] = Disabled,
                 [nameof(Irrelevant)] = Irrelevant
