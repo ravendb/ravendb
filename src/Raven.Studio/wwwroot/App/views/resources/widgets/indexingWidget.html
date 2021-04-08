@@ -15,10 +15,10 @@
             <div class="flex-horizontal">
                 <div class="nodes-container" data-bind="foreach: nodeStats">
                     <div class="nodes-item">
-                        <div class="nodes-item-header" data-bind="css: { 'disconnected': disconnected }">
+                        <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
-                                <span data-bind="text: indexedPerSecondFormatted"></span>
+                                <span data-bind="text: indexedPerSecond"></span>
                                 <span class="supplementary-info">Docs<br /> indexed/s</span>
                             </div>
                         </div>
@@ -36,10 +36,10 @@
             <div class="flex-horizontal">
                 <div class="nodes-container" data-bind="foreach: nodeStats">
                     <div class="nodes-item">
-                        <div class="nodes-item-header" data-bind="css: { 'disconnected': disconnected }">
+                        <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
-                                <span data-bind="text: mappedPerSecondFormatted"></span>
+                                <span data-bind="text: mappedPerSecond"></span>
                                 <span class="supplementary-info"># Docs<br /> mapped/s</span>
                             </div>
                         </div>
@@ -54,10 +54,10 @@
             <div class="flex-horizontal">
                 <div class="nodes-container" data-bind="foreach: nodeStats">
                     <div class="nodes-item">
-                        <div class="nodes-item-header" data-bind="css: { 'disconnected': disconnected }">
+                        <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
-                                <span data-bind="text: reducedPerSecondFormatted"></span>
+                                <span data-bind="text: reducedPerSecond"></span>
                                 <span class="supplementary-info"># Mapped entries reduced/s</span>
                             </div>
                         </div>
