@@ -13,6 +13,8 @@ namespace Corax
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
         private readonly StorageEnvironment _environment;
+        private readonly TransactionPersistentContext _transactionPersistentContext;
+
         private readonly Transaction _transaction;
 
         public static readonly Slice IndexEntriesSlice;
@@ -55,10 +57,13 @@ namespace Corax
         public IndexWriter([NotNull] StorageEnvironment environment)
         {
             _environment = environment;
-            _transaction = _environment.WriteTransaction();
+            _transactionPersistentContext = new TransactionPersistentContext(true);
+
+            _transaction = _environment.WriteTransaction(_transactionPersistentContext);
             _entries = _transaction.OpenTable(IndexEntriesSchema, IndexEntriesSlice);
             if (_entries != null) return;
             IndexEntriesSchema.Create(_transaction, IndexEntriesSlice, 8);
+
             _entries = _transaction.OpenTable(IndexEntriesSchema, IndexEntriesSlice);
             _entries.CORAX_DEBUG_MOVE_DATA += () =>
                 throw new NotSupportedException("Data move are not supported for index entries");
@@ -111,6 +116,9 @@ namespace Corax
                 case BlittableJsonToken.Boolean:
                 {
                     var str = val.ToString(); // TODO: fixme
+                    if (str.Length > 512)
+                        break;
+
                     var fst = field.FixedTreeFor(str);
                     fst.Add(entryId);
                     break;
