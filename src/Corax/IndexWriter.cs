@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -69,11 +70,14 @@ namespace Corax
                 throw new NotSupportedException("Data move are not supported for index entries");
         }
 
-        public unsafe long Index(string id, BlittableJsonReaderObject item)
+        public long Index(string id, BlittableJsonReaderObject item)
         {
             using var _ = Slice.From(_transaction.Allocator, id, out var idSlice);
             return Index(idSlice, item);
         }
+
+        private SortedList<string, SortedList<string, SortedList<long, long>>> _buffer =
+            new SortedList<string, SortedList<string, SortedList<long, long>>>();
 
         public unsafe long Index(Slice id, BlittableJsonReaderObject item)
         {
@@ -87,8 +91,12 @@ namespace Corax
                 for (int i = 0; i < item.Count; i++)
                 {
                     item.GetPropertyByIndex(i, ref prop, addObjectToCache: false);
-                  
-                    Tree field = _transaction.CreateTree(prop.Name.ToString());
+
+                    var key = prop.Name.ToString();
+                    if (_buffer.TryGetValue(key, out var field) == false)
+                    {
+                        _buffer[key] = field = new SortedList<string, SortedList<long, long>>();
+                    }
                     InsertToken(field, prop.Value, prop.Token, entryId);
                 }
                 
@@ -97,7 +105,7 @@ namespace Corax
 
         }
 
-        private static void InsertToken(Tree field, object val, BlittableJsonToken token, long entryId)
+        private static void InsertToken(SortedList<string, SortedList<long, long>> field, object val, BlittableJsonToken token, long entryId)
         {
             switch (token & BlittableJsonReaderBase.TypesMask)
             {
@@ -119,14 +127,23 @@ namespace Corax
                     if (str.Length > 512)
                         break;
 
-                    var fst = field.FixedTreeFor(str);
-                    fst.Add(entryId);
+                    if (field.TryGetValue(str, out var term) == false)
+                    {
+                        field[str] = term = new SortedList<long, long>();
+                    }
+
+                    term[entryId] = entryId;
                     break;
                 }
                 case BlittableJsonToken.Null:
                 {
-                    var fst = field.FixedTreeFor("<<NULL_VALUE>>"); // TODO: fixme
-                    fst.Add(entryId);
+                    var str = "<<NULL_VALUE>>"; // todo: fixme
+                    if (field.TryGetValue(str, out var term) == false)
+                    {
+                        field[str] = term = new SortedList<long, long>();
+                    }
+                    term[entryId] = entryId;
+
                     break;
                 }
                 default:
@@ -136,6 +153,18 @@ namespace Corax
 
         public void Commit()
         {
+            foreach (var (field, terms) in _buffer)
+            {
+                var tree = _transaction.CreateTree(field);
+                foreach (var (term, entries) in terms)
+                {
+                    var fixedSizeTree = tree.FixedTreeFor(term);
+                    foreach (long entry in entries.Keys)
+                    {
+                        fixedSizeTree.Add(entry);
+                    }
+                }
+            }
             _transaction.Commit();
         }
 
