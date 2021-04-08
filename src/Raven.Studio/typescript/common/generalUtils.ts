@@ -235,26 +235,31 @@ class genUtils {
     /***  Size Methods ***/
 
     // Format bytes to human size string
-    static formatBytesToSize(bytes: number, digitsAfterDecimalPoint = 2): string {
+    static formatBytesToSize(bytes: number, digitsAfterDecimalPoint?: number, asArray?: false): string
+    static formatBytesToSize(bytes: number, digitsAfterDecimalPoint?: number, asArray?: true): [string, string]
+    static formatBytesToSize(bytes: number, digitsAfterDecimalPoint = 2, asArray: boolean = false): string|[string, string] {
         const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
         if (bytes === 0) {
-            return "0 Bytes";
+            return asArray ? ["0", "Bytes"] : "0 Bytes";
         }
         if (bytes === 1) {
-            return "1 Byte";
+            return asArray ? ["1", "Byte"] : "1 Byte";
         }
-        if (!bytes || bytes === -1) return 'n/a';
+        if (!bytes || bytes === -1) {
+            return asArray ? ['n/a', "-"] : "n/a";
+        }
         const i = Math.floor(Math.log(bytes) / Math.log(1024));
 
         if (i < 0) {
             // number < 1
-            return genUtils.formatAsCommaSeperatedString(bytes, digitsAfterDecimalPoint) + ' Bytes';
+            const numberPart = genUtils.formatAsCommaSeperatedString(bytes, digitsAfterDecimalPoint);
+            return asArray ? [numberPart, "Bytes"] : numberPart + " Bytes";
         }
 
         const res = bytes / Math.pow(1024, i);
         const newRes = genUtils.formatAsCommaSeperatedString(res, digitsAfterDecimalPoint);
-
-        return newRes + ' ' + sizes[i];
+        
+        return asArray ? [newRes, sizes[i]] : newRes + " " + sizes[i];
     }
 
     static getSizeInBytesAsUTF8(input: string) {

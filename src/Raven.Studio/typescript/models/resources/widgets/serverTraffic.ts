@@ -1,77 +1,58 @@
 import generalUtils = require("common/generalUtils");
+import historyAwareNodeStats = require("models/resources/widgets/historyAwareNodeStats");
 
-class serverTraffic {
-    readonly tag: string;
-    disconnected = ko.observable<boolean>(true);
+class serverTraffic extends historyAwareNodeStats<Raven.Server.Dashboard.Cluster.Notifications.TrafficWatchPayload> {
 
-    hasData = ko.observable<boolean>(false);
-
-    attachmentsWriteBytesPerSecond = ko.observable<number>();
-    attachmentWritesPerSecond = ko.observable<number>();
-    countersWriteBytesPerSecond = ko.observable<number>();
-    counterWritesPerSecond = ko.observable<number>();
-    documentsWriteBytesPerSecond = ko.observable<number>();
-    documentWritesPerSecond = ko.observable<number>();
-    requestsPerSecond = ko.observable<number>();
-    timeSeriesWriteBytesPerSecond = ko.observable<number>();
-    timeSeriesWritesPerSecond = ko.observable<number>();
+    attachmentsWriteBytesPerSecond = this.conditionalDataExtractor(x => generalUtils.formatBytesToSize(x.AttachmentsWriteBytesPerSecond) + "/s", { customNoData: "n/a" });
+    attachmentWritesPerSecond = this.conditionalDataExtractor(x => x.AttachmentWritesPerSecond.toLocaleString() + "/s", { customNoData: "n/a" });
+    countersWriteBytesPerSecond = this.conditionalDataExtractor(x => generalUtils.formatBytesToSize(x.CountersWriteBytesPerSecond) + "/s", { customNoData: "n/a" });
+    counterWritesPerSecond = this.conditionalDataExtractor(x => x.CounterWritesPerSecond.toLocaleString() + "/s", { customNoData: "n/a" });
+    documentsWriteBytesPerSecond = this.conditionalDataExtractor(x => generalUtils.formatBytesToSize(x.DocumentsWriteBytesPerSecond) + "/s", { customNoData: "n/a" });
+    documentWritesPerSecond = this.conditionalDataExtractor(x => x.DocumentWritesPerSecond.toLocaleString() + "/s", { customNoData: "n/a" });
+    requestsPerSecond = this.dataExtractor(x => x.RequestsPerSecond);
+    timeSeriesWriteBytesPerSecond = this.conditionalDataExtractor(x => generalUtils.formatBytesToSize(x.TimeSeriesWriteBytesPerSecond) + "/s", { customNoData: "n/a" });
+    timeSeriesWritesPerSecond = this.conditionalDataExtractor(x => x.TimeSeriesWritesPerSecond.toLocaleString() + "/s", { customNoData: "n/a" });
     
-    sizeFormatter = generalUtils.formatBytesToSize;
+    totalWritesPerSecond = this.dataExtractor(x => x.DocumentWritesPerSecond
+        + x.AttachmentWritesPerSecond
+        + x.CounterWritesPerSecond
+        + x.TimeSeriesWritesPerSecond);
+    
+    totalWritesPerSecondSize = this.conditionalDataExtractor(() => generalUtils.formatBytesToSize(this.totalWritesPerSecond(), 2, true)[0]);
+    totalWritesPerSecondUnit = this.conditionalDataExtractor(() => generalUtils.formatBytesToSize(this.totalWritesPerSecond(), 2, true)[1], { customNoData: "-" });
+    
+    totalWriteBytesPerSecond = this.dataExtractor(x => x.DocumentsWriteBytesPerSecond
+        + x.AttachmentsWriteBytesPerSecond
+        + x.CountersWriteBytesPerSecond
+        + x.TimeSeriesWriteBytesPerSecond);
+
+    totalWriteBytesPerSecondSize = this.conditionalDataExtractor(() => generalUtils.formatBytesToSize(this.totalWriteBytesPerSecond(), 2, true)[0]);
+    totalWriteBytesPerSecondUnit = this.conditionalDataExtractor(() => generalUtils.formatBytesToSize(this.totalWriteBytesPerSecond(), 2, true)[1], { customNoData: "-" });
     
     requestsFormatted: KnockoutComputed<string>;
 
     constructor(tag: string) {
-        this.tag = tag;
+        super(tag);
         
         this.requestsFormatted = ko.pureComputed(() => {
-            const requests = this.requestsPerSecond();
-            if (requests != null) {
-                return requests.toLocaleString();
+            const noData = this.noDataText();
+            if (noData) {
+                return noData;
             }
-            return "n/a";
-        })
-    }
-
-    update(data: Raven.Server.Dashboard.Cluster.Notifications.TrafficWatchPayload) {
-        this.hasData(true);
-        this.attachmentsWriteBytesPerSecond(data.AttachmentsWriteBytesPerSecond);
-        this.attachmentWritesPerSecond(data.AttachmentWritesPerSecond);
-        this.countersWriteBytesPerSecond(data.CountersWriteBytesPerSecond);
-        this.counterWritesPerSecond(data.CounterWritesPerSecond);
-        this.documentsWriteBytesPerSecond(data.DocumentsWriteBytesPerSecond);
-        this.documentWritesPerSecond(data.DocumentWritesPerSecond);
-        this.requestsPerSecond(data.RequestsPerSecond);
-        this.timeSeriesWriteBytesPerSecond(data.TimeSeriesWriteBytesPerSecond);
-        this.timeSeriesWritesPerSecond(data.TimeSeriesWritesPerSecond);
-    }
-    
-    writesFormatter(value: KnockoutObservable<number>): KnockoutComputed<[string, string] | string> {
-        return ko.pureComputed(() => {
-            if (this.disconnected() || !this.hasData()) {
-                return "n/a";
-            }
-            
-            const rawValue = value();
-            if (rawValue != null) {
-                return rawValue.toLocaleString() + "/s";
-            }
-            return "n/a";
+            return this.requestsPerSecond().toLocaleString();
         });
     }
 
-    dataWrittenFormatter(value: KnockoutObservable<number>, asArray = false): KnockoutComputed<[string, string] | string> {
+    dataWrittenFormatter(value: KnockoutObservable<number>, customNoData?: string): KnockoutComputed<[string, string] | string> {
         return ko.pureComputed(() => {
-            if (this.disconnected() || !this.hasData()) {
-                return asArray ? ["n/a", ""] : "n/a";
+            const noData = this.noDataText();
+            if (noData) {
+                return customNoData ?? noData;
             }
 
             const rawValue = value();
-            if (rawValue != null) {
-                const [size, unit] = generalUtils.formatBytesToSize(rawValue).split(" ", 2);
-                return asArray ? [size, unit + "/s"] : size + " " + unit + "/s";
-            }
-
-            return asArray ? ["n/a", ""] : "n/a";
+            const [size, unit] = generalUtils.formatBytesToSize(rawValue).split(" ", 2); //TODO: check me: 1 024 kb won't work
+            return size + " " + unit + "/s";
         });
     }
 }

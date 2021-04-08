@@ -1,6 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
-class historyAwareWidget<T extends Raven.Server.Dashboard.Cluster.AbstractClusterDashboardNotification> {
+class historyAwareNodeStats<T extends Raven.Server.Dashboard.Cluster.AbstractClusterDashboardNotification> {
     readonly tag: string;
 
     connectedAt = ko.observable<Date>();
@@ -138,4 +138,4 @@ class historyAwareWidget<T extends Raven.Server.Dashboard.Cluster.AbstractCluste
     }
 }
 
-export = historyAwareWidget;
+export = historyAwareNodeStats;
