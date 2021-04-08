@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private static readonly string UrlEscapedEqualsSign = System.Net.WebUtility.UrlEncode("=");
         private ObjectInstance _noPartition;
         private const string PartitionKeys = "$partition_keys";
-
+        private const string DefaultPartitionColumnName = "_dt";
 
         public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config, string processName, Logger logger)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.OlapEtl), null)
@@ -38,7 +39,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _config = config;
             _tables = new Dictionary<string, OlapTransformedItems>();
             _logger = logger;
-
             var localSettings = BackupTask.GetBackupConfigurationFromScript(_config.Connection.LocalSettings, x => JsonDeserializationServer.LocalSettings(x),
                 database, updateServerWideSettingsFunc: null, serverWide: false);
 
@@ -135,8 +135,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private JsValue LoadToS3FunctionTranslator(string name, JsValue[] args)
         {
-            // todo error messages
-
             if (args.Length != 2)
                 ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) must be called with exactly 2 parameters");
 
@@ -144,11 +142,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'obj' must be an object");
 
             if (args[0].IsObject() == false)
-                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be a date object");
+                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be an object");
 
             var objectInstance = args[0].AsObject();
             if (objectInstance.HasOwnProperty(PartitionKeys) == false)
-                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be a date object");
+                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must have {PartitionKeys} property. Did you forget to use 'partitionBy(p)' / 'noPartition()' ? ");
 
             var partitionBy = objectInstance.GetOwnProperty(PartitionKeys).Value;
             var result = new ScriptRunnerResult(DocumentScript, args[1].AsObject());
@@ -156,24 +154,23 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             if (partitionBy.IsNull())
             {
                 // no partition
-                // todo : write test
                 LoadToFunction(name, key: name, result);
                 return result.Instance;
             }
 
             if (partitionBy.IsArray() == false)
-                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be a date object");
+                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) property {PartitionKeys} of argument 'key' must be an array instance");
 
             StringBuilder sb = new StringBuilder(name);
             var arr = partitionBy.AsArray();
             foreach (var item in arr)
             {
                 if (item.IsArray() == false)
-                    ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be a date object");
+                    ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) items in array {PartitionKeys} of argument 'key' must be array instances");
 
                 var tuple = item.AsArray();
                 if (tuple.Length != 2)
-                    ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be a date object");
+                    ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) items in array {PartitionKeys} of argument 'key' must be array instances of size 2, but got '{tuple.Length}'");
 
                 sb.Append('/').Append(tuple[0]).Append(UrlEscapedEqualsSign);
                 var val = tuple[1].IsDate()
@@ -200,7 +197,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 {
                     JsValue.FromObject(DocumentScript.ScriptEngine, new[]
                     {
-                        new JsString("_dt"), args[0] //todo
+                        new JsString(DefaultPartitionColumnName), args[0]
                     })
                 });
 

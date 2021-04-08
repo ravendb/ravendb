@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Server.Basic.Entities;
@@ -76,7 +77,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(key,
+loadToOrders(partitionBy(key),
     {
         Company : this.Company,
         ShipVia : this.ShipVia
@@ -141,7 +142,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(key,
+loadToOrders(partitionBy(key),
     {
         Company : this.Company,
         ShipVia : this.ShipVia
@@ -305,7 +306,7 @@ for (var i = 0; i < this.Lines.length; i++) {
     
     // load to 'sales' table
 
-    loadToSales(key, {
+    loadToSales(partitionBy(key), {
         Qty: line.Quantity,
         Product: line.Product,
         Cost: line.PricePerUnit
@@ -313,7 +314,7 @@ for (var i = 0; i < this.Lines.length; i++) {
 }
 
 // load to 'orders' table
-loadToOrders(key, orderData);
+loadToOrders(partitionBy(key), orderData);
 ";
 
 
@@ -443,7 +444,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(key,
+loadToOrders(partitionBy(key),
     {
         Company : this.Company,
         ShipVia : this.ShipVia
@@ -492,6 +493,239 @@ loadToOrders(key,
                 }
             }
 
+            finally
+            {
+                await DeleteObjects(settings);
+            }
+        }
+
+        [AmazonS3Fact]
+        public async Task SimpleTransformation_NoPartition()
+        {
+            var settings = GetS3Settings();
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    var baseline = new DateTime(2020, 1, 1).ToUniversalTime();
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 100; i++)
+                        {
+                            await session.StoreAsync(new Query.Order
+                            {
+                                Id = $"orders/{i}",
+                                OrderedAt = baseline.AddDays(i),
+                                ShipVia = $"shippers/{i}",
+                                Company = $"companies/{i}"
+                            });
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    var script = @"
+loadToOrders(noPartition(),
+    {
+        OrderDate : this.OrderedAt
+        Company : this.Company,
+        ShipVia : this.ShipVia
+    });
+";
+                    SetupS3OlapEtl(store, script, settings, TimeSpan.FromMinutes(10));
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    using (var s3Client = new RavenAwsS3Client(settings))
+                    {
+                        var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
+
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
+
+                        Assert.Equal(1, cloudObjects.FileInfoDetails.Count);
+
+                        var blob = await s3Client.GetObjectAsync(cloudObjects.FileInfoDetails[0].FullPath);
+                        await using var ms = new MemoryStream();
+                        blob.Data.CopyTo(ms);
+
+                        using (var parquetReader = new ParquetReader(ms))
+                        {
+                            Assert.Equal(1, parquetReader.RowGroupCount);
+
+                            var expectedFields = new[] { "OrderDate", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
+
+                            Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
+
+                            using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
+                            foreach (var field in parquetReader.Schema.Fields)
+                            {
+                                Assert.True(field.Name.In(expectedFields));
+
+                                var data = rowGroupReader.ReadColumn((DataField)field).Data;
+                                Assert.True(data.Length == 100);
+
+                                if (field.Name == ParquetTransformedItems.LastModifiedColumn)
+                                    continue;
+
+                                var count = 0;
+                                foreach (var val in data)
+                                {
+                                    if (field.Name == "OrderDate")
+                                    {
+                                        var expectedDto = new DateTimeOffset(DateTime.SpecifyKind(baseline.AddDays(count), DateTimeKind.Utc));
+                                        Assert.Equal(expectedDto, val);
+                                    }
+
+                                    else
+                                    {
+                                        var expected = field.Name switch
+                                        {
+                                            ParquetTransformedItems.DefaultIdColumn => $"orders/{count}",
+                                            "Company" => $"companies/{count}",
+                                            "ShipVia" => $"shippers/{count}",
+                                            _ => null
+                                        };
+
+                                        Assert.Equal(expected, val);
+                                    }
+
+                                    count++;
+                                }
+                            }
+                        }
+                    }
+
+                }
+
+            }
+            finally
+            {
+                await DeleteObjects(settings);
+            }
+        }
+
+        [AmazonS3Fact]
+        public async Task SimpleTransformation_MultiplePartitions()
+        {
+            var settings = GetS3Settings();
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    var baseline = DateTime.SpecifyKind(new DateTime(2020, 1, 1), DateTimeKind.Utc);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        const int total = 31 + 28; // days in January + days in February 
+
+                        for (int i = 0; i < total; i++)
+                        {
+                            var orderedAt = baseline.AddDays(i);
+                            await session.StoreAsync(new Query.Order
+                            {
+                                Id = $"orders/{i}",
+                                OrderedAt = orderedAt,
+                                RequireAt = orderedAt.AddDays(7),
+                                ShipVia = $"shippers/{i}",
+                                Company = $"companies/{i}"
+                            });
+                        }
+
+                        for (int i = 1; i <= 37; i++)
+                        {
+                            var index = i + total;
+                            var orderedAt = baseline.AddYears(1).AddMonths(1).AddDays(i);
+                            await session.StoreAsync(new Query.Order
+                            {
+                                Id = $"orders/{index}",
+                                OrderedAt = orderedAt,
+                                RequireAt = orderedAt.AddDays(7),
+                                ShipVia = $"shippers/{index}",
+                                Company = $"companies/{index}"
+                            });
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    var script = @"
+var orderDate = new Date(this.OrderedAt);
+
+loadToOrders(partitionBy([
+    ['year', orderDate.getFullYear()],
+    ['month', orderDate.getMonth() + 1]
+]),
+    {
+        Company : this.Company,
+        ShipVia : this.ShipVia,
+        RequireAt : this.RequireAt
+    });
+";
+                    SetupS3OlapEtl(store, script, settings, TimeSpan.FromMinutes(10));
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    Thread.Sleep(20000);
+
+                    var expectedFields = new[] { "RequireAt", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
+
+                    using (var s3Client = new RavenAwsS3Client(settings))
+                    {
+                        var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
+
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
+                        var files = cloudObjects.FileInfoDetails;
+
+                        Assert.Equal(4, files.Count);
+
+                        foreach (var fileInfo in files)
+                        {
+                            var fileName = fileInfo.FullPath;
+                            using (var fs = File.OpenRead(fileName))
+                            using (var parquetReader = new ParquetReader(fs))
+                            {
+                                Assert.Equal(1, parquetReader.RowGroupCount);
+                                Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
+
+                                using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
+                                foreach (var field in parquetReader.Schema.Fields)
+                                {
+                                    Assert.True(field.Name.In(expectedFields));
+                                    var data = rowGroupReader.ReadColumn((DataField)field).Data;
+
+                                    Assert.True(data.Length == 31 || data.Length == 28 || data.Length == 27 || data.Length == 10);
+                                    if (field.Name != "RequireAt")
+                                        continue;
+
+                                    var count = data.Length switch
+                                    {
+                                        31 => 0,
+                                        28 => 31,
+                                        27 => 365 + 33,
+                                        10 => 365 + 33 + 27
+                                    };
+
+                                    foreach (var val in data)
+                                    {
+                                        var expectedOrderDate = new DateTimeOffset(DateTime.SpecifyKind(baseline.AddDays(count++), DateTimeKind.Utc));
+                                        var expected = expectedOrderDate.AddDays(7);
+                                        Assert.Equal(expected, val);
+                                    }
+
+                                }
+
+                            }
+
+                        }
+                    }
+                }
+
+            }
             finally
             {
                 await DeleteObjects(settings);
