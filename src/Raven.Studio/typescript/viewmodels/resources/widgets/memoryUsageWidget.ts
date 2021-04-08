@@ -18,8 +18,6 @@ class memoryUsageWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashb
     ravenChart: lineChart;
     serverChart: lineChart;
     
-    nodeStats = ko.observableArray<memoryUsage>([]);
-    
     constructor(controller: clusterDashboard, state: memoryUsageState = undefined) {
         super(controller, undefined, state);
         

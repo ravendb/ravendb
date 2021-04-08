@@ -18,8 +18,6 @@ class trafficWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard
     writesChart: lineChart;
     dataWrittenChart: lineChart;
     
-    nodeStats = ko.observableArray<serverTraffic>([]);
-    
     constructor(controller: clusterDashboard, state: trafficState = undefined) {
         super(controller, undefined, state);
         
