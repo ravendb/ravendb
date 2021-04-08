@@ -2,6 +2,8 @@
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import listView = require("widgets/listView/listView");
 import genUtils = require("common/generalUtils");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import accessManager = require("common/shell/accessManager");
 
 class extensions {
     static install() {
@@ -191,9 +193,140 @@ class extensions {
             $(document).off("shown.bs.modal", onModalShown);
         });
     }
+    
+    private static verifyBindingLocation(bindingsArray: string[], binding: string, accessBindingLocation: number) {
+        const bindingLocation = bindingsArray.indexOf(binding);
 
+        if (bindingLocation > accessBindingLocation) {
+            throw new Error(`The '${binding}' binding must come BEFORE the 'requiredAccess' binding in your html.`);
+        }
+    }
+    
     private static installBindingHandlers() {
+        ko.bindingHandlers["requiredAccess"] = {
+            init: (element: Element,
+                   valueAccessor: KnockoutObservable<Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess>,
+                   allBindings) => {
+                
+                const requiredAccessLevel = ko.unwrap(valueAccessor());
+                const levelTypes = ["Read", "ReadWrite", "Admin"];
 
+                if (!_.includes(levelTypes, requiredAccessLevel)) {
+                    throw new Error(`Invalid requiredAccess level. Value provided: ${requiredAccessLevel}. Possible values are: ${levelTypes}.`);
+                }
+                const bindings = allBindings();
+                const bindingsArray = Object.keys(bindings);
+                const requiredAccessBindingLocation = bindingsArray.indexOf("requiredAccess");
+                
+                const activeDatabase = activeDatabaseTracker.default.database();
+                if (activeDatabase) {
+                    if (bindings.visible) {
+                        this.verifyBindingLocation(bindingsArray, "visible", requiredAccessBindingLocation);
+                    }
+                    if (bindings.hidden) {
+                        this.verifyBindingLocation(bindingsArray, "hidden", requiredAccessBindingLocation);
+                    }
+                    if (bindings.disable) {
+                        this.verifyBindingLocation(bindingsArray, "disable", requiredAccessBindingLocation);
+                    }
+                    if (bindings.enable) {
+                        this.verifyBindingLocation(bindingsArray, "enable", requiredAccessBindingLocation);
+                    }
+                } else {
+                    throw new Error("Cannot use the 'requiredAccess' binding - no database is active.");
+                }
+
+                const strategyTypes = ["hide", "disable", "visibilityHidden"];
+                
+                if (bindings.requiredAccessOptions) {
+                    const strategy = bindings.requiredAccessOptions.strategy;
+                    if (!_.includes(strategyTypes, strategy)) {
+                        throw new Error(`Invalid requiredAccess strategy. Value provided: ${strategy}. Possible values are: ${strategyTypes}`);
+                    }
+
+                    if (strategy === 'disable') {
+                        const hasDisabledClass = $(element).hasClass("disabled");
+                        if (hasDisabledClass) {
+                            throw new Error("Do not use the 'disabled' class. Please use the disabled/enabled bindings.");
+                        }
+
+                        if (element.tagName === "A") {
+                            throw new Error("Please do not use the 'requiredAccessOptions disable strategy' binding with element of type 'a'.");
+                        }
+                        
+                        const hasDisabledBinding = _.includes(bindingsArray, "disable");
+                        const hasEnabledBinding = _.includes(bindingsArray, "enable");
+                        if (hasDisabledBinding && hasEnabledBinding) {
+                            throw new Error("Element cannot have both the 'disable' binding & the 'enable' binding.");
+                        }
+                    }
+                }
+            },
+            update: (element: any,
+                     valueAccessor: KnockoutObservable<Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess>,
+                     allBindings) => {
+
+                const activeDatabase = activeDatabaseTracker.default.database();
+                if (activeDatabase) {
+                    const bindings = allBindings();
+                    
+                    const requiredAccessLevel = ko.unwrap(valueAccessor());
+                    const strategy = bindings.requiredAccessOptions ? bindings.requiredAccessOptions.strategy : 'hide';
+                    
+                    switch (strategy) {
+                        case 'hide': {
+                            const visibleBinding = bindings.visible;
+                            const visibleValue = visibleBinding ? ko.unwrap(visibleBinding) : true;
+
+                            const hiddenBinding = bindings.enable;
+                            const hiddenValue = hiddenBinding ? ko.unwrap(hiddenBinding) : false;
+
+                            const shouldBeVisibleByKo = visibleValue && !hiddenValue;
+                            const isElementVisible = element.style.display !== "none";
+
+                            if (accessManager.default.canHandleOperation(requiredAccessLevel)()) {
+                                if (!isElementVisible && shouldBeVisibleByKo) {
+                                    element.style.display = "";
+                                }
+                            } else {
+                                if (isElementVisible) {
+                                    element.style.display = "none";
+                                }
+                            }
+                        }
+                            break;
+
+                        case 'disable': {
+                            const disableBinding = bindings.disable;
+                            const disableValue = disableBinding ? ko.unwrap(disableBinding) : false;
+
+                            const enableBinding = bindings.enable;
+                            const enableValue = enableBinding ? ko.unwrap(enableBinding) : true;
+
+                            const shouldBeEnabledByKo = !disableValue && enableValue;
+                            const isElementDisabled = element.hasAttribute("disabled");
+
+                            if (accessManager.default.canHandleOperation(requiredAccessLevel)()) {
+                                if (isElementDisabled && shouldBeEnabledByKo) {
+                                    element.setAttribute("disabled", false)
+                                }
+                            } else {
+                                if (!isElementDisabled) {
+                                    element.setAttribute("disabled", true);
+                                }
+                            }
+                        }
+                            break;
+                        
+                        case 'visibilityHidden': {
+                            // TODO
+                        }
+                            break;
+                    }
+                }
+            }
+        };
+        
         ko.bindingHandlers["tooltipText"] = {
             init: (element: any, valueAccessor: KnockoutObservable<string>) => {
                 const text = ko.utils.unwrapObservable(valueAccessor());

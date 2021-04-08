@@ -198,7 +198,9 @@
             <button class="btn btn-default" type="button" data-bind="click: showAdvancedOptions.toggle.bind(showAdvancedOptions)">
                 <span data-bind="text: showAdvancedOptions() ? 'Close ' : ''"></span>Advanced
             </button>
-            <button class="btn btn-primary" type="submit" data-bind="disable: isExporting, css: { 'btn-spinner': isExporting() }"><span class="icon-export"></span> <span>Export Database</span></button>
+            <button class="btn btn-primary" type="submit" data-bind="disable: isExporting, css: { 'btn-spinner': isExporting() }">
+                <i class="icon-export"></i> <span>Export Database</span>
+            </button>
         </form>
     </div>
 </div>

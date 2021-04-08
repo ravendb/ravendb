@@ -34,11 +34,12 @@
     <div class="flex-horizontal flex-noshrink">
         <div class="btn-bar toolbar">
             <div class="btn-group">
-                <button class="btn btn-primary" type="button" data-bind="click: _.partial($root.createTimeSeries, false), attr: { title: 'Add a new entry to time series ' + timeSeriesName()}">
+                <button class="btn btn-primary" type="button" 
+                        data-bind="click: _.partial($root.createTimeSeries, false), attr: { title: 'Add a new entry to time series ' + timeSeriesName()}, requiredAccess: 'ReadWrite'">
                     <i class="icon-plus"></i>
                     <span>New Entry</span>
                 </button>
-                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" data-bind="requiredAccess: 'ReadWrite'">
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>
                 </button>
@@ -50,7 +51,7 @@
                     </li>
                 </ul>
             </div>
-            <button class="btn btn-danger" type="button" data-bind="click: deleteTimeSeries, enable: canDeleteSelected">
+            <button class="btn btn-danger" type="button" data-bind="click: deleteTimeSeries, enable: canDeleteSelected, requiredAccess: 'ReadWrite'">
                 <i class="icon-trash"></i>
                 <span data-bind="text: deleteButtonText"></span>
             </button>

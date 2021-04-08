@@ -235,6 +235,7 @@ class shell extends viewModelBase {
                     if (certificate) {
                         this.accessManager.securityClearance(certificate.SecurityClearance);
                         accessManager.clientCertificateThumbprint(certificate.Thumbprint);
+                        accessManager.databasesAccess = certificate.Permissions;
                     } else {
                         this.accessManager.securityClearance("ValidUser");
                     }
@@ -279,6 +280,8 @@ class shell extends viewModelBase {
             const dbAccess = certificateModel.resolveDatabasesAccess(this.clientCertificate());
             const allowedDatabases = dbAccess.length ? dbAccess.map(x => `<div>${x}</div>`).join("") : "Access to all databases is denied";
 
+            // todo: make separate L&F for db name and access level in param allowedDatabases
+            
             popoverUtils.longWithHover($(".js-client-cert"),
                 {
                     content: `<dl class="dl-horizontal margin-none client-certificate-info">

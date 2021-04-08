@@ -42,8 +42,11 @@
             <div class="inputs-container">
                 <div class="database-switcher-container" data-bind="with: databaseSwitcher">
                     <div class="form-control btn-toggle database-switcher">
-                        <span class="database on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
-                        <span data-bind="visible: $root.activeDatabase() ? $root.activeDatabase().environment() : false, text: $root.activeDatabase() ? $root.activeDatabase().environment(): '', attr: { class: 'label text-uppercase ' + ($root.activeDatabase() ? $root.activeDatabase().environmentClass() : '') }"></span>
+                        <span class="database on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name : ''"></span>
+                        <span data-bind="visible: $root.activeDatabase() ? $root.activeDatabase().environment() : false, 
+                                         text: $root.activeDatabase() ? $root.activeDatabase().environment(): '',
+                                         attr: { class: 'margin-right label text-uppercase ' + ($root.activeDatabase() ? $root.activeDatabase().environmentClass() : '') }"></span>
+                        <strong class="on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().databaseAccessText() : ''"></strong>
                     </div>
                     <a data-bind="attr: { href: $root.appUrls.databases }" title="View all databases" class="resources-link"><i class="icon-resources"></i></a>
                     <div class="box-container">
@@ -57,8 +60,10 @@
                                     <li data-bind="visible: !disabled() && relevant()">
                                         <a href="#" data-bind="click: $parent.selectDatabase.bind($parent), attr: {title: name}, css: { active: name === $parent.highlightedItem() , database: true }">
                                             <div class="name" data-bind="text: name"></div>
-                                            <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
+                                            <div data-bind="text: environment, visible: environment, attr: { class: 'margin-left label text-uppercase ' + environmentClass() }"></div>
                                             <div data-bind="visible: errored" class="label label-danger">Errored</div>
+                                            <div class="flex-separator"></div>
+                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText"></small>
                                         </a>
                                     </li>
                                     <!-- /ko -->
@@ -66,9 +71,11 @@
                                     <li data-bind="visible: !relevant()">
                                         <a class="database non-relevant" data-bind="attr: {title: name}">
                                             <div class="name" data-bind="text: name"></div>
-                                            <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
+                                            <div data-bind="text: environment, visible: environment, attr: { class: 'margin-left label text-uppercase ' + environmentClass() }"></div>
                                             <div class="label label-default">Non-relevant (Remote)</div>
                                             <div data-bind="visible: errored" class="label label-danger">Errored</div>
+                                            <div class="flex-separator"></div>
+                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText"></small>
                                         </a>
                                     </li>
                                     <!-- /ko -->
@@ -76,9 +83,11 @@
                                     <li data-bind="visible: disabled() && relevant()">
                                         <a class="database disabled" data-bind="attr: {title: name}">
                                             <div class="name" data-bind="text: name"></div>
-                                            <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
+                                            <div data-bind="text: environment, visible: environment, attr: { class: 'margin-left label text-uppercase ' + environmentClass() }"></div>
                                             <div class="label label-default">Disabled</div>
                                             <div data-bind="visible: errored" class="label label-danger">Errored</div>
+                                            <div class="flex-separator"></div>
+                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText"></small>
                                         </a>
                                     </li>
                                     <!-- /ko -->

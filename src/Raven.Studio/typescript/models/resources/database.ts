@@ -1,4 +1,7 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
+
+import accessManager = require("common/shell/accessManager");
+
 class database {
     static readonly type = "database";
     static readonly qualifier = "db";
@@ -17,6 +20,9 @@ class database {
     environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
     environmentClass = database.createEnvironmentColorComputed("label", this.environment);
 
+    databaseAccess = ko.observable<Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess>();
+    databaseAccessText = ko.observable<string>();
+    
     private clusterNodeTag: KnockoutObservable<string>;
 
     constructor(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
@@ -64,6 +70,9 @@ class database {
 
             this.relevant(inMemberList || inPromotableList || inRehabList);
         }
+
+        this.databaseAccess(accessManager.default.getDatabaseAccessLevel(incomingCopy.Name));
+        this.databaseAccessText(accessManager.default.getDatabaseAccessLevelText(incomingCopy.Name));
     }
 
     private attributeValue(attributes: any, bundleName: string) {

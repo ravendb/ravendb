@@ -322,6 +322,11 @@
                     <small title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-key text-success"></i></small>
                     <small title="This database is not encrypted" data-bind="visible: !isEncrypted()"><i class="icon-unencrypted text-muted"></i></small>
                 </div>
+                <div data-bind="if: databaseAccessText">
+                    <div class="database-access" >
+                        <small data-bind="text: databaseAccessText" title="Database access level"></small>
+                    </div>
+                </div>
                 <div class="storage">
                     <small><i class="icon-drive"></i></small>
                     <a class="set-size" data-toggle="size-tooltip"

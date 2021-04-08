@@ -1,6 +1,7 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
 import certificatePermissionModel = require("models/auth/certificatePermissionModel");
+import accessManager = require("common/shell/accessManager");
 
 class certificateModel {
 
@@ -89,9 +90,11 @@ class certificateModel {
             case "ClusterNode":
                 return ["All"];
             default:
-                const access = Object.keys(certificateDefinition.Permissions);
-                if (access.length) {
-                    return _.sortBy(access, x => x.toLowerCase());
+                const allowedDatabses = Object.keys(certificateDefinition.Permissions);
+                const accessDetails = allowedDatabses.map(x => x + ' ' + accessManager.default.getDatabaseAccessLevelText(x));
+                
+                if (accessDetails.length) {
+                    return _.sortBy(accessDetails, x => x.toLowerCase());
                 }
                 return [];
         }

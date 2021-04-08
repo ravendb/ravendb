@@ -1958,6 +1958,13 @@ ul.properties {
     }
 }
 
+.has-disable-reason, .tooltip {
+    .tooltip-inner {
+        min-width: @tooltip-inner-min-width * 2;
+        max-width: @tooltip-inner-max-width * 2;
+    }
+}
+
 .bg-experimental {
     .bg-variant(@state-experimental-bg, @state-experimental-text);
 }

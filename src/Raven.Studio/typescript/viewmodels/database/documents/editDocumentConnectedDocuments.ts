@@ -41,6 +41,8 @@ class connectedDocuments {
     compareWithRevisionAction: (revisionChangeVector: string) => JQueryPromise<document>;
     document: KnockoutObservable<document>;
     db: KnockoutObservable<database>;
+    
+    isReadOnlyAccess: KnockoutObservable<boolean>;
     inReadOnlyMode: KnockoutObservable<boolean>;
     searchInput = ko.observable<string>("");
     searchInputVisible: KnockoutObservable<boolean>;
@@ -85,12 +87,14 @@ class connectedDocuments {
         compareWithRevision: (revisionChangeVector: string) => JQueryPromise<document>,
         isCreatingNewDocument: KnockoutObservable<boolean>,
         crudActionsProvider: () => editDocumentCrudActions,
-        inReadOnlyMode: KnockoutObservable<boolean>) {
+        inReadOnlyMode: KnockoutObservable<boolean>,
+        isReadOnlyAccess: KnockoutComputed<boolean>) {
 
         _.bindAll(this, ...["toggleStar"] as Array<keyof this & string>);
 
         this.document = document;
         this.db = db;
+        this.isReadOnlyAccess = isReadOnlyAccess;
         this.inReadOnlyMode = inReadOnlyMode;
         this.document.subscribe((doc) => this.onDocumentLoaded(doc));
         this.loadDocumentAction = loadDocument;
@@ -151,7 +155,11 @@ class connectedDocuments {
                 "Delete",
                 `<i class="icon-trash"></i>`,
                 "35px",
-                { title: () => 'Delete attachment', extraClass: () => 'file-trash' })
+                {
+                  extraClass: () => 'file-trash',
+                  title: () => 'Delete attachment',
+                  hideAction: () => this.isReadOnlyAccess()
+                })
         ];
 
         this.attachmentsInReadOnlyModeColumns = [
@@ -171,13 +179,13 @@ class connectedDocuments {
                 "Edit",
                 `<i class="icon-edit"></i>`,
                 "35px",
-                { title: () => 'Edit counter' }),  
-            new actionColumn<counterItem>(this.gridController() as virtualGridController<any>, 
+                { title: () => 'Edit counter', hideAction: () => this.isReadOnlyAccess() }),
+            new actionColumn<counterItem>(this.gridController() as virtualGridController<any>,
                  x => this.crudActionsProvider().deleteCounter(x),
                 "Delete",
                 `<i class="icon-trash"></i>`,
                 "35px",
-                { title: () => 'Delete counter' }),
+                { title: () => 'Delete counter', hideAction: () => this.isReadOnlyAccess() }),
         ];
 
         this.revisionCountersColumns = [

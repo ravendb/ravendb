@@ -9,6 +9,7 @@ import databasesManager = require("common/shell/databasesManager");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import eventsCollector = require("common/eventsCollector");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import accessManager = require("common/shell/accessManager");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -16,6 +17,7 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 class viewModelBase {
 
     protected activeDatabase = activeDatabaseTracker.default.database;
+    protected isReadOnlyAccess = accessManager.default.isReadOnlyAccess;
     
     downloader = new downloader();
 
