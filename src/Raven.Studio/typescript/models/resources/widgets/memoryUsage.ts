@@ -1,8 +1,8 @@
 import generalUtils = require("common/generalUtils");
 
-import historyAwareWidget = require("models/resources/widgets/historyAwareWidget");
+import historyAwareNodeStats = require("models/resources/widgets/historyAwareNodeStats");
 
-class memoryUsage extends historyAwareWidget<Raven.Server.Dashboard.Cluster.Notifications.MemoryUsagePayload> {
+class memoryUsage extends historyAwareNodeStats<Raven.Server.Dashboard.Cluster.Notifications.MemoryUsagePayload> {
 
     availableMemory = this.dataExtractor(x => x.AvailableMemory);
     lowMemorySeverity = this.dataExtractor(x => x.LowMemorySeverity);

@@ -1,6 +1,5 @@
-import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBasedWidget");
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
-import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
+import abstractChartsWebsocketWidget = require("viewmodels/resources/widgets/abstractChartsWebsocketWidget");
 
 import lineChart = require("models/resources/clusterDashboard/lineChart");
 import serverTraffic = require("models/resources/widgets/serverTraffic");
@@ -10,7 +9,7 @@ interface trafficState {
     showDataWrittenDetails: boolean;
 }
 
-class trafficWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.Notifications.TrafficWatchPayload, void, trafficState> {
+class trafficWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard.Cluster.Notifications.TrafficWatchPayload, serverTraffic, void, trafficState> {
 
     showWritesDetails = ko.observable<boolean>(false);
     showDataWrittenDetails = ko.observable<boolean>(false);
@@ -48,102 +47,46 @@ class trafficWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.
         this.showDataWrittenDetails(state.showDataWrittenDetails);
     }
     
-    compositionComplete() {
-        super.compositionComplete();
-
-        for (let ws of this.controller.getConnectedLiveClients()) {
-            this.onClientConnected(ws);
-        }
-        
-        this.initCharts();
-        this.enableSyncUpdates();
-    }
-
-    initTooltip() {
-        $('[data-toggle="tooltip"]', this.container).tooltip();
-    }
-    
-    private initCharts() {
+    initCharts() {
         const requestsContainer = this.container.querySelector(".requests-chart");
         this.requestsChart = new lineChart(requestsContainer, {
             grid: true,
-            fillData: true
+            fillData: true,
+            tooltipProvider: date => trafficWidget.tooltipContent(date),
+            onMouseMove: date => this.onMouseMove(date)
         });
         
         const writesChartContainer = this.container.querySelector(".writes-chart");
         this.writesChart = new lineChart(writesChartContainer, {
             grid: true,
-            fillData: true
+            fillData: true,
+            tooltipProvider: date => trafficWidget.tooltipContent(date),
+            onMouseMove: date => this.onMouseMove(date)
         });
         
         const dataWrittenContainer = this.container.querySelector(".data-written-chart");
         this.dataWrittenChart = new lineChart(dataWrittenContainer, {
             grid: true,
-            fillData: true
+            fillData: true,
+            tooltipProvider: date => trafficWidget.tooltipContent(date),
+            onMouseMove: date => this.onMouseMove(date)
         });
+        
+        return [this.requestsChart, this.writesChart, this.dataWrittenChart];
     }
 
-    onData(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.TrafficWatchPayload) {
-        this.scheduleSyncUpdate(() => this.withStats(nodeTag, x => x.update(data)));
-        
-        const date = moment.utc(data.Date).toDate();
-        const key = "node-" + nodeTag.toLocaleLowerCase();
-        
-        this.scheduleSyncUpdate(() => {
-            this.requestsChart.onData(date, [{
-                key,
-                value: data.RequestsPerSecond
-            }]);
-
-            this.writesChart.onData(date, [{
-                key,
-                value: data.DocumentWritesPerSecond + data.AttachmentWritesPerSecond + data.CounterWritesPerSecond + data.TimeSeriesWritesPerSecond
-            }]);
-
-            this.dataWrittenChart.onData(date, [{
-                key,
-                value: data.DocumentsWriteBytesPerSecond + data.AttachmentsWriteBytesPerSecond + data.CountersWriteBytesPerSecond + data.TimeSeriesWriteBytesPerSecond
-            }]);
-        });
-    }
-
-    protected afterSyncUpdate(updatesCount: number) {
-        if (updatesCount) {
-            this.requestsChart.draw();
-            this.writesChart.draw();
-            this.dataWrittenChart.draw();
+    protected extractDataForChart(chart: lineChart, data: Raven.Server.Dashboard.Cluster.Notifications.TrafficWatchPayload): number {
+        if (chart === this.requestsChart) {
+            return data.RequestsPerSecond;
+        } else if (chart === this.writesChart) {
+            return data.DocumentWritesPerSecond + data.AttachmentWritesPerSecond + data.CounterWritesPerSecond + data.TimeSeriesWritesPerSecond;
+        } else if (chart === this.dataWrittenChart) {
+            return data.DocumentsWriteBytesPerSecond + data.AttachmentsWriteBytesPerSecond + data.CountersWriteBytesPerSecond + data.TimeSeriesWriteBytesPerSecond;
+        } else {
+            throw new Error("Unsupported chart: " + chart);
         }
-    }
-
-    protected afterComponentResized() {
-        this.requestsChart.onResize();
-        this.writesChart.onResize();
-        this.dataWrittenChart.onResize();
-        
-        this.requestsChart.draw();
-        this.writesChart.draw();
-        this.dataWrittenChart.draw();
-    }
-
-    onClientConnected(ws: clusterDashboardWebSocketClient) {
-        super.onClientConnected(ws);
-        
-        this.withStats(ws.nodeTag, x => x.disconnected(false));
-    }
-
-    onClientDisconnected(ws: clusterDashboardWebSocketClient) {
-        super.onClientDisconnected(ws);
-
-        this.withStats(ws.nodeTag, x => x.disconnected(true));
     }
     
-    private withStats(nodeTag: string, action: (stats: serverTraffic) => void) {
-        const stats = this.nodeStats().find(x => x.tag === nodeTag);
-        if (stats) {
-            action(stats);
-        }
-    }
-
     toggleWritesDetails() {
         this.showWritesDetails.toggle();
 

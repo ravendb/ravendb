@@ -1,8 +1,8 @@
 import CpuUsagePayload = Raven.Server.Dashboard.Cluster.Notifications.CpuUsagePayload;
 
-import historyAwareWidget = require("models/resources/widgets/historyAwareWidget");
+import historyAwareNodeStats = require("models/resources/widgets/historyAwareNodeStats");
 
-class cpuUsage extends historyAwareWidget<CpuUsagePayload> {
+class cpuUsage extends historyAwareNodeStats<CpuUsagePayload> {
     
     coresInfo = this.conditionalDataExtractor(x => x.UtilizedCores + "/" + x.NumberOfCores + " Cores", {
         customNoData: "-/- Cores"

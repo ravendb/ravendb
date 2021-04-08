@@ -14,7 +14,7 @@
         <div class="property">
             <div class="flex-horizontal">
                 <div class="nodes-container" data-bind="foreach: nodeStats">
-                    <div class="nodes-item" data-bind="css: { 'disconnected': disconnected }">
+                    <div class="nodes-item" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
                         <div class="nodes-item-header">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
@@ -40,29 +40,30 @@
                 </button>
 
                 <div class="nodes-container" data-bind="foreach: nodeStats">
-                    <div class="nodes-item" data-bind="css: { 'disconnected': disconnected }">
+                    <div class="nodes-item" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
                         <div class="nodes-item-header">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
-                                <span data-bind="text: writesFormatter(documentWritesPerSecond)"></span>
+                                <span data-bind="text: totalWritesPerSecondSize"></span>
+                                <span class="supplementary-info" data-bind="text: totalWritesPerSecondUnit"></span>
                             </div>
                         </div>
                         <div class="details-list">
                             <div class="details-item">
                                 <div class="details-item-name">Documents</div>
-                                <div class="details-item-value" data-bind="text: writesFormatter(documentWritesPerSecond)"></div>
+                                <div class="details-item-value" data-bind="text: documentWritesPerSecond"></div>
                             </div>
                             <div class="details-item">
                                 <div class="details-item-name">Attachments</div>
-                                <div class="details-item-value" data-bind="text: writesFormatter(attachmentWritesPerSecond)"></div>
+                                <div class="details-item-value" data-bind="text: attachmentWritesPerSecond"></div>
                             </div>
                             <div class="details-item">
                                 <div class="details-item-name">Counters</div>
-                                <div class="details-item-value" data-bind="text: writesFormatter(counterWritesPerSecond)"></div>
+                                <div class="details-item-value" data-bind="text: counterWritesPerSecond"></div>
                             </div>
                             <div class="details-item">
                                 <div class="details-item-name">Time Series</div>
-                                <div class="details-item-value" data-bind="text: writesFormatter(timeSeriesWritesPerSecond)"></div>
+                                <div class="details-item-value" data-bind="text: timeSeriesWritesPerSecond"></div>
                             </div>
                         </div>
                     </div>
@@ -83,30 +84,30 @@
                 </button>
 
                 <div class="nodes-container" data-bind="foreach: nodeStats">
-                    <div class="nodes-item" data-bind="css: { 'disconnected': disconnected }">
+                    <div class="nodes-item" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
                         <div class="nodes-item-header">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
-                                <span data-bind="text: dataWrittenFormatter(documentsWriteBytesPerSecond, true)()[0]"></span>
-                                <span class="supplementary-info" data-bind="text: dataWrittenFormatter(documentsWriteBytesPerSecond, true)()[1]"></span>
+                                <span data-bind="text: totalWriteBytesPerSecondSize"></span>
+                                <span class="supplementary-info" data-bind="text: totalWriteBytesPerSecondUnit"></span>
                             </div>
                         </div>
                         <div class="details-list">
                             <div class="details-item">
                                 <div class="details-item-name">Documents</div>
-                                <div class="details-item-value" data-bind="text: dataWrittenFormatter(documentsWriteBytesPerSecond)"></div>
+                                <div class="details-item-value" data-bind="text: documentsWriteBytesPerSecond"></div>
                             </div>
                             <div class="details-item">
                                 <div class="details-item-name">Attachments</div>
-                                <div class="details-item-value" data-bind="text: dataWrittenFormatter(attachmentsWriteBytesPerSecond)"></div>
+                                <div class="details-item-value" data-bind="text: attachmentsWriteBytesPerSecond"></div>
                             </div>
                             <div class="details-item">
                                 <div class="details-item-name">Counters</div>
-                                <div class="details-item-value" data-bind="text: dataWrittenFormatter(countersWriteBytesPerSecond)"></div>
+                                <div class="details-item-value" data-bind="text: countersWriteBytesPerSecond"></div>
                             </div>
                             <div class="details-item">
                                 <div class="details-item-name">Time Series</div>
-                                <div class="details-item-value" data-bind="text: dataWrittenFormatter(timeSeriesWriteBytesPerSecond)"></div>
+                                <div class="details-item-value" data-bind="text: timeSeriesWriteBytesPerSecond"></div>
                             </div>
                         </div>
                     </div>
