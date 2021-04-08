@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Server.Basic.Entities;
@@ -83,8 +82,6 @@ loadToOrders(partitionBy(key),
                     SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                    Thread.Sleep(20000);
 
                     var files = Directory.GetFiles(path);
                     Assert.Equal(2, files.Length);
@@ -201,7 +198,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(key, o);
+loadToOrders(partitionBy(key), o);
 ";
 
                     SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
@@ -325,7 +322,7 @@ var month = orderDate.getMonth();
 var day = orderDate.getDay();
 var key = new Date(year, month, day);
 
-loadToOrders(key, o);
+loadToOrders(partitionBy(key), o);
 ";
 
                     SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
@@ -427,7 +424,7 @@ var day = orderDate.getDay();
 var hour = orderDate.getHours();
 var key = new Date(year, month, day, hour);
 
-loadToOrders(key, o);
+loadToOrders(partitionBy(key), o);
 ";
 
                     SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
@@ -517,7 +514,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(key, o);
+loadToOrders(partitionBy(key), o);
 ";
 
                     SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
@@ -624,7 +621,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(key, o);
+loadToOrders(partitionBy(key), o);
 ";
 
                     SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
@@ -726,7 +723,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(key, o);
+loadToOrders(partitionBy(key), o);
 ";
 
                     SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(1));
@@ -878,7 +875,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(key, o);
+loadToOrders(partitionBy(key), o);
 ";
 
                     var connectionStringName = $"{store.Database} to S3";
@@ -973,7 +970,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(key, o);
+loadToOrders(partitionBy(key), o);
 ";
 
                     SetupLocalOlapEtl(store, script, path, TimeSpan.FromSeconds(30));
@@ -1103,7 +1100,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(key, o);
+loadToOrders(partitionBy(key), o);
 ";
 
                     SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
@@ -1235,7 +1232,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(key, o);
+loadToOrders(partitionBy(key), o);
 ";
 
                     var connectionStringName = $"{store.Database} to local";
@@ -1389,7 +1386,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(key, o);
+loadToOrders(partitionBy(key), o);
 ";
 
                     SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10), maxNumberOfItemsInRowGroups: maxNumberOfItemsInRowGroups);
@@ -1422,6 +1419,236 @@ loadToOrders(key, o);
                         }
                     }
                 }
+            }
+            finally
+            {
+                var di = new DirectoryInfo(path);
+                foreach (var file in di.EnumerateFiles())
+                {
+                    file.Delete();
+                }
+
+                di.Delete();
+            }
+        }
+
+        [Fact]
+        public async Task SimpleTransformation_NoPartition()
+        {
+            var path = GetTempPath("Orders");
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    var baseline = new DateTime(2020, 1, 1).ToUniversalTime();
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 100; i++)
+                        {
+                            await session.StoreAsync(new Query.Order
+                            {
+                                Id = $"orders/{i}",
+                                OrderedAt = baseline.AddDays(i),
+                                ShipVia = $"shippers/{i}",
+                                Company = $"companies/{i}"
+                            });
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    var script = @"
+loadToOrders(noPartition(),
+    {
+        OrderDate : this.OrderedAt
+        Company : this.Company,
+        ShipVia : this.ShipVia
+    });
+";
+                    SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    var files = Directory.GetFiles(path);
+                    Assert.Equal(1, files.Length);
+
+                    var expectedFields = new[] { "OrderDate", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
+
+                    foreach (var fileName in files)
+                    {
+                        using (var fs = File.OpenRead(fileName))
+                        using (var parquetReader = new ParquetReader(fs))
+                        {
+                            Assert.Equal(1, parquetReader.RowGroupCount);
+                            Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
+
+                            using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
+                            foreach (var field in parquetReader.Schema.Fields)
+                            {
+                                Assert.True(field.Name.In(expectedFields));
+                                var data = rowGroupReader.ReadColumn((DataField)field).Data;
+
+                                Assert.True(data.Length == 100);
+
+                                if (field.Name == ParquetTransformedItems.LastModifiedColumn)
+                                    continue;
+
+                                var count = 0;
+                                foreach (var val in data)
+                                {
+                                    if (field.Name == "OrderDate")
+                                    {
+                                        var expectedDto = new DateTimeOffset(DateTime.SpecifyKind(baseline.AddDays(count), DateTimeKind.Utc));
+                                        Assert.Equal(expectedDto, val);
+                                    }
+
+                                    else
+                                    {
+                                        var expected = field.Name switch
+                                        {
+                                            ParquetTransformedItems.DefaultIdColumn => $"orders/{count}",
+                                            "Company" => $"companies/{count}",
+                                            "ShipVia" => $"shippers/{count}",
+                                            _ => null
+                                        };
+
+                                        Assert.Equal(expected, val);
+                                    }
+
+                                    count++;
+                                }
+
+                            }
+
+                        }
+
+                    }
+                }
+
+            }
+            finally
+            {
+                var di = new DirectoryInfo(path);
+                foreach (var file in di.EnumerateFiles())
+                {
+                    file.Delete();
+                }
+
+                di.Delete();
+            }
+        }
+
+        [Fact]
+        public async Task SimpleTransformation_MultiplePartitions()
+        {
+            var path = GetTempPath("Orders");
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    var baseline = DateTime.SpecifyKind(new DateTime(2020, 1, 1), DateTimeKind.Utc);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        const int total = 31 + 28; // days in January + days in February 
+
+                        for (int i = 0; i < total; i++)
+                        {
+                            var orderedAt = baseline.AddDays(i);
+                            await session.StoreAsync(new Query.Order
+                            {
+                                Id = $"orders/{i}",
+                                OrderedAt = orderedAt,
+                                RequireAt = orderedAt.AddDays(7),
+                                ShipVia = $"shippers/{i}",
+                                Company = $"companies/{i}"
+                            });
+                        }
+
+                        for (int i = 1; i <= 37; i++)
+                        {
+                            var index = i + total;
+                            var orderedAt = baseline.AddYears(1).AddMonths(1).AddDays(i);
+                            await session.StoreAsync(new Query.Order
+                            {
+                                Id = $"orders/{index}",
+                                OrderedAt = orderedAt,
+                                RequireAt = orderedAt.AddDays(7),
+                                ShipVia = $"shippers/{index}",
+                                Company = $"companies/{index}"
+                            });
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    var script = @"
+var orderDate = new Date(this.OrderedAt);
+
+loadToOrders(partitionBy([
+    ['year', orderDate.getFullYear()],
+    ['month', orderDate.getMonth()]
+]),
+    {
+        Company : this.Company,
+        ShipVia : this.ShipVia,
+        RequireAt : this.RequireAt
+    });
+";
+                    SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    var files = Directory.GetFiles(path);
+                    Assert.Equal(4, files.Length);
+
+                    var expectedFields = new[] { "RequireAt", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
+
+                    foreach (var fileName in files)
+                    {
+                        using (var fs = File.OpenRead(fileName))
+                        using (var parquetReader = new ParquetReader(fs))
+                        {
+                            Assert.Equal(1, parquetReader.RowGroupCount);
+                            Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
+
+                            using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
+                            foreach (var field in parquetReader.Schema.Fields)
+                            {
+                                Assert.True(field.Name.In(expectedFields));
+                                var data = rowGroupReader.ReadColumn((DataField)field).Data;
+
+                                Assert.True(data.Length == 31 || data.Length == 28 || data.Length == 27 || data.Length == 10);
+                                if (field.Name != "RequireAt")
+                                    continue;
+
+                                var count = data.Length switch
+                                {
+                                    31 => 0, 
+                                    28 => 31, 
+                                    27 => 365 + 33,
+                                    10 => 365 + 33 + 27
+                                };
+
+                                foreach (var val in data)
+                                {
+                                    var expectedOrderDate = new DateTimeOffset(DateTime.SpecifyKind(baseline.AddDays(count++), DateTimeKind.Utc));
+                                    var expected = expectedOrderDate.AddDays(7);
+                                    Assert.Equal(expected, val);
+                                }
+
+                            }
+
+                        }
+
+                    }
+                }
+
             }
             finally
             {
