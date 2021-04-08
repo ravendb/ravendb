@@ -38,7 +38,7 @@ namespace Tests.Infrastructure
 
             if (AzureSettings == null)
             {
-                Skip = $"S3 {memberName} tests missing Azure settings.";
+                Skip = $"Azure {memberName} tests missing {nameof(AzureSettings)}.";
                 return;
             }
         }
