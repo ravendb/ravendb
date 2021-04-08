@@ -5,6 +5,7 @@ import databasesManager = require("common/shell/databasesManager");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import generalUtils = require("common/generalUtils");
 import databaseGroupNode = require("models/resources/info/databaseGroupNode");
+import accessManager = require("common/shell/accessManager");
 
 class databaseInfo {
 
@@ -46,6 +47,8 @@ class databaseInfo {
     hasLoadError: KnockoutComputed<boolean>;
     canNavigateToDatabase: KnockoutComputed<boolean>;
     isCurrentlyActiveDatabase: KnockoutComputed<boolean>;
+    
+    databaseAccessText = ko.observable<string>();
 
     inProgressAction = ko.observable<string>();
 
@@ -211,6 +214,8 @@ class databaseInfo {
             
             this.nodes(joinedNodes);
         }
+
+        this.databaseAccessText(accessManager.default.getDatabaseAccessLevelText(this.name));
     }
 
     private applyNodesStatuses(nodes: databaseGroupNode[], statuses: { [key: string]: Raven.Client.ServerWide.Operations.DatabaseGroupNodeStatus;}) {

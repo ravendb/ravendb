@@ -2,7 +2,8 @@
     <form class="flex-form" data-bind="submit: saveConfiguration" novalidate>
         <div class="content-margin">
             <div class="toolbar no-margin">
-                <button type="submit" class="btn btn-primary" data-bind="disable: spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': spinners.save }">
+                <button type="submit" class="btn btn-primary"
+                        data-bind="disable: spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': spinners.save }, requiredAccess: 'ReadWrite'">
                     <i class="icon-save"></i><span>Save</span>
                 </button>
             </div>
@@ -11,7 +12,9 @@
                     <div class="margin-bottom margin-bottom-xs flex-horizontal">
                         <div class="flex-separator"></div>
                         <small title="Navigate to the server-wide Studio Configuration View">
-                            <a target="_blank" data-bind="attr: { href: serverWideStudioConfigurationUrl }">&nbsp;Go to Server-Wide Studio Configuration View</a>
+                            <a target="_blank" data-bind="attr: { href: serverWideStudioConfigurationUrl }, visible: canNavigateToServerSettings">
+                                <i class="icon-link"></i>Go to Server-Wide Studio Configuration View
+                            </a>
                         </small>
                     </div>
                     <div class="panel">
@@ -22,7 +25,8 @@
                                     <label class="control-label">Environment</label>
                                 </div>
                                 <div style="position: relative" class="margin-top margin-top-lg">
-                                    <button class="btn btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-block dropdown-toggle" type="button" data-toggle="dropdown"
+                                            data-bind="requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }">
                                         <span data-bind="text: model.environment"></span>
                                         <span class="caret"></span>
                                     </button>

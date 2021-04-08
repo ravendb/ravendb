@@ -2,11 +2,23 @@
     <form data-bind="submit: saveConfiguration" novalidate>
         <div class="content-margin">
             <div class="toolbar margin-bottom margin-bottom-lg flex-horizontal">
-                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }">
+                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }, requiredAccess: 'ReadWrite'">
                     <i class="icon-save"></i><span>Save</span>
                 </button>
             </div>
             <div>
+                <div data-bind="css: { 'row': !hasGlobalConfiguration() }">
+                    <div data-bind="css: { 'col-sm-6': !hasGlobalConfiguration() }">
+                        <div class="margin-bottom margin-bottom-xs flex-horizontal">
+                            <div class="flex-separator"></div>
+                            <small title="Navigate to the server-wide Client Configuration View">
+                                <a target="_blank" data-bind="attr: { href: serverWideClientConfigurationUrl }, visible: canNavigateToServerSettings">
+                                    <i class="icon-link"></i>Go to Server-Wide Client Configuration View
+                                </a>
+                            </small>
+                        </div>
+                    </div>
+                </div>
                 <div class="panel">
                     <div class="row" data-bind="visible: hasGlobalConfiguration">
                         <div class="col-sm-3 margin-top margin-top-sm">
@@ -21,7 +33,9 @@
                             <h3 class="margin-left margin-left-sm">Database Configuration</h3>
                         </div>
                         <div class="col-sm-2 flex-horizontal">
-                            <div class="margin-top margin-top-sm" title="Navigate to server-wide client configuration"><a href="#" data-bind="attr: { href: globalConfigUrl }"><i class="icon-link"></i></a></div>
+                            <div class="margin-top margin-top-sm" title="Navigate to server-wide client configuration">
+                                <a href="#" data-bind="attr: { href: serverWideClientConfigurationUrl }, visible: canNavigateToServerSettings"><i class="icon-link"></i></a>
+                            </div>
                             <div class="margin-top"><h3>Server Configuration</h3></div>
                         </div>
                         <div class="col-sm-2 margin-top">
@@ -34,9 +48,11 @@
                         <div class="panel padding">
                             <div class="row">
                                 <div data-bind="css: { 'col-sm-3': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
+                                    <!-- // TODO: don't show checkboxes, only lables.. can be done -->
                                     <div class="checkbox">
                                         <input id="checkboxSeparator" type="checkbox"
-                                               data-bind="checked: model.isDefined, checkedValue: 'identityPartsSeparator', enable: canEditSettings, validationElement: model.identityPartsSeparator">
+                                               data-bind="checked: model.isDefined, checkedValue: 'identityPartsSeparator', enable: canEditSettings, validationElement: model.identityPartsSeparator,
+                                                          requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }">
                                         <label for="checkboxSeparator">
                                             Identity parts separator
                                         </label>
@@ -64,7 +80,8 @@
                                 <div data-bind="css: { 'col-sm-3': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
                                     <div class="checkbox">
                                         <input id="checkboxMaxRequests" type="checkbox" min="0"
-                                               data-bind="checked: model.isDefined, checkedValue: 'maxNumberOfRequestsPerSession', enable: canEditSettings, validationElement: model.maxNumberOfRequestsPerSession">
+                                               data-bind="checked: model.isDefined, checkedValue: 'maxNumberOfRequestsPerSession', enable: canEditSettings, validationElement: model.maxNumberOfRequestsPerSession,
+                                                          requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }">
                                         <label for="checkboxMaxRequests">
                                             Maximum number of requests per session
                                         </label>
@@ -92,7 +109,8 @@
                                 <div data-bind="css: { 'col-sm-3': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
                                     <div class="checkbox">
                                         <input id="useSessionContextToggle" type="checkbox"
-                                               data-bind="checked: model.isDefined, checkedValue: 'useSessionContextForLoadBehavior', enable: canEditSettings()">
+                                               data-bind="checked: model.isDefined, checkedValue: 'useSessionContextForLoadBehavior', enable: canEditSettings(),
+                                                          requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }">
                                         <label for="useSessionContextToggle">
                                             Use Session Context for Load Balancing
                                         </label>
@@ -120,7 +138,8 @@
                                 <div data-bind="css: { 'col-sm-3': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
                                     <div class="checkbox">
                                         <input id="checkboxReadBalance" type="checkbox"
-                                               data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior', enable: canEditSettings()">
+                                               data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior', enable: canEditSettings(),
+                                                          requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }">
                                         <label for="checkboxReadBalance">
                                             Read balance behavior
                                         </label>

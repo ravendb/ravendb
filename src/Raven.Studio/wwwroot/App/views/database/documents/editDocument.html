@@ -51,15 +51,18 @@
             <div class="btn-bar toolbar">
                 <div class="pull-left-sm">
                     <button type="submit" class="btn btn-primary save-btn" 
-                            data-bind="enable: isSaveEnabled, css: { 'btn-spinner': isSaving }, visible: !inReadOnlyMode() && !inDiffMode(), attr: { 'title': isSaveEnabled ? 'Save your changes' : ''}">
+                            data-bind="enable: isSaveEnabled, css: { 'btn-spinner': isSaving }, visible: !inReadOnlyMode() && !inDiffMode(), 
+                                       attr: { 'title': isSaveEnabled ? 'Save your changes' : ''}, requiredAccess: 'ReadWrite'">
                         <i class="icon-save"></i>
                         <span>Save</span>
                     </button>
-                    <button type="button" class="clone-btn btn btn-default" data-bind="click: createClone, enable: !isCreatingNewDocument(), visible: !isDeleteRevision() && !inDiffMode()">
+                    <button type="button" class="clone-btn btn btn-default" 
+                            data-bind="click: createClone, enable: !isCreatingNewDocument(), visible: !isDeleteRevision() && !inDiffMode(), requiredAccess: 'ReadWrite'">
                         <i class="icon-clone"></i>
                         <span>Clone</span>
                     </button>
-                    <button type="button" data-bind="click: deleteDocument, enable: !isCreatingNewDocument(), visible: !inReadOnlyMode() && !inDiffMode()" class="delete-btn btn btn-danger">
+                    <button type="button" class="delete-btn btn btn-danger"
+                            data-bind="click: deleteDocument, enable: !isCreatingNewDocument(), visible: !inReadOnlyMode() && !inDiffMode(), requiredAccess: 'ReadWrite'">
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>
@@ -137,7 +140,7 @@
         <div class="flex-window-scroll editors-container">
             <div class="left-editor">
                 <pre id="docEditor" class="form-control absolute-fill"
-                     data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() || inDiffMode() }, 
+                     data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() || inDiffMode() || isReadOnlyAccess() },
                                 disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
                 <div class="absolute-fill" data-bind="visible: isDeleteRevision()">
                     <div class="absolute-center padding bg-info text-center">
@@ -150,16 +153,20 @@
             </div>
             <div class="right-editor">
                 <pre id="docEditorRight" class="form-control absolute-fill"
-                     data-bind="aceEditor: { code: documentTextRight, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() || inDiffMode() }, 
+                     data-bind="aceEditor: { code: documentTextRight, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() || inDiffMode() || isReadOnlyAccess() },
                                 disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
             </div>
         </div>
         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: documentText">
             <div class="help-block" data-bind="validationMessage: documentText"></div>
         </div>
-        <small data-bind="visible: inReadOnlyMode() && !isDeleteRevision() && !inDiffMode()" class="text-warning bg-warning padding padding-sm">
+        <small data-bind="visible: inReadOnlyMode() && !isDeleteRevision() && !inDiffMode() && !isReadOnlyAccess()" class="text-warning bg-warning padding padding-sm">
             <i class="icon-warning"></i>
-            <span data-bind="text: 'Note: File editing is not available in revisions'"></span>
+            <span data-bind="text: 'File editing is not available in revisions'"></span>
+        </small>
+        <small data-bind="visible: isReadOnlyAccess" class="text-warning bg-warning padding padding-sm">
+            <i class="icon-warning"></i>
+            <span data-bind="text: 'File editing is not available. Insufficient database access.'"></span>
         </small>
         <div class="differences_summary" data-bind="visible: currentDiff, with: currentDiff">
             <div class="padding padding-sm" data-bind="visible: identicalContent">
@@ -303,9 +310,10 @@
                 <div class="search-documents" data-bind="visible: searchInputVisible">
                     <input type="search" class="form-control" data-bind="textInput: searchInput" placeholder="search" /><span class="icon-search"></span>
                 </div>
-                <div class="flex-window-head" data-bind="visible: isUploaderActive() && $root.canViewAttachments() && !$root.inReadOnlyMode(), template: { name: 'uploader-template' }">
+                <div class="flex-window-head" data-bind="visible: isUploaderActive() && $root.canViewAttachments() && !$root.inReadOnlyMode(), 
+                                                         template: { name: 'uploader-template' }, requiredAccess: 'ReadWrite'">
                 </div>
-                <div class="flex-window-head" data-bind="visible: isCountersActive() && $root.canViewCounters() && !$root.inReadOnlyMode()">
+                <div class="flex-window-head" data-bind="visible: isCountersActive() && $root.canViewCounters() && !$root.inReadOnlyMode(), requiredAccess: 'ReadWrite'">
                     <div class="padding padding-xs margin-top margin-top-sm">
                         <button type="button" class="btn btn-sm btn-primary btn-block" data-bind="click: _.partial($root.crudActionsProvider().setCounter, null)">
                             <i class="icon-new-counter"></i>
@@ -313,7 +321,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="flex-window-head" data-bind="visible: isTimeSeriesActive() && $root.canViewTimeSeries() && !$root.inReadOnlyMode()">
+                <div class="flex-window-head" data-bind="visible: isTimeSeriesActive() && $root.canViewTimeSeries() && !$root.inReadOnlyMode(), requiredAccess: 'ReadWrite'">
                     <div class="padding padding-xs margin-top margin-top-sm">
                         <a class="btn btn-sm btn-primary btn-block" data-bind="attr: { href: $root.createTimeSeriesUrl() }">
                             <i class="icon-new-time-series"></i>
@@ -322,7 +330,8 @@
                     </div>
                 </div>
                 <div class="flex-window-head" data-bind="visible: isRevisionsActive() && $root.canViewRevisions() && !$root.inReadOnlyMode(),
-                     attr: { title: $root.dirtyFlag().isDirty() ? 'Save your changes before creating a revision' : 'A revision will be created even if Revisions are Not configured for the collection' }">
+                     attr: { title: $root.dirtyFlag().isDirty() ? 'Save your changes before creating a revision' : 'A revision will be created even if Revisions are Not configured for the collection' },
+                     requiredAccess: 'ReadWrite'">
                     <div class="padding padding-xs margin-top margin-top-sm">
                         <button type="button" class="btn btn-sm btn-primary btn-block"
                                 data-bind="click: $root.forceCreateRevision, disable: $root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.isSaving }">

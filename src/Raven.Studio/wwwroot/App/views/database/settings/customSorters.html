@@ -3,7 +3,7 @@
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-header">
                 <div>
-                    <a class="btn btn-primary" data-bind="attr: { href: addUrl }">
+                    <a class="btn btn-primary" data-bind="attr: { href: addUrl }, requiredAccess: 'ReadWrite'">
                         <i class="icon-plus"></i><span>Add a Database Custom Sorter</span>
                     </a>
                 </div>
@@ -27,10 +27,13 @@
                                 <button type="button" data-bind="click: $root.enterTestSorterMode.bind($root, $data)"
                                         class="btn btn-default"><i class="icon-rocket" title="Test custom sorter"></i>
                                 </button>
-                                <button type="button" data-bind="click: $root.editSorter.bind($root, $data)"
+                                <button type="button" data-bind="click: $root.editSorter.bind($root, $data), visible: !$root.isReadOnlyAccess()"
                                         class="btn btn-default"><i class="icon-edit" title="Edit custom sorter"></i>
                                 </button>
-                                <button type="button" data-bind="click: $root.confirmRemoveSorter.bind($root, $data)"
+                                <button type="button" data-bind="click: $root.editSorter.bind($root, $data), visible: $root.isReadOnlyAccess"
+                                        class="btn btn-default"><i class="icon-preview" title="View custom sorter"></i>
+                                </button>
+                                <button type="button" data-bind="click: $root.confirmRemoveSorter.bind($root, $data), requiredAccess: 'ReadWrite'"
                                         class="btn btn-danger"><i class="icon-trash" title="Delete custom sorter"></i>
                                 </button>
                             </div>
@@ -47,7 +50,7 @@
             </div>
             <div class="hr-title margin-top margin-top-lg flex-horizontal">
                 <h5 class="no-text-transform"><span>Server-wide custom sorters</span></h5><hr>
-                <small class="padding padding-xs margin-left" data-bind="if: canNavigateToServerWideCustomSorters" title="Go to the Server-Wide custom sorters view">
+                <small class="padding padding-xs margin-left" data-bind="visible: canNavigateToServerWideCustomSorters" title="Go to the Server-Wide custom sorters view">
                     <a target="_blank" data-bind="attr: { href: serverWideCustomSortersUrl }"><i class="icon-link"></i>Server-Wide Custom Sorters</a>
                 </small>
             </div>

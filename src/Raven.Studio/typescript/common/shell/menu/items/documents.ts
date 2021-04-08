@@ -2,8 +2,11 @@
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import collectionMenuItem = require("common/shell/menu/collectionMenuItem");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import accessManager = require("common/shell/accessManager");
 
 export = getDocumentsMenuItem;
+
+const access = accessManager.default.databaseDocumentsMenu;
 
 function getDocumentsMenuItem(appUrls: computedAppUrls) {
     let documentsItems = [
@@ -30,7 +33,8 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             route: "databases/patch(/:recentPatchHash)",
             moduleId: "viewmodels/database/patch/patch",
             css: 'icon-patch',
-            dynamicHash: appUrls.patch
+            dynamicHash: appUrls.patch,
+            disableWithReason: access.disablePatchMenuItem
         }),
         new leafMenuItem({
             route: 'databases/query/index(/:indexNameOrRecentQueryIndex)',

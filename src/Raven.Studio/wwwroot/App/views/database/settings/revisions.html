@@ -1,7 +1,7 @@
 <form role="form" class="revisions flex-vertical absolute-fill content-margin" data-bind="submit: saveChanges" novalidate autocomplete="off">
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-8">
-            <div class="flex-header flex-horizontal">
+            <div class="flex-header flex-horizontal" data-bind="requiredAccess: 'ReadWrite'">
                 <div class="form-inline">
                     <div class="checkbox checkbox-primary checkbox-inline align-checkboxes" title="Select all or none">
                         <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }" />
@@ -28,7 +28,8 @@
                                 </li>
                             </ul>
                         </div>
-                        <button type="submit" class="btn btn-primary" title="Save Changes" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save() }">
+                        <button type="submit" class="btn btn-primary" title="Save Changes" 
+                                data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save() }">
                             <i class="icon-save"></i> <span>Save</span>
                         </button>
                     </div>
@@ -78,15 +79,17 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm-12 col-lg-4">
+        <div class="col-sm-12 col-lg-4" data-bind="requiredAccess: 'ReadWrite'">
             <div class="flex-header">
                 <span class="has-disable-reason" data-bind="attr: { 'data-original-title': defaultDocumentConfiguration() ? 'Default document configuration has been created' : '' }">
-                    <button class="btn btn-info" data-bind="click: createDefaultConfiguration, disable: defaultDocumentConfiguration()" title="Create a default revision configuration for all (non-conflicting) documents">
+                    <button class="btn btn-info" data-bind="click: createDefaultConfiguration, disable: defaultDocumentConfiguration()" 
+                            title="Create a default revision configuration for all (non-conflicting) documents">
                         <i class="icon-settings"></i>
                         <span>Create document defaults</span>
                     </button>
                 </span>
-                <button class="btn btn-default" data-bind="click: addCollectionSpecificConfiguration" title="Create a revision configuration for a specific collection">
+                <button class="btn btn-default" data-bind="click: addCollectionSpecificConfiguration" 
+                        title="Create a revision configuration for a specific collection">
                     <i class="icon-plus"></i>
                     <span>Add a collection specific configuration</span>
                 </button>
@@ -155,7 +158,7 @@
 <script type="text/html" id="revisions-config-item-template">
     <div class="state" data-bind="attr: { 'data-state-text': disabled() ? 'disabled' : 'enabled' }, css: { 'state-success': !disabled(), 'state-warning': disabled() }"></div>
     <div class="padding padding-sm flex-horizontal">
-        <div class="checkbox">
+        <div class="checkbox" data-bind="requiredAccess: 'ReadWrite'">
             <input type="checkbox" class="styled" data-bind="checked: $root.selectedItems, checkedValue: $data">
             <label></label>
         </div>
@@ -175,16 +178,21 @@
             <div class="actions">
                 <i class="icon-info text-info margin-right margin-right-sm conflict-defaults-info" data-placement="left" data-bind="visible: isConflicts()"></i>
                 <i class="icon-info text-info margin-right margin-right-sm document-defaults-info" data-placement="left" data-bind="visible: isDefault()"></i>
-                <button class="btn btn-default" data-bind="visible: !disabled(), click: $root.disableConfiguration" title="click to disable this revision configuration">
+                <button class="btn btn-default" data-bind="visible: !disabled(), click: $root.disableConfiguration, requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }"
+                        title="Click to disable this revision configuration">
                     <i class="icon-stop"></i><span>Disable</span>
                 </button>
-                <button class="btn btn-success" data-bind="visible: disabled, click: $root.enableConfiguration" title="click to enable this revision configuration">
+                <button class="btn btn-success" data-bind="visible: disabled, click: $root.enableConfiguration, requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }"
+                        title="Click to enable this revision configuration">
                     <i class="icon-play"></i><span>Enable</span>
                 </button>
-                <button class="btn btn-default" data-bind="click: $root.editItem" title="Edit this revision configuration">
+                <button class="btn btn-default" data-bind="click: $root.editItem, requiredAccess: 'ReadWrite'" title="Edit this revision configuration">
                     <i class="icon-edit"></i>
                 </button>
-                <button class="btn btn-danger" data-bind="click: $root.deleteItem, style: { visibility: isConflicts() ? 'hidden' : 'visible' }" title="Delete this revision configuration"><i class="icon-trash"></i></button>
+                <button class="btn btn-danger" data-bind="click: $root.deleteItem, style: { visibility: isConflicts() ? 'hidden' : 'visible' }, requiredAccess: 'ReadWrite'"
+                        title="Delete this revision configuration">
+                    <i class="icon-trash"></i>
+                </button>
             </div>
         </div>
     </div>
