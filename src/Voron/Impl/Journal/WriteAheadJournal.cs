@@ -748,16 +748,20 @@ namespace Voron.Impl.Journal
                         try
                         {
                             UpdateJournalStateUnderWriteTransactionLock(txw, journalSnapshots, lastProcessedJournal, lastFlushedTransactionId);
+
+                            if (_waj._logger.IsInfoEnabled)
+                                _waj._logger.Info($"Updated journal state under write tx lock (txId: {txw.Id}) after waiting for {sp.Elapsed}");
                         }
                         catch (Exception e)
                         {
+                            if (_waj._logger.IsOperationsEnabled)
+                                _waj._logger.Operations($"Failed to update journal state under write tx lock (waited - {sp.Elapsed})");
+
                             edi = ExceptionDispatchInfo.Capture(e);
                             throw;
                         }
                         finally
                         {
-                            if (_waj._logger.IsInfoEnabled)
-                                _waj._logger.Info($"Updated journal state under write tx lock after waiting for {sp.Elapsed}");
                             _updateJournalStateAfterFlush = null;
                             _waitForJournalStateUpdateUnderTx.Set();
                         }
@@ -856,6 +860,12 @@ namespace Voron.Impl.Journal
                     }
 
                     var unusedJournals = GetUnusedJournalFiles(journalSnapshots, lastProcessedJournal, lastFlushedTransactionIdThatWontReadFromJournal);
+
+                    if (_waj._logger.IsInfoEnabled)
+                    {
+                        _waj._logger.Info($"Detected {unusedJournals.Count} unused journals after flush ({nameof(lastFlushedTransactionId)} - {lastFlushedTransactionId}, {nameof(lastFlushedTransactionIdThatWontReadFromJournal)} - {lastFlushedTransactionIdThatWontReadFromJournal}). " +
+                                          $"Journals to delete: {string.Join(',' , unusedJournals.Select(x => x.Number.ToString()))}");
+                    }
 
                     foreach (var unused in unusedJournals)
                     {
