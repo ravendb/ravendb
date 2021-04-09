@@ -264,7 +264,7 @@ namespace TypingsGenerator
 
             // spatial query
             scripter.AddType(typeof(SpatialUnits));
-            scripter.AddType(typeof(SpatialShape));
+            scripter.AddType(typeof(SpatialShapeType));
             scripter.AddType(typeof(SpatialShapeBase));
             scripter.AddType(typeof(Circle));
             scripter.AddType(typeof(Polygon));

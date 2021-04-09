@@ -193,12 +193,14 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task<IndexQueryServerSide> GetIndexQuery(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker)
         {
+            var addSpatialProperties = GetBoolValueQueryString("addSpatialProperties", required: false) ?? false;
+
             if (method == HttpMethod.Get)
-                return await IndexQueryServerSide.CreateAsync(HttpContext, GetStart(), GetPageSize(), context, tracker);
+                return await IndexQueryServerSide.CreateAsync(HttpContext, GetStart(), GetPageSize(), context, tracker, addSpatialProperties);
 
             var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
 
-            return IndexQueryServerSide.Create(HttpContext, json, Database.QueryMetadataCache, tracker, Database);
+            return IndexQueryServerSide.Create(HttpContext, json, Database.QueryMetadataCache, tracker, addSpatialProperties, Database);
         }
 
         private async Task SuggestQuery(IndexQueryServerSide indexQuery, QueryOperationContext queryContext, OperationCancelToken token)

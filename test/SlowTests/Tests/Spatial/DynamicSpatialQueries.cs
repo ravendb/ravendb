@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System;
+using FastTests;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Spatial;
@@ -294,7 +295,7 @@ namespace SlowTests.Tests.Spatial
                     Assert.True(json.TryGet(nameof(DocumentQueryResult.SpatialShapes), out BlittableJsonReaderArray spatialShapes));
                     Assert.Equal(1, spatialShapes.Length);
 
-                    (spatialShapes[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialShapeBase.ShapeType), out string shape);
+                    (spatialShapes[0] as BlittableJsonReaderObject).TryGet(nameof(SpatialShapeBase.Type), out string shape);
                     Assert.Equal(shape, "Polygon");
 
                     Assert.True((spatialShapes[0] as BlittableJsonReaderObject).TryGet(nameof(Polygon.Vertices), out BlittableJsonReaderArray vertices));
@@ -345,7 +346,7 @@ namespace SlowTests.Tests.Spatial
                     Assert.Equal(2, spatialShapes.Length);
 
                     var firstShape = spatialShapes[0] as BlittableJsonReaderObject;
-                    firstShape.TryGet(nameof(SpatialShapeBase.ShapeType), out string shape);
+                    firstShape.TryGet(nameof(SpatialShapeBase.Type), out string shape);
                     Assert.Equal(shape, "Circle");
 
                     Assert.True(firstShape.TryGet(nameof(Circle.Center), out BlittableJsonReaderObject center));
@@ -355,13 +356,13 @@ namespace SlowTests.Tests.Spatial
                     Assert.Equal(-93.35, longitude);
 
                     firstShape.TryGet(nameof(Circle.Radius), out double radius);
-                    Assert.Equal(50, radius);
+                    Assert.True(Math.Abs(50 - radius) < 0.1);
 
                     firstShape.TryGet(nameof(Circle.Units), out SpatialUnits units);
                     Assert.Equal(SpatialUnits.Miles, units);
 
                     var secondShape = spatialShapes[1] as BlittableJsonReaderObject;
-                    secondShape.TryGet(nameof(SpatialShapeBase.ShapeType), out shape);
+                    secondShape.TryGet(nameof(SpatialShapeBase.Type), out shape);
                     Assert.Equal(shape, "Circle");
 
                     Assert.True(secondShape.TryGet(nameof(Circle.Center), out center));
@@ -371,7 +372,7 @@ namespace SlowTests.Tests.Spatial
                     Assert.Equal(-90, longitude);
 
                     secondShape.TryGet(nameof(Circle.Radius), out radius);
-                    Assert.Equal(20, radius);
+                    Assert.True(Math.Abs(20 - radius) < 0.1);
 
                     secondShape.TryGet(nameof(Circle.Units), out units);
                     Assert.Equal(SpatialUnits.Kilometers, units);
@@ -388,12 +389,12 @@ namespace SlowTests.Tests.Spatial
 
                 using (var commands = store.Commands())
                 {
-                    var e = Assert.Throws<Raven.Client.Exceptions.RavenException>(() => commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs " +
+                    var e = Assert.Throws<Raven.Client.Exceptions.InvalidQueryException>(() => commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs " +
                                                                                                  "where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), " +
                                                                                                  "spatial.wkt('CIRCLE(-90 40)'))" +
                                                                                                  "&addSpatialProperties=true"));
 
-                    Assert.Contains("WKT CIRCLE should contain 3 params. i.e. CIRCLE(longitude latitude d=radiusDistance)", e.Message);
+                    Assert.Contains("Value 'CIRCLE(-90 40)' is not a valid WKT value", e.Message);
                 }
             }
         }
@@ -407,12 +408,12 @@ namespace SlowTests.Tests.Spatial
 
                 using (var commands = store.Commands())
                 {
-                    var e = Assert.Throws<Raven.Client.Exceptions.RavenException>(() => commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs " +
+                    var e = Assert.Throws<Raven.Client.Exceptions.InvalidQueryException>(() => commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=from GeoDocs " +
                                                                                                                          "where spatial.within(spatial.point(Location1.Latitude, Location1.Longitude), " +
                                                                                                                          "spatial.wkt('CIRCLE(-90 40 d2)'))" +
                                                                                                                          "&addSpatialProperties=true"));
 
-                    Assert.Contains("Invalid radius distance param", e.Message);
+                    Assert.Contains("Value 'CIRCLE(-90 40 d2)' is not a valid WKT value", e.Message);
                 }
             }
         }

@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents.Indexes.Spatial
 {
-    public enum SpatialShape
+    public enum SpatialShapeType
     {
         Polygon,
         Circle

@@ -37,12 +37,16 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             if (_options.Type == SpatialFieldType.Geography)
                 shape = TranslateCircleRadius(shape, unitOverride ?? _options.Units);
 
+#pragma warning disable 612
             return _context.ReadShape(shape);
+#pragma warning restore 612
         }
 
         public string WriteShape(IShape shape)
         {
+#pragma warning disable 612
             return _context.ToString(shape);
+#pragma warning restore 612
         }
 
         public static double TranslateCircleRadius(double radius, SpatialUnits units)
@@ -51,6 +55,18 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 radius *= Constants.Documents.Indexing.Spatial.MilesToKm;
 
             return (radius / Constants.Documents.Indexing.Spatial.EarthMeanRadiusKm) * RadiansToDegrees;
+        }
+
+        public static double TranslateDegreesToRadius(double degrees, SpatialUnits units, SpatialOptions options)
+        {
+            if (options.Type == SpatialFieldType.Cartesian)
+                return degrees;
+
+            var radius = (degrees * Constants.Documents.Indexing.Spatial.EarthMeanRadiusKm) / RadiansToDegrees;
+            if (units == SpatialUnits.Miles)
+                radius /= Constants.Documents.Indexing.Spatial.MilesToKm;
+
+            return radius;
         }
 
         private static string TranslateCircleRadius(string shapeWkt, SpatialUnits units)

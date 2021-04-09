@@ -1,74 +1,27 @@
 ﻿using System;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Server.Documents.Indexes.Static.Spatial;
+using Spatial4n.Core.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Spatial
 {
     public class Circle : SpatialShapeBase
     {
-        public Coordinates Center;
-        public double Radius;
-        public SpatialUnits Units;
+        public readonly Coordinates Center;
+        public readonly double Radius;
+        public readonly SpatialUnits Units;
 
-        public Circle()
+        public Circle(ICircle circle, SpatialUnits units, SpatialOptions options)
+            : base(SpatialShapeType.Circle)
         {
-            ShapeType = SpatialShape.Circle;
-        }
+            if (circle == null)
+                throw new ArgumentNullException(nameof(circle));
+            if (options == null)
+                throw new ArgumentNullException(nameof(options));
 
-        public Circle(string radiusStr, string latitudeStr, string longitudeStr, string unitsStr) : this()
-        {
-            try
-            {
-                var latitude = Convert.ToDouble(latitudeStr);
-                var longitude = Convert.ToDouble(longitudeStr);
-                Center = new Coordinates(latitude, longitude);
-                Radius = Convert.ToDouble(radiusStr);
-                Units = GetUnits(unitsStr);
-            }
-            catch (Exception e)
-            {
-                throw new ArgumentException("Invalid arguments in spatial.circle. " + e.Message);
-            }
-        }
-
-        public Circle(string circleExpression, string unitsStr) : this()
-        {
-            try
-            {
-                var tokens = circleExpression.Split('(', ')');
-                var circleItems = tokens[1].Split(default(string[]), StringSplitOptions.RemoveEmptyEntries);
-                if (circleItems.Length != 3)
-                {
-                    throw new ArgumentException("WKT CIRCLE should contain 3 params. i.e. CIRCLE(longitude latitude d=radiusDistance)");
-                }
-
-                // Revert long & lat - WKT format is [long, lat] and studio expects [lat, long]
-                var longitude = Convert.ToDouble(circleItems[0]);
-                var latitude = Convert.ToDouble(circleItems[1]);
-                Center = new Coordinates(latitude, longitude);
-
-                var radiusItems = circleItems[2].Split('=');
-                if (radiusItems.Length != 2)
-                {
-                    throw new ArgumentException("Invalid radius distance param.");
-                }
-                Radius = Convert.ToDouble(radiusItems[1]);
-
-                Units = GetUnits(unitsStr);
-            }
-            catch (Exception e)
-            {
-                throw new ArgumentException("Invalid WKT CIRCLE format. " + e.Message);
-            }
-        }
-
-        private SpatialUnits GetUnits(string unitsStr)
-        {
-            if (unitsStr?.ToLower() == "miles")
-            {
-                return SpatialUnits.Miles;
-            }
-
-            return SpatialUnits.Kilometers;
+            Center = new Coordinates(circle.Center);
+            Radius = ShapeStringReadWriter.TranslateDegreesToRadius(circle.Radius, units, options);
+            Units = units;
         }
     }
 }

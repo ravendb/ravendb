@@ -185,7 +185,7 @@ namespace Sparrow.Json
             return false;
         }
 
-        protected bool Equals(LazyNumberValue other)
+        private bool Equals(LazyNumberValue other)
         {
             if (_val != null && other._val != null)
                 return _val.Value.AlmostEquals(other._val.Value);
