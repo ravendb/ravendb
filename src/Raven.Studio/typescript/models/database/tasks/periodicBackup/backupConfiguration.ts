@@ -155,6 +155,16 @@ abstract class backupConfiguration {
         this.backupType(backupType);
     }
 
+    getPathForCreatedBackups(backupLocationInfo: Raven.Server.Web.Studio.SingleNodeDataDirectoryResult) {
+        return ko.pureComputed(() => {
+            const separator = backupLocationInfo.FullPath[0] === "/" ? "/" : "\\";
+            
+            return this.isServerWide() ? 
+                `${backupLocationInfo.FullPath}${separator}{DATABASE-NAME}${separator}` :
+                `${backupLocationInfo.FullPath}`; 
+        })
+    }
+
     static emptyDto(): Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration {
         return {
             TaskId: 0,
