@@ -81,6 +81,10 @@ abstract class widget<TConfig = unknown, TState = unknown> {
         this.controller.deleteWidget(this);
     }
     
+    protected forceSyncUpdate() {
+        this.syncUpdate();
+    }
+    
     private syncUpdate() {
         const updatesCount = this.pendingUpdates.length;
         this.pendingUpdates.forEach(action => action());

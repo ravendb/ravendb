@@ -2,14 +2,20 @@
 
 import d3 = require("d3");
 
-type chartItemData = {
-    x: Date,
-    y: number
+interface chartItemData {
+    x: Date;
+    y: number;
 }
 
-type chartData = {
-    id: string,
-    values: chartItemData[],
+interface chartData {
+    id: string;
+    ranges: chartItemRange[];
+}
+
+interface chartItemRange {
+    finished: boolean;
+    parent: chartData;
+    values: chartItemData[];
 }
 
 type chartOpts = {
@@ -44,7 +50,7 @@ class lineChart {
     
     private xScale: d3.time.Scale<number, number>;
     
-    private containerSelector: string | EventTarget;
+    private readonly containerSelector: string | EventTarget;
     private highlightVisible: boolean = false;
     
     constructor(containerSelector: string | EventTarget, opts?: chartOpts) {
@@ -132,8 +138,6 @@ class lineChart {
             .attr("width", this.width)
             .attr("height", this.height);
         
-        //TODO: add viewport? 
-        
         const gridContainer = this.svg.select(".grid");
         gridContainer.selectAll("line").remove();
         
@@ -198,14 +202,14 @@ class lineChart {
     
     showTooltip() {
         this.tooltip
-            .style('display', undefined)
+            .style("display", undefined)
             .transition()
             .duration(250)
             .style("opacity", 1);
     }
     
     updateTooltip(passive = false) {
-        let xToUse = null as number;
+        let xToUse: number;
         if (passive) {
             // just update contents
             xToUse = this.lastXPosition;
@@ -235,6 +239,7 @@ class lineChart {
     }
     
     private findClosestData(xToUse: number): Date {
+        // noinspection JSSuspiciousNameCombination
         const hoverTime = this.xScale.invert(xToUse);
         return hoverTime.getTime() >= this.minDate.getTime() ? hoverTime : null; 
     }
@@ -255,17 +260,9 @@ class lineChart {
         this.maxDate = time;
         
         data.forEach(dataItem => {
-            let dataEntry = this.data.find(x => x.id === dataItem.key);
-            
-            if (!dataEntry) {
-                dataEntry = {
-                    id: dataItem.key,
-                    values: []
-                };
-                this.data.push(dataEntry);
-            }
+            const dataRange = this.getOrCreateRange(dataItem.key);
 
-            dataEntry.values.push({
+            dataRange.values.push({
                 x: time,
                 y: dataItem.value
             });
@@ -282,7 +279,51 @@ class lineChart {
         this.updateTooltip(true);
     }
     
+    private getOrCreateChartData(key: string): chartData {
+        let dataEntry = this.data.find(x => x.id === key);
+
+        if (!dataEntry) {
+            dataEntry = {
+                id: key,
+                ranges: []
+            };
+            this.data.push(dataEntry);
+        }
+        
+        return dataEntry;
+    }
+    
+    private getOrCreateRange(key: string): chartItemRange {
+        const dataEntry = this.getOrCreateChartData(key);
+
+        if (dataEntry.ranges.length) {
+            const lastRange = dataEntry.ranges[dataEntry.ranges.length - 1];
+            if (!lastRange.finished) {
+                // reusing last range - it isn't finished yet
+                return lastRange;
+            }
+        }
+
+        const newRange: chartItemRange = {
+            values: [],
+            parent: dataEntry,
+            finished: false
+        };
+
+        dataEntry.ranges.push(newRange);
+        return newRange;
+    }
+    
+    recordNoData(time: Date, key: string) {
+        const dataEntry = this.data.find(x => x.id === key);
+        if (dataEntry?.ranges.length) {
+            const lastRange = dataEntry.ranges[dataEntry.ranges.length - 1];
+            lastRange.finished = true;
+        }
+    }
+    
     private maybeTrimData() {
+        /* TODO:
         let hasAnyTrim = false;
         for (let i = 0; i < this.data.length; i++) {
             const entry = this.data[i];
@@ -295,7 +336,7 @@ class lineChart {
         
         if (hasAnyTrim) {
             this.minDate = _.min(this.data.map(x => x.values[0].x));
-        }
+        }*/
     }
     
     private createLineFunctions(): Map<string, d3.svg.Line<chartItemData>> {
@@ -330,7 +371,7 @@ class lineChart {
             });
         } else if (this.opts.useSeparateYScales) {
             this.data.forEach(data => {
-                const yMax = d3.max(data.values.map(x => x.y));
+                const yMax = d3.max(data.ranges.filter(range => range.values.length).map(range => d3.max(range.values.map(values => values.y))));
                 const yScale = yScaleCreator(yMax, this.opts.topPaddingProvider(data.id));
 
                 const lineFunction = d3.svg.line<chartItemData>()
@@ -340,7 +381,7 @@ class lineChart {
                 result.set(data.id, lineFunction);
             });
         } else {
-            const yMax = d3.max(this.data.map(d => d3.max(d.values.map(x => x.y))));
+            const yMax = d3.max(this.data.map(data => d3.max(data.ranges.filter(range => range.values.length).map(range => d3.max(range.values.map(values => values.y))))));
             const yScale = yScaleCreator(yMax, this.opts.topPaddingProvider(null));
 
             const lineFunction = d3.svg.line<chartItemData>()
@@ -365,33 +406,40 @@ class lineChart {
             .exit()
             .remove();
         
-        const enteringSerie = series
+        series
             .enter()
             .append("g")
             .attr("class", x => "serie " + x.id);
         
         const lineFunctions = this.createLineFunctions();
         
-        enteringSerie
+        const lines = series.selectAll(".line")
+            .data<chartItemRange>(x => x.ranges);
+
+        lines
+            .exit()
+            .remove();
+
+        lines.enter()
             .append("path")
             .attr("class", "line")
-            .attr("d", d => lineFunctions.get(d.id)(this.applyFill(d.values)));
 
-        if (this.opts.fillArea) {
-            enteringSerie
-                .append("path")
-                .attr("class", "fill")
-                .attr("d", d => lineFunctions.get(d.id)(lineChart.closedPath(this.applyFill(d.values))));
-        }
+        lines
+            .attr("d", d => lineFunctions.get(d.parent.id)(this.applyFill(d.values)));
         
-        series
-            .select(".line")
-            .attr("d", d => lineFunctions.get(d.id)(this.applyFill(d.values)));
-
         if (this.opts.fillArea) {
-            series
-                .select(".fill")
-                .attr("d", d => lineFunctions.get(d.id)(lineChart.closedPath(this.applyFill(d.values))));
+            const fills = series.selectAll(".fill")
+                .data<chartItemRange>(x => x.ranges);
+            
+            fills
+                .exit()
+                .remove();
+            
+            fills.enter()
+                .append("path");
+            
+            fills
+                .attr("d", d => lineFunctions.get(d.parent.id)(lineChart.closedPath(this.applyFill(d.values))));
         }
     }
     
