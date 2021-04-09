@@ -51,6 +51,8 @@ namespace Voron.Impl.Scratch
             _strongRefToAllocateInBytesFunc = new StrongReference<Func<long>> { Value = scratchPager.AllocatedInBytesFunc };
             MemoryInformation.DirtyMemoryObjects.TryAdd(_strongRefToAllocateInBytesFunc);
 
+            DebugInfo = new ScratchFileDebugInfo(this);
+
             _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
             {
                 _strongRefToAllocateInBytesFunc.Value = null; // remove ref (so if there's a left over refs in DirtyMemoryObjects but also function as _disposed = true for racy func invoke)
@@ -106,6 +108,9 @@ namespace Voron.Impl.Scratch
             _txIdAfterWhichLatestFreePagesBecomeAvailable = -1;
             _lastUsedPage = 0;
             _allocatedPagesCount = 0;
+
+            DebugInfo.NumberOfResets++;
+            DebugInfo.LastResetTime = DateTime.UtcNow;
         }
 
         public PagerState PagerState => _scratchPager.PagerState;
@@ -123,6 +128,8 @@ namespace Voron.Impl.Scratch
         public long AllocatedPagesCount => _allocatedPagesCount;
 
         public long TxIdAfterWhichLatestFreePagesBecomeAvailable => _txIdAfterWhichLatestFreePagesBecomeAvailable;
+
+        public ScratchFileDebugInfo DebugInfo { get; } 
 
         public long SizeAfterAllocation(long sizeToAllocate)
         {
@@ -240,6 +247,9 @@ namespace Voron.Impl.Scratch
                 return; // never called
             }
 
+            DebugInfo.LastFreeTime = DateTime.UtcNow;
+            DebugInfo.LastAsOfTxIdWhenFree = asOfTxId;
+
             _allocatedPagesCount -= value.NumberOfPages;
             _allocatedPages.Remove(page);
 
@@ -303,20 +313,6 @@ namespace Voron.Impl.Scratch
             return _scratchPager.AcquirePagePointerForNewPage(tx, p, numberOfPages);
         }
 
-        internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
-        {
-            return _freePagesBySize.Keys.ToDictionary(size => size, size =>
-            {
-                var list = _freePagesBySize[size].Last;
-
-                var value = list?.Value;
-                if (value == null)
-                    return -1;
-
-                return value.ValidAfterTransactionId;
-            });
-        }
-
         public void Dispose()
         {
             _disposeOnceRunner.Dispose();
@@ -372,6 +368,43 @@ namespace Voron.Impl.Scratch
         private static void InvalidAttemptToShrinkPageThatWasntAllocated(PageFromScratchBuffer value)
         {
             throw new InvalidOperationException($"Attempt to shrink a page that wasn't currently allocated: {value.PositionInScratchBuffer}");
+        }
+
+        public class ScratchFileDebugInfo
+        {
+            private readonly ScratchBufferFile _parent;
+
+            public ScratchFileDebugInfo(ScratchBufferFile parent)
+            {
+                _parent = parent;
+            }
+
+            public DateTime? LastResetTime { get; set; }
+
+            public int NumberOfResets { get; set; }
+
+            public DateTime? LastFreeTime { get; set; }
+
+            public long LastAsOfTxIdWhenFree { get; set; }
+
+            internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
+            {
+                return _parent._freePagesBySize.Keys.ToDictionary(size => size, size =>
+                {
+                    var list = _parent._freePagesBySize[size].Last;
+
+                    var value = list?.Value;
+                    if (value == null)
+                        return -1;
+
+                    return value.ValidAfterTransactionId;
+                });
+            }
+
+            internal List<PageFromScratchBuffer> GetFirst10AllocatedPages()
+            {
+                return _parent._allocatedPages.Take(10).Select(x => x.Value).ToList();
+            }
         }
     }
 }
