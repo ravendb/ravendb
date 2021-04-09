@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Voron;
+using Voron.Impl;
 using Voron.Impl.Journal;
 using Xunit;
 using Xunit.Abstractions;
@@ -61,6 +62,8 @@ namespace FastTests.Voron.Bugs
                 var journalSnapshots = readTx.LowLevelTransaction.JournalSnapshots;
 
                 Assert.Equal(0, journalSnapshots.Count); // _files collection was cleaned during the flush
+
+                Assert.Equal(0, Env.Journal.Files.Count);
             }
 
             Env.FlushLogToDataFile();
@@ -70,6 +73,64 @@ namespace FastTests.Voron.Bugs
             var scratchBufferPoolInfo = Env.ScratchBufferPool.InfoForDebug(Env.PossibleOldestReadTransaction(null));
 
             Assert.Equal(1, scratchBufferPoolInfo.ScratchFilesUsage.Count);
+        }
+
+        [Fact]
+        public void MustNotFreePagesAndRemoveJournalsIfThereIsTransactionThatMightReadFromIt()
+        {
+            RequireFileBasedPager();
+
+            var r = new Random(3);
+
+            for (int j = 0; j < 2; j++)
+            {
+                using (var tx = Env.WriteTransaction())
+                {
+                    var tree = tx.CreateTree("tree");
+
+                    for (int i = 0; i < 8; i++)
+                    {
+                        var overflowSize = r.Next(5, 10);
+
+                        var bytes = new byte[overflowSize * 8192];
+
+                        r.NextBytes(bytes);
+
+                        tree.Add("items/" + i, bytes);
+                    }
+
+                    tx.Commit();
+                }
+            }
+
+            Assert.Equal(3, Env.Journal.Files.Count);
+            Assert.Equal(0, Env.Journal.CurrentFile.Available4Kbs);
+
+            Transaction readTx = null;
+
+            Env.Journal.Applicator.ForTestingPurposesOnly().OnUpdateJournalStateUnderWriteTransactionLock += () =>
+            {
+                readTx = Env.ReadTransaction();
+            };
+
+            Env.FlushLogToDataFile(); 
+
+            readTx.Dispose();
+
+            Env.Journal.Applicator.ForTestingPurposesOnly().OnUpdateJournalStateUnderWriteTransactionLock = null;
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var journalSnapshots = tx.LowLevelTransaction.JournalSnapshots;
+
+                Assert.Equal(1, journalSnapshots.Count);
+
+                Assert.Equal(1, Env.Journal.Files.Count);
+
+                Assert.False(Env.Journal.Files[0].PageTranslationTable.IsEmpty);
+
+                Assert.Equal(3, Env.Journal.Files[0].PageTranslationTable.MaxTransactionId());
+            }
         }
     }
 }
