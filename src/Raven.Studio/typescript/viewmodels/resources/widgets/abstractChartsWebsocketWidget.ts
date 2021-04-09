@@ -68,20 +68,18 @@ abstract class abstractChartsWebsocketWidget<
         super.onClientConnected(ws);
 
         this.withStats(ws.nodeTag, x => x.onConnectionStatusChanged(true));
-        
-        this.charts.forEach(chart => {
-            //TODO: chart.onConnectionStatusChanged(ws.nodeTag, true);
-        });
     }
 
     onClientDisconnected(ws: clusterDashboardWebSocketClient) {
         super.onClientDisconnected(ws);
-        //TODO: flush pending updates? 
+        
+        // flush pending changes - as we redraw anyway 
+        this.forceSyncUpdate();
+        
+        const now = new Date();
 
         this.withStats(ws.nodeTag, x => x.onConnectionStatusChanged(false));
-        this.charts.forEach(chart => {
-            //TODO: chart.onConnectionStatusChanged(ws.nodeTag, false);
-        });
+        this.charts.forEach(chart => chart.recordNoData(now, abstractChartsWebsocketWidget.chartKey(ws.nodeTag)));
     }
 
     protected afterSyncUpdate(updatesCount: number) {
@@ -92,17 +90,20 @@ abstract class abstractChartsWebsocketWidget<
         this.charts.forEach(chart => chart.onResize());
         this.charts.forEach(chart => chart.draw());
     }
+    
+    private static chartKey(nodeTag: string) {
+        return "node-" + nodeTag.toLocaleLowerCase();
+    }
 
     onData(nodeTag: string, data: TPayload) {
         this.scheduleSyncUpdate(() => this.withStats(nodeTag, x => x.onData(data)));
 
         const date = moment.utc(data.Date).toDate();
-        const key = "node-" + nodeTag.toLocaleLowerCase();
 
         this.scheduleSyncUpdate(() => {
             this.charts.forEach(chart => {
                 chart.onData(date, [{
-                    key,
+                    key: abstractChartsWebsocketWidget.chartKey(nodeTag),
                     value: this.extractDataForChart(chart, data)
                 }]);
             })
