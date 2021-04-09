@@ -7,7 +7,7 @@ import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 
 class addNewNodeToDatabaseGroup extends dialogViewModelBase {
 
-    private isEncrypted: boolean;
+    private readonly isEncrypted: boolean;
     
     nodeTag = ko.observable<string>();
     mentorNode = ko.observable<string>();

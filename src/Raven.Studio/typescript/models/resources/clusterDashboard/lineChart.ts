@@ -323,20 +323,33 @@ class lineChart {
     }
     
     private maybeTrimData() {
-        /* TODO:
         let hasAnyTrim = false;
-        for (let i = 0; i < this.data.length; i++) {
-            const entry = this.data[i];
-            
-            if (entry.values.length > 2000) {
-                entry.values = entry.values.splice(1500);
-                hasAnyTrim = true;
+        
+        for (const datum of this.data) {
+            const rangesLengths = datum.ranges.map(x => x.values.length);
+            if (_.sum(rangesLengths) < 2000) {
+                continue;
+            }
+
+            let sum = 0;
+
+            for (let i = rangesLengths.length - 1; i >= 0; i--) {
+                const currentLength = rangesLengths[i];
+                if (sum + currentLength > 1500) {
+                    // we have overflow in this chunk over the limit - slice this chunk and all previous
+                    const itemsToRemove = 1500 - sum;
+                    datum.ranges[i].values = datum.ranges[i].values.slice(itemsToRemove);
+                    datum.ranges = datum.ranges.slice(i);
+                    break;
+                }
+
+                sum += currentLength;
             }
         }
-        
+
         if (hasAnyTrim) {
-            this.minDate = _.min(this.data.map(x => x.values[0].x));
-        }*/
+            this.minDate = _.min(this.data.filter(x => x.ranges.length).map(d => d.ranges[0].values[0].x));
+        }
     }
     
     private createLineFunctions(): Map<string, d3.svg.Line<chartItemData>> {
