@@ -1,5 +1,6 @@
 ﻿const Menu = {
-    LevelChanged: 'MainMenu.LevelChanged'
+    LevelChanged: 'MainMenu.LevelChanged',
+    Resized: 'MainMenu.Resized'
 };
 
 const DatabaseSwitcher = {

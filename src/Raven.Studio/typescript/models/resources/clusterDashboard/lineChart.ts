@@ -340,6 +340,10 @@ class lineChart {
     }
     
     private createLineFunctions(): Map<string, d3.svg.Line<chartItemData>> {
+        if (!this.data.length) {
+            return new Map<string, d3.svg.Line<chartItemData>>();
+        }
+        
         const timePerPixel = 500;
         const maxTime = this.maxDate;
         const minTime = new Date(maxTime.getTime() - this.width * timePerPixel);
