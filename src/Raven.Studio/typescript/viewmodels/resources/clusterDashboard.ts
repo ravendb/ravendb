@@ -15,6 +15,7 @@ import trafficWidget = require("viewmodels/resources/widgets/trafficWidget");
 import databaseIndexingWidget = require("viewmodels/resources/widgets/databaseIndexingWidget");
 import databaseStorageWidget = require("viewmodels/resources/widgets/databaseStorageWidget");
 import databaseTrafficWidget = require("viewmodels/resources/widgets/databaseTrafficWidget");
+import EVENTS = require("common/constants/events");
 
 interface savedWidget {
     type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType;
@@ -28,6 +29,7 @@ interface savedWidget {
 class clusterDashboard extends viewModelBase {
     
     private packery: PackeryStatic;
+    private initialized = false;
     
     readonly currentServerNodeTag: string;
     
@@ -62,7 +64,7 @@ class clusterDashboard extends viewModelBase {
             transitionDuration: '0',
         });
         
-        const throttledLayout = _.debounce(() => {
+        const throttledLayoutSave = _.debounce(() => {
             const layout: savedWidget[] = this.widgets().map(x => {
                 return {
                     type: x.getType(),
@@ -77,22 +79,43 @@ class clusterDashboard extends viewModelBase {
             localStorage.setObject("cluster-dashboard-layout", layout);
         }, 5_000);
         
-        this.packery.on("layoutComplete", throttledLayout);
+        this.packery.on("layoutComplete", throttledLayoutSave);
+    }
+    
+    createPostboxSubscriptions(): Array<KnockoutSubscription> {
+        return [
+            ko.postbox.subscribe(EVENTS.Menu.Resized, () => {
+                this.packery.layout();
+            })
+        ];
     }
 
     compositionComplete() {
         super.compositionComplete();
-        //TODO: what if cluster is not bootstraped?
         
-        //todo on menu resize
+        if (this.nodes().length) {
+            this.initDashboard();
+        } else {
+            // wait for cluster boostrap
+            const awaitClusterInit = this.nodes.subscribe(nodes => {
+                if (nodes.length && !this.initialized) {
+                    this.initDashboard();
+                    this.initialized = true;
+                    awaitClusterInit.dispose();
+                }
+            });
+        }
+    }
+    
+    private initDashboard() {
         this.initPackery();
 
         this.enableLiveView();
-        
+
         const savedLayout: savedWidget[] = localStorage.getObject("cluster-dashboard-layout");
         if (savedLayout) {
             const sortedWidgets = _.sortBy(savedLayout, x => parseFloat(x.top), x => parseFloat(x.left));
-            
+
             for (const item of sortedWidgets) {
                 this.spawnWidget(item.type, item.fullscreen, item.config, item.state);
             }
