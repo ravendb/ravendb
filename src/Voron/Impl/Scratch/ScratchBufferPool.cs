@@ -553,7 +553,8 @@ namespace Voron.Impl.Scratch
                 NumberOfScratchFiles = _scratchBuffers.Count,
                 CurrentFileNumber = currentFile.Number,
                 CurrentFileSizeInMB = currentFile.Size / 1024L / 1024L,
-                PerScratchFileSizeLimitInMB = _options.MaxScratchBufferSize / 1024L / 1024L
+                PerScratchFileSizeLimitInMB = _options.MaxScratchBufferSize / 1024L / 1024L,
+                CurrentUtcTime = DateTime.UtcNow
             };
 
             foreach (var scratchBufferItem in _scratchBuffers.Values.OrderBy(x => x.Number))
@@ -566,15 +567,31 @@ namespace Voron.Impl.Scratch
                     NumberOfAllocations = scratchBufferItem.File.NumberOfAllocations,
                     AllocatedPagesCount = scratchBufferItem.File.AllocatedPagesCount,
                     CanBeDeleted = scratchBufferItem != current && scratchBufferItem.File.HasActivelyUsedBytes(oldestActiveTransaction) == false,
-                    TxIdAfterWhichLatestFreePagesBecomeAvailable = scratchBufferItem.File.TxIdAfterWhichLatestFreePagesBecomeAvailable
+                    TxIdAfterWhichLatestFreePagesBecomeAvailable = scratchBufferItem.File.TxIdAfterWhichLatestFreePagesBecomeAvailable,
+                    IsInRecycleArea = _recycleArea.Contains(scratchBufferItem),
+                    NumberOfResets = scratchBufferItem.File.DebugInfo.NumberOfResets,
+                    LastResetTime = scratchBufferItem.File.DebugInfo.LastResetTime,
+                    LastFreeTime = scratchBufferItem.File.DebugInfo.LastFreeTime
                 };
 
-                foreach (var freePage in scratchBufferItem.File.GetMostAvailableFreePagesBySize())
+                foreach (var freePage in scratchBufferItem.File.DebugInfo.GetMostAvailableFreePagesBySize())
                 {
                     scratchFileUsage.MostAvailableFreePages.Add(new MostAvailableFreePagesBySize
                     {
                         Size = freePage.Key,
                         ValidAfterTransactionId = freePage.Value
+                    });
+                }
+
+                foreach (var allocatedPage in scratchBufferItem.File.DebugInfo.GetFirst10AllocatedPages())
+                {
+                    scratchFileUsage.First10AllocatedPages.Add(new AllocatedPageInScratchBuffer()
+                    {
+                        NumberOfPages = allocatedPage.NumberOfPages,
+                        PositionInScratchBuffer = allocatedPage.PositionInScratchBuffer,
+                        ScratchFileNumber = allocatedPage.ScratchFileNumber,
+                        ScratchPageNumber = allocatedPage.ScratchPageNumber,
+                        Size = allocatedPage.Size
                     });
                 }
 
