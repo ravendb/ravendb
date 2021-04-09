@@ -63,9 +63,7 @@ namespace SlowTests.Voron.Bugs
 
                 env.FlushLogToDataFile(); // non read nor write transactions, so it should flush and release everything from scratch
 
-                // we keep track of the pages in scratch for one additional transaction, to avoid race
-                // condition with FlushLogToDataFile concurrently with new read transactions
-                Assert.Equal(2, env.ScratchBufferPool.GetNumberOfAllocations(0)); 
+                Assert.Equal(0, env.ScratchBufferPool.GetNumberOfAllocations(0)); 
             }
         }
     }
