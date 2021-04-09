@@ -291,11 +291,11 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(nameof(result.ShapeType));
-            writer.WriteString(result.ShapeType.ToString());
+            writer.WritePropertyName(nameof(result.Type));
+            writer.WriteString(result.Type.ToString());
             writer.WriteComma();
 
-            if (result.ShapeType == SpatialShape.Circle)
+            if (result.Type == SpatialShapeType.Circle)
             {
                 var circle = result as Circle;
                 writer.WritePropertyName(nameof(circle.Center));
@@ -311,7 +311,7 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(nameof(circle.Units));
                 writer.WriteString(circle.Units.ToString());
             }
-            else if (result.ShapeType == SpatialShape.Polygon)
+            else if (result.Type == SpatialShapeType.Polygon)
             {
                 var polygon = result as Polygon;
                 writer.WriteArray(context, nameof(polygon.Vertices), polygon.Vertices,
@@ -319,7 +319,7 @@ namespace Raven.Server.Json
             }
             else
             {
-                throw new NotSupportedException($"Shape type: {result.ShapeType} is not supported.");
+                throw new NotSupportedException($"Shape type: {result.Type} is not supported.");
             }
 
             writer.WriteEndObject();
