@@ -19,7 +19,7 @@ namespace Sparrow.Json
 {
     public unsafe class ArenaMemoryAllocator : IDisposable
     {
-        private const int MaxArenaSize = 1024 * 1024 * 1024;
+        internal const int MaxArenaSize = 1024 * 1024 * 1024;
         private static readonly int? SingleAllocationSizeLimit = PlatformDetails.Is32Bits ? 8 * Constants.Size.Megabyte : (int?)null;
 
         private byte* _ptrStart;
