@@ -399,7 +399,8 @@ namespace Voron.Impl.Scratch
                 var scratchBufferItem = item.Value;
 
                 if (scratchBufferItem.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction(null)) ||
-                    scratchBufferItem == except)
+                    scratchBufferItem == except ||
+                    scratchBufferItem == _current)
                     continue;
 
                 ScratchBufferItem _;
