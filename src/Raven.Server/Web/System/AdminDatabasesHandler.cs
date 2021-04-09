@@ -718,7 +718,7 @@ namespace Raven.Server.Web.System
                     var clientCert = GetCurrentCertificate();
 
                     var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
-                    auditLog.Info($"Delete [{string.Join(", ", parameters.DatabaseNames)}] database from ({string.Join(", ", parameters.FromNodes)}) by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+                    auditLog.Info($"Attempt to delete [{string.Join(", ", parameters.DatabaseNames)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())}) by {clientCert?.Subject} ({clientCert?.Thumbprint})");
                 }
 
                 using (context.OpenReadTransaction())
@@ -772,12 +772,21 @@ namespace Raven.Server.Web.System
                     }
                 }
 
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    var clientCert = GetCurrentCertificate();
+
+                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
+                    auditLog.Info($"Delete [{string.Join(", ", databasesToDelete)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())}) by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+                }
+
                 long index = -1;
                 foreach (var databaseName in databasesToDelete)
                 {
                     var (newIndex, _) = await ServerStore.DeleteDatabaseAsync(databaseName, parameters.HardDelete, parameters.FromNodes, $"{GetRaftRequestIdFromQuery()}/{databaseName}");
                     index = newIndex;
                 }
+
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 long actualDeletionIndex = index;
