@@ -830,6 +830,8 @@ namespace Voron.Impl.Journal
 
             private void UpdateJournalStateUnderWriteTransactionLock(LowLevelTransaction txw, List<JournalSnapshot> journalSnapshots, long lastProcessedJournal, long lastFlushedTransactionId)
             {
+                _forTestingPurposes?.OnUpdateJournalStateUnderWriteTransactionLock?.Invoke();
+
                 var oldestActiveTransaction = _waj._env.ActiveTransactions.OldestTransaction;
 
                 IDisposable exitPreventNewTransactions = null;
@@ -840,7 +842,7 @@ namespace Voron.Impl.Journal
                     // running, that started after the flush
                     var lastFlushedTransactionIdThatWontReadFromJournal = Math.Min(Math.Min(lastFlushedTransactionId, _waj._env.CurrentReadTransactionId - 1), txw.Id - 1);
 
-                    if (oldestActiveTransaction == txw.Id)
+                    if (oldestActiveTransaction == txw.Id && journalSnapshots.Count > 0 && journalSnapshots[^1].Number == lastProcessedJournal)
                     {
                         // we're the only active transaction and there are no reading transactions
                         // let's try to prevent running new read transactions so we'll be able to free more scratch pages and delete more journals
@@ -978,6 +980,21 @@ namespace Voron.Impl.Journal
                 {
                     Monitor.Enter(_flushingLock);// reacquire the lock
                 }
+            }
+
+            private TestingStuff _forTestingPurposes;
+
+            internal TestingStuff ForTestingPurposesOnly()
+            {
+                if (_forTestingPurposes != null)
+                    return _forTestingPurposes;
+
+                return _forTestingPurposes = new TestingStuff();
+            }
+
+            internal class TestingStuff
+            {
+                internal Action OnUpdateJournalStateUnderWriteTransactionLock;
             }
 
             // This can take a LONG time, and it needs to run concurrently with the
