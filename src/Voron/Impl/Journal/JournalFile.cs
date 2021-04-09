@@ -33,6 +33,7 @@ namespace Voron.Impl.Journal
 
         private readonly FastList<PagePosition> _unusedPages;
         private readonly ContentionLoggingLocker _locker2;
+        private Logger _logger;
 
         public JournalFile(StorageEnvironment env, IJournalWriter journalWriter, long journalNumber)
         {
@@ -42,8 +43,8 @@ namespace Voron.Impl.Journal
             _journalWriter = journalWriter;
             _writePosIn4Kb = 0;
             _unusedPages = new FastList<PagePosition>();
-            var logger = LoggingSource.Instance.GetLogger<JournalFile>(JournalWriter.FileName.FullPath);
-            _locker2 = new ContentionLoggingLocker(logger, JournalWriter.FileName.FullPath);
+            _logger = LoggingSource.Instance.GetLogger<JournalFile>(JournalWriter.FileName.FullPath);
+            _locker2 = new ContentionLoggingLocker(_logger, JournalWriter.FileName.FullPath);
         }
 
         public override string ToString()
@@ -350,6 +351,9 @@ namespace Voron.Impl.Journal
             }
 
             length = unusedAndFree.Count;
+
+            int totalFreed = 0;
+
             for (int i = 0; i < length; i++)
             {
                 var unusedPage = unusedAndFree[i];
@@ -357,6 +361,13 @@ namespace Voron.Impl.Journal
                     continue;
 
                 _env.ScratchBufferPool.Free(tx, unusedPage.ScratchNumber, unusedPage.ScratchPage, availableForAllocationAfterTx);
+
+                totalFreed++;
+            }
+
+            if (_logger.IsInfoEnabled)
+            {
+                _logger.Info($"Freed {totalFreed} scratch pages used by journal that will be available after transaction {availableForAllocationAfterTx}. There were {unusedPages.Count} unused pages and {unusedAndFree.Count} unused and free.");
             }
 
             _scratchPagesPositionsPool.Free(unusedPages);

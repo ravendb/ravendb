@@ -819,6 +819,20 @@ namespace Voron
             return new ExitWriteLock(_txCommit);
         }
 
+        internal bool IsInPreventNewReadTransactionsMode => _txCommit.IsWriteLockHeld;
+
+        internal bool TryPreventNewReadTransactions(TimeSpan timeout, out IDisposable exitWriteLock)
+        {
+            if (_txCommit.TryEnterWriteLock(timeout))
+            {
+                exitWriteLock = new ExitWriteLock(_txCommit);
+                return true;
+            }
+
+            exitWriteLock = null;
+            return false;
+        }
+
         public struct ExitWriteLock : IDisposable
         {
             readonly ReaderWriterLockSlim _rwls;

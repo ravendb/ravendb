@@ -87,6 +87,8 @@ namespace Raven.Server.Web.System
                                     ["Message"] = "Database " + name + " wasn't found"
                                 });
                         }
+
+                        return;
                     }
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
