@@ -29,7 +29,7 @@ interface savedWidget {
 class clusterDashboard extends viewModelBase {
     
     private packery: PackeryStatic;
-    private initialized = false;
+    initialized = ko.observable<boolean>(false);
     
     readonly currentServerNodeTag: string;
     
@@ -98,9 +98,8 @@ class clusterDashboard extends viewModelBase {
         } else {
             // wait for cluster boostrap
             const awaitClusterInit = this.nodes.subscribe(nodes => {
-                if (nodes.length && !this.initialized) {
+                if (nodes.length && !this.initialized()) {
                     this.initDashboard();
-                    this.initialized = true;
                     awaitClusterInit.dispose();
                 }
             });
@@ -120,11 +119,18 @@ class clusterDashboard extends viewModelBase {
                 this.spawnWidget(item.type, item.fullscreen, item.config, item.state);
             }
         } else {
-            // TODO: this is default list!
             this.addWidget(new cpuUsageWidget(this));
             this.addWidget(new memoryUsageWidget(this));
             this.addWidget(new licenseWidget(this));
+            this.addWidget(new storageWidget(this));
+            this.addWidget(new trafficWidget(this));
+            this.addWidget(new indexingWidget(this));
+            this.addWidget(new databaseIndexingWidget(this));
+            this.addWidget(new databaseTrafficWidget(this));
+            this.addWidget(new databaseStorageWidget(this));
         }
+
+        this.initialized(true);
     }
     
     private enableLiveView() {
@@ -208,7 +214,6 @@ class clusterDashboard extends viewModelBase {
         });
         this.packery.bindDraggabillyEvents(draggie);
         
-        //TODO: with set timeout?
         setTimeout(() => {
             this.layout(false);    
         }, 100);

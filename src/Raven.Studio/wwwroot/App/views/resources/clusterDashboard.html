@@ -1,5 +1,5 @@
 <div class="content-margin">
-    <div class="cluster-dashboard-container masonry-grid">
+    <div class="cluster-dashboard-container masonry-grid" data-bind="visible: initialized">
         <div class="grid-sizer"></div>
         <div class="gutter-sizer"></div>
         
@@ -7,7 +7,7 @@
             <div class="cluster-dashboard-item" data-bind="compose: $data, attr: { 'data-widget-id': id }, css: { 'fullscreen': fullscreen }"></div>    
         </div>
 
-        <button class="add-widget" data-bind="click: addWidgetModal">
+        <button class="add-widget" data-bind="click: addWidgetModal, visible: initialized">
             <i class="icon-plus"></i>
         </button>
     </div>
