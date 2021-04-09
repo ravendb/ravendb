@@ -3,8 +3,10 @@ using Sparrow.Binary;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server;
 using Sparrow.Server.Exceptions;
@@ -49,9 +51,12 @@ namespace Voron.Impl.Scratch
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
 
         private readonly ScratchSpaceUsageMonitor _scratchSpaceMonitor; // it tracks total size of all scratches (active and recycled)
+        private readonly Logger _logger;
 
         public ScratchBufferPool(StorageEnvironment env)
         {
+            _logger = LoggingSource.Instance.GetLogger<ScratchBufferPool>(Path.GetFileName(env.ToString()));
+
             _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
             {
                 if (_pagerStatesAllScratchesCache != null)
@@ -392,8 +397,10 @@ namespace Voron.Impl.Scratch
             _scratchBuffers.AddOrUpdate(scratch.Number, scratch, (_, __) => scratch);
         }
 
-        private void RemoveInactiveScratches(ScratchBufferItem except)
+        private int RemoveInactiveScratches(ScratchBufferItem except)
         {
+            var removed = 0;
+
             foreach (var item in _scratchBuffers)
             {
                 var scratchBufferItem = item.Value;
@@ -411,8 +418,12 @@ namespace Voron.Impl.Scratch
                     scratchBufferItem.File.Dispose();
 
                     _scratchSpaceMonitor.Decrease(scratchBufferItem.File.NumberOfAllocatedPages * Constants.Storage.PageSize);
+
+                    removed++;
                 }
             }
+
+            return removed;
         }
 
         private static void ThrowUnableToRemoveScratch(ScratchBufferItem scratchBufferItem)
@@ -491,9 +502,14 @@ namespace Voron.Impl.Scratch
                 {
                     using (_env.WriteTransaction(context: byteStringContext))
                     {
-                        RemoveInactiveScratches(_current);
+                        var removedInactive = RemoveInactiveScratches(_current);
 
-                        RemoveInactiveRecycledScratches();
+                        var removedInactiveRecycled = RemoveInactiveRecycledScratches();
+
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info($"Cleanup of {nameof(ScratchBufferPool)} removed: {removedInactive} inactive scratches and {removedInactiveRecycled} inactive from the recycle area");
+                        }
                     }
                 }
                 catch (TimeoutException)
@@ -511,10 +527,12 @@ namespace Voron.Impl.Scratch
             }
         }
 
-        private void RemoveInactiveRecycledScratches()
+        private int RemoveInactiveRecycledScratches()
         {
             if (_recycleArea.Count == 0)
-                return;
+                return 0;
+
+            var removed = 0;
 
             var scratchNode = _recycleArea.First;
             while (scratchNode != null)
@@ -529,10 +547,14 @@ namespace Voron.Impl.Scratch
                     _scratchSpaceMonitor.Decrease(recycledScratch.File.NumberOfAllocatedPages * Constants.Storage.PageSize);
 
                     _recycleArea.Remove(scratchNode);
+
+                    removed++;
                 }
 
                 scratchNode = next;
             }
+
+            return removed;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -553,7 +575,8 @@ namespace Voron.Impl.Scratch
                 NumberOfScratchFiles = _scratchBuffers.Count,
                 CurrentFileNumber = currentFile.Number,
                 CurrentFileSizeInMB = currentFile.Size / 1024L / 1024L,
-                PerScratchFileSizeLimitInMB = _options.MaxScratchBufferSize / 1024L / 1024L
+                PerScratchFileSizeLimitInMB = _options.MaxScratchBufferSize / 1024L / 1024L,
+                CurrentUtcTime = DateTime.UtcNow
             };
 
             foreach (var scratchBufferItem in _scratchBuffers.Values.OrderBy(x => x.Number))
@@ -566,15 +589,31 @@ namespace Voron.Impl.Scratch
                     NumberOfAllocations = scratchBufferItem.File.NumberOfAllocations,
                     AllocatedPagesCount = scratchBufferItem.File.AllocatedPagesCount,
                     CanBeDeleted = scratchBufferItem != current && scratchBufferItem.File.HasActivelyUsedBytes(oldestActiveTransaction) == false,
-                    TxIdAfterWhichLatestFreePagesBecomeAvailable = scratchBufferItem.File.TxIdAfterWhichLatestFreePagesBecomeAvailable
+                    TxIdAfterWhichLatestFreePagesBecomeAvailable = scratchBufferItem.File.TxIdAfterWhichLatestFreePagesBecomeAvailable,
+                    IsInRecycleArea = _recycleArea.Contains(scratchBufferItem),
+                    NumberOfResets = scratchBufferItem.File.DebugInfo.NumberOfResets,
+                    LastResetTime = scratchBufferItem.File.DebugInfo.LastResetTime,
+                    LastFreeTime = scratchBufferItem.File.DebugInfo.LastFreeTime
                 };
 
-                foreach (var freePage in scratchBufferItem.File.GetMostAvailableFreePagesBySize())
+                foreach (var freePage in scratchBufferItem.File.DebugInfo.GetMostAvailableFreePagesBySize())
                 {
                     scratchFileUsage.MostAvailableFreePages.Add(new MostAvailableFreePagesBySize
                     {
                         Size = freePage.Key,
                         ValidAfterTransactionId = freePage.Value
+                    });
+                }
+
+                foreach (var allocatedPage in scratchBufferItem.File.DebugInfo.GetFirst10AllocatedPages())
+                {
+                    scratchFileUsage.First10AllocatedPages.Add(new AllocatedPageInScratchBuffer()
+                    {
+                        NumberOfPages = allocatedPage.NumberOfPages,
+                        PositionInScratchBuffer = allocatedPage.PositionInScratchBuffer,
+                        ScratchFileNumber = allocatedPage.ScratchFileNumber,
+                        ScratchPageNumber = allocatedPage.ScratchPageNumber,
+                        Size = allocatedPage.Size
                     });
                 }
 
