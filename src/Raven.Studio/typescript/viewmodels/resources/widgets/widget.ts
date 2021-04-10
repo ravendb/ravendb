@@ -14,6 +14,8 @@ abstract class widget<TConfig = unknown, TState = unknown> {
     controller: clusterDashboard;
     container: HTMLElement;
     
+    composeTask: JQueryDeferred<void> = $.Deferred();
+    
     fullscreen = ko.observable<boolean>(false);
 
     syncUpdatesEnabled = false;
@@ -28,10 +30,6 @@ abstract class widget<TConfig = unknown, TState = unknown> {
     constructor(controller: clusterDashboard) {
         this.id = widget.nextWidgetId++;
         this.controller = controller;
-        
-        this.fullscreen.subscribe(() => {
-            this.controller.layout();
-        });
     }
     
     scheduleSyncUpdate(action: () => void) {
@@ -57,12 +55,14 @@ abstract class widget<TConfig = unknown, TState = unknown> {
     compositionComplete() {
         this.initialized = true;
         this.controller.onWidgetAdded(this);
+        
+        this.composeTask.resolve();
 
         this.fullscreen.subscribe(
             () => setTimeout(
                 () => this.afterComponentResized(), widget.resizeAnimationDuration));
     }
-
+    
     abstract getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType;
     
     getConfiguration(): TConfig {

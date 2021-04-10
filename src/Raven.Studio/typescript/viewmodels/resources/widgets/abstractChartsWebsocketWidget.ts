@@ -17,8 +17,8 @@ abstract class abstractChartsWebsocketWidget<
 
     nodeStats = ko.observableArray<TNodeStats>([]);
 
-    protected constructor(controller: clusterDashboard, config: TConfig = undefined, state: TState = undefined) {
-        super(controller, config, state);
+    protected constructor(controller: clusterDashboard) {
+        super(controller);
 
         this.throttledShowHistory = _.throttle((d: Date) => this.showNodesHistory(d), 100);
     }
