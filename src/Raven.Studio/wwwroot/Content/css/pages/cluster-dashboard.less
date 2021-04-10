@@ -11,6 +11,14 @@
 .cluster-dashboard-container {
     width: 100%;
     padding-bottom: @gutter;
+    opacity: 0;
+    
+    transition: opacity 0.5s ease-in-out;
+    transition-delay: 0.5s;
+    
+    &.initialized {
+        opacity: 1;
+    }
 
     .gutter-sizer {
         width: @gutter-sm;

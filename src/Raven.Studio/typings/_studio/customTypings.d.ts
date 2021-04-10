@@ -174,6 +174,11 @@ interface JQuery {
 /// Packery
 ///
 
+interface PackeryPacker {
+    width: number;
+    height: number;
+}
+
 class PackeryStatic {
     layout(): void;
 
@@ -186,6 +191,9 @@ class PackeryStatic {
     remove(elements: Element[] | Element): void;
 
     getItemElements(): HTMLElement[];
+    getItem(element: HTMLElement): any;
+    packer: PackeryPacker;
+    _resetLayout(): void;
     
     on(event: "layoutComplete", callback: () => void);
 

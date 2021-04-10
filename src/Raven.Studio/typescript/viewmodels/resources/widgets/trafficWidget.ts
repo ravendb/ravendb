@@ -1,6 +1,5 @@
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import abstractChartsWebsocketWidget = require("viewmodels/resources/widgets/abstractChartsWebsocketWidget");
-
 import lineChart = require("models/resources/clusterDashboard/lineChart");
 import serverTraffic = require("models/resources/widgets/serverTraffic");
 
@@ -18,8 +17,8 @@ class trafficWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard
     writesChart: lineChart;
     dataWrittenChart: lineChart;
     
-    constructor(controller: clusterDashboard, state: trafficState = undefined) {
-        super(controller, undefined, state);
+    constructor(controller: clusterDashboard) {
+        super(controller);
         
         _.bindAll(this, "toggleWritesDetails", "toggleDataWrittenDetails");
 

@@ -18,8 +18,8 @@ class memoryUsageWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashb
     ravenChart: lineChart;
     serverChart: lineChart;
     
-    constructor(controller: clusterDashboard, state: memoryUsageState = undefined) {
-        super(controller, undefined, state);
+    constructor(controller: clusterDashboard) {
+        super(controller);
         
         _.bindAll(this, "toggleProcessDetails", "toggleMachineDetails");
 

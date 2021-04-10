@@ -19,8 +19,7 @@ import EVENTS = require("common/constants/events");
 
 interface savedWidget {
     type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType;
-    left: string;
-    top: string;
+    left: number;
     fullscreen: boolean;
     config: any;
     state: any;
@@ -59,27 +58,32 @@ class clusterDashboard extends viewModelBase {
         this.packery = new Packery( ".masonry-grid", {
             itemSelector: ".cluster-dashboard-item",
             percentPosition: true,
+            initialLayout: false,
             columnWidth: ".grid-sizer",
             gutter: ".gutter-sizer",
             transitionDuration: '0',
         });
-        
+    }
+    
+    private afterLayoutInitialized() {
         const throttledLayoutSave = _.debounce(() => {
+            const packeryWidth = this.packery.packer.width;
             const layout: savedWidget[] = this.widgets().map(x => {
                 return {
                     type: x.getType(),
-                    left: x.container.style.left,
-                    top: x.container.style.top,
+                    left: this.packery.getItem(x.container).rect.x / packeryWidth,
                     fullscreen: x.fullscreen(),
                     config: x.getConfiguration(),
                     state: x.getState()
                 }
             });
-            
+
             localStorage.setObject("cluster-dashboard-layout", layout);
         }, 5_000);
-        
+
         this.packery.on("layoutComplete", throttledLayoutSave);
+
+        this.initialized(true);
     }
     
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
@@ -106,18 +110,31 @@ class clusterDashboard extends viewModelBase {
         }
     }
     
-    private initDashboard() {
+    private initDashboard(): JQueryPromise<void> {
         this.initPackery();
 
         this.enableLiveView();
 
         const savedLayout: savedWidget[] = localStorage.getObject("cluster-dashboard-layout");
         if (savedLayout) {
-            const sortedWidgets = _.sortBy(savedLayout, x => parseFloat(x.top), x => parseFloat(x.left));
+            const widgets = savedLayout.map(item => this.spawnWidget(item.type, item.fullscreen, item.config, item.state));
+            return $.when(...widgets.map(x => x.composeTask))
+                .done(() => {
+                    this.packery._resetLayout();
 
-            for (const item of sortedWidgets) {
-                this.spawnWidget(item.type, item.fullscreen, item.config, item.state);
-            }
+                    const packeryWidth = this.packery.packer.width;
+
+                    for (let i = 0; i < savedLayout.length; i++) {
+                        const savedItem = savedLayout[i];
+                        const widget = widgets[i];
+                        const packeryItem = this.packery.getItem(widget.container);
+                        packeryItem.rect.x = savedItem.left * packeryWidth;
+                    }
+
+                    this.packery.shiftLayout();
+
+                    this.afterLayoutInitialized();
+                });
         } else {
             this.addWidget(new cpuUsageWidget(this));
             this.addWidget(new memoryUsageWidget(this));
@@ -128,9 +145,12 @@ class clusterDashboard extends viewModelBase {
             this.addWidget(new databaseIndexingWidget(this));
             this.addWidget(new databaseTrafficWidget(this));
             this.addWidget(new databaseStorageWidget(this));
+            
+            return $.when(...this.widgets().map(x => x.composeTask))
+                .done(() => {
+                    this.afterLayoutInitialized();
+                });
         }
-
-        this.initialized(true);
     }
     
     private enableLiveView() {
@@ -213,10 +233,6 @@ class clusterDashboard extends viewModelBase {
             handle: ".cluster-dashboard-item-header"
         });
         this.packery.bindDraggabillyEvents(draggie);
-        
-        setTimeout(() => {
-            this.layout(false);    
-        }, 100);
     }
  
     private onData(nodeTag: string, msg: Raven.Server.Dashboard.Cluster.WidgetMessage) {
@@ -281,6 +297,8 @@ class clusterDashboard extends viewModelBase {
         }
         
         this.addWidget(widget);
+        
+        return widget;
     }
 }
 
