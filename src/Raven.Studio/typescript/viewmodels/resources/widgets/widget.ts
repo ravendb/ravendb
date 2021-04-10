@@ -25,7 +25,7 @@ abstract class widget<TConfig = unknown, TState = unknown> {
 
     id: number;
 
-    constructor(controller: clusterDashboard, config: TConfig = undefined, state: TState = undefined) {
+    constructor(controller: clusterDashboard) {
         this.id = widget.nextWidgetId++;
         this.controller = controller;
         
@@ -104,6 +104,7 @@ abstract class widget<TConfig = unknown, TState = unknown> {
         // empty by default
     }
     
+    // noinspection JSUnusedLocalSymbols
     restoreConfiguration(config: TConfig) {
         // empty by default
     }

@@ -42,19 +42,6 @@ class serverTraffic extends historyAwareNodeStats<Raven.Server.Dashboard.Cluster
             return this.requestsPerSecond().toLocaleString();
         });
     }
-
-    dataWrittenFormatter(value: KnockoutObservable<number>, customNoData?: string): KnockoutComputed<[string, string] | string> {
-        return ko.pureComputed(() => {
-            const noData = this.noDataText();
-            if (noData) {
-                return customNoData ?? noData;
-            }
-
-            const rawValue = value();
-            const [size, unit] = generalUtils.formatBytesToSize(rawValue).split(" ", 2); //TODO: check me: 1 024 kb won't work
-            return size + " " + unit + "/s";
-        });
-    }
 }
 
 export = serverTraffic;

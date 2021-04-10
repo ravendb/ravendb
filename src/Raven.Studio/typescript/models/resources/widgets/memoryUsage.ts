@@ -35,7 +35,7 @@ class memoryUsage extends historyAwareNodeStats<Raven.Server.Dashboard.Cluster.N
         
         this.workingSetFormatted = this.valueAndUnitFormatter(this.workingSet);
 
-        this.machineMemoryUsage = this.conditionalDataExtractor(x => {
+        this.machineMemoryUsage = this.conditionalDataExtractor(() => {
             const physical = this.physicalMemory();
             const available = this.availableMemory();
 
