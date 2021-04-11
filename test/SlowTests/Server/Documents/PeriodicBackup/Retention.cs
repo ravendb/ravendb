@@ -102,19 +102,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AzureFact]
-        public async Task can_delete_backups_by_date_azure()
-        {
-            await can_delete_backups_by_date_azure(7, 3, false);
-        }
-
-        [AzureFact]
-        public async Task can_delete_backups_by_date_azure_incremental()
-        {
-            await can_delete_backups_by_date_azure(7, 3, true);
-        }
-
-        private async Task can_delete_backups_by_date_azure(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
+        [AzureTheory]
+        [InlineData(7, 3, false)]
+        [InlineData(7, 3, true)]
+        public async Task can_delete_backups_by_date_azure(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
             await Locker.WaitAsync();
             var settings = AzureFactAttribute.AzureSettings;
