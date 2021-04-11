@@ -276,7 +276,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (definition.Type == IndexType.AutoMap)
             {
-                var result = new AutoMapIndexDefinition(definition.Collection, mapFields, IndexDefinitionBase.IndexVersion.CurrentVersion);
+                var result = new AutoMapIndexDefinition(definition.Collection, mapFields, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;
@@ -299,7 +299,7 @@ namespace Raven.Server.Documents.Indexes
                     })
                     .ToArray();
 
-                var result = new AutoMapReduceIndexDefinition(definition.Collection, mapFields, groupByFields, IndexDefinitionBase.IndexVersion.CurrentVersion);
+                var result = new AutoMapReduceIndexDefinition(definition.Collection, mapFields, groupByFields, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;
@@ -694,7 +694,7 @@ namespace Raven.Server.Documents.Indexes
             return new IndexBatchScope(this, GetNumberOfUtilizedCores());
         }
 
-        public async Task<Index> CreateIndex(IndexDefinitionBase definition, string raftRequestId)
+        public async Task<Index> CreateIndex(IndexDefinitionBaseServerSide definition, string raftRequestId)
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
@@ -728,7 +728,7 @@ namespace Raven.Server.Documents.Indexes
             return GetIndex(definition.Name);
         }
 
-        private void ValidateAutoIndex(IndexDefinitionBase definition)
+        private void ValidateAutoIndex(IndexDefinitionBaseServerSide definition)
         {
             ValidateIndexName(definition.Name, isStatic: false);
         }
@@ -737,11 +737,11 @@ namespace Raven.Server.Documents.Indexes
         {
             ValidateIndexName(definition.Name, isStatic: true);
 
-            var safeFileSystemIndexName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
+            var safeFileSystemIndexName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(definition.Name);
 
             var indexWithFileSystemNameCollision = GetIndexes().FirstOrDefault(x =>
                 x.Name.Equals(definition.Name, StringComparison.OrdinalIgnoreCase) == false &&
-                safeFileSystemIndexName.Equals(IndexDefinitionBase.GetIndexNameSafeForFileSystem(x.Name), StringComparison.OrdinalIgnoreCase));
+                safeFileSystemIndexName.Equals(IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(x.Name), StringComparison.OrdinalIgnoreCase));
 
             if (indexWithFileSystemNameCollision != null)
                 throw new IndexCreationException(
@@ -854,7 +854,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private static void UpdateIndexDefinition(ClientIndexDefinitionBase definition, Index existingIndex, IndexDefinitionCompareDifferences indexDifferences)
+        private static void UpdateIndexDefinition(IndexDefinitionBase definition, Index existingIndex, IndexDefinitionCompareDifferences indexDifferences)
         {
             if (definition is IndexDefinition def)
             {
@@ -880,15 +880,14 @@ namespace Raven.Server.Documents.Indexes
             {
                 differences = existingIndex.Definition.Compare(indexDef);
 
-                if (indexDef.LastStateChangeRaftIndex != existingIndex.Definition.LastStateChangeRaftIndex)
+                if (indexDef._clusterIndex?.ClusterIndexForState > (existingIndex.Definition._clusterIndex?.ClusterIndexForState ?? -1))
                 {
                     differences |= IndexDefinitionCompareDifferences.State;
-                    existingIndex.Definition.LastStateChangeRaftIndex = indexDef.LastStateChangeRaftIndex;
                 }
 
             }
 
-            var indexDefBase = indexDefinition as IndexDefinitionBase;
+            var indexDefBase = indexDefinition as IndexDefinitionBaseServerSide;
             if (indexDefBase != null)
                 differences = existingIndex.Definition.Compare(indexDefBase);
 
@@ -1078,7 +1077,7 @@ namespace Raven.Server.Documents.Indexes
             //if (index.Configuration.RunInMemory)
             //    return;
 
-            var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name);
+            var name = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(index.Name);
 
             var indexPath = index.Configuration.StoragePath.Combine(name);
 
@@ -1407,7 +1406,7 @@ namespace Raven.Server.Documents.Indexes
                 var name = kvp.Key;
                 var definition = kvp.Value;
 
-                var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
+                var safeName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(definition.Name);
                 var indexPath = path.Combine(safeName).FullPath;
                 if (Directory.Exists(indexPath))
                 {
@@ -1429,7 +1428,7 @@ namespace Raven.Server.Documents.Indexes
                 var name = kvp.Key;
                 var definition = kvp.Value;
 
-                var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
+                var safeName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(definition.Name);
                 var indexPath = path.Combine(safeName).FullPath;
                 if (Directory.Exists(indexPath))
                 {
@@ -1461,7 +1460,7 @@ namespace Raven.Server.Documents.Indexes
             Debug.Assert(index is FaultyInMemoryIndex);
 
             var path = _documentDatabase.Configuration.Indexing.StoragePath;
-            var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name);
+            var safeName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(index.Name);
             var indexPath = path.Combine(safeName).FullPath;
             var exceptions = new List<Exception>();
 
@@ -1481,7 +1480,7 @@ namespace Raven.Server.Documents.Indexes
                 });
         }
 
-        private void OpenIndex(PathSetting path, string indexPath, List<Exception> exceptions, string name, ClientIndexDefinitionBase indexDefinition)
+        private void OpenIndex(PathSetting path, string indexPath, List<Exception> exceptions, string name, IndexDefinitionBase indexDefinition)
         {
             Index index = null;
 
@@ -1501,7 +1500,8 @@ namespace Raven.Server.Documents.Indexes
                 if (indexDefinition.State != null && index.Definition.State != indexDefinition.State)
                     differences |= IndexDefinitionCompareDifferences.State;
 
-                index.Definition.LastStateChangeRaftIndex = indexDefinition.LastStateChangeRaftIndex;
+                index.Definition._clusterIndex ??= new ClusterIndex();
+                index.Definition._clusterIndex.ClusterIndexForState = (indexDefinition._clusterIndex?.ClusterIndexForState ?? 0);
                 if (differences != IndexDefinitionCompareDifferences.None)
                 {
                     // database record has different lock mode / priority / state setting than persisted locally
@@ -1884,8 +1884,8 @@ namespace Raven.Server.Documents.Indexes
                         {
                             using (newIndex.DrainRunningQueries())
                             {
-                                var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
-                                var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
+                                var oldIndexDirectoryName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(oldIndexName);
+                                var replacementIndexDirectoryName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(replacementIndexName);
 
                                 using (newIndex.RestartEnvironment())
                                 {
@@ -2047,7 +2047,7 @@ namespace Raven.Server.Documents.Indexes
                 _numberOfUtilizedCores = numberOfUtilizedCores;
             }
 
-            public void AddIndex(IndexDefinitionBase definition, string source, DateTime createdAt, string raftRequestId)
+            public void AddIndex(IndexDefinitionBaseServerSide definition, string source, DateTime createdAt, string raftRequestId)
             {
                 if (_command == null)
                     _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId);

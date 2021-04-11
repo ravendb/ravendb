@@ -2,8 +2,8 @@ using System;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
+using Raven.Server.Extensions;
 using Raven.Server.Rachis;
-using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
 
@@ -22,6 +22,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             : base(databaseName, uniqueRequestId)
         {
             Definition = definition;
+            Definition._clusterIndex ??= new ClusterIndex();
             Source = source;
             CreatedAt = createdAt;
         }
@@ -52,7 +53,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(Definition)] = TypeConverter.ToBlittableSupportedType(Definition);
+            json[nameof(Definition)] = Definition.ToJson();
             json[nameof(Source)] = Source;
             json[nameof(CreatedAt)] = CreatedAt;
         }

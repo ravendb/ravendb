@@ -15,11 +15,12 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     /// A definition of a RavenIndex
     /// </summary>
-    public class IndexDefinition : ClientIndexDefinitionBase
+    public class IndexDefinition : IndexDefinitionBase
     {
         public IndexDefinition()
         {
             _configuration = new IndexConfiguration();
+            _clusterIndex = new ClusterIndex();
         }
 
         /// <summary>
@@ -454,7 +455,8 @@ namespace Raven.Client.Documents.Indexes
                 OutputReduceToCollection = OutputReduceToCollection,
                 ReduceOutputIndex = ReduceOutputIndex,
                 PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
-                PatternReferencesCollectionName = PatternReferencesCollectionName
+                PatternReferencesCollectionName = PatternReferencesCollectionName,
+                _clusterIndex = new ClusterIndex(){ClusterIndexForState = _clusterIndex.ClusterIndexForState}
             };
 
             foreach (var kvp in _configuration)
