@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Indexes
         public IndexState? State { get; set; }
 
         [JsonDeserializationDoNotIgnore]
-        internal ClusterIndex _clusterIndex;
+        internal ClusterIndex ClusterIndex;
 
     }
 }

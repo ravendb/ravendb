@@ -32,14 +32,14 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             if (record.AutoIndexes.TryGetValue(IndexName, out AutoIndexDefinition autoIndex))
             {
                 autoIndex.State = State;
-                autoIndex._clusterIndex ??= new ClusterIndex();
-                autoIndex._clusterIndex.ClusterIndexForState = etag;
+                autoIndex.ClusterIndex ??= new ClusterIndex();
+                autoIndex.ClusterIndex.ClusterIndexForState = etag;
             }
             else if (record.Indexes.TryGetValue(IndexName, out IndexDefinition indexDefinition))
             {
                 indexDefinition.State = State;
-                indexDefinition._clusterIndex ??= new ClusterIndex();
-                indexDefinition._clusterIndex.ClusterIndexForState = etag;
+                indexDefinition.ClusterIndex ??= new ClusterIndex();
+                indexDefinition.ClusterIndex.ClusterIndexForState = etag;
             }
 
             return null;

@@ -906,17 +906,10 @@ namespace Raven.Server.Documents.Indexes
                     Stop();
 
                 _indexStorage.WriteDefinition(definition);
-                if (definition._clusterIndex?.ClusterIndexForState > (Definition._clusterIndex?.ClusterIndexForState ?? -1))
+                if (definition.ClusterIndex?.ClusterIndexForState > (Definition.ClusterIndex?.ClusterIndexForState ?? -1))
                 {
-                    if (definition.State == IndexState.Normal)
-                    {
-                        SetState(IndexState.Normal);
-                        stateChanged = true;
-                    }
-                    else
-                    {
-                        SetState(definition.State);
-                    }
+                    stateChanged = definition.State == IndexState.Normal;
+                    SetState(definition.State);
                 }
 
                 Definition = definition;

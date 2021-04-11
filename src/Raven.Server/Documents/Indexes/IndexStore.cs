@@ -880,7 +880,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 differences = existingIndex.Definition.Compare(indexDef);
 
-                if (indexDef._clusterIndex?.ClusterIndexForState > (existingIndex.Definition._clusterIndex?.ClusterIndexForState ?? -1))
+                if (indexDef.ClusterIndex?.ClusterIndexForState > (existingIndex.Definition.ClusterIndex?.ClusterIndexForState ?? -1))
                 {
                     differences |= IndexDefinitionCompareDifferences.State;
                 }
@@ -1500,8 +1500,8 @@ namespace Raven.Server.Documents.Indexes
                 if (indexDefinition.State != null && index.Definition.State != indexDefinition.State)
                     differences |= IndexDefinitionCompareDifferences.State;
 
-                index.Definition._clusterIndex ??= new ClusterIndex();
-                index.Definition._clusterIndex.ClusterIndexForState = (indexDefinition._clusterIndex?.ClusterIndexForState ?? 0);
+                index.Definition.ClusterIndex ??= new ClusterIndex();
+                index.Definition.ClusterIndex.ClusterIndexForState = (indexDefinition.ClusterIndex?.ClusterIndexForState ?? 0);
                 if (differences != IndexDefinitionCompareDifferences.None)
                 {
                     // database record has different lock mode / priority / state setting than persisted locally

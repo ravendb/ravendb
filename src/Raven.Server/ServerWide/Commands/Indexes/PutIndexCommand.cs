@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             : base(databaseName, uniqueRequestId)
         {
             Definition = definition;
-            Definition._clusterIndex ??= new ClusterIndex();
+            Definition.ClusterIndex ??= new ClusterIndex();
             Source = source;
             CreatedAt = createdAt;
         }
