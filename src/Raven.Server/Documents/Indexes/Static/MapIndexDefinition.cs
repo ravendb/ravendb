@@ -11,7 +11,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class MapIndexDefinition : IndexDefinitionBase<IndexField>
+    public class MapIndexDefinition : IndexDefinitionBaseServerSide<IndexField>
     {
         private readonly bool _hasDynamicFields;
         private readonly bool _hasCompareExchange;
@@ -19,11 +19,12 @@ namespace Raven.Server.Documents.Indexes.Static
         public readonly IndexDefinition IndexDefinition;
 
         public MapIndexDefinition(IndexDefinition definition, IEnumerable<string> collections, string[] outputFields, bool hasDynamicFields, bool hasCompareExchange, long indexVersion)
-            : base(definition.Name, collections, definition.LockMode ?? IndexLockMode.Unlock, definition.Priority ?? IndexPriority.Normal, definition.State ??IndexState.Normal, GetFields(definition, outputFields), indexVersion)
+            : base(definition.Name, collections, definition.LockMode ?? IndexLockMode.Unlock, definition.Priority ?? IndexPriority.Normal, definition.State ??IndexState.Normal, GetFields(definition, outputFields), indexVersion, definition._clusterIndex?.ClusterIndexForState)
         {
             _hasDynamicFields = hasDynamicFields;
             _hasCompareExchange = hasCompareExchange;
             IndexDefinition = definition;
+
         }
 
         public override bool HasDynamicFields => _hasDynamicFields;
@@ -96,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return definition;
         }
 
-        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition)
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBaseServerSide indexDefinition)
         {
             return IndexDefinitionCompareDifferences.All;
         }

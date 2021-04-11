@@ -311,7 +311,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 var definition = MapIndexDefinition.Load(index._environment, out var version);
                 Assert.NotNull(definition.PatternForOutputReduceToCollectionReferences);
-                Assert.Equal(IndexDefinitionBase.IndexVersion.CurrentVersion, version);
+                Assert.Equal(IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, version);
 
                 Assert.Equal("CustomCollection", definition.PatternReferencesCollectionName);
 

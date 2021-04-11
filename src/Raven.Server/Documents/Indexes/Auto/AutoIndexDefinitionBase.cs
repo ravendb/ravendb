@@ -8,10 +8,10 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public abstract class AutoIndexDefinitionBase : IndexDefinitionBase<AutoIndexField>
+    public abstract class AutoIndexDefinitionBase : IndexDefinitionBaseServerSide<AutoIndexField>
     {
         protected AutoIndexDefinitionBase(string indexName, string collection, AutoIndexField[] fields, long? indexVersion = null)
-            : base(indexName, new [] { collection }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, fields, indexVersion ?? IndexVersion.CurrentVersion)
+            : base(indexName, new [] { collection }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, fields, indexVersion ?? IndexVersion.CurrentVersion, 0)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         protected internal abstract override IndexDefinition GetOrCreateIndexDefinitionInternal();
 
-        public abstract override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition);
+        public abstract override IndexDefinitionCompareDifferences Compare(IndexDefinitionBaseServerSide indexDefinition);
 
         public abstract override IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition);
 

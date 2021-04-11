@@ -518,7 +518,7 @@ namespace Raven.Server.Documents.Queries
             ticksFirst = -1;
             ticksSecond = -1;
 
-            if (exact || index == null || valueFirst == null || valueSecond == null || index.Definition.Version < IndexDefinitionBase.IndexVersion.TimeTicks)
+            if (exact || index == null || valueFirst == null || valueSecond == null || index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.TimeTicks)
                 return false;
 
             if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && TryGetTime(valueFirst, out ticksFirst) && TryGetTime(valueSecond, out ticksSecond))
@@ -531,7 +531,7 @@ namespace Raven.Server.Documents.Queries
         {
             ticks = -1;
 
-            if (exact || index == null || value == null || index.Definition.Version < IndexDefinitionBase.IndexVersion.TimeTicks)
+            if (exact || index == null || value == null || index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.TimeTicks)
                 return false;
 
             if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && TryGetTime(value, out ticks))

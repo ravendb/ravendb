@@ -506,7 +506,7 @@ namespace FastTests.Client.Indexing
                     }, new HashSet<string>()
                     {
                         "Posts"
-                    }, new[] { "Title", "Desc" }, false, false, IndexDefinitionBase.IndexVersion.CurrentVersion), Guid.NewGuid().ToString());
+                    }, new[] { "Title", "Desc" }, false, false, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion), Guid.NewGuid().ToString());
 
                     WaitForIndexing(store);
 

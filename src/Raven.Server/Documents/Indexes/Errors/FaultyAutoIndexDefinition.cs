@@ -6,12 +6,12 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {
-    public class FaultyAutoIndexDefinition : IndexDefinitionBase<IndexField>
+    public class FaultyAutoIndexDefinition : IndexDefinitionBaseServerSide<IndexField>
     {
         public readonly AutoIndexDefinitionBase Definition;
 
         public FaultyAutoIndexDefinition(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexState state, IndexField[] mapFields, AutoIndexDefinitionBase definition)
-            : base(name, collections, lockMode, priority, state, mapFields, definition.Version)
+            : base(name, collections, lockMode, priority, state, mapFields, definition.Version, definition._clusterIndex?.ClusterIndexForState)
         {
             Definition = definition;
         }
@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             return (hashCode * 397) ^ -1337;
         }
 
-        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition)
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBaseServerSide indexDefinition)
         {
             return Definition.Compare(indexDefinition);
         }

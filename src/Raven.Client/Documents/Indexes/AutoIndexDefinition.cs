@@ -4,7 +4,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Indexes
 {
-    public class AutoIndexDefinition : ClientIndexDefinitionBase
+    public class AutoIndexDefinition : IndexDefinitionBase
     {
         public AutoIndexDefinition()
         {

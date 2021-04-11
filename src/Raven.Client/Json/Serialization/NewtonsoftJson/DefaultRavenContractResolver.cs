@@ -193,7 +193,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             var fieldInfo = info as FieldInfo;
             if (fieldInfo != null)
             {
-                if (fieldInfo.IsPublic == false)
+                if ((fieldInfo.IsPublic == false) && (fieldInfo.IsDefined(typeof(JsonDeserializationDoNotIgnoreAttribute)) == false))
                     return true;
 
 #if NETSTANDARD2_0

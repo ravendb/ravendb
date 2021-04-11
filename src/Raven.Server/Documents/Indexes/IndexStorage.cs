@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Indexes
             return _lastDatabaseEtagOnIndexCreation >= currentEtag;
         }
 
-        public void WriteDefinition(IndexDefinitionBase indexDefinition, TimeSpan? timeout = null)
+        public void WriteDefinition(IndexDefinitionBaseServerSide indexDefinition, TimeSpan? timeout = null)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction(timeout))
