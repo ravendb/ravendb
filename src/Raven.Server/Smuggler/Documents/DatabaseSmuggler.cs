@@ -193,6 +193,7 @@ namespace Raven.Server.Smuggler.Documents
                     break;
                 case DatabaseItemType.Tombstones:
                     counts = ProcessTombstones(result, buildType);
+                    ProcessDocumentsWithDuplicateCollection(result);
                     break;
                 case DatabaseItemType.Conflicts:
                     counts = ProcessConflicts(result);
@@ -248,6 +249,28 @@ namespace Raven.Server.Smuggler.Documents
 
             result.AddInfo($"Finished processing {type}. {counts}");
             _onProgress.Invoke(result.Progress);
+        }
+
+        private void ProcessDocumentsWithDuplicateCollection(SmugglerResult result)
+        {
+            var didWork = false;
+            var count = 0;
+            using (var actions = _destination.Documents())
+            {
+                foreach (var item in actions.GetDocumentsWithDuplicateCollection())
+                {
+                    if (didWork == false)
+                    {
+                        result.AddInfo("Starting to process documents with duplicate collection.");
+                        didWork = true;
+                    }
+                    actions.WriteDocument(item, result.Documents);
+                    count++;
+                }
+            }
+
+            if (didWork)
+                result.AddInfo($"Finished processing '{count}' documents with duplicate collection.");
         }
 
         private void SkipType(DatabaseItemType type, SmugglerResult result, bool ensureStepProcessed = true)
@@ -580,11 +603,11 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessDocuments(SmugglerResult result, BuildVersionType buildType)
         {
-            using (var actions = _destination.Documents())
+            var throwOnCollectionMismatchError = _options.OperateOnTypes.HasFlag(DatabaseItemType.Tombstones) == false;
+            using (var actions = _destination.Documents(throwOnCollectionMismatchError))
             {
                 List<LazyStringValue> legacyIdsToDelete = null;
-
-                foreach (DocumentItem item in _source.GetDocuments(_options.Collections, actions))
+                foreach (var item in _source.GetDocuments(_options.Collections, actions))
                 {
                     _token.ThrowIfCancellationRequested();
 
