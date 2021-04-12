@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -83,6 +84,26 @@ namespace Raven.Server.Documents
         {
             _metadataEnsured = false;
             Data.Modifications = null;
+        }
+
+        public Document Clone(DocumentsOperationContext context)
+        {
+            return new Document
+            {
+                Etag = Etag,
+                StorageId = StorageId,
+                IndexScore = IndexScore,
+                Distance = Distance,
+                ChangeVector = ChangeVector,
+                LastModified = LastModified,
+                Flags = Flags,
+                NonPersistentFlags = NonPersistentFlags,
+                TransactionMarker = TransactionMarker,
+
+                Id = context.GetLazyString(Id),
+                LowerId = context.GetLazyString(LowerId),
+                Data = Data.Clone(context),
+            };
         }
 
         public void Dispose()

@@ -13,6 +13,7 @@ using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -1594,6 +1595,274 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         var revision = await session.Advanced.Revisions.GetForAsync<User>(id);
                         Assert.NotNull(revision);
                         Assert.NotEmpty(revision);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Can_restore_backup_when_document_changed_collection_between_backups()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                const string documentId = "Users/1";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 1 1 *" };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                var fullBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: true, backupTaskId);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Person { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(documentId);
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new PersonWithAddress { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                var incBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: false, backupTaskId);
+                Assert.NotEqual(fullBackupOpId, incBackupOpId);
+
+                // to have a different count of docs in databases
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Person { Name = "EGOR" }, "Users/2");
+                    await session.SaveChangesAsync();
+                }
+
+                string backupFolder = Directory.GetDirectories(backupPath).OrderBy(Directory.GetCreationTime).Last();
+                var lastBackupToRestore = Directory.GetFiles(backupFolder).Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
+                var databaseName = GetDatabaseName() + "_restore";
+                using (EnsureDatabaseDeletion(databaseName, store))
+                {
+                    var restoreOperation = new RestoreBackupOperation(new RestoreBackupConfiguration
+                    {
+                        BackupLocation = backupFolder,
+                        DatabaseName = databaseName,
+                        LastFileNameToRestore = lastBackupToRestore.Last()
+                    });
+
+                    var operation = await store.Maintenance.Server.SendAsync(restoreOperation);
+                    var res = (RestoreResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
+                    Assert.Equal(2, res.Documents.ReadCount);
+                    Assert.Equal(2, res.Tombstones.ReadCount);
+
+                    using (var session = store.OpenAsyncSession(databaseName))
+                    {
+                        var bestUser = await session.LoadAsync<PersonWithAddress>("users/1");
+                        Assert.NotNull(bestUser);
+                        Assert.Equal("Grisha", bestUser.Name);
+
+                        var metadata = session.Advanced.GetMetadataFor(bestUser);
+                        var expectedCollection = store.Conventions.GetCollectionName(typeof(PersonWithAddress));
+                        Assert.True(metadata.TryGetValue(Constants.Documents.Metadata.Collection, out string collection));
+                        Assert.Equal(expectedCollection, collection);
+                        var stats = store.Maintenance.ForDatabase(databaseName).Send(new GetStatisticsOperation());
+                        Assert.Equal(1, stats.CountOfDocuments);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Can_restore_snapshot_when_document_changed_collection_between_backups()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                const string documentId = "Users/1";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Snapshot,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 0 1 1 *"
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                var fullBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: true, backupTaskId);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Person { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(documentId);
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new PersonWithAddress { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                var incBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: false, backupTaskId);
+                Assert.NotEqual(fullBackupOpId, incBackupOpId);
+
+                // to have a different count of docs in databases
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Person { Name = "EGOR" }, "Users/2");
+                    await session.SaveChangesAsync();
+                }
+
+                string backupFolder = Directory.GetDirectories(backupPath).OrderBy(Directory.GetCreationTime).Last();
+                var lastBackupToRestore = Directory.GetFiles(backupFolder).Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
+                var databaseName = GetDatabaseName() + "_restore";
+                using (EnsureDatabaseDeletion(databaseName, store))
+                {
+                    var restoreOperation = new RestoreBackupOperation(new RestoreBackupConfiguration
+                    {
+                        BackupLocation = backupFolder,
+                        DatabaseName = databaseName,
+                        LastFileNameToRestore = lastBackupToRestore.Last()
+                    });
+
+                    var operation = await store.Maintenance.Server.SendAsync(restoreOperation);
+                    var res = (RestoreResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
+                    Assert.Equal(2, res.Documents.ReadCount);
+                    Assert.Equal(2, res.Tombstones.ReadCount);
+
+                    using (var session = store.OpenAsyncSession(databaseName))
+                    {
+                        var bestUser = await session.LoadAsync<PersonWithAddress>("users/1");
+                        Assert.NotNull(bestUser);
+                        Assert.Equal("Grisha", bestUser.Name);
+
+                        var metadata = session.Advanced.GetMetadataFor(bestUser);
+                        var expectedCollection = store.Conventions.GetCollectionName(typeof(PersonWithAddress));
+                        Assert.True(metadata.TryGetValue(Constants.Documents.Metadata.Collection, out string collection));
+                        Assert.Equal(expectedCollection, collection);
+                        var stats = store.Maintenance.ForDatabase(databaseName).Send(new GetStatisticsOperation());
+                        Assert.Equal(1, stats.CountOfDocuments);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Can_restore_backup_when_document_with_attachment_changed_collection_between_backups()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                const string documentId = "Users/1";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 1 1 *" };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                var fullBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: true, backupTaskId);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Person { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation(documentId, "test_attachment", profileStream, "image/png"));
+                    Assert.Equal("test_attachment", result.Name);
+                }
+
+                var incBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: false, backupTaskId);
+                Assert.NotEqual(fullBackupOpId, incBackupOpId);
+
+                // to have a different count of docs in databases
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Person { Name = "EGOR" }, "Users/2");
+                    await session.SaveChangesAsync();
+                }
+
+                string backupFolder = Directory.GetDirectories(backupPath).OrderBy(Directory.GetCreationTime).Last();
+                var lastBackupToRestore = Directory.GetFiles(backupFolder).Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
+                var databaseName = GetDatabaseName() + "_restore";
+                using (EnsureDatabaseDeletion(databaseName, store))
+                {
+                    var restoreOperation = new RestoreBackupOperation(new RestoreBackupConfiguration
+                    {
+                        BackupLocation = backupFolder,
+                        DatabaseName = databaseName,
+                        LastFileNameToRestore = lastBackupToRestore.Last()
+                    });
+
+                    var operation = await store.Maintenance.Server.SendAsync(restoreOperation);
+                    var res = (RestoreResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
+                    Assert.Equal(2, res.Documents.ReadCount);
+                    Assert.Equal(1, res.Tombstones.ReadCount);
+                    WaitForUserToContinueTheTest(store);
+                    using (var session = store.OpenAsyncSession(databaseName))
+                    {
+                        var bestUser = await session.LoadAsync<Person>("users/1");
+                        Assert.NotNull(bestUser);
+                        Assert.Equal("Grisha", bestUser.Name);
+
+                        var metadata = session.Advanced.GetMetadataFor(bestUser);
+                        var expectedCollection = store.Conventions.GetCollectionName(typeof(Person));
+                        Assert.True(metadata.TryGetValue(Constants.Documents.Metadata.Collection, out string collection));
+                        Assert.Equal(expectedCollection, collection);
+                        var stats = store.Maintenance.ForDatabase(databaseName).Send(new GetStatisticsOperation());
+                        Assert.Equal(1, stats.CountOfDocuments);
+                        Assert.Equal(1, stats.CountOfAttachments);
                     }
                 }
             }
