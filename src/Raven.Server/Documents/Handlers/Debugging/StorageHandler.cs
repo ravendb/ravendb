@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         [RavenAction("/databases/*/debug/storage/btree-structure", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = false)]
-        public Task BTreeStructure()
+        public async Task BTreeStructure()
         {
             var treeName = GetStringQueryString("name", required: true);
 
@@ -121,14 +121,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     );
 
                 HttpContext.Response.ContentType = "text/html";
-                DebugStuff.DumpTreeToStream(tree, ResponseBodyStream());
+                await DebugStuff.DumpTreeToStreamAsync(tree, ResponseBodyStream());
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/debug/storage/fst-structure", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = false)]
-        public Task FixedSizeTreeStructure()
+        public async Task FixedSizeTreeStructure()
         {
             var treeName = GetStringQueryString("name", required: true);
 
@@ -148,13 +146,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
 
                 HttpContext.Response.ContentType = "text/html";
-                DebugStuff.DumpFixedSizedTreeToStream(tx.InnerTransaction.LowLevelTransaction, tree, ResponseBodyStream());
+                await DebugStuff.DumpFixedSizedTreeToStreamAsync(tx.InnerTransaction.LowLevelTransaction, tree, ResponseBodyStream());
             }
-
-            return Task.CompletedTask;
         }
 
-        private IEnumerable<string> GetTreeNames(Transaction tx, RootObjectType type)
+        private static IEnumerable<string> GetTreeNames(Transaction tx, RootObjectType type)
         {
             using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate(false))
             {
