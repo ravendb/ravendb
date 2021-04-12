@@ -27,6 +27,7 @@ class databaseInfo {
     isEncrypted = ko.observable<boolean>();
     isAdmin = ko.observable<boolean>();
     disabled = ko.observable<boolean>();
+    lockMode = ko.observable<Raven.Client.ServerWide.DatabaseLockMode>();
 
     filteredOut = ko.observable<boolean>(false);
     isBeingDeleted = ko.observable<boolean>(false);
@@ -169,6 +170,7 @@ class databaseInfo {
 
     update(dto: Raven.Client.ServerWide.Operations.DatabaseInfo): void {
         this.name = dto.Name;
+        this.lockMode(dto.LockMode);
         this.disabled(dto.Disabled);
         this.isAdmin(dto.IsAdmin);
         this.isEncrypted(dto.IsEncrypted);

@@ -389,6 +389,7 @@ namespace Raven.Server.Web.System
                 }
 
                 var disabled = dbRecord.Disabled;
+                var lockMode = dbRecord.LockMode;
 
                 var studioEnvironment = StudioConfiguration.StudioEnvironment.None;
                 if (dbRecord.Studio != null && !dbRecord.Studio.Disabled)
@@ -404,6 +405,7 @@ namespace Raven.Server.Web.System
                         databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
                         {
                             [nameof(DatabaseInfo.Disabled)] = disabled,
+                            [nameof(DatabaseInfo.LockMode)] = lockMode,
                             [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus,
                             [nameof(DatabaseInfo.NodesTopology)] = nodesTopology.ToJson(),
                             [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(dbRecord.DeletionInProgress),
@@ -426,6 +428,7 @@ namespace Raven.Server.Web.System
                 {
                     Name = databaseName,
                     Disabled = disabled,
+                    LockMode = lockMode,
                     TotalSize = size.Data,
                     TempBuffersSize = size.TempBuffers,
 

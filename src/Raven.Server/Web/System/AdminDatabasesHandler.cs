@@ -1452,7 +1452,6 @@ namespace Raven.Server.Web.System
                     long index = 0;
                     foreach (var databaseName in databasesToUpdate)
                     {
-                        //var result = await ServerStore.WriteDatabaseRecordAsync(kvp.DatabaseRecord.DatabaseName, kvp.DatabaseRecord, kvp.Index, raftRequestId);
                         var result = await ServerStore.SendToLeaderAsync(new EditLockModeCommand(databaseName, parameters.Mode, raftRequestId));
                         index = result.Index;
                     }
