@@ -40,6 +40,7 @@ namespace Raven.Client.ServerWide.Operations
     {
         public string Name { get; set; }
         public bool Disabled { get; set; }
+        public DatabaseLockMode LockMode;
         public Size TotalSize { get; set; }
         public Size TempBuffersSize { get; set; }
 
@@ -75,6 +76,7 @@ namespace Raven.Client.ServerWide.Operations
             {
                 [nameof(Name)] = Name,
                 [nameof(Disabled)] = Disabled,
+                [nameof(LockMode)] = LockMode,
                 [nameof(TotalSize)] = new DynamicJsonValue
                 {
                     [nameof(Size.HumaneSize)] = TotalSize.HumaneSize,
