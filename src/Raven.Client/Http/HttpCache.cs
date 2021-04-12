@@ -83,8 +83,6 @@ namespace Raven.Client.Http
                 // Do the actual deallocation. 
                 if (Allocation != null)
                 {
-                    
-
                     Cache._unmanagedBuffersPool.Return(Allocation);
                     Interlocked.Add(ref Cache._totalSize, -Size);
                 }

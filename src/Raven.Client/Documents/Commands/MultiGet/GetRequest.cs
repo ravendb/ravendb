@@ -40,6 +40,8 @@ namespace Raven.Client.Documents.Commands.MultiGet
             }
         }
 
+        public bool CanCacheAggressively { get; set; } = true;
+
         public IContent Content { get; set; }
 
         public GetRequest()
