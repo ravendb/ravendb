@@ -763,6 +763,39 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private Dictionary<string, S3ConnectionString> _s3ConnectionStrings;
+
+        public Dictionary<string, S3ConnectionString> S3ConnectionStrings
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.S3ConnectionStrings;
+
+                if (_s3ConnectionStrings == null)
+                {
+                    _s3ConnectionStrings = new Dictionary<string, S3ConnectionString>();
+                    if (_record.TryGet(nameof(DatabaseRecord.S3ConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject bjro)
+                                _s3ConnectionStrings[propertyDetails.Name] = JsonDeserializationCluster.S3ConnectionString(bjro);
+                        }
+                    }
+                }
+
+                return _s3ConnectionStrings;
+            }
+        }
+
+
         public void Dispose()
         {
             _record?.Dispose();

@@ -70,4 +70,24 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
             record.SqlConnectionStrings[ConnectionString.Name] = ConnectionString;
         }
     }
+
+    public class PutS3ConnectionStringCommand : PutConnectionStringCommand<S3ConnectionString>
+    {
+        protected PutS3ConnectionStringCommand()
+        {
+            // for deserialization
+        }
+
+        public PutS3ConnectionStringCommand(S3ConnectionString connectionString, string databaseName, string uniqueRequestId) : base(connectionString, databaseName, uniqueRequestId)
+        {
+
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            record.S3ConnectionStrings[ConnectionString.Name] = ConnectionString;
+        }
+    }
+
+    
 }

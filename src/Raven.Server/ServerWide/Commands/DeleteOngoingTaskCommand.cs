@@ -114,7 +114,14 @@ namespace Raven.Server.ServerWide.Commands
                         record.RavenEtls.Remove(ravenEtl);
                     }
                     break;
-                
+
+                case OngoingTaskType.S3Etl:
+                    // todo
+                    break;
+                case OngoingTaskType.Subscription:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 

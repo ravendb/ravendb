@@ -61,4 +61,22 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
             record.SqlConnectionStrings.Remove(ConnectionStringName);
         }
     }
+
+    public class RemoveS3ConnectionStringCommand : RemoveConnectionStringCommand<S3ConnectionString>
+    {
+        protected RemoveS3ConnectionStringCommand()
+        {
+            // for deserialization
+        }
+
+        public RemoveS3ConnectionStringCommand(string connectionStringName, string databaseName, string uniqueRequestId) : base(connectionStringName, databaseName, uniqueRequestId)
+        {
+
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            record.S3ConnectionStrings.Remove(ConnectionStringName);
+        }
+    }
 }

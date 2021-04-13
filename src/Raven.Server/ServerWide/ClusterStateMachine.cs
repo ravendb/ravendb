@@ -402,13 +402,17 @@ namespace Raven.Server.ServerWide
                     case nameof(ToggleTaskStateCommand):
                     case nameof(AddRavenEtlCommand):
                     case nameof(AddSqlEtlCommand):
+                    case nameof(AddS3EtlCommand):
                     case nameof(UpdateRavenEtlCommand):
                     case nameof(UpdateSqlEtlCommand):
+                    //case nameof(UpdateS3EtlCommand): todo
                     case nameof(DeleteOngoingTaskCommand):
                     case nameof(PutRavenConnectionStringCommand):
                     case nameof(PutSqlConnectionStringCommand):
+                    case nameof(PutS3ConnectionStringCommand):
                     case nameof(RemoveRavenConnectionStringCommand):
                     case nameof(RemoveSqlConnectionStringCommand):
+                    case nameof(RemoveS3ConnectionStringCommand): 
                     case nameof(UpdatePullReplicationAsHubCommand):
                     case nameof(UpdatePullReplicationAsSinkCommand):
                     case nameof(EditDatabaseClientConfigurationCommand):

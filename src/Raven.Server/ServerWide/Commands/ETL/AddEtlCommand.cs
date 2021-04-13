@@ -80,4 +80,22 @@ namespace Raven.Server.ServerWide.Commands.ETL
             Add(ref record.SqlEtls, record, etag);
         }
     }
+
+    public class AddS3EtlCommand : AddEtlCommand<S3EtlConfiguration, S3ConnectionString>
+    {
+        public AddS3EtlCommand()
+        {
+            // for deserialization
+        }
+
+        public AddS3EtlCommand(S3EtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
+        {
+
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            Add(ref record.S3Etls, record, etag);
+        }
+    }
 }
