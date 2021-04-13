@@ -127,7 +127,7 @@ namespace Raven.Client.Http
 #endif 
             var mem = _unmanagedBuffersPool.Allocate(result.Size);
             result.CopyTo(mem.Address);
-            if (Interlocked.Add(ref _totalSize, result.Size) > _maxSize)
+            if (Interlocked.Add(ref _totalSize, mem.SizeInBytes) > _maxSize)
             {
                 if (_isFreeSpaceRunning == false)
                     Task.Run(FreeSpace);
