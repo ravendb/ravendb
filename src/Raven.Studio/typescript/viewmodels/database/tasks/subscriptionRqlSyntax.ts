@@ -3,17 +3,17 @@ import copyToClipboard = require("common/copyToClipboard");
 
 class subscriptionRqlSyntax extends dialogViewModelBase {
 
-    htmlElement: HTMLElement;
+    dialogContainer: Element;
 
     compositionComplete() {
         super.compositionComplete();
         this.bindToCurrentInstance("copySample");
-        this.htmlElement = document.getElementById("subscriptionRqlSyntaxDialog");
+        this.dialogContainer = document.getElementById("subscriptionRqlSyntaxDialog");
     }
 
     copySample(sampleTitle: string) {
         const sampleText = subscriptionRqlSyntax.samples.find(x => x.title === sampleTitle).text;
-        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.htmlElement);
+        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
     }
 
     static readonly samples: Array<sampleCode> = [

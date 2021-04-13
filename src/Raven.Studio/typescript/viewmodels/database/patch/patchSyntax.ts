@@ -2,18 +2,18 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import copyToClipboard = require("common/copyToClipboard");
 
 class patchSyntax extends dialogViewModelBase {
-    
-    htmlElement: HTMLElement;
+
+    dialogContainer: Element;
 
     compositionComplete() {
         super.compositionComplete();
         this.bindToCurrentInstance("copySample");
-        this.htmlElement = document.getElementById("patchSyntaxDialog");
+        this.dialogContainer = document.getElementById("patchSyntaxDialog");
     }
 
     copySample(sampleTitle: string) {
         const sampleText = patchSyntax.samples.find(x => x.title === sampleTitle).text;
-        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.htmlElement);
+        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
     }
 
     static readonly samples: Array<sampleCode> = [

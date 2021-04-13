@@ -4,7 +4,7 @@ import copyToClipboard = require("common/copyToClipboard");
 class transformationScriptSyntax extends dialogViewModelBase {
 
     etlType = ko.observable<Raven.Client.Documents.Operations.ETL.EtlType>();
-    htmlElement: HTMLElement;
+    dialogContainer: Element;
 
     constructor(etlType: Raven.Client.Documents.Operations.ETL.EtlType) {
         super();
@@ -14,7 +14,7 @@ class transformationScriptSyntax extends dialogViewModelBase {
     compositionComplete() {
         super.compositionComplete();
         this.bindToCurrentInstance("copySample");
-        this.htmlElement = document.getElementById("transformationScriptSyntaxDialog");
+        this.dialogContainer = document.getElementById("transformationScriptSyntaxDialog");
     }
 
     copySample(sampleTitle?: string) {
@@ -26,7 +26,7 @@ class transformationScriptSyntax extends dialogViewModelBase {
             sampleText = transformationScriptSyntax.sqlEtlSampleText;
         }
         
-        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.htmlElement);
+        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
     }
 
     static readonly ravenEtlSamples: Array<sampleCode> = [
