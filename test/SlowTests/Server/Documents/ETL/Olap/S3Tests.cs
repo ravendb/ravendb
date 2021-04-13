@@ -456,7 +456,7 @@ loadToOrders(partitionBy(key),
                     {
                         Name = "olap-s3-test",
                         ConnectionStringName = connectionStringName,
-                        RunFrequency = TimeSpan.FromMinutes(10),
+                        RunFrequency = LocalTests.DefaultFrequency,
                         OlapTables = new List<OlapEtlTable>()
                         {
                             new OlapEtlTable
@@ -740,7 +740,7 @@ loadToOrders(partitionBy([
             {
                 Name = "olap-s3-test",
                 ConnectionStringName = connectionStringName,
-                RunFrequency = frequency,
+                RunFrequency = LocalTests.DefaultFrequency,
                 Transforms =
                 {
                     new Transformation

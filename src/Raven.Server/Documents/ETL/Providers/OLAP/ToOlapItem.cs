@@ -19,10 +19,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
         }
 
-        public ToOlapItem(Tombstone tombstone, string collection) : base(tombstone, collection, EtlItemType.Document)
-        {
-        }
-
         public List<SqlColumn> Properties { get; set; }
     }
 }
