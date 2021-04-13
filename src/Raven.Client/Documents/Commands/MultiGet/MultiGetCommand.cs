@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -12,14 +13,15 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.MultiGet
 {
-    public class MultiGetCommand : RavenCommand<GetResponse[]>
+    public class MultiGetCommand : RavenCommand<GetResponse[]>, IDisposable
     {
         private readonly RequestExecutor _requestExecutor;
         private readonly HttpCache _cache;
         private readonly List<GetRequest> _commands;
 
         private string _baseUrl;
-
+        private (HttpCache.ReleaseCacheItem release, BlittableJsonReaderObject cached)[] _cachedValues;
+        
         internal bool AggressivelyCached;
 
         public MultiGetCommand(RequestExecutor requestExecutor, List<GetRequest> commands)
@@ -34,8 +36,6 @@ namespace Raven.Client.Documents.Commands.MultiGet
         {
             _baseUrl = $"{node.Url}/databases/{node.Database}";
             url = $"{_baseUrl}/multi_get";
-
-            Result = new GetResponse[_commands.Count];
 
             if (MaybeReadAllFromCache(ctx, _requestExecutor.AggressiveCaching.Value))
             {
@@ -112,31 +112,52 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         private bool MaybeReadAllFromCache(JsonOperationContext ctx, AggressiveCacheOptions options)
         {
-            if (options == null)
-                return false;
+            if(_cachedValues != null)
+            {
+                for (int i = 0; i < _cachedValues.Length; i++)
+                {
+                    _cachedValues[i].release.Dispose();
+                    _cachedValues[i] = default;
+                }
+            }
 
-            var trackChanges = options.Mode == AggressiveCacheMode.TrackChanges;
-
-            var fromCache = 0;
+            bool result = options != null;
+            var trackChanges = result && options.Mode == AggressiveCacheMode.TrackChanges;
+            
             for (int i = 0; i < _commands.Count; i++)
             {
                 var command = _commands[i];
-                if (command.CanCacheAggressively == false)
-                    continue;
 
                 var cacheKey = GetCacheKey(command, out _);
-                using var cachedItem = _cache.Get(ctx, cacheKey, out var changeVector, out var cached);
-                if (cached == null ||
-                    cachedItem.Age > options.Duration ||
-                    trackChanges && cachedItem.MightHaveBeenModified)
+                var cachedItem = _cache.Get(ctx, cacheKey, out var changeVector, out var cached);
+                if (cached == null)
+                {
+                    result = false;
                     continue;
+                }
+                
+                if(result && (trackChanges && cachedItem.MightHaveBeenModified || cachedItem.Age > options.Duration || command.CanCacheAggressively == false))
+                    result = false;
 
-                fromCache++;
                 command.Headers[Constants.Headers.IfNoneMatch] = $"\"{changeVector}\"";
-                Result[i] = new GetResponse { Result = cached.Clone(ctx), StatusCode = HttpStatusCode.NotModified };
+                _cachedValues ??= ArrayPool<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)>.Shared.Rent(_commands.Count);
+                _cachedValues[i] = (cachedItem, cached);
             }
 
-            return fromCache == _commands.Count;
+            if (result)
+            {
+                Result = new GetResponse[_commands.Count];
+                for (int i = 0; i < _commands.Count; i++)
+                {
+                    var (release, cached)= _cachedValues[i];
+                    Result[i] = new GetResponse { Result = cached.Clone(ctx), StatusCode = HttpStatusCode.NotModified };
+                    release.Dispose();
+                }
+
+                ArrayPool<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)>.Shared.Return(_cachedValues);
+                _cachedValues = null;
+            }
+            return result;
         }
 
         private string GetCacheKey(GetRequest command, out string requestUrl)
@@ -163,26 +184,30 @@ namespace Raven.Client.Documents.Commands.MultiGet
                     ThrowInvalidJsonResponse(peepingTomStream);
 
                 var i = 0;
+                Result = new GetResponse[_commands.Count];
                 foreach (var getResponse in ReadResponses(context, peepingTomStream, parser, state, buffer))
                 {
                     var command = _commands[i];
 
                     MaybeSetCache(getResponse, command);
 
-                    if (getResponse.StatusCode != HttpStatusCode.NotModified)
+                    Result[i] = getResponse;
+                    if(_cachedValues != null)
                     {
-                        Result[i] = getResponse;
+                        var (release, cached) = _cachedValues[i];
+                        if (getResponse.StatusCode == HttpStatusCode.NotModified)
+                        {
+                            Result[i] = new GetResponse { Result = cached.Clone(context), StatusCode = HttpStatusCode.NotModified };
+                        }
+                        release.Dispose();
                     }
-                    else if(Result[i] == null)
-                    {
-                        var cacheKey = GetCacheKey(command, out _);
-                        using var cachedItem = _cache.Get(context, cacheKey, out _, out var cached);
-                        Result[i] = cached != null 
-                            ? new GetResponse {Result = cached.Clone(context), StatusCode = HttpStatusCode.NotModified} 
-                            : getResponse;
-                    }
-
                     i++;
+                }
+
+                if (_cachedValues != null)
+                {
+                    ArrayPool<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)>.Shared.Return(_cachedValues);
+                    _cachedValues = null;
                 }
 
                 if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
@@ -306,5 +331,17 @@ namespace Raven.Client.Documents.Commands.MultiGet
         }
 
         public override bool IsReadRequest => false;
+
+        public void Dispose()
+        {
+            if (_cachedValues == null)
+                return;
+            
+            foreach (var (release, _) in _cachedValues)
+            {
+                release.Dispose();
+            }
+            ArrayPool<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)>.Shared.Return(_cachedValues);
+        }
     }
 }

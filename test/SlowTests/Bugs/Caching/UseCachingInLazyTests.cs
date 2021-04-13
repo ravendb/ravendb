@@ -393,7 +393,7 @@ namespace SlowTests.Bugs.Caching
                         .Select(i => new GetRequest { Url = "/docs", Query = $"?&id={Uri.EscapeDataString($"TestObjs/{i}")}", });
 
                 var multiGetOperation = new MultiGetOperation((AsyncDocumentSession)session);
-                var multiGetCommand = multiGetOperation.CreateRequest(requests.ToList());
+                using var multiGetCommand = multiGetOperation.CreateRequest(requests.ToList());
 
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
