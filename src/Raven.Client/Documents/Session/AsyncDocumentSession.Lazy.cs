@@ -113,7 +113,7 @@ namespace Raven.Client.Documents.Session
         private async Task<bool> ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation, List<GetRequest> requests, Stopwatch sw, CancellationToken token = default)
         {
             var multiGetOperation = new MultiGetOperation(this);
-            var multiGetCommand = multiGetOperation.CreateRequest(requests);
+            using var multiGetCommand = multiGetOperation.CreateRequest(requests);
             await RequestExecutor.ExecuteAsync(multiGetCommand, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
             var responses = multiGetCommand.Result;
             if (multiGetCommand.AggressivelyCached == false)
