@@ -2,9 +2,9 @@
 
 namespace Tests.Infrastructure
 {
-    public class NightlyBuildAzureStorageEmulatorFact : AzureStorageEmulatorFact
+    public class NightlyBuildAzureFact : AzureFactAttribute
     {
-        public NightlyBuildAzureStorageEmulatorFact([CallerMemberName] string memberName = "")
+        public NightlyBuildAzureFact([CallerMemberName] string memberName = "")
             : base(memberName)
         {
             if (NightlyBuildTheoryAttribute.IsNightlyBuild == false)

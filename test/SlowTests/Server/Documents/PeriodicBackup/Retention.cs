@@ -11,8 +11,8 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
-using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Voron.Util.Settings;
 using Xunit;
 using Xunit.Abstractions;
@@ -102,40 +102,36 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory(Skip = "Batch operations are not supported in emulator")]
+        [AzureTheory]
         [InlineData(7, 3, false)]
         [InlineData(7, 3, true)]
         public async Task can_delete_backups_by_date_azure(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
             await Locker.WaitAsync();
-
-            var containerName = Guid.NewGuid().ToString();
-            using var client = new RavenAzureClient(new AzureSettings { AccountName = Azure.AzureAccountName, AccountKey = Azure.AzureAccountKey, StorageContainer = containerName });
-
-            try
+            var settings = AzureFactAttribute.AzureSettings;
+            using (var holder = new Azure.AzureClientHolder(settings))
             {
-                client.DeleteContainer();
-                client.PutContainer();
+                try
+                {
+                    BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
 
-                BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
+                    await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
+                        (configuration, databaseName) =>
+                        {
+                            configuration.AzureSettings = settings;
+                        },
+                        async databaseName =>
+                        {
 
-                await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
-                    (configuration, databaseName) =>
-                    {
-                        configuration.AzureSettings = GetAzureSettings(containerName, databaseName);
-                    },
-                    async databaseName =>
-                    {
-                        using var c = new RavenAzureClient(GetAzureSettings(containerName, databaseName));
-                        var folders = await c.ListBlobsAsync($"{c.RemoteFolderName}/", delimiter: "/", listFolders: true);
-                        return folders.List.Count();
-                    }, timeout: 120000, checkIncremental);
-            }
-            finally
-            {
-                BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = false;
-                client.DeleteContainer();
-                Locker.Release();
+                            var folders = await holder.Client.ListBlobsAsync($"{holder.Client.RemoteFolderName}/", delimiter: "/", listFolders: true);
+                            return folders.List.Count();
+                        }, timeout: 120000, checkIncremental);
+                }
+                finally
+                {
+                    BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = false;
+                    Locker.Release();
+                }
             }
         }
 
@@ -283,17 +279,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 AwsSecretKey = null,
                 AwsRegionName = null,
                 BucketName = "ravendb-test",
-                RemoteFolderName = $"{remoteFolderName}/{databaseName}"
-            };
-        }
-
-        private static AzureSettings GetAzureSettings(string containerName, string databaseName, [CallerMemberName] string remoteFolderName = null)
-        {
-            return new AzureSettings
-            {
-                AccountName = Azure.AzureAccountName,
-                AccountKey = Azure.AzureAccountKey,
-                StorageContainer = containerName,
                 RemoteFolderName = $"{remoteFolderName}/{databaseName}"
             };
         }
