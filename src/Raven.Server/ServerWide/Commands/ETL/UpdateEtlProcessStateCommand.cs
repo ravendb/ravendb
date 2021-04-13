@@ -25,7 +25,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public HashSet<string> SkippedTimeSeriesDocs { get; set; }
 
-        public long LastBatchTime { get; set; }
+        public DateTime? LastBatchTime { get; set; }
 
         private UpdateEtlProcessStateCommand()
         {
@@ -33,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
 
         public UpdateEtlProcessStateCommand(string databaseName, string configurationName, string transformationName, long lastProcessedEtag, string changeVector,
-            string nodeTag, bool hasHighlyAvailableTasks, string uniqueRequestId, HashSet<string> skippedTimeSeriesDocs, long lastBatchTimeMilliseconds) : base(databaseName, uniqueRequestId)
+            string nodeTag, bool hasHighlyAvailableTasks, string uniqueRequestId, HashSet<string> skippedTimeSeriesDocs, DateTime? lastBatchTime) : base(databaseName, uniqueRequestId)
         {
             ConfigurationName = configurationName;
             TransformationName = transformationName;
@@ -43,8 +43,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
             HasHighlyAvailableTasks = hasHighlyAvailableTasks;
             SkippedTimeSeriesDocs = skippedTimeSeriesDocs;
 
-            if (lastBatchTimeMilliseconds > 0)
-                LastBatchTime = lastBatchTimeMilliseconds;
+            if (lastBatchTime.HasValue)
+                LastBatchTime = lastBatchTime;
         }
 
         public override string GetItemId()
@@ -156,6 +156,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             json[nameof(NodeTag)] = NodeTag;
             json[nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks;
             json[nameof(SkippedTimeSeriesDocs)] = SkippedTimeSeriesDocs;
+            json[nameof(LastBatchTime)] = LastBatchTime;
         }
     }
 }

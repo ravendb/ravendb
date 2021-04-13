@@ -16,6 +16,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
+using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL;
@@ -626,6 +627,8 @@ namespace Raven.Server.Documents.ETL
 
         public void Run()
         {
+            var runStart = Database.Time.GetUtcNow();
+
             while (true)
             {
                 try
@@ -732,7 +735,7 @@ namespace Raven.Server.Documents.ETL
                     }
                     try
                     {
-                        AfterAllBatchesCompleted(startTime.Ticks);
+                        AfterAllBatchesCompleted(runStart);
 
                         PauseIfCpuCreditsBalanceIsTooLow();
 
@@ -759,6 +762,8 @@ namespace Raven.Server.Documents.ETL
 
                             FallbackTime = null;
                         }
+
+                        runStart = Database.Time.GetUtcNow();
                     }
                     catch (ObjectDisposedException)
                     {
@@ -782,7 +787,7 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        protected void UpdateEtlProcessState(EtlProcessState state, long lastBatchTime = 0)
+        protected void UpdateEtlProcessState(EtlProcessState state, DateTime? lastBatchTime = null)
         {
             var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
                 ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
@@ -825,7 +830,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract bool ShouldFilterOutHiLoDocument();
 
-        protected virtual void AfterAllBatchesCompleted(long batchTime)
+        protected virtual void AfterAllBatchesCompleted(DateTime lastBatchTime)
         {
         }
         

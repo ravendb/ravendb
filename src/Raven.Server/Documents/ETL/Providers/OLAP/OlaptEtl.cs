@@ -3,20 +3,24 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using NCrontab.Advanced;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Retention;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
@@ -26,8 +30,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         public readonly OlapEtlMetricsCountersManager OlapMetrics = new OlapEtlMetricsCountersManager();
 
-        private Timer _timer;
-        private const long MinTimeToWait = 1000;
+        private PeriodicBackup.PeriodicBackup.BackupTimer _timer;
         private readonly S3Settings _s3Settings;
         private readonly OperationCancelToken _operationCancelToken;
 
@@ -42,24 +45,88 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             _operationCancelToken = new OperationCancelToken(Database.DatabaseShutdown, CancellationToken);
 
-            _timer = new Timer(_ => _waitForChanges.Set(), state: null, dueTime: GetDueTime(configuration.RunFrequency), period: configuration.RunFrequency);
+            UpdateTimer(LastProcessState.LastBatchTime);
         }
 
-        private TimeSpan GetDueTime(TimeSpan etlFrequency)
+        private void UpdateTimer(DateTime? lastBatchTime)
         {
-            var state = GetProcessState(Database, Configuration.Name, Transformation.Name);
-            if (state.LastBatchTime <= 0) 
-                return TimeSpan.Zero;
-            
-            var nowMs = Database.Time.GetUtcNow().EnsureMilliseconds().Ticks / 10_000;
-            var timeSinceLastBatch = nowMs - state.LastBatchTime;
+            var nextRunOccurrence = GetNextRunOccurrence(Configuration.RunFrequency, lastBatchTime);
 
-            var dueTime = etlFrequency.TotalMilliseconds - timeSinceLastBatch;
+            var now = SystemTime.UtcNow;
+            var timeSpan = nextRunOccurrence - now;
 
-            if (dueTime < MinTimeToWait)
-                return TimeSpan.Zero;
+            TimeSpan nextRunTimeSpan;
+            if (timeSpan.Ticks <= 0)
+            {
+                nextRunTimeSpan = TimeSpan.Zero;
+                nextRunOccurrence = now;
+            }
+            else
+            {
+                if (_timer?.NextBackup?.DateTime == nextRunOccurrence)
+                    return;
 
-            return TimeSpan.FromMilliseconds(dueTime);
+                nextRunTimeSpan = timeSpan;
+            }
+
+            UpdateTimerInternal(new NextBackup
+            {
+                TimeSpan = nextRunTimeSpan,
+                DateTime = nextRunOccurrence
+            });
+        }
+
+        private void UpdateTimerInternal(NextBackup nextRun)
+        {
+            if (Configuration.Disabled)
+                return;
+
+            _timer?.Dispose();
+
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations($"Next OLAP ETL run is in {nextRun.TimeSpan.TotalMinutes} minutes.");
+
+            var timer = new Timer(_ => _waitForChanges.Set(), state: nextRun, dueTime: nextRun.TimeSpan, period: Timeout.InfiniteTimeSpan);
+
+            _timer = new PeriodicBackup.PeriodicBackup.BackupTimer
+            {
+                Timer = timer,
+                CreatedAt = DateTime.UtcNow,
+                NextBackup = nextRun
+            };
+        }
+
+
+        private DateTime GetNextRunOccurrence(string runFrequency, DateTime? lastBatchTime = null)
+        {
+            if (string.IsNullOrWhiteSpace(runFrequency))
+                return default;
+
+            try
+            {
+                var backupParser = CrontabSchedule.Parse(runFrequency);
+                return backupParser.GetNextOccurrence(lastBatchTime ?? default);
+            }
+            catch (Exception e)
+            {
+                var message = "Couldn't parse OLAP ETL " +
+                              $"frequency {runFrequency}, task id: {Configuration.TaskId}, " +
+                              $"ETL name: {Name} , error: {e.Message}";
+
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(message);
+
+                Database.NotificationCenter.Add(AlertRaised.Create(
+                    Database.Name,
+                    "OLAP ETL run frequency parsing error",
+                    message,
+                    AlertType.Etl_Error,
+                    NotificationSeverity.Error,
+                    details: new ExceptionDetails(e)));
+
+                return default;
+            }
         }
 
         public override EtlType EtlType => EtlType.Olap;
@@ -97,10 +164,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             throw new NotSupportedException("Time series deletes aren't supported by OLAP ETL");
         }
 
-        protected override void AfterAllBatchesCompleted(long batchTime)
+        protected override void AfterAllBatchesCompleted(DateTime lastBatchTime)
         {
-            var batchTimeMs = batchTime / 10_000;
-            UpdateEtlProcessState(LastProcessState, batchTimeMs);
+            UpdateEtlProcessState(LastProcessState, lastBatchTime);
+            UpdateTimer(lastBatchTime);
         }
 
         public override void NotifyAboutWork(DatabaseChange change)

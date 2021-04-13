@@ -93,7 +93,7 @@ loadToOrders(key,
                 {
                     Name = configName,
                     ConnectionStringName = connectionStringName,
-                    RunFrequency = TimeSpan.FromSeconds(10),
+                    RunFrequency = LocalTests.DefaultFrequency,
                     Transforms = {new Transformation
                     {
                         Name = transformationName, 

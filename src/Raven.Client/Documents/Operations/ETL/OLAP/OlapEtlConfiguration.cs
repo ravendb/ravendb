@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 {
     public class OlapEtlConfiguration : EtlConfiguration<OlapConnectionString>
     {
-        public TimeSpan RunFrequency { get; set; }
+        public string RunFrequency { get; set; }
 
         public OlapEtlFileFormat Format { get; set; }
 

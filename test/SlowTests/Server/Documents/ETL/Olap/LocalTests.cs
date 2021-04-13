@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Server.Basic.Entities;
@@ -24,6 +25,8 @@ namespace SlowTests.Server.Documents.ETL.Olap
 {
     public class LocalTests : EtlTestBase
     {
+        internal const string DefaultFrequency = "* * * * *"; // every minute
+
         public LocalTests(ITestOutputHelper output) : base(output)
         {
         }
@@ -79,7 +82,7 @@ loadToOrders(partitionBy(key),
         ShipVia : this.ShipVia
     });
 ";
-                    SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
+                    SetupLocalOlapEtl(store, script, path);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -201,7 +204,7 @@ var key = new Date(year, month);
 loadToOrders(partitionBy(key), o);
 ";
 
-                    SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
+                    SetupLocalOlapEtl(store, script, path);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -325,7 +328,7 @@ var key = new Date(year, month, day);
 loadToOrders(partitionBy(key), o);
 ";
 
-                    SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
+                    SetupLocalOlapEtl(store, script, path);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -427,7 +430,7 @@ var key = new Date(year, month, day, hour);
 loadToOrders(partitionBy(key), o);
 ";
 
-                    SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
+                    SetupLocalOlapEtl(store, script, path);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -517,7 +520,7 @@ var key = new Date(year, month);
 loadToOrders(partitionBy(key), o);
 ";
 
-                    SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
+                    SetupLocalOlapEtl(store, script, path);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -624,7 +627,7 @@ var key = new Date(year, month);
 loadToOrders(partitionBy(key), o);
 ";
 
-                    SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
+                    SetupLocalOlapEtl(store, script, path);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -726,9 +729,10 @@ var key = new Date(year, month);
 loadToOrders(partitionBy(key), o);
 ";
 
-                    SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(1));
-
+                    SetupLocalOlapEtl(store, script, path, "*/2 * * * *"); // every 2nd minute
                     etlDone.Wait(TimeSpan.FromMinutes(1));
+                    var sw = new Stopwatch();
+                    sw.Start();
 
                     var files = Directory.GetFiles(path);
                     Assert.Equal(1, files.Length);
@@ -792,15 +796,12 @@ loadToOrders(partitionBy(key), o);
                         await session.SaveChangesAsync();
                     }
 
-                    var sw = new Stopwatch();
-                    sw.Start();
                     etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-                    etlDone.Wait(TimeSpan.FromSeconds(60));
+                    etlDone.Wait(TimeSpan.FromSeconds(120));
                     var timeWaited = sw.Elapsed.TotalMilliseconds;
                     sw.Stop();
 
-                    var tolerance = TimeSpan.FromSeconds(58).TotalMilliseconds;
-                    Assert.True(timeWaited >= tolerance);
+                    Assert.True(timeWaited > TimeSpan.FromSeconds(60).TotalMilliseconds);
 
                     files = Directory.GetFiles(path);
                     Assert.Equal(2, files.Length);
@@ -898,7 +899,7 @@ loadToOrders(partitionBy(key), o);
                     {
                         Name = connectionStringName,
                         ConnectionStringName = connectionStringName,
-                        RunFrequency = TimeSpan.FromMinutes(5),
+                        RunFrequency = DefaultFrequency,
                         Transforms =
                         {
                             new Transformation
@@ -973,17 +974,15 @@ var key = new Date(year, month);
 loadToOrders(partitionBy(key), o);
 ";
 
-                    SetupLocalOlapEtl(store, script, path, TimeSpan.FromSeconds(30));
-
-                    Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
-
                     var sw = new Stopwatch();
                     sw.Start();
+                    SetupLocalOlapEtl(store, script, path, "*/2 * * * *"); // every 2nd minute
+                    Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                     var files = Directory.GetFiles(path);
-                    Assert.Equal(1, files.Length);
+                    Assert.Equal(1, files.Length); 
 
-                    // disable an re enable the database
+                    // disable and re enable the database
 
                     var result = store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, disable: true));
                     Assert.True(result.Success);
@@ -1015,21 +1014,16 @@ loadToOrders(partitionBy(key), o);
                         await session.SaveChangesAsync();
                     }
 
-                    // assert
-
-                    Assert.False(etlDone.Wait(TimeSpan.FromSeconds(10)));
+                    Assert.False(etlDone.Wait(TimeSpan.FromSeconds(40)));
                     files = Directory.GetFiles(path);
                     Assert.Equal(1, files.Length);
 
-                    Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                    Assert.True(etlDone.Wait(TimeSpan.FromSeconds(120)));
 
                     var timeWaited = sw.Elapsed.TotalMilliseconds;
                     sw.Stop();
 
-                    var tolerance = TimeSpan.FromSeconds(1).TotalMilliseconds;
-                    var expected = TimeSpan.FromSeconds(30).TotalMilliseconds;
-
-                    Assert.True(timeWaited >= expected - tolerance);
+                    //Assert.True(timeWaited > TimeSpan.FromSeconds(60).TotalMilliseconds, "time : " + sw.Elapsed);
 
                     files = Directory.GetFiles(path);
                     Assert.Equal(2, files.Length);
@@ -1103,7 +1097,7 @@ var key = new Date(year, month);
 loadToOrders(partitionBy(key), o);
 ";
 
-                    SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
+                    SetupLocalOlapEtl(store, script, path);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -1240,7 +1234,7 @@ loadToOrders(partitionBy(key), o);
                     {
                         Name = "olap-test",
                         ConnectionStringName = connectionStringName,
-                        RunFrequency = TimeSpan.FromSeconds(30),
+                        RunFrequency = DefaultFrequency,
                         Transforms =
                         {
                             new Transformation
@@ -1389,7 +1383,7 @@ var key = new Date(year, month);
 loadToOrders(partitionBy(key), o);
 ";
 
-                    SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10), maxNumberOfItemsInRowGroups: maxNumberOfItemsInRowGroups);
+                    SetupLocalOlapEtl(store, script, path, maxNumberOfItemsInRowGroups: maxNumberOfItemsInRowGroups);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -1468,7 +1462,7 @@ loadToOrders(noPartition(),
         ShipVia : this.ShipVia
     });
 ";
-                    SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
+                    SetupLocalOlapEtl(store, script, path);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -1600,7 +1594,7 @@ loadToOrders(partitionBy([
         RequireAt : this.RequireAt
     });
 ";
-                    SetupLocalOlapEtl(store, script, path, TimeSpan.FromMinutes(10));
+                    SetupLocalOlapEtl(store, script, path);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -1697,14 +1691,15 @@ loadToOrders(partitionBy([
             return Directory.CreateDirectory(Path.Combine(tmpPath, caller, collection)).FullName;
         }
 
-        private void SetupLocalOlapEtl(DocumentStore store, string script, string path, TimeSpan frequency, int? maxNumberOfItemsInRowGroups = null)
+        private void SetupLocalOlapEtl(DocumentStore store, string script, string path, string frequency = null, int? maxNumberOfItemsInRowGroups = null)
         {
             var connectionStringName = $"{store.Database} to local";
             var configuration = new OlapEtlConfiguration
             {
                 Name = "olap-test",
                 ConnectionStringName = connectionStringName,
-                RunFrequency = frequency,
+                RunFrequency = frequency ?? DefaultFrequency
+                ,
                 Transforms =
                 {
                     new Transformation
