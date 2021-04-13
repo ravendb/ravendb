@@ -3,19 +3,19 @@ import copyToClipboard = require("common/copyToClipboard");
 
 class mapReduceIndexSyntax extends dialogViewModelBase {
 
-    htmlElement: HTMLElement;
+    dialogContainer: Element;
 
     compositionComplete() {
         super.compositionComplete();
         this.bindToCurrentInstance("copySample");
-        this.htmlElement = document.getElementById("mapReduceIndexSyntaxDialog");
+        this.dialogContainer = document.getElementById("mapReduceIndexSyntaxDialog");
     }
 
     copySample(sampleTitle: string) {
         const sampleText = [...mapReduceIndexSyntax.linqSamples, ...mapReduceIndexSyntax.javascriptSamples]
             .find(x => x.title === sampleTitle).text;
         
-        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.htmlElement);
+        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
     }
 
     static readonly linqSamples: Array<sampleCode> = [

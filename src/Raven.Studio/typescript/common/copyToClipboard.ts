@@ -1,7 +1,7 @@
 ﻿import messagePublisher = require("common/messagePublisher");
 
 class copyToClipboard {
-    static copy(toCopy: string, successMessage?: string, container = document.body) {
+    static copy(toCopy: string, successMessage?: string, container: Element = document.body) {
         const dummy = document.createElement("textarea");
         // Add it to the document
         container.appendChild(dummy);
