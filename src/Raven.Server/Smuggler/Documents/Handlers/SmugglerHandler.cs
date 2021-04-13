@@ -48,7 +48,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
     {
         private static readonly HttpClient HttpClient = new HttpClient();
 
-        [RavenAction("/databases/*/smuggler/validate-options", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        [RavenAction("/databases/*/smuggler/validate-options", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PostValidateOptions()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
