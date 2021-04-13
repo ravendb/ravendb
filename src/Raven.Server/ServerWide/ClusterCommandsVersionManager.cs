@@ -126,6 +126,11 @@ namespace Raven.Server.ServerWide
 
             [nameof(PutAnalyzersCommand)] = 52_000,
             [nameof(DeleteAnalyzerCommand)] = 52_000,
+
+            [nameof(AddS3EtlCommand)] = 52_000,
+            [nameof(PutS3ConnectionStringCommand)] = 52_000,
+            [nameof(RemoveS3ConnectionStringCommand)] = 52_000
+
             [nameof(PutServerWideAnalyzerCommand)] = 52_000,
             [nameof(DeleteServerWideAnalyzerCommand)] = 52_000,
 
