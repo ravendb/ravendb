@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Server.Basic.Entities;
@@ -16,6 +15,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -83,7 +83,7 @@ loadToOrders(partitionBy(key),
         ShipVia : this.ShipVia
     })
 ";
-                    SetupS3OlapEtl(store, script, settings, TimeSpan.FromMinutes(10));
+                    SetupS3OlapEtl(store, script, settings);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -148,7 +148,7 @@ loadToOrders(partitionBy(key),
         ShipVia : this.ShipVia
     })
 ";
-                    SetupS3OlapEtl(store, script, settings, TimeSpan.FromMinutes(10));
+                    SetupS3OlapEtl(store, script, settings);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -318,7 +318,7 @@ loadToOrders(partitionBy(key), orderData);
 ";
 
 
-                    SetupS3OlapEtl(store, script, settings, TimeSpan.FromMinutes(10));
+                    SetupS3OlapEtl(store, script, settings);
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
                     using (var s3Client = new RavenAwsS3Client(settings))
@@ -373,7 +373,7 @@ loadToOrders(partitionBy(key), orderData);
                         {
                             Assert.Equal(1, parquetReader.RowGroupCount);
 
-                            var expectedFields = new[] { "OrderId", "Qty", "Product", "Cost", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
+                            var expectedFields = new[] { "Qty", "Product", "Cost", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
                             Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
 
                             using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
@@ -405,7 +405,7 @@ loadToOrders(partitionBy(key), orderData);
             {
                 using (var store = GetDocumentStore())
                 {
-                    const string partitionColumn = "Order_Date";
+                    const string partitionColumn = "order_date";
 
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -444,7 +444,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(partitionBy(key),
+loadToOrders(partitionBy([['order_date', key]]),
     {
         Company : this.Company,
         ShipVia : this.ShipVia
@@ -457,14 +457,6 @@ loadToOrders(partitionBy(key),
                         Name = "olap-s3-test",
                         ConnectionStringName = connectionStringName,
                         RunFrequency = LocalTests.DefaultFrequency,
-                        OlapTables = new List<OlapEtlTable>()
-                        {
-                            new OlapEtlTable
-                            {
-                                TableName = "Orders",
-                                PartitionColumn = partitionColumn
-                            }
-                        },
                         Transforms =
                         {
                             new Transformation
@@ -535,7 +527,7 @@ loadToOrders(noPartition(),
         ShipVia : this.ShipVia
     });
 ";
-                    SetupS3OlapEtl(store, script, settings, TimeSpan.FromMinutes(10));
+                    SetupS3OlapEtl(store, script, settings);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -666,28 +658,44 @@ loadToOrders(partitionBy([
         RequireAt : this.RequireAt
     });
 ";
-                    SetupS3OlapEtl(store, script, settings, TimeSpan.FromMinutes(10));
+                    SetupS3OlapEtl(store, script, settings);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                    Thread.Sleep(20000);
 
                     var expectedFields = new[] { "RequireAt", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
 
                     using (var s3Client = new RavenAwsS3Client(settings))
                     {
-                        var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
+                        var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
 
-                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
-                        var files = cloudObjects.FileInfoDetails;
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: "/", listFolders: true);
 
-                        Assert.Equal(4, files.Count);
+                        Assert.Equal(2, cloudObjects.FileInfoDetails.Count);
+                        Assert.Contains("Orders/year=2020/", cloudObjects.FileInfoDetails[0].FullPath);
+                        Assert.Contains("Orders/year=2021/", cloudObjects.FileInfoDetails[1].FullPath);
 
-                        foreach (var fileInfo in files)
+                        var filesInfo = new List<S3FileInfoDetails>();
+                        for (var index = 1; index <= cloudObjects.FileInfoDetails.Count; index++)
                         {
-                            var fileName = fileInfo.FullPath;
-                            using (var fs = File.OpenRead(fileName))
-                            using (var parquetReader = new ParquetReader(fs))
+                            var fileInfo = cloudObjects.FileInfoDetails[index - 1];
+                            var files = await s3Client.ListObjectsAsync(prefix: fileInfo.FullPath, delimiter: "/", listFolders: true);
+                            Assert.Equal(2, files.FileInfoDetails.Count);
+
+                            Assert.True(files.FileInfoDetails.Exists(f => f.FullPath.Contains($"month={index}/")));
+                            Assert.True(files.FileInfoDetails.Exists(f => f.FullPath.Contains($"month={index+1}/")));
+
+                            filesInfo.AddRange(files.FileInfoDetails);
+                        }
+
+                        Assert.Equal(4, filesInfo.Count);
+
+/*                        foreach (var fileInfo in filesInfo)
+                        {
+                            var blob = await s3Client.GetObjectAsync(fileInfo.FullPath);
+                            await using var ms = new MemoryStream();
+                            blob.Data.CopyTo(ms);
+
+                            using (var parquetReader = new ParquetReader(ms))
                             {
                                 Assert.Equal(1, parquetReader.RowGroupCount);
                                 Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
@@ -721,18 +729,92 @@ loadToOrders(partitionBy([
 
                             }
 
-                        }
+                        }*/
                     }
                 }
 
             }
             finally
             {
-                await DeleteObjects(settings);
+                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}/", delimiter: "/");
             }
         }
 
-        private void SetupS3OlapEtl(DocumentStore store, string script, S3Settings settings, TimeSpan frequency)
+        [AmazonS3Fact]
+        public async Task CanUseCustomPrefix()
+        {
+            var settings = GetS3Settings();
+            const string customPrefix = "custom-prefix.1";
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    var baseline = new DateTime(2020, 1, 1);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 31; i++)
+                        {
+                            await session.StoreAsync(new Query.Order
+                            {
+                                Id = $"orders/{i}",
+                                OrderedAt = baseline.AddDays(i),
+                                ShipVia = $"shippers/{i}",
+                                Company = $"companies/{i}"
+                            });
+                        }
+
+                        for (int i = 0; i < 28; i++)
+                        {
+                            await session.StoreAsync(new Query.Order
+                            {
+                                Id = $"orders/{i + 31}",
+                                OrderedAt = baseline.AddMonths(1).AddDays(i),
+                                ShipVia = $"shippers/{i + 31}",
+                                Company = $"companies/{i + 31}"
+                            });
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    var script = @"
+var orderDate = new Date(this.OrderedAt);
+var year = orderDate.getFullYear();
+var month = orderDate.getMonth();
+var key = new Date(year, month);
+
+loadToOrders(partitionBy(key),
+    {
+        Company : this.Company,
+        ShipVia : this.ShipVia
+    })
+";
+                    SetupS3OlapEtl(store, script, settings, customPrefix);
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    using (var s3Client = new RavenAwsS3Client(settings))
+                    {
+                        var prefix = $"{settings.RemoteFolderName}/{customPrefix}/{CollectionName}";
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, string.Empty, false);
+
+                        Assert.Equal(2, cloudObjects.FileInfoDetails.Count);
+                        Assert.Contains("2020-01-01", cloudObjects.FileInfoDetails[0].FullPath);
+                        Assert.Contains("2020-02-01", cloudObjects.FileInfoDetails[1].FullPath);
+                    }
+                }
+            }
+
+            finally
+            {
+                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{customPrefix}/{CollectionName}", delimiter: string.Empty);
+            }
+        }
+
+        private void SetupS3OlapEtl(DocumentStore store, string script, S3Settings settings, string customPrefix = null)
         {
             var connectionStringName = $"{store.Database} to S3";
 
@@ -741,6 +823,7 @@ loadToOrders(partitionBy([
                 Name = "olap-s3-test",
                 ConnectionStringName = connectionStringName,
                 RunFrequency = LocalTests.DefaultFrequency,
+                CustomPrefix = customPrefix,
                 Transforms =
                 {
                     new Transformation
@@ -824,5 +907,27 @@ loadToOrders(partitionBy([
                 // ignored
             }
         }
+
+        private static async Task DeleteObjects(S3Settings s3Settings, string prefix, string delimiter)
+        {
+            if (s3Settings == null)
+                return;
+
+            try
+            {
+                using (var s3Client = new RavenAwsS3Client(s3Settings))
+                {
+                    var cloudObjects = await s3Client.ListObjectsAsync(prefix: prefix, delimiter: delimiter, listFolders: true);
+                    var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
+
+                    s3Client.DeleteMultipleObjects(pathsToDelete);
+                }
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+        }
+
     }
 }

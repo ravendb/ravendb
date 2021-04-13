@@ -14,15 +14,13 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
     public class ParquetTransformedItems : OlapTransformedItems
     {
         public const string DefaultIdColumn = "_id";
-        //public const string DefaultPartitionColumn = "_dt";
         public const string LastModifiedColumn = "_lastModifiedTicks";
 
         public Dictionary<string, DataField> Fields => _fields ??= GenerateDataFields();
 
         public override int Count => _count;
 
-        //private static readonly string UrlEscapedEqualsSign = System.Net.WebUtility.UrlEncode("=");
-        private const int DefaultMaxItemsInGroup = 50_000;
+        private const int DefaultMaxItemsInGroup = 25 * 10;
         private RowGroup _group;
         private readonly Dictionary<string, DataType> _dataFields;
         private Dictionary<string, DataField> _fields;
@@ -37,24 +35,26 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private DateTimeOffset[] _dtoArr;
         private TimeSpan[] _tsArr;
         private readonly Logger _logger;
+        private OlapEtlConfiguration _configuration;
 
         public ParquetTransformedItems(string name, string key, string tmpPath, string fileNamePrefix, OlapEtlConfiguration configuration, Logger logger) : base(OlapEtlFileFormat.Parquet)
         {
             _tableName = name;
             _key = key;
             _logger = logger;
-            _maxItemsPerGroup = configuration.MaxNumberOfItemsInRowGroup ?? DefaultMaxItemsInGroup;
+            _maxItemsPerGroup = DefaultMaxItemsInGroup;
+            _configuration = configuration;
             _dataFields = new Dictionary<string, DataType>();
 
-            SetPath(configuration, tmpPath, fileNamePrefix);
+            SetPath(tmpPath, fileNamePrefix);
         }
 
-        private void SetPath(OlapEtlConfiguration configuration, string tmpFilePath, string fileNamePrefix)
+        private void SetPath(string tmpFilePath, string fileNamePrefix)
         {
             string idColumn = default;
-            if (configuration.OlapTables != null)
+            if (_configuration.OlapTables != null)
             {
-                foreach (var olapTable in configuration.OlapTables)
+                foreach (var olapTable in _configuration.OlapTables)
                 {
                     if (olapTable.TableName != _tableName)
                         continue;
@@ -68,7 +68,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 ? DefaultIdColumn
                 : idColumn;
 
-            //_folder = $"{_tableName}/{partitionColumn}{UrlEscapedEqualsSign}{_key}";
             _fileName = $"{fileNamePrefix}_{Guid.NewGuid()}.{Format}";
             _localPath = Path.Combine(tmpFilePath, _fileName);
         }
@@ -78,6 +77,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             fileName = _fileName;
             folderName = _key;
+            if (string.IsNullOrEmpty(_configuration.CustomPrefix) == false)
+            {
+                folderName = $"{_configuration.CustomPrefix}/{folderName}";
+            }
 
             WriteToFile();
             

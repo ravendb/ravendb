@@ -13,8 +13,6 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public bool KeepFilesOnDisk { get; set; }
         
-        public int? MaxNumberOfItemsInRowGroup { get; set; }
-
         public string CustomPrefix { get; set; }
 
         public List<OlapEtlTable> OlapTables { get; set; }
@@ -43,7 +41,6 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             var json = base.ToJson();
 
             json[nameof(KeepFilesOnDisk)] = KeepFilesOnDisk;
-            json[nameof(MaxNumberOfItemsInRowGroup)] = MaxNumberOfItemsInRowGroup;
             json[nameof(CustomPrefix)] = CustomPrefix;
             json[nameof(RunFrequency)] = RunFrequency;
             json[nameof(OlapTables)] = new DynamicJsonArray(OlapTables.Select(x => x.ToJson()));
@@ -58,12 +55,9 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public string DocumentIdColumn { get; set; }
 
-        public string PartitionColumn { get; set; }
-
         protected bool Equals(OlapEtlTable other)
         {
-            return string.Equals(TableName, other.TableName) && string.Equals(DocumentIdColumn, other.DocumentIdColumn, StringComparison.OrdinalIgnoreCase) &&
-                   PartitionColumn == other.PartitionColumn;
+            return string.Equals(TableName, other.TableName) && string.Equals(DocumentIdColumn, other.DocumentIdColumn, StringComparison.OrdinalIgnoreCase);
         }
 
         public DynamicJsonValue ToJson()
@@ -71,8 +65,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             return new DynamicJsonValue
             {
                 [nameof(TableName)] = TableName,
-                [nameof(DocumentIdColumn)] = DocumentIdColumn,
-                [nameof(PartitionColumn)] = PartitionColumn
+                [nameof(DocumentIdColumn)] = DocumentIdColumn
             };
         }
     }

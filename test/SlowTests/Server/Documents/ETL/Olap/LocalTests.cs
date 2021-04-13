@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Server.Basic.Entities;
@@ -976,7 +975,7 @@ loadToOrders(partitionBy(key), o);
 
                     var sw = new Stopwatch();
                     sw.Start();
-                    SetupLocalOlapEtl(store, script, path, "*/2 * * * *"); // every 2nd minute
+                    SetupLocalOlapEtl(store, script, path, "*/3 * * * *"); // every 3rd minute
                     Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                     var files = Directory.GetFiles(path);
@@ -1014,16 +1013,16 @@ loadToOrders(partitionBy(key), o);
                         await session.SaveChangesAsync();
                     }
 
-                    Assert.False(etlDone.Wait(TimeSpan.FromSeconds(40)));
+                    Assert.False(etlDone.Wait(TimeSpan.FromSeconds(50)));
                     files = Directory.GetFiles(path);
                     Assert.Equal(1, files.Length);
 
-                    Assert.True(etlDone.Wait(TimeSpan.FromSeconds(120)));
+                    Assert.True(etlDone.Wait(TimeSpan.FromSeconds(180)));
 
                     var timeWaited = sw.Elapsed.TotalMilliseconds;
                     sw.Stop();
 
-                    //Assert.True(timeWaited > TimeSpan.FromSeconds(60).TotalMilliseconds, "time : " + sw.Elapsed);
+                    Assert.True(timeWaited > TimeSpan.FromSeconds(60).TotalMilliseconds, "time : " + sw.Elapsed);
 
                     files = Directory.GetFiles(path);
                     Assert.Equal(2, files.Length);
@@ -1322,111 +1321,6 @@ loadToOrders(partitionBy(key), o);
         }
 
         [Fact]
-        public async Task CanConfigureMaxNumberOfRowGroups()
-        {
-            const int maxNumberOfItemsInRowGroups = 10;
-            const int numberOfDocs = 100;
-
-            var path = GetTempPath("Orders");
-            try
-            {
-                using (var store = GetDocumentStore())
-                {
-                    var baseline = new DateTime(2020, 1, 1);
-
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        for (int i = 1; i <= numberOfDocs; i++)
-                        {
-                            var orderedAt = baseline.AddHours(i);
-                            var o = new Query.Order
-                            {
-                                Id = $"orders/{i}",
-                                OrderedAt = orderedAt,
-                                Company = $"companies/{i}",
-                                Lines = new List<OrderLine>
-                                {
-                                    new OrderLine
-                                    {
-                                        Quantity = i * 10,
-                                        PricePerUnit = i
-                                    }
-                                }
-                            };
-
-                            await session.StoreAsync(o);
-                        }
-
-                        await session.SaveChangesAsync();
-                    }
-
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-
-                    var script = @"
-var o = {
-    Company : this.Company
-    Total : 0
-};
-
-for (var j = 0; j < this.Lines.length; j++)
-{
-    var line = this.Lines[j];
-    var p = line.Quantity * line.PricePerUnit;
-    o.Total += p;
-}
-
-var orderDate = new Date(this.OrderedAt);
-var year = orderDate.getFullYear();
-var month = orderDate.getMonth();
-var key = new Date(year, month);
-
-loadToOrders(partitionBy(key), o);
-";
-
-                    SetupLocalOlapEtl(store, script, path, maxNumberOfItemsInRowGroups: maxNumberOfItemsInRowGroups);
-
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                    var files = Directory.GetFiles(path);
-                    Assert.Equal(1, files.Length);
-
-                    var expectedFields = new[] { "Company", "Total", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
-
-                    using (var fs = File.OpenRead(files[0]))
-                    using (var parquetReader = new ParquetReader(fs))
-                    {
-                        var expectedRowGroupsCount = numberOfDocs / maxNumberOfItemsInRowGroups;
-
-                        Assert.Equal(expectedRowGroupsCount, parquetReader.RowGroupCount);
-                        Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
-
-                        for (int index = 0; index < parquetReader.RowGroupCount; index++)
-                        {
-                            using var rowGroupReader = parquetReader.OpenRowGroupReader(index);
-                            foreach (var field in parquetReader.Schema.Fields)
-                            {
-                                Assert.True(field.Name.In(expectedFields));
-
-                                var data = rowGroupReader.ReadColumn((DataField)field).Data;
-                                Assert.True(data.Length == maxNumberOfItemsInRowGroups);
-                            }
-                        }
-                    }
-                }
-            }
-            finally
-            {
-                var di = new DirectoryInfo(path);
-                foreach (var file in di.EnumerateFiles())
-                {
-                    file.Delete();
-                }
-
-                di.Delete();
-            }
-        }
-
-        [Fact]
         public async Task SimpleTransformation_NoPartition()
         {
             var path = GetTempPath("Orders");
@@ -1691,7 +1585,7 @@ loadToOrders(partitionBy([
             return Directory.CreateDirectory(Path.Combine(tmpPath, caller, collection)).FullName;
         }
 
-        private void SetupLocalOlapEtl(DocumentStore store, string script, string path, string frequency = null, int? maxNumberOfItemsInRowGroups = null)
+        private void SetupLocalOlapEtl(DocumentStore store, string script, string path, string frequency = null)
         {
             var connectionStringName = $"{store.Database} to local";
             var configuration = new OlapEtlConfiguration
@@ -1709,8 +1603,7 @@ loadToOrders(partitionBy([
                         Script = script
                     }
                 },
-                KeepFilesOnDisk = true,
-                MaxNumberOfItemsInRowGroup = maxNumberOfItemsInRowGroups
+                KeepFilesOnDisk = true
             };
 
             SetupLocalOlapEtl(store, configuration, path, connectionStringName);
