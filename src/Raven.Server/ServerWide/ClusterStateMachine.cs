@@ -476,9 +476,6 @@ namespace Raven.Server.ServerWide
                         throw new UnknownClusterCommand(massage);
                 }
 
-                if (_parent == null)
-                    throw new InvalidOperationException("TEST");
-
                 _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, result, null);
 
                 DismissUnrecoverableNotification();
