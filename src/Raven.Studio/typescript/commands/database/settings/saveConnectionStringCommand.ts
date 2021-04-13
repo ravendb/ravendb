@@ -3,10 +3,11 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import connectionStringSqlEtlModel = require("models/database/settings/connectionStringSqlEtlModel");
+import connectionStringOlapEtlModel = require("models/database/settings/connectionStringOlapEtlModel");
 
 class saveConnectionStringCommand extends commandBase {
 
-    constructor(private db: database, private connectionString: connectionStringRavenEtlModel | connectionStringSqlEtlModel) {
+    constructor(private db: database, private connectionString: connectionStringRavenEtlModel | connectionStringSqlEtlModel | connectionStringOlapEtlModel) {
         super();
     }
  

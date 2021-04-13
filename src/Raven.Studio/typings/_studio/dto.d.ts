@@ -779,7 +779,7 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
     Deletes: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.DeleteOperation[];
 }
 
-type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink";
+type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Olap ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink";
 
 interface sampleCode {
     title: string;

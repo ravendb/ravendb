@@ -254,14 +254,6 @@
 
 <script type="text/html" id="test-connection-results-template">
     <div data-bind="with: testConnectionResult">
-        <div class="padding bg-success small" data-bind="visible: Success">
-            <div>Successfully connected</div>
-        </div>
-        <div class="padding bg-danger small" data-bind="visible: !Success">
-            Connection test failed: <span data-bind="text: $parent.fullErrorDetailsVisible() ? Error : $parent.shortErrorText()"></span>
-            <div>
-                <a href="#" data-bind="click: $parent.fullErrorDetailsVisible.toggle.bind($parent.fullErrorDetailsVisible), text: $parent.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
-            </div>
-        </div>
+        <div data-bind="compose: 'partial/backupDestinationTestCredentialsResults.html'"></div>
     </div>
 </script>

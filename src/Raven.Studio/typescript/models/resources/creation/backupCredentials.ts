@@ -1,7 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import generalUtils = require("common/generalUtils");
 import amazonSettings = require("models/database/tasks/periodicBackup/amazonSettings");
-import s3Settings = require("models/database/tasks/periodicBackup/s3Settings");
+import s3Settings = require("viewmodels/database/tasks/destinations/s3Settings");
 import getRestorePointsCommand = require("commands/resources/getRestorePointsCommand");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 import commandBase = require("commands/commandBase");
@@ -12,7 +12,7 @@ export abstract class restoreSettings {
     mandatoryFieldsText: string;
 
     folderContent: KnockoutComputed<string>;
-    fetchRestorePointsCommand: () => commandBase;    
+    fetchRestorePointsCommand: () => commandBase;
 
     abstract getFolderPathOptions(): JQueryPromise<string[]>;
     
@@ -32,7 +32,7 @@ export abstract class restoreSettings {
     }
 }
 
-export class localServerCredentials extends restoreSettings {  
+export class localServerCredentials extends restoreSettings {
     backupStorageType: restoreSource = 'local'; 
     backupStorageTypeText: string ='Local Server Directory';
     mandatoryFieldsText = "Backup Directory";
@@ -88,9 +88,9 @@ export class amazonS3Credentials extends restoreSettings {
 
     toDto(): Raven.Client.Documents.Operations.Backups.S3Settings {
         let selectedRegion = _.trim(this.regionName()).toLowerCase();
-        const foundRegion = amazonSettings.availableAwsRegionEndpointsStatic.find(x => amazonSettings.getDisplayRegionName(x).toLowerCase() === selectedRegion);        
+        const foundRegion = amazonSettings.availableAwsRegionEndpointsStatic.find(x => amazonSettings.getDisplayRegionName(x).toLowerCase() === selectedRegion);
         if (foundRegion) {
-            selectedRegion = foundRegion.value;            
+            selectedRegion = foundRegion.value;
         }
         
         return {
@@ -177,7 +177,7 @@ export class azureCredentials extends restoreSettings {
     accountName = ko.observable<string>();
     accountKey = ko.observable<string>();
     sasToken = ko.observable<string>();
-    container = ko.observable<string>();  
+    container = ko.observable<string>();
     
     toDto(): Raven.Client.Documents.Operations.Backups.AzureSettings {
         return {
@@ -412,5 +412,4 @@ export class ravenCloudCredentials extends restoreSettings {
     static empty() {
         return new ravenCloudCredentials();
     }
-  
 }

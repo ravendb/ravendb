@@ -136,11 +136,6 @@ class editPeriodicBackupTask extends viewModelBase {
                 content: tasksCommonContent.backupAgeInfo
             });
 
-        popoverUtils.longWithHover($(".bucket-info"),
-            {
-                content: tasksCommonContent.textForPopover("Bucket")
-            });
-
         popoverUtils.longWithHover($(".bucket-gcs-info"),
             {
                 content: tasksCommonContent.textForPopoverGCS("Bucket")
