@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
@@ -637,6 +638,7 @@ namespace Raven.Server.Web.System
             {
                 Dictionary<string, RavenConnectionString> ravenConnectionStrings;
                 Dictionary<string, SqlConnectionString> sqlConnectionStrings;
+                Dictionary<string, OlapConnectionString> olapConnectionStrings;
 
                 using (context.OpenReadTransaction())
                 using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
@@ -649,12 +651,13 @@ namespace Raven.Server.Web.System
                         if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
                             throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
 
-                        (ravenConnectionStrings, sqlConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
+                        (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
                     }
                     else
                     {
                         ravenConnectionStrings = rawRecord.RavenConnectionStrings;
                         sqlConnectionStrings = rawRecord.SqlConnectionStrings;
+                        olapConnectionStrings = rawRecord.OlapConnectionString;
                     }
                 }
 
@@ -663,18 +666,20 @@ namespace Raven.Server.Web.System
                     var result = new GetConnectionStringsResult
                     {
                         RavenConnectionStrings = ravenConnectionStrings,
-                        SqlConnectionStrings = sqlConnectionStrings
+                        SqlConnectionStrings = sqlConnectionStrings,
+                        OlapConnectionStrings = olapConnectionStrings
                     };
                     context.Write(writer, result.ToJson());
                 }
             }
         }
 
-        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>)
+        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>)
             GetConnectionString(RawDatabaseRecord rawRecord, string connectionStringName, ConnectionStringType connectionStringType)
         {
             var ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
             var sqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
+            var olapConnectionStrings = new Dictionary<string, OlapConnectionString>();
 
             switch (connectionStringType)
             {
@@ -696,11 +701,20 @@ namespace Raven.Server.Web.System
 
                     break;
 
+                case ConnectionStringType.Olap:
+                    var recordOlapConnectionStrings = rawRecord.OlapConnectionString;
+                    if (recordOlapConnectionStrings != null && recordOlapConnectionStrings.TryGetValue(connectionStringName, out var olapConnectionString))
+                    {
+                        olapConnectionStrings.TryAdd(connectionStringName, olapConnectionString);
+                    }
+
+                    break;
+                
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
             }
 
-            return (ravenConnectionStrings, sqlConnectionStrings);
+            return (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings);
         }
 
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
@@ -845,6 +859,32 @@ namespace Raven.Server.Web.System
                         DestinationDatabase = database,
                         ConnectionStringDefined = sqlConnection != null,
                         ConnectionStringName = sqlEtl.ConnectionStringName,
+                        Error = error
+                    };
+                }
+            }
+            
+            if (databaseRecord.OlapEtls != null)
+            {
+                foreach (var olapEtl in databaseRecord.OlapEtls)
+                {
+                    var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, olapEtl, out var tag, out var error);
+
+                    var taskState = GetEtlTaskState(olapEtl);
+
+                    yield return new OngoingTaskOlapEtlListView
+                    {
+                        TaskId = olapEtl.TaskId,
+                        TaskName = olapEtl.Name,
+                        TaskConnectionStatus = connectionStatus,
+                        TaskState = taskState,
+                        MentorNode = olapEtl.MentorNode,
+                        ResponsibleNode = new NodeId
+                        {
+                            NodeTag = tag,
+                            NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                        },
+                        ConnectionStringName = olapEtl.ConnectionStringName,
                         Error = error
                     };
                 }

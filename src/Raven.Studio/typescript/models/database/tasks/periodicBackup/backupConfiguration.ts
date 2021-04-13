@@ -1,6 +1,7 @@
 ﻿/// <reference path="../../../../../typings/tsd.d.ts"/>
 import localSettings = require("models/database/tasks/periodicBackup/localSettings");
-import s3Settings = require("models/database/tasks/periodicBackup/s3Settings");
+// import s3Settings = require("models/database/tasks/periodicBackup/s3Settings");
+import s3Settings = require("viewmodels/database/tasks/destinations/s3Settings");
 import glacierSettings = require("models/database/tasks/periodicBackup/glacierSettings");
 import azureSettings = require("models/database/tasks/periodicBackup/azureSettings");
 import ftpSettings = require("models/database/tasks/periodicBackup/ftpSettings");
@@ -41,11 +42,11 @@ abstract class backupConfiguration {
     
     validationGroup: KnockoutValidationGroup;
     
-    backupLocationInfo = ko.observableArray<Raven.Server.Web.Studio.SingleNodeDataDirectoryResult>([]);
+    locationInfo = ko.observableArray<Raven.Server.Web.Studio.SingleNodeDataDirectoryResult>([]);
     folderPathOptions = ko.observableArray<string>([]);
 
     spinners = {
-        backupLocationInfoLoading: ko.observable<boolean>(false)
+        locationInfoLoading: ko.observable<boolean>(false)
     };
 
     dirtyFlag: () => DirtyFlag;
@@ -58,7 +59,7 @@ abstract class backupConfiguration {
                 isServerWide: boolean = false) {
         this.taskId(dto.TaskId);
         this.backupType(dto.BackupType);
-        this.localSettings(!dto.LocalSettings ? localSettings.empty() : new localSettings(dto.LocalSettings));
+        this.localSettings(!dto.LocalSettings ? localSettings.empty("backup") : new localSettings(dto.LocalSettings, "backup"));
         this.s3Settings(!dto.S3Settings ? s3Settings.empty(serverLimits.AllowedAwsRegions) : new s3Settings(dto.S3Settings, serverLimits.AllowedAwsRegions));
         this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty(serverLimits.AllowedAwsRegions) : new glacierSettings(dto.GlacierSettings, serverLimits.AllowedAwsRegions));
         this.azureSettings(!dto.AzureSettings ? azureSettings.empty() : new azureSettings(dto.AzureSettings));
@@ -69,7 +70,7 @@ abstract class backupConfiguration {
 
         const folderPath = this.localSettings().folderPath();
         if (folderPath) {
-            this.updateBackupLocationInfo(folderPath);
+            this.updateLocationInfo(folderPath);
         }
 
         this.updateFolderPathOptions(folderPath);
@@ -95,12 +96,12 @@ abstract class backupConfiguration {
         
         this.localSettings().folderPath.throttle(300).subscribe((newPathValue) => {
             if (this.localSettings().folderPath.isValid()) {
-                this.updateBackupLocationInfo(newPathValue);
+                this.updateLocationInfo(newPathValue);
                 this.updateFolderPathOptions(newPathValue);
             } else {
-                this.backupLocationInfo([]);
+                this.locationInfo([]);
                 this.folderPathOptions([]);
-                this.spinners.backupLocationInfoLoading(false);
+                this.spinners.locationInfoLoading(false);
             }
         });
     }
@@ -119,7 +120,7 @@ abstract class backupConfiguration {
         return ko.observable(backupConfiguration.defaultIncrementalBackupFrequency);
     }
     
-    private updateBackupLocationInfo(path: string) {
+    private updateLocationInfo(path: string) {
         const getLocationCommand = this.isServerWide() ? 
                         new getServerWideBackupLocationCommand(path) : 
                         new getBackupLocationCommand(path, activeDatabaseTracker.default.database());
@@ -132,10 +133,10 @@ abstract class backupConfiguration {
                     return;
                 }
 
-                this.backupLocationInfo(result.List);
+                this.locationInfo(result.List);
             });
         
-        generalUtils.delayedSpinner(this.spinners.backupLocationInfoLoading, getLocationtask);
+        generalUtils.delayedSpinner(this.spinners.locationInfoLoading, getLocationtask);
     }
 
     private updateFolderPathOptions(path: string) {

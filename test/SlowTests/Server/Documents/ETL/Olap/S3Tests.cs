@@ -245,7 +245,7 @@ loadToOrders(key,
                                 Id = $"orders/{i}",
                                 OrderedAt = orderedAt,
                                 RequireAt = orderedAt.AddDays(7),
-                                Company = $"comapnies/{i}",
+                                Company = $"companies/{i}",
                                 Lines = lines
                             };
 
@@ -274,7 +274,7 @@ loadToOrders(key,
                                 Id = $"orders/{i + 31}",
                                 OrderedAt = orderedAt,
                                 RequireAt = orderedAt.AddDays(7),
-                                Company = $"comapnies/{i}",
+                                Company = $"companies/{i}",
                                 Lines = lines
                             };
 

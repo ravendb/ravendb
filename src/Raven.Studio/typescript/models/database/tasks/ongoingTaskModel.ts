@@ -33,6 +33,8 @@ abstract class ongoingTaskModel {
                 return "Replication Hub" as TasksNamesInUI;
             case "PullReplicationAsSink":
                 return "Replication Sink" as TasksNamesInUI;
+            case "OlapEtl":
+                return "Olap ETL" as TasksNamesInUI; 
             default:
                 return taskType;
         }
@@ -58,7 +60,7 @@ abstract class ongoingTaskModel {
                     return "state-offline";
                 }
             }
-        });            
+        });
 
         this.badgeText = ko.pureComputed(() => {
 

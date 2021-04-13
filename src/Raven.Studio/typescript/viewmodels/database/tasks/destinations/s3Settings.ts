@@ -1,6 +1,8 @@
 ﻿import amazonSettings = require("models/database/tasks/periodicBackup/amazonSettings");
 import jsonUtil = require("common/jsonUtil");
 import genUtils = require("common/generalUtils");
+import popoverUtils = require("common/popoverUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class s3Settings extends amazonSettings {
     bucketName = ko.observable<string>();
@@ -53,7 +55,14 @@ class s3Settings extends amazonSettings {
     private static isBackBlaze(useCustomS3Host: boolean, customServerUrl: string) {
         return useCustomS3Host && customServerUrl && customServerUrl.toLowerCase().endsWith(".backblazeb2.com");
     }
-
+    
+    compositionComplete(view: Element, container: HTMLElement) {
+        popoverUtils.longWithHover($(".bucket-info", container),
+            {
+                content: tasksCommonContent.textForPopover("Bucket")
+            });
+    }
+    
     initValidation() {
         /* Bucket name must :
             - be at least 3 and no more than 63 characters long.

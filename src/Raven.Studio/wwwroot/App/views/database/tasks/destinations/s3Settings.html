@@ -1,0 +1,58 @@
+<div class="row margin-bottom" data-bind="validationElement: customServerUrl, collapse: useCustomS3Host">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">
+        Custom server URL <i class="required"></i>
+    </label>
+    <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: customServerUrl">
+        <input data-bind="textInput: customServerUrl" type="text" class="form-control" />
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: bucketName">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">
+        Bucket name <i class="required"></i> <small><i class="icon-info text-info bucket-info"></i></small>
+    </label>
+    <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: bucketName">
+        <input data-bind="textInput: bucketName" type="text" class="form-control" />
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: remoteFolderName">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Remote folder name</label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="visible: useCustomS3Host">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <input type="text" class="form-control" data-bind="textInput: selectedAwsRegion">
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="visible: !useCustomS3Host(), validationElement: awsRegionName">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region <i class="required"></i></label>
+    <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }">
+        <div class="dropdown btn-block">
+            <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
+                   id="s3RegionInput"
+                   data-bind="textInput: selectedAwsRegion"
+                   placeholder="Select an AWS region">
+            <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+            <ul class="dropdown-menu" data-bind="foreach: createAwsRegionAutoCompleter(true), autoComplete: '#' + 's3RegionInput'">
+                <li data-bind="click: $parent.useAwsRegion.bind($parent, $data)">
+                    <a href="#" data-bind="text: $data.label + ' - ' + $data.value"></a>
+                </li>
+            </ul>
+        </div>
+        <span class="help-block" data-bind="validationMessage: awsRegionName"></span>
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: awsAccessKey">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4"><span data-bind="text: accessKeyPropertyName"></span> <i class="required"></i></label>
+    <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsAccessKey">
+        <input data-bind="textInput: awsAccessKey" class="form-control" />
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: awsSecretKey">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4"><span data-bind="text: secretKeyPropertyName"></span> <i class="required"></i></label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <input data-bind="textInput: awsSecretKey" type="password" class="form-control" />
+    </div>
+</div>

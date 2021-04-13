@@ -21,7 +21,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row" data-bind="if: hasConfigurationScript">
+                    <div class="row" data-bind="collapse: hasConfigurationScript">
                         <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
                     </div>
                     <div data-bind="if: !hasConfigurationScript()">
@@ -114,68 +114,13 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row" data-bind="if: hasConfigurationScript">
-                        <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
+                    <div class="row">
+                        <div data-bind="collapse: hasConfigurationScript">
+                            <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
+                        </div>
                     </div>
-                    <div data-bind="if: !hasConfigurationScript()">
-                        <div class="row margin-bottom" data-bind="validationElement: customServerUrl, collapse: useCustomS3Host">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                                Custom server URL <i class="required"></i>
-                            </label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: customServerUrl">
-                                <input data-bind="textInput: customServerUrl" type="text" class="form-control" />
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="validationElement: bucketName">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                                Bucket name <i class="required"></i> <small><i class="icon-info text-info bucket-info"></i></small>
-                            </label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: bucketName">
-                                <input data-bind="textInput: bucketName" type="text" class="form-control" />
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="validationElement: remoteFolderName">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Remote folder name</label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="visible: useCustomS3Host">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input type="text" class="form-control" data-bind="textInput: selectedAwsRegion">
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="visible: !useCustomS3Host(), validationElement: awsRegionName">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region <i class="required"></i></label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }">
-                                <div class="dropdown btn-block">
-                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                                           id="s3RegionInput"
-                                           data-bind="textInput: selectedAwsRegion"
-                                           placeholder="Select an AWS region">
-                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu" data-bind="foreach: createAwsRegionAutoCompleter(true), autoComplete: '#' + 's3RegionInput'">
-                                        <li data-bind="click: $parent.useAwsRegion.bind($parent, $data)">
-                                            <a href="#" data-bind="text: $data.label + ' - ' + $data.value"></a>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <span class="help-block" data-bind="validationMessage: awsRegionName"></span>
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="validationElement: awsAccessKey">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4"><span data-bind="text: accessKeyPropertyName"></span> <i class="required"></i></label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsAccessKey">
-                                <input data-bind="textInput: awsAccessKey" class="form-control" />
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="validationElement: awsSecretKey">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4"><span data-bind="text: secretKeyPropertyName"></span> <i class="required"></i></label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="textInput: awsSecretKey" type="password" class="form-control" />
-                            </div>
-                        </div>
+                    <div data-bind="collapse: !hasConfigurationScript()">
+                        <div data-bind="compose: $data"></div>
                         <div data-bind="if: $parent.isServerWide()">
                             <div data-bind="template: { name: 'remote-folder-path' }"></div>
                         </div>
@@ -213,10 +158,10 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row" data-bind="if: hasConfigurationScript">
+                    <div class="row" data-bind="collapse: hasConfigurationScript">
                         <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
                     </div>
-                    <div data-bind="if: !hasConfigurationScript()">
+                    <div data-bind="collapse: !hasConfigurationScript()">
                         <div class="row margin-bottom" data-bind="validationElement: storageContainer">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">
                                 Storage container <i class="required"></i> <small><i class="storage-container-info icon-info text-info"></i></small>
@@ -280,10 +225,10 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row" data-bind="if: hasConfigurationScript">
+                    <div class="row" data-bind="collapse: hasConfigurationScript">
                         <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
                     </div>
-                    <div data-bind="if: !hasConfigurationScript()">
+                    <div data-bind="collapse: !hasConfigurationScript()">
                         <div class="row margin-bottom" data-bind="validationElement: bucket">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">
                                 Bucket <i class="required"></i> <small><i class="bucket-gcs-info icon-info text-info"></i></small>
@@ -355,10 +300,10 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row" data-bind="if: hasConfigurationScript">
+                    <div class="row" data-bind="collapse: hasConfigurationScript">
                         <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
                     </div>
-                    <div data-bind="if: !hasConfigurationScript()">
+                    <div data-bind="collapse: !hasConfigurationScript()">
                         <div class="row margin-bottom" data-bind="validationElement: vaultName">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">
                                 Vault name <i class="required"></i> <small><i class="vault-info icon-info text-info"></i></small>
@@ -440,10 +385,10 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row" data-bind="if: hasConfigurationScript">
+                    <div class="row" data-bind="collapse: hasConfigurationScript">
                         <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
                     </div>
-                    <div data-bind="if: !hasConfigurationScript()">
+                    <div data-bind="collapse: !hasConfigurationScript()">
                         <div class="row margin-bottom" data-bind="validationElement: url">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">
                                 Host <i class="required"></i> <small><i class="ftp-host-info icon-info text-info"></i></small>
@@ -513,37 +458,7 @@
 </div>
 
 <script type="text/html" id="backup-via-configuration-script">
-    <div>
-        <div class="row margin-bottom" data-bind="validationElement: configurationScript.exec">
-            <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                Exec
-            </label>
-            <div class="col-xs-12 col-sm-6 col-lg-8">
-                <input data-bind="textInput: configurationScript.exec" type="text" class="form-control" placeholder="Path to executable" />
-            </div>
-        </div>
-        <div class="row margin-bottom" data-bind="validationElement: configurationScript.arguments">
-            <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                Arguments
-            </label>
-            <div class="col-xs-12 col-sm-6 col-lg-8">
-                <input data-bind="textInput: configurationScript.arguments" type="text" class="form-control" placeholder="Command line arguments passed to exec" />
-            </div>
-        </div>
-        <div class="row margin-bottom" data-bind="validationElement: configurationScript.timeoutInMs">
-            <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                Timeout
-            </label>
-            <div class="col-xs-12 col-sm-6 col-lg-8">
-                <div class="input-group">
-                    <input data-bind="numericInput: configurationScript.timeoutInMs" min="0" type="number" class="form-control" />
-                    <div class="input-group-addon">
-                        ms
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div data-bind="compose: 'partial/backupConfigurationScript.html'"></div>
 </script>
 
 <script type="text/html" id="remote-folder-path">

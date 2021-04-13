@@ -19,6 +19,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Indexes;
@@ -438,7 +439,13 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TestSqlEtlScript));
             scripter.AddType(typeof(SqlEtlTable));
             scripter.AddType(typeof(SqlEtlTestScriptResult));
-
+            
+            // ongoing tasks - Olap ETL
+            scripter.AddType(typeof(OngoingTaskOlapEtlDetails));
+            scripter.AddType(typeof(OngoingTaskOlapEtlListView));
+            scripter.AddType(typeof(OlapEtlConfiguration));
+            scripter.AddType(typeof(OlapEtlTable));
+            
             // connection strings
             scripter.AddType(typeof(ConnectionString));
             scripter.AddType(typeof(RavenConnectionString));

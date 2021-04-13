@@ -1,6 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import connectionStringSqlEtlModel = require("models/database/settings/connectionStringSqlEtlModel");
+import connectionStringOlapEtlModel = require("models/database/settings/connectionStringOlapEtlModel");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
@@ -10,48 +11,41 @@ import discoveryUrl = require("models/database/settings/discoveryUrl");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 import appUrl = require("common/appUrl");
+import getPeriodicBackupConfigCommand = require("commands/database/tasks/getPeriodicBackupConfigCommand");
+import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
+import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testPeriodicBackupCredentialsCommand");
 
 class connectionStrings extends viewModelBase {
 
     ravenEtlConnectionStringsNames = ko.observableArray<string>([]);
     sqlEtlConnectionStringsNames = ko.observableArray<string>([]);
+    olapEtlConnectionStringsNames = ko.observableArray<string>([]); 
 
     // Mapping from { connection string } to { taskId, taskName, taskType }
     connectionStringsTasksInfo: dictionary<Array<{ TaskId: number, TaskName: string, TaskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType }>> = {}; 
     
     editedRavenEtlConnectionString = ko.observable<connectionStringRavenEtlModel>(null);
     editedSqlEtlConnectionString = ko.observable<connectionStringSqlEtlModel>(null);
+    editedOlapEtlConnectionString = ko.observable<connectionStringOlapEtlModel>(null);
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     testConnectionHttpSuccess: KnockoutComputed<boolean>;
+    
     spinners = { 
         test: ko.observable<boolean>(false)
     };
-    fullErrorDetailsVisible = ko.observable<boolean>(false);
+    fullErrorDetailsVisible = ko.observable<boolean>(false);    
+
 
     shortErrorText: KnockoutObservable<string>;
 
+    serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>(); // needed for olap local destination
+
     constructor() {
         super();
-
+        this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "onEditOlapEtl", "confirmDelete",
+                                   "isConnectionStringInUse", "onTestConnectionRaven", "testCredentials");
         this.initObservables();
-        this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "confirmDelete", "isConnectionStringInUse", "onTestConnectionRaven");
-        
-        const currentlyEditedObjectIsDirty = ko.pureComputed(() => {
-            const ravenEtl = this.editedRavenEtlConnectionString();
-            if (ravenEtl) {
-                return ravenEtl.dirtyFlag().isDirty();
-            }
-            
-            const sqlEtl = this.editedSqlEtlConnectionString();
-            if (sqlEtl) {
-                return sqlEtl.dirtyFlag().isDirty();
-            }
-            
-            return false;
-        });
-        
-        this.dirtyFlag = new ko.DirtyFlag([currentlyEditedObjectIsDirty], false);
     }
     
     private initObservables() {
@@ -71,19 +65,46 @@ class connectionStrings extends viewModelBase {
             }
             
             return testResult.HTTPSuccess || false;
-        })
+        });
+
+        const currentlyEditedObjectIsDirty = ko.pureComputed(() => {
+            const ravenEtl = this.editedRavenEtlConnectionString();
+            if (ravenEtl) {
+                return ravenEtl.dirtyFlag().isDirty();
+            }
+
+            const sqlEtl = this.editedSqlEtlConnectionString();
+            if (sqlEtl) {
+                return sqlEtl.dirtyFlag().isDirty();
+            }
+
+            const olapEtl = this.editedOlapEtlConnectionString();
+            if (olapEtl) {
+                return olapEtl.dirtyFlag().isDirty();
+            }
+
+            return false;
+        });
+
+        this.dirtyFlag = new ko.DirtyFlag([currentlyEditedObjectIsDirty], false);
     }
 
     activate(args: any) {
         super.activate(args);
         
-        return $.when<any>(this.getAllConnectionStrings(), this.fetchOngoingTasks())
-                .done(()=>{
+        return $.when<any>(this.getAllConnectionStrings(), this.fetchOngoingTasks(), this.loadServerSideConfiguration())
+                .done(() => {
                     if (args.name) {
-                        if (args.type === "sql") {
-                            this.onEditSqlEtl(args.name);
-                        } else {
-                            this.onEditRavenEtl(args.name);
+                        switch (args.type) {
+                            case "sql":
+                                this.onEditSqlEtl(args.name);
+                                break;
+                            case "ravendb":
+                                this.onEditRavenEtl(args.name);
+                                break;
+                            case "olap":
+                                this.onEditOlapEtl(args.name);
+                                break;
                         }
                     }
                 });
@@ -92,6 +113,14 @@ class connectionStrings extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         this.setupDisableReasons();
+    }
+
+    private loadServerSideConfiguration() {
+        return new getPeriodicBackupConfigCommand(this.activeDatabase())
+            .execute()
+            .done(config => {
+                this.serverConfiguration(config);
+            });
     }
     
     private clearTestResult() {
@@ -108,9 +137,10 @@ class connectionStrings extends viewModelBase {
     }
     
     private processData(result: Raven.Server.Web.System.OngoingTasksResult) {
-        const tasksThatUseConnectionStrings = result.OngoingTasksList.filter((task) => 
+        const tasksThatUseConnectionStrings = result.OngoingTasksList.filter((task) =>
                                                                               task.TaskType === "RavenEtl"    ||
                                                                               task.TaskType === "SqlEtl"      ||
+                                                                              task.TaskType === "OlapEtl"     ||
                                                                               task.TaskType === "Replication" ||
                                                                               task.TaskType === "PullReplicationAsSink");
         for (let i = 0; i < tasksThatUseConnectionStrings.length; i++) {
@@ -127,6 +157,9 @@ class connectionStrings extends viewModelBase {
                     break;
                 case "SqlEtl":
                     stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView).ConnectionStringName;
+                    break;
+                case "OlapEtl":
+                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView).ConnectionStringName;
                     break;
                 case "Replication":
                     stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication).ConnectionStringName;
@@ -166,21 +199,26 @@ class connectionStrings extends viewModelBase {
                 // sqlEtl
                 this.sqlEtlConnectionStringsNames(Object.keys(result.SqlConnectionStrings));
                 this.sqlEtlConnectionStringsNames(_.sortBy(this.sqlEtlConnectionStringsNames(), x => x.toUpperCase()));
+
+                // olapEtl
+                this.olapEtlConnectionStringsNames(Object.keys(result.OlapConnectionStrings));
+                this.olapEtlConnectionStringsNames(_.sortBy(this.olapEtlConnectionStringsNames(), x => x.toUpperCase()));
             });
     }
 
     confirmDelete(connectionStringName: string, connectionStringtype: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType) {
-        const stringType = connectionStringtype === "Raven" ? "RavenDB" : "SQL";
-        this.confirmationMessage("Are you sure?",
-            `Do you want to delete ${stringType} ETL connection string: <br><strong>${generalUtils.escapeHtml(connectionStringName)}</strong>`, {
-            buttons: ["Cancel", "Delete"],
-            html: true
-        })
+        const stringType = connectionStringtype === "Raven" ? "RavenDB" :  connectionStringtype === "Sql" ? "SQL" : "Olap";
+
+        this.confirmationMessage("Delete connection string?",
+            `You're deleting ${stringType} connection string: <br><ul><li><strong>${generalUtils.escapeHtml(connectionStringName)}</strong></li></ul>`, {
+                buttons: ["Cancel", "Delete"],
+                html: true
+            })
             .done(result => {
                 if (result.can) {
                     this.deleteConnectionSring(connectionStringtype, connectionStringName);
                 }
-        });
+            });
     }
 
     private deleteConnectionSring(connectionStringType: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType, connectionStringName: string) {
@@ -195,45 +233,84 @@ class connectionStrings extends viewModelBase {
     onAddRavenEtl() {
         eventsCollector.default.reportEvent("connection-strings", "add-raven-etl");
         this.editedRavenEtlConnectionString(connectionStringRavenEtlModel.empty());
+        this.onRavenEtl();
+        this.clearTestResult();
+    }
+    
+    onEditRavenEtl(connectionStringName: string) {
+        this.clearTestResult();
+
+        return getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), connectionStringName)
+            .execute()
+            .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+                this.editedRavenEtlConnectionString(new connectionStringRavenEtlModel(result.RavenConnectionStrings[connectionStringName], false, this.getTasksThatUseThisString(connectionStringName, "Raven")));
+                this.onRavenEtl();
+            });
+    }
+    
+    private onRavenEtl() {
         this.editedRavenEtlConnectionString().topologyDiscoveryUrls.subscribe(() => this.clearTestResult());
         this.editedRavenEtlConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.clearTestResult());
 
         this.editedSqlEtlConnectionString(null);
-        this.clearTestResult();
+        this.editedOlapEtlConnectionString(null);
     }
 
     onAddSqlEtl() {
         eventsCollector.default.reportEvent("connection-strings", "add-sql-etl");
         this.editedSqlEtlConnectionString(connectionStringSqlEtlModel.empty());
-        this.editedSqlEtlConnectionString().connectionString.subscribe(() => this.clearTestResult());
-
-        this.editedRavenEtlConnectionString(null);
+        this.onSqlEtl();
         this.clearTestResult();
     }
-
-    onEditRavenEtl(connectionStringName: string) {
-        this.clearTestResult();
-        
-        return getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), connectionStringName)
-            .execute()
-            .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
-                this.editedRavenEtlConnectionString(new connectionStringRavenEtlModel(result.RavenConnectionStrings[connectionStringName], false, this.getTasksThatUseThisString(connectionStringName, "Raven")));
-                this.editedRavenEtlConnectionString().topologyDiscoveryUrls.subscribe(() => this.clearTestResult());
-                this.editedRavenEtlConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.clearTestResult());
-                this.editedSqlEtlConnectionString(null);
-            });
-    }
-
+    
     onEditSqlEtl(connectionStringName: string) {
         this.clearTestResult();
-        
+
         return getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), connectionStringName)
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 this.editedSqlEtlConnectionString(new connectionStringSqlEtlModel(result.SqlConnectionStrings[connectionStringName], false, this.getTasksThatUseThisString(connectionStringName, "Sql")));
-                this.editedSqlEtlConnectionString().connectionString.subscribe(() => this.clearTestResult());
-                this.editedRavenEtlConnectionString(null);
+                this.onSqlEtl();
             });
+    }
+    
+    private onSqlEtl() {
+        this.editedSqlEtlConnectionString().connectionString.subscribe(() => this.clearTestResult());
+
+        this.editedRavenEtlConnectionString(null);
+        this.editedOlapEtlConnectionString(null);
+    }
+
+    onAddOlapEtl() {
+        eventsCollector.default.reportEvent("connection-strings", "add-olap-etl");
+        this.editedOlapEtlConnectionString(connectionStringOlapEtlModel.empty());
+        this.onOlapEtl();
+        this.clearTestResult();
+    }
+
+    onEditOlapEtl(connectionStringName: string) {
+        this.clearTestResult();
+
+        return getConnectionStringInfoCommand.forOlapEtl(this.activeDatabase(), connectionStringName)
+            .execute()
+            .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+                this.editedOlapEtlConnectionString(new connectionStringOlapEtlModel(result.OlapConnectionStrings[connectionStringName], false, this.getTasksThatUseThisString(connectionStringName, "Olap")));
+                this.onOlapEtl();
+            });
+    }
+    
+    private onOlapEtl() {
+        this.editedOlapEtlConnectionString().s3Settings().bucketName.subscribe(() => this.clearTestResult());
+        this.editedOlapEtlConnectionString().s3Settings().useCustomS3Host.subscribe(() => this.clearTestResult());
+        this.editedOlapEtlConnectionString().s3Settings().customServerUrl.subscribe(() => this.clearTestResult());
+        this.editedOlapEtlConnectionString().s3Settings().accessKeyPropertyName.subscribe(() => this.clearTestResult());
+        this.editedOlapEtlConnectionString().s3Settings().awsAccessKey.subscribe(() => this.clearTestResult());
+        this.editedOlapEtlConnectionString().s3Settings().awsSecretKey.subscribe(() => this.clearTestResult());
+        this.editedOlapEtlConnectionString().s3Settings().awsRegionName.subscribe(() => this.clearTestResult());
+        this.editedOlapEtlConnectionString().s3Settings().remoteFolderName.subscribe(() => this.clearTestResult());
+
+        this.editedRavenEtlConnectionString(null);
+        this.editedSqlEtlConnectionString(null);
     }
     
     private getTasksThatUseThisString(connectionStringName: string, connectionStringType: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType): { taskName: string; taskId: number }[] {
@@ -252,7 +329,11 @@ class connectionStrings extends viewModelBase {
     
     private getTasksTypes(connectionType: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType): Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType[] {
         if (connectionType === "Sql") {
-            return ["SqlEtl"]
+            return ["SqlEtl"];
+        }
+        
+        if (connectionType === "Olap") {
+            return ["OlapEtl"];
         }
         
         return ["RavenEtl", "Replication", "PullReplicationAsSink"];
@@ -264,7 +345,7 @@ class connectionStrings extends viewModelBase {
 
         if (sqlConnectionString) {
             if (this.isValid(sqlConnectionString.testConnectionValidationGroup)) {
-                eventsCollector.default.reportEvent("ravenDB-SQL-connection-string", "test-connection");
+                eventsCollector.default.reportEvent("SQL-connection-string", "test-connection");
 
                 this.spinners.test(true);
                 sqlConnectionString.testConnection(this.activeDatabase())
@@ -279,7 +360,7 @@ class connectionStrings extends viewModelBase {
     onTestConnectionRaven(urlToTest: discoveryUrl) {
         this.clearTestResult();
         const ravenConnectionString = this.editedRavenEtlConnectionString();
-        eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
+        eventsCollector.default.reportEvent("ravenDB-connection-string", "test-connection");
         
         this.spinners.test(true);
         ravenConnectionString.selectedUrlToTest(urlToTest.discoveryUrlName());
@@ -295,39 +376,34 @@ class connectionStrings extends viewModelBase {
     onCloseEdit() {
         this.editedRavenEtlConnectionString(null);
         this.editedSqlEtlConnectionString(null);
+        this.editedOlapEtlConnectionString(null);
     }
 
     onSave() {
-        let model: connectionStringRavenEtlModel | connectionStringSqlEtlModel;
-
+        let model: connectionStringRavenEtlModel | connectionStringSqlEtlModel | connectionStringOlapEtlModel;
+        
+        const editedRavenEtl = this.editedRavenEtlConnectionString();
+        const editedSqlEtl = this.editedSqlEtlConnectionString();
+        const editedOlapEtl = this.editedOlapEtlConnectionString();
+        
         // 1. Validate model
-        if (this.editedRavenEtlConnectionString()) {
-            let isValid = true;
-            
-            const discoveryUrl = this.editedRavenEtlConnectionString().inputUrl().discoveryUrlName;
-            if (discoveryUrl()) {
-                if (discoveryUrl.isValid()) {
-                    // user probably forgot to click on 'Add Url' button 
-                    this.editedRavenEtlConnectionString().addDiscoveryUrlWithBlink();
-                } else {
-                    isValid = false;
-                }
-            }
-            
-            if (!this.isValid(this.editedRavenEtlConnectionString().validationGroup)) { 
-                isValid = false;
-            }
-            
-            if (!isValid) {
+        if (editedRavenEtl) {
+            if (!this.isValidEditedRavenEtl()) {
                 return;
             }
+            model = editedRavenEtl;
             
-            model = this.editedRavenEtlConnectionString();
-        } else {
-            if (!this.isValid(this.editedSqlEtlConnectionString().validationGroup)) {
+        } else if (editedSqlEtl) {
+            if (!this.isValidEditedSqlEtl()) {
                 return;
             }
-            model = this.editedSqlEtlConnectionString();
+            model = editedSqlEtl;
+            
+        } else if (editedOlapEtl) {
+            if (!this.isValidEditedOlapEtl()) {
+                return;
+            }
+            model = editedOlapEtl;
         }
 
         // 2. Create/add the new connection string
@@ -339,11 +415,59 @@ class connectionStrings extends viewModelBase {
 
                 this.editedRavenEtlConnectionString(null);
                 this.editedSqlEtlConnectionString(null);
+                this.editedOlapEtlConnectionString(null);
 
                 this.dirtyFlag().reset();
             });
     }
 
+    isValidEditedRavenEtl() {
+        const editedRavenEtl = this.editedRavenEtlConnectionString();
+        
+        let isValid = true;
+
+        const discoveryUrl = editedRavenEtl.inputUrl().discoveryUrlName;
+        if (discoveryUrl()) {
+            if (discoveryUrl.isValid()) {
+                // user probably forgot to click on 'Add Url' button 
+                editedRavenEtl.addDiscoveryUrlWithBlink();
+            } else {
+                isValid = false;
+            }
+        }
+
+        if (!this.isValid(editedRavenEtl.validationGroup)) {
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    isValidEditedSqlEtl() {
+        const editedSqlEtl = this.editedSqlEtlConnectionString();
+        return this.isValid(editedSqlEtl.validationGroup);
+    }
+
+    isValidEditedOlapEtl() {
+        const editedOlapEtl = this.editedOlapEtlConnectionString();
+
+        let isValid = true;
+
+        if (!this.isValid(editedOlapEtl.validationGroup)) {
+            isValid = false;
+        }
+
+        const localSettings = editedOlapEtl.localSettings();
+        if (localSettings.enabled() && !this.isValid(localSettings.effectiveValidationGroup()))
+            isValid = false;
+
+        const s3Settings = editedOlapEtl.s3Settings();
+        if (s3Settings.enabled() && !this.isValid(s3Settings.effectiveValidationGroup()))
+            isValid = false;
+
+        return isValid;
+    }
+    
     taskEditLink(taskId: number, connectionStringName: string) : string {
         const task = _.find(this.connectionStringsTasksInfo[connectionStringName], task => task.TaskId === taskId);
         const urls = appUrl.forCurrentDatabase();
@@ -351,6 +475,8 @@ class connectionStrings extends viewModelBase {
         switch (task.TaskType) {
             case "SqlEtl":
                 return urls.editSqlEtl(task.TaskId)();
+            case "OlapEtl":
+                return urls.editOlapEtl(task.TaskId)();
             case "RavenEtl": 
                 return urls.editRavenEtl(task.TaskId)();
             case "Replication":
@@ -366,6 +492,22 @@ class connectionStrings extends viewModelBase {
     
     private hasServerWidePrefix(name: string) {
         return name.startsWith(connectionStringRavenEtlModel.serverWidePrefix);
+    }
+
+    testCredentials(bs: backupSettings) {
+        if (!this.isValid(bs.effectiveValidationGroup())) {
+            return;
+        }
+
+        bs.isTestingCredentials(true);
+        bs.testConnectionResult(null);
+
+        new testPeriodicBackupCredentialsCommand(bs.connectionType, bs.toDto())
+            .execute()
+            .done((result: Raven.Server.Web.System.NodeConnectionTestResult) => {
+                bs.testConnectionResult(result);
+            })
+            .always(() => bs.isTestingCredentials(false));
     }
 }
 

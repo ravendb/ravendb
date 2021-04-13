@@ -28,6 +28,10 @@ class getConnectionStringInfoCommand extends commandBase {
     static forSqlEtl(db: database, connectionStringName: string) {
         return new getConnectionStringInfoCommand(db, "Sql", connectionStringName);
     }
+
+    static forOlapEtl(db: database, connectionStringName: string) {
+        return new getConnectionStringInfoCommand(db, "Olap", connectionStringName);
+    }
 }
 
 export = getConnectionStringInfoCommand; 

@@ -1944,7 +1944,7 @@ namespace Raven.Server.ServerWide
                     var sqlConnectionString = databaseRecord.SqlConnectionStrings;
                     return sqlConnectionString != null && sqlConnectionString.TryGetValue(connectionStringName, out _);
                 case EtlType.Olap:
-                    var s3ConnectionString = databaseRecord.OlapEtlConnectionString;
+                    var s3ConnectionString = databaseRecord.OlapConnectionString;
                     return s3ConnectionString != null && s3ConnectionString.TryGetValue(connectionStringName, out _);
             }
 
@@ -2123,6 +2123,25 @@ namespace Raven.Server.ServerWide
                         command = new RemoveSqlConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
                         break;
 
+                    case ConnectionStringType.Olap:
+
+                        var olapEtls = rawRecord.OlapEtls;
+
+                        // Don't delete the connection string if used by tasks types: Olap Etl
+                        if (olapEtls != null)
+                        {
+                            foreach (var olapETlTask in olapEtls)
+                            {
+                                if (olapETlTask.ConnectionStringName == connectionStringName)
+                                {
+                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {olapETlTask.Name}");
+                                }
+                            }
+                        }
+
+                        command = new RemoveOlapConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
+                        break;
+                    
                     default:
                         throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
                 }

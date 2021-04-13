@@ -2,18 +2,23 @@
 import jsonUtil = require("common/jsonUtil");
 import genUtils = require("common/generalUtils");
 
+type container =  "backup" | "connectionString";
+
 class localSettings extends backupSettings {
     folderPath = ko.observable<string>();
     folderPathHasFocus = ko.observable<boolean>(false);
-
-    constructor(dto: Raven.Client.Documents.Operations.Backups.LocalSettings) {
+    
+    container = ko.observable<container>();
+    
+    constructor(dto: Raven.Client.Documents.Operations.Backups.LocalSettings, localSettingsFor: container) {
         super(dto, "Local");
 
         this.folderPath(dto.FolderPath);
+        this.container(localSettingsFor);
 
         this.initValidation();
         
-        _.bindAll(this, "localBackupPathChanged");
+        _.bindAll(this, "localPathChanged");
         
         this.dirtyFlag = new ko.DirtyFlag([
             this.enabled,
@@ -34,7 +39,7 @@ class localSettings extends backupSettings {
         });
     }
 
-    localBackupPathChanged(value: string) {
+    localPathChanged(value: string) {
         this.folderPath(value);
 
         // try to continue autocomplete flow
@@ -48,12 +53,12 @@ class localSettings extends backupSettings {
         return genUtils.trimProperties(dto, ["FolderPath"]);
     }
 
-    static empty(): localSettings {
+    static empty(localSettingsFor: container): localSettings {
         return new localSettings({
             Disabled: true,
             FolderPath: null,
             GetBackupConfigurationScript: null
-        });
+        }, localSettingsFor);
     }
 }
 

@@ -1,0 +1,76 @@
+<div class="form-group" data-bind="validationElement: connectionStringName">
+    <label class="control-label">Name</label>
+    <div class="flex-grow">
+        <input class="form-control" placeholder="Enter a name for the connection string"
+               data-bind="textInput: connectionStringName, enable: isNew, attr: { 'title': isNew() ? 'Enter any name of your choice for this connection string' : '' }" />
+    </div>
+</div>
+<div class="margin-top margin-top-lg"><h3>Destinations</h3></div>
+<div data-bind="with: localSettings" class="margin-top margin-top-lg">
+    <div class="toggle margin-left">
+        <input id="toggle-local" type="checkbox" data-bind="checked: enabled">
+        <label for="toggle-local">Local</label>
+    </div>
+    <div data-bind="collapse: enabled">
+        <div class="row margin-bottom">
+            <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
+                <div class="toggle margin-left">
+                    <input id="localSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript">
+                    <label for="localSettingsViaScript">Override configuration via external script</label>
+                </div>
+            </div>
+        </div>
+        <div data-bind="collapse: hasConfigurationScript">
+            <div data-bind="compose: 'partial/backupConfigurationScript.html'"></div>
+        </div>
+        <div data-bind="collapse: !hasConfigurationScript()">
+            <div data-bind="compose: 'partial/backupDestinationLocal.html'"></div>
+        </div>
+    </div>
+</div>
+<div data-bind="with: s3Settings">
+    <div class="toggle margin-left">
+        <input id="toggle-amazonS3" type="checkbox" data-bind="checked: enabled">
+        <label for="toggle-amazonS3">Amazon S3</label>
+    </div>
+    <div data-bind="collapse: enabled">
+        <div>
+            <div class="row">
+                <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
+                    <div class="toggle margin-left">
+                        <input id="s3SettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript">
+                        <label for="s3SettingsViaScript">Override configuration via external script</label>
+                    </div>
+                </div>
+            </div>
+            <div class="row margin-bottom" data-bind="visible: !hasConfigurationScript()">
+                <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
+                    <div class="toggle margin-left">
+                        <input id="s3CustomHost" type="checkbox" data-bind="checked: useCustomS3Host">
+                        <label for="s3CustomHost">Use a custom S3 host</label>
+                    </div>
+                </div>
+            </div>
+            <div data-bind="collapse: hasConfigurationScript">
+                <div data-bind="compose: 'partial/backupConfigurationScript.html'"></div>
+            </div>
+            <div data-bind="collapse: !hasConfigurationScript()">
+                <div data-bind="compose: $data"></div>
+                <div class="text-right">
+                    <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
+                        <i class="icon-rocket"></i>
+                        &nbsp;&nbsp;<span>Test credentials</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="panel-addon">
+            <div data-bind="with: testConnectionResult">
+                <div data-bind="compose: 'partial/backupDestinationTestCredentialsResults.html'"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<div data-bind="validationElement: destinationsChecked">
+    <div class="help-block" data-bind="validationMessage: destinationsChecked"></div>
+</div>
