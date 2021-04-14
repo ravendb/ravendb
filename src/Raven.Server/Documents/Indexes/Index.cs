@@ -1300,7 +1300,7 @@ namespace Raven.Server.Documents.Indexes
                                 }
                                 catch (Exception e) when (e.IsOutOfMemory())
                                 {
-                                    HandleOutOfMemoryException(e, scope);
+                                    HandleOutOfMemoryException(scope, storageEnvironment, e);
                                 }
                                 catch (Exception e)
                                 {
@@ -1714,20 +1714,7 @@ namespace Raven.Server.Documents.Indexes
                                        $"going to try flushing and syncing the environment to cleanup the storage. " +
                                        $"Will wait for flush for: {timeToWaitInMilliseconds}ms", dfe);
 
-                // force flush and sync
-                var sp = Stopwatch.StartNew();
-                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(storageEnvironment);
-                if (_logsAppliedEvent.Wait(timeToWaitInMilliseconds, _indexingProcessCancellationTokenSource.Token))
-                {
-                    storageEnvironment.ForceSyncDataFile();
-                }
-
-                var timeLeft = timeToWaitInMilliseconds - sp.ElapsedMilliseconds;
-                // wait for sync
-                if (timeLeft > 0)
-                    Task.Delay((int)timeLeft, _indexingProcessCancellationTokenSource.Token).Wait();
-
-                storageEnvironment.Cleanup(tryCleanupRecycledJournals: true);
+                FlushAndSync(storageEnvironment, timeToWaitInMilliseconds, true);
                 return;
             }
 
@@ -1741,13 +1728,31 @@ namespace Raven.Server.Documents.Indexes
             SetErrorState($"State was changed due to excessive number of disk full errors ({diskFullErrors}).");
         }
 
+        private void FlushAndSync(StorageEnvironment storageEnvironment, int timeToWaitInMilliseconds, bool tryCleanupRecycledJournals)
+        {
+            // force flush and sync
+            var sp = Stopwatch.StartNew();
+            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(storageEnvironment);
+            if (_logsAppliedEvent.Wait(timeToWaitInMilliseconds, _indexingProcessCancellationTokenSource.Token))
+            {
+                storageEnvironment.ForceSyncDataFile();
+            }
+
+            var timeLeft = timeToWaitInMilliseconds - sp.ElapsedMilliseconds;
+            // wait for sync
+            if (timeLeft > 0)
+                Task.Delay((int)timeLeft, _indexingProcessCancellationTokenSource.Token).Wait();
+
+            storageEnvironment.Cleanup(tryCleanupRecycledJournals);
+        }
+
         private void SetErrorState(string reason)
         {
             _errorStateReason = reason;
             SetState(IndexState.Error, ignoreWriteError: true);
         }
 
-        private void HandleOutOfMemoryException(Exception exception, IndexingStatsScope scope)
+        private void HandleOutOfMemoryException(IndexingStatsScope scope, StorageEnvironment storageEnvironment, Exception exception)
         {
             try
             {
@@ -1758,8 +1763,21 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 scope.AddMemoryError(exception);
-                Interlocked.Add(ref _lowMemoryPressure, LowMemoryPressure);
+                var outOfMemoryErrors = Interlocked.Add(ref _lowMemoryPressure, LowMemoryPressure);
                 _lowMemoryFlag.Raise();
+
+                if (storageEnvironment.ScratchBufferPool.NumberOfScratchBuffers > 1)
+                {
+                    // we'll try to clear the scratch buffers to free up some memory
+                    var timeToWaitInMilliseconds = (int)Math.Min(Math.Pow(2, outOfMemoryErrors), 30) * 1000;
+
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"After out of memory error in index : '{Name}', " +
+                                           $"going to try flushing and syncing the environment to cleanup the scratch buffers. " +
+                                           $"Will wait for flush for: {timeToWaitInMilliseconds}ms", exception);
+
+                    FlushAndSync(storageEnvironment, timeToWaitInMilliseconds, false);
+                }
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Out of memory occurred for '{Name}'", exception);

@@ -64,6 +64,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         fileName,
                         new MemoryStream(Encoding.UTF8.GetBytes("123"))
                     );
+
                     var stream = client.DownloadObject(fileName);
                     using (var sr = new StreamReader(stream))
                     {
