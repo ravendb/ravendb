@@ -61,15 +61,11 @@ abstract class abstractWebSocketClient<T> {
         return true;
     }
     
-    protected hostname() { //TODO: remove me!
-        return window.location.host;
-    }
-    
     private connectWebSocket(connectArgs: any) {
         const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
         const queryString = this.webSocketUrlFactory(connectArgs);
         const queryStringWithStudioMarker = queryString.includes("?") ? queryString + "&fromStudio=true" : queryString + "?fromStudio=true";
-        const url = wsProtocol + this.hostname() + this.resourcePath + queryStringWithStudioMarker;
+        const url = wsProtocol + window.location.host + this.resourcePath + queryStringWithStudioMarker;
         this.webSocket = new WebSocket(url);
 
         if (this.isJsonBasedClient()) {

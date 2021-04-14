@@ -35,20 +35,8 @@ class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Serv
         return "Cluster Dashboard";
     }
 
-    protected hostname(): string { //TODO: remove me!
-        if (this.nodeTag === "A") {
-            return super.hostname();
-        } else if (this.nodeTag === "B") {
-            return "127.0.0.2:8084";
-        } else if (this.nodeTag === "C") {
-            return "127.0.0.3:8084";
-        } else {
-            throw new Error("Don't expect too much - this is temporary impl!"); //TODO: : 
-        }
-    }
-
     protected webSocketUrlFactory() {
-        return endpoints.global.clusterDashboard.clusterDashboardWatch;
+        return endpoints.global.clusterDashboard.clusterDashboardWatch + "?node=" + this.nodeTag;
     }
 
     get autoReconnect() {
