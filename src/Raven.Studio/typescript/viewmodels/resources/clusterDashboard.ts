@@ -16,6 +16,7 @@ import databaseIndexingWidget = require("viewmodels/resources/widgets/databaseIn
 import databaseStorageWidget = require("viewmodels/resources/widgets/databaseStorageWidget");
 import databaseTrafficWidget = require("viewmodels/resources/widgets/databaseTrafficWidget");
 import EVENTS = require("common/constants/events");
+import storageKeyProvider = require("common/storage/storageKeyProvider");
 
 interface savedWidget {
     type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType;
@@ -26,6 +27,8 @@ interface savedWidget {
 }
 
 class clusterDashboard extends viewModelBase {
+
+    static localStorageName = storageKeyProvider.storageKeyFor("clusterDashboardLayout");
     
     private packery: PackeryStatic;
     initialized = ko.observable<boolean>(false);
@@ -78,7 +81,7 @@ class clusterDashboard extends viewModelBase {
                 }
             });
 
-            localStorage.setObject("cluster-dashboard-layout", layout);
+            localStorage.setObject(clusterDashboard.localStorageName, layout);
         }, 5_000);
 
         this.packery.on("layoutComplete", throttledLayoutSave);
@@ -115,7 +118,7 @@ class clusterDashboard extends viewModelBase {
 
         this.enableLiveView();
 
-        const savedLayout: savedWidget[] = localStorage.getObject("cluster-dashboard-layout");
+        const savedLayout: savedWidget[] = localStorage.getObject(clusterDashboard.localStorageName);
         if (savedLayout) {
             const widgets = savedLayout.map(item => this.spawnWidget(item.type, item.fullscreen, item.config, item.state));
             return $.when(...widgets.map(x => x.composeTask))
