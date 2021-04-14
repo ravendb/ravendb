@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,7 +17,6 @@ namespace Raven.Server.NotificationCenter.Handlers
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ClusterDashboardConnection>(nameof(ClusterDashboardConnection));
 
-        private readonly RavenServer _server;
         private readonly CanAccessDatabase _canAccessDatabase;
         private readonly ClusterDashboardNotifications _clusterDashboardNotifications;
         private readonly JsonOperationContext _readContext;
@@ -27,11 +25,10 @@ namespace Raven.Server.NotificationCenter.Handlers
 
         private Task _receiveTask;
 
-        public ClusterDashboardConnection(RavenServer server, WebSocket webSocket, CanAccessDatabase canAccessDatabase, ClusterDashboardNotifications clusterDashboardNotifications,
+        public ClusterDashboardConnection(WebSocket webSocket, CanAccessDatabase canAccessDatabase, ClusterDashboardNotifications clusterDashboardNotifications,
             IMemoryContextPool contextPool, CancellationToken resourceShutdown)
             : base(webSocket, clusterDashboardNotifications, contextPool, resourceShutdown)
         {
-            _server = server;
             _canAccessDatabase = canAccessDatabase;
             _clusterDashboardNotifications = clusterDashboardNotifications;
             _returnReadContext = contextPool.AllocateOperationContext(out _readContext);
@@ -63,16 +60,15 @@ namespace Raven.Server.NotificationCenter.Handlers
                     {
                         var result = await receiveAsync;
                         _resourceShutdown.ThrowIfCancellationRequested();
-
+                        
                         parser.SetBuffer(segments[index], 0, result.Count);
                         index++;
                         receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory.Memory, _resourceShutdown);
 
                         while (true)
                         {
-                            using (var builder =
-                                new BlittableJsonDocumentBuilder(_readContext, BlittableJsonDocumentBuilder.UsageMode.None, "cluster-dashboard",
-                                    parser, jsonParserState))
+                            using (var builder = new BlittableJsonDocumentBuilder(_readContext, BlittableJsonDocumentBuilder.UsageMode.None, 
+                                "cluster-dashboard", parser, jsonParserState))
                             {
                                 parser.NewDocument();
                                 builder.ReadObjectDocument();
@@ -81,7 +77,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                                 {
                                     result = await receiveAsync;
                                     _resourceShutdown.ThrowIfCancellationRequested();
-
+                                    
                                     parser.SetBuffer(segments[index], 0, result.Count);
                                     if (++index >= segments.Length)
                                         index = 0;
