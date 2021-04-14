@@ -40,19 +40,19 @@
                         <ul class="dropdown-menu">
                             <li data-bind="click: unlockSelectedDatabases">
                                 <a href="#" title="Allow to delete selected databases">
-                                    <i class="icon-unlock"></i> <!-- TODO: new icon -->
+                                    <i class="icon-trash-cutout icon-addon-check"></i>
                                     <span>Allow databases delete</span>
                                 </a>
                             </li>
                             <li data-bind="click: lockSelectedDatabases">
                                 <a href="#" title="Prevent deletion of selected databases. An error will not be thrown if an app attempts to delete.">
-                                    <i class="icon-lock"></i> <!-- TODO: new icon -->
+                                    <i class="icon-trash-cutout icon-addon-cancel"></i>
                                     <span>Prevent databases delete</span>
                                 </a>
                             </li>
                             <li data-bind="click: lockErrorSelectedDatabases">
                                 <a href="#" title="Prevent deletion of selected databases. An error will be thrown if an app attempts to delete.">
-                                    <i class="icon-lock-error"></i> <!-- TODO: new icon -->
+                                    <i class="icon-trash-cutout icon-addon-exclamation"></i>
                                     <span>Prevent databases delete (Error)</span>
                                 </a>
                             </li>
@@ -262,9 +262,9 @@
                                 </button>
                                 <div class="btn-group" data-bind="visible: $root.accessManager.canDelete">
                                     <button class="btn" data-bind="click: $root.deleteDatabase, disable: isBeingDeleted() || lockMode() !== 'Unlock', css: { 'btn-danger': lockMode() === 'Unlock', 'btn-default': lockMode() !== 'Unlock', 'btn-spinner': isBeingDeleted() || _.includes($root.spinners.localLockChanges(), name) }, attr: { title: lockMode() === 'Unlock' ? 'Remove database' : 'Database cannot be deleted because of the set lock mode' }">
-                                        <i class="icon-unlock" data-bind="visible: lockMode() === 'Unlock'"></i>
-                                        <i class="icon-lock" data-bind="visible: lockMode() === 'PreventDeletesIgnore'"></i>
-                                        <i class="icon-lock-error" data-bind="visible: lockMode() === 'PreventDeletesError'"></i>
+                                        <i class="icon-trash" data-bind="visible: lockMode() === 'Unlock'"></i>
+                                        <i class="icon-trash-cutout icon-addon-cancel" data-bind="visible: lockMode() === 'PreventDeletesIgnore'"></i>
+                                        <i class="icon-trash-cutout icon-addon-exclamation" data-bind="visible: lockMode() === 'PreventDeletesError'"></i>
                                     </button>
                                     <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" data-bind="css: { 'btn-danger': lockMode() === 'Unlock', 'btn-default': lockMode() !== 'Unlock' }">
                                         <span class="caret"></span>
@@ -272,21 +272,18 @@
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-right">
                                         <li>
-                                            <a href="#" data-bind="click: $root.allowDatabaseDelete" title="Allow to delete database"> 
-                                                <!-- TODO new icon -->
-                                                <i class="icon-unlock"></i> Allow database delete
+                                            <a href="#" data-bind="click: $root.allowDatabaseDelete" title="Allow to delete database">
+                                                <i class="icon-trash-cutout icon-addon-check"></i> Allow database delete
                                             </a>
                                         </li>
                                         <li>
                                             <a href="#" data-bind="click: $root.preventDatabaseDelete" title="Prevent deletion of database. An error will not be thrown if an app attempts to delete the database.">
-                                                <!-- TODO: new icon -->
-                                                <i class="icon-lock"></i> Prevent database delete 
+                                                <i class="icon-trash-cutout icon-addon-cancel"></i> Prevent database delete 
                                             </a>
                                         </li>
                                         <li>
                                             <a href="#" data-bind="click: $root.preventDatabaseDeleteWithError" title="Prevent deletion of database. An error will be thrown if an app attempts to delete the database.">
-                                                <!-- TODO: new icon -->
-                                                <i class="icon-lock-error"></i> Prevent database delete (Error)
+                                                <i class="icon-trash-cutout icon-addon-exclamation"></i> Prevent database delete (Error)
                                             </a>
                                         </li>
                                     </ul>
@@ -322,8 +319,8 @@
         <div class="addons-container flex-wrap">
             <div class="database-properties">
                 <div class="encryption">
-                    <small title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-encryption text-success"></i></small>
-                    <small title="This database is not encrypted" data-bind="visible: !isEncrypted()"><i class="icon-unlock text-muted"></i></small>
+                    <small title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-key text-success"></i></small>
+                    <small title="This database is not encrypted" data-bind="visible: !isEncrypted()"><i class="icon-unencrypted text-muted"></i></small>
                 </div>
                 <div class="storage">
                     <small><i class="icon-drive"></i></small>
