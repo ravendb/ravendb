@@ -13,6 +13,7 @@ interface serverCertificateInfo {
 
 class licenseWidget extends widget {
 
+    refreshIntervalId: number = -1;
     usingHttps = location.protocol === "https:";
     
     spinners = {
@@ -31,6 +32,7 @@ class licenseWidget extends widget {
         
         if (this.usingHttps) {
             this.loadServerCertificate();
+            this.refreshIntervalId = setInterval(() => this.loadServerCertificate(), 3600 * 1000);
         }
     }
     
@@ -91,6 +93,14 @@ class licenseWidget extends widget {
         return "License";
     }
     
+    dispose() {
+        super.dispose();
+        
+        if (this.refreshIntervalId !== -1) {
+            clearInterval(this.refreshIntervalId);
+        }
+    }
+
 }
 
 export = licenseWidget;
