@@ -667,31 +667,28 @@ loadToOrders(partitionBy([
                     using (var s3Client = new RavenAwsS3Client(settings))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
-
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: "/", listFolders: true);
 
                         Assert.Equal(2, cloudObjects.FileInfoDetails.Count);
                         Assert.Contains("Orders/year=2020/", cloudObjects.FileInfoDetails[0].FullPath);
                         Assert.Contains("Orders/year=2021/", cloudObjects.FileInfoDetails[1].FullPath);
 
-                        var filesInfo = new List<S3FileInfoDetails>();
                         for (var index = 1; index <= cloudObjects.FileInfoDetails.Count; index++)
                         {
-                            var fileInfo = cloudObjects.FileInfoDetails[index - 1];
-                            var files = await s3Client.ListObjectsAsync(prefix: fileInfo.FullPath, delimiter: "/", listFolders: true);
-                            Assert.Equal(2, files.FileInfoDetails.Count);
-
-                            Assert.True(files.FileInfoDetails.Exists(f => f.FullPath.Contains($"month={index}/")));
-                            Assert.True(files.FileInfoDetails.Exists(f => f.FullPath.Contains($"month={index+1}/")));
-
-                            filesInfo.AddRange(files.FileInfoDetails);
+                            var folder = cloudObjects.FileInfoDetails[index - 1];
+                            var objectsInFolder = await s3Client.ListObjectsAsync(prefix: folder.FullPath, delimiter: "/", listFolders: true);
+                            
+                            Assert.Equal(2, objectsInFolder.FileInfoDetails.Count);
+                            Assert.Contains($"month={index}/", objectsInFolder.FileInfoDetails[0].FullPath);
+                            Assert.Contains($"month={index + 1}/", objectsInFolder.FileInfoDetails[1].FullPath);
                         }
 
-                        Assert.Equal(4, filesInfo.Count);
+                        var files = await ListAllFilesInFolders(s3Client, cloudObjects);
+                        Assert.Equal(4, files.Count);
 
-/*                        foreach (var fileInfo in filesInfo)
+                        foreach (var filePath in files)
                         {
-                            var blob = await s3Client.GetObjectAsync(fileInfo.FullPath);
+                            var blob = await s3Client.GetObjectAsync(filePath.Replace("=", "%3D"));
                             await using var ms = new MemoryStream();
                             blob.Data.CopyTo(ms);
 
@@ -724,19 +721,15 @@ loadToOrders(partitionBy([
                                         var expected = expectedOrderDate.AddDays(7);
                                         Assert.Equal(expected, val);
                                     }
-
                                 }
-
                             }
-
-                        }*/
+                        }
                     }
                 }
-
             }
             finally
             {
-                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}/", delimiter: "/");
+                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}/", delimiter: "/", listFolder: true);
             }
         }
 
@@ -799,7 +792,7 @@ loadToOrders(partitionBy(key),
                     using (var s3Client = new RavenAwsS3Client(settings))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{customPrefix}/{CollectionName}";
-                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, string.Empty, false);
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
 
                         Assert.Equal(2, cloudObjects.FileInfoDetails.Count);
                         Assert.Contains("2020-01-01", cloudObjects.FileInfoDetails[0].FullPath);
@@ -880,35 +873,15 @@ loadToOrders(partitionBy(key),
             if (s3Settings == null)
                 return;
 
-            try
-            {
-                using (var s3Client = new RavenAwsS3Client(s3Settings))
-                {
-                    var prefix = $"{s3Settings.RemoteFolderName}/{CollectionName}";
+            await DeleteObjects(s3Settings, prefix: $"{s3Settings.RemoteFolderName}/{CollectionName}", delimiter: string.Empty);
 
-                    var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
-                    var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
+            if (additionalTable == null)
+                return;
 
-                    s3Client.DeleteMultipleObjects(pathsToDelete);
-
-                    if (additionalTable == null)
-                        return;
-                    
-                    prefix = $"{s3Settings.RemoteFolderName}/{additionalTable}";
-
-                    cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
-                    pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
-
-                    s3Client.DeleteMultipleObjects(pathsToDelete);
-                }
-            }
-            catch (Exception)
-            {
-                // ignored
-            }
+            await DeleteObjects(s3Settings, prefix: $"{s3Settings.RemoteFolderName}/{additionalTable}", delimiter: string.Empty);
         }
 
-        private static async Task DeleteObjects(S3Settings s3Settings, string prefix, string delimiter)
+        private static async Task DeleteObjects(S3Settings s3Settings, string prefix, string delimiter, bool listFolder = false)
         {
             if (s3Settings == null)
                 return;
@@ -917,10 +890,19 @@ loadToOrders(partitionBy(key),
             {
                 using (var s3Client = new RavenAwsS3Client(s3Settings))
                 {
-                    var cloudObjects = await s3Client.ListObjectsAsync(prefix: prefix, delimiter: delimiter, listFolders: true);
-                    var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
+                    var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter, listFolder);
+                    if (cloudObjects.FileInfoDetails.Count == 0)
+                        return;
 
-                    s3Client.DeleteMultipleObjects(pathsToDelete);
+                    if (listFolder == false)
+                    {
+                        var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
+                        s3Client.DeleteMultipleObjects(pathsToDelete);
+                        return;
+                    }
+
+                    var filesToDelete = await ListAllFilesInFolders(s3Client, cloudObjects);
+                    s3Client.DeleteMultipleObjects(filesToDelete);
                 }
             }
             catch (Exception)
@@ -929,5 +911,16 @@ loadToOrders(partitionBy(key),
             }
         }
 
+        private static async Task<List<string>> ListAllFilesInFolders(RavenAwsS3Client s3Client, ListObjectsResult cloudObjects)
+        {
+            var files = new List<string>();
+            foreach (var folder in cloudObjects.FileInfoDetails)
+            {
+                var objectsInFolder = await s3Client.ListObjectsAsync(prefix: folder.FullPath, delimiter: string.Empty, listFolders: false);
+                files.AddRange(objectsInFolder.FileInfoDetails.Select(fi => fi.FullPath));
+            }
+
+            return files;
+        }
     }
 }
