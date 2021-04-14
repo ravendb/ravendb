@@ -6,10 +6,13 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
+using Raven.Client.Http;
 using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -24,55 +27,81 @@ namespace Raven.Server.NotificationCenter.Handlers
         [RavenAction("/cluster-dashboard/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task Get()
         {
-            //TODO: check for param - withProxy?
+            var nodeTag = GetStringQueryString("node", required: true);
+
 
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
-                var canAccessDatabase = GetDatabaseAccessValidationFunc();
-
-                using (var notifications = new ClusterDashboardNotifications(Server, canAccessDatabase, ServerStore.ServerShutdown))
-                using (var connection = new ClusterDashboardConnection(Server, webSocket, canAccessDatabase, notifications, 
-                    ServerStore.ContextPool, ServerStore.ServerShutdown))
+                try
                 {
+                    if (nodeTag.Equals(ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var canAccessDatabase = GetDatabaseAccessValidationFunc();
+
+                        using (var notifications = new ClusterDashboardNotifications(Server, canAccessDatabase, ServerStore.ServerShutdown))
+                        using (var connection = new ClusterDashboardConnection(webSocket, canAccessDatabase, notifications,
+                            ServerStore.ContextPool, ServerStore.ServerShutdown))
+                        {
+                            await connection.Handle();
+                        }
+                    }
+                    else
+                    {
+                        ClusterTopology topology;
+
+                        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txOperationContext))
+                        using (txOperationContext.OpenReadTransaction())
+                        {
+                            topology = ServerStore.GetClusterTopology(txOperationContext);
+                        }
+
+                        var remoteNodeUrl = topology.GetUrlFromTag(nodeTag);
+
+                        if (string.IsNullOrEmpty(remoteNodeUrl))
+                        {
+                            throw new InvalidOperationException($"Could not find node url for node tag '{nodeTag}'");
+                        }
+
+                        using (var connection = new ProxyWebSocketConnection(webSocket, remoteNodeUrl, $"/cluster-dashboard/watch?node={nodeTag}", ServerStore.ContextPool, ServerStore.ServerShutdown))
+                        {
+                            await connection.Establish(Server.Certificate?.Certificate);
+
+                            await connection.RelayData();
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // ignored 
+                }
+                catch (Exception ex)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Error encountered in cluster dashboard handler", ex);
+
                     try
                     {
-                        await connection.Handle();
+                        using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                        using (var ms = new MemoryStream())
+                        {
+                            using (var writer = new BlittableJsonTextWriter(context, ms))
+                            {
+                                context.Write(writer, new DynamicJsonValue
+                                {
+                                    ["Type"] = "Error",
+                                    ["Exception"] = ex.ToString()
+                                });
+                            }
+
+                            ms.TryGetBuffer(out ArraySegment<byte> bytes);
+                            await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, ServerStore.ServerShutdown);
+                        }
                     }
-                    catch (OperationCanceledException)
-                    {
-                        // ignored 
-                    }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         if (Logger.IsInfoEnabled)
-                            Logger.Info("Error encountered in cluster dashboard handler", ex);
-
-                        try
-                        {
-                            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                            using (var ms = new MemoryStream())
-                            {
-                                using (var writer = new BlittableJsonTextWriter(context, ms))
-                                {
-                                    context.Write(writer, new DynamicJsonValue
-                                    {
-                                        ["Type"] = "Error",
-                                        ["Exception"] = ex.ToString()
-                                    });
-                                }
-
-                                ms.TryGetBuffer(out ArraySegment<byte> bytes);
-                                await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, ServerStore.ServerShutdown);
-                            }
-                        }
-                        catch (Exception)
-                        {
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info("Failed to send the error in cluster dashboard handler to the client", ex);
-                        }
+                            Logger.Info("Failed to send the error in cluster dashboard handler to the client", ex);
                     }
-
-
                 }
             }
         }
