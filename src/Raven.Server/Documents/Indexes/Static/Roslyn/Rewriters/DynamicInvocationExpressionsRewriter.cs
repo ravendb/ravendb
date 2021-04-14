@@ -71,10 +71,15 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
             static ArgumentSyntax GetArgument(InvocationExpressionSyntax node)
             {
-                if (node.Parent is ArgumentSyntax a)
+                var parent = node.Parent;
+
+                if (parent is ArgumentSyntax a)
                     return a;
 
-                var e = node.Parent as SimpleLambdaExpressionSyntax;
+                if (parent is CastExpressionSyntax ces)
+                    parent = ces.Parent; // unwrapping
+
+                var e = parent as SimpleLambdaExpressionSyntax;
                 return e?.Parent as ArgumentSyntax;
             }
         }

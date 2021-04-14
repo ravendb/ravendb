@@ -754,7 +754,7 @@ namespace Voron.Impl.Journal
                         catch (Exception e)
                         {
                             if (_waj._logger.IsOperationsEnabled)
-                                _waj._logger.Operations($"Failed to update journal state under write tx lock (waited - {sp.Elapsed})");
+                                _waj._logger.Operations($"Failed to update journal state under write tx lock (waited - {sp.Elapsed})", e);
 
                             edi = ExceptionDispatchInfo.Capture(e);
                             throw;
