@@ -20,6 +20,7 @@ import indexStalenessReasons = require("viewmodels/database/indexes/indexStalene
 import generalUtils = require("common/generalUtils");
 import shell = require("viewmodels/shell");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import bulkIndexOperationConfirm = require("./bulkIndexOperationConfirm");
 
 type indexGroup = {
     entityName: string;
@@ -701,23 +702,26 @@ class indexes extends viewModelBase {
     }
 
     private toggleDisableSelectedIndexes(enableIndex: boolean, clusterWide: boolean) {
-        const status = enableIndex ? "Enable" : "Disable";
-        const location = clusterWide ? "cluster wide" : "on node " + this.localNodeTag();
+        const selectedIndexes = this.getSelectedIndexes();
+        const nodeTag = this.localNodeTag();
+
+        const confirmation = clusterWide
+            ? (enableIndex ? bulkIndexOperationConfirm.forClusterWideEnable(selectedIndexes) : bulkIndexOperationConfirm.forClusterWideDisable(selectedIndexes))
+            : (enableIndex ? bulkIndexOperationConfirm.forEnable(selectedIndexes, nodeTag) : bulkIndexOperationConfirm.forDisable(selectedIndexes, nodeTag));
         
-        this.confirmationMessage(status + " indexes", `<strong>${status}</strong> selected indexes ${location}? `, {
-            html: true
-        })
-            .done(can => {
-                if (can) {
+        confirmation.result
+            .done(result => {
+                if (result.can) {
                     eventsCollector.default.reportEvent("index", "toggle-status", status);
 
                     this.spinners.globalLockChanges(true);
 
-                    const indexes = this.getSelectedIndexes();
-                    indexes.forEach(i => enableIndex ? this.enableIndex(i, clusterWide) : this.disableIndex(i, clusterWide));
+                    selectedIndexes.forEach(i => enableIndex ? this.enableIndex(i, clusterWide) : this.disableIndex(i, clusterWide));
                 }
             })
             .always(() => this.spinners.globalLockChanges(false));
+
+        app.showBootstrapDialog(confirmation);
     }
 
     pauseSelectedIndexes() {
@@ -729,21 +733,25 @@ class indexes extends viewModelBase {
     }
 
     private togglePauseSelectedIndexes(resume: boolean) {
-        const status = resume ? "Resume" : "Pause";
-        this.confirmationMessage(status + " indexes", `<strong>${status}</strong> selected indexes on node ${this.localNodeTag()}?`, {
-            html: true
-        })
-            .done(can => {
-                if (can) {
+        const selectedIndexes = this.getSelectedIndexes();
+        const nodeTag = this.localNodeTag();
+        const confirmation = resume 
+            ? bulkIndexOperationConfirm.forResume(selectedIndexes, nodeTag) 
+            : bulkIndexOperationConfirm.forPause(selectedIndexes, nodeTag);
+        
+        confirmation.result
+            .done(result => {
+                if (result.can) {
                     eventsCollector.default.reportEvent("index", "toggle-status", status);
 
                     this.spinners.globalLockChanges(true);
 
-                    const indexes = this.getSelectedIndexes();
-                    indexes.forEach(i => resume ? this.resumeIndexing(i) : this.pauseUntilRestart(i));
+                    selectedIndexes.forEach(i => resume ? this.resumeIndexing(i) : this.pauseUntilRestart(i));
                 }
             })
             .always(() => this.spinners.globalLockChanges(false));
+
+        app.showBootstrapDialog(confirmation);
     }
 
     deleteSelectedIndexes() {
