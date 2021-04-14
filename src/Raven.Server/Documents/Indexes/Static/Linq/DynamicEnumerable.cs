@@ -179,22 +179,22 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
             return new DynamicArray(((IEnumerable<object>)source).Intersect((IEnumerable<object>)other));
         }
 
-        public static IEnumerable<dynamic> OrderBy<TSource, TKey>(IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
+        public static IOrderedEnumerable<dynamic> OrderBy<TSource, TKey>(IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
         {
             return new DynamicArray(Enumerable.OrderBy(source, keySelector));
         }
 
-        public static IEnumerable<dynamic> OrderBy<TSource, TKey>(IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey> comparer)
+        public static IOrderedEnumerable<dynamic> OrderBy<TSource, TKey>(IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey> comparer)
         {
             return new DynamicArray(Enumerable.OrderBy(source, keySelector, comparer));
         }
 
-        public static IEnumerable<dynamic> OrderByDescending<TSource, TKey>(IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
+        public static IOrderedEnumerable<dynamic> OrderByDescending<TSource, TKey>(IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
         {
             return new DynamicArray(Enumerable.OrderByDescending(source, keySelector));
         }
 
-        public static IEnumerable<dynamic> OrderByDescending<TSource, TKey>(IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey> comparer)
+        public static IOrderedEnumerable<dynamic> OrderByDescending<TSource, TKey>(IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey> comparer)
         {
             return new DynamicArray(Enumerable.OrderByDescending(source, keySelector, comparer));
         }

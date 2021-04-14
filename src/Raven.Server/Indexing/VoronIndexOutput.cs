@@ -150,8 +150,8 @@ namespace Raven.Server.Indexing
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to copy the file: {_name}", e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to copy the file: {_name}", e);
 
                 _indexOutputFilesSummary.SetWriteError();
 
