@@ -82,7 +82,7 @@ namespace Raven.Server.Dashboard
                 [nameof(AlertsCount)] = AlertsCount,
                 [nameof(PerformanceHintsCount)] = PerformanceHintsCount,
                 [nameof(ReplicationFactor)] = ReplicationFactor,
-                [nameof(BackupInfo)] = BackupInfo.ToJson()
+                [nameof(BackupInfo)] = BackupInfo?.ToJson(),
                 [nameof(Online)] = Online,
                 [nameof(Disabled)] = Disabled,
                 [nameof(Irrelevant)] = Irrelevant
