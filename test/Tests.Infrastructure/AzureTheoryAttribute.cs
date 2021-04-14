@@ -9,7 +9,9 @@ namespace Tests.Infrastructure
     {
         private const string AzureCredentialEnvironmentVariable = "AZURE_CREDENTIAL";
 
-        public static AzureSettings AzureSettings { get; }
+        private static readonly AzureSettings _azureSettings;
+
+        public static AzureSettings AzureSettings => new AzureSettings(_azureSettings);
 
         private static readonly string ParsingError;
 
@@ -19,7 +21,7 @@ namespace Tests.Infrastructure
 
             try
             {
-                AzureSettings = JsonConvert.DeserializeObject<AzureSettings>(azureSettingsString);
+                _azureSettings = JsonConvert.DeserializeObject<AzureSettings>(azureSettingsString);
             }
             catch (Exception e)
             {
