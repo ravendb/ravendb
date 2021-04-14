@@ -98,7 +98,7 @@ function getManageServerMenuItem() {
             moduleId: "viewmodels/manage/serverWideCustomAnalyzers",
             title: "Server-Wide Analyzers",
             nav: true,
-            css: 'icon-server-wide-tasks', // todo.. RavenDB-16441
+            css: 'icon-server-wide-custom-analyzers',
             dynamicHash: appUrl.forServerWideCustomAnalyzers,
             disableWithReason: access.disableServerWideCustomAnalyzersMenuItem
         }),
@@ -116,7 +116,7 @@ function getManageServerMenuItem() {
             moduleId: "viewmodels/manage/serverWideCustomSorters",
             title: "Server-Wide Sorters",
             nav: true,
-            css: 'icon-server-wide-tasks', // todo.. RavenDB-16441
+            css: 'icon-server-wide-custom-sorters',
             dynamicHash: appUrl.forServerWideCustomSorters,
             disableWithReason: access.disableServerWideCustomSortersMenuItem
         }),
