@@ -54,7 +54,6 @@ abstract class widget<TConfig = unknown, TState = unknown> {
 
     compositionComplete() {
         this.initialized = true;
-        this.controller.onWidgetAdded(this);
         
         this.composeTask.resolve();
 
@@ -97,7 +96,7 @@ abstract class widget<TConfig = unknown, TState = unknown> {
     }
     
     protected afterComponentResized() {
-        // empty by default
+        this.controller.layout();
     }
     
     restoreState(state: TState) {
