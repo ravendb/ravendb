@@ -18,7 +18,6 @@
 
 ## Supported use cases
 
-### Ran under systemd
 The default is when RavenDB is used as a systemd daemon and controlled with systemd.
 The following directory layout (initialized by the package installation process) and permissions is used in this scenario:
 
@@ -37,8 +36,6 @@ The following directory layout (initialized by the package installation process)
 - binaries (current Server dir) - `/usr/lib/ravendb`
 
 - rvn link - `/usr/bin/rvn -> /usr/lib/ravendb/rvn`
-
-- ravendb - `/usr/bin/ravendb -> /usr/lib/ravendb/Raven.Server` 
 
 - systemd unit file - `/lib/systemd/ravendb.service`
 
@@ -87,20 +84,3 @@ On a regular package removal (e.g. `apt-get rm`) only the binaries are going to 
 ### Purge
 
 Data and configuration are removed when user decides to `purge` (`dpkg -P pkgname`) the package.
-
-## Notes
-
-To determine the Dependencies field value we need to:
-```
-$ apt show dotnet-runtime-5.0
-Package: dotnet-runtime-5.0
-Version: 5.0.2-1
-Priority: standard
-Section: libs
-Maintainer: .NET Team <dotnetpackages@dotnetfoundation.org>
-Installed-Size: 70.0 MB
-Depends: dotnet-runtime-deps-5.0 (>= 5.0.2), dotnet-hostfxr-5.0 (>= 5.0.2)
-Homepage: https://dot.net/core
-Download-Size: 22.1 MB
-APT-Sources: https://packages.microsoft.com/ubuntu/18.04/prod bionic/main amd64 Packages
-```

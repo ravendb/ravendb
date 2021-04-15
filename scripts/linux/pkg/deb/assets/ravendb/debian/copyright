@@ -4,7 +4,7 @@ Upstream-Contact: support@ravendb.net
 Source: https://ravendb.net
 
 Files: *
-Copyright: 2021 Hibernating Rhinos LTD <support@ravendb.net>
+Copyright: $COPYRIGHT_YEAR Hibernating Rhinos LTD <support@ravendb.net>
 License: https://raw.githubusercontent.com/ravendb/ravendb/$RAVENDB_VERSION/LICENSE.txt
 
 # If you want to use GPL v2 or later for the /debian/* files use

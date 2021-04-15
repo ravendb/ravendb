@@ -6,12 +6,19 @@ ARG DISTRO_VERSION
 
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y dos2unix devscripts dh-make wget gettext-base lintian curl dh-systemd debhelper
 
+# install dotnet-runtime-deps 
+RUN apt update \ 
+    && apt install -y curl wget \
+    && wget https://packages.microsoft.com/config/ubuntu/${DISTRO_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb \
+    && dpkg -i ./packages-microsoft-prod.deb \
+    && apt update \
+    && apt install -y apt-transport-https \
+    && apt update 
+
 ENV DEBEMAIL=support@ravendb.net DEBFULLNAME="Hibernating Rhinos LTD" 
-ENV DEB_ARCHITECTURE="amd64" RAVEN_SO_ARCH_SUFFIX="x64"
+ENV DEB_ARCHITECTURE="" DOTNET_RUNTIME_VERSION="" DOTNET_DEPS_VERSION=""
+ENV RAVEN_PLATFORM="" RAVEN_ARCH=""
 ENV TARBALL_CACHE_DIR="/cache"
-ENV DOTNET_RUNTIME_VERSION 5.0
-ENV DOTNET_DEPS_VERSION 5.0.2
-ENV DEB_DEPS "dotnet-runtime-deps-${DOTNET_RUNTIME_VERSION} (>= ${DOTNET_DEPS_VERSION}), libc6-dev (>= 2.27)"
 
 ENV BUILD_DIR=/build
 ENV OUTPUT_DIR=/dist/${DISTRO_VERSION}

@@ -89,7 +89,7 @@ if grep -e '"Setup.Mode": "Initial"' /etc/ravendb/settings.json >&/dev/null; the
         foundPublicAddr=`curl -s https://api.ipify.org`
     fi
 
-    if [ $? -eq 0 ]; then
+    if [ $? -eq 0 ] && [ ! -z "$foundPublicAddr" ]; then
         publicAddr="$foundPublicAddr"
     fi
 
