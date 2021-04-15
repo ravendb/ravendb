@@ -11,6 +11,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -713,12 +714,14 @@ namespace Raven.Server.Web.System
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
                 var parameters = JsonDeserializationServer.Parameters.DeleteDatabasesParameters(json);
 
+                X509Certificate2 clientCertificate = null;
+
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    var clientCert = GetCurrentCertificate();
+                    clientCertificate = GetCurrentCertificate();
 
                     var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
-                    auditLog.Info($"Attempt to delete [{string.Join(", ", parameters.DatabaseNames)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())}) by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+                    auditLog.Info($"Attempt to delete [{string.Join(", ", parameters.DatabaseNames)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())}) by {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
                 }
 
                 using (context.OpenReadTransaction())
@@ -739,6 +742,13 @@ namespace Raven.Server.Web.System
                                     databasesToDelete.Add(databaseName);
                                     break;
                                 case DatabaseLockMode.PreventDeletesIgnore:
+                                    if (Logger.IsOperationsEnabled)
+                                    {
+                                        clientCertificate ??= GetCurrentCertificate();
+
+                                        Logger.Operations($"Attempt to delete '{databaseName}' database was prevented due to lock mode set to '{rawRecord.LockMode}'. IP: '{HttpContext.Connection.RemoteIpAddress}'. Certificate: {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
+                                    }
+
                                     continue;
                                 case DatabaseLockMode.PreventDeletesError:
                                     throw new InvalidOperationException($"Database '{databaseName}' cannot be deleted because of the set lock mode ('{rawRecord.LockMode}'). Please consider changing the lock mode before deleting the database.");
