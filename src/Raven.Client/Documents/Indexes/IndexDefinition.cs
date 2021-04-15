@@ -338,6 +338,8 @@ namespace Raven.Client.Documents.Indexes
                 result = (result * 397) ^ (Reduce?.GetHashCode() ?? 0);
                 result = (result * 397) ^ DictionaryHashCode(Fields);
                 result = (result * 397) ^ DictionaryHashCode(AdditionalSources);
+                result = (result * 397) ^ AdditionalAssemblies.Count;
+                result = (result * 397) ^ AdditionalAssemblies.GetEnumerableHashCode();
                 result = (result * 397) ^ (OutputReduceToCollection?.GetHashCode() ?? 0);
                 return result;
             }
