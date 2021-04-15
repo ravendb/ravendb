@@ -21,6 +21,7 @@ import storageKeyProvider = require("common/storage/storageKeyProvider");
 interface savedWidget {
     type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType;
     left: number;
+    top: number;
     fullscreen: boolean;
     config: any;
     state: any;
@@ -72,16 +73,19 @@ class clusterDashboard extends viewModelBase {
         const throttledLayoutSave = _.debounce(() => {
             const packeryWidth = this.packery.packer.width;
             const layout: savedWidget[] = this.widgets().map(x => {
+                const packeryItem = this.packery.getItem(x.container);
                 return {
                     type: x.getType(),
-                    left: this.packery.getItem(x.container).rect.x / packeryWidth,
+                    left: packeryItem.rect.x / packeryWidth,
+                    top: packeryItem.rect.y,
                     fullscreen: x.fullscreen(),
                     config: x.getConfiguration(),
                     state: x.getState()
                 }
             });
-
-            localStorage.setObject(clusterDashboard.localStorageName, layout);
+            
+            const sortedLayout = layout.sort((a, b) => a.top === b.top ? a.left - b.left : a.top - b.top);
+            localStorage.setObject(clusterDashboard.localStorageName, sortedLayout);
         }, 5_000);
 
         this.packery.on("layoutComplete", throttledLayoutSave);
@@ -89,6 +93,12 @@ class clusterDashboard extends viewModelBase {
         this.initialized(true);
     }
     
+    attached() {
+        super.attached();
+
+        $("#page-host").css("overflow-y", "scroll");
+    }
+
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
             ko.postbox.subscribe(EVENTS.Menu.Resized, () => {
@@ -121,8 +131,13 @@ class clusterDashboard extends viewModelBase {
         const savedLayout: savedWidget[] = localStorage.getObject(clusterDashboard.localStorageName);
         if (savedLayout) {
             const widgets = savedLayout.map(item => this.spawnWidget(item.type, item.fullscreen, item.config, item.state));
+            
+            widgets.forEach(w => this.addWidget(w));
+            
             return $.when(...widgets.map(x => x.composeTask))
                 .done(() => {
+                    widgets.forEach(w => this.onWidgetAdded(w));
+                    
                     this.packery._resetLayout();
 
                     const packeryWidth = this.packery.packer.width;
@@ -149,8 +164,11 @@ class clusterDashboard extends viewModelBase {
             this.addWidget(new databaseTrafficWidget(this));
             this.addWidget(new databaseStorageWidget(this));
             
+            const initialWidgets = this.widgets();
+            
             return $.when(...this.widgets().map(x => x.composeTask))
                 .done(() => {
+                    initialWidgets.forEach(w => this.onWidgetAdded(w));
                     this.afterLayoutInitialized();
                 });
         }
@@ -194,6 +212,12 @@ class clusterDashboard extends viewModelBase {
         this.liveClients([]);
     }
     
+    detached() {
+        super.detached();
+        
+        $("#page-host").css("overflow-y", "");
+    }
+
     deleteWidget(widget: widget<any, any>) {
         this.packery.remove(widget.container);
         this.packery.shiftLayout();
@@ -251,7 +275,14 @@ class clusterDashboard extends viewModelBase {
     }
     
     addWidgetModal() {
-        const addWidgetView = new addWidgetModal(type => this.spawnWidget(type));
+        const addWidgetView = new addWidgetModal(type => {
+            const newWidget = this.spawnWidget(type);
+            this.addWidget(newWidget);
+            
+            newWidget.composeTask.done(() => {
+                this.onWidgetAdded(newWidget);
+            })
+        });
         app.showBootstrapDialog(addWidgetView);
     }
     
@@ -298,8 +329,6 @@ class clusterDashboard extends viewModelBase {
         if (state) {
             widget.restoreState(state);
         }
-        
-        this.addWidget(widget);
         
         return widget;
     }
