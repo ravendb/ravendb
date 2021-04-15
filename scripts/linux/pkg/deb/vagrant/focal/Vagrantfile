@@ -16,7 +16,7 @@ Vagrant.configure("2") do |config|
 
   if not pkgOutputDir.nil? then
     output = Dir.entries(pkgOutputDir)
-    deb = output.select { |a| a.start_with?("ravendb_#{ravendbVersion}") && a.end_with?(".deb") }.first
+    deb = output.select { |a| a.start_with?("ravendb_#{ravendbVersion}") && a.end_with?("_amd64.deb") }.first
     if deb.nil? then
       raise "DEB not found for #{ravendbVersion}"
     end
@@ -33,35 +33,12 @@ Vagrant.configure("2") do |config|
   config.vm.provision "file", run: "always", source: "../../assets/test.sh", destination: "/tmp/test.sh"
 
   config.vm.provision "shell", run: "always", inline: <<-SHELL
-
-    set -e
-    
-    if [ ! -f "packages-microsoft-prod.deb" ]; then
-      apt update 
-      apt install -y wget 
-      wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
-      dpkg -i ./packages-microsoft-prod.deb 
-    fi
-    
-    if ! dpkg -l | grep apt-transport-https; then
-      apt update 
-      apt install -y apt-transport-https 
-    fi
-
-    if ! dpkg -l | grep dotnet-runtime-deps-5.0; then
-      apt update 
-      apt install -y dotnet-runtime-deps-5.0
-    fi
-
-  SHELL
-
-  config.vm.provision "shell", run: "always", inline: <<-SHELL
     set -e
 
     source /tmp/test.sh
 
     export _DEB_DEBUG=debug
-
+    apt-get update
     test_package_systemd /tmp/ravendb.deb || exit 1
 
   SHELL

@@ -263,7 +263,7 @@ function test_package_local {
     
     echo "Install package."
     dpkg -i $pkgFilename
-
+    
     set -e
     export DEBIAN_FRONTEND=noninteractive 
     apt-get -y -f install
@@ -296,8 +296,11 @@ function test_package_systemd {
     dpkg -i $pkgFilename
 
     set -e
-    export DEBIAN_FRONTEND=noninteractive 
-    apt-get -y -f install
+    export DEBIAN_FRONTEND=noninteractive
+    if ! apt-get -y -f install; then
+        return 1
+    fi
+
 
     if ! assert_ravendb_installed; then
         return 1

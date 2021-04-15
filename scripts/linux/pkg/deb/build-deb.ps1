@@ -8,9 +8,9 @@ $REQUIRED_VARS = @(
     "DISTRO_NAME" 
     "DISTRO_VERSION" 
     "DISTRO_VERSION_NAME" 
-    "RAVENDB_VERSION"
-    "DOTNET_DEPS_VERSION"
-    "DOTNET_RUNTIME_VERSION"
+    "RAVENDB_VERSION",
+    "RAVEN_PLATFORM",
+    "DOCKER_BUILDPLATFORM"
 )
 
 foreach ($envVar in $REQUIRED_VARS) {
@@ -26,14 +26,13 @@ $distVer = $env:DISTRO_VERSION
 $distVerName = $env:DISTRO_VERSION_NAME
 $outputDir = $env:OUTPUT_DIR 
 
-$debDotnetRuntimeDepsLine = "dotnet-runtime-deps-$($env:DOTNET_RUNTIME_VERSION) (>= $env:DOTNET_DEPS_VERSION)"
-
-Write-Host "Build DEB of RavenDB $ravenVersion for $distName $distVer $distVerName"
+Write-Host "Build DEB of RavenDB $ravenVersion for distro $distName $distVer $distVerName $env:DEB_ARCHITECTURE"
 
 $DOCKER_FILE = "./ubuntu.Dockerfile"
-$DEB_BUILD_ENV_IMAGE = "ravendb-deb_ubuntu_$distVerName"
+$DEB_BUILD_ENV_IMAGE = "ravendb-deb_ubuntu_$env:DEB_ARCHITECTURE"
 
 docker build `
+    --platform $env:DOCKER_BUILDPLATFORM `
     --build-arg "DISTRO_VERSION_NAME=$env:DISTRO_VERSION_NAME" `
     --build-arg "DISTRO_VERSION=$env:DISTRO_VERSION" `
     -t $DEB_BUILD_ENV_IMAGE `
@@ -54,11 +53,13 @@ if (-not (Test-Path $distroOutputDir)) {
 }
 
 docker run --rm -it `
+    --platform $env:DOCKER_BUILDPLATFORM `
     -v "$($env:OUTPUT_DIR):/dist" `
     -v "$PSScriptRoot/temp:/cache" `
     -e RAVENDB_VERSION=$ravenVersion  `
     -e "DOTNET_RUNTIME_VERSION=$env:DOTNET_RUNTIME_VERSION" `
     -e "DOTNET_DEPS_VERSION=$env:DOTNET_DEPS_VERSION" `
     -e "DISTRO_VERSION_NAME=$env:DISTRO_VERSION_NAME" `
+    -e "RAVEN_PLATFORM=$env:RAVEN_PLATFORM" `
     $DEB_BUILD_ENV_IMAGE 
 
