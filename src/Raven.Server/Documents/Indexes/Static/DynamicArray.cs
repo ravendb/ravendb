@@ -138,6 +138,42 @@ namespace Raven.Server.Documents.Indexes.Static
             return Enumerable.All(this, predicate);
         }
 
+        public int FindIndex(Predicate<dynamic> match)
+        {
+            var items = Enumerable.ToList(this);
+            return items.FindIndex(match);
+        }
+
+        public int FindIndex(int startIndex, Predicate<dynamic> match)
+        {
+            var items = Enumerable.ToList(this);
+            return items.FindIndex(startIndex, match);
+        }
+
+        public int FindIndex(int startIndex, int count, Predicate<dynamic> match)
+        {
+            var items = Enumerable.ToList(this);
+            return items.FindIndex(startIndex, count, match);
+        }
+
+        public int FindLastIndex(Predicate<dynamic> match)
+        {
+            var items = Enumerable.ToList(this);
+            return items.FindLastIndex(match);
+        }
+
+        public int FindLastIndex(int startIndex, Predicate<dynamic> match)
+        {
+            var items = Enumerable.ToList(this);
+            return items.FindLastIndex(startIndex, match);
+        }
+
+        public int FindLastIndex(int startIndex, int count, Predicate<dynamic> match)
+        {
+            var items = Enumerable.ToList(this);
+            return items.FindLastIndex(startIndex, count, match);
+        }
+
         public dynamic First()
         {
             return Enumerable.First(this);

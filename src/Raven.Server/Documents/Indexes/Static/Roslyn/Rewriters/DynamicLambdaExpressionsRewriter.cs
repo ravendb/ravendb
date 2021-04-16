@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 using Microsoft.CodeAnalysis;
@@ -103,6 +104,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "LongCount":
                 case "SingleOrDefault":
                     return Visit(ModifyLambdaForBools(node));
+                case nameof(List<object>.FindIndex):
+                case nameof(List<object>.FindLastIndex):
+                    return Visit(ModifyLambdaForPredicates(node));
                 case "Zip":
                     return Visit(ModifyLambdaForZip(node));
                 case "Aggregate":
@@ -136,6 +140,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         private static SyntaxNode ModifyLambdaForBools(LambdaExpressionSyntax node)
         {
             return SyntaxFactory.ParseExpression($"(Func<dynamic, bool>)({node})");
+        }
+
+        private static SyntaxNode ModifyLambdaForPredicates(LambdaExpressionSyntax node)
+        {
+            return SyntaxFactory.ParseExpression($"(Predicate<dynamic>)({node})");
         }
 
         private SyntaxNode ModifyLambdaForSelectMany(LambdaExpressionSyntax node, InvocationExpressionSyntax currentInvocation)
