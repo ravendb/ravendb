@@ -3149,6 +3149,8 @@ namespace Raven.Server.ServerWide
             var sizeOnDisk = environment.Environment.GenerateSizeReport(includeTempBuffers);
             var usage = new Client.ServerWide.Operations.MountPointUsage
             {
+                Name = environment.Name,
+                Type = environment.Type.ToString(),
                 UsedSpace = sizeOnDisk.DataFileInBytes,
                 DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
                 {
@@ -3172,6 +3174,8 @@ namespace Raven.Server.ServerWide
                 {
                     yield return new Client.ServerWide.Operations.MountPointUsage
                     {
+                        Name = environment.Name,
+                        Type = environment.Type.ToString(),
                         DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
                         {
                             DriveName = journalPathUsage.DriveName,
@@ -3197,6 +3201,8 @@ namespace Raven.Server.ServerWide
                     {
                         yield return new Client.ServerWide.Operations.MountPointUsage
                         {
+                            Name = environment.Name,
+                            Type = environment.Type.ToString(),
                             UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes,
                             DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
                             {
