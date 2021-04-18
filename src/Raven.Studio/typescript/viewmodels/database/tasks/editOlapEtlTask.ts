@@ -51,7 +51,6 @@ class editOlapEtlTask extends viewModelBase {
     
     collectionNames: KnockoutComputed<string[]>;
     
-    showAdvancedOptions = ko.observable<boolean>(false);
     showEditTransformationArea: KnockoutComputed<boolean>;
     showEditOlapTableArea: KnockoutComputed<boolean>;
 
@@ -71,7 +70,6 @@ class editOlapEtlTask extends viewModelBase {
                                    "saveEditedTransformation",
                                    "saveEditedOlapTable",
                                    "syntaxHelp",
-                                   "toggleAdvancedArea",
                                    "deleteOlapTable",
                                    "editOlapTable");
 
@@ -90,7 +88,6 @@ class editOlapEtlTask extends viewModelBase {
                 .execute()
                 .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails) => {
                     this.editedOlapEtl(new ongoingTaskOlapEtlEditModel(result));
-                    this.showAdvancedOptions(!!result.Configuration.MaxNumberOfItemsInRowGroup);
                     deferred.resolve();
                 })
                 .fail(() => {
@@ -132,12 +129,16 @@ class editOlapEtlTask extends viewModelBase {
 
         popoverUtils.longWithHover($(".keep-files-on-disk"),
             {
-                content: `<small>Keep the output files on disk</small>`
+                content: `<small>Keep output parquet files on disk even when 'Local' is not defined in conection string</small>`
             });
 
         popoverUtils.longWithHover($(".custom-prefix"),
             {
-                content: `<small>Set custom prefix</small>`
+                content: `<ul class="margin-top margin-top-xs margin-right">
+                              <li><small>A prefix that is added to the target parquet file location</small></li>
+                              <li><small>i.e.: <code>{RemoteFolderName}/{customPrefix}/{CollectionName}</code></small></li>
+                              <li><small>Useful to differentiate locations when using the same connection string</small></li>
+                          </ul>`
             });
 
         popoverUtils.longWithHover($(".run-frequency"),
@@ -394,10 +395,6 @@ class editOlapEtlTask extends viewModelBase {
     syntaxHelp() {
         const viewmodel = new transformationScriptSyntax("Olap");
         app.showBootstrapDialog(viewmodel);
-    }
-   
-    toggleAdvancedArea() {
-        this.showAdvancedOptions.toggle();
     }
 
     /********************************************/

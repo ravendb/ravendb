@@ -5,7 +5,6 @@ import jsonUtil = require("common/jsonUtil");
 class ongoingTaskOlapEtlTableModel {
     tableName = ko.observable<string>();
     documentIdColumn = ko.observable<string>();
-    partitionColumn = ko.observable<string>();
     
     isNew = ko.observable<boolean>(true);
     validationGroup: KnockoutValidationGroup; 
@@ -27,20 +26,18 @@ class ongoingTaskOlapEtlTableModel {
         return new ongoingTaskOlapEtlTableModel(
             {
                 TableName: "",
-                DocumentIdColumn: "",
-                PartitionColumn: ""
+                DocumentIdColumn: ""
             }, true);
     }
 
     hasContent() {
-        return !!(this.tableName() || this.documentIdColumn() || this.partitionColumn());
+        return !!(this.tableName() || this.documentIdColumn());
     }
 
     toDto(): Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlTable {
         return {
             TableName: this.tableName(),
-            DocumentIdColumn: this.documentIdColumn(),
-            PartitionColumn: this.partitionColumn()
+            DocumentIdColumn: this.documentIdColumn()
         }
     }
     

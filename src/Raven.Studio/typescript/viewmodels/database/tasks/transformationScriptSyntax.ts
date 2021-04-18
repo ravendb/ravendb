@@ -134,17 +134,16 @@ for (var i = 0; i < this.Lines.length; i++) {
     var line = this.Lines[i];
     orderData.TotalCost += (line.PricePerUnit * line.Quantity);
     
-    // load to OLAP table 'sales'
-
-    loadToSales(key, {
+    // load to 'sales' table
+    loadToSales(partitionBy(key), {
         Qty: line.Quantity,
         Product: line.Product,
         Cost: line.PricePerUnit
     });
 }
 
-// load to OLAP table 'orders'
-loadToOrders(key, orderData);`;
+// load to 'orders' table
+loadToOrders(partitionBy(key), orderData);`;
 
     olapEtlSampleHtml = ko.pureComputed(() => {
         return Prism.highlight(transformationScriptSyntax.olapEtlSampleText, (Prism.languages as any).javascript);

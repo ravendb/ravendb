@@ -245,7 +245,7 @@
                 <div data-bind="if: showOlapSection">
                     <div class="hr-title">
                         <h5 class="tasks-list-item olap-etl no-text-transform">
-                            <i class="icon-sql-etl"></i>  <!-- TODO... replace icon - issue RavenDB-16396 --> 
+                            <i class="icon-olap-etl"></i>
                             <span>OLAP ETL</span><span data-bind="text: ' (' + olapTasks().length + ')'"></span>
                         </h5><hr>
                     </div>
@@ -272,12 +272,13 @@
                                                 <div class="property-name">Task Status:</div>
                                                 <div class="property-value text-details" data-bind="text: badgeText"></div>
                                             </div>
-                                            <div class="property-item">
-                                                <div class="property-name">Destination:</div>
-                                                <div class="property-value" title="Destinations that are defined the in connection string">
-                                                    <span data-bind="text: destinationDescription"></span>
-                                                </div>
-                                            </div>
+                                                <!--    TODO ... Destination info is waiting for RavenDB-16435 -->
+<!--                                            <div class="property-item">-->
+<!--                                                <div class="property-name">Destination:</div>-->
+<!--                                                <div class="property-value" title="Destinations that are defined the in connection string">-->
+<!--                                                    <span data-bind="text: destinationDescription"></span>-->
+<!--                                                </div>-->
+<!--                                            </div>-->
                                             <div class="property-item" data-bind="template: { name: 'connection-string' }"></div>
                                         </div>
                                         <div data-bind="template: { name: 'etl-progress-template' }"></div>
@@ -704,7 +705,7 @@
             <div class="overall-container">
                 <div class="text-info flex-horizontal">
                     <span data-bind="text: name"></span>
-                    <a title="Show script preview" href="#" data-bind="click: _.partial($root.showItemPreview, $parent, name())"><i class="icon-preview"></i></a>
+                    <a title="Show script preview" href="#" data-bind="click: _.partial($root.showItemPreview, $parent, name())"><i class="icon-preview margin-left margin-left-xs"></i></a>
                     <div class="flex-separator"></div>
                     <div class="text-warning" data-bind="visible: !globalProgress.total()">
                         <small>
