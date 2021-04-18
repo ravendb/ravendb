@@ -384,6 +384,7 @@ namespace Raven.Server.ServerWide
                     case nameof(PutIndexCommand):
                     case nameof(PutIndexesCommand):
                     case nameof(PutAutoIndexCommand):
+                    case nameof(PutRollingIndexCommand):
                     case nameof(DeleteIndexCommand):
                     case nameof(SetIndexLockCommand):
                     case nameof(SetIndexPriorityCommand):

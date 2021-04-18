@@ -34,16 +34,18 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            var setting = PutIndexCommand.GetGlobalRollingSetting(record);
+
             if (Static != null)
             {
                 foreach (var definition in Static)
-                    record.AddIndex(definition, Source, CreatedAt, etag, RevisionsToKeep);
+                    record.AddIndex(definition, Source, CreatedAt, etag, RevisionsToKeep, setting);
             }
 
             if (Auto != null)
             {
                 foreach (var definition in Auto)
-                    record.AddIndex(definition);
+                    record.AddIndex(definition, CreatedAt, etag, setting);
             }
 
         }

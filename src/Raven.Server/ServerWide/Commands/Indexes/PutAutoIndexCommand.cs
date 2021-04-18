@@ -15,23 +15,26 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 {
     public class PutAutoIndexCommand : UpdateDatabaseCommand
     {
+        public DateTime CreatedAt { get; set; }
         public AutoIndexDefinition Definition;
 
         public PutAutoIndexCommand()
         {
         }
 
-        public PutAutoIndexCommand(AutoIndexDefinition definition, string databaseName, string uniqueRequestId)
+        public PutAutoIndexCommand(AutoIndexDefinition definition, string databaseName, string uniqueRequestId, DateTime? createdAt = null)
             : base(databaseName, uniqueRequestId)
         {
             Definition = definition;
+            CreatedAt = createdAt ?? DateTime.MinValue;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             try
             {
-                record.AddIndex(Definition);
+                var setting = PutIndexCommand.GetGlobalRollingSetting(record);
+                record.AddIndex(Definition, CreatedAt, etag, setting);
             }
             catch (Exception e)
             {
@@ -43,13 +46,14 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Definition)] = TypeConverter.ToBlittableSupportedType(Definition);
+            json[nameof(CreatedAt)] = TypeConverter.ToBlittableSupportedType(CreatedAt);
         }
 
         public static PutAutoIndexCommand Create(AutoIndexDefinitionBase definition, string databaseName, string raftRequestId)
         {
             var indexType = GetAutoIndexType(definition);
 
-            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName, raftRequestId);
+            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName, raftRequestId, DateTime.UtcNow);
         }
 
         public static IndexType GetAutoIndexType(AutoIndexDefinitionBase definition)
@@ -78,7 +82,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 GroupByFields = indexType == IndexType.AutoMap ? null : CreateFields(((AutoMapReduceIndexDefinition)definition).GroupByFields),
                 Priority = definition.Priority,
                 Name = definition.Name,
-                Type = indexType
+                Type = indexType,
+                Rolling = definition.Rolling
             };
         }
 

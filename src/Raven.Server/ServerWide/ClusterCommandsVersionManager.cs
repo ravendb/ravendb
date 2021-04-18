@@ -78,7 +78,7 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateSnmpDatabasesMappingCommand)] = Base40CommandsVersion,
             [nameof(DeleteIndexCommand)] = Base40CommandsVersion,
             [nameof(PutAutoIndexCommand)] = Base40CommandsVersion,
-            [nameof(PutIndexCommand)] = Base40CommandsVersion,
+            [nameof(PutIndexCommand)] = Base40CommandsVersion, //todo
             [nameof(SetIndexLockCommand)] = Base40CommandsVersion,
             [nameof(SetIndexPriorityCommand)] = Base40CommandsVersion,
             [nameof(AddRavenEtlCommand)] = Base40CommandsVersion,
@@ -137,7 +137,8 @@ namespace Raven.Server.ServerWide
             [nameof(PutServerWideSorterCommand)] = 52_000,
             [nameof(DeleteServerWideSorterCommand)] = 52_000,
 
-            [nameof(EditLockModeCommand)] = 52_000
+            [nameof(EditLockModeCommand)] = 52_000,
+			[nameof(PutRollingIndexCommand)] = 52_000,
         };
 
         public static bool CanPutCommand(string command)

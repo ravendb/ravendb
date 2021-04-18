@@ -28,6 +28,9 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Documents Compression")]
         DocumentsCompression,
 
+        [Description("Rolling Indexes")]
+        RollingIndexes,
+
         [Description("External Replication")]
         ExternalReplication,
 

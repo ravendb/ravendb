@@ -48,6 +48,8 @@ namespace Raven.Client.ServerWide
 
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress;
 
+        public Dictionary<string, RollingIndex> RollingIndexes;
+
         public DatabaseStateStatus DatabaseState;
 
         public DatabaseLockMode LockMode;
@@ -137,7 +139,7 @@ namespace Raven.Client.ServerWide
             Analyzers?.Remove(sorterName);
         }
 
-        public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex, int revisionsToKeep)
+        public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex, int revisionsToKeep, bool globalRollingSetting)
         {
             var lockMode = IndexLockMode.Unlock;
 
@@ -208,25 +210,110 @@ namespace Raven.Client.ServerWide
             {
                 history.RemoveRange(revisionsToKeep, history.Count - revisionsToKeep);
             }
+
+            if (IsRolling(definition.Rolling, globalRollingSetting))
+            {
+                if (differences == null || (differences.Value & IndexDefinitionCompareDifferences.ReIndexRequiredMask) != 0)
+                    InitializeRollingDeployment(definition.Name, createdAt, raftIndex);
+            }
         }
 
         public void AddIndex(AutoIndexDefinition definition)
         {
+            AddIndex(definition, DateTime.UtcNow, 0, false);
+        }
+        
+        internal void AddIndex(AutoIndexDefinition definition, DateTime createdAt, long raftIndex, bool globalRollingSetting)
+        {
+            IndexDefinitionCompareDifferences? differences = null;
+
             if (AutoIndexes.TryGetValue(definition.Name, out AutoIndexDefinition existingDefinition))
             {
-                var result = existingDefinition.Compare(definition);
+                differences = existingDefinition.Compare(definition);
 
-                if (result == IndexDefinitionCompareDifferences.None)
+                if (differences == IndexDefinitionCompareDifferences.None)
                     return;
 
-                result &= ~IndexDefinitionCompareDifferences.Priority;
-                result &= ~IndexDefinitionCompareDifferences.State;
+                differences &= ~IndexDefinitionCompareDifferences.Priority;
+                differences &= ~IndexDefinitionCompareDifferences.State;
 
-                if (result != IndexDefinitionCompareDifferences.None)
-                    throw new NotSupportedException($"Can not update auto-index: {definition.Name} (compare result: {result})");
+                if (differences != IndexDefinitionCompareDifferences.None)
+                    throw new NotSupportedException($"Can not update auto-index: {definition.Name} (compare result: {differences})");
             }
 
             AutoIndexes[definition.Name] = definition;
+            
+            if (IsRolling(definition.Rolling, globalRollingSetting))
+            {
+                if (differences == null || (differences.Value & IndexDefinitionCompareDifferences.ReIndexRequiredMask) != 0)
+                    InitializeRollingDeployment(definition.Name, createdAt, raftIndex);
+            }
+        }
+
+        private bool IsRolling(bool? fromDefinition, bool fromSetting)
+        {
+            if (fromDefinition == false)
+                return false;
+
+            return fromSetting || fromDefinition == true;
+        }
+
+        private void InitializeRollingDeployment(string indexName, DateTime createdAt, long raftIndex)
+        {
+            // todo 
+            // check cluster command versions
+            // what happens if the definition changed but this node didn't start yet? Now we'll process this index but still need to do the replacement. ==> We can think about this later as an optimization
+
+            RollingIndexes ??= new Dictionary<string, RollingIndex>();
+            if (RollingIndexes.TryGetValue(indexName, out var rollingIndex) == false)
+            {
+                rollingIndex = new RollingIndex();
+                RollingIndexes[indexName] = rollingIndex;
+            }
+
+            rollingIndex.RaftIndexChange = raftIndex;
+
+            var chosenNode = ChooseFirstNode();
+
+            foreach (var node in Topology.AllNodes)
+            {
+                var deployment = new RollingIndexDeployment
+                {
+                    CreatedAt = createdAt
+                };
+
+                if (node.Equals(chosenNode))
+                {
+                    deployment.State = RollingIndexState.Running;
+                    deployment.StartedAt = createdAt;
+                }
+                else
+                {
+                    deployment.State = RollingIndexState.Pending;
+                }
+
+                rollingIndex.ActiveDeployments[node] = deployment;
+            }
+        }
+
+        private string ChooseFirstNode()
+        {
+            string chosenNode;
+
+            if (Topology.Members.Count > 0)
+            {
+                chosenNode = Topology.Members.Last();
+            }
+            else if (Topology.Promotables.Count > 0)
+            {
+                chosenNode = Topology.Promotables.Last();
+            }
+            else
+            {
+                chosenNode = Topology.Rehabs.Last();
+            }
+
+            return chosenNode;
         }
 
         public void DeleteIndex(string name)
@@ -234,6 +321,7 @@ namespace Raven.Client.ServerWide
             Indexes?.Remove(name);
             AutoIndexes?.Remove(name);
             IndexesHistory?.Remove(name);
+            RollingIndexes?.Remove(name);
         }
 
         public void DeletePeriodicBackupConfiguration(long backupTaskId)
@@ -320,6 +408,7 @@ namespace Raven.Client.ServerWide
         public IndexDefinition Definition { get; set; }
         public string Source { get; set; }
         public DateTime CreatedAt { get; set; }
+        public Dictionary<string, RollingIndexDeployment> RollingDeployment { get; set; }
     }
 
     public enum DatabaseLockMode

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Raven.Client.ServerWide;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -17,6 +18,8 @@ namespace Raven.Client.Documents.Indexes
         public IndexRunningStatus IndexRunningStatus { get; set; }
 
         public double ProcessedPerSecond { get; set; }
+
+        public RollingIndex RollingProgress { get; set; }
 
         public class CollectionStats
         {

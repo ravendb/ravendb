@@ -20,7 +20,16 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         public bool Equals(RevisionsConfiguration other)
         {
-            if (other?.Default == null || other.Default.Equals(Default) == false)
+            if (other == null)
+                return false;
+
+            if (other.Default == null && Default != null)
+                return false;
+
+            if (other.Default != null && Default == null)
+                return false;
+
+            if (other.Default != null && other.Default.Equals(Default) == false)
                 return false;
 
             foreach (var keyValue in Collections)

@@ -117,22 +117,24 @@ namespace Raven.Client.Documents.Changes
 
         BatchCompleted = 1,
 
-        IndexAdded = 8,
-        IndexRemoved = 16,
+        IndexAdded = 1 << 3,
+        IndexRemoved = 1 << 4,
 
-        IndexDemotedToIdle = 32,
-        IndexPromotedFromIdle = 64,
+        IndexDemotedToIdle = 1 << 5,
+        IndexPromotedFromIdle = 1 << 6,
 
-        IndexDemotedToDisabled = 256,
+        IndexDemotedToDisabled = 1 << 8,
 
-        IndexMarkedAsErrored = 512,
+        IndexMarkedAsErrored = 1 << 9,
 
-        SideBySideReplace = 1024,
+        SideBySideReplace = 1 << 10,
 
-        Renamed = 2048,
-        IndexPaused = 4096,
-        LockModeChanged = 8192,
-        PriorityChanged = 16384
+        Renamed = 1 << 11,
+        IndexPaused = 1 << 12,
+        LockModeChanged = 1 << 13,
+        PriorityChanged = 1 << 14,
+
+        RollingIndexChanged = 1 << 16
     }
 
     [Flags]

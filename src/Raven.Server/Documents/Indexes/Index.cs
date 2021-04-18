@@ -14,8 +14,11 @@ using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Extensions;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
@@ -43,6 +46,8 @@ using Raven.Server.Indexing;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Memory;
 using Raven.Server.Storage.Layout;
@@ -1292,6 +1297,10 @@ namespace Raven.Server.Documents.Indexes
                                         ResetErrors();
                                         _hadRealIndexingWorkToDo.Raise();
                                     }
+                                    else
+                                    {
+                                        MaybeFinishRollingDeployment();
+                                    }
 
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Finished indexing for '{Name}'.'");
@@ -1533,6 +1542,88 @@ namespace Raven.Server.Documents.Indexes
                     _mre.DisableThrottlingTimer();
                 }
             }
+        }
+        
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal TestingStuff ForTestingPurposes { get; set; }
+
+        internal class TestingStuff
+        {
+            internal Action<RawDatabaseRecord> OnRollingIndexNodeFinished;
+        }
+        private void MaybeFinishRollingDeployment()
+        {
+            if (Definition.Rolling == false)
+                return;
+
+            var nodeTag = DocumentDatabase.ServerStore.NodeTag;
+
+            using (DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var rawRecord = DocumentDatabase.ServerStore.Cluster.ReadRawDatabaseRecord(context, DocumentDatabase.Name))
+            {
+                var rollingIndexes = rawRecord.RollingIndexes;
+
+                if (rollingIndexes == null)
+                    return;
+
+                if (rollingIndexes.TryGetValue(Definition.Name, out var index) == false)
+                    return;
+
+                if (index.ActiveDeployments.TryGetValue(nodeTag, out var currentDeployment) == false)
+                    return;
+
+                if (currentDeployment.State != RollingIndexState.Running)
+                    return;
+
+                if (IndexIsStale())
+                    return;
+
+                try
+                {
+                    // We may send the command multiple times so we need a new Id every time.
+                    var command = new PutRollingIndexCommand(DocumentDatabase.Name, Definition.Name, nodeTag, DateTime.UtcNow, RaftIdGenerator.NewId());
+                    DocumentDatabase.ServerStore.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
+                    ForTestingPurposes?.OnRollingIndexNodeFinished?.Invoke(rawRecord);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{Name}' in node {nodeTag}.", e);
+                }
+            }
+        }
+
+        private bool IndexIsStale()
+        {
+            using (var queryOperationContext = QueryOperationContext.Allocate(DocumentDatabase, this))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+            {
+                using (indexContext.OpenReadTransaction())
+                using (queryOperationContext.OpenReadTransaction())
+                {
+                    indexContext.IgnoreStalenessDueToReduceOutputsToDelete = true;
+
+                    try
+                    {
+                        if (IsStale(queryOperationContext, indexContext))
+                            return true;
+                    }
+                    finally
+                    {
+                        indexContext.IgnoreStalenessDueToReduceOutputsToDelete = false;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private void PauseIfCpuCreditsBalanceIsTooLow()

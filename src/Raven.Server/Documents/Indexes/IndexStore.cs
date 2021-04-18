@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,6 +21,7 @@ using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Configuration;
@@ -33,7 +35,12 @@ using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
+using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -41,6 +48,7 @@ using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -203,10 +211,15 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     var definition = CreateAutoDefinition(kvp.Value);
+                    
+                    if (ShouldSkipThisNodeWhenRolling(record, name, definition))
+                        continue;
 
                     var indexToStart = HandleAutoIndexChange(name, definition);
                     if (indexToStart != null)
+                    {
                         indexesToStart.Add(indexToStart);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -339,9 +352,16 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
+                    RaiseRollingChangeNotificationIfNeeded(record, index, name);
+
+                    if (ShouldSkipThisNodeWhenRolling(record, name, definition))
+                        continue;
+
                     var indexToStart = HandleStaticIndexChange(name, definition);
                     if (indexToStart != null)
+                    {
                         indexesToStart.Add(indexToStart);
+                    }
                 }
                 catch (Exception exception)
                 {
@@ -371,6 +391,57 @@ namespace Raven.Server.Documents.Indexes
                     _indexes.Add(fakeIndex);
                 }
             }
+        }
+
+        private void RaiseRollingChangeNotificationIfNeeded(DatabaseRecord record, long index, string name)
+        {
+            if (record.RollingIndexes.TryGetValue(name, out var rollingIndex) && rollingIndex.RaftIndexChange == index)
+            {
+                _documentDatabase.Changes.RaiseNotifications(
+                    new IndexChange {
+                        Name = name, 
+                        Type = IndexChangeTypes.RollingIndexChanged
+                    });
+            }
+        }
+
+        private bool ShouldSkipThisNodeWhenRolling(DatabaseRecord record, string indexName, IndexDefinition definition)
+        {
+            return ShouldSkipThisNodeWhenRolling(record, indexName, definition.Rolling);
+        }
+
+        private bool ShouldSkipThisNodeWhenRolling(DatabaseRecord record, string indexName, AutoIndexDefinitionBase definition)
+        {
+            return ShouldSkipThisNodeWhenRolling(record, indexName, definition.Rolling);
+        }
+
+        private bool ShouldSkipThisNodeWhenRolling(DatabaseRecord record, string indexName, bool? rolling)
+        {
+            return rolling != false && ShouldSkipThisNode(record, indexName);
+        }
+
+        private bool ShouldSkipThisNode(DatabaseRecord record, string indexName)
+        {
+            if (record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out var deletion))
+            {
+                if (deletion != DeletionInProgressStatus.No)
+                    return true;
+            }
+
+            // Can happen if there's a race in the record --> we don't skip, we process the index
+            if (record.RollingIndexes == null)
+                return false;
+            
+            if (record.RollingIndexes.TryGetValue(indexName, out var rollingIndex) == false)
+                return false;
+
+            // Can happen when we add a node to the database while the rolling index is running --> we skip this node for now.
+            // Adding the new node to the deployment will be handled in PutRollingIndexCommand.UpdateDatabaseRecord()
+            if (rollingIndex.ActiveDeployments.TryGetValue(_serverStore.NodeTag, out var nodeDeployment) == false)
+                return true;
+
+            // Only nodes which are marked 'Running' can proceed to execute the index.
+            return nodeDeployment.State != RollingIndexState.Running;
         }
 
         private Index HandleStaticIndexChange(string name, IndexDefinition definition)
@@ -621,12 +692,120 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
-        public Index GetIndex(string name)
+        public Index GetIndex(string name, bool throwOnPendingRollingIndex = true)
         {
             if (_indexes.TryGetByName(name, out Index index) == false)
-                return null;
+            {
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                using (var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name, out _ ))
+                {
+                    if (record.RollingIndexes == null)
+                        return null;
+
+                    if (record.RollingIndexes.TryGetValue(name, out var rollingIndex) == false) 
+                        return null;
+
+                    if (rollingIndex.ActiveDeployments.TryGetValue(_serverStore.NodeTag, out var deployment) && deployment.State != RollingIndexState.Pending)
+                        return null;
+
+                    if (throwOnPendingRollingIndex == false)
+                        return null;
+
+                    throw new PendingRollingIndexException(
+                        $"Cannot use index `{name}` on node {_serverStore.NodeTag} because a rolling index deployment is still pending on this node.");
+                }
+            }
 
             return index;
+        }
+
+        public IndexDefinition GetIndexDefinition(string name)
+        {
+            if (_indexes.TryGetByName(name, out Index index) == false)
+            {
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                using (var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name, out _ ))
+                {
+                    var existingIndexName = name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty,
+                        StringComparison.OrdinalIgnoreCase);
+
+                    return GetDefinitionFromRecord(record, existingIndexName);
+                }
+            }
+
+            return index.GetIndexDefinition();
+        }
+
+        public Dictionary<string, RollingIndex> GetRollingIndexes()
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name, out _ ))
+            {
+                return record.RollingIndexes;
+            }
+        }
+
+        public IEnumerable<(string Name, IndexDefinition Definition)> GetRollingIndexesDefinition()
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name, out _ ))
+            {
+                if (record.RollingIndexes == null)
+                    yield break;
+
+                foreach (var index in record.RollingIndexes)
+                {
+                    var name = index.Key;
+                    var definition = GetDefinitionFromRecord(record, name);
+                    
+                    if (index.Value.ActiveDeployments.TryGetValue(_serverStore.NodeTag, out var myProgress))
+                    {
+                        if (_indexes.TryGetByName(name, out _) && 
+                            myProgress.State != RollingIndexState.Done)
+                        {
+                            var sideBySideName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
+                            yield return (sideBySideName, definition);
+                        }
+                    }
+
+                    yield return (name, definition); 
+                }
+            }
+        }
+
+        public IEnumerable<string> GetRollingIndexesNames()
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name, out _ ))
+            {
+                if (record.RollingIndexes == null)
+                    yield break;
+
+                foreach (var index in record.RollingIndexes)
+                {
+                    yield return index.Key;
+                }
+            }
+        }
+
+        private static IndexDefinition GetDefinitionFromRecord(RawDatabaseRecord record, string name)
+        {
+            if (record.Indexes.TryGetValue(name, out var definition))
+            {
+                return definition;
+            }
+
+            if (record.AutoIndexes.TryGetValue(name, out var autoDef))
+            {
+                return CreateAutoDefinition(autoDef).GetOrCreateIndexDefinitionInternal();
+            }
+
+            return null;
         }
 
         public async Task<long> CreateIndexInternal(IndexDefinition definition, string raftRequestId, string source = null)
@@ -749,12 +928,32 @@ namespace Raven.Server.Documents.Indexes
 
             _forTestingPurposes?.AfterIndexCreation?.Invoke(definition.Name);
 
-            return GetIndex(definition.Name);
+            return await WaitForRollingIndex(definition.Name);
+        }
+
+        private async Task<Index> WaitForRollingIndex(string name)
+        {
+            while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+            {
+                try
+                {
+                    return GetIndex(name);
+                }
+                catch (PendingRollingIndexException)
+                {
+                    await Task.Delay(250);
+                }
+            }
+
+            return null;
         }
 
         private void ValidateAutoIndex(IndexDefinitionBase definition)
         {
             ValidateIndexName(definition.Name, isStatic: false);
+
+            if (definition.Rolling)
+                _serverStore.LicenseManager.AssertCanUseRollingIndexes();
         }
 
         private void ValidateStaticIndex(IndexDefinition definition)
@@ -784,6 +983,10 @@ namespace Raven.Server.Documents.Indexes
                 if (string.IsNullOrEmpty(definition.PatternForOutputReduceToCollectionReferences) == false)
                     OutputReferencesPattern.ValidatePattern(definition.PatternForOutputReduceToCollectionReferences, out _);
             }
+
+            if (definition.Rolling == true || _documentDatabase.Configuration.Indexing.Rolling)
+                _serverStore.LicenseManager.AssertCanUseRollingIndexes();
+
         }
 
         public bool HasChanged(IndexDefinition definition)
@@ -1257,19 +1460,20 @@ namespace Raven.Server.Documents.Indexes
             var list = indexes.ToList();
 
             ExecuteForIndexes(list, index =>
+            {
+                using (IndexLock(index.Name))
                 {
-                    using (IndexLock(index.Name))
+                    try
                     {
-                        try
-                        {
-                            index.Stop(disableIndex: true);
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            // this can happen if we replaced or removed the index
-                        }
+                        index.Stop(disableIndex: true);
                     }
-                });
+                    catch (ObjectDisposedException)
+                    {
+                        // this can happen if we replaced or removed the index
+                    }
+                }
+            });
+
 
             foreach (var index in list)
             {
@@ -1632,6 +1836,58 @@ namespace Raven.Server.Documents.Indexes
         public IEnumerable<Index> GetIndexesForCollection(string collection)
         {
             return _indexes.GetForCollection(collection);
+        }
+
+        private bool IsRollingSideBySide(string name, object definition, RawDatabaseRecord record)
+        {
+            if (_indexes.TryGetByName(name, out var current) == false)
+                return false;
+
+            if (record.RollingIndexes.TryGetValue(name, out var rolling) == false)
+                return false;
+
+            if (rolling.ActiveDeployments.TryGetValue(_serverStore.NodeTag, out var deployment) == false)
+                return false;
+            
+            switch (deployment.State)
+            {
+                case RollingIndexState.Pending:
+                    return true;
+                case RollingIndexState.Running:
+                    // we need to distinguish between index being deployed and editing the index while the deployment is in progress  
+                    GetIndexCreationOptions(definition, current, out var diff);
+                    return (diff & IndexDefinitionCompareDifferences.ReIndexRequiredMask) != 0;
+                case RollingIndexState.Done:
+                    return false;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(RollingIndexState), deployment.State, "Unknown deployment type");
+            }
+        }
+
+        public IEnumerable<string> GetNames()
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name, out _ ))
+            {
+                foreach (var index in record.Indexes)
+                {
+                    var name = index.Key;
+                    if (IsRollingSideBySide(index.Key, index.Value, record))
+                        yield return Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
+
+                    yield return name;
+                }
+
+                foreach (var index in record.AutoIndexes)
+                {
+                    var name = index.Key;
+                    if (IsRollingSideBySide(index.Key, index.Value, record))
+                        yield return Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
+
+                    yield return name;
+                }
+            }
         }
 
         public IEnumerable<Index> GetIndexes()

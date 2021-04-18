@@ -37,11 +37,45 @@ namespace FastTests
 
         private static int _pathCount;
 
-        public static string NewDataPath(string testName, int serverPort, bool forceCreateDir = false)
+        public static string NewDataPath(string testName, int serverPort, bool forceCreateDir = false, string rootDir = null)
         {
             testName = testName?.Replace("<", "").Replace(">", "");
 
-            var newDataDir = Path.GetFullPath($".\\Databases\\{testName ?? "TestDatabase"}.{serverPort}-{Interlocked.Increment(ref _pathCount)}");
+            var prefix = rootDir == null ? "." : $".\\{rootDir}-{Interlocked.Increment(ref _pathCount)}";
+
+            var pathString = $"{prefix}\\Databases\\{testName ?? "TestDatabase"}.{serverPort}-{Interlocked.Increment(ref _pathCount)}";
+
+            var newDataDir = Path.GetFullPath(pathString);
+
+            if (PlatformDetails.RunningOnPosix)
+                newDataDir = PosixHelper.FixLinuxPath(newDataDir);
+
+            if (forceCreateDir && Directory.Exists(newDataDir) == false)
+                Directory.CreateDirectory(newDataDir);
+
+            return newDataDir;
+        }
+
+        public static string NewServerDataPath(string serverName, int serverPort)
+        {
+            var newDataDir = Path.GetFullPath($".\\{serverName}-{serverPort}.{Interlocked.Increment(ref _pathCount)}");
+
+            if (PlatformDetails.RunningOnPosix)
+                newDataDir = PosixHelper.FixLinuxPath(newDataDir);
+
+            if (Directory.Exists(newDataDir) == false)
+                Directory.CreateDirectory(newDataDir);
+
+            return newDataDir;
+        }
+
+        public static string NewDatabaseDataPath(string serverPath, string testName, int serverPort, bool forceCreateDir = false)
+        {
+            testName = testName?.Replace("<", "").Replace(">", "");
+
+            var pathString = $"{serverPath}\\Databases\\{testName ?? "TestDatabase"}.{serverPort}-{Interlocked.Increment(ref _pathCount)}";
+
+            var newDataDir = Path.GetFullPath(pathString);
 
             if (PlatformDetails.RunningOnPosix)
                 newDataDir = PosixHelper.FixLinuxPath(newDataDir);
@@ -54,7 +88,7 @@ namespace FastTests
 
         public static void DeletePaths(ConcurrentSet<string> pathsToDelete, ExceptionAggregator exceptionAggregator)
         {
-            var localPathsToDelete = pathsToDelete.ToArray();
+            var localPathsToDelete = pathsToDelete.OrderByDescending(x => x).ToArray();
             foreach (var pathToDelete in localPathsToDelete)
             {
                 pathsToDelete.TryRemove(pathToDelete);
