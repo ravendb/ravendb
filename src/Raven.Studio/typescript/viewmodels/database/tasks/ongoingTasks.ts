@@ -76,7 +76,7 @@ class ongoingTasks extends viewModelBase {
     private initObservables() {
         this.myNodeTag(this.clusterManager.localNodeTag());
         this.serverWideTasksUrl = appUrl.forServerWideTasks();
-        this.canNavigateToServerWideTasks = accessManager.default.clusterAdminOrClusterNode;
+        this.canNavigateToServerWideTasks = accessManager.default.isClusterAdminOrClusterNodeClearance;
         this.taskNameToCount = ko.pureComputed<dictionary<number>>(() => {
             return {
                 "External Replication": this.replicationTasks().length,

@@ -105,7 +105,7 @@ class databaseSettings extends viewModelBase {
             .then(() => {
                 const deferred = $.Deferred<canActivateResultDto>();
 
-                this.isForbidden(!accessManager.default.operatorAndAbove());
+                this.isForbidden(!accessManager.default.isOperatorOrAboveClearance());
 
                 if (this.isForbidden()) {
                     deferred.resolve({can: true});

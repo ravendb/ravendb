@@ -46,7 +46,8 @@
                         <span data-bind="visible: $root.activeDatabase() ? $root.activeDatabase().environment() : false, 
                                          text: $root.activeDatabase() ? $root.activeDatabase().environment(): '',
                                          attr: { class: 'margin-right label text-uppercase ' + ($root.activeDatabase() ? $root.activeDatabase().environmentClass() : '') }"></span>
-                        <strong class="on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().databaseAccessText() : ''"></strong>
+                        <strong data-bind="text: $root.activeDatabase() ? $root.activeDatabase().databaseAccessText() : '',
+                                           attr: { class: 'on-base-background ' + ($root.activeDatabase() ? $root.activeDatabase().databaseAccessColor() : '') } "></strong>
                     </div>
                     <a data-bind="attr: { href: $root.appUrls.databases }" title="View all databases" class="resources-link"><i class="icon-resources"></i></a>
                     <div class="box-container">
@@ -63,7 +64,7 @@
                                             <div data-bind="text: environment, visible: environment, attr: { class: 'margin-left label text-uppercase ' + environmentClass() }"></div>
                                             <div data-bind="visible: errored" class="label label-danger">Errored</div>
                                             <div class="flex-separator"></div>
-                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText"></small>
+                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText, attr: { class: databaseAccessColor() }"></small>
                                         </a>
                                     </li>
                                     <!-- /ko -->
@@ -75,7 +76,7 @@
                                             <div class="label label-default">Non-relevant (Remote)</div>
                                             <div data-bind="visible: errored" class="label label-danger">Errored</div>
                                             <div class="flex-separator"></div>
-                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText"></small>
+                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText, attr: { class: databaseAccessColor() }"></small>
                                         </a>
                                     </li>
                                     <!-- /ko -->
@@ -87,7 +88,7 @@
                                             <div class="label label-default">Disabled</div>
                                             <div data-bind="visible: errored" class="label label-danger">Errored</div>
                                             <div class="flex-separator"></div>
-                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText"></small>
+                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText, attr: { class: databaseAccessColor() }"></small>
                                         </a>
                                     </li>
                                     <!-- /ko -->

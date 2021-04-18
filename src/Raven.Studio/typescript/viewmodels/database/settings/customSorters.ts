@@ -59,7 +59,7 @@ class customSorters extends viewModelBase {
         aceEditorBindingHandler.install();
         this.bindToCurrentInstance("confirmRemoveSorter", "enterTestSorterMode", "editSorter", "runTest");
 
-        this.canNavigateToServerWideCustomSorters = accessManager.default.clusterAdminOrClusterNode;
+        this.canNavigateToServerWideCustomSorters = accessManager.default.isClusterAdminOrClusterNodeClearance;
     }
     
     activate(args: any) {

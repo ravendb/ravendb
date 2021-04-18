@@ -6,7 +6,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import generalUtils = require("common/generalUtils");
 
 type actionColumnOpts<T> = {
-    hideAction?: (item: T) => boolean;
+    hide?: (item: T) => boolean;
     extraClass?: (item: T) => string;
     title?: (item:T) => string;
 }
@@ -56,7 +56,7 @@ class actionColumn<T> implements virtualColumn {
     }
 
     renderCell(item: T, isSelected: boolean, isSorted: boolean): string {
-        const extraStyle = this.opts.hideAction ? this.opts.hideAction(item) ? 'display: none;' : `display: block;` : '';
+        const extraStyle = this.opts.hide ? this.opts.hide(item) ? 'display: none;' : `display: block;` : '';
         const extraButtonHtml = this.opts.title ? ` title="${generalUtils.escapeHtml(this.opts.title(item))}" ` : '';
         let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
         

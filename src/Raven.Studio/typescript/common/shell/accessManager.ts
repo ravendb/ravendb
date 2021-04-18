@@ -14,43 +14,78 @@ class accessManager {
     private allLevels = ko.pureComputed(() => true);
     
     // cluster node has the same privileges as cluster admin
-    clusterAdminOrClusterNode = ko.pureComputed(() => this.securityClearance() === "ClusterAdmin" || this.securityClearance() === "ClusterNode");
-        
-    isUserClearance = ko.pureComputed<boolean>(() => this.securityClearance() === "ValidUser");
+    isClusterAdminOrClusterNodeClearance = ko.pureComputed(() => {
+        const clearance = this.securityClearance();
+        return clearance === "ClusterAdmin" || clearance === "ClusterNode";
+    });
     
-    operatorAndAbove = ko.pureComputed(() => { 
+    isOperatorOrAboveClearance = ko.pureComputed(() => {
          const clearance = this.securityClearance();
          return clearance === "ClusterAdmin" || clearance === "ClusterNode" || clearance === "Operator";
-    });    
-    
-    getDatabaseAccessLevel(dbName: string) {
-        if (this.operatorAndAbove()) {
+    });
+
+    isUserClearance = ko.pureComputed<boolean>(() => this.securityClearance() === "ValidUser");
+
+    getEffectiveDatabaseAccessLevel(dbName: string) {
+        if (this.isOperatorOrAboveClearance()) {
             return "Admin";
         }
         
         return accessManager.databasesAccess[dbName];
     }
 
-    getDatabaseAccessLevelText(dbName: string) {
-        const accessLevel = this.getDatabaseAccessLevel(dbName);
-        if (accessLevel) {
-            switch (accessLevel) {
-                case "Admin":
-                    return "Admin access";
-                case "ReadWrite":
-                    return "Read/Write access";
-                case "Read":
-                    return "Read Only access";
-            }
+    getDatabaseAccessLevelTextByDbName(dbName: string) {
+        const accessLevel = this.getEffectiveDatabaseAccessLevel(dbName);
+        return accessLevel ? this.getAccessLevelText(accessLevel) : null;
+    }
+    
+    getAccessLevelText(accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
+        switch (accessLevel) {
+            case "Admin":
+                return "Admin";
+            case "ReadWrite":
+                return "Read/Write";
+            case "Read":
+                return "Read Only";
         }
-        
-        return null;
+    }
+
+    getAccessColorByDbName(dbName: string) {
+        const accessLevel = this.getEffectiveDatabaseAccessLevel(dbName);
+        return this.getAccessColor(accessLevel);
+    }
+    
+    getAccessColor(accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
+        switch (accessLevel) {
+            case "Admin":
+                return "text-success";
+            case "ReadWrite":
+                return "text-warning";
+            case "Read":
+                return "text-danger";
+        }
+    }
+
+    getAccessClassByDbName(dbName: string) {
+        const accessLevel = this.getEffectiveDatabaseAccessLevel(dbName);
+        return this.getAccessClass(accessLevel);
+    }
+    
+    getAccessClass(accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
+        switch (accessLevel) {
+            case "Admin":
+                return "icon-access-admin";
+            case "ReadWrite":
+                return "icon-access-read-write";
+            case "Read":
+                return "icon-access-read";
+        }
     }
     
     activeDatabaseAccessLevel = ko.pureComputed<Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess>(() => {
         const activeDatabase = activeDatabaseTracker.default.database();
         if (activeDatabase) {
-            return this.getDatabaseAccessLevel(activeDatabase.name);
+            return this.getEffectiveDatabaseAccessLevel(activeDatabase.name);
         } 
         
         return null;
@@ -58,13 +93,30 @@ class accessManager {
     
     isReadOnlyAccess = ko.pureComputed(() => this.activeDatabaseAccessLevel() === 'Read');
     
-    canHandleOperation(requiredAccess: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess)  {
+    isReadWriteAccessOrAbove = ko.pureComputed(() => {
+        const accessLevel = this.activeDatabaseAccessLevel();
+        return accessLevel === 'ReadWrite' || accessLevel === 'Admin'; 
+    });
+    
+    isAdminAccessOrAbove = ko.pureComputed(() => {
+        const accessLevel = this.activeDatabaseAccessLevel();
+        return accessLevel === 'Admin';
+    });
+    
+    canHandleOperation(requiredAccess: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
         return ko.pureComputed(() => {
-            if (this.activeDatabaseAccessLevel() === 'Read') {
+            const activeDatabaseAccess = this.activeDatabaseAccessLevel();
+            
+            if (!activeDatabaseAccess) {
+                return false;
+            }
+            
+            if (activeDatabaseAccess === 'Read' &&
+                (requiredAccess === 'ReadWrite' || requiredAccess === 'Admin')) {
                 return false;
             }
 
-            if (this.activeDatabaseAccessLevel() === 'ReadWrite' && requiredAccess === 'Admin') {
+            if (activeDatabaseAccess === 'ReadWrite' && requiredAccess === 'Admin') {
                 return false;
             }
 
@@ -74,29 +126,29 @@ class accessManager {
     
     private createSecurityRule(enabledPredicate: KnockoutObservable<boolean>, requiredRoles: string) {
         return ko.pureComputed(() => {
-            const enabled = enabledPredicate();
-            const clearance = this.securityClearance();
-            
-            if (enabled) {
+            if (enabledPredicate()) {
                 return undefined;
             }
-            return this.getRuleHtml("Insufficient security clearance", requiredRoles, clearance);
+            return this.getRuleHtml("Insufficient security clearance", requiredRoles, this.securityClearance());
         });
     }
 
-    private createDatabaseSecurityRule(requiredDatabaseAccess: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
+    private createDatabaseSecurityRule(enabledPredicate: KnockoutObservable<boolean>, 
+                                       requiredDatabaseAccess: string) {
         return ko.pureComputed(() => {
-            if (requiredDatabaseAccess === 'Admin' && this.operatorAndAbove()) {
+            if  (enabledPredicate()) {
+                return undefined;
+            }
+
+            if (!activeDatabaseTracker.default.database()) {
                 return undefined;
             }
             
-            if (this.canHandleOperation(requiredDatabaseAccess)) {
-                return this.getRuleHtml("Insufficient database access", requiredDatabaseAccess, this.activeDatabaseAccessLevel());
-            }
-            
-            return undefined;
+            return this.getRuleHtml("Insufficient database access", requiredDatabaseAccess,
+                                    this.getDatabaseAccessLevelTextByDbName(activeDatabaseTracker.default.database().name));
         });
     }
+    
     
     private getRuleHtml(title: string, required: string, actual: string) {
         return `<div class="text-left">
@@ -110,44 +162,44 @@ class accessManager {
 
     static activeDatabaseTracker = activeDatabaseTracker.default;
 
-    disableIfNotClusterAdminOrClusterNode = this.createSecurityRule(this.clusterAdminOrClusterNode, "Cluster Admin");
-    disableIfNotOperatorOrAbove = this.createSecurityRule(this.operatorAndAbove, "Cluster Admin or Operator");
+    disableIfNotClusterAdminOrClusterNode = this.createSecurityRule(this.isClusterAdminOrClusterNodeClearance, "Cluster Admin");
+    disableIfNotOperatorOrAbove = this.createSecurityRule(this.isOperatorOrAboveClearance, "Cluster Admin or Operator");
     
-    disableIfNotAdminAccessPerDatabase = this.createDatabaseSecurityRule('Admin');
-    disableIfNotReadWriteAccessPerDatabase = this.createDatabaseSecurityRule('ReadWrite');
+    disableIfNotAdminAccessPerDatabaseOrAbove = this.createDatabaseSecurityRule(this.isAdminAccessOrAbove, 'Admin');
+    disableIfNotReadWriteAccessPerDatabaseOrAbove = this.createDatabaseSecurityRule(this.isReadWriteAccessOrAbove, 'Read/Write');
     
     dashboardView = {
-        showCertificatesLink: this.operatorAndAbove
+        showCertificatesLink: this.isOperatorOrAboveClearance
     };
     
     clusterView = {
-        canAddNode: this.clusterAdminOrClusterNode,
-        canDeleteNode: this.clusterAdminOrClusterNode,
-        showCoresInfo: this.clusterAdminOrClusterNode,
-        canDemotePromoteNode: this.clusterAdminOrClusterNode
+        canAddNode: this.isClusterAdminOrClusterNodeClearance,
+        canDeleteNode: this.isClusterAdminOrClusterNodeClearance,
+        showCoresInfo: this.isClusterAdminOrClusterNodeClearance,
+        canDemotePromoteNode: this.isClusterAdminOrClusterNodeClearance
     };
     
     aboutView = {
-        canReplaceLicense: this.clusterAdminOrClusterNode,
-        canForceUpdate: this.clusterAdminOrClusterNode,
-        canRenewLicense: this.clusterAdminOrClusterNode,
-        canRegisterLicense: this.clusterAdminOrClusterNode
+        canReplaceLicense: this.isClusterAdminOrClusterNodeClearance,
+        canForceUpdate: this.isClusterAdminOrClusterNodeClearance,
+        canRenewLicense: this.isClusterAdminOrClusterNodeClearance,
+        canRegisterLicense: this.isClusterAdminOrClusterNodeClearance
     };
     
     databasesView = {
-        canCreateNewDatabase: this.operatorAndAbove,
-        canSetState: this.operatorAndAbove,
-        canDelete: this.operatorAndAbove,
-        canDisableEnableDatabase: this.operatorAndAbove,
-        canDisableIndexing: this.operatorAndAbove,
-        canCompactDatabase: this.operatorAndAbove
+        canCreateNewDatabase: this.isOperatorOrAboveClearance,
+        canSetState: this.isOperatorOrAboveClearance,
+        canDelete: this.isOperatorOrAboveClearance,
+        canDisableEnableDatabase: this.isOperatorOrAboveClearance,
+        canDisableIndexing: this.isOperatorOrAboveClearance,
+        canCompactDatabase: this.isOperatorOrAboveClearance
     };
     
     certificatesView = {
-        canRenewLetsEncryptCertificate: this.clusterAdminOrClusterNode,
-        canDeleteClusterNodeCertificate: this.clusterAdminOrClusterNode,
-        canDeleteClusterAdminCertificate: this.clusterAdminOrClusterNode,
-        canGenerateClientCertificateForAdmin: this.clusterAdminOrClusterNode
+        canRenewLetsEncryptCertificate: this.isClusterAdminOrClusterNodeClearance,
+        canDeleteClusterNodeCertificate: this.isClusterAdminOrClusterNodeClearance,
+        canDeleteClusterAdminCertificate: this.isClusterAdminOrClusterNodeClearance,
+        canGenerateClientCertificateForAdmin: this.isClusterAdminOrClusterNodeClearance
     };
 
     mainMenu = {
@@ -170,26 +222,25 @@ class accessManager {
         disableSystemIoStats: this.disableIfNotOperatorOrAbove,
         disableAdvancedMenuItem: this.disableIfNotOperatorOrAbove,
         disableCaptureStackTraces: this.disableIfNotOperatorOrAbove,
-        enableRecordTransactionCommands: this.operatorAndAbove
+        enableRecordTransactionCommands: this.isOperatorOrAboveClearance
     };
     
     databaseSettingsMenu = {
-        showDatabaseSettingsMenuItem: this.operatorAndAbove,
-        showDatabaseRecordMenuItem: this.operatorAndAbove,
-        showDatabaseIDsMenuItem: this.operatorAndAbove,
-        showConnectionStringsMenuItem: this.operatorAndAbove,
-        disableConnectionStringsMenuItem: this.disableIfNotAdminAccessPerDatabase,
-        disableConflictResolutionMenuItem: this.disableIfNotClusterAdminOrClusterNode
+        showDatabaseSettingsMenuItem: this.isOperatorOrAboveClearance,
+        showDatabaseRecordMenuItem: this.isOperatorOrAboveClearance,
+        showDatabaseIDsMenuItem: this.isOperatorOrAboveClearance,
+        disableConnectionStringsMenuItem: this.disableIfNotAdminAccessPerDatabaseOrAbove,
+        disableConflictResolutionMenuItem: this.disableIfNotAdminAccessPerDatabaseOrAbove
     };
     
     databaseDocumentsMenu = {
-        disablePatchMenuItem: this.disableIfNotReadWriteAccessPerDatabase
+        disablePatchMenuItem: this.disableIfNotReadWriteAccessPerDatabaseOrAbove
     }
 
     databaseTasksMenu = {
-        disableImportDataItem: this.disableIfNotReadWriteAccessPerDatabase,
-        disableCreateSampleDataItem: this.disableIfNotReadWriteAccessPerDatabase,
-        disableExportDatabaseItem: this.disableIfNotReadWriteAccessPerDatabase
+        disableImportDataItem: this.disableIfNotReadWriteAccessPerDatabaseOrAbove,
+        disableCreateSampleDataItem: this.disableIfNotReadWriteAccessPerDatabaseOrAbove,
+        disableExportDatabaseItem: this.disableIfNotReadWriteAccessPerDatabaseOrAbove
     }
 }
 

@@ -23,7 +23,7 @@ class studioConfiguration extends viewModelBase {
         super.activate(args);
      
         this.canNavigateToServerSettings = ko.pureComputed(() => {
-            return accessManager.default.clusterAdminOrClusterNode();
+            return accessManager.default.isClusterAdminOrClusterNodeClearance();
         });
         
         return new getStudioConfigurationCommand(this.activeDatabase())

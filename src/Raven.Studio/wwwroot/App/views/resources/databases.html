@@ -323,8 +323,9 @@
                     <small title="This database is not encrypted" data-bind="visible: !isEncrypted()"><i class="icon-unencrypted text-muted"></i></small>
                 </div>
                 <div data-bind="if: databaseAccessText">
-                    <div class="database-access" >
-                        <small data-bind="text: databaseAccessText" title="Database access level"></small>
+                    <div class="database-access" title="Database access level">
+                        <i data-bind="attr: { class: databaseAccessColor() + ' ' + databaseAccessClass() }"></i>
+                        <small data-bind="text: databaseAccessText" ></small>
                     </div>
                 </div>
                 <div class="storage">

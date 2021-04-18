@@ -158,7 +158,7 @@ class connectedDocuments {
                 {
                   extraClass: () => 'file-trash',
                   title: () => 'Delete attachment',
-                  hideAction: () => this.isReadOnlyAccess()
+                  hide: () => this.isReadOnlyAccess()
                 })
         ];
 
@@ -179,13 +179,13 @@ class connectedDocuments {
                 "Edit",
                 `<i class="icon-edit"></i>`,
                 "35px",
-                { title: () => 'Edit counter', hideAction: () => this.isReadOnlyAccess() }),
+                { title: () => 'Edit counter', hide: () => this.isReadOnlyAccess() }),
             new actionColumn<counterItem>(this.gridController() as virtualGridController<any>,
                  x => this.crudActionsProvider().deleteCounter(x),
                 "Delete",
                 `<i class="icon-trash"></i>`,
                 "35px",
-                { title: () => 'Delete counter', hideAction: () => this.isReadOnlyAccess() }),
+                { title: () => 'Delete counter', hide: () => this.isReadOnlyAccess() }),
         ];
 
         this.revisionCountersColumns = [
