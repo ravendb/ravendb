@@ -110,26 +110,6 @@
                                     <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
                                 </div>
                             </div>
-                            <div class="flex-horizontal">
-                                <div class="flex-grow">
-                                    <button type="button" class="btn btn-info" data-bind="click: $root.toggleAdvancedArea">
-                                            <i class="icon-settings"></i><span>Advanced</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div data-bind="collapse: $root.showAdvancedOptions">
-                            <div class="panel-body">
-                                <div class="form-group max-items-in-row">
-                                    <label for="maxNumber" class="control-label">Max Items in Row</label>
-                                    <div class="flex-grow" data-bind="validationElement: maxNumberOfItemsInRowGroup">
-                                        <div class="input-group">
-                                            <input type="number" min="1" class="form-control" placeholder="Enter a number (or leave empty for null)" id="maxNumber"
-                                                   data-bind="numericInput: maxNumberOfItemsInRowGroup" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                     <div class="panel-addon" data-bind="visible: $root.olapEtlConnectionStringsNames().length === 0 && !$root.createNewConnectionString()">
@@ -155,9 +135,6 @@
                         </div>
                         <div class="flex-grow" data-bind="validationElement: documentIdColumn">
                             <input type="text" class="form-control input-sm" placeholder="Document Id Column Name" data-bind="textInput: documentIdColumn" />
-                        </div>
-                        <div class="flex-grow">
-                            <input type="text" class="form-control input-sm" placeholder="Partition Column Name" data-bind="textInput: partitionColumn" />
                         </div>
                         <div class="flex-noshrink">
                             <button type="button" class="btn btn-success btn-sm" title="Add this OLAP table" data-bind="click: $root.saveEditedOlapTable"><i class="icon-tick"></i></button>

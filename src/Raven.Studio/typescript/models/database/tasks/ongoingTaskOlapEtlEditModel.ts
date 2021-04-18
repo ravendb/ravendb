@@ -15,8 +15,6 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
     runFrequency = ko.observable<string>();
     runFrequencyEnabled = ko.observable<boolean>(false);
     runFrequencyCronEditor = ko.observable<cronEditor>();
-
-    maxNumberOfItemsInRowGroup = ko.observable<number | null>();
     
     transformationScripts = ko.observableArray<ongoingTaskOlapEtlTransformationModel>([]);
     olapTables = ko.observableArray<ongoingTaskOlapEtlTableModel>([]);
@@ -46,8 +44,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             this.customPrefixEnabled,
             this.keepFilesOnDisk,
             this.runFrequency,
-            this.runFrequencyEnabled,
-            this.maxNumberOfItemsInRowGroup
+            this.runFrequencyEnabled
         ])
     }
     
@@ -78,11 +75,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
                 onlyIf: () => this.runFrequencyEnabled()
             }
         });
-        
-        this.maxNumberOfItemsInRowGroup.extend({
-           digit: true,
-           min: 1
-        });
+
 
         this.validationGroup = ko.validatedObservable({
             connectionStringName: this.connectionStringName,
@@ -90,8 +83,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             transformationScripts: this.transformationScripts,
             mentorNode: this.mentorNode,
             customPrefix: this.customPrefix,
-            runFrequency: this.runFrequency,
-            maxNumberOfItemsInRowGroup: this.maxNumberOfItemsInRowGroup
+            runFrequency: this.runFrequency
         });
     }
 
@@ -108,12 +100,9 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             
             this.keepFilesOnDisk(configuration.KeepFilesOnDisk);
                        
-            configuration.RunFrequency = "0 2 * * *"; // hard coded for now - until server is fixed - todo...
             this.runFrequencyEnabled(!!configuration.RunFrequency); 
             this.runFrequency(configuration.RunFrequency ||  ongoingTaskOlapEtlEditModel.defaultRunFrequency);
             this.runFrequencyCronEditor(new cronEditor(this.runFrequency));
-            
-            this.maxNumberOfItemsInRowGroup(configuration.MaxNumberOfItemsInRowGroup || null); // todo - check what if null ??
             
             if (configuration.Transforms) {
                 this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskOlapEtlTransformationModel(x, false, false)));
@@ -140,11 +129,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             Transforms: this.transformationScripts().map(x => x.toDto()),
             CustomPrefix: this.customPrefixEnabled() ? this.customPrefix() : null,
             KeepFilesOnDisk: this.keepFilesOnDisk(),
-            
-            // RunFrequency: this.runFrequencyEnabled() ? this.runFrequency() : null, // todo ... return this line when server is fixed
-            RunFrequency: null, // send null for now, until server is fixed
-            
-            MaxNumberOfItemsInRowGroup: this.maxNumberOfItemsInRowGroup() || null,
+            RunFrequency: this.runFrequencyEnabled() ? this.runFrequency() : null,
             OlapTables: this.olapTables().map(x => x.toDto())
         } as Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration;
         
@@ -160,8 +145,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
                 Configuration: {
                     CustomPrefix: "",
                     KeepFilesOnDisk: false,
-                    RunFrequency: "", // todo .. return actual value when server is fixed
-                    MaxNumberOfItemsInRowGroup: null,
+                    RunFrequency: this.defaultRunFrequency,
                     Transforms: [],
                     OlapTables: []
                 }
