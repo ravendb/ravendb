@@ -276,11 +276,16 @@ class shell extends viewModelBase {
         super.attached();
 
         if (this.clientCertificate() && this.clientCertificate().Name) {
-            
-            const dbAccess = certificateModel.resolveDatabasesAccess(this.clientCertificate());
-            const allowedDatabases = dbAccess.length ? dbAccess.map(x => `<div>${x}</div>`).join("") : "Access to all databases is denied";
+            const dbAccessArray = certificateModel.resolveDatabasesAccess(this.clientCertificate());
 
-            // todo: make separate L&F for db name and access level in param allowedDatabases
+            const allowedDatabasesText = dbAccessArray.length ?
+                dbAccessArray.map(x => `<div>
+                                            <strong>${x.dbName}</strong>
+                                            <span class="${accessManager.default.getAccessColor(x.accessLevel)} margin-left">
+                                                         ${accessManager.default.getAccessLevelText(x.accessLevel)}
+                                            </span>
+                                        </div>`).join("")
+                : "Access to all databases is denied";
             
             popoverUtils.longWithHover($(".js-client-cert"),
                 {
@@ -292,7 +297,7 @@ class shell extends viewModelBase {
                             <dt><span>Security Clearance</span></dt>
                             <dd><strong>${certificateModel.clearanceLabelFor(this.clientCertificate().SecurityClearance)}</strong></dd>
                             <dt><span>Access to databases:</span></dt>
-                            <dd><strong>${allowedDatabases}</strong></dd>
+                            <dd><span>${allowedDatabasesText}</span></dd>
                           </dl>`
                     ,
                     placement: 'top'

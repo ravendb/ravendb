@@ -236,7 +236,7 @@ class extensions {
                     throw new Error("Cannot use the 'requiredAccess' binding - no database is active.");
                 }
 
-                const strategyTypes = ["hide", "disable", "visibilityHidden"];
+                const strategyTypes = ["hide", "disable"]; // todo: "visibilityHidden"
                 
                 if (bindings.requiredAccessOptions) {
                     const strategy = bindings.requiredAccessOptions.strategy;
@@ -247,17 +247,15 @@ class extensions {
                     if (strategy === 'disable') {
                         const hasDisabledClass = $(element).hasClass("disabled");
                         if (hasDisabledClass) {
-                            throw new Error("Do not use the 'disabled' class. Please use the disabled/enabled bindings.");
+                            throw new Error("Error in 'requiredAccess' binding. Support for 'disabled' class is not implemented.");
                         }
 
                         if (element.tagName === "A") {
-                            throw new Error("Please do not use the 'requiredAccessOptions disable strategy' binding with element of type 'a'.");
+                            throw new Error("Error in 'RequiredAccess' binding. Support for 'disable' strategy on type 'a' is not implemented.");
                         }
                         
-                        const hasDisabledBinding = _.includes(bindingsArray, "disable");
-                        const hasEnabledBinding = _.includes(bindingsArray, "enable");
-                        if (hasDisabledBinding && hasEnabledBinding) {
-                            throw new Error("Element cannot have both the 'disable' binding & the 'enable' binding.");
+                        if (bindings.enable && bindings.disable) {
+                            throw new Error("Error in 'RequiredAccess' binding. Do not use both 'disable' & 'enable' bindings together.");
                         }
                     }
                 }
@@ -278,7 +276,7 @@ class extensions {
                             const visibleBinding = bindings.visible;
                             const visibleValue = visibleBinding ? ko.unwrap(visibleBinding) : true;
 
-                            const hiddenBinding = bindings.enable;
+                            const hiddenBinding = bindings.hidden;
                             const hiddenValue = hiddenBinding ? ko.unwrap(hiddenBinding) : false;
 
                             const shouldBeVisibleByKo = visibleValue && !hiddenValue;
@@ -315,11 +313,6 @@ class extensions {
                                     element.setAttribute("disabled", true);
                                 }
                             }
-                        }
-                            break;
-                        
-                        case 'visibilityHidden': {
-                            // TODO
                         }
                             break;
                     }

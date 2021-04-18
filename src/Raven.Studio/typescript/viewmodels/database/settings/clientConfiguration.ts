@@ -36,7 +36,7 @@ class clientConfiguration extends viewModelBase {
         this.bindToCurrentInstance("saveConfiguration", "setReadMode");
 
         this.canNavigateToServerSettings = ko.pureComputed(() => {
-            return accessManager.default.clusterAdminOrClusterNode();
+            return accessManager.default.isClusterAdminOrClusterNodeClearance();
         });
         
         const globalTask = new getGlobalClientConfigurationCommand()

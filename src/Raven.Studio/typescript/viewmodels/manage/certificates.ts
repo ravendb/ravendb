@@ -57,7 +57,6 @@ class certificates extends viewModelBase {
     
     usingHttps = location.protocol === "https:";
     
-    resolveDatabasesAccess = certificateModel.resolveDatabasesAccess;
     accessManager = accessManager.default.certificatesView;
 
     importedFileName = ko.observable<string>();
@@ -109,6 +108,8 @@ class certificates extends viewModelBase {
         super.compositionComplete();
         
         this.addNotification(changesContext.default.serverNotifications().watchAllAlerts(alert => this.onAlert(alert)));
+
+        $('.certificates [data-toggle="tooltip"]').tooltip({ html: true });
         
         popoverUtils.longWithHover($("#download-certificates"),
             {
@@ -214,6 +215,30 @@ class certificates extends viewModelBase {
                 const dateFormatted = date.format("YYYY-MM-DD");
                 this.serverCertificateRenewalDate(dateFormatted);
             })
+    }
+    
+    databasesAccessInfo(certificateDefinition: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
+        return ko.pureComputed(() => {
+            return certificateModel.resolveDatabasesAccess(certificateDefinition);
+        });
+    }
+    getAccessClass(accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
+        return ko.pureComputed(() => {
+           return accessManager.default.getAccessClass(accessLevel);
+        });
+    }
+
+    getAccessColor(accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
+        return ko.pureComputed(() => {
+            return accessManager.default.getAccessColor(accessLevel);
+        });
+    }
+
+    getAccessInfoText(dbName: string, accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
+        return `<div class="text-left padding padding-xs">
+                   <strong>Name</strong>: ${dbName === "All" ? "All databases" : dbName }<br>
+                   <strong>Access</strong>: ${accessManager.default.getAccessLevelText(accessLevel) }
+                </div>`
     }
     
     canBeAutomaticallyRenewed(thumbprints: string[]) {

@@ -22,6 +22,7 @@ class database {
 
     databaseAccess = ko.observable<Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess>();
     databaseAccessText = ko.observable<string>();
+    databaseAccessColor = ko.observable<string>();
     
     private clusterNodeTag: KnockoutObservable<string>;
 
@@ -71,8 +72,9 @@ class database {
             this.relevant(inMemberList || inPromotableList || inRehabList);
         }
 
-        this.databaseAccess(accessManager.default.getDatabaseAccessLevel(incomingCopy.Name));
-        this.databaseAccessText(accessManager.default.getDatabaseAccessLevelText(incomingCopy.Name));
+        this.databaseAccess(accessManager.default.getEffectiveDatabaseAccessLevel(incomingCopy.Name));
+        this.databaseAccessText(accessManager.default.getAccessLevelText(this.databaseAccess()));
+        this.databaseAccessColor(accessManager.default.getAccessColor(this.databaseAccess()));
     }
 
     private attributeValue(attributes: any, bundleName: string) {

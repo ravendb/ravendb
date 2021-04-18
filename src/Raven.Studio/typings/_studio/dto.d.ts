@@ -793,3 +793,8 @@ interface indexHistoryCommandResult {
     Index: string;
     History: Raven.Client.ServerWide.IndexHistoryEntry[];
 }
+
+interface databaseAccessInfo {
+    dbName: string;
+    accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess;
+}

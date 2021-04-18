@@ -49,6 +49,8 @@ class databaseInfo {
     isCurrentlyActiveDatabase: KnockoutComputed<boolean>;
     
     databaseAccessText = ko.observable<string>();
+    databaseAccessColor = ko.observable<string>();
+    databaseAccessClass = ko.observable<string>();
 
     inProgressAction = ko.observable<string>();
 
@@ -215,7 +217,9 @@ class databaseInfo {
             this.nodes(joinedNodes);
         }
 
-        this.databaseAccessText(accessManager.default.getDatabaseAccessLevelText(this.name));
+        this.databaseAccessText(accessManager.default.getDatabaseAccessLevelTextByDbName(this.name));
+        this.databaseAccessColor(accessManager.default.getAccessColorByDbName(this.name));
+        this.databaseAccessClass(accessManager.default.getAccessClassByDbName(this.name))
     }
 
     private applyNodesStatuses(nodes: databaseGroupNode[], statuses: { [key: string]: Raven.Client.ServerWide.Operations.DatabaseGroupNodeStatus;}) {
