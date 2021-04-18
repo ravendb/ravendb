@@ -1262,6 +1262,23 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.DocumentsCompression, details);
         }
 
+        public void AssertCanUseRollingIndexes()
+        {
+            var hasRollingIndexes = HasRollingIndexes();
+
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasRollingIndexes)
+                return;
+
+            if (hasRollingIndexes == false)
+                return;
+
+            var details = $"Your current license ({LicenseStatus.Type}) does not allow rolling indexes.";
+            throw GenerateLicenseLimit(LimitType.RollingIndexes, details);
+        }
+
         public void AssertCanAddPullReplicationAsHub()
         {
             if (IsValid(out var licenseLimit) == false)
@@ -1403,6 +1420,11 @@ namespace Raven.Server.Commercial
             const string message = "Your current license doesn't include the dynamic database distribution feature";
             GenerateLicenseLimit(LimitType.DynamicNodeDistribution, message, addNotification: true);
             return false;
+        }
+
+        public bool HasRollingIndexes()
+        {
+            return LicenseStatus.HasRollingIndexes;
         }
 
         public bool HasHighlyAvailableTasks()

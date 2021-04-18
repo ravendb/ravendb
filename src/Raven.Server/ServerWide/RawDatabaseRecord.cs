@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Server.Documents.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
@@ -522,6 +523,38 @@ namespace Raven.Server.ServerWide
                 }
 
                 return _deletionInProgress;
+            }
+        }
+
+
+        private Dictionary<string, RollingIndex> _rollingIndexes;
+
+        public Dictionary<string, RollingIndex> RollingIndexes
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.RollingIndexes;
+
+                if (_rollingIndexes == null)
+                {
+                    if (_record.TryGet(nameof(DatabaseRecord.RollingIndexes), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        _rollingIndexes = new Dictionary<string, RollingIndex>();
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject bjro)
+                                _rollingIndexes[propertyDetails.Name] = JsonDeserializationCluster.RollingIndexes(bjro);
+                        }
+                    }
+                }
+                return _rollingIndexes;
             }
         }
 

@@ -628,7 +628,7 @@ namespace FastTests
                 {
                     string dataDirectory = null;
                     if (options.DataDirectory == null)
-                        dataDirectory = NewDataPath(prefix: $"GetNewServer-{options.NodeTag}", forceCreateDir: true);
+                        dataDirectory = NewServerPath($"GetNewServer-{options.NodeTag}");
                     else
                     {
                         if (Path.IsPathRooted(options.DataDirectory) == false)
@@ -710,14 +710,34 @@ namespace FastTests
             Process.Start("xdg-open", url);
         }
 
-        protected string NewDataPath([CallerMemberName] string prefix = null, string suffix = null, bool forceCreateDir = false)
+        protected string NewDataPath([CallerMemberName] string prefix = null, string suffix = null, bool forceCreateDir = false, string rootDir = null)
         {
             if (suffix != null)
                 prefix += suffix;
-            var path = RavenTestHelper.NewDataPath(prefix, 0, forceCreateDir);
+            var path = RavenTestHelper.NewDataPath(prefix, 0, forceCreateDir, rootDir);
 
             GlobalPathsToDelete.Add(path);
             _localPathsToDelete.Add(path);
+
+            return path;
+        }
+
+        protected string NewDatabasePath(string serverPath, string testName = null, int serverPort = 0, bool forceCreateDir = false)
+        {
+            var path = RavenTestHelper.NewDatabaseDataPath(serverPath, testName, serverPort, forceCreateDir);
+
+            GlobalPathsToDelete.Add(path);
+            _localPathsToDelete.Add(path);
+
+            return path;
+        }
+
+        protected string NewServerPath(string serverName, int serverPort = 0)
+        {
+            var path = RavenTestHelper.NewServerDataPath(serverName, serverPort);
+
+            GlobalPathsToDelete.Add(path);
+            //_localPathsToDelete.Add(path);
 
             return path;
         }

@@ -484,6 +484,11 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public string PatternReferencesCollectionName { get; set; }
 
+        /// <summary>
+        /// Enable index rolling deployment
+        /// </summary>
+        public bool? Rolling { get; set; } = true;
+
         public override string ToString()
         {
             return Name;
@@ -560,6 +565,7 @@ namespace Raven.Client.Documents.Indexes
         AdditionalSources = 1 << 10,
         AdditionalAssemblies = 1 << 11,
 
-        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies
+        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies,
+        ReIndexRequiredMask = Maps | Reduce | Fields | Configuration | AdditionalSources | AdditionalAssemblies
     }
 }

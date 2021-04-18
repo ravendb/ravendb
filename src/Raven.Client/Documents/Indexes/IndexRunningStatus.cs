@@ -4,6 +4,9 @@ namespace Raven.Client.Documents.Indexes
     {
         Running,
         Paused,
-        Disabled
+        Disabled,
+
+        // for rolling indexes
+        Pending
     }
 }

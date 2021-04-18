@@ -357,8 +357,9 @@ namespace Raven.Server
                 exception is DatabaseConcurrentLoadTimeoutException ||
                 exception is NodeIsPassiveException ||
                 exception is ClientVersionMismatchException ||
-                exception is DatabaseSchemaErrorException ||
-                exception is DatabaseIdleException)
+                exception is DatabaseSchemaErrorException || 
+                exception is DatabaseIdleException ||
+                exception is PendingRollingIndexException)
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                 return;

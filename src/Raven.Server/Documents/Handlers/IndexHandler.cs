@@ -12,6 +12,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Errors;
@@ -25,6 +26,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -37,7 +39,7 @@ namespace Raven.Server.Documents.Handlers
     public class IndexHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/indexes/replace", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public Task Replace()
+        public async Task Replace()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var replacementName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
@@ -49,14 +51,21 @@ namespace Raven.Server.Documents.Handlers
                 throw new IndexDoesNotExistException($"Could not find '{name}' and '{replacementName}' indexes.");
 
             if (newIndex == null)
+            {
+                if (Database.IndexStore.GetRollingIndexes().ContainsKey(name))
+                {
+                    var command = new PutRollingIndexCommand(Database.Name, name, ServerStore.NodeTag, DateTime.UtcNow, RaftIdGenerator.NewId());
+                    await ServerStore.SendToLeaderAsync(command);
+                    return;
+                }
+
                 throw new IndexDoesNotExistException($"Could not find side-by-side index for '{name}'.");
+            }
 
             using (var token = CreateOperationToken(TimeSpan.FromMinutes(15)))
             {
                 Database.IndexStore.ReplaceIndexes(name, newIndex.Name, token.Token);
             }
-
-            return NoContent();
         }
 
         [RavenAction("/databases/*/indexes/source", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -271,23 +280,25 @@ namespace Raven.Server.Documents.Handlers
             {
                 IndexDefinition[] indexDefinitions;
                 if (string.IsNullOrEmpty(name))
+                {
                     indexDefinitions = Database.IndexStore
-                        .GetIndexes()
-                        .OrderBy(x => x.Name)
+                        .GetNames()
+                        .OrderBy(x => x)
                         .Skip(start)
                         .Take(pageSize)
-                        .Select(x => x.GetIndexDefinition())
+                        .Select(x => Database.IndexStore.GetIndexDefinition(x))
                         .ToArray();
+                }
                 else
                 {
-                    var index = Database.IndexStore.GetIndex(name);
-                    if (index == null)
+                    var definition = Database.IndexStore.GetIndexDefinition(name);
+                    if (definition == null)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                         return;
                     }
 
-                    indexDefinitions = new[] { index.GetIndexDefinition() };
+                    indexDefinitions = new[] { definition };
                 }
 
                 writer.WriteStartObject();
@@ -316,61 +327,74 @@ namespace Raven.Server.Documents.Handlers
             await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
             {
                 IndexStats[] indexStats;
+                var rollingIndexes = Database.IndexStore.GetRollingIndexesDefinition()
+                    .ToDictionary(x => x.Name, y => y.Definition);
+
                 using (context.OpenReadTransaction())
                 {
                     if (string.IsNullOrEmpty(name))
                     {
                         indexStats = Database.IndexStore
-                            .GetIndexes()
-                            .OrderBy(x => x.Name)
-                            .Select(x =>
+                            .GetNames()
+                            .OrderBy(x => x)
+                            .Select(indexName =>
                             {
+                                Index index = null;
                                 try
                                 {
-                                    return x.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, queryContext: context);
+                                    index = Database.IndexStore.GetIndex(indexName, throwOnPendingRollingIndex: false);
+                                    if (index == null)
+                                    {
+                                        if (rollingIndexes.TryGetValue(indexName, out var definition))
+                                            return CreateStatsForRollingIndex(indexName, definition);
+
+                                        System.Diagnostics.Debug.Assert(false, $"{indexName} is null");
+                                    }
+
+                                    return index.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, queryContext: context);
                                 }
                                 catch (Exception e)
                                 {
                                     if (Logger.IsOperationsEnabled)
-                                        Logger.Operations($"Failed to get stats of '{x.Name}' index", e);
+                                        Logger.Operations($"Failed to get stats of '{index.Name}' index", e);
 
                                     try
                                     {
-                                        Database.NotificationCenter.Add(AlertRaised.Create(Database.Name, $"Failed to get stats of '{x.Name}' index",
-                                            $"Exception was thrown on getting stats of '{x.Name}' index",
-                                            AlertType.Indexing_CouldNotGetStats, NotificationSeverity.Error, key: x.Name, details: new ExceptionDetails(e)));
+                                        Database.NotificationCenter.Add(AlertRaised.Create(Database.Name, $"Failed to get stats of '{index.Name}' index",
+                                            $"Exception was thrown on getting stats of '{index.Name}' index",
+                                            AlertType.Indexing_CouldNotGetStats, NotificationSeverity.Error, key: index.Name, details: new ExceptionDetails(e)));
                                     }
                                     catch (Exception addAlertException)
                                     {
                                         if (Logger.IsOperationsEnabled && addAlertException.IsOutOfMemory() == false && addAlertException.IsRavenDiskFullException() == false)
-                                            Logger.Operations($"Failed to add alert when getting error on retrieving stats of '{x.Name}' index", addAlertException);
+                                            Logger.Operations($"Failed to add alert when getting error on retrieving stats of '{index.Name}' index", addAlertException);
                                     }
 
-                                    var state = x.State;
+                                    var state = index.State;
 
                                     if (e.IsOutOfMemory() == false && e.IsRavenDiskFullException() == false)
                                     {
                                         try
                                         {
                                             state = IndexState.Error;
-                                            x.SetState(state, inMemoryOnly: true);
+                                            index.SetState(state, inMemoryOnly: true);
                                         }
                                         catch (Exception ex)
                                         {
                                             if (Logger.IsOperationsEnabled)
-                                                Logger.Operations($"Failed to change state of '{x.Name}' index to error after encountering exception when getting its stats.",
+                                                Logger.Operations($"Failed to change state of '{index.Name}' index to error after encountering exception when getting its stats.",
                                                     ex);
                                         }
                                     }
 
                                     return new IndexStats
                                     {
-                                        Name = x.Name,
-                                        Type = x.Type,
+                                        Name = index.Name,
+                                        Type = index.Type,
                                         State = state,
-                                        Status = x.Status,
-                                        LockMode = x.Definition.LockMode,
-                                        Priority = x.Definition.Priority,
+                                        Status = index.Status,
+                                        LockMode = index.Definition.LockMode,
+                                        Priority = index.Definition.Priority,
                                     };
                                 }
                             })
@@ -378,14 +402,24 @@ namespace Raven.Server.Documents.Handlers
                     }
                     else
                     {
-                        var index = Database.IndexStore.GetIndex(name);
+                        var index = Database.IndexStore.GetIndex(name, throwOnPendingRollingIndex: false);
                         if (index == null)
                         {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            return;
-                        }
+                            if (rollingIndexes.TryGetValue(name, out var definition) == false)
+                            {
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                return;
+                            }
 
-                        indexStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, queryContext: context) };
+                            indexStats = new[]
+                            {
+                                CreateStatsForRollingIndex(name, definition)
+                            };
+                        }
+                        else
+                        {
+                            indexStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, queryContext: context) };
+                        }
                     }
                 }
 
@@ -395,6 +429,33 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteEndObject();
             }
+        }
+
+        private static IndexStats CreateStatsForRollingIndex(string indexName, IndexDefinition definition)
+        {
+            return new IndexStats
+            {
+                Name = indexName,
+                Type = definition.Type,
+                SourceType = definition.SourceType,
+                LockMode = definition.LockMode ?? IndexLockMode.Unlock,
+                Priority = definition.Priority ?? IndexPriority.Normal,
+                State = definition.State ?? IndexState.Normal,
+                Status = IndexRunningStatus.Pending,
+                IsStale = true
+            };
+        }
+
+        private static IndexProgress CreateProgressForRollingIndex(string indexName, IndexDefinition definition)
+        {
+            return new IndexProgress
+            {
+                Name = indexName,
+                Type = definition.Type,
+                SourceType = definition.SourceType,
+                IndexRunningStatus = IndexRunningStatus.Pending,
+                IsStale = true
+            };
         }
 
         [RavenAction("/databases/*/indexes/staleness", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -428,6 +489,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/progress", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Progress()
         {
+            var rollingIndexes = Database.IndexStore.GetRollingIndexes();
+
             using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
             await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
             using (context.OpenReadTransaction())
@@ -437,14 +500,30 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteStartArray();
 
                 var first = true;
-                foreach (var index in Database.IndexStore.GetIndexes())
+                foreach (var name in Database.IndexStore.GetNames())
                 {
                     try
                     {
-                        if (index.IsStale(context) == false)
-                            continue;
+                        var index = Database.IndexStore.GetIndex(name, throwOnPendingRollingIndex: false);
+                        var progress = index?.GetProgress(context, isStale: true);
 
-                        var progress = index.GetProgress(context, isStale: true);
+                        var existingIndexName = name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty,
+                            StringComparison.OrdinalIgnoreCase);
+
+                        if (rollingIndexes.TryGetValue(existingIndexName, out var rollingProgress))
+                        {
+                            if (index == null)
+                            {
+                                progress = CreateProgressForRollingIndex(name, Database.IndexStore.GetIndexDefinition(name));
+                            }
+
+                            progress.RollingProgress = rollingProgress;
+                        }
+                        else
+                        {
+                            if (index?.IsStale(context) == false)
+                                continue;
+                        }
 
                         if (first == false)
                             writer.WriteComma();
@@ -464,7 +543,7 @@ namespace Raven.Server.Documents.Handlers
                     catch (Exception e)
                     {
                         if (Logger.IsOperationsEnabled)
-                            Logger.Operations($"Failed to get index progress for index name: {index.Name}", e);
+                            Logger.Operations($"Failed to get index progress for index name: {name}", e);
                     }
                 }
 
@@ -565,6 +644,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/status", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Status()
         {
+            var rolling = Database.IndexStore.GetRollingIndexesNames().ToHashSet();
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -577,7 +657,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WritePropertyName(nameof(IndexingStatus.Indexes));
                 writer.WriteStartArray();
                 var isFirst = true;
-                foreach (var index in Database.IndexStore.GetIndexes())
+                foreach (var name in Database.IndexStore.GetNames())
                 {
                     if (isFirst == false)
                         writer.WriteComma();
@@ -587,12 +667,17 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
 
                     writer.WritePropertyName(nameof(IndexingStatus.IndexStatus.Name));
-                    writer.WriteString(index.Name);
+                    writer.WriteString(name);
 
                     writer.WriteComma();
-
                     writer.WritePropertyName(nameof(IndexingStatus.IndexStatus.Status));
-                    writer.WriteString(index.Status.ToString());
+
+                    var index = Database.IndexStore.GetIndex(name, throwOnPendingRollingIndex: false);
+                    var existingIndexName = name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty,
+                        StringComparison.OrdinalIgnoreCase);
+
+                    var status = index == null && rolling.Contains(existingIndexName) ? IndexRunningStatus.Pending.ToString() : index.Status.ToString();
+                    writer.WriteString(status);
 
                     writer.WriteEndObject();
                 }

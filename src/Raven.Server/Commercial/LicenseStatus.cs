@@ -112,6 +112,8 @@ namespace Raven.Server.Commercial
 
         public bool HasDocumentsCompression => GetValue<bool>("documentsCompression");
 
+        public bool HasRollingIndexes => true; //todo
+
         public bool HasExternalReplication => GetValue<bool>("externalReplication");
 
         public bool HasDelayedExternalReplication => GetValue<bool>("delayedExternalReplication");

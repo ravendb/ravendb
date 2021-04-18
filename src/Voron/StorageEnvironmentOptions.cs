@@ -317,7 +317,7 @@ namespace Voron
 
         public static StorageEnvironmentOptions CreateMemoryOnly(string name, string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {
-            var tempPathSetting = new VoronPathSetting(tempPath ?? GetTempPath());
+            var tempPathSetting = new VoronPathSetting(tempPath ?? GetTempPath(name));
             return new PureMemoryStorageEnvironmentOptions(name, tempPathSetting, ioChangesNotifications, catastrophicFailureNotification);
         }
 

@@ -30,6 +30,8 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexState State { get; set; }
 
+        public bool Rolling { get; set; } = true; //todo
+
         public virtual bool HasDynamicFields => false;
 
         public virtual bool HasCompareExchange => false;

@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -125,6 +126,9 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
         public static readonly Func<BlittableJsonReaderObject, AutoIndexDefinition> AutoIndexDefinition = GenerateJsonDeserializationRoutine<AutoIndexDefinition>();
 
+        public static Func<BlittableJsonReaderObject, RollingIndex> RollingIndexes = GenerateJsonDeserializationRoutine<RollingIndex>();
+        public static Func<BlittableJsonReaderObject, SorterDefinition> SorterDefinition = GenerateJsonDeserializationRoutine<SorterDefinition>();
+
         public static readonly Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {
             [nameof(UnregisterReplicationHubAccessCommand)] = GenerateJsonDeserializationRoutine<UnregisterReplicationHubAccessCommand>(),
@@ -157,6 +161,7 @@ namespace Raven.Server.ServerWide
             [nameof(PutIndexCommand)] = GenerateJsonDeserializationRoutine<PutIndexCommand>(),
             [nameof(PutIndexesCommand)] = GenerateJsonDeserializationRoutine<PutIndexesCommand>(),
             [nameof(PutAutoIndexCommand)] = GenerateJsonDeserializationRoutine<PutAutoIndexCommand>(),
+            [nameof(PutRollingIndexCommand)] = GenerateJsonDeserializationRoutine<PutRollingIndexCommand>(),
             [nameof(DeleteIndexCommand)] = GenerateJsonDeserializationRoutine<DeleteIndexCommand>(),
             [nameof(SetIndexLockCommand)] = GenerateJsonDeserializationRoutine<SetIndexLockCommand>(),
             [nameof(SetIndexPriorityCommand)] = GenerateJsonDeserializationRoutine<SetIndexPriorityCommand>(),
