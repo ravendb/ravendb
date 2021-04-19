@@ -31,6 +31,11 @@ namespace Raven.Client.Documents.Session
         public int TotalResults { get; set; }
 
         /// <summary>
+        /// What was the total count of the results that matched the query
+        /// </summary>
+        public long TotalResults64 { get; set; }
+
+        /// <summary>
         /// Gets or sets the skipped results
         /// </summary>
         public int SkippedResults { get; set; }
@@ -70,6 +75,7 @@ namespace Raven.Client.Documents.Session
             IsStale = qr.IsStale;
             DurationInMs = qr.DurationInMs;
             TotalResults = qr.TotalResults;
+            TotalResults64 = qr.TotalResults64;
             SkippedResults = qr.SkippedResults;
             Timestamp = qr.IndexTimestamp;
             IndexName = qr.IndexName;

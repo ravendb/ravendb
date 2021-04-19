@@ -234,6 +234,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
 
                 resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
+                resultToFill.TotalResults64 = resultToFill.TotalResults;
 
                 if (query.Offset != null || query.Limit != null)
                 {
@@ -286,6 +287,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     buffer[hasCounters ? 4 : 3] = DocumentsStorage.ReadLastTimeSeriesEtag(context.Documents.Transaction.InnerTransaction);
 
                 resultToFill.TotalResults = (int)numberOfDocuments;
+                resultToFill.TotalResults64 = numberOfDocuments;
             }
             else
             {
@@ -301,6 +303,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     buffer[hasCounters ? 4 : 3] = Database.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(context.Documents, collection);
 
                 resultToFill.TotalResults = (int)collectionStats.Count;
+                resultToFill.TotalResults64 = collectionStats.Count;
             }
 
             if (hasCmpXchg)

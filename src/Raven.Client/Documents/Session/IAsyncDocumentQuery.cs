@@ -60,6 +60,11 @@ namespace Raven.Client.Documents.Session
         Task<int> CountAsync(CancellationToken token = default);
 
         /// <summary>
+        /// Gets the total count of records for this query in Long type
+        /// </summary>
+        Task<long> CountLongAsync(CancellationToken token = default);
+
+        /// <summary>
         ///     Register the query as a lazy query and return a lazy
         ///     instance that will evaluate the query only when needed.
         /// Also provide a function to execute when the value is evaluated

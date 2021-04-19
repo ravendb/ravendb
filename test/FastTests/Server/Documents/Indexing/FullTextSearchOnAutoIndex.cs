@@ -33,10 +33,11 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     QueryStatistics stats;
 
-                    var count = await s.Query<User>()
+                    var count = await
+                        s.Query<User>()
                         .Statistics(out stats)
                         .Search(u => u.Name, "Ayende")
-                        .CountAsync();
+                        .CountLongAsync();
 
                     Assert.Equal(1, count);
                     Assert.Equal("Auto/Users/BySearch(Name)", stats.IndexName);
@@ -46,12 +47,14 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     QueryStatistics stats;
 
-                    var count = await s.Query<User>()
+                    var q = s.Query<User>()
                         .Statistics(out stats)
-                        .Where(u => u.Name == "Ayende")
-                        .CountAsync();
+                        .Search(u => u.Name, "Ayende");
+                    var count = await q.CountAsync();
 
-                    Assert.Equal(0, count);
+                    WaitForUserToContinueTheTest(store);
+
+                    Assert.Equal(1, count);
                     Assert.Equal("Auto/Users/BySearch(Name)", stats.IndexName);
                 }
             }

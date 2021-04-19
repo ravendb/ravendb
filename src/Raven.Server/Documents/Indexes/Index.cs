@@ -2848,7 +2848,8 @@ namespace Raven.Server.Documents.Indexes
                                         {
                                             var document = enumerator.Current;
 
-                                            resultToFill.TotalResults = totalResults.Value;
+                                            resultToFill.TotalResults64 = resultToFill.TotalResults = totalResults.Value;
+
                                             if (query.Offset != null || query.Limit != null)
                                             {
                                                 resultToFill.CappedMaxResults = Math.Min(
@@ -2904,6 +2905,7 @@ namespace Raven.Server.Documents.Indexes
                                 resultToFill.RegisterSpatialProperties(query);
                                 
                                 resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
+                                resultToFill.TotalResults64 = resultToFill.TotalResults;
                                 resultToFill.SkippedResults = skippedResults.Value;
                                 resultToFill.IncludedPaths = query.Metadata.Includes;
                             }
@@ -2998,6 +3000,7 @@ namespace Raven.Server.Documents.Indexes
                             foreach (var indexEntry in reader.IndexEntries(query, totalResults, queryContext.Documents, GetOrAddSpatialField, token.Token))
                             {
                                 resultToFill.TotalResults = totalResults.Value;
+                                resultToFill.TotalResults64 = totalResults.Value;
                                 await resultToFill.AddResultAsync(indexEntry, token.Token);
                             }
                         }
@@ -3112,6 +3115,7 @@ namespace Raven.Server.Documents.Indexes
                                 }
 
                                 result.TotalResults = result.Results.Count;
+                                result.TotalResults64 = result.Results.Count;
 
                                 return result;
                             }
@@ -3217,6 +3221,7 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             result.TotalResults = result.Results.Count;
+                            result.TotalResults64 = result.Results.Count;
                             return result;
                         }
                     }
