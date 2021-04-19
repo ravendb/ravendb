@@ -150,9 +150,9 @@ class genUtils {
         return timeTokens.join(" ");
     }
     
-    static formatUtcDateAsLocal(date: string) {
+    static formatUtcDateAsLocal(date: string, format: string = genUtils.dateFormat) {
         const dateToFormat = moment.utc(date);
-        return dateToFormat.local().format(genUtils.dateFormat);
+        return dateToFormat.local().format(format);
     }
 
     static formatDurationByDate(dateInUtc: moment.Moment, isFromDuration: boolean): string {
