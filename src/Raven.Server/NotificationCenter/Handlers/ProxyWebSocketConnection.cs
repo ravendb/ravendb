@@ -53,7 +53,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             _localToRemote = ForwardLocalToRemote();
             _remoteToLocal = ForwardRemoteToLocal();
 
-            await Task.WhenAll(_localToRemote, _remoteToLocal);
+            await Task.WhenAny(_localToRemote, _remoteToLocal);
         }
 
         private async Task ForwardLocalToRemote()
