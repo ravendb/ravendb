@@ -33,26 +33,43 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     QueryStatistics stats;
 
-                    var count = await
-                        s.Query<User>()
-                        .Statistics(out stats)
-                        .Search(u => u.Name, "Ayende")
-                        .CountLongAsync();
-
-                    Assert.Equal(1, count);
-                    Assert.Equal("Auto/Users/BySearch(Name)", stats.IndexName);
-                }
-
-                using (var s = store.OpenAsyncSession())
-                {
-                    QueryStatistics stats;
-
                     var q = s.Query<User>()
                         .Statistics(out stats)
                         .Search(u => u.Name, "Ayende");
                     var count = await q.CountAsync();
 
                     WaitForUserToContinueTheTest(store);
+
+                    Assert.Equal(1, count);
+                    Assert.Equal("Auto/Users/BySearch(Name)", stats.IndexName);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanUseFullTextSearchInAutoIndex2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var s = store.OpenAsyncSession())
+                {
+                    await s.StoreAsync(new User
+                    {
+                        Name = "Ayende Rahien"
+                    });
+
+                    await s.SaveChangesAsync();
+                }
+
+                using (var s = store.OpenAsyncSession())
+                {
+                    QueryStatistics stats;
+
+                    var count = await
+                        s.Query<User>()
+                            .Statistics(out stats)
+                            .Search(u => u.Name, "Ayende")
+                            .LongCountAsync();
 
                     Assert.Equal(1, count);
                     Assert.Equal("Auto/Users/BySearch(Name)", stats.IndexName);

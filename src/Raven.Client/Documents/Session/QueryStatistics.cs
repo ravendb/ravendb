@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Session
         public int TotalResults { get; set; }
 
         /// <summary>
-        /// What was the total count of the results that matched the query
+        /// What was the total count of the results that matched the query as int64
         /// </summary>
         public long TotalResults64 { get; set; }
 
