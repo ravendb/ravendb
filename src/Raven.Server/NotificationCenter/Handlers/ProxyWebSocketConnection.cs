@@ -14,8 +14,8 @@ namespace Raven.Server.NotificationCenter.Handlers
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ProxyWebSocketConnection>(nameof(ProxyWebSocketConnection));
 
-        private readonly CancellationToken _token;
-        private readonly Uri _webSocketUri;
+        private readonly CancellationTokenSource _cts;
+        private readonly Uri _remoteWebSocketUri;
         private readonly ClientWebSocket _remoteWebSocket;
         private readonly WebSocket _localWebSocket;
         private readonly IMemoryContextPool _contextPool;
@@ -35,8 +35,8 @@ namespace Raven.Server.NotificationCenter.Handlers
 
             _localWebSocket = localWebSocket;
             _contextPool = contextPool;
-            _token = token;
-            _webSocketUri = new Uri($"{nodeUrl.Replace("http", "ws", StringComparison.OrdinalIgnoreCase)}{websocketEndpoint}");
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            _remoteWebSocketUri = new Uri($"{nodeUrl.Replace("http", "ws", StringComparison.OrdinalIgnoreCase)}{websocketEndpoint}");
             _remoteWebSocket = new ClientWebSocket();
         }
 
@@ -45,7 +45,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             if (certificate != null) 
                 _remoteWebSocket.Options.ClientCertificates.Add(certificate);
             
-            return _remoteWebSocket.ConnectAsync(_webSocketUri, _token);
+            return _remoteWebSocket.ConnectAsync(_remoteWebSocketUri, _cts.Token);
         }
 
         public async Task RelayData()
@@ -63,19 +63,26 @@ namespace Raven.Server.NotificationCenter.Handlers
             {
                 try
                 {
-                    while (_remoteToLocal.IsCompleted == false && (_localWebSocket.State == WebSocketState.Open || _localWebSocket.State == WebSocketState.CloseSent))
+                    while (_localWebSocket.State == WebSocketState.Open || _localWebSocket.State == WebSocketState.CloseSent)
                     {
+                        if (_remoteToLocal?.IsCompleted == true)
+                            break;
+
                         var buffer = segment.Memory.Memory;
 
-                        var receiveResult = await _localWebSocket.ReceiveAsync(buffer, _token);
+                        var receiveResult = await _localWebSocket.ReceiveAsync(buffer, _cts.Token);
 
-                        await _remoteWebSocket.SendAsync(buffer.Slice(0, receiveResult.Count), WebSocketMessageType.Text, false, _token);
+                        await _remoteWebSocket.SendAsync(buffer.Slice(0, receiveResult.Count), receiveResult.MessageType, receiveResult.EndOfMessage, _cts.Token);
                     }
+                }
+                catch (OperationCanceledException)
+                {
+                    // ignored
                 }
                 catch (IOException ex)
                 {
                     if (Logger.IsInfoEnabled)
-                        Logger.Info($"Websocket proxy got disconnected", ex); // TODO arek better message
+                        Logger.Info($"Websocket proxy got disconnected (local WS proxy to {_remoteWebSocketUri})", ex);
                 }
                 catch (Exception ex)
                 {
@@ -101,19 +108,26 @@ namespace Raven.Server.NotificationCenter.Handlers
             {
                 try
                 {
-                    while (_localToRemote.IsCompleted == false && (_remoteWebSocket.State == WebSocketState.Open || _remoteWebSocket.State == WebSocketState.CloseSent))
+                    while (_remoteWebSocket.State == WebSocketState.Open || _remoteWebSocket.State == WebSocketState.CloseSent)
                     {
+                        if (_localToRemote?.IsCompleted == true)
+                            break;
+
                         var buffer = segment.Memory.Memory;
 
-                        var receiveResult = await _remoteWebSocket.ReceiveAsync(buffer, _token).ConfigureAwait(false);
+                        var receiveResult = await _remoteWebSocket.ReceiveAsync(buffer, _cts.Token).ConfigureAwait(false);
 
-                        await _localWebSocket.SendAsync(buffer.Slice(0, receiveResult.Count), receiveResult.MessageType, receiveResult.EndOfMessage, _token);
+                        await _localWebSocket.SendAsync(buffer.Slice(0, receiveResult.Count), receiveResult.MessageType, receiveResult.EndOfMessage, _cts.Token);
                     }
+                }
+                catch (OperationCanceledException)
+                {
+                    // ignored
                 }
                 catch (IOException ex)
                 {
                     if (Logger.IsInfoEnabled)
-                        Logger.Info($"Websocket proxy got disconnected", ex); // TODO arek better message
+                        Logger.Info($"Websocket proxy got disconnected ({_remoteWebSocketUri} to local)", ex);
                 }
                 catch (Exception ex)
                 {
@@ -134,6 +148,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
         public void Dispose()
         {
+            _cts.Dispose();
             _remoteWebSocket.Dispose();
         }
     }
