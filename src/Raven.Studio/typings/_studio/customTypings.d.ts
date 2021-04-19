@@ -181,6 +181,9 @@ interface PackeryPacker {
 
 class PackeryStatic {
     layout(): void;
+    
+    columnWidth: number;
+    gutter: number;
 
     bindDraggabillyEvents(events: any): void;
 
