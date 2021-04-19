@@ -18,10 +18,14 @@ import databaseTrafficWidget = require("viewmodels/resources/widgets/databaseTra
 import EVENTS = require("common/constants/events");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 
+interface savedWidgetsLayout {
+    widgets: savedWidget[];
+    columns: number;
+}
+
 interface savedWidget {
     type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType;
-    left: number;
-    top: number;
+    columnIndex: number;
     fullscreen: boolean;
     config: any;
     state: any;
@@ -72,25 +76,44 @@ class clusterDashboard extends viewModelBase {
     private afterLayoutInitialized() {
         const throttledLayoutSave = _.debounce(() => {
             const packeryWidth = this.packery.packer.width;
-            const layout: savedWidget[] = this.widgets().map(x => {
+            const layout = this.widgets().map(x => {
                 const packeryItem = this.packery.getItem(x.container);
                 return {
-                    type: x.getType(),
                     left: packeryItem.rect.x / packeryWidth,
                     top: packeryItem.rect.y,
-                    fullscreen: x.fullscreen(),
-                    config: x.getConfiguration(),
-                    state: x.getState()
+                    widget: x
                 }
             });
             
             const sortedLayout = layout.sort((a, b) => a.top === b.top ? a.left - b.left : a.top - b.top);
-            localStorage.setObject(clusterDashboard.localStorageName, sortedLayout);
+            
+            const columnsCount = this.getNumberOfColumnsInPackeryLayout();
+            
+            const widgetsLayout: savedWidgetsLayout = {
+                widgets: sortedLayout.map(x => ({
+                    type: x.widget.getType(),
+                    fullscreen: x.widget.fullscreen(),
+                    config: x.widget.getConfiguration(),
+                    state: x.widget.getState(),
+                    columnIndex: clusterDashboard.getColumnIndex(x.left, columnsCount)
+                })),
+                columns: columnsCount
+            };
+            localStorage.setObject(clusterDashboard.localStorageName, widgetsLayout);
         }, 5_000);
 
         this.packery.on("layoutComplete", throttledLayoutSave);
 
         this.initialized(true);
+    }
+    
+    private static getColumnIndex(leftPositionPercentage: number, totalColumns: number): number {
+        return Math.round(leftPositionPercentage * totalColumns);
+    }
+    
+    private getNumberOfColumnsInPackeryLayout() {
+        const gridSizer = $(".cluster-dashboard-container .grid-sizer").innerWidth();
+        return Math.round(this.packery.packer.width / gridSizer);
     }
     
     attached() {
@@ -128,8 +151,12 @@ class clusterDashboard extends viewModelBase {
 
         this.enableLiveView();
 
-        const savedLayout: savedWidget[] = localStorage.getObject(clusterDashboard.localStorageName);
-        if (savedLayout) {
+        const savedWidgetsLayout: savedWidgetsLayout = localStorage.getObject(clusterDashboard.localStorageName);
+        if (savedWidgetsLayout) {
+            const currentColumnsCount = this.getNumberOfColumnsInPackeryLayout();
+            const sameColumnsCount = savedWidgetsLayout.columns === currentColumnsCount;
+            
+            const savedLayout = savedWidgetsLayout.widgets;
             const widgets = savedLayout.map(item => this.spawnWidget(item.type, item.fullscreen, item.config, item.state));
             
             widgets.forEach(w => this.addWidget(w));
@@ -138,20 +165,31 @@ class clusterDashboard extends viewModelBase {
                 .done(() => {
                     widgets.forEach(w => this.onWidgetAdded(w));
                     
-                    this.packery._resetLayout();
+                    if (sameColumnsCount) {
+                        // saved and current columns count is the same 
+                        // try to restore layout with regard to positions within columns 
+                        // and try to respect items orders inside each column 
+                        this.packery._resetLayout();
+                        const gutterWidth = this.packery.gutter;
+                        const itemWidth = this.packery.columnWidth;
 
-                    const packeryWidth = this.packery.packer.width;
+                        for (let i = 0; i < savedLayout.length; i++) {
+                            const savedItem = savedLayout[i];
+                            const widget = widgets[i];
+                            const packeryItem = this.packery.getItem(widget.container);
+                            packeryItem.rect.x = savedItem.columnIndex * (itemWidth + gutterWidth); 
+                        }
 
-                    for (let i = 0; i < savedLayout.length; i++) {
-                        const savedItem = savedLayout[i];
-                        const widget = widgets[i];
-                        const packeryItem = this.packery.getItem(widget.container);
-                        packeryItem.rect.x = savedItem.left * packeryWidth;
+                        this.packery.shiftLayout();
+
+                        this.afterLayoutInitialized();
+                    } else {
+                        // looks like columns count changed - let call fresh layout
+                        // but it should maintain item's order
+                        // that's all we can do
+                        this.packery.layout();
+                        this.afterLayoutInitialized();
                     }
-
-                    this.packery.shiftLayout();
-
-                    this.afterLayoutInitialized();
                 });
         } else {
             this.addWidget(new cpuUsageWidget(this));
