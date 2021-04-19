@@ -108,11 +108,11 @@ class refresh extends viewModelBase {
         }
     }
     
-    toDto() {
+    toDto() : Raven.Client.Documents.Operations.Refresh.RefreshConfiguration {
         return {
             Disabled: !this.enabled(),
-            DeleteFrequencyInSec: this.specifyRefreshFrequency() ? this.refreshFrequencyInSec() : null
-        } as Raven.Client.Documents.Operations.Refresh.RefreshConfiguration;
+            RefreshFrequencyInSec: this.specifyRefreshFrequency() ? this.refreshFrequencyInSec() : null
+        };
     }
 
     saveChanges() {

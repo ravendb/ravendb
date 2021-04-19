@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             using (var holder = new AzureClientHolder(AzureFactAttribute.AzureSettings))
             {
-                var blobNames = GenerateBlobNames(AzureFactAttribute.AzureSettings, 2, out var prefix);
+                var blobNames = GenerateBlobNames(holder.Settings, 2, out var prefix);
                 foreach (var blob in blobNames)
                 {
                     holder.Client.PutBlob(blob, new MemoryStream(Encoding.UTF8.GetBytes("abc")), new Dictionary<string, string>());
@@ -71,7 +71,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 var blobs = new List<string>();
                 // put blob
-                var k = GenerateBlobNames(AzureFactAttribute.AzureSettings, 1, out var prefix).First();
+                var k = GenerateBlobNames(holder.Settings, 1, out var prefix).First();
                 var tmpArr = new byte[3];
                 new Random().NextBytes(tmpArr);
                 holder.Client.PutBlob(k, new MemoryStream(tmpArr), new Dictionary<string, string> { { "Nice", "NotNice" } });
@@ -98,7 +98,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             using (var holder = new AzureClientHolder(AzureFactAttribute.AzureSettings))
             {
-                var blobKey = GenerateBlobNames(AzureFactAttribute.AzureSettings, 1, out _).First();
+                var blobKey = GenerateBlobNames(holder.Settings, 1, out _).First();
 
                 holder.Client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
                     {
@@ -124,7 +124,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             using (var holder = new AzureClientHolder(AzureFactAttribute.AzureSettings))
             {
-                var blobNames = GenerateBlobNames(AzureFactAttribute.AzureSettings, 1, out _);
+                var blobNames = GenerateBlobNames(holder.Settings, 1, out _);
 
                 holder.Client.PutBlob(blobNames[0], new MemoryStream(Encoding.UTF8.GetBytes("123")),
                         new Dictionary<string, string> { { "property1", "value1" }, { "property2", "value2" } });
@@ -157,10 +157,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         private static void PutBlobs(int blobsCount, bool useSasToken)
         {
-            var settings = useSasToken == false ? AzureFactAttribute.AzureSettings : AzureSasTokenFactAttribute.AzureSettings;
-            using (var holder = new AzureClientHolder(settings))
+            using (var holder = new AzureClientHolder(useSasToken == false ? AzureFactAttribute.AzureSettings : AzureSasTokenFactAttribute.AzureSettings))
             {
-                var blobNames = GenerateBlobNames(settings, blobsCount, out var prefix);
+                var blobNames = GenerateBlobNames(holder.Settings, blobsCount, out var prefix);
                 for (var i = 0; i < blobsCount; i++)
                 {
                     holder.Client.PutBlob(blobNames[i], new MemoryStream(Encoding.UTF8.GetBytes("123")),
@@ -208,17 +207,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         internal class AzureClientHolder : IDisposable
         {
             public RavenAzureClient Client { get; set; }
-
-            private readonly string _remoteFolderName;
+            public AzureSettings Settings { get; set; }
 
             public AzureClientHolder(AzureSettings setting, Progress progress = null, [CallerMemberName] string caller = null)
             {
                 Assert.False(string.IsNullOrEmpty(setting.StorageContainer), "string.IsNullOrEmpty(setting.StorageContainer)");
+                Settings = setting;
 
                 // keep only alphanumeric characters
                 caller = caller == null ? string.Empty : string.Concat(caller.Where(char.IsLetterOrDigit));
-                _remoteFolderName = setting.RemoteFolderName = $"{caller}{Guid.NewGuid()}";
-                Client = new RavenAzureClient(setting, progress);
+                Settings.RemoteFolderName = $"{caller}{Guid.NewGuid()}";
+                Client = new RavenAzureClient(Settings, progress);
             }
 
             public void Dispose()
@@ -232,7 +231,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     do
                     {
-                        var blobs = Client.ListBlobs(_remoteFolderName, delimiter: null, listFolders: false, marker: blobsNextMarker);
+                        var blobs = Client.ListBlobs(Settings.RemoteFolderName, delimiter: null, listFolders: false, marker: blobsNextMarker);
 
                         foreach (var blob in blobs.List)
                         {
@@ -254,7 +253,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     if (blobsToDelete.Count > 0)
                         Client.DeleteBlobs(blobsToDelete);
 
-                    Assert.Empty(Client.ListBlobs(_remoteFolderName, delimiter: null, listFolders: false).List);
+                    Assert.Empty(Client.ListBlobs(Settings.RemoteFolderName, delimiter: null, listFolders: false).List);
                 }
                 catch
                 {
