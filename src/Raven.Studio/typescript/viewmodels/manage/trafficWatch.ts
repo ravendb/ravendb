@@ -26,6 +26,8 @@ class trafficWatch extends viewModelBase {
     
     static maxBufferSize = 200000;
     
+    static dateTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
+    
     private liveClient = ko.observable<trafficWatchWebSocketClient>();
     private allData = [] as Raven.Client.Documents.Changes.TrafficWatchChange[];
     private filteredData = [] as Raven.Client.Documents.Changes.TrafficWatchChange[];
@@ -224,7 +226,7 @@ class trafficWatch extends viewModelBase {
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchTraffic(s, t), () =>
             [
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => generalUtils.formatUtcDateAsLocal(x.TimeStamp), "Timestamp", "12%", {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => generalUtils.formatUtcDateAsLocal(x.TimeStamp, trafficWatch.dateTimeFormat), "Timestamp", "12%", {
                     extraClass: rowHighlightRules,
                     sortable: "string"
                 }),

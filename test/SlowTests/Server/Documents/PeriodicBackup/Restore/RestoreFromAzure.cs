@@ -72,8 +72,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         [AzureFact]
         public void can_backup_and_restore()
         {
-            var settings = AzureFactAttribute.AzureSettings;
-            using (var holder = new Azure.AzureClientHolder(settings))
+            using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
             {
                 using (var store = GetDocumentStore())
                 {
@@ -87,7 +86,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     var config = new PeriodicBackupConfiguration
                     {
                         BackupType = BackupType.Backup,
-                        AzureSettings = settings,
+                        AzureSettings = holder.Settings,
                         IncrementalBackupFrequency = "0 0 1 1 *"
                     };
 
@@ -132,11 +131,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                     // restore the database with a different name
                     var databaseName = $"restored_database-{Guid.NewGuid()}";
-                    settings.RemoteFolderName = $"{settings.RemoteFolderName}/{status.FolderName}";
+                    holder.Settings.RemoteFolderName = $"{holder.Settings.RemoteFolderName}/{status.FolderName}";
                     var restoreFromGoogleCloudConfiguration = new RestoreFromAzureConfiguration()
                     {
                         DatabaseName = databaseName,
-                        Settings = settings,
+                        Settings = holder.Settings,
                         DisableOngoingTasks = true
                     };
                     var googleCloudOperation = new RestoreBackupOperation(restoreFromGoogleCloudConfiguration);
@@ -174,8 +173,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         [AzureFact]
         public async Task can_create_azure_snapshot_and_restore_using_restore_point()
         {
-            var settings = AzureFactAttribute.AzureSettings;
-            using (var holder = new Azure.AzureClientHolder(settings))
+            using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
             {
                 using (var store = GetDocumentStore())
                 {
@@ -189,7 +187,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     var config = new PeriodicBackupConfiguration
                     {
                         BackupType = BackupType.Snapshot,
-                        AzureSettings = settings,
+                        AzureSettings = holder.Settings,
                         IncrementalBackupFrequency = "0 0 1 1 *"
                     };
 
@@ -206,7 +204,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
 
                     var client = store.GetRequestExecutor().HttpClient;
-                    var data = new StringContent(JsonConvert.SerializeObject(settings), Encoding.UTF8, "application/json");
+                    var data = new StringContent(JsonConvert.SerializeObject(holder.Settings), Encoding.UTF8, "application/json");
                     var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Azure ", data);
                     string result = response.Content.ReadAsStringAsync().Result;
                     var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
@@ -214,11 +212,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     var point = restorePoints.List.First();
 
                     var databaseName = $"restored_database-{Guid.NewGuid()}";
-                    settings.RemoteFolderName = settings.RemoteFolderName + "/" + status.FolderName;
+                    holder.Settings.RemoteFolderName = holder.Settings.RemoteFolderName + "/" + status.FolderName;
                     var restoreOperation = await store.Maintenance.Server.SendAsync(new RestoreBackupOperation(new RestoreFromAzureConfiguration()
                     {
                         DatabaseName = databaseName,
-                        Settings = settings,
+                        Settings = holder.Settings,
                         DisableOngoingTasks = true,
                         LastFileNameToRestore = point.FileName,
                     }));
