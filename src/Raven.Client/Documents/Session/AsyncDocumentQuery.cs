@@ -1026,7 +1026,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        async Task<long> IAsyncDocumentQueryBase<T>.CountLongAsync(CancellationToken token)
+        async Task<long> IAsyncDocumentQueryBase<T>.LongCountAsync(CancellationToken token)
         {
             Take(0);
             var result = await GetQueryResultAsync(token).ConfigureAwait(false);
