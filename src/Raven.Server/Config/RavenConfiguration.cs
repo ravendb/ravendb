@@ -121,7 +121,7 @@ namespace Raven.Server.Config
             Logs = new LogsConfiguration();
             Server = new ServerConfiguration();
             Embedded = new EmbeddedConfiguration();
-            Databases = new DatabaseConfiguration();
+            Databases = new DatabaseConfiguration(Storage.ForceUsing32BitsPager);
             Memory = new MemoryConfiguration();
             Studio = new StudioConfiguration();
             Licensing = new LicenseConfiguration();
