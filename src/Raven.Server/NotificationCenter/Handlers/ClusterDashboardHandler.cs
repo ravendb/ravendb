@@ -28,8 +28,7 @@ namespace Raven.Server.NotificationCenter.Handlers
         public async Task Get()
         {
             var nodeTag = GetStringQueryString("node", required: true);
-
-
+            
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
                 try

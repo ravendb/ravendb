@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Dashboard;
 using Raven.Server.Dashboard.Cluster;
+using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -38,9 +39,22 @@ namespace Raven.Server.NotificationCenter.Handlers
         {
             _receiveTask = ListenForCommands();
 
+            await WriteToWebSocket(CreateInitialMessage());
+
             await WriteNotifications(_canAccessDatabase, taskHandlingReceiveOfData: _receiveTask);
 
             await _receiveTask;
+        }
+
+        private DynamicJsonValue CreateInitialMessage()
+        {
+            var serverTimePayload = new ServerTimePayload();
+            var dataJson = serverTimePayload.ToJson();
+            return new DynamicJsonValue
+            {
+                [nameof(WidgetMessage.Id)] = 0, // special id - for initial message
+                [nameof(WidgetMessage.Data)] = dataJson
+            };
         }
 
         private async Task ListenForCommands()

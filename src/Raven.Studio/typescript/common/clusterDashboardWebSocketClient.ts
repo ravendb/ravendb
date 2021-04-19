@@ -9,6 +9,7 @@ class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Serv
     loading = ko.observable<boolean>(true);
     private readonly onConnection: () => void;
     private readonly onDisconnect: () => void;
+    connectedAt: Date;
 
     constructor(nodeTag: string, onData: (data: Raven.Server.Dashboard.Cluster.WidgetMessage) => void, onConnection: () => void, onDisconnect: () => void) {
         super(null);
@@ -19,9 +20,17 @@ class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Serv
         
         this.isConnected.subscribe(connected => {
             if (connected) {
-                this.onConnection();
+                // here we don't call on connection for purpose
+                // instead we are waiting for initial message, which contains server time
+                // after we get this message we assume we're fully connected. 
+                // this.onConnection();
             } else {
-                this.onDisconnect();
+                // symmetric approach: only call onDisconnect was socket was fully connected
+                // (we got initial message)
+                if (this.connectedAt) {
+                    this.connectedAt = null;
+                    this.onDisconnect();
+                }
             }
         });
     }
@@ -49,7 +58,17 @@ class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Serv
 
     protected onMessage(e: Raven.Server.Dashboard.Cluster.WidgetMessage) {
         this.loading(false);
-
+        
+        if (e.Id === 0) {
+            const serverTimeMsg = e.Data as Raven.Server.Dashboard.Cluster.Notifications.ServerTimePayload;
+            if (serverTimeMsg.Type === "ServerTime") {
+                this.connectedAt = moment.utc(serverTimeMsg.Date).toDate();
+                this.onConnection();
+            } else {
+                throw new Error("Unexpected initial message: " + e.Data);
+            }
+        }
+        
         this.onData(e);
     }
 }

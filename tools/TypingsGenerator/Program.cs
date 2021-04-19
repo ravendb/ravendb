@@ -136,6 +136,7 @@ namespace TypingsGenerator
                 .WithTypeMapping(TsPrimitive.Any, typeof(TreePage))
                 .WithTypeMapping(TsPrimitive.String, typeof(DateTime))
                 .WithTypeMapping(TsPrimitive.String, typeof(LazyStringValue))
+                .WithTypeMapping(TsPrimitive.Any, typeof(DynamicJsonValue))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(BlittableJsonReaderArray))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(DynamicJsonArray))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(IEnumerable))
@@ -309,6 +310,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(WidgetRequest));
             scripter.AddType(typeof(WidgetMessage));
             scripter.AddType(typeof(CpuUsagePayload));
+            scripter.AddType(typeof(ServerTimePayload));
             scripter.AddType(typeof(MemoryUsagePayload));
             scripter.AddType(typeof(StorageUsagePayload));
             scripter.AddType(typeof(DatabaseIndexingSpeedPayload));
