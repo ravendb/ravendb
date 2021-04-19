@@ -169,8 +169,11 @@ namespace Voron.Impl
 
             Debug.Assert(previous.Flags == TransactionFlags.Read);
 
+            IsCloned = true;
+
             PersistentContext = transactionPersistentContext;
 
+            TxStartTime = previous.TxStartTime;
             DataPager = previous.DataPager;
             _env = previous._env;
             _journal = previous._journal;
@@ -1216,6 +1219,7 @@ namespace Voron.Impl
         internal ImmutableAppendOnlyList<JournalFile> JournalFiles;
         internal bool AlreadyAllowedDisposeWithLazyTransactionRunning;
         public DateTime TxStartTime;
+        public bool IsCloned;
         internal long? LocalPossibleOldestReadTransaction;
         internal RacyConcurrentBag.Node ActiveTransactionNode;
         public Transaction Transaction;

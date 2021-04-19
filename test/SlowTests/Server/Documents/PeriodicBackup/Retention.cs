@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
@@ -108,8 +109,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task can_delete_backups_by_date_azure(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
             await Locker.WaitAsync();
-            var settings = AzureFactAttribute.AzureSettings;
-            using (var holder = new Azure.AzureClientHolder(settings))
+            using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
             {
                 try
                 {
@@ -118,7 +118,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
                         (configuration, databaseName) =>
                         {
-                            configuration.AzureSettings = settings;
+                            configuration.AzureSettings = holder.Settings;
                         },
                         async databaseName =>
                         {
@@ -267,6 +267,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 return true;
             }, true, timeout: timeout);
             Assert.True(value, $"Got status: {status != null}, exception: {status?.Error?.Exception}, LocalBackup Exception: {status?.LocalBackup?.Exception}, lastEtag: {lastEtag}, status LastEtag: {status?.LastEtag}");
+
+            // make sure the backup operation is completed
+            var backupOperationId = status.LastOperationId;
+            OperationState backupOperation = null;
+            var opStatus = WaitForValue(() =>
+            {
+                backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupOperationId.Value));
+                return backupOperation.Status;
+            }, OperationStatus.Completed);
+            Assert.Equal(OperationStatus.Completed, opStatus);
 
             return lastEtag;
         }
