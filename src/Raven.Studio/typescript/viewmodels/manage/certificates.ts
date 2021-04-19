@@ -218,25 +218,20 @@ class certificates extends viewModelBase {
     }
     
     databasesAccessInfo(certificateDefinition: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
-        return ko.pureComputed(() => {
-            return certificateModel.resolveDatabasesAccess(certificateDefinition);
-        });
+        return certificateModel.resolveDatabasesAccess(certificateDefinition);
     }
-    getAccessClass(accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
-        return ko.pureComputed(() => {
-           return accessManager.default.getAccessClass(accessLevel);
-        });
+
+    getAccessIcon(accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
+        return accessManager.default.getAccessIcon(accessLevel);
     }
 
     getAccessColor(accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
-        return ko.pureComputed(() => {
-            return accessManager.default.getAccessColor(accessLevel);
-        });
+        return accessManager.default.getAccessColor(accessLevel);
     }
 
     getAccessInfoText(dbName: string, accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
         return `<div class="text-left padding padding-xs">
-                   <strong>Name</strong>: ${dbName === "All" ? "All databases" : dbName }<br>
+                   <strong>Name</strong>: ${dbName === "All" ? "All databases" : generalUtils.escapeHtml(dbName) }<br/>
                    <strong>Access</strong>: ${accessManager.default.getAccessLevelText(accessLevel) }
                 </div>`
     }

@@ -156,9 +156,9 @@ class connectedDocuments {
                 `<i class="icon-trash"></i>`,
                 "35px",
                 {
-                  extraClass: () => 'file-trash',
-                  title: () => 'Delete attachment',
-                  hide: () => this.isReadOnlyAccess()
+                    extraClass: () => 'file-trash',
+                    title: () => 'Delete attachment',
+                    hide: () => this.isReadOnlyAccess()
                 })
         ];
 

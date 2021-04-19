@@ -219,7 +219,7 @@ class databaseInfo {
 
         this.databaseAccessText(accessManager.default.getDatabaseAccessLevelTextByDbName(this.name));
         this.databaseAccessColor(accessManager.default.getAccessColorByDbName(this.name));
-        this.databaseAccessClass(accessManager.default.getAccessClassByDbName(this.name))
+        this.databaseAccessClass(accessManager.default.getAccessIconByDbName(this.name))
     }
 
     private applyNodesStatuses(nodes: databaseGroupNode[], statuses: { [key: string]: Raven.Client.ServerWide.Operations.DatabaseGroupNodeStatus;}) {

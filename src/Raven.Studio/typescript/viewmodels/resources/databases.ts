@@ -68,7 +68,7 @@ class databases extends viewModelBase {
     statsSubscription: changeSubscription;
 
     accessManager = accessManager.default.databasesView;
-    isAboveUserAccess = accessManager.default.isOperatorOrAboveClearance;
+    isAboveUserAccess = accessManager.default.isOperatorOrAbove;
     
     databaseNameWidth = ko.observable<number>(350);
 

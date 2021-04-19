@@ -46,7 +46,7 @@ class backups extends viewModelBase {
         this.myNodeTag(this.clusterManager.localNodeTag());
         this.serverWideTasksUrl = appUrl.forServerWideTasks();
         this.ongoingTasksUrl = appUrl.forOngoingTasks(this.activeDatabase());
-        this.canNavigateToServerWideBackupTasks = accessManager.default.isClusterAdminOrClusterNodeClearance;
+        this.canNavigateToServerWideBackupTasks = accessManager.default.isClusterAdminOrClusterNode;
     }
 
     activate(args: any): JQueryPromise<any> {
