@@ -444,6 +444,45 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
+        /// Returns the number of elements in a sequence as int64 type.
+        /// </summary>
+        /// 
+        /// <typeparam name="TSource">
+        /// The type of the elements of source.
+        /// </typeparam>
+        /// 
+        /// <param name="source">
+        /// The <see cref="IRavenQueryable{T}"/> that contains the elements to be counted.
+        /// </param>
+        /// <param name="token">The cancellation token.</param>
+        /// 
+        /// <returns>
+        /// The number of elements in the input sequence.
+        /// </returns>
+        /// 
+        /// <exception cref="ArgumentNullException">
+        /// source is null.
+        /// </exception>
+        /// 
+        /// <exception cref="OverflowException">
+        /// The number of elements in source is larger than <see cref="Int32.MaxValue"/>.
+        /// </exception>
+        public static Task<long> CountLongAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException("CountAsync only be used with IRavenQueryable");
+
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression);
+
+            return query.CountLongAsync(token);
+        }
+
+        /// <summary>
         /// Returns the number of elements in the specified sequence that satisfies a condition.
         /// </summary>
         /// 
