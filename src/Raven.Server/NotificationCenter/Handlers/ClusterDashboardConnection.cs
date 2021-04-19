@@ -45,7 +45,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
         private async Task ListenForCommands()
         {
-            await _clusterDashboardNotifications.EnsureWatcher(); // TODO arek
+            await _clusterDashboardNotifications.EnsureWatcher(); // in current impl cluster dashboard senders talk to a single watcher
 
             using (_readContext.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer segment1))
             using (_readContext.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer segment2))
