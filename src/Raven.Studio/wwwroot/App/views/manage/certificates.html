@@ -195,10 +195,10 @@
                                             <div class="margin-right" data-placement="bottom" data-toggle="tooltip" data-animation="true"
                                                  data-bind="attr: { title: $root.getAccessInfoText(dbName, accessLevel) }">
                                                 <strong data-bind="text: dbName"></strong>
-                                                <i data-bind="attr: { class: $root.getAccessColor(accessLevel)() + ' ' + $root.getAccessClass(accessLevel)() }"></i>
+                                                <i data-bind="attr: { class: $root.getAccessColor(accessLevel) + ' ' + $root.getAccessIcon(accessLevel) }"></i>
                                             </div>
                                         </div>
-                                        <strong class="flex-horizontal flex-wrap text-danger" data-bind="visible: !$root.databasesAccessInfo($data)().length">
+                                        <strong class="flex-horizontal flex-wrap text-danger" data-bind="visible: !$root.databasesAccessInfo($data).length">
                                             None
                                         </strong>
                                     </div>

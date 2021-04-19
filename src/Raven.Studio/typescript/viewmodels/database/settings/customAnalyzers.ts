@@ -26,7 +26,7 @@ class customAnalyzers extends viewModelBase {
         aceEditorBindingHandler.install();
         this.bindToCurrentInstance("confirmRemoveAnalyzer", "editAnalyzer");
 
-        this.canNavigateToServerWideCustomAnalyzers = accessManager.default.isClusterAdminOrClusterNodeClearance;
+        this.canNavigateToServerWideCustomAnalyzers = accessManager.default.isClusterAdminOrClusterNode;
     }
     
     activate(args: any) {

@@ -51,6 +51,7 @@ import serverTime = require("common/helpers/database/serverTime");
 import saveGlobalStudioConfigurationCommand = require("commands/resources/saveGlobalStudioConfigurationCommand");
 import saveStudioConfigurationCommand = require("commands/resources/saveStudioConfigurationCommand");
 import studioSetting = require("common/settings/studioSetting");
+import genUtils = require("common/generalUtils");
 
 class shell extends viewModelBase {
 
@@ -280,12 +281,12 @@ class shell extends viewModelBase {
 
             const allowedDatabasesText = dbAccessArray.length ?
                 dbAccessArray.map(x => `<div>
-                                            <strong>${x.dbName}</strong>
+                                            <strong>${genUtils.escapeHtml(x.dbName)}</strong>
                                             <span class="${accessManager.default.getAccessColor(x.accessLevel)} margin-left">
                                                          ${accessManager.default.getAccessLevelText(x.accessLevel)}
                                             </span>
                                         </div>`).join("")
-                : "Access to all databases is denied";
+                : "No access granted";
             
             popoverUtils.longWithHover($(".js-client-cert"),
                 {

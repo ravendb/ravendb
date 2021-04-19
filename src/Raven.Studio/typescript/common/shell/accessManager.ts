@@ -14,20 +14,20 @@ class accessManager {
     private allLevels = ko.pureComputed(() => true);
     
     // cluster node has the same privileges as cluster admin
-    isClusterAdminOrClusterNodeClearance = ko.pureComputed(() => {
+    isClusterAdminOrClusterNode = ko.pureComputed(() => {
         const clearance = this.securityClearance();
         return clearance === "ClusterAdmin" || clearance === "ClusterNode";
     });
     
-    isOperatorOrAboveClearance = ko.pureComputed(() => {
+    isOperatorOrAbove = ko.pureComputed(() => {
          const clearance = this.securityClearance();
          return clearance === "ClusterAdmin" || clearance === "ClusterNode" || clearance === "Operator";
     });
 
-    isUserClearance = ko.pureComputed<boolean>(() => this.securityClearance() === "ValidUser");
+    isValidUser = ko.pureComputed<boolean>(() => this.securityClearance() === "ValidUser");
 
     getEffectiveDatabaseAccessLevel(dbName: string) {
-        if (this.isOperatorOrAboveClearance()) {
+        if (this.isOperatorOrAbove()) {
             return "Admin";
         }
         
@@ -66,12 +66,12 @@ class accessManager {
         }
     }
 
-    getAccessClassByDbName(dbName: string) {
+    getAccessIconByDbName(dbName: string) {
         const accessLevel = this.getEffectiveDatabaseAccessLevel(dbName);
-        return this.getAccessClass(accessLevel);
+        return this.getAccessIcon(accessLevel);
     }
     
-    getAccessClass(accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
+    getAccessIcon(accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
         switch (accessLevel) {
             case "Admin":
                 return "icon-access-admin";
@@ -162,44 +162,44 @@ class accessManager {
 
     static activeDatabaseTracker = activeDatabaseTracker.default;
 
-    disableIfNotClusterAdminOrClusterNode = this.createSecurityRule(this.isClusterAdminOrClusterNodeClearance, "Cluster Admin");
-    disableIfNotOperatorOrAbove = this.createSecurityRule(this.isOperatorOrAboveClearance, "Cluster Admin or Operator");
+    disableIfNotClusterAdminOrClusterNode = this.createSecurityRule(this.isClusterAdminOrClusterNode, "Cluster Admin");
+    disableIfNotOperatorOrAbove = this.createSecurityRule(this.isOperatorOrAbove, "Cluster Admin or Operator");
     
     disableIfNotAdminAccessPerDatabaseOrAbove = this.createDatabaseSecurityRule(this.isAdminAccessOrAbove, 'Admin');
     disableIfNotReadWriteAccessPerDatabaseOrAbove = this.createDatabaseSecurityRule(this.isReadWriteAccessOrAbove, 'Read/Write');
     
     dashboardView = {
-        showCertificatesLink: this.isOperatorOrAboveClearance
+        showCertificatesLink: this.isOperatorOrAbove
     };
     
     clusterView = {
-        canAddNode: this.isClusterAdminOrClusterNodeClearance,
-        canDeleteNode: this.isClusterAdminOrClusterNodeClearance,
-        showCoresInfo: this.isClusterAdminOrClusterNodeClearance,
-        canDemotePromoteNode: this.isClusterAdminOrClusterNodeClearance
+        canAddNode: this.isClusterAdminOrClusterNode,
+        canDeleteNode: this.isClusterAdminOrClusterNode,
+        showCoresInfo: this.isClusterAdminOrClusterNode,
+        canDemotePromoteNode: this.isClusterAdminOrClusterNode
     };
     
     aboutView = {
-        canReplaceLicense: this.isClusterAdminOrClusterNodeClearance,
-        canForceUpdate: this.isClusterAdminOrClusterNodeClearance,
-        canRenewLicense: this.isClusterAdminOrClusterNodeClearance,
-        canRegisterLicense: this.isClusterAdminOrClusterNodeClearance
+        canReplaceLicense: this.isClusterAdminOrClusterNode,
+        canForceUpdate: this.isClusterAdminOrClusterNode,
+        canRenewLicense: this.isClusterAdminOrClusterNode,
+        canRegisterLicense: this.isClusterAdminOrClusterNode
     };
     
     databasesView = {
-        canCreateNewDatabase: this.isOperatorOrAboveClearance,
-        canSetState: this.isOperatorOrAboveClearance,
-        canDelete: this.isOperatorOrAboveClearance,
-        canDisableEnableDatabase: this.isOperatorOrAboveClearance,
-        canDisableIndexing: this.isOperatorOrAboveClearance,
-        canCompactDatabase: this.isOperatorOrAboveClearance
+        canCreateNewDatabase: this.isOperatorOrAbove,
+        canSetState: this.isOperatorOrAbove,
+        canDelete: this.isOperatorOrAbove,
+        canDisableEnableDatabase: this.isOperatorOrAbove,
+        canDisableIndexing: this.isOperatorOrAbove,
+        canCompactDatabase: this.isOperatorOrAbove
     };
     
     certificatesView = {
-        canRenewLetsEncryptCertificate: this.isClusterAdminOrClusterNodeClearance,
-        canDeleteClusterNodeCertificate: this.isClusterAdminOrClusterNodeClearance,
-        canDeleteClusterAdminCertificate: this.isClusterAdminOrClusterNodeClearance,
-        canGenerateClientCertificateForAdmin: this.isClusterAdminOrClusterNodeClearance
+        canRenewLetsEncryptCertificate: this.isClusterAdminOrClusterNode,
+        canDeleteClusterNodeCertificate: this.isClusterAdminOrClusterNode,
+        canDeleteClusterAdminCertificate: this.isClusterAdminOrClusterNode,
+        canGenerateClientCertificateForAdmin: this.isClusterAdminOrClusterNode
     };
 
     mainMenu = {
@@ -222,13 +222,13 @@ class accessManager {
         disableSystemIoStats: this.disableIfNotOperatorOrAbove,
         disableAdvancedMenuItem: this.disableIfNotOperatorOrAbove,
         disableCaptureStackTraces: this.disableIfNotOperatorOrAbove,
-        enableRecordTransactionCommands: this.isOperatorOrAboveClearance
+        enableRecordTransactionCommands: this.isOperatorOrAbove
     };
     
     databaseSettingsMenu = {
-        showDatabaseSettingsMenuItem: this.isOperatorOrAboveClearance,
-        showDatabaseRecordMenuItem: this.isOperatorOrAboveClearance,
-        showDatabaseIDsMenuItem: this.isOperatorOrAboveClearance,
+        showDatabaseSettingsMenuItem: this.isOperatorOrAbove,
+        showDatabaseRecordMenuItem: this.isOperatorOrAbove,
+        showDatabaseIDsMenuItem: this.isOperatorOrAbove,
         disableConnectionStringsMenuItem: this.disableIfNotAdminAccessPerDatabaseOrAbove,
         disableConflictResolutionMenuItem: this.disableIfNotAdminAccessPerDatabaseOrAbove
     };

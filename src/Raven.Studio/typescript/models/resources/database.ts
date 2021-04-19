@@ -72,18 +72,10 @@ class database {
             this.relevant(inMemberList || inPromotableList || inRehabList);
         }
 
-        this.databaseAccess(accessManager.default.getEffectiveDatabaseAccessLevel(incomingCopy.Name));
-        this.databaseAccessText(accessManager.default.getAccessLevelText(this.databaseAccess()));
-        this.databaseAccessColor(accessManager.default.getAccessColor(this.databaseAccess()));
-    }
-
-    private attributeValue(attributes: any, bundleName: string) {
-        for (var key in attributes){
-            if (attributes.hasOwnProperty(key) && key.toLowerCase() === bundleName.toLowerCase()) {
-                return attributes[key];
-            }
-        }
-        return "true";
+        const dbAccessLevel = accessManager.default.getEffectiveDatabaseAccessLevel(incomingCopy.Name);
+        this.databaseAccess(dbAccessLevel);
+        this.databaseAccessText(accessManager.default.getAccessLevelText(dbAccessLevel));
+        this.databaseAccessColor(accessManager.default.getAccessColor(dbAccessLevel));
     }
 
     static getNameFromUrl(url: string) {
