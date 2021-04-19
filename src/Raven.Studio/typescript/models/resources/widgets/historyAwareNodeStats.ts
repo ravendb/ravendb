@@ -20,16 +20,23 @@ class historyAwareNodeStats<T extends Raven.Server.Dashboard.Cluster.AbstractClu
         this.tag = tag;
     }
 
-    onConnectionStatusChanged(connected: boolean) {
+    onConnectionStatusChanged(connected: true, serverTime: Date): void;
+    onConnectionStatusChanged(connected: false): void;
+    onConnectionStatusChanged(connected: boolean, serverTime?: Date): void {
         if (connected) {
-            this.connectedAt(new Date());
+            this.connectedAt(serverTime);
         } else {
             const connectionDate = this.connectedAt();
             this.connectedAt(null);
             if (!this.mouseOver()) {
                 this.currentItem(null);
             }
-            this.connectionHistory.push([connectionDate, new Date()]);
+            if (this.history.length) {
+                const lastHistoryItem = this.history[this.history.length - 1].date;
+                if (connectionDate.getTime() <= lastHistoryItem.getTime()) {
+                    this.connectionHistory.push([connectionDate, lastHistoryItem]);
+                }
+            }
         }
     }
 
@@ -79,20 +86,16 @@ class historyAwareNodeStats<T extends Raven.Server.Dashboard.Cluster.AbstractClu
         }
     }
     
-    // don't be so strict here - due to potential time skews between local machine and servers
     private wasConnected(date: Date): boolean {
         const time = date.getTime();
         const currentConnection = this.connectedAt();
-        const maxSkew = 3000;
 
-        if (currentConnection && currentConnection.getTime() - maxSkew < time) {
+        if (currentConnection && currentConnection.getTime() < time) {
             return true;
         }
 
         for (const [start, end] of this.connectionHistory) {
-            const startWithSkew = start.getTime() - maxSkew;
-            const endWithSkew = end.getTime() + maxSkew;
-            if (startWithSkew <= time && time <= endWithSkew) {
+            if (start.getTime() <= time && time <= end.getTime()) {
                 return true;
             }
         }

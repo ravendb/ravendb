@@ -442,7 +442,7 @@ class lineChart {
             .attr("class", "line")
 
         lines
-            .attr("d", d => lineFunctions.get(d.parent.id)(this.applyFill(d.values)));
+            .attr("d", d => lineFunctions.get(d.parent.id)(this.applyFill(d)));
         
         if (this.opts.fillArea) {
             const fills = series.selectAll(".fill")
@@ -456,12 +456,13 @@ class lineChart {
                 .append("path");
             
             fills
-                .attr("d", d => lineFunctions.get(d.parent.id)(lineChart.closedPath(this.applyFill(d.values))));
+                .attr("d", d => lineFunctions.get(d.parent.id)(lineChart.closedPath(this.applyFill(d))));
         }
     }
     
-    private applyFill(items: chartItemData[]) {
-        if (!this.opts.fillData) {
+    private applyFill(range: chartItemRange) {
+        const items = range.values;
+        if (!this.opts.fillData || range.finished) {
             return items;
         }
 

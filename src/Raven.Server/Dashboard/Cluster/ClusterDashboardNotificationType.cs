@@ -9,6 +9,7 @@ namespace Raven.Server.Dashboard.Cluster
     public enum ClusterDashboardNotificationType
     {
         Unknown,
+        ServerTime, // used by studio to sync clocks
         CpuUsage,
         License, // used by studio w/o websockets
         StorageUsage, 

@@ -67,7 +67,7 @@ abstract class abstractChartsWebsocketWidget<
     onClientConnected(ws: clusterDashboardWebSocketClient) {
         super.onClientConnected(ws);
 
-        this.withStats(ws.nodeTag, x => x.onConnectionStatusChanged(true));
+        this.withStats(ws.nodeTag, x => x.onConnectionStatusChanged(true, ws.connectedAt));
     }
 
     onClientDisconnected(ws: clusterDashboardWebSocketClient) {
