@@ -313,7 +313,8 @@ class clusterDashboard extends viewModelBase {
     }
     
     addWidgetModal() {
-        const addWidgetView = new addWidgetModal(type => {
+        const existingWidgetTypes = _.uniq(this.widgets().map(x => x.getType()));
+        const addWidgetView = new addWidgetModal(existingWidgetTypes, type => {
             const newWidget = this.spawnWidget(type);
             this.addWidget(newWidget);
             
