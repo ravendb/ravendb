@@ -1,5 +1,4 @@
 import widget = require("viewmodels/resources/widgets/widget");
-
 import license = require("models/auth/licenseModel");
 import appUrl = require("common/appUrl");
 import generalUtils = require("common/generalUtils");
@@ -89,7 +88,7 @@ class licenseWidget extends widget {
         return this.isCloud() ? "Cloud licenses are automatically renewed" : "";
     });
 
-    getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
+    getType(): widgetType {
         return "License";
     }
     

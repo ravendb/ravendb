@@ -10,6 +10,8 @@ class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Serv
     private readonly onConnection: () => void;
     private readonly onDisconnect: () => void;
     connectedAt: Date;
+    
+    private static readonly welcomeMessageId = -1;
 
     constructor(nodeTag: string, onData: (data: Raven.Server.Dashboard.Cluster.WidgetMessage) => void, onConnection: () => void, onDisconnect: () => void) {
         super(null);
@@ -59,7 +61,7 @@ class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Serv
     protected onMessage(e: Raven.Server.Dashboard.Cluster.WidgetMessage) {
         this.loading(false);
         
-        if (e.Id === 0) {
+        if (e.Id === clusterDashboardWebSocketClient.welcomeMessageId) {
             const serverTimeMsg = e.Data as Raven.Server.Dashboard.Cluster.Notifications.ServerTimePayload;
             if (serverTimeMsg.Type === "ServerTime") {
                 this.connectedAt = moment.utc(serverTimeMsg.Date).toDate();

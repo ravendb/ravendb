@@ -8,6 +8,7 @@ import appUrl = require("common/appUrl");
 import perNodeStatItems = require("models/resources/widgets/perNodeStatItems");
 
 class databaseStorageWidget extends abstractDatabaseAndNodeAwareTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseStorageUsagePayload, perNodeStatItems<databaseDiskUsage>, databaseDiskUsage> {
+    
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
         return "DatabaseStorageUsage";
     }

@@ -7,7 +7,7 @@
             <div class="cluster-dashboard-item" data-bind="compose: $data, attr: { 'data-widget-id': id }, css: { 'fullscreen': fullscreen }"></div>    
         </div>
 
-        <button class="add-widget" data-bind="click: addWidgetModal, visible: initialized">
+        <button class="add-widget" data-bind="click: addWidgetModal, visible: initialized() && bootstrapped()">
             <i class="icon-plus"></i>
         </button>
     </div>

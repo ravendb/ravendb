@@ -62,7 +62,7 @@ abstract class widget<TConfig = unknown, TState = unknown> {
                 () => this.afterComponentResized(), widget.resizeAnimationDuration));
     }
     
-    abstract getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType;
+    abstract getType(): widgetType;
     
     getConfiguration(): TConfig {
         return undefined;

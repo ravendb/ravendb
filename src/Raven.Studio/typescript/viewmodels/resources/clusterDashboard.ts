@@ -12,6 +12,7 @@ import clusterNode = require("models/database/cluster/clusterNode");
 import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBasedWidget");
 import indexingWidget = require("viewmodels/resources/widgets/indexingWidget");
 import trafficWidget = require("viewmodels/resources/widgets/trafficWidget");
+import welcomeWidget = require("viewmodels/resources/widgets/welcomeWidget");
 import databaseIndexingWidget = require("viewmodels/resources/widgets/databaseIndexingWidget");
 import databaseStorageWidget = require("viewmodels/resources/widgets/databaseStorageWidget");
 import databaseTrafficWidget = require("viewmodels/resources/widgets/databaseTrafficWidget");
@@ -24,7 +25,7 @@ interface savedWidgetsLayout {
 }
 
 interface savedWidget {
-    type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType;
+    type: widgetType;
     columnIndex: number;
     fullscreen: boolean;
     config: any;
@@ -37,12 +38,12 @@ class clusterDashboard extends viewModelBase {
     
     private packery: PackeryStatic;
     initialized = ko.observable<boolean>(false);
-    
     readonly currentServerNodeTag: string;
     
     widgets = ko.observableArray<widget<any>>([]);
     
     nodes: KnockoutComputed<clusterNode[]>;
+    bootstrapped: KnockoutComputed<boolean>;
     
     liveClients = ko.observableArray<clusterDashboardWebSocketClient>([]);
     
@@ -60,6 +61,8 @@ class clusterDashboard extends viewModelBase {
             }
             return topologyManager.topology().nodes();
         });
+        
+        this.bootstrapped = ko.pureComputed(() => !!this.nodes().length);
     }
     
     private initPackery() {
@@ -138,16 +141,38 @@ class clusterDashboard extends viewModelBase {
         } else {
             // wait for cluster boostrap
             const awaitClusterInit = this.nodes.subscribe(nodes => {
-                if (nodes.length && !this.initialized()) {
-                    this.initDashboard();
+                if (nodes.length) {
+                    this.initialized(false);
+                    this.widgets([]);
                     awaitClusterInit.dispose();
+                    
+                    setTimeout(() => {
+                        this.initDashboard();    
+                    }, 500);
                 }
             });
+            
+            // but in meantime we want to show welcome widget only to avoid empty screen on newly started server
+            // (since it isn't bootstrapped by default)
+            this.clusterIsNotBootstrapped();
         }
+    }
+    
+    private clusterIsNotBootstrapped() {
+        this.initPackery();
+        const welcome = this.spawnWidget("Welcome", true);
+        this.addWidget(welcome);
+        
+        welcome.composeTask.done(() => {
+            this.onWidgetAdded(welcome);
+            this.initialized(true);
+        });
     }
     
     private initDashboard(): JQueryPromise<void> {
         this.initPackery();
+        
+        this.widgets([]);
 
         this.enableLiveView();
 
@@ -192,6 +217,9 @@ class clusterDashboard extends viewModelBase {
                     }
                 });
         } else {
+            const welcome = new welcomeWidget(this);
+            welcome.fullscreen(true);
+            this.addWidget(welcome);
             this.addWidget(new cpuUsageWidget(this));
             this.addWidget(new memoryUsageWidget(this));
             this.addWidget(new licenseWidget(this));
@@ -325,10 +353,13 @@ class clusterDashboard extends viewModelBase {
         app.showBootstrapDialog(addWidgetView);
     }
     
-    spawnWidget(type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType, fullscreen: boolean = false, config: any = undefined, state: any = undefined) {
+    spawnWidget(type: widgetType, fullscreen: boolean = false, config: any = undefined, state: any = undefined) {
         let widget: widget<any>;
         
         switch (type) {
+            case "Welcome":
+                widget = new welcomeWidget(this);
+                break;
             case "CpuUsage":
                 widget = new cpuUsageWidget(this);
                 break;
