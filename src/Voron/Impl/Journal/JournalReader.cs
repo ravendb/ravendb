@@ -693,7 +693,7 @@ namespace Voron.Impl.Journal
         public event Action<IPagerLevelTransactionState> OnDispose;
         public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
 
-        void IPagerLevelTransactionState.EnsurePagerStateReference(PagerState state)
+        void IPagerLevelTransactionState.EnsurePagerStateReference(ref PagerState state)
         {
             //nothing to do
         }

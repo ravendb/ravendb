@@ -34,7 +34,9 @@ namespace SlowTests.Voron.Bugs
                     dataFilePager.EnsureContinuous(5000, 1);
                 }))
                 {
-                    tx.LowLevelTransaction.EnsurePagerStateReference(dataFilePager.PagerState);
+                    var state = dataFilePager.PagerState;
+
+                    tx.LowLevelTransaction.EnsurePagerStateReference(ref state);
 
                     Assert.Contains(dataFilePager.PagerState, testingStuff.GetPagerStates());
                 }
