@@ -590,7 +590,7 @@ namespace Voron
                 }
 
                 var state = _dataPager.PagerState;
-                tx.EnsurePagerStateReference(state);
+                tx.EnsurePagerStateReference(ref state);
 
                 return new Transaction(tx);
             }
@@ -698,7 +698,7 @@ namespace Voron
                 }
 
                 var state = _dataPager.PagerState;
-                tx.EnsurePagerStateReference(state);
+                tx.EnsurePagerStateReference(ref state);
 
                 return tx;
             }
