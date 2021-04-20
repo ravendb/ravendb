@@ -28,9 +28,19 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
         protected override void InitializeWork()
         {
             //TODO: do we want to update that over time?
+            TryFillNodeLicenseLimits();
+        }
+
+        private void TryFillNodeLicenseLimits()
+        {
+            if (_nodeLicenseLimits != null)
+            {
+                return;
+            }
+            
             _server.ServerStore.LicenseManager.GetCoresLimitForNode(out var licenseLimits);
             
-            if (licenseLimits.NodeLicenseDetails.TryGetValue(_server.ServerStore.NodeTag, out var nodeLimits))
+            if (licenseLimits != null && licenseLimits.NodeLicenseDetails.TryGetValue(_server.ServerStore.NodeTag, out var nodeLimits))
             {
                 _nodeLicenseLimits = nodeLimits;
             }
@@ -42,6 +52,8 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
         {
             var cpuInfo = _server.MetricCacher.GetValue<(double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait)>(
                 MetricCacher.Keys.Server.CpuUsage);
+
+            TryFillNodeLicenseLimits();
 
             var utilizedCores = _nodeLicenseLimits?.UtilizedCores ?? -1;
             var numberOfCores = _nodeLicenseLimits?.NumberOfCores ?? -1;

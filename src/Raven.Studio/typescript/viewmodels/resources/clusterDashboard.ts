@@ -172,8 +172,6 @@ class clusterDashboard extends viewModelBase {
     private initDashboard(): JQueryPromise<void> {
         this.initPackery();
         
-        this.widgets([]);
-
         this.enableLiveView();
 
         const savedWidgetsLayout: savedWidgetsLayout = localStorage.getObject(clusterDashboard.localStorageName);
@@ -312,7 +310,7 @@ class clusterDashboard extends viewModelBase {
     }
     
     getConnectedLiveClients() {
-        return this.liveClients().filter(x => x.isConnected());
+        return this.liveClients().filter(x => x.connectedAt);
     }
     
     getConnectedCurrentNodeLiveClient() {
