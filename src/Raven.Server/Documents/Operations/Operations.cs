@@ -441,7 +441,10 @@ namespace Raven.Server.Documents.Operations
             DatabaseRevert,
 
             [Description("Enforce Revision Configuration")]
-            EnforceRevisionConfiguration
+            EnforceRevisionConfiguration,
+            
+            [Description("Debug package")]
+            DebugPackage,
         }
     }
 }
