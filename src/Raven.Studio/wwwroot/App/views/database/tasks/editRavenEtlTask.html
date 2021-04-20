@@ -229,11 +229,11 @@
                             <div class="flex-horizontal">
                                 <div class="flex-grow">
                                     <div class="dropdown btn-block flex-grow">
-                                        <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown" autocomplete="off"
+                                        <input class="form-control dropdown-toggle" placeholder="Select (or enter) a collection" data-toggle="dropdown" autocomplete="off"
                                                data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput' }, disable: $root.collections().length === 0" />
                                         <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                         <ul class="dropdown-menu" role="menu" style="display: none;"
-                                            data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutocompleter(transformScriptCollections, inputCollection)">
+                                            data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutoCompleter(transformScriptCollections, inputCollection)">
                                             <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
                                                 <a role="menuitem" tabindex="-1" href="#">
                                                     <span data-bind="text: $data"></span>

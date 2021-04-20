@@ -11,12 +11,15 @@ class s3Settings extends amazonSettings {
     accessKeyPropertyName: KnockoutComputed<string>;
     secretKeyPropertyName: KnockoutComputed<string>;
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.S3Settings, allowedRegions: Array<string>) {
+    targetOperation: string;
+
+    constructor(dto: Raven.Client.Documents.Operations.Backups.S3Settings, allowedRegions: Array<string>, targetOperation: string) {
         super(dto, "S3", allowedRegions);
 
         this.bucketName(dto.BucketName);
         this.customServerUrl(dto.CustomServerUrl);
         this.useCustomS3Host(!!dto.CustomServerUrl);
+        this.targetOperation = targetOperation;
         
         this.initValidation();
 
@@ -59,7 +62,7 @@ class s3Settings extends amazonSettings {
     compositionComplete(view: Element, container: HTMLElement) {
         popoverUtils.longWithHover($(".bucket-info", container),
             {
-                content: tasksCommonContent.textForPopover("Bucket")
+                content: tasksCommonContent.textForPopover("Bucket", this.targetOperation)
             });
     }
     
@@ -142,7 +145,7 @@ class s3Settings extends amazonSettings {
         return genUtils.trimProperties(dto, ["CustomServerUrl", "RemoteFolderName", "AwsRegionName", "AwsAccessKey"]);
     }
 
-    static empty(allowedRegions: Array<string>): s3Settings {
+    static empty(allowedRegions: Array<string>, targetOperation: string): s3Settings {
         return new s3Settings({
             Disabled: true,
             AwsAccessKey: null,
@@ -153,7 +156,7 @@ class s3Settings extends amazonSettings {
             RemoteFolderName: null,
             GetBackupConfigurationScript: null,
             CustomServerUrl: null,
-        }, allowedRegions);
+        }, allowedRegions, targetOperation);
     }
 }
 

@@ -13,7 +13,6 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
     keepFilesOnDisk = ko.observable<boolean>(false);
         
     runFrequency = ko.observable<string>();
-    runFrequencyEnabled = ko.observable<boolean>(false);
     runFrequencyCronEditor = ko.observable<cronEditor>();
     
     transformationScripts = ko.observableArray<ongoingTaskOlapEtlTransformationModel>([]);
@@ -22,7 +21,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
     validationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
 
-    static readonly defaultRunFrequency = "0 2 * * *";
+    static readonly defaultRunFrequency = "0 * * * *"; // every hour
    
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails) {
         super();
@@ -43,8 +42,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             this.customPrefix,
             this.customPrefixEnabled,
             this.keepFilesOnDisk,
-            this.runFrequency,
-            this.runFrequencyEnabled
+            this.runFrequency
         ])
     }
     
@@ -69,13 +67,6 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
                 onlyIf: () => this.customPrefixEnabled()
             }
         });
-        
-        this.runFrequency.extend({
-            required: {
-                onlyIf: () => this.runFrequencyEnabled()
-            }
-        });
-
 
         this.validationGroup = ko.validatedObservable({
             connectionStringName: this.connectionStringName,
@@ -100,8 +91,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             
             this.keepFilesOnDisk(configuration.KeepFilesOnDisk);
                        
-            this.runFrequencyEnabled(!!configuration.RunFrequency); 
-            this.runFrequency(configuration.RunFrequency ||  ongoingTaskOlapEtlEditModel.defaultRunFrequency);
+            this.runFrequency(configuration.RunFrequency || ongoingTaskOlapEtlEditModel.defaultRunFrequency);
             this.runFrequencyCronEditor(new cronEditor(this.runFrequency));
             
             if (configuration.Transforms) {
@@ -129,7 +119,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             Transforms: this.transformationScripts().map(x => x.toDto()),
             CustomPrefix: this.customPrefixEnabled() ? this.customPrefix() : null,
             KeepFilesOnDisk: this.keepFilesOnDisk(),
-            RunFrequency: this.runFrequencyEnabled() ? this.runFrequency() : null,
+            RunFrequency: this.runFrequency(),
             OlapTables: this.olapTables().map(x => x.toDto())
         } as Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration;
         

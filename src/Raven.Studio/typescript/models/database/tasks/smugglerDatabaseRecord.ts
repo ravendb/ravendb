@@ -23,7 +23,7 @@ class smugglerDatabaseRecord {
     includeOlapConnectionStrings = ko.observable<boolean>(true);
     includeRavenEtls = ko.observable<boolean>(true);
     includeSqlEtls = ko.observable<boolean>(true);
-    includeOlapEtls = ko.observable<boolean>(true);
+    includeOlapEtls = ko.observable<boolean>(false); // todo - waiting for RavenDB-16434
     includeClient = ko.observable<boolean>(true);
     includeSorters = ko.observable<boolean>(true);
     includeAnalyzers = ko.observable<boolean>(true);

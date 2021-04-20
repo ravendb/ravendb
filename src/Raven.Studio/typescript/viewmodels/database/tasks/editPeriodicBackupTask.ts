@@ -143,12 +143,12 @@ class editPeriodicBackupTask extends viewModelBase {
 
         popoverUtils.longWithHover($(".storage-container-info"),
             {
-                content: tasksCommonContent.textForPopover("Storage container")
+                content: tasksCommonContent.textForPopover("Storage container", "Backup")
             });
 
         popoverUtils.longWithHover($(".vault-info"),
             {
-                content: tasksCommonContent.textForPopover("Vault")
+                content: tasksCommonContent.textForPopover("Vault", "Backup")
             });
 
         popoverUtils.longWithHover($(".ftp-host-info"),

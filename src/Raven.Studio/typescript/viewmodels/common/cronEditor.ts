@@ -6,7 +6,7 @@ import popoverUtils = require("common/popoverUtils");
 
 type cronPeriod = "minute" | "hour" | "day" | "week" | "month" | "year" | "custom";
 
-class cronEditor  {
+class cronEditor {
     targetField: KnockoutObservable<string>;
     
     static periods = ["minute", "hour", "day", "week", "month", "year", "custom"] as cronPeriod[];
@@ -83,7 +83,7 @@ class cronEditor  {
                     this.minutes(parts[0]);
                     this.hour(parts[1]);
                     this.dayOfMonth(parts[2]);
-                } else if (/^(\d{1,2}\s){4}\*$/.test(value)) {   // "? ? ? ? *"
+                } else if (/^(\d{1,2}\s){4}\*$/.test(value)) { // "? ? ? ? *"
                     this.period("year");
                     this.minutes(parts[0]);
                     this.hour(parts[1]);

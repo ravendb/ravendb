@@ -18,13 +18,14 @@ import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleM
 import jsonUtil = require("common/jsonUtil");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
-import backupSettings = require("../../../models/database/tasks/periodicBackup/backupSettings");
+import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testPeriodicBackupCredentialsCommand");
 import getPeriodicBackupConfigCommand = require("commands/database/tasks/getPeriodicBackupConfigCommand");
 
 class editOlapEtlTask extends viewModelBase {
 
     static readonly scriptNamePrefix = "Script #";
+    static isApplyToAll = ongoingTaskOlapEtlTransformationModel.isApplyToAll;
     
     editedOlapEtl = ko.observable<ongoingTaskOlapEtlEditModel>();
     isAddingNewOlapEtlTask = ko.observable<boolean>(true);
@@ -49,7 +50,7 @@ class editOlapEtlTask extends viewModelBase {
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
     
-    collectionNames: KnockoutComputed<string[]>;
+    collections = collectionsTracker.default.collections;
     
     showEditTransformationArea: KnockoutComputed<boolean>;
     showEditOlapTableArea: KnockoutComputed<boolean>;
@@ -62,7 +63,6 @@ class editOlapEtlTask extends viewModelBase {
     constructor() {
         super();
         this.bindToCurrentInstance("useConnectionString",
-                                   "useCollection",
                                    "testCredentials",
                                    "removeTransformationScript",
                                    "cancelEditedTransformation",
@@ -145,12 +145,6 @@ class editOlapEtlTask extends viewModelBase {
             {
                 content: `<small>Frequency at which this task will be triggered</small>`
             });
-
-        popoverUtils.longWithHover($(".max-items-in-row"),
-            {
-                content: `<small>Max number of items in the parquet row group</small>`,
-                placement: 'top'
-            });
     }
     
     /****************************************************/
@@ -176,10 +170,6 @@ class editOlapEtlTask extends viewModelBase {
                 return "";
             }
             return generalUtils.trimMessage(result.Error);
-        });
-
-        this.collectionNames = ko.pureComputed(() => {
-           return collectionsTracker.default.getCollectionNames(); 
         });
         
         this.showEditOlapTableArea = ko.pureComputed(() => !!this.editedOlapTableSandbox());
@@ -400,10 +390,6 @@ class editOlapEtlTask extends viewModelBase {
     /********************************************/
     /*** Transformation Script Actions Region ***/
     /********************************************/
-
-    useCollection(collectionToUse: string) {
-        this.editedTransformationScriptSandbox().collection(collectionToUse);
-    }
     
     addNewTransformation() {
         this.transformationScriptSelectedForEdit(null);
@@ -478,17 +464,28 @@ class editOlapEtlTask extends viewModelBase {
         }
     }
 
-    createCollectionNameAutocompleter(collectionText: KnockoutObservable<string>) {
+    createCollectionNameAutoCompleter(usedCollections: KnockoutObservableArray<string>, collectionText: KnockoutObservable<string>) {
         return ko.pureComputed(() => {
+            let result;
             const key = collectionText();
 
-            const options = this.collectionNames();
+            const options = this.collections().filter(x => !x.isAllDocuments).map(x => x.name);
+
+            const usedOptions = usedCollections().filter(k => k !== key);
+
+            const filteredOptions = _.difference(options, usedOptions);
 
             if (key) {
-                return options.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+                result = filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));
             } else {
-                return options;
+                result = filteredOptions;
             }
+
+            if (!_.includes(this.editedTransformationScriptSandbox().transformScriptCollections(), ongoingTaskOlapEtlTransformationModel.applyToAllCollectionsText)) {
+                result.unshift(ongoingTaskOlapEtlTransformationModel.applyToAllCollectionsText);
+            }
+
+            return result;
         });
     }
     
@@ -550,7 +547,9 @@ class editOlapEtlTask extends viewModelBase {
 
         overwriteAction.done(() => {
             this.editedOlapEtl().olapTables.sort((a, b) => a.tableName().toLowerCase().localeCompare(b.tableName().toLowerCase()));
-            if (overwriteAction) { this.editedOlapTableSandbox(null); } 
+            if (overwriteAction) {
+                this.editedOlapTableSandbox(null);
+            } 
         });
     }
     

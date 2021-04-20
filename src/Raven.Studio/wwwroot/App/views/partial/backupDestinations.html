@@ -35,7 +35,7 @@
                                            data-bind="textInput: folderPath, attr: { 'placeholder': $root.serverConfiguration().LocalRootPath ? 'Relative backup path' : 'Full directory backup path' }, hasFocus: folderPathHasFocus">
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                     <ul class="dropdown-menu" data-bind="foreach: $parent.folderPathOptions, autoComplete: '#localFolderPath'">
-                                        <li data-bind="click: $parent.localBackupPathChanged">
+                                        <li data-bind="click: $parent.localPathChanged">
                                             <a href="#" data-bind="text: $data"></a>
                                         </li>
                                     </ul>
@@ -45,14 +45,14 @@
                         </div>
                         <div class="row margin-bottom">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4"></label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="visible: $parent.backupLocationInfo().length">
+                            <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="visible: $parent.locationInfo().length">
                                 <div class="text-info bg-info padding padding-sm">
                                     <span>The backup files will be created in:</span><br />
-                                    <div data-bind="if: $parent.spinners.backupLocationInfoLoading">
+                                    <div data-bind="if: $parent.spinners.locationInfoLoading">
                                         <span class="global-spinner"></span>
                                     </div>
-                                    <div data-bind="if: !$parent.spinners.backupLocationInfoLoading()">
-                                        <ul data-bind="foreach: $parent.backupLocationInfo" class="text-info bg-info">
+                                    <div data-bind="if: !$parent.spinners.locationInfoLoading()">
+                                        <ul data-bind="foreach: $parent.locationInfo" class="text-info bg-info">
                                             <li>
                                                 <small>
                                                     Node Tag: <strong data-bind="text: NodeTag"></strong>

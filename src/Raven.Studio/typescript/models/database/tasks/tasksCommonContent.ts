@@ -54,8 +54,8 @@
             "<li>If the database backed up is <strong>not-encrypted</strong> - the Snapshot will not be encrytped as well.</li>" +
         "</ul>";
     
-    static textForPopover(storageName: string) : string {
-        return `${storageName} should be created manually in order for this backup to work.<br /> ` +
+    static textForPopover(storageName: string, targetOperation: string) : string {
+        return `${storageName} should be created manually in order for this ${targetOperation} to work.<br /> ` +
             "You can use the 'Test credentials' button to verify its existance.";
     }
 
