@@ -39,6 +39,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _config = config;
             _tables = new Dictionary<string, OlapTransformedItems>();
             _logger = logger;
+
             var localSettings = BackupTask.GetBackupConfigurationFromScript(_config.Connection.LocalSettings, x => JsonDeserializationServer.LocalSettings(x),
                 database, updateServerWideSettingsFunc: null, serverWide: false);
 

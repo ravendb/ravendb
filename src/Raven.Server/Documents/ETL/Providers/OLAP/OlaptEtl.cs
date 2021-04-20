@@ -32,7 +32,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private PeriodicBackup.PeriodicBackup.BackupTimer _timer;
         private readonly S3Settings _s3Settings;
+        private readonly AzureSettings _azureSettings;
+        private readonly BackupResult _uploadResult;
         private readonly OperationCancelToken _operationCancelToken;
+        private static readonly IEnumerator<ToOlapItem> EmptyEnumerator = Enumerable.Empty<ToOlapItem>().GetEnumerator();
 
         public OlapEtl(Transformation transformation, OlapEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, OlaptEtlTag)
@@ -43,9 +46,98 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _s3Settings = BackupTask.GetBackupConfigurationFromScript(configuration.Connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
                     Database, updateServerWideSettingsFunc: null, serverWide: false);
 
+            _azureSettings = BackupTask.GetBackupConfigurationFromScript(configuration.Connection.AzureSettings, x => JsonDeserializationServer.AzureSettings(x),
+                Database, updateServerWideSettingsFunc: null, serverWide: false);
+
+            _uploadResult = GenerateUploadResult();
+
             _operationCancelToken = new OperationCancelToken(Database.DatabaseShutdown, CancellationToken);
 
             UpdateTimer(LastProcessState.LastBatchTime);
+        }
+
+        public override EtlType EtlType => EtlType.Olap;
+
+        public override bool ShouldTrackCounters() => false;
+
+        public override bool ShouldTrackTimeSeries() => false;
+
+        public override void NotifyAboutWork(DatabaseChange change)
+        {
+            // intentionally not setting _waitForChanges here
+            // _waitForChanges is being set by the timer
+        }
+
+        protected override bool ShouldTrackAttachmentTombstones()
+        {
+            return false;
+        }
+
+        protected override bool ShouldFilterOutHiLoDocument()
+        {
+            return true;
+        }
+
+        protected override IEnumerator<ToOlapItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
+        {
+            return new DocumentsToOlapItems(docs, collection);
+        }
+
+        protected override IEnumerator<ToOlapItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
+        {
+            return EmptyEnumerator;
+        }
+
+        protected override IEnumerator<ToOlapItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
+        {
+            throw new NotSupportedException("Attachment tombstones aren't supported by OLAP ETL");
+        }
+
+        protected override IEnumerator<ToOlapItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection)
+        {
+            throw new NotSupportedException("Counters aren't supported by OLAP ETL");
+        }
+
+        protected override IEnumerator<ToOlapItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
+        {
+            // RavenDB-16308
+            throw new NotSupportedException("Time Series are currently not supported by OLAP ETL");
+        }
+
+        protected override IEnumerator<ToOlapItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
+        {
+            throw new NotSupportedException("Time series deletes aren't supported by OLAP ETL");
+        }
+
+        protected override EtlTransformer<ToOlapItem, OlapTransformedItems> GetTransformer(DocumentsOperationContext context)
+        {
+            return new OlapDocumentTransformer(Transformation, Database, context, Configuration, Name, Logger);
+        }
+
+        protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context)
+        {
+            var count = 0;
+
+            foreach (var transformed in records)
+            {
+                var localPath = transformed.GenerateFileFromItems(out var folderName, out var fileName);
+                count += transformed.Count;
+
+                UploadToServer(localPath, folderName, fileName);
+
+                if (Configuration.KeepFilesOnDisk)
+                    continue;
+
+                File.Delete(localPath);
+            }
+
+            return count;
+        }
+
+        protected override void AfterAllBatchesCompleted(DateTime lastBatchTime)
+        {
+            UpdateEtlProcessState(LastProcessState, lastBatchTime);
+            UpdateTimer(lastBatchTime);
         }
 
         private void UpdateTimer(DateTime? lastBatchTime)
@@ -96,7 +188,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             };
         }
 
-
         private DateTime GetNextRunOccurrence(string runFrequency, DateTime? lastBatchTime = null)
         {
             if (string.IsNullOrWhiteSpace(runFrequency))
@@ -129,90 +220,20 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
         }
 
-        public override EtlType EtlType => EtlType.Olap;
-
-        private static readonly IEnumerator<ToOlapItem> EmptyEnumerator = Enumerable.Empty<ToOlapItem>().GetEnumerator();
-
-        protected override IEnumerator<ToOlapItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
+        private static BackupResult GenerateUploadResult()
         {
-            return new DocumentsToOlapItems(docs, collection);
-        }
-
-        protected override IEnumerator<ToOlapItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
-        {
-            return EmptyEnumerator;
-        }
-
-        protected override IEnumerator<ToOlapItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
-        {
-            throw new NotSupportedException("Attachment tombstones aren't supported by OLAP ETL");
-        }
-
-        protected override IEnumerator<ToOlapItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection)
-        {
-            throw new NotSupportedException("Counters aren't supported by OLAP ETL");
-        }
-
-        protected override IEnumerator<ToOlapItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
-        {
-            // RavenDB-16308
-            throw new NotSupportedException("Time Series are currently not supported by OLAP ETL");
-        }
-
-        protected override IEnumerator<ToOlapItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
-        {
-            throw new NotSupportedException("Time series deletes aren't supported by OLAP ETL");
-        }
-
-        protected override void AfterAllBatchesCompleted(DateTime lastBatchTime)
-        {
-            UpdateEtlProcessState(LastProcessState, lastBatchTime);
-            UpdateTimer(lastBatchTime);
-        }
-
-        public override void NotifyAboutWork(DatabaseChange change)
-        {
-            // intentionally not setting _waitForChanges here
-            // _waitForChanges is being set by the timer
-        }
-
-        protected override bool ShouldTrackAttachmentTombstones()
-        {
-            return false;
-        }
-
-        protected override bool ShouldFilterOutHiLoDocument()
-        {
-            return true;
-        }
-
-        public override bool ShouldTrackCounters() => false;
-
-        public override bool ShouldTrackTimeSeries() => false;
-
-        protected override EtlTransformer<ToOlapItem, OlapTransformedItems> GetTransformer(DocumentsOperationContext context)
-        {
-            return new OlapDocumentTransformer(Transformation, Database, context, Configuration, Name, Logger);
-        }
-
-        protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context)
-        {
-            var count = 0;
-
-            foreach (var transformed in records)
+            return new BackupResult
             {
-                var localPath = transformed.GenerateFileFromItems(out var folderName, out var fileName);
-                count += transformed.Count;
-
-                UploadToServer(localPath, folderName, fileName);
-
-                if (Configuration.KeepFilesOnDisk)
-                    continue;
-                
-                File.Delete(localPath);
-            }
-
-            return count;
+                // Skipped will be set later, if needed
+                S3Backup = new UploadToS3
+                {
+                    Skipped = true
+                },
+                AzureBackup = new UploadToAzure
+                {
+                    Skipped = true
+                }
+            };
         }
 
         private void UploadToServer(string localPath, string folderName, string fileName)
@@ -222,6 +243,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             var uploaderSettings = new UploaderSettings
             {
                 S3Settings = _s3Settings,
+                AzureSettings = _azureSettings,
                 FilePath = localPath,
                 FolderName = folderName,
                 FileName = fileName,
@@ -229,15 +251,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 TaskName = Name
             };
 
-            var uploadResult = new BackupResult
-            {
-                S3Backup = new UploadToS3
-                {
-                    Skipped = true // will be set later, if needed
-                }
-            };
-
-            var backupUploader = new BackupUploader(uploaderSettings, new RetentionPolicyBaseParameters(), Logger, uploadResult, onProgress: ProgressNotification, _operationCancelToken);
+            var backupUploader = new BackupUploader(uploaderSettings, new RetentionPolicyBaseParameters(), Logger, _uploadResult, onProgress: ProgressNotification, _operationCancelToken);
             backupUploader.Execute();
         }
 

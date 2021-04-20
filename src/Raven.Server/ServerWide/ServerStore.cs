@@ -1892,14 +1892,14 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case EtlType.Olap:
-                        var parquetEtl = JsonDeserializationCluster.OlapEtlConfiguration(etlConfiguration);
-                        parquetEtl.Validate(out var parquetEtlErr, validateName: false, validateConnection: false);
-                        if (ValidateConnectionString(rawRecord, parquetEtl.ConnectionStringName, parquetEtl.EtlType) == false)
-                            parquetEtlErr.Add($"Could not find connection string named '{parquetEtl.ConnectionStringName}'. Please supply an existing connection string.");
+                        var olapEtl = JsonDeserializationCluster.OlapEtlConfiguration(etlConfiguration);
+                        olapEtl.Validate(out var olapEtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, olapEtl.ConnectionStringName, olapEtl.EtlType) == false)
+                            olapEtlErr.Add($"Could not find connection string named '{olapEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
-                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, parquetEtlErr);
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, olapEtlErr);
 
-                        command = new AddOlapEtlCommand(parquetEtl, databaseName, raftRequestId);
+                        command = new AddOlapEtlCommand(olapEtl, databaseName, raftRequestId);
                         break;
 
                     default:
@@ -1944,8 +1944,8 @@ namespace Raven.Server.ServerWide
                     var sqlConnectionString = databaseRecord.SqlConnectionStrings;
                     return sqlConnectionString != null && sqlConnectionString.TryGetValue(connectionStringName, out _);
                 case EtlType.Olap:
-                    var s3ConnectionString = databaseRecord.OlapConnectionString;
-                    return s3ConnectionString != null && s3ConnectionString.TryGetValue(connectionStringName, out _);
+                    var olapConnectionString = databaseRecord.OlapConnectionString;
+                    return olapConnectionString != null && olapConnectionString.TryGetValue(connectionStringName, out _);
             }
 
             return false;
@@ -1962,7 +1962,6 @@ namespace Raven.Server.ServerWide
                 {
                     case EtlType.Raven:
                         var rvnEtl = JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration);
-
                         rvnEtl.Validate(out var rvnEtlErr, validateName: false, validateConnection: false);
                         if (ValidateConnectionString(rawRecord, rvnEtl.ConnectionStringName, rvnEtl.EtlType) == false)
                             rvnEtlErr.Add($"Could not find connection string named '{rvnEtl.ConnectionStringName}'. Please supply an existing connection string.");
@@ -1971,9 +1970,7 @@ namespace Raven.Server.ServerWide
 
                         command = new UpdateRavenEtlCommand(id, rvnEtl, databaseName, raftRequestId);
                         break;
-
                     case EtlType.Sql:
-
                         var sqlEtl = JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration);
                         sqlEtl.Validate(out var sqlEtlErr, validateName: false, validateConnection: false);
                         if (ValidateConnectionString(rawRecord, sqlEtl.ConnectionStringName, sqlEtl.EtlType) == false)
@@ -1984,15 +1981,14 @@ namespace Raven.Server.ServerWide
                         command = new UpdateSqlEtlCommand(id, sqlEtl, databaseName, raftRequestId);
                         break;
                     case EtlType.Olap:
-
-                        var parquetEtl = JsonDeserializationCluster.OlapEtlConfiguration(etlConfiguration);
-                        parquetEtl.Validate(out var s3EtlErr, validateName: false, validateConnection: false);
-                        if (ValidateConnectionString(rawRecord, parquetEtl.ConnectionStringName, parquetEtl.EtlType) == false)
-                            s3EtlErr.Add($"Could not find connection string named '{parquetEtl.ConnectionStringName}'. Please supply an existing connection string.");
+                        var olapEtl = JsonDeserializationCluster.OlapEtlConfiguration(etlConfiguration);
+                        olapEtl.Validate(out var s3EtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, olapEtl.ConnectionStringName, olapEtl.EtlType) == false)
+                            s3EtlErr.Add($"Could not find connection string named '{olapEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, s3EtlErr);
 
-                        command = new UpdateOlapEtlCommand(id, parquetEtl, databaseName, raftRequestId);
+                        command = new UpdateOlapEtlCommand(id, olapEtl, databaseName, raftRequestId);
                         break;
                     default:
                         throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
