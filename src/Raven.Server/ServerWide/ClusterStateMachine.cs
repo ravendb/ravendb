@@ -529,7 +529,7 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                    serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.UnrecoverableClusterError, null), context.Transaction, false);
+                    serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.UnrecoverableClusterError, $"{_parent.CurrentTerm}/{index}"), context.Transaction, false);
                 }
                 catch
                 {
@@ -550,6 +550,7 @@ namespace Raven.Server.ServerWide
                             error,
                             AlertType.UnrecoverableClusterError,
                             NotificationSeverity.Error,
+                            key: $"{_parent.CurrentTerm}/{index}",
                             details: new ExceptionDetails(exception)));
                     }
                     catch
