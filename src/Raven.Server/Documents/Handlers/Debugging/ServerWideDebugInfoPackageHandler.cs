@@ -67,98 +67,107 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
-            using (transactionOperationContext.OpenReadTransaction())
+            var token = CreateOperationToken();
+            var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
+
+            await ServerStore.Operations.AddOperation(null, "Created debug package for all cluster nodes", Operations.Operations.OperationType.DebugPackage, async _ =>
             {
-                using (var ms = new MemoryStream())
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
+                using (transactionOperationContext.OpenReadTransaction())
                 {
-                    using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+                    using (var ms = new MemoryStream())
                     {
-                        var localEndpointClient = new LocalEndpointClient(Server);
-
-                        using (var localMemoryStream = new MemoryStream())
+                        using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                         {
-                            //assuming that if the name tag is empty
-                            var nodeName = $"Node - [{ServerStore.NodeTag ?? "Empty node tag"}]";
+                            var localEndpointClient = new LocalEndpointClient(Server);
 
-                            using (var localArchive = new ZipArchive(localMemoryStream, ZipArchiveMode.Create, true))
+                            using (var localMemoryStream = new MemoryStream())
                             {
-                                await WriteServerWide(localArchive, jsonOperationContext, localEndpointClient, _serverWidePrefix);
-                                await WriteForAllLocalDatabases(localArchive, jsonOperationContext, localEndpointClient);
-                                await WriteLogFile(localArchive);
+                                //assuming that if the name tag is empty
+                                var nodeName = $"Node - [{ServerStore.NodeTag ?? "Empty node tag"}]";
+
+                                using (var localArchive = new ZipArchive(localMemoryStream, ZipArchiveMode.Create, true))
+                                {
+                                    await WriteServerWide(localArchive, jsonOperationContext, localEndpointClient, _serverWidePrefix);
+                                    await WriteForAllLocalDatabases(localArchive, jsonOperationContext, localEndpointClient);
+                                    await WriteLogFile(localArchive);
+                                }
+
+                                localMemoryStream.Position = 0;
+                                var entry = archive.CreateEntry($"{nodeName}.zip");
+                                entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+                                using (var entryStream = entry.Open())
+                                {
+                                    localMemoryStream.CopyTo(entryStream);
+                                    entryStream.Flush();
+                                }
                             }
 
-                            localMemoryStream.Position = 0;
-                            var entry = archive.CreateEntry($"{nodeName}.zip");
-                            entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+                            var databaseNames = ServerStore.Cluster.GetDatabaseNames(transactionOperationContext);
+                            var topology = ServerStore.GetClusterTopology(transactionOperationContext);
 
-                            using (var entryStream = entry.Open())
+                            //this means no databases are defined in the cluster
+                            //in this case just output server-wide endpoints from all cluster nodes
+                            if (databaseNames.Count == 0)
                             {
-                                localMemoryStream.CopyTo(entryStream);
-                                entryStream.Flush();
+                                foreach (var tagWithUrl in topology.AllNodes)
+                                {
+                                    if (tagWithUrl.Value.Contains(ServerStore.GetNodeHttpServerUrl()))
+                                        continue;
+
+                                    try
+                                    {
+                                        await WriteDebugInfoPackageForNodeAsync(
+                                            jsonOperationContext,
+                                            archive,
+                                            tag: tagWithUrl.Key,
+                                            url: tagWithUrl.Value,
+                                            certificate: Server.Certificate.Certificate,
+                                            databaseNames: null);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        var entryName = $"Node - [{tagWithUrl.Key}]";
+                                        DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                var nodeUrlToDatabaseNames = CreateUrlToDatabaseNamesMapping(transactionOperationContext, databaseNames);
+                                foreach (var urlToDatabaseNamesMap in nodeUrlToDatabaseNames)
+                                {
+                                    if (urlToDatabaseNamesMap.Key.Contains(ServerStore.GetNodeHttpServerUrl()))
+                                        continue; //skip writing local data, we do it separately
+
+                                    try
+                                    {
+                                        await WriteDebugInfoPackageForNodeAsync(
+                                            jsonOperationContext,
+                                            archive,
+                                            tag: urlToDatabaseNamesMap.Value.Item2,
+                                            url: urlToDatabaseNamesMap.Key,
+                                            databaseNames: urlToDatabaseNamesMap.Value.Item1,
+                                            certificate: Server.Certificate.Certificate);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        var entryName = $"Node - [{urlToDatabaseNamesMap.Value.Item2}]";
+                                        DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
+                                    }
+                                }
                             }
                         }
-                        var databaseNames = ServerStore.Cluster.GetDatabaseNames(transactionOperationContext);
-                        var topology = ServerStore.GetClusterTopology(transactionOperationContext);
 
-                        //this means no databases are defined in the cluster
-                        //in this case just output server-wide endpoints from all cluster nodes
-                        if (databaseNames.Count == 0)
-                        {
-                            foreach (var tagWithUrl in topology.AllNodes)
-                            {
-                                if (tagWithUrl.Value.Contains(ServerStore.GetNodeHttpServerUrl()))
-                                    continue;
-
-                                try
-                                {
-                                    await WriteDebugInfoPackageForNodeAsync(
-                                        jsonOperationContext,
-                                        archive,
-                                        tag: tagWithUrl.Key,
-                                        url: tagWithUrl.Value,
-                                        certificate: Server.Certificate.Certificate,
-                                        databaseNames: null);
-                                }
-                                catch (Exception e)
-                                {
-                                    var entryName = $"Node - [{tagWithUrl.Key}]";
-                                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            var nodeUrlToDatabaseNames = CreateUrlToDatabaseNamesMapping(transactionOperationContext, databaseNames);
-                            foreach (var urlToDatabaseNamesMap in nodeUrlToDatabaseNames)
-                            {
-                                if (urlToDatabaseNamesMap.Key.Contains(ServerStore.GetNodeHttpServerUrl()))
-                                    continue; //skip writing local data, we do it separately
-
-                                try
-                                {
-                                    await WriteDebugInfoPackageForNodeAsync(
-                                        jsonOperationContext,
-                                        archive,
-                                        tag: urlToDatabaseNamesMap.Value.Item2,
-                                        url: urlToDatabaseNamesMap.Key,
-                                        databaseNames: urlToDatabaseNamesMap.Value.Item1,
-                                        certificate: Server.Certificate.Certificate);
-                                }
-                                catch (Exception e)
-                                {
-                                    var entryName = $"Node - [{urlToDatabaseNamesMap.Value.Item2}]";
-                                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
-                                }
-                            }
-                        }
+                        ms.Position = 0;
+                        await ms.CopyToAsync(ResponseBodyStream());
                     }
-
-                    ms.Position = 0;
-                    await ms.CopyToAsync(ResponseBodyStream());
                 }
-            }
+
+                return null;
+            }, operationId, token: token);
         }
 
         private async Task WriteDebugInfoPackageForNodeAsync(
@@ -200,22 +209,31 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node [{ServerStore.NodeTag}].zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                using (var ms = new MemoryStream())
-                {
-                    using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
-                    {
-                        var localEndpointClient = new LocalEndpointClient(Server);
-                        await WriteServerWide(archive, context, localEndpointClient, _serverWidePrefix);
-                        await WriteForAllLocalDatabases(archive, context, localEndpointClient);
-                        await WriteLogFile(archive);
-                    }
+            
+            var token = CreateOperationToken();
+            var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
 
-                    ms.Position = 0;
-                    await ms.CopyToAsync(ResponseBodyStream());
+            await ServerStore.Operations.AddOperation(null, "Created debug package for current server only", Operations.Operations.OperationType.DebugPackage, async _ =>
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    using (var ms = new MemoryStream())
+                    {
+                        using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+                        {
+                            var localEndpointClient = new LocalEndpointClient(Server);
+                            await WriteServerWide(archive, context, localEndpointClient, _serverWidePrefix);
+                            await WriteForAllLocalDatabases(archive, context, localEndpointClient);
+                            await WriteLogFile(archive);
+                        }
+
+                        ms.Position = 0;
+                        await ms.CopyToAsync(ResponseBodyStream());
+                    }
                 }
-            }
+
+                return null;
+            }, operationId, token: token);
         }
 
         private static async Task WriteLogFile(ZipArchive archive)
