@@ -132,7 +132,7 @@ class editServerWideBackup extends viewModelBase {
 
         popoverUtils.longWithHover($(".bucket-info"),
             {
-                content: tasksCommonContent.textForPopover("Bucket") 
+                content: tasksCommonContent.textForPopover("Bucket", "Server-Wide Backup") 
             });
 
         popoverUtils.longWithHover($(".bucket-gcs-info"),
@@ -142,12 +142,12 @@ class editServerWideBackup extends viewModelBase {
 
         popoverUtils.longWithHover($(".storage-container-info"),
             {
-                content: tasksCommonContent.textForPopover("Storage container") 
+                content: tasksCommonContent.textForPopover("Storage container", "Server-Wide Backup") 
             });
 
         popoverUtils.longWithHover($(".vault-info"),
             {
-                content: tasksCommonContent.textForPopover("Vault") 
+                content: tasksCommonContent.textForPopover("Vault", "Server-Wide Backup") 
             });
 
         popoverUtils.longWithHover($(".ftp-host-info"),

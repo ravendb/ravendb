@@ -10,8 +10,8 @@
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>
                 </div>
-                <div class="panel">
-                    <div data-bind="with: editedOlapEtl">
+                <div data-bind="with: editedOlapEtl">
+                    <div class="panel">
                         <div class="panel-body">
                             <h3 data-bind="text: $parent.isAddingNewOlapEtlTask() ? 'New OLAP ETL' : 'Edit OLAP ETL'"></h3>
                             <div class="form-group" data-bind="validationElement: taskName">
@@ -28,12 +28,12 @@
                                     <label for="responsibleNode">Set preferred responsible node</label>
                                 </div>
                             </div>
-                            <div data-bind="validationElement: mentorNode, collapse: manualChooseMentor"> 
+                            <div data-bind="validationElement: mentorNode, collapse: manualChooseMentor">
                                 <div class="form-group">
                                     <div>
                                         <label class="control-label">Responsible Node</label>
                                     </div>
-                                    <div class="flex-grow"> 
+                                    <div class="flex-grow">
                                         <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
                                             <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select preferred responsible node'"></span>
                                             <span class="caret"></span>
@@ -68,19 +68,20 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label class="control-label">&nbsp;</label>
-                                <div class="toggle run-frequency">
-                                    <input id="setFrequency" type="checkbox" data-bind="checked: runFrequencyEnabled" />
-                                    <label for="setFrequency">Set run frequency</label>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-body">
+                            <div class="form-group" data-bind="validationElement: runFrequency">
+                                <label class="control-label">Run Frequency</label>
+                                <div class="flex-grow">
+                                    <div data-bind="compose: runFrequencyCronEditor"></div>
                                 </div>
                             </div>
-                            <div data-bind="validationElement: runFrequency, collapse: runFrequencyEnabled">
-                                <div class="form-group" data-bind="validationElement: runFrequency">
-                                    <label for="taskName" class="control-label">&nbsp;</label>
-                                    <div data-bind="compose: runFrequencyCronEditor, collapse: runFrequencyEnabled"></div>
-                                </div>
-                            </div>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-body">
                             <div class="form-group">
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle">
@@ -89,8 +90,12 @@
                                 </div>
                             </div>
                             <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString">
-                                <div class="form-group">
-                                    <div class="flex-grow" data-bind="compose: 'database/settings/connectionStringOlap.html'"></div>
+                                <div class="form-group" data-bind="validationElement: connectionStringName">
+                                    <label class="control-label">Name</label>
+                                    <div class="flex-grow">
+                                        <input class="form-control" placeholder="Enter a name for the new connection string"
+                                               data-bind="textInput: connectionStringName, enable: isNew" />
+                                    </div>
                                 </div>
                             </div>
                             <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName, visible: !$root.createNewConnectionString()">
@@ -111,36 +116,42 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="panel-addon" data-bind="visible: $root.olapEtlConnectionStringsNames().length === 0 && !$root.createNewConnectionString()">
+                            <div class="padding bg-warning small">
+                                <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
+                            </div>
+                        </div>
                     </div>
-                    <div class="panel-addon" data-bind="visible: $root.olapEtlConnectionStringsNames().length === 0 && !$root.createNewConnectionString()">
-                        <div class="padding bg-warning small">
-                            <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
+                    <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString">
+                        <div data-bind="validationElement: connectionStringName">
+                            <div data-bind="compose: 'database/settings/connectionStringOlap.html'"></div>
                         </div>
                     </div>
                 </div>
             </form>
-            <div class="flex-horizontal flex-header">
+            <div class="flex-horizontal flex-header margin-top margin-top-xs">
                 <div class="flex-grow"><h3>OLAP Tables</h3></div>
                 <div><button type="button" class="btn btn-info" data-bind="click: addNewOlapTable, disable: showEditOlapTableArea()"><i class="icon-plus"></i><span>Add Table</span></button></div>
             </div>
             <div class="olap-tables-list margin-bottom">
                 <!-- OLAP table edit area -->
                 <div class="panel" data-bind="visible: showEditOlapTableArea()">
-                    <div class="padding padding-sm flex-horizontal item" data-bind="with: editedOlapTableSandbox()">
-                        <div class="flex-grow" data-bind="validationElement: tableName"> 
-                            <!-- todo 1: why not red on the FIRST Time ? only after saving at least once.. -->
-                            <!-- todo 2: where to place the message - if placed it has an offset, so for now msg is removed... -->
-                            <input type="text" class="form-control input-sm" placeholder="Table name"
-                                   data-bind="textInput: tableName" />
+                    <form autocomplete="off">
+                        <div class="padding padding-sm flex-horizontal item" data-bind="with: editedOlapTableSandbox()">
+                            <div class="flex-grow" data-bind="validationElement: tableName">
+                                <input type="text" class="form-control input-sm" placeholder="Table name"
+                                       data-bind="textInput: tableName" />
+                            </div>
+                            <div class="flex-grow" data-bind="validationElement: documentIdColumn">
+                                <input type="text" class="form-control input-sm" placeholder="Document Id Column Name"
+                                       data-bind="textInput: documentIdColumn" />
+                            </div>
+                            <div class="flex-noshrink">
+                                <button type="button" class="btn btn-success btn-sm" title="Add this OLAP table" data-bind="click: $root.saveEditedOlapTable"><i class="icon-tick"></i></button>
+                                <button type="button" class="btn btn-default btn-sm" title="Cancel" data-bind="click: $root.cancelEditedOlapTable"><i class="icon-cancel"></i></button>
+                            </div>
                         </div>
-                        <div class="flex-grow" data-bind="validationElement: documentIdColumn">
-                            <input type="text" class="form-control input-sm" placeholder="Document Id Column Name" data-bind="textInput: documentIdColumn" />
-                        </div>
-                        <div class="flex-noshrink">
-                            <button type="button" class="btn btn-success btn-sm" title="Add this OLAP table" data-bind="click: $root.saveEditedOlapTable"><i class="icon-tick"></i></button>
-                            <button type="button" class="btn btn-default btn-sm" title="Cancel" data-bind="click: $root.cancelEditedOlapTable"><i class="icon-cancel"></i></button>
-                        </div>
-                    </div>
+                    </form>
                 </div>
                 <!-- The olap tables list -->
                 <div class="text-center text-muted" data-bind="if: editedOlapEtl().olapTables().length === 0 && !showEditOlapTableArea()">
@@ -172,13 +183,13 @@
                 <div class="flex-grow"><h3>Transform Scripts</h3></div>
                 <div>
                     <button type="button" class="btn btn-info" data-bind="click: addNewTransformation"><i class="icon-plus"></i><span>Add Transformation Script</span></button>
-                </div> 
+                </div>
             </div>
             <!-- The transformation scripts -->
             <div class="etl-list" data-bind="with: editedOlapEtl">
                 <div class="text-center text-muted" data-bind="visible: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
                     <i class="icon-lg icon-empty-set"></i>
-                    <h3 class="margin-top margin-top-sm" 
+                    <h3 class="margin-top margin-top-sm"
                         data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No Transformation Scripts have been defined
                     </h3>
                 </div>
@@ -191,8 +202,15 @@
                                         <span data-bind="text: name"></span>
                                         <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
                                     </div>
-                                    <div class="collections">Collection: <span
-                                        data-bind="text: collection, attr: { class: 'collection-color-' + getCollectionEntry(collection) }"></span>
+                                    <div class="collections">
+                                        Collections:
+                                        <span class="etl-collections" title="The Collections transformed"
+                                              data-bind="foreach: transformScriptCollections, visible: !applyScriptForAllCollections() && transformScriptCollections().length">
+                                            <span data-bind="text: $data, attr: { class: 'collection-color-' + $parent.getCollectionEntry($data) }"></span>
+                                        </span>
+                                        <span class="etl-collections" data-bind="visible: applyScriptForAllCollections" title="The Collections transformed">
+                                            <span>All collections</span>
+                                        </span>
                                     </div>
                                 </div>
                                 <div class="actions">
@@ -227,24 +245,44 @@
                                 <div class="help-block" data-bind="validationMessage: script"></div>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label><strong>Collection:</strong></label>
-                            <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: collection">
-                                <div class="dropdown btn-block">
-                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" title="Select/enter the collection name"
-                                           data-bind="textInput: collection" placeholder="Select a collection" />
-                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu"
-                                        data-bind="foreach: $root.createCollectionNameAutocompleter(collection)">
-                                        <li data-bind="click: _.partial($root.useCollection, $data)">
-                                            <a href="#" data-bind="text: $data"></a>
-                                        </li>
-                                    </ul>
+                        <div class="margin-bottom margin-top">
+                            <div class="flex-horizontal">
+                                <div class="flex-grow">
+                                    <div class="dropdown btn-block flex-grow">
+                                        <input class="form-control dropdown-toggle" placeholder="Select (or enter) a collection" data-toggle="dropdown" autocomplete="off"
+                                               data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput' }, disable: $root.collections().length === 0" />
+                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                        <ul class="dropdown-menu" role="menu" style="display: none;"
+                                            data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutoCompleter(transformScriptCollections, inputCollection)">
+                                            <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
+                                                <a role="menuitem" tabindex="-1" href="#">
+                                                    <span data-bind="text: $data"></span>
+                                                </a>
+                                                <div class="divider" data-bind="visible: $root.constructor.isApplyToAll($data)"></div>
+                                            </li>
+                                        </ul>
+                                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScriptCollections">
+                                            <div class="help-block" data-bind="validationMessage: transformScriptCollections"></div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <span class="help-block" data-bind="validationMessage: collection"></span>
+                                <div>
+                                    <button class="btn btn-info" data-bind="click: addCollection, enable: inputCollection() && canAddCollection()">
+                                        <i class="icon-plus"></i><span>Add Collection</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div data-bind="visible: transformScriptCollections().length" class="margin-top">
+                                <label><strong>Collections Selected:</strong></label>
+                                <ul class="well collection-list" data-bind="foreach: transformScriptCollections">
+                                    <li>
+                                        <div class="name" data-bind="text: $data"></div>
+                                        <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
-                         <div class="toggle margin-top margin-bottom" data-bind="visible: !isNew()">
+                        <div class="toggle margin-top margin-bottom" data-bind="visible: !isNew()">
                             <input id="reset" type="checkbox" data-bind="checked: resetScript" />
                             <label for="reset">Apply script to documents from beginning of time (Reset)</label>
                         </div>
@@ -255,11 +293,11 @@
                                 </button>
                                 <button type="button" title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
                             </div>
-<!-- todo - add test script in the future -->
-<!--                            <div class="flex-separator"></div>-->
-<!--                            <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()">-->
-<!--                                <i class="icon-rocket"></i> <span>Test script</span>-->
-<!--                            </button>-->
+                            <!-- todo - add test script in the future -->
+                            <!--                            <div class="flex-separator"></div>-->
+                            <!--                            <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()">-->
+                            <!--                                <i class="icon-rocket"></i> <span>Test script</span>-->
+                            <!--                            </button>-->
                         </div>
                     </div>
                 </div>

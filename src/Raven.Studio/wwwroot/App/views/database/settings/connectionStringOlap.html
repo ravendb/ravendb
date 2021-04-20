@@ -1,20 +1,14 @@
-<div class="form-group" data-bind="validationElement: connectionStringName">
-    <label class="control-label">Name</label>
-    <div class="flex-grow">
-        <input class="form-control" placeholder="Enter a name for the connection string"
-               data-bind="textInput: connectionStringName, enable: isNew, attr: { 'title': isNew() ? 'Enter any name of your choice for this connection string' : '' }" />
-    </div>
-</div>
-<div class="margin-top margin-top-lg"><h3>Destinations</h3></div>
-<div data-bind="with: localSettings" class="margin-top margin-top-lg">
+<h3>Destinations</h3>
+<div data-bind="with: localSettings" class="panel padding">
     <div class="toggle margin-left">
         <input id="toggle-local" type="checkbox" data-bind="checked: enabled">
         <label for="toggle-local">Local</label>
     </div>
     <div data-bind="collapse: enabled">
         <div class="row margin-bottom">
-            <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
-                <div class="toggle margin-left">
+            <label class="control-label col-xs-12 col-sm-6 col-lg-4"></label>
+            <div class="col-xs-12 col-sm-6 col-lg-8">
+                <div class="toggle">
                     <input id="localSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript">
                     <label for="localSettingsViaScript">Override configuration via external script</label>
                 </div>
@@ -28,7 +22,7 @@
         </div>
     </div>
 </div>
-<div data-bind="with: s3Settings">
+<div data-bind="with: s3Settings" class="panel padding">
     <div class="toggle margin-left">
         <input id="toggle-amazonS3" type="checkbox" data-bind="checked: enabled">
         <label for="toggle-amazonS3">Amazon S3</label>
@@ -36,16 +30,18 @@
     <div data-bind="collapse: enabled">
         <div>
             <div class="row">
-                <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
-                    <div class="toggle margin-left">
+                <label class="control-label col-xs-12 col-sm-6 col-lg-4"></label>
+                <div class="col-xs-12 col-sm-6 col-lg-8">
+                    <div class="toggle">
                         <input id="s3SettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript">
                         <label for="s3SettingsViaScript">Override configuration via external script</label>
                     </div>
                 </div>
             </div>
             <div class="row margin-bottom" data-bind="visible: !hasConfigurationScript()">
-                <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
-                    <div class="toggle margin-left">
+                <label class="control-label col-xs-12 col-sm-6 col-lg-4"></label>
+                <div class="col-xs-12 col-sm-6 col-lg-8">
+                    <div class="toggle">
                         <input id="s3CustomHost" type="checkbox" data-bind="checked: useCustomS3Host">
                         <label for="s3CustomHost">Use a custom S3 host</label>
                     </div>

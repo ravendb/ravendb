@@ -480,7 +480,7 @@ class editRavenEtlTask extends viewModelBase {
         router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
     }
 
-    createCollectionNameAutocompleter(usedCollections: KnockoutObservableArray<string>, collectionText: KnockoutObservable<string>) {
+    createCollectionNameAutoCompleter(usedCollections: KnockoutObservableArray<string>, collectionText: KnockoutObservable<string>) {
         return ko.pureComputed(() => {
             let result;
             const key = collectionText();
@@ -497,8 +497,8 @@ class editRavenEtlTask extends viewModelBase {
                 result = filteredOptions;
             }
             
-            if (!_.includes(this.editedRavenEtl().editedTransformationScriptSandbox().transformScriptCollections(), ongoingTaskEtlTransformationModel.applyToAllCollectionsText)) {
-                result.unshift(ongoingTaskEtlTransformationModel.applyToAllCollectionsText);
+            if (!_.includes(this.editedRavenEtl().editedTransformationScriptSandbox().transformScriptCollections(), ongoingTaskRavenEtlTransformationModel.applyToAllCollectionsText)) {
+                result.unshift(ongoingTaskRavenEtlTransformationModel.applyToAllCollectionsText);
             }
             
             return result;

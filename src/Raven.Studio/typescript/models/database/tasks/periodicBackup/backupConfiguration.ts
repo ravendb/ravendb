@@ -1,6 +1,5 @@
 ﻿/// <reference path="../../../../../typings/tsd.d.ts"/>
 import localSettings = require("models/database/tasks/periodicBackup/localSettings");
-// import s3Settings = require("models/database/tasks/periodicBackup/s3Settings");
 import s3Settings = require("viewmodels/database/tasks/destinations/s3Settings");
 import glacierSettings = require("models/database/tasks/periodicBackup/glacierSettings");
 import azureSettings = require("models/database/tasks/periodicBackup/azureSettings");
@@ -60,7 +59,7 @@ abstract class backupConfiguration {
         this.taskId(dto.TaskId);
         this.backupType(dto.BackupType);
         this.localSettings(!dto.LocalSettings ? localSettings.empty("backup") : new localSettings(dto.LocalSettings, "backup"));
-        this.s3Settings(!dto.S3Settings ? s3Settings.empty(serverLimits.AllowedAwsRegions) : new s3Settings(dto.S3Settings, serverLimits.AllowedAwsRegions));
+        this.s3Settings(!dto.S3Settings ? s3Settings.empty(serverLimits.AllowedAwsRegions, "Backup") : new s3Settings(dto.S3Settings, serverLimits.AllowedAwsRegions, "Backup"));
         this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty(serverLimits.AllowedAwsRegions) : new glacierSettings(dto.GlacierSettings, serverLimits.AllowedAwsRegions));
         this.azureSettings(!dto.AzureSettings ? azureSettings.empty() : new azureSettings(dto.AzureSettings));
         this.googleCloudSettings(!dto.GoogleCloudSettings ? googleCloudSettings.empty() : new googleCloudSettings(dto.GoogleCloudSettings));

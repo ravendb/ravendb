@@ -15,7 +15,6 @@ class ongoingTaskOlapEtlListModel extends abstractOngoingTaskEtlListModel {
         this.initializeObservables();
 
         this.connectionStringsUrl = appUrl.forConnectionStrings(activeDatabaseTracker.default.database(), "olap", this.connectionStringName());
-        console.log("url === " + this.connectionStringsUrl);
     }
 
     initializeObservables() {

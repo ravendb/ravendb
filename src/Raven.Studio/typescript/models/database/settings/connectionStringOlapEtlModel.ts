@@ -42,7 +42,7 @@ class connectionStringOlapEtlModel extends connectionStringModel {
         super.update(dto);
         
         this.connectionStringName(dto.Name);
-        this.s3Settings(dto.S3Settings ? new s3Settings(dto.S3Settings, null) : s3Settings.empty(null));
+        this.s3Settings(dto.S3Settings ? new s3Settings(dto.S3Settings, null, "OLAP") : s3Settings.empty(null, "OLAP"));
         this.localSettings(dto.LocalSettings ? new localSettings(dto.LocalSettings, "connectionString") : localSettings.empty("connectionString"));
     }
     
@@ -100,7 +100,7 @@ class connectionStringOlapEtlModel extends connectionStringModel {
         return new connectionStringOlapEtlModel({
             Type: "Olap",
             Name: "",
-            S3Settings: s3Settings.empty(null).toDto(),
+            S3Settings: s3Settings.empty(null, "OLAP").toDto(),
             LocalSettings: localSettings.empty("connectionString").toDto()
         } , true, []);
     }
