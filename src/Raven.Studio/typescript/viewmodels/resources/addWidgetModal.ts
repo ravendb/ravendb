@@ -3,15 +3,20 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 interface widgetToAdd {
     name: string;
     icon: "text-icon" | "graph-icon" | "list-icon" | "chart-icon";
-    type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType;
+    type: widgetType;
 }
 
 class addWidgetModal extends dialogViewModelBase {
 
-    private readonly existingTypes: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType[];
-    private readonly onWidgetSelected: (type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType) => void;
+    private readonly existingTypes: widgetType[];
+    private readonly onWidgetSelected: (type: widgetType) => void;
     
     widgets: widgetToAdd[] = [
+        {
+            name: "Welcome Screen",
+            type: "Welcome",
+            icon: "text-icon"
+        },
         {
             name: "License info",
             type: "License",
@@ -52,8 +57,8 @@ class addWidgetModal extends dialogViewModelBase {
     ]
     
     constructor(
-        existingTypes: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType[], 
-        onWidgetSelected: (type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType) => void
+        existingTypes: widgetType[], 
+        onWidgetSelected: (type: widgetType) => void
     ) {
         super();
         
@@ -63,7 +68,7 @@ class addWidgetModal extends dialogViewModelBase {
         this.bindToCurrentInstance("addWidget");
     }
     
-    addWidget(type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType) {
+    addWidget(type: widgetType) {
         if (!this.canAddWidget(type)) {
             return;
         }
@@ -79,7 +84,7 @@ class addWidgetModal extends dialogViewModelBase {
         });
     }
 
-    canAddWidget(type: Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType) {
+    canAddWidget(type: widgetType) {
         return !_.includes(this.existingTypes, type);
     }
 }

@@ -16,6 +16,8 @@ namespace Raven.Server.NotificationCenter.Handlers
 {
     public class ClusterDashboardConnection : NotificationCenterWebSocketWriter
     {
+        private const int WelcomeMessageId = -1;
+        
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ClusterDashboardConnection>(nameof(ClusterDashboardConnection));
 
         private readonly CanAccessDatabase _canAccessDatabase;
@@ -52,7 +54,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             var dataJson = serverTimePayload.ToJson();
             return new DynamicJsonValue
             {
-                [nameof(WidgetMessage.Id)] = 0, // special id - for initial message
+                [nameof(WidgetMessage.Id)] = WelcomeMessageId,
                 [nameof(WidgetMessage.Data)] = dataJson
             };
         }

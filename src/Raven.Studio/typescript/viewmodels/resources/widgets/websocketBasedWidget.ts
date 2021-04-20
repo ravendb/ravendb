@@ -7,6 +7,8 @@ abstract class websocketBasedWidget<TData, TConfig = unknown, TState = unknown> 
     supportedOnNode(targetNodeTag: string, currentServerNodeTag: string): boolean {
         return true;
     }
+
+    abstract getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType;
     
     onClientConnected(ws: clusterDashboardWebSocketClient) {
         if (!this.initialized) {
