@@ -13,6 +13,8 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public S3Settings S3Settings { get; set; }
 
+        public AzureSettings AzureSettings { get; set; }
+
         protected override void ValidateImpl(ref List<string> errors)
         {
             if (S3Settings != null)
@@ -22,10 +24,16 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
                 return;
             }
+            if (AzureSettings != null)
+            {
+                if (AzureSettings.HasSettings() == false)
+                    errors.Add($"{nameof(AzureSettings)} has no valid setting");
 
+                return;
+            }
             if (LocalSettings == null)
             {
-                errors.Add($"Missing both {nameof(LocalSettings)} and {nameof(S3Settings)}");
+                errors.Add($"Connection string is missing {nameof(LocalSettings)}, {nameof(S3Settings)} and {nameof(AzureSettings)}");
                 return;
             }
 
@@ -43,6 +51,13 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
                 if (string.IsNullOrEmpty(S3Settings.RemoteFolderName) == false)
                     destination = $"{destination}/{S3Settings.RemoteFolderName}";
             }
+            else if (AzureSettings != null)
+            {
+                type = nameof(RestoreType.Azure);
+                destination = AzureSettings.StorageContainer;
+                if (string.IsNullOrEmpty(AzureSettings.RemoteFolderName) == false)
+                    destination = $"{destination}/{AzureSettings.RemoteFolderName}";
+            }
             else
             {
                 type = nameof(RestoreType.Local);
@@ -57,6 +72,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             var json = base.ToJson();
             json[nameof(LocalSettings)] = LocalSettings?.ToJson();
             json[nameof(S3Settings)] = S3Settings?.ToJson();
+            json[nameof(AzureSettings)] = AzureSettings?.ToJson();
             return json;
         }
     }
