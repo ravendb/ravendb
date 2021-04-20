@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             else
             {
-                var utilizedCores = _licenseManager.GetCoresLimitForNode(out _);
+                var utilizedCores = _licenseManager.GetCoresLimitForNode(out _, false);
                 numberOfCoresToUse = GetNumberOfCoresToUseForBackup(utilizedCores);
             }
 
