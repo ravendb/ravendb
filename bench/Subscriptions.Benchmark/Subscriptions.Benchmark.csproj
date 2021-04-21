@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <RuntimeFrameworkVersion>3.1.13</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>3.1.14</RuntimeFrameworkVersion>
     <AssemblyName>Subscriptions.Benchmark</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Subscriptions.Benchmark</PackageId>
