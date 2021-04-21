@@ -37,7 +37,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/monitoring/v1/server", "GET", AuthorizationStatus.Operator)]
         public async Task MonitoringServer()
         {
-            AssertMonitoring();
+            ServerStore.LicenseManager.AssertCanUseMonitoringEndpoints();
 
             var result = new ServerMetrics();
 
@@ -259,7 +259,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/monitoring/v1/databases", "GET", AuthorizationStatus.Operator)]
         public async Task MonitoringDatabases()
         {
-            AssertMonitoring();
+            ServerStore.LicenseManager.AssertCanUseMonitoringEndpoints();
 
             var databases = GetDatabases();
 
@@ -456,9 +456,8 @@ namespace Raven.Server.Web.System
 
         [RavenAction("/admin/monitoring/v1/indexes", "GET", AuthorizationStatus.Operator)]
         public async Task MonitoringIndexes()
-
         {
-            AssertMonitoring();
+            ServerStore.LicenseManager.AssertCanUseMonitoringEndpoints();
 
             var databases = GetDatabases();
 
@@ -529,7 +528,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/monitoring/v1/collections", "GET", AuthorizationStatus.Operator)]
         public async Task MonitoringCollections()
         {
-            AssertMonitoring();
+            ServerStore.LicenseManager.AssertCanUseMonitoringEndpoints();
 
             var databases = GetDatabases();
 
@@ -563,14 +562,6 @@ namespace Raven.Server.Web.System
             {
                 context.Write(writer, result.ToJson());
             }
-        }
-
-        private void AssertMonitoring()
-        {
-            /* TODO:  uncomment + add section in studio
-            if (ServerStore.LicenseManager.CanUseMonitoringEndpoints(withNotification: false) == false)
-                throw new InvalidOperationException("Your license does not allow monitoring endpoints to be used.");
-              */
         }
     }
 }
