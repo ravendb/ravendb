@@ -1980,13 +1980,27 @@ namespace Raven.Server.Documents.Indexes
             if (_forTestingPurposes != null)
                 return _forTestingPurposes;
 
-            return _forTestingPurposes = new TestingStuff();
+            return _forTestingPurposes = new TestingStuff(this);
         }
 
         internal class TestingStuff
         {
+            private readonly IndexStore _parent;
             internal Action DuringIndexReplacement_AfterUpdatingCollectionOfIndexes;
             internal Action DuringIndexReplacement_OnOldIndexDeletion;
+
+            public TestingStuff(IndexStore parent)
+            {
+                _parent = parent;
+            }
+
+            public void RunFakeIndex(Index index)
+            {
+                // create the SemaphoreSlim
+                _parent.GetIndexLock(index.Name);
+
+                _parent.StartIndex(index);
+            }
         }
     }
 

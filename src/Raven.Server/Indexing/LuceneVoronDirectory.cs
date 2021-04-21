@@ -13,7 +13,7 @@ namespace Raven.Server.Indexing
         private readonly StorageEnvironment _environment;
         private readonly string _name;
         private readonly IndexOutputFilesSummary _indexOutputFilesSummary;
-        private readonly TempFileCache _tmpFileCache;
+        internal readonly TempFileCache TempFileCache;
 
         public string Name => _name;
 
@@ -38,7 +38,7 @@ namespace Raven.Server.Indexing
 
             _indexOutputFilesSummary = new IndexOutputFilesSummary();
             
-            _tmpFileCache = new TempFileCache(environment.Options);
+            TempFileCache = new TempFileCache(environment.Options);
         }
 
         public override bool FileExists(string name, IState s)
@@ -194,7 +194,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            return new VoronIndexOutput(_tmpFileCache, name, state.Transaction, _name, _indexOutputFilesSummary);
+            return new VoronIndexOutput(TempFileCache, name, state.Transaction, _name, _indexOutputFilesSummary);
         }
 
         public IDisposable SetTransaction(Transaction tx, out IState state)
@@ -214,7 +214,7 @@ namespace Raven.Server.Indexing
 
         protected override void Dispose(bool disposing)
         {
-            _tmpFileCache.Dispose();
+            TempFileCache.Dispose();
         }
 
         public void ResetAllocations()
