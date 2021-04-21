@@ -324,20 +324,25 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         private class Cached : IDisposable
         {
-            public readonly (HttpCache.ReleaseCacheItem Release, BlittableJsonReaderObject Cached)[] Values;
+            private readonly int _size;
+            public (HttpCache.ReleaseCacheItem Release, BlittableJsonReaderObject Cached)[] Values;
 
             public Cached(int size)
             {
+                _size = size;
                 Values = ArrayPool<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)>.Shared.Rent(size);
             }
 
             public void Dispose()
             {
-                for (int i = 0; i < Values.Length; i++)
+                if(Values == null)
+                    return;
+                for (int i = 0; i < _size; i++)
                 {
                     Values[i].Release.Dispose();
                 }
                 ArrayPool<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)>.Shared.Return(Values);
+                Values = null;
             }
         }
     }
