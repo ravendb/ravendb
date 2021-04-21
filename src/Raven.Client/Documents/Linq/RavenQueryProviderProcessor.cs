@@ -3659,7 +3659,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         var qr = finalQuery.GetQueryResult();
                         if (_queryType != SpecialQueryType.Count)
-                            return qr.TotalResults64;
+                            return qr.LongTotalResults;
                         return qr.TotalResults;
                     }
                 default:

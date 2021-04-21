@@ -22,9 +22,9 @@ namespace Raven.Client.Documents.Queries
         public int TotalResults { get; set; }
 
         /// <summary>
-        /// Gets or sets the total results as int64 type for this query
+        /// Gets or sets the total results as int64 for this query
         /// </summary>
-        public long TotalResults64 { get; set; }
+        public long LongTotalResults { get; set; }
 
         /// <summary>
         /// The total results for the query, taking into account the 
@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Queries
                 IsStale = IsStale,
                 SkippedResults = SkippedResults,
                 TotalResults = TotalResults,
-                TotalResults64 = TotalResults64,
+                LongTotalResults = LongTotalResults,
                 Highlightings = Highlightings?.ToDictionary(pair => pair.Key, x => new Dictionary<string, string[]>(x.Value)),
                 Explanations = Explanations?.ToDictionary(x => x.Key, x => x.Value),
                 Timings = Timings?.Clone(),
