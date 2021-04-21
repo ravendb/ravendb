@@ -739,8 +739,11 @@ namespace Raven.Server.Web.System
 
             if (id == null)
             {
-                await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.AddEtl(_, databaseName, etlConfiguration, guid), "etl-add",
-                    GetRaftRequestIdFromQuery(), beforeSetupConfiguration: AssertCanAddOrUpdateEtl, fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
+                await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) =>
+                        ServerStore.AddEtl(_, databaseName, etlConfiguration, guid), "etl-add",
+                    GetRaftRequestIdFromQuery(),
+                    beforeSetupConfiguration: AssertCanAddOrUpdateEtl,
+                    fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
                 return;
             }
@@ -748,12 +751,13 @@ namespace Raven.Server.Web.System
             string etlConfigurationName = null;
 
             await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) =>
-            {
-                var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration, guid);
-                etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
-                return task;
-            }, "etl-update",
+                {
+                    var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration, guid);
+                    etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
+                    return task;
+                }, "etl-update",
                 GetRaftRequestIdFromQuery(),
+                beforeSetupConfiguration: AssertCanAddOrUpdateEtl,
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
             // Reset scripts if needed
@@ -777,7 +781,6 @@ namespace Raven.Server.Web.System
                 case EtlType.Raven:
                     ServerStore.LicenseManager.AssertCanAddRavenEtl();
                     break;
-
                 case EtlType.Sql:
                     ServerStore.LicenseManager.AssertCanAddSqlEtl();
                     break;

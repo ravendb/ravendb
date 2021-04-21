@@ -1318,23 +1318,23 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (LicenseStatus.HasSqlEtl != false)
+            if (LicenseStatus.HasSqlEtl)
                 return;
 
             const string message = "Your current license doesn't include the SQL ETL feature";
             throw GenerateLicenseLimit(LimitType.SqlEtl, message);
         }
+
         public void AssertCanAddOlapEtl()
         {
-            // todo
-            // RavenDB-16242
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
 
+            if (LicenseStatus.HasOlapEtl)
+                return;
 
-
-
-
-
-
+            const string message = "Your current license doesn't include the OLAP ETL feature";
+            throw GenerateLicenseLimit(LimitType.OlapEtl, message);
         }
 
         public void AssertCanUseMonitoringEndpoints()
