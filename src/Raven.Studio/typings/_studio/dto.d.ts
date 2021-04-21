@@ -813,4 +813,4 @@ interface cachedDateValue<T> {
     value: T;
 }
 
-type widgetType = Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType | "Welcome";
+type widgetType = Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType | "Welcome" | "License";
