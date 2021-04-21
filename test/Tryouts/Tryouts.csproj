@@ -92,6 +92,7 @@
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.13.0" />
     <PackageReference Include="BenchmarkDotNet" Version="0.12.1" />
+    <PackageReference Include="CsvHelper" Version="26.1.0" />
     <PackageReference Include="Lucene.Net" Version="4.8.0-beta00014" />
     <PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00014" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />

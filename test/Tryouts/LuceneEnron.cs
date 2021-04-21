@@ -16,16 +16,16 @@ namespace Tryouts
 {
     class LuceneEnron
     {
-        public static string EnronLucene = "enron-lucene";
+        public const string EnronLucene = "enron-lucene";
 
-        public static void IndexEnronInLucene(bool recreateDatabase = true)
+        public static void IndexInLucene(bool recreateDatabase = true, string outputDirectory = EnronLucene)
         {
             var path = Path.Join("..", Enron.DatasetFile);
 
             var sp = Stopwatch.StartNew();
             var indexOnlySp = new Stopwatch();
 
-            using var dir = FSDirectory.Open(EnronLucene);
+            using var dir = FSDirectory.Open(outputDirectory);
             var analyzer = new StandardAnalyzer(Lucene.Net.Util.LuceneVersion.LUCENE_48);
             using var writer = new IndexWriter(dir, new IndexWriterConfig(Lucene.Net.Util.LuceneVersion.LUCENE_48, analyzer));
 

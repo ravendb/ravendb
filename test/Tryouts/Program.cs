@@ -20,8 +20,11 @@ namespace Tryouts
 
         public static async Task Main(string[] args)
         {
-            CoraxEnron.IndexEnronInCorax(true);
-            //LuceneEnron.IndexEnronInLucene(true);
+            //CoraxEnron.IndexInCorax(true);
+            //LuceneEnron.IndexInLucene(true);
+
+            CoraxReddit.IndexInCorax(true, "Z:\\corax");
+            //LuceneReddit.IndexInLucene(true);
 
             //using (var searcher = new IndexSearcher(env))
             //{

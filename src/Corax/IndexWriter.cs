@@ -76,7 +76,7 @@ namespace Corax
             return Index(idSlice, item);
         }
 
-        private SortedList<string, SortedList<string, SortedList<long, long>>> _buffer =
+        private readonly SortedList<string, SortedList<string, SortedList<long, long>>> _buffer =
             new SortedList<string, SortedList<string, SortedList<long, long>>>();
 
         public unsafe long Index(Slice id, BlittableJsonReaderObject item)
