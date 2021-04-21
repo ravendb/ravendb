@@ -824,8 +824,9 @@ namespace Raven.Client.Http
                 command.FailoverTopologyEtag = _nodeSelector?.Topology?.Etag ?? InitialTopologyEtag;
 
             var request = CreateRequest(context, chosenNode, command, out string url);
-            if (request == null) return;
-            
+            if (request == null)
+                return;
+
             var noCaching = sessionInfo?.NoCaching ?? false;
 
             using (var cachedItem = GetFromCache(context, command, !noCaching, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
@@ -1312,7 +1313,8 @@ namespace Raven.Client.Http
         internal HttpRequestMessage CreateRequest<TResult>(JsonOperationContext ctx, ServerNode node, RavenCommand<TResult> command, out string url)
         {
             var request = command.CreateRequest(ctx, node, out url);
-            if (request == null) return null;
+            if (request == null)
+                return null;
 
             var builder = new UriBuilder(url);
 
@@ -1362,7 +1364,7 @@ namespace Raven.Client.Http
                     {
                         builder.Append("a certificate is required. ");
                     }
-                    else if(Certificate.PrivateKey != null)
+                    else if (Certificate.PrivateKey != null)
                     {
                         builder.Append(Certificate.FriendlyName).Append(" does not have permission to access it or is unknown. ");
                     }
@@ -2123,12 +2125,12 @@ namespace Raven.Client.Http
 
         private async Task EnsureNodeSelector()
         {
-            if(_disableTopologyUpdates == false)
+            if (_disableTopologyUpdates == false)
                 await WaitForTopologyUpdate(_firstTopologyUpdate).ConfigureAwait(false);
 
             _nodeSelector ??= new NodeSelector(new Topology
             {
-                Nodes = TopologyNodes.ToList(), 
+                Nodes = TopologyNodes.ToList(),
                 Etag = TopologyEtag
             });
         }

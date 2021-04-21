@@ -58,4 +58,8 @@ scripts/raspberry-pi/ravendbd    text eol=lf
 *.java text eol=lf
 *.smaps binary
 
+scripts/linux/pkg/deb/assets/** text eol=lf
+scripts/linux/pkg/deb/assets/ravendb/etc/** text eol=lf
+
 * -crlf
+
