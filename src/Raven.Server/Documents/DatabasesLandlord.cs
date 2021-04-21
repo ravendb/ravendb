@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -25,6 +26,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Exceptions;
+using Voron.Util.Settings;
 
 namespace Raven.Server.Documents
 {
@@ -107,6 +109,7 @@ namespace Raven.Server.Documents
                             UnloadDatabase(databaseName, dbRecordIsNull: true);
                             return;
                         }
+
 
                         if (ShouldDeleteDatabase(context, databaseName, rawRecord))
                             return;
@@ -347,6 +350,34 @@ namespace Raven.Server.Documents
                     {
                         configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true,
                             databaseRecord: record);
+
+                        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            var allDatabasesRecords = _serverStore.Cluster.GetAllDatabases(context);
+                            var parentDirectory = configuration.Core.DataDirectory.FullPath;
+
+                            foreach (var currRecord in allDatabasesRecords)
+                            {
+                                if (currRecord.DatabaseName.Equals(dbName))
+                                    continue;
+
+                                var currConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true, 
+                                    ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: currRecord);
+
+                                var currDirectory = currConfiguration.Core.DataDirectory.FullPath;
+
+                                if (PathUtil.IsSubDirectory(currDirectory, parentDirectory))
+                                        throw new IntersectionInPaths($"Cannot delete database {dbName} from {parentDirectory}. " +
+                                                                      $"There is an intersection with database {currRecord.DatabaseName} located in {currDirectory}.");
+                            }
+                        }
+                    }
+                    catch (IntersectionInPaths e)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(e.Message);
+                        throw;
                     }
                     catch (Exception ex)
                     {
@@ -1052,6 +1083,33 @@ namespace Raven.Server.Documents
             }
 
             database.DatabaseShutdownCompleted.Set();
+        }
+
+        private class IntersectionInPaths : Exception
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="IntersectionInPaths"/> class.
+            /// </summary>
+            public IntersectionInPaths()
+            {
+            }
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="IntersectionInPaths"/> class.
+            /// </summary>
+            /// <param name="message">The message.</param>
+            public IntersectionInPaths(string message) : base(message)
+            {
+            }
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="IntersectionInPaths"/> class.
+            /// </summary>
+            /// <param name="message">The message.</param>
+            /// <param name="inner">The inner.</param>
+            public IntersectionInPaths(string message, Exception inner) : base(message, inner)
+            {
+            }
         }
     }
 }
