@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.Queries
 
                     final.TotalResults = final.Results.Count;
 
-                    final.TotalResults64 = final.Results.Count;
+                    final.LongTotalResults = final.Results.Count;
 
                     if (query.Limit != null || query.Offset != null)
                     {

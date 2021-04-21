@@ -1030,7 +1030,7 @@ namespace Raven.Client.Documents.Session
         {
             Take(0);
             var result = await GetQueryResultAsync(token).ConfigureAwait(false);
-            return result.TotalResults64;
+            return result.LongTotalResults;
         }
 
         /// <inheritdoc />

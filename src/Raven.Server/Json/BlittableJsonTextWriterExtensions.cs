@@ -492,8 +492,8 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(result.TotalResults64));
-            writer.WriteInteger(result.TotalResults64);
+            writer.WritePropertyName(nameof(result.LongTotalResults));
+            writer.WriteInteger(result.LongTotalResults);
             writer.WriteComma();
 
             if (result.CappedMaxResults != null)
