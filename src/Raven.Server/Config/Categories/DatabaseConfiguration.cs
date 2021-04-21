@@ -2,12 +2,35 @@ using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Sparrow;
+using Sparrow.LowMemory;
+using Sparrow.Platform;
 
 namespace Raven.Server.Config.Categories
 {
     [ConfigurationCategory(ConfigurationCategoryType.Database)]
     public class DatabaseConfiguration : ConfigurationCategory
     {
+        public DatabaseConfiguration(bool forceUsing32BitsPager)
+        {
+            var totalMem = MemoryInformation.TotalPhysicalMemory;
+
+            Size defaultPulseReadTransactionLimit;
+
+            if (PlatformDetails.Is32Bits || forceUsing32BitsPager || totalMem <= new Size(1, SizeUnit.Gigabytes))
+                defaultPulseReadTransactionLimit = new Size(16, SizeUnit.Megabytes);
+            else if (totalMem <= new Size(4, SizeUnit.Gigabytes))
+                defaultPulseReadTransactionLimit = new Size(32, SizeUnit.Megabytes);
+            else if (totalMem <= new Size(16, SizeUnit.Gigabytes))
+                defaultPulseReadTransactionLimit = new Size(64, SizeUnit.Megabytes);
+            else if (totalMem <= new Size(64, SizeUnit.Gigabytes))
+                defaultPulseReadTransactionLimit = new Size(128, SizeUnit.Megabytes);
+            else
+                defaultPulseReadTransactionLimit = new Size(256, SizeUnit.Megabytes);
+
+            PulseReadTransactionLimit = defaultPulseReadTransactionLimit;
+        }
+
+
         /// <summary>
         /// The time in seconds to wait before canceling query
         /// </summary>
@@ -83,7 +106,7 @@ namespace Raven.Server.Config.Categories
         public TimeSetting FrequencyToCheckForIdle { get; set; }
 
         [Description("Number of megabytes occupied by encryption buffers (if database is encrypted) or mapped 32 bites buffers (when running on 32 bits) after which a read transaction will be renewed to reduce memory usage during long running operations like backups or streaming")]
-        [DefaultValue(16)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Databases.PulseReadTransactionLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size PulseReadTransactionLimit { get; set; }

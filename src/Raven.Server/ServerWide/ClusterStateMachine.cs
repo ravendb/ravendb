@@ -3215,7 +3215,7 @@ namespace Raven.Server.ServerWide
 
             const string dbKey = "db/";
             var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
-            (long? TaskId, string name) old = default;
+            long? oldTaskId = null;
 
             var allServerWideBackupNames = GetSeverWideBackupNames(context);
 
@@ -3248,7 +3248,10 @@ namespace Raven.Server.ServerWide
                             isBackupToEditFound = true;
 
                             if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
+                            {
                                 periodicBackupConfiguration.TaskId = taskId;
+                                oldTaskId = taskId;
+                            }
                         }
                     }
 
@@ -3266,7 +3269,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            ApplyDatabaseRecordUpdates(toUpdate, type, old.TaskId ?? serverWideBackupConfiguration.TaskId, serverWideBackupConfiguration.TaskId, items, context);
+            ApplyDatabaseRecordUpdates(toUpdate, type, oldTaskId ?? serverWideBackupConfiguration.TaskId, serverWideBackupConfiguration.TaskId, items, context);
         }
 
         private static bool IsServerWideBackupToEdit(BlittableJsonReaderObject backup,

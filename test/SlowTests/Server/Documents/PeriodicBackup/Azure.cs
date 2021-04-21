@@ -193,6 +193,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             prefix = Guid.NewGuid().ToString();
             if (string.IsNullOrEmpty(setting.RemoteFolderName) == false)
                 prefix = $"{setting.RemoteFolderName}/{prefix}";
+            else
+            {
+                Assert.True(false, $"Found empty {nameof(AzureSettings)}.RemoteFolderName:{Environment.NewLine}"+Environment.StackTrace);
+            }
 
             for (var i = 0; i < blobsCount; i++)
             {
@@ -208,6 +212,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             public RavenAzureClient Client { get; set; }
             public AzureSettings Settings { get; set; }
+            private readonly string _remoteFolder;
 
             public AzureClientHolder(AzureSettings setting, Progress progress = null, [CallerMemberName] string caller = null)
             {
@@ -216,7 +221,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // keep only alphanumeric characters
                 caller = caller == null ? string.Empty : string.Concat(caller.Where(char.IsLetterOrDigit));
-                Settings.RemoteFolderName = $"{caller}{Guid.NewGuid()}";
+                Settings.RemoteFolderName = _remoteFolder = $"{caller}{Guid.NewGuid()}";
                 Client = new RavenAzureClient(Settings, progress);
             }
 
@@ -231,7 +236,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     do
                     {
-                        var blobs = Client.ListBlobs(Settings.RemoteFolderName, delimiter: null, listFolders: false, marker: blobsNextMarker);
+                        var blobs = Client.ListBlobs(_remoteFolder, delimiter: null, listFolders: false, marker: blobsNextMarker);
 
                         foreach (var blob in blobs.List)
                         {
@@ -253,7 +258,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     if (blobsToDelete.Count > 0)
                         Client.DeleteBlobs(blobsToDelete);
 
-                    Assert.Empty(Client.ListBlobs(Settings.RemoteFolderName, delimiter: null, listFolders: false).List);
+                    Assert.Empty(Client.ListBlobs(_remoteFolder, delimiter: null, listFolders: false).List);
                 }
                 catch
                 {
