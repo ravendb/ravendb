@@ -124,3 +124,5 @@ bench/Micro.Benchmark/BenchmarkDotNet.Artifacts/
 /src/Raven.Pal/src/posix/*.o
 
 test/Tryouts/enron_mail_20150507.tar.gz
+
+test/Tryouts/69M_reddit_accounts.csv.gz

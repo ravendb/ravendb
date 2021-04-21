@@ -12,16 +12,16 @@ namespace Tryouts
 {
     class CoraxEnron
     {
-        public static string DirectoryEnron = "enron-corax";
+        public const string DirectoryEnron = "enron-corax";
 
-        public static void IndexEnronInCorax(bool recreateDatabase = true)
+        public static void IndexInCorax(bool recreateDatabase = true, string outputDirectory = DirectoryEnron)
         {
             var path = Path.Join("..", Enron.DatasetFile);
 
             if (Directory.Exists(DirectoryEnron))
                 Directory.Delete(DirectoryEnron, true);
 
-            using var options = StorageEnvironmentOptions.ForPath(DirectoryEnron);
+            using var options = StorageEnvironmentOptions.ForPath(outputDirectory);
             using var env = new StorageEnvironment(options);
 
             var sp = Stopwatch.StartNew();
@@ -29,12 +29,12 @@ namespace Tryouts
 
             using var tar = SharpCompress.Readers.Tar.TarReader.Open(File.OpenRead(path));
 
-            using var ctx = JsonOperationContext.ShortTermSingleUse();
             var indexWriter = new IndexWriter(env);
 
             int i = 0;
             long ms = 0;
             long justIndex = 0;
+            using var ctx = JsonOperationContext.ShortTermSingleUse();
             while (tar.MoveToNextEntry())
             {
                 if (tar.Entry.IsDirectory)
@@ -90,7 +90,9 @@ namespace Tryouts
 
                     indexWriter.Commit();
                     indexWriter.Dispose();
+                    
                     indexWriter = new IndexWriter(env);
+                    ctx.Reset();
                 }
 
                 i++;
