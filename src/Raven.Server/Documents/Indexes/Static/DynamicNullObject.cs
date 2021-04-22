@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -151,6 +152,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static dynamic operator +(DynamicNullObject left, object right)
         {
+            if (right is string || right is LazyStringValue || right is LazyCompressedStringValue) 
+                return right; // match string concat on null
             return left;
         }
 

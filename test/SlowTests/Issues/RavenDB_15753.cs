@@ -137,7 +137,7 @@ namespace SlowTests.Issues
                     Name = "HtmlIndex",
                     Maps =
                     {
-                        "from c in docs.Companies select new { Name = typeof(HtmlAgilityPack.HtmlNode).Name }"
+                        "from c in docs.Companies select new { Name = typeof(HtmlAgilityPack.HtmlNode).Assembly.FullName }"
                     },
                     AdditionalAssemblies =
                     {
@@ -157,6 +157,50 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation("HtmlIndex", "Name", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("1.11.28.0", terms[0]);
+
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+                {
+                    Name = "HtmlIndex",
+                    Maps =
+                    {
+                        "from c in docs.Companies select new { Name = typeof(HtmlAgilityPack.HtmlNode).Assembly.FullName }"
+                    },
+                    AdditionalAssemblies =
+                    {
+                        AdditionalAssembly.FromNuGet("HtmlAgilityPack", "1.11.32")
+                    }
+                }));
+
+                WaitForIndexing(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("HtmlIndex", "Name", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("1.11.32.0", terms[0]);
+
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+                {
+                    Name = "HtmlIndex_2",
+                    Maps =
+                    {
+                        "from c in docs.Companies select new { Name = typeof(HtmlAgilityPack.HtmlNode).Assembly.FullName }"
+                    },
+                    AdditionalAssemblies =
+                    {
+                        AdditionalAssembly.FromNuGet("HtmlAgilityPack", "1.11.28")
+                    }
+                }));
+
+                WaitForIndexing(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("HtmlIndex_2", "Name", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("1.11.28.0", terms[0]);
             }
         }
 

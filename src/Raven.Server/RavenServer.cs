@@ -1900,6 +1900,7 @@ namespace Raven.Server
                             if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.TestConnection ||
                                 header.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
                             {
+                                tcp.Dispose();
                                 tcp = null;
                                 return;
                             }

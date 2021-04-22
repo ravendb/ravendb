@@ -195,6 +195,8 @@ namespace Raven.Server.Documents.Indexes
         private readonly AsyncLocal<bool> _isRunningQueriesWriteLockTaken = new AsyncLocal<bool>();
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
         private readonly MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
+        internal bool HadRealIndexingWork => _hadRealIndexingWorkToDo.IsRaised();
+
         private readonly MultipleUseFlag _definitionChanged = new MultipleUseFlag();
         private Size _initialManagedAllocations;
 
@@ -1343,7 +1345,7 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.OrdinalIgnoreCase);
                                         _isReplacing = true;
-
+                                        
                                         if (batchCompleted)
                                         {
                                             // this side-by-side index will be replaced in a second, notify about indexing success
@@ -4266,8 +4268,10 @@ namespace Raven.Server.Documents.Indexes
 
             onBeforeEnvironmentDispose?.Invoke();
 
-            _environment.Dispose();
+            IndexPersistence.Dispose();
 
+            _environment.Dispose();
+            
             return new DisposableAction(() =>
             {
                 // restart environment

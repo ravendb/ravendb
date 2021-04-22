@@ -443,6 +443,9 @@ namespace Raven.Server.Documents.Operations
             [Description("Enforce Revision Configuration")]
             EnforceRevisionConfiguration,
 
+            [Description("Debug package")]
+            DebugPackage,
+
             [Description("Dump Raw Index Data - Debug")]
             DumpRawIndexData
         }
