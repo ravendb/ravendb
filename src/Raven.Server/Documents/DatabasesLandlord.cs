@@ -351,32 +351,10 @@ namespace Raven.Server.Documents
                         configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true,
                             databaseRecord: record);
 
-                        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                        using (context.OpenReadTransaction())
-                        {
-                            var allDatabasesRecords = _serverStore.Cluster.GetAllDatabases(context);
-                            var parentDirectory = configuration.Core.DataDirectory.FullPath;
-
-                            foreach (var currRecord in allDatabasesRecords)
-                            {
-                                if (currRecord.DatabaseName.Equals(dbName))
-                                    continue;
-
-                                var currConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true, 
-                                    ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: currRecord);
-
-                                var currDirectory = currConfiguration.Core.DataDirectory.FullPath;
-
-                                if (PathUtil.IsSubDirectory(currDirectory, parentDirectory))
-                                        throw new IntersectionInPaths($"Cannot delete database {dbName} from {parentDirectory}. " +
-                                                                      $"There is an intersection with database {currRecord.DatabaseName} located in {currDirectory}.");
-                            }
-                        }
+                        CheckDatabasePathsIntersection(dbName, configuration);
                     }
-                    catch (IntersectionInPaths e)
+                    catch (InvalidOperationException)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info(e.Message);
                         throw;
                     }
                     catch (Exception ex)
@@ -1085,30 +1063,28 @@ namespace Raven.Server.Documents
             database.DatabaseShutdownCompleted.Set();
         }
 
-        private class IntersectionInPaths : Exception
+        private void CheckDatabasePathsIntersection(string databaseName, RavenConfiguration configuration)
         {
-            /// <summary>
-            /// Initializes a new instance of the <see cref="IntersectionInPaths"/> class.
-            /// </summary>
-            public IntersectionInPaths()
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
-            }
+                var allDatabasesRecords = _serverStore.Cluster.GetAllDatabases(context);
+                var parentDir = configuration.Core.DataDirectory.FullPath;
 
-            /// <summary>
-            /// Initializes a new instance of the <see cref="IntersectionInPaths"/> class.
-            /// </summary>
-            /// <param name="message">The message.</param>
-            public IntersectionInPaths(string message) : base(message)
-            {
-            }
+                foreach (var currRecord in allDatabasesRecords)
+                {
+                    if (currRecord.DatabaseName.Equals(databaseName))
+                        continue;
 
-            /// <summary>
-            /// Initializes a new instance of the <see cref="IntersectionInPaths"/> class.
-            /// </summary>
-            /// <param name="message">The message.</param>
-            /// <param name="inner">The inner.</param>
-            public IntersectionInPaths(string message, Exception inner) : base(message, inner)
-            {
+                    var currConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true,
+                        ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: currRecord);
+
+                    var currDir = currConfiguration.Core.DataDirectory.FullPath;
+
+                    if (PathUtil.IsSubDirectory(currDir, parentDir))
+                        throw new InvalidOperationException($"Cannot delete database {databaseName} from {parentDir}. " +
+                                                            $"There is an intersection with database {currRecord.DatabaseName} located in {currDir}.");
+                }
             }
         }
     }
