@@ -22,7 +22,7 @@ abstract class abstractWebSocketClient<T> {
 
         if ("WebSocket" in window) {
             // let children classes to fully initialize
-            setTimeout(() => this.connect(() => this.connectWebSocket(connectArgs)), 0);
+            this.connect(() => this.connectWebSocket(connectArgs));
         } else {
             //The browser doesn't support websocket
             //or we are in IE10 or IE11 and the server doesn't support WebSockets.
