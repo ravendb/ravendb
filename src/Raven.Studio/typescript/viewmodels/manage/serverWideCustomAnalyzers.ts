@@ -12,6 +12,8 @@ class serverWideCustomAnalyzers extends viewModelBase {
 
     addUrl = ko.pureComputed(() => appUrl.forEditServerWideCustomAnalyzer());
 
+    clientVersion = viewModelBase.clientVersion;
+
     constructor() {
         super();
 

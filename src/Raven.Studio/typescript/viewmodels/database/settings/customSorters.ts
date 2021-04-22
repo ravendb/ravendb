@@ -52,6 +52,8 @@ class customSorters extends viewModelBase {
     diagnosticsCount = ko.observable<number>(0);
     
     testResultsVisible = ko.observable<boolean>(false);
+
+    clientVersion = viewModelBase.clientVersion;
     
     constructor() {
         super();

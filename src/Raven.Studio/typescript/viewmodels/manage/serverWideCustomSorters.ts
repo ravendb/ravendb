@@ -11,6 +11,8 @@ class serverWideCustomSorters extends viewModelBase {
     serverWideSorters = ko.observableArray<sorterListItemModel>([]);
 
     addUrl = ko.pureComputed(() => appUrl.forEditServerWideCustomSorter());
+    
+    clientVersion = viewModelBase.clientVersion;
 
     constructor() {
         super();
