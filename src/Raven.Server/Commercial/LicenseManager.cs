@@ -129,7 +129,7 @@ namespace Raven.Server.Commercial
 
                 // on a fresh server we are setting the amount of cores in the default license (3)
                 ReloadLicense(firstRun: true);
-                ReloadLicenseLimits();
+                ReloadLicenseLimits(firstRun: true);
 
                 Task.Run(async () => await PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
             }
@@ -241,13 +241,13 @@ namespace Raven.Server.Commercial
             _serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.LicenseManager_AGPL3, null));
         }
 
-        public void ReloadLicenseLimits()
+        public void ReloadLicenseLimits(bool firstRun = false)
         {
             try
             {
                 using (var process = Process.GetCurrentProcess())
                 {
-                    var utilizedCores = GetCoresLimitForNode(out var licenseLimits);
+                    var utilizedCores = GetCoresLimitForNode(out var licenseLimits, firstRun == false);
                     var clusterSize = GetClusterSize();
                     var maxWorkingSet = Math.Min(LicenseStatus.MaxMemory / (double)clusterSize, utilizedCores * LicenseStatus.Ratio);
 
@@ -263,7 +263,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public int GetCoresLimitForNode(out LicenseLimits licenseLimits)
+        public int GetCoresLimitForNode(out LicenseLimits licenseLimits, bool shouldPutNodeInfoIfNotExist = true)
         {
             licenseLimits = _serverStore.LoadLicenseLimits();
             if (licenseLimits?.NodeLicenseDetails != null &&
@@ -273,7 +273,8 @@ namespace Raven.Server.Commercial
             }
 
             // we don't have any license limits for this node, let's put our info to update it
-            Task.Run(async () => await PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
+            if(shouldPutNodeInfoIfNotExist)
+                Task.Run(async () => await PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
             return Math.Min(ProcessorInfo.ProcessorCount, LicenseStatus.MaxCores);
         }
 

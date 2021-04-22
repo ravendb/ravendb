@@ -57,7 +57,16 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
             var contract = (JsonArrayContract)serializer.ContractResolver.ResolveContract(value.GetType());
 
             foreach (object val in (IEnumerable)value)
+            {
+                if (contract.ItemConverter != null && contract.ItemConverter.CanWrite)
+                {
+                    contract.ItemConverter.WriteJson(writer, val, serializer);
+                    continue;
+                }
+
                 serializer.Serialize(writer, val, contract.CollectionItemType);
+            }
+                
 
             writer.WriteEndArray();
         }

@@ -77,8 +77,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
         private void can_backup_and_restore_internal(bool oneTimeBackup)
         {
-            var settings = AzureFactAttribute.AzureSettings;
-            using (var holder = new Azure.AzureClientHolder(settings))
+            using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
             {
                 using (var store = GetDocumentStore())
                 {
@@ -95,7 +94,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     BackupResult backupResult = null;
                     if (oneTimeBackup == false)
                     {
-                        var config = new PeriodicBackupConfiguration { BackupType = BackupType.Backup, AzureSettings = settings, IncrementalBackupFrequency = "0 0 1 1 *" };
+                        var config = new PeriodicBackupConfiguration { BackupType = BackupType.Backup, AzureSettings = holder.Settings, IncrementalBackupFrequency = "0 0 1 1 *" };
                         backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
                         operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                         store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
@@ -143,7 +142,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                         var backupConfiguration = new BackupConfiguration
                         {
                             BackupType = BackupType.Backup,
-                            AzureSettings = settings,
+                            AzureSettings = holder.Settings,
                         };
 
                         backupResult = (BackupResult)store.Maintenance.Send(new BackupOperation(backupConfiguration)).WaitForCompletion(TimeSpan.FromSeconds(15));
@@ -154,11 +153,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     // restore the database with a different name
                     var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                    settings.RemoteFolderName = oneTimeBackup ? backupResult.LocalBackup.BackupDirectory : status.FolderName;
+                    holder.Settings.RemoteFolderName = oneTimeBackup ? $"{holder.Settings.RemoteFolderName}/{backupResult.LocalBackup.BackupDirectory}" : $"{holder.Settings.RemoteFolderName}/{status.FolderName}";
                     var restoreFromGoogleCloudConfiguration = new RestoreFromAzureConfiguration()
                     {
                         DatabaseName = databaseName,
-                        Settings = settings,
+                        Settings = holder.Settings,
                         DisableOngoingTasks = true
                     };
                     var googleCloudOperation = new RestoreBackupOperation(restoreFromGoogleCloudConfiguration);
@@ -196,8 +195,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         [AzureFact]
         public async Task can_create_azure_snapshot_and_restore_using_restore_point()
         {
-            var settings = AzureFactAttribute.AzureSettings;
-            using (var holder = new Azure.AzureClientHolder(settings))
+            using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
             {
                 using (var store = GetDocumentStore())
                 {
@@ -211,7 +209,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     var config = new PeriodicBackupConfiguration
                     {
                         BackupType = BackupType.Snapshot,
-                        AzureSettings = settings,
+                        AzureSettings = holder.Settings,
                         IncrementalBackupFrequency = "0 0 1 1 *"
                     };
 
@@ -228,7 +226,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
 
                     var client = store.GetRequestExecutor().HttpClient;
-                    var data = new StringContent(JsonConvert.SerializeObject(settings), Encoding.UTF8, "application/json");
+                    var data = new StringContent(JsonConvert.SerializeObject(holder.Settings), Encoding.UTF8, "application/json");
                     var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Azure ", data);
                     string result = response.Content.ReadAsStringAsync().Result;
                     var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
@@ -236,11 +234,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     var point = restorePoints.List.First();
 
                     var databaseName = $"restored_database-{Guid.NewGuid()}";
-                    settings.RemoteFolderName = settings.RemoteFolderName + "/" + status.FolderName;
+                    holder.Settings.RemoteFolderName = holder.Settings.RemoteFolderName + "/" + status.FolderName;
                     var restoreOperation = await store.Maintenance.Server.SendAsync(new RestoreBackupOperation(new RestoreFromAzureConfiguration()
                     {
                         DatabaseName = databaseName,
-                        Settings = settings,
+                        Settings = holder.Settings,
                         DisableOngoingTasks = true,
                         LastFileNameToRestore = point.FileName,
                     }));

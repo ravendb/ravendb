@@ -216,10 +216,10 @@ namespace Raven.Client.Documents.Session
         private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation, List<GetRequest> requests, Stopwatch sw)
         {
             var multiGetOperation = new MultiGetOperation(this);
-            var multiGetCommand = multiGetOperation.CreateRequest(requests);
+            using var multiGetCommand = multiGetOperation.CreateRequest(requests);
             RequestExecutor.Execute(multiGetCommand, Context, sessionInfo: _sessionInfo);
             var responses = multiGetCommand.Result;
-            if(multiGetCommand.AggressivelyCached == false)
+            if (multiGetCommand.AggressivelyCached == false)
                 IncrementRequestCount();
 
             for (var i = 0; i < PendingLazyOperations.Count; i++)

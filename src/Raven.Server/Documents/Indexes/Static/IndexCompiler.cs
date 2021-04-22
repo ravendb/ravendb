@@ -11,6 +11,7 @@ using System.Reflection.Metadata;
 using System.Runtime.Loader;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -49,6 +50,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static readonly AssemblyName LuceneAssemblyName = LuceneAssembly.GetName();
 
+        [ThreadStatic]
+        private static bool DisableMatchingAdditionalAssembliesByNameValue;
+
         static IndexCompiler()
         {
             AssemblyLoadContext.Default.Resolving += (ctx, name) =>
@@ -58,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (AdditionalAssemblies.Value.TryGetValue(name.FullName, out var assembly))
                         return assembly.Assembly;
 
-                    if (AdditionalAssemblies.Value.TryGetValue(name.Name, out assembly))
+                    if (DisableMatchingAdditionalAssembliesByNameValue == false && AdditionalAssemblies.Value.TryGetValue(name.Name, out assembly))
                         return assembly.Assembly;
                 }
 
@@ -67,6 +71,16 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 return null;
             };
+        }
+
+        private static IDisposable DisableMatchingAdditionalAssembliesByName()
+        {
+            DisableMatchingAdditionalAssembliesByNameValue = true;
+
+            return new DisposableAction(() =>
+            {
+                DisableMatchingAdditionalAssembliesByNameValue = false;
+            });
         }
 
         private static ConcurrentDictionary<string, AdditionalAssemblyServerSide> DiscoverAdditionalAssemblies()
@@ -423,8 +437,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     foreach (var path in paths)
                     {
-                        var assembly = LoadAssembly(path);
-                        references.Add(RegisterAssembly(assembly));
+                        using (DisableMatchingAdditionalAssembliesByName())
+                        {
+                            var assembly = LoadAssembly(path);
+                            references.Add(RegisterAssembly(assembly));
+                        }
                     }
 
                     return references;
@@ -439,16 +456,17 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 var assemblyName = assembly.GetName();
 
-                if (AdditionalAssemblies.Value.TryGetValue(assemblyName.FullName, out var additionalAssembly))
-                    return additionalAssembly.AssemblyMetadataReference;
+                if (AdditionalAssemblies.Value.TryGetValue(assemblyName.FullName, out var additionalAssemblyByFullName))
+                    return additionalAssemblyByFullName.AssemblyMetadataReference;
 
-                if (AdditionalAssemblies.Value.TryGetValue(assemblyName.Name, out additionalAssembly))
-                    return additionalAssembly.AssemblyMetadataReference;
+                AdditionalAssemblies.Value.TryGetValue(assemblyName.Name, out var additionalAssemblyByName);
 
-                additionalAssembly = new AdditionalAssemblyServerSide(assemblyName, assembly, CreateMetadataReferenceFromAssembly(assembly), AdditionalAssemblyType.Package);
+                var additionalAssembly = new AdditionalAssemblyServerSide(assemblyName, assembly, CreateMetadataReferenceFromAssembly(assembly), AdditionalAssemblyType.Package);
 
                 AdditionalAssemblies.Value.TryAdd(assemblyName.FullName, additionalAssembly);
-                AdditionalAssemblies.Value.TryAdd(assemblyName.Name, additionalAssembly);
+
+                if (additionalAssemblyByName == null || additionalAssemblyByName.AssemblyName.Version < assemblyName.Version)
+                    AdditionalAssemblies.Value.TryAdd(assemblyName.Name, additionalAssembly);
 
                 return additionalAssembly.AssemblyMetadataReference;
             }

@@ -46,8 +46,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 holder.Client.OnePutBlockSizeLimitInBytes = 1 * 1024 * 1024;
 
                 var blobKey = testBlobKeyAsFolder == false
-                    ? AzureFactAttribute.AzureSettings.RemoteFolderName
-                    : $"{AzureFactAttribute.AzureSettings.RemoteFolderName}/folder/testKey";
+                    ? holder.Settings.RemoteFolderName
+                    : $"{holder.Settings.RemoteFolderName}/folder/testKey";
 
                 var path = NewDataPath(forceCreateDir: true);
                 var filePath = Path.Combine(path, Guid.NewGuid().ToString());

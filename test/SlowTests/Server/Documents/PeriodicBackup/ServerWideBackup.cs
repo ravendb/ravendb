@@ -950,12 +950,46 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
 
                 // update the backup configuration
+                putConfiguration.Name = serverWideConfiguration.Name;
+                putConfiguration.TaskId = serverWideConfiguration.TaskId;
                 putConfiguration.FullBackupFrequency = "0 2 * * 0";
 
+                var oldName = result.Name;
                 result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
-                serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
-                Assert.Equal(incFreq, serverWideConfiguration.FullBackupFrequency);
-                Assert.Equal(incFreq, serverWideConfiguration.IncrementalBackupFrequency);
+
+                Exception ex = null;
+                try
+                {
+                    await server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex, TimeSpan.FromMinutes(1));
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+                finally
+                {
+                    Assert.Null(ex);
+                }
+                
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(1, record.PeriodicBackups.Count);
+                PeriodicBackupConfiguration periodicBackupConfiguration = record.PeriodicBackups.First();
+
+                var newServerWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
+
+                // compare with periodic backup task 
+                Assert.NotEqual(newServerWideConfiguration.TaskId, periodicBackupConfiguration.TaskId); // backup task id in db record doesn't change
+                Assert.Equal(PutServerWideBackupConfigurationCommand.GetTaskName(oldName), periodicBackupConfiguration.Name);
+                Assert.Equal(incFreq, periodicBackupConfiguration.FullBackupFrequency);
+                Assert.Equal(incFreq, periodicBackupConfiguration.IncrementalBackupFrequency);
+                Assert.NotEqual(serverWideConfiguration.FullBackupFrequency, periodicBackupConfiguration.FullBackupFrequency);
+
+                // compare with previous server wide backup
+                Assert.NotEqual(serverWideConfiguration.TaskId, newServerWideConfiguration.TaskId); // task id in server storage get increased with each change
+                Assert.Equal(oldName, result.Name);
+                Assert.Equal(incFreq, newServerWideConfiguration.FullBackupFrequency);
+                Assert.Equal(incFreq, newServerWideConfiguration.IncrementalBackupFrequency);
+                Assert.NotEqual(serverWideConfiguration.FullBackupFrequency, newServerWideConfiguration.FullBackupFrequency);
                 Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
             }
         }

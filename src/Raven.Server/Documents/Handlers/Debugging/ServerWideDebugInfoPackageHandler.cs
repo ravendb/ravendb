@@ -65,6 +65,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             HttpContext.Response.Headers["Content-Type"] = "application/zip";
 
+            var token = CreateOperationToken();
+            var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
+
+            await ServerStore.Operations.AddOperation(null, "Created debug package for all cluster nodes", Operations.Operations.OperationType.DebugPackage, async _ =>
+            {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
             using (transactionOperationContext.OpenReadTransaction())
@@ -97,6 +102,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 await entryStream.FlushAsync();
                             }
                         }
+
                         var databaseNames = ServerStore.Cluster.GetDatabaseNames(transactionOperationContext);
                         var topology = ServerStore.GetClusterTopology(transactionOperationContext);
 
@@ -157,6 +163,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     await ms.CopyToAsync(ResponseBodyStream());
                 }
             }
+
+                return null;
+            }, operationId, token: token);
         }
 
         private async Task WriteDebugInfoPackageForNodeAsync(
@@ -200,6 +209,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             HttpContext.Response.Headers["Content-Type"] = "application/zip";
 
+
+            var token = CreateOperationToken();
+            var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
+
+            await ServerStore.Operations.AddOperation(null, "Created debug package for current server only", Operations.Operations.OperationType.DebugPackage, async _ =>
+            {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 await using (var ms = new MemoryStream())
@@ -216,6 +231,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     await ms.CopyToAsync(ResponseBodyStream());
                 }
             }
+
+                return null;
+            }, operationId, token: token);
         }
 
         private static async Task WriteLogFile(ZipArchive archive)

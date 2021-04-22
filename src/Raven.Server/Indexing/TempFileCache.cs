@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Threading;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Global;
@@ -22,6 +23,7 @@ namespace Raven.Server.Indexing
 
         private const long MaxFileSizeToKeepInBytes = 16 * Constants.Size.Megabyte;
         private const int MaxFilesToKeepInCache = 32;
+        private int _memoryStreamCapacity = 128 * Constants.Size.Kilobyte;
 
         public TempFileCache(StorageEnvironmentOptions options)
         {
@@ -42,7 +44,8 @@ namespace Raven.Server.Indexing
                     TempFileStream fileStream;
                     try
                     {
-                        fileStream = new TempFileStream(new FileStream(file, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose));
+                        var stream = new FileStream(file, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
+                        fileStream = new TempFileStream(stream);
                         fileStream.ResetLength();
                     }
                     catch (IOException)
@@ -59,9 +62,14 @@ namespace Raven.Server.Indexing
 
         public string FullPath => _options.TempPath.FullPath;
 
+        public void SetMemoryStreamCapacity(int capacity)
+        {
+            _memoryStreamCapacity = capacity;
+        }
+
         public MemoryStream RentMemoryStream()
         {
-            return _ms.TryDequeue(out var ms) ? ms : new MemoryStream(128 * Constants.Size.Kilobyte);
+            return _ms.TryDequeue(out var ms) ? ms : new MemoryStream(_memoryStreamCapacity);
         }
 
         public void ReturnMemoryStream(MemoryStream stream)
@@ -117,9 +125,14 @@ namespace Raven.Server.Indexing
 
         public void Dispose()
         {
-            foreach (var file in _files)
+            while (_files.TryDequeue(out var file))
             {
                 DisposeFile(file);
+            }
+
+            while (_ms.TryDequeue(out var ms))
+            {
+                ms.Dispose();
             }
         }
 

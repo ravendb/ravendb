@@ -67,7 +67,7 @@ namespace Raven.Client.ServerWide.Operations
         public int ReplicationFactor { get; set; }
         public bool DynamicNodesDistribution { get; set; }
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress { get; set; }
-        
+
         public StudioConfiguration.StudioEnvironment Environment { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -115,6 +115,10 @@ namespace Raven.Client.ServerWide.Operations
 
     public class MountPointUsage
     {
+        public string Name { get; set; }
+
+        public string Type { get; set; }
+
         public DiskSpaceResult DiskSpaceResult { get; set; }
 
         public long UsedSpace { get; set; }
@@ -125,9 +129,11 @@ namespace Raven.Client.ServerWide.Operations
         {
             return new DynamicJsonValue
             {
-                [nameof(DiskSpaceResult)] = DiskSpaceResult.ToJson(),
+                [nameof(Name)] = Name,
+                [nameof(Type)] = Type,
                 [nameof(UsedSpace)] = UsedSpace,
-                [nameof(UsedSpaceByTempBuffers)] = UsedSpaceByTempBuffers
+                [nameof(UsedSpaceByTempBuffers)] = UsedSpaceByTempBuffers,
+                [nameof(DiskSpaceResult)] = DiskSpaceResult.ToJson()
             };
         }
     }
