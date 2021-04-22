@@ -274,10 +274,10 @@ class extensions {
                     switch (strategy) {
                         case 'hide': {
                             const visibleBinding = bindings.visible;
-                            const visibleValue = visibleBinding ? ko.unwrap(visibleBinding) : true;
+                            const visibleValue = visibleBinding != null ? ko.unwrap(visibleBinding) : true;
 
                             const hiddenBinding = bindings.hidden;
-                            const hiddenValue = hiddenBinding ? ko.unwrap(hiddenBinding) : false;
+                            const hiddenValue = hiddenBinding != null ? ko.unwrap(hiddenBinding) : false;
 
                             const shouldBeVisibleByKo = visibleValue && !hiddenValue;
                             const isElementVisible = element.style.display !== "none";
@@ -296,10 +296,10 @@ class extensions {
 
                         case 'disable': {
                             const disableBinding = bindings.disable;
-                            const disableValue = disableBinding ? ko.unwrap(disableBinding) : false;
+                            const disableValue = disableBinding != null ? ko.unwrap(disableBinding) : false;
 
                             const enableBinding = bindings.enable;
-                            const enableValue = enableBinding ? ko.unwrap(enableBinding) : true;
+                            const enableValue = enableBinding != null ? ko.unwrap(enableBinding) : true;
 
                             const shouldBeEnabledByKo = !disableValue && enableValue;
                             const isElementDisabled = element.hasAttribute("disabled");
