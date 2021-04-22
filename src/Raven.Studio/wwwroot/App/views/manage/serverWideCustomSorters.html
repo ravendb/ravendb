@@ -1,12 +1,16 @@
 <div class="flex-vertical absolute-fill content-margin">
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6 flex-vertical">
-            <div class="flex-header">
+            <div class="flex-header flex-horizontal">
                 <div>
                     <a class="btn btn-primary" data-bind="attr: { href: addUrl }">
                         <i class="icon-plus"></i><span>Add a Server Wide Custom Sorter</span>
                     </a>
                 </div>
+                <div class="flex-separator"></div>
+                <small title="Go to the RavenDB sorters documentation">
+                    <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/LGUJH8' }"><i class="icon-link"></i>Sorters tutorial</a>
+                </small>
             </div>
             <div class="hr-title margin-top">
                 <h5 class="no-text-transform"><span>Server-wide custom sorters</span></h5><hr>
