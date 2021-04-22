@@ -20,6 +20,8 @@ class customAnalyzers extends viewModelBase {
     serverWideCustomAnalyzersUrl = appUrl.forServerWideCustomAnalyzers();
     canNavigateToServerWideCustomAnalyzers: KnockoutComputed<boolean>;
     
+    clientVersion = viewModelBase.clientVersion;
+    
     constructor() {
         super();
         
