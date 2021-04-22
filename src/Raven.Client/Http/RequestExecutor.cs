@@ -2138,12 +2138,12 @@ namespace Raven.Client.Http
 
         private async Task EnsureNodeSelector()
         {
-            if(_disableTopologyUpdates == false)
+            if (_disableTopologyUpdates == false)
                 await WaitForTopologyUpdate(_firstTopologyUpdate).ConfigureAwait(false);
 
             _nodeSelector ??= new NodeSelector(new Topology
             {
-                Nodes = TopologyNodes.ToList(), 
+                Nodes = TopologyNodes.ToList(),
                 Etag = TopologyEtag
             });
         }

@@ -49,7 +49,7 @@ namespace SlowTests.Tests.MultiGet
 
                 using (var commands = store.Commands())
                 {
-                    var command = new MultiGetCommand(commands.RequestExecutor, new List<GetRequest>
+                    using var command = new MultiGetCommand(commands.RequestExecutor, new List<GetRequest>
                     {
                         new GetRequest
                         {
@@ -103,7 +103,7 @@ namespace SlowTests.Tests.MultiGet
 
                 using (var commands = store.Commands())
                 {
-                    var command = new MultiGetCommand(commands.RequestExecutor, new List<GetRequest>
+                    using var command = new MultiGetCommand(commands.RequestExecutor, new List<GetRequest>
                     {
                         new GetRequest
                         {
@@ -150,7 +150,7 @@ namespace SlowTests.Tests.MultiGet
 
                 using (var commands = store.Commands())
                 {
-                    var command = new MultiGetCommand(commands.RequestExecutor, new List<GetRequest>
+                    using var firstCommand = new MultiGetCommand(commands.RequestExecutor, new List<GetRequest>
                     {
                         new GetRequest
                         {
@@ -164,12 +164,12 @@ namespace SlowTests.Tests.MultiGet
                         }
                     });
 
-                    commands.RequestExecutor.Execute(command, commands.Context);
+                    commands.RequestExecutor.Execute(firstCommand, commands.Context);
 
-                    Assert.True(command.Result[0].Headers.ContainsKey("ETag"));
-                    Assert.True(command.Result[1].Headers.ContainsKey("ETag"));
+                    Assert.True(firstCommand.Result[0].Headers.ContainsKey("ETag"));
+                    Assert.True(firstCommand.Result[1].Headers.ContainsKey("ETag"));
 
-                    command = new MultiGetCommand(commands.RequestExecutor, new List<GetRequest>
+                    using var secondCommand = new MultiGetCommand(commands.RequestExecutor, new List<GetRequest>
                     {
                         new GetRequest
                         {
@@ -177,7 +177,7 @@ namespace SlowTests.Tests.MultiGet
                             Query = "?id=users/1-A",
                             Headers =
                             {
-                                {"If-None-Match", command.Result[0].Headers["ETag"]}
+                                {"If-None-Match", firstCommand.Result[0].Headers["ETag"]}
                             }
                         },
                         new GetRequest
@@ -186,15 +186,15 @@ namespace SlowTests.Tests.MultiGet
                             Query = "?id=users/2-A",
                             Headers =
                             {
-                                {"If-None-Match", command.Result[1].Headers["ETag"]}
+                                {"If-None-Match", firstCommand.Result[1].Headers["ETag"]}
                             }
                         }
                     });
 
-                    commands.RequestExecutor.Execute(command, commands.Context);
+                    commands.RequestExecutor.Execute(secondCommand, commands.Context);
 
-                    Assert.Equal(HttpStatusCode.NotModified, command.Result[0].StatusCode);
-                    Assert.Equal(HttpStatusCode.NotModified, command.Result[1].StatusCode);
+                    Assert.Equal(HttpStatusCode.NotModified, secondCommand.Result[0].StatusCode);
+                    Assert.Equal(HttpStatusCode.NotModified, secondCommand.Result[1].StatusCode);
                 }
             }
         }
