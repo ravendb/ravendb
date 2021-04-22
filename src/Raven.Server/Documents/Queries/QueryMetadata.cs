@@ -30,6 +30,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
 using Spatial4n.Core.Shapes;
+using Spatial4n.Core.Shapes.Nts;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 
 namespace Raven.Server.Documents.Queries
@@ -2454,7 +2455,9 @@ namespace Raven.Server.Documents.Queries
                                 shapeBase = new Circle(circle, units, spatialOptions);
                             else if (shape is IRectangle rectangle)
                                 shapeBase = new Polygon(rectangle);
-
+                            else if (shape is NtsGeometry geometry && geometry.Geometry is NetTopologySuite.Geometries.Polygon polygon)
+                                shapeBase = new Polygon(polygon);
+                            
                             if (shapeBase != null)
                                 AddSpatialShapeToMetadata(shapeBase);
                         }
