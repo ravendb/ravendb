@@ -28,7 +28,7 @@ namespace Sparrow.Utils
     /// </remarks>
     internal class FifoSemaphore
     {
-        private readonly Queue<OneTimeWaiter> _waitQueue;
+        internal readonly List<OneTimeWaiter> _waitQueue;
 
         protected readonly object _Lock;
 
@@ -41,7 +41,7 @@ namespace Sparrow.Utils
 
             _Tokens = tokens;
             _Lock = new object();
-            _waitQueue = new Queue<OneTimeWaiter>();
+            _waitQueue = new List<OneTimeWaiter>();
         }
 
         public bool TryAcquire(TimeSpan timeout, CancellationToken token)
@@ -56,19 +56,44 @@ namespace Sparrow.Utils
                     return true;
                 }
 
+                token.ThrowIfCancellationRequested();
+
+                _forTestingPurposes?.JustBeforeAddingToWaitQueue?.Invoke();
+
                 waiter = new OneTimeWaiter();
-                _waitQueue.Enqueue(waiter);
+                _waitQueue.Add(waiter);
             }
 
             using (waiter)
             {
-                return waiter.TryWait(timeout, token);
+                try
+                {
+
+                    return waiter.TryWait(timeout, token);
+                }
+                catch
+                {
+                    lock (_Lock)
+                    {
+                        _waitQueue.Remove(waiter);
+                    }
+
+                    throw;
+                }
             }
         }
 
         public void Acquire(CancellationToken token)
         {
-            TryAcquire(Timeout.InfiniteTimeSpan, token);
+            var result = TryAcquire(Timeout.InfiniteTimeSpan, token);
+
+            if (result == false)
+                ThrowCouldNotAcquireLock();
+        }
+
+        private static void ThrowCouldNotAcquireLock()
+        {
+            throw new InvalidOperationException("Could not acquire the lock");
         }
 
         public void Release()
@@ -84,7 +109,10 @@ namespace Sparrow.Utils
                 {
                     if (_waitQueue.Count > 0)
                     {
-                        var waiter = _waitQueue.Dequeue();
+                        var waiter = _waitQueue[0];
+
+                        _waitQueue.RemoveAt(0);
+
                         waiter.Release();
                     }
                     else
@@ -96,7 +124,7 @@ namespace Sparrow.Utils
             }
         }
 
-        private class OneTimeWaiter : IDisposable
+        internal class OneTimeWaiter : IDisposable
         {
             private readonly ManualResetEventSlim _mre = new ManualResetEventSlim(false);
             
@@ -114,6 +142,22 @@ namespace Sparrow.Utils
             {
                 _mre?.Dispose();
             }
+        }
+
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action JustBeforeAddingToWaitQueue;
+
         }
     }
 }

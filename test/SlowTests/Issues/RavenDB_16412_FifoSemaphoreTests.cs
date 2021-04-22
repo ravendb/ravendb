@@ -84,5 +84,29 @@ namespace SlowTests.Issues
 
             Assert.Equal(numberOfTasks * numberOfLocksPerTask, totalNumberOfLocksTaken);
         }
+
+        [Fact]
+        public void ShouldNotLeaveWaitersInQueueIfOperationIsCancelled()
+        {
+            var @lock = new FifoSemaphore(1);
+
+            @lock.Acquire(CancellationToken.None);
+
+            var cts = new CancellationTokenSource();
+
+            cts.Cancel();
+
+            Assert.Throws<OperationCanceledException>(() => @lock.Acquire(cts.Token));
+
+            Assert.Empty(@lock._waitQueue);
+
+            cts = new CancellationTokenSource();
+
+            @lock.ForTestingPurposesOnly().JustBeforeAddingToWaitQueue += () => cts.Cancel();
+
+            Assert.Throws<OperationCanceledException>(() => @lock.Acquire(cts.Token));
+
+            Assert.Empty(@lock._waitQueue);
+        }
     }
 }
