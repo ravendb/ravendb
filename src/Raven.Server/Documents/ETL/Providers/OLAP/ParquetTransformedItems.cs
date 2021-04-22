@@ -31,6 +31,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private bool[] _boolArr;
         private string[] _strArr;
         private double[] _doubleArr;
+        private decimal[] _decimalArr;
         private long[] _longArr;
         private DateTimeOffset[] _dtoArr;
         private TimeSpan[] _tsArr;
@@ -150,8 +151,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                             break;
                         case DataType.Float:
                         case DataType.Double:
-                        case DataType.Decimal:
                             array = _doubleArr ??= new double[data.Count];
+                            break;
+                        case DataType.Decimal:
+                            array = _decimalArr ??= new decimal[data.Count];
                             break;
                         case DataType.DateTimeOffset:
                             array = _dtoArr ??= new DateTimeOffset[data.Count];
@@ -164,6 +167,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                             return;
                     }
 
+                    Debug.Assert(array.Length == data.Count, $"Invalid field data on property '{kvp.Key}'");
+
                     data.CopyTo(array, 0);
                     groupWriter.WriteColumn(new DataColumn(field, array));
                 }
@@ -173,6 +178,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _longArr = null;
             _strArr = null;
             _doubleArr = null;
+            _decimalArr = null;
             _dtoArr = null;
             _tsArr = null;
         }
@@ -214,8 +220,25 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                         data ??= new List<long>();
                         break;
                     case BlittableJsonToken.LazyNumber:
-                        propType = DataType.Double;
-                        data ??= new List<double>();
+                        var lnv = (LazyNumberValue)prop.Value;
+                        if (lnv.TryParseULong(out var ulongValue))
+                        {
+                            prop.Value = ulongValue;
+                            propType = DataType.Int64;
+                            data ??= new List<long>();
+                        }
+                        else if (lnv.TryParseDecimal(out var decimalValue))
+                        {
+                            prop.Value = decimalValue;
+                            propType = DataType.Decimal;
+                            data ??= new List<decimal>();
+                        }
+                        else
+                        {
+                            prop.Value = (double)lnv;
+                            propType = DataType.Double;
+                            data ??= new List<double>();
+                        }
                         break;
                     case BlittableJsonToken.CompressedString:
                     case BlittableJsonToken.String:
@@ -264,6 +287,25 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     UpdateField(dataType = propType, propName, data, group);
                 }
 
+                else if (propType != dataType)
+                {
+                    // data type change
+
+                    if ((dataType == DataType.Int64 || dataType == DataType.Decimal) && TryChangeDataType(propType, data, out data))
+                    {
+                        // change previous data from 'long' to 'double' / 'decimal'
+                        // or from 'decimal' to 'double'
+                        UpdateField(dataType = propType, propName, data, group, addDefaultData: false);
+                    }
+
+                    else if ((propType == DataType.Int64 || propType == DataType.Decimal) && TryChangeValueType(dataType, prop.Value, out var newValue))
+                    {
+                        // change current value from 'long' to 'double' / 'decimal'
+                        // or from 'decimal' to 'double'
+                        prop.Value = newValue;
+                    }
+                }
+
                 try
                 {
                     AddNewValue(data, dataType, prop.Value);
@@ -287,6 +329,61 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             group.Count++;
         }
 
+        private static bool TryChangeDataType(DataType propType, IList data, out IList newData)
+        {
+            switch (propType)
+            {
+                case DataType.Double:
+                {
+                    newData = new List<double>();
+
+                    foreach (var number in data)
+                    {
+                        var asDouble = Convert.ToDouble(number);
+
+                        newData.Add(asDouble);
+                    }
+
+                    return true;
+                }
+
+                case DataType.Decimal:
+                {
+                    newData = new List<decimal>();
+
+                    foreach (var number in data)
+                    {
+                        var asDecimal = Convert.ToDecimal(number);
+
+                        newData.Add(asDecimal);
+                    }
+
+                    return true;
+                }
+
+                default:
+                    newData = data;
+                    return false;
+            }
+        }
+
+        private static bool TryChangeValueType(DataType dataType, object value, out object newValue)
+        {
+            newValue = default;
+
+            switch (dataType)
+            {
+                case DataType.Decimal:
+                    newValue = Convert.ToDecimal(value);
+                    return true;
+                case DataType.Double:
+                    newValue = Convert.ToDouble(value);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         private static void AddNewValue(IList data, DataType dataType, object value)
         {
             switch (dataType)
@@ -296,11 +393,14 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 case DataType.Boolean:
                     data?.Add((bool)value);
                     break;
+                case DataType.String:
+                    data?.Add(value.ToString());
+                    break;
                 case DataType.Int64:
                     data?.Add((long)value);
                     break;
-                case DataType.String:
-                    data?.Add(value.ToString());
+                case DataType.Decimal:
+                    data?.Add((decimal)value);
                     break;
                 case DataType.Double:
                     data?.Add((double)value);
@@ -322,11 +422,14 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             throw new NotSupportedException($"Unsupported {nameof(DataType)} '{dataType}'");
         }
 
-        private void UpdateField(DataType dataType, string propName, IList data, RowGroup group)
+        private void UpdateField(DataType dataType, string propName, IList data, RowGroup group, bool addDefaultData = true)
         {
             _dataFields[propName] = dataType;
             group.Data[propName] = data;
 
+            if (addDefaultData == false) 
+                return;
+            
             AddDefaultData(data, dataType, group.Count);
         }
 

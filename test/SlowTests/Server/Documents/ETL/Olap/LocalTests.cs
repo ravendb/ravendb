@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FastTests.Client;
@@ -17,6 +18,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -169,7 +171,7 @@ loadToOrders(partitionBy(key),
                                     new OrderLine
                                     {
                                         Quantity = i * 10,
-                                        PricePerUnit = i
+                                        PricePerUnit = (decimal)1.25,
                                     }
                                 }
                             };
@@ -1550,6 +1552,190 @@ loadToOrders(partitionBy([
             }
         }
 
+        [Fact]
+        public async Task CanHandleLazyNumbersWithTypeChanges()
+        {
+            var path = GetTempPath("Orders");
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User
+                        {
+                            // after running the script, this is recognized as Int64
+                            Double = 1.0
+                        });
+
+                        await session.StoreAsync(new User
+                        {
+                            // recognized as Decimal
+                            Double = 2.22
+                        });
+
+                        await session.StoreAsync(new User
+                        {
+                            // recognized as Double
+                            Double = double.MaxValue
+                        });
+
+                        await session.StoreAsync(new User
+                        {
+                            // recognized as Decimal
+                            Double = 1.012345
+                        });
+
+                        await session.StoreAsync(new User
+                        {
+                            // recognized as Int64
+                            Double = 6
+                        });
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    var script = @"
+    loadToUsers(noPartition(), {
+        double : this.Double
+    });";
+
+                    var connectionStringName = $"{store.Database} to local";
+                    var configuration = new OlapEtlConfiguration
+                    {
+                        Name = "olap-test",
+                        ConnectionStringName = connectionStringName,
+                        RunFrequency = DefaultFrequency,
+                        Transforms =
+                        {
+                            new Transformation
+                            {
+                                Name = "MonthlySales",
+                                Collections = new List<string> {"Users"},
+                                Script = script
+                            }
+                        },
+                        KeepFilesOnDisk = true
+                    };
+
+                    SetupLocalOlapEtl(store, configuration, path, connectionStringName);
+
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    var files = Directory.GetFiles(path);
+                    Assert.Equal(1, files.Length);
+
+                    var expectedFields = new[] { "double", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
+
+                    using (var fs = File.OpenRead(files[0]))
+                    using (var parquetReader = new ParquetReader(fs))
+                    {
+                        Assert.Equal(1, parquetReader.RowGroupCount);
+                        Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
+
+                        using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
+                        foreach (var field in parquetReader.Schema.Fields)
+                        {
+                            Assert.True(field.Name.In(expectedFields));
+                            var data = rowGroupReader.ReadColumn((DataField)field).Data;
+
+                            Assert.True(data.Length == 5);
+
+                            if (field.Name != "double")
+                                continue;
+
+                            var count = 0;
+                            var expectedValues = new[]
+                            {
+                                1.0, 2.22, double.MaxValue, 1.012345, 6
+                            };
+
+                            foreach (var val in data)
+                            {
+                                Assert.Equal(expectedValues[count++], val);
+                            }
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                var di = new DirectoryInfo(path);
+                foreach (var file in di.EnumerateFiles())
+                {
+                    file.Delete();
+                }
+
+                di.Delete();
+            }
+        }
+
+        [Fact]
+        public async Task SimpleTransformation_CanUseSampleData()
+        {
+            var path = GetTempPath("Orders");
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+
+                    WaitForIndexing(store);
+
+                    long expectedCount;
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var query = session.Query<Order>()
+                            .GroupBy(o => new
+                            {
+                                o.OrderedAt.Year, o.OrderedAt.Month
+                            });
+
+                        expectedCount = await query.CountAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    var script = @"
+var orderDate = new Date(this.OrderedAt);
+var year = orderDate.getFullYear();
+var month = orderDate.getMonth();
+var key = new Date(year, month);
+
+for (var i = 0; i < this.Lines.length; i++) {
+    var line = this.Lines[i];
+    
+    // load to 'sales' table
+
+    loadToSales(partitionBy(key), {
+        Qty: line.Quantity,
+        Product: line.Product,
+        Cost: line.PricePerUnit
+    });
+}";
+                    SetupLocalOlapEtl(store, script, path);
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    var files = Directory.GetFiles(path);
+                    Assert.Equal(expectedCount, files.Length);
+                }
+            }
+            finally
+            {
+                var di = new DirectoryInfo(path);
+                foreach (var file in di.EnumerateFiles())
+                {
+                    file.Delete();
+                }
+
+                di.Delete();
+            }
+        }
+
         private static string GenerateConfigurationScript(string path, out string command)
         {
             var scriptPath = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
@@ -1623,5 +1809,9 @@ loadToOrders(partitionBy([
             AddEtl(store, configuration, connectionString);
         }
 
+        private class User
+        {
+            public double Double { get; set; }
+        }
     }
 }
