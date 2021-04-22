@@ -1238,7 +1238,7 @@ class query extends viewModelBase {
             const spatialShapes = queryResults.additionalResultInfo.SpatialShapes;
             for (let i = 0; i < spatialShapes.length; i++) {
                 const shape = spatialShapes[i];
-                switch (shape.ShapeType) {
+                switch (shape.Type) {
                     case "Circle": {
                         const circle = new spatialCircleModel(shape as Raven.Server.Documents.Indexes.Spatial.Circle);
                         spatialCirclesLayer.push(circle);
