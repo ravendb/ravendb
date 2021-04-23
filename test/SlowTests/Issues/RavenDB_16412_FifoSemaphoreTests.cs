@@ -108,5 +108,17 @@ namespace SlowTests.Issues
 
             Assert.Empty(@lock._waitQueue);
         }
+
+        [Fact]
+        public void ShouldNotLeaveWaitersInQueueIfTimeout()
+        {
+            var @lock = new FifoSemaphore(1);
+
+            @lock.Acquire(CancellationToken.None);
+
+            Assert.False(@lock.TryAcquire(TimeSpan.Zero, CancellationToken.None));
+
+            Assert.Empty(@lock._waitQueue);
+        }
     }
 }

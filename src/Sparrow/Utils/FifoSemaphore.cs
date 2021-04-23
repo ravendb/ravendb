@@ -30,17 +30,17 @@ namespace Sparrow.Utils
     {
         internal readonly List<OneTimeWaiter> _waitQueue;
 
-        protected readonly object _Lock;
+        private readonly object _lock;
 
-        protected int _Tokens;
+        private int _tokens;
 
         public FifoSemaphore(int tokens)
         {
             if (tokens <= 0)
                 throw new ArgumentException(nameof(tokens));
 
-            _Tokens = tokens;
-            _Lock = new object();
+            _tokens = tokens;
+            _lock = new object();
             _waitQueue = new List<OneTimeWaiter>();
         }
 
@@ -48,11 +48,11 @@ namespace Sparrow.Utils
         {
             OneTimeWaiter waiter;
 
-            lock (_Lock)
+            lock (_lock)
             {
-                if (_Tokens > 0)
+                if (_tokens > 0)
                 {
-                    _Tokens--;
+                    _tokens--;
                     return true;
                 }
 
@@ -69,16 +69,25 @@ namespace Sparrow.Utils
                 try
                 {
 
-                    return waiter.TryWait(timeout, token);
+                    var result = waiter.TryWait(timeout, token);
+                    if (result == false)
+                        RemoveWaiter(waiter);
+
+                    return result;
                 }
                 catch
                 {
-                    lock (_Lock)
-                    {
-                        _waitQueue.Remove(waiter);
-                    }
+                    RemoveWaiter(waiter);
 
                     throw;
+                }
+            }
+
+            void RemoveWaiter(OneTimeWaiter w)
+            {
+                lock (_lock)
+                {
+                    _waitQueue.Remove(w);
                 }
             }
         }
@@ -103,7 +112,7 @@ namespace Sparrow.Utils
 
         public void ReleaseMany(int tokens)
         {
-            lock (_Lock)
+            lock (_lock)
             {
                 for (int i = 0; i < tokens; i++)
                 {
@@ -118,7 +127,7 @@ namespace Sparrow.Utils
                     else
                     {
                         //We've got no one waiting, so add a token
-                        _Tokens++;
+                        _tokens++;
                     }
                 }
             }
@@ -127,7 +136,7 @@ namespace Sparrow.Utils
         internal class OneTimeWaiter : IDisposable
         {
             private readonly ManualResetEventSlim _mre = new ManualResetEventSlim(false);
-            
+
             public bool TryWait(TimeSpan timeout, CancellationToken token)
             {
                 return _mre.Wait(timeout, token);
