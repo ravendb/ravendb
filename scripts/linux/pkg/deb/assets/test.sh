@@ -24,7 +24,7 @@ rvnpid=\$!
 
 trap "rc=\$?; pgrep \$rvnpid && kill -9 \$rvnpid 2>&1 >/dev/null; echo \$rc; exit \$rc" EXIT
 
-sleep 5 
+sleep 7 
 
 curl -Ss 'http://localhost:8080/admin/databases?name=Test&replicationFactor=1' \
   --retry 3 \
