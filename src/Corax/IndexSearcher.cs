@@ -34,8 +34,36 @@ namespace Corax
             {
                 return FilterByOrder(context, q, take, sort, entries);
             }
+
+            return SearchThenSort(context, take, sort, q, entries);
+        }
+
+        public IEnumerable<string> QueryExact(JsonOperationContext context, QueryOp q, int take = 1, string sort = null)
+        {
+            Table entries = _transaction.OpenTable(IndexWriter.IndexEntriesSchema, IndexWriter.IndexEntriesSlice);
+
+            if (take <= 1)
+            {
+                return SearchExactSingle(context, q, entries);
+            }
             
-            return SearchThenSort(context, take, sort,q, entries);
+            if (take < 1024)  // query "planner"
+            {
+                return FilterByOrder(context, q, take, sort, entries);
+            }
+
+            return SearchThenSort(context, take, sort, q, entries);
+        }
+
+        private IEnumerable<string> SearchExactSingle(JsonOperationContext context, QueryOp q, Table entries)
+        {
+            var results = new Bitmap();
+            q.Apply(_transaction, results, BitmapOp.Or);
+
+            if( results.Count == 0 )
+                return Enumerable.Empty<string>();
+
+            return new[] { ExtractDocumentId(entries, results.First()) };
         }
 
         private IEnumerable<string> FilterByOrder(JsonOperationContext context, QueryOp q, int take, string sort, Table entries)
@@ -43,9 +71,11 @@ namespace Corax
             Tree sortTree = _transaction.ReadTree(sort);
             if (sortTree == null)
                 return Enumerable.Empty<string>();
+
             using var it = sortTree.Iterate(false);
             if (it.Seek(Slices.BeforeAllKeys) == false)
                 return Enumerable.Empty<string>();
+            
             var list = new List<string>(take);
             do
             {
@@ -69,8 +99,7 @@ namespace Corax
             return list;
         }
 
-        private  IEnumerable<string> SearchThenSort(JsonOperationContext context, int take, string sort, QueryOp q,
-            Table entries)
+        private IEnumerable<string> SearchThenSort(JsonOperationContext context, int take, string sort, QueryOp q, Table entries)
         {
             var results = new Bitmap();
             q.Apply(_transaction, results, BitmapOp.Or);
@@ -200,6 +229,7 @@ namespace Corax
             return first;
         }
     }
+
     // where User = $userId and startsWith(Name, 'a')
     public class TermQuery : QueryOp
     {
