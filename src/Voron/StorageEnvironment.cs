@@ -97,7 +97,6 @@ namespace Voron
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ScratchBufferPool _scratchBufferPool;
         private EndOfDiskSpaceEvent _endOfDiskSpace;
-        internal int SizeOfUnflushedTransactionsInJournalFile;
 
         private int _idleFlushTimerFailures = 0;
         private Task _idleFlushTimer = Task.CompletedTask;
@@ -111,7 +110,7 @@ namespace Voron
         private readonly Logger _log;
         public static int MaxConcurrentFlushes = 10; // RavenDB-5221
         public static int NumOfConcurrentSyncsPerPhysDrive;
-        public static int TimeToSyncAfterFlushInSec;
+        public int TimeToSyncAfterFlushInSec;
 
         public Guid DbId { get; set; }
 
@@ -175,7 +174,6 @@ namespace Voron
                 throw;
             }
         }
-
         private async Task IdleFlushTimer()
         {
             try
@@ -194,10 +192,10 @@ namespace Voron
                     {
                         if (await _writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(Options.IdleFlushTimeout)) == false)
                         {
-                            if (SizeOfUnflushedTransactionsInJournalFile != 0)
+                            if (Journal.Applicator.ShouldFlush)
                                 GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
 
-                            else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
+                            else if (Journal.Applicator.ShouldSync)
                                 SuggestSyncDataFile();
                         }
                         else
@@ -884,7 +882,7 @@ namespace Voron
                         totalPages += page.NumberOfPages;
                     }
 
-                    Interlocked.Add(ref SizeOfUnflushedTransactionsInJournalFile, totalPages);
+                    Interlocked.Add(ref Journal.Applicator.TotalCommittedSinceLastFlushPages, totalPages);
 
                     if (tx.IsLazyTransaction == false)
                         GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);

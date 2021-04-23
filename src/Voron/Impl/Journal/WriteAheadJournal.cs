@@ -576,6 +576,11 @@ namespace Voron.Impl.Journal
             public long LastFlushedTransactionId => _lastFlushed.TransactionId;
             public long LastFlushedJournalId => _lastFlushed.JournalId;
             public long TotalWrittenButUnsyncedBytes => Interlocked.Read(ref _totalWrittenButUnsyncedBytes);
+
+            internal int TotalCommittedSinceLastFlushPages;
+            internal bool ShouldFlush => TotalCommittedSinceLastFlushPages != 0 || _lastFlushed.TransactionId != _waj._env.CurrentReadTransactionId;
+
+            public bool ShouldSync => TotalWrittenButUnsyncedBytes != 0;
             public int JournalsToDeleteCount => _journalsToDelete.Count;
             public JournalFile[] JournalsToDelete => _journalsToDelete.Values.ToArray();
 
@@ -619,6 +624,7 @@ namespace Voron.Impl.Journal
                     if (jrnls.Count == 0)
                         return; // nothing to do
 
+                    var currentTotalCommittedSinceLastFlushPages = TotalCommittedSinceLastFlushPages;
                     var lastFlushed = _lastFlushed;
                     Debug.Assert(jrnls.First().Number >= lastFlushed.JournalId);
 
@@ -708,6 +714,8 @@ namespace Voron.Impl.Journal
                         _waj._env.HandleDataDiskFullException(diskFullEx);
                         return;
                     }
+
+                    Interlocked.Add(ref TotalCommittedSinceLastFlushPages, -currentTotalCommittedSinceLastFlushPages);
 
                     ApplyJournalStateAfterFlush(token, jrnls, lastProcessedJournal, lastFlushedTransactionId, byteStringContext);
 
