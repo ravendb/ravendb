@@ -80,7 +80,7 @@ namespace FastTests.Client
             {
                 var obs = changes.ForDocumentsInCollection<User>();
                 var task = obs.EnsureSubscribedNow();
-                var timeout = TimeSpan.FromSeconds(10);
+                var timeout = TimeSpan.FromSeconds(30);
                 if (await Task.WhenAny(task, Task.Delay(timeout)) != task)
                     throw new TimeoutException($"{timeout}");
 
