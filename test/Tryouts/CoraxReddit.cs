@@ -19,16 +19,17 @@ namespace Tryouts
 {
     class CoraxReddit
     {
-        public const string DirectoryEnron = "reddit-corax";
+        public const string DirectoryReddit = "reddit-corax";
 
-        public static void IndexInCorax(bool recreateDatabase = true, string outputDirectory = DirectoryEnron)
+        public static void Index(bool recreateDatabase = true, string outputDirectory = ".")
         {
             var path = Path.Join("..", Reddit.DatasetFile);
 
-            if (Directory.Exists(DirectoryEnron))
-                Directory.Delete(DirectoryEnron, true);
+            string storagePath = Path.Join(outputDirectory, DirectoryReddit);
+            if (Directory.Exists(storagePath))
+                Directory.Delete(storagePath, true);
 
-            var options = StorageEnvironmentOptions.ForPath(outputDirectory);
+            var options = StorageEnvironmentOptions.ForPath(storagePath);
             var env = new StorageEnvironment(options);
 
             var sp = Stopwatch.StartNew();
@@ -99,6 +100,59 @@ namespace Tryouts
             Console.WriteLine($"Total execution time: {ms}");
 
             indexWriter.Dispose();
+        }
+
+        public static void SearchExact(string inputDirectory)
+        {
+            var path = Path.Join("..", Reddit.DatasetFile);
+
+            var options = StorageEnvironmentOptions.ForPath(Path.Join(inputDirectory, DirectoryReddit));
+            var env = new StorageEnvironment(options);
+
+            var sp = Stopwatch.StartNew();
+            var searchOp = new Stopwatch();
+
+            var gz = SharpCompress.Readers.GZip.GZipReader.Open(File.OpenRead(path));
+
+            int i = 0;
+            long ms = 0;
+            gz.MoveToNextEntry();
+
+            using var s = gz.OpenEntryStream();
+            var entryReader = new CsvReader(new StreamReader(s), new CsvConfiguration(CultureInfo.InvariantCulture));
+
+            // Ignore the header.
+            entryReader.Read();
+
+            var ctx = JsonOperationContext.ShortTermSingleUse();
+            while (entryReader.Read())
+            {
+                entryReader.TryGetField<string>(1, out var name);
+
+                using (var searcher = new IndexSearcher(env))
+                {
+                    var query = new TermQuery("Name", name);
+
+                    var results = searcher.QueryExact(ctx, query);
+
+                    //foreach (object result in results)
+                    //{
+                    //    Console.WriteLine(result);
+                    //}
+                }
+
+                if (i % 1024 * 512 == 0)
+                {
+                    ms += sp.ElapsedMilliseconds;
+                    Console.WriteLine(sp.ElapsedMilliseconds);
+
+                    sp.Restart();
+
+                    ctx = JsonOperationContext.ShortTermSingleUse();
+                }
+
+                i++;
+            }
         }
     }
 }

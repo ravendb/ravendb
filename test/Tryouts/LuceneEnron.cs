@@ -11,6 +11,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Store;
 using MimeKit;
 using Voron;
+using Directory = System.IO.Directory;
 
 namespace Tryouts
 {
@@ -18,14 +19,18 @@ namespace Tryouts
     {
         public const string EnronLucene = "enron-lucene";
 
-        public static void IndexInLucene(bool recreateDatabase = true, string outputDirectory = EnronLucene)
+        public static void Index(bool recreateDatabase = true, string outputDirectory = ".")
         {
             var path = Path.Join("..", Enron.DatasetFile);
+
+            string storagePath = Path.Join(outputDirectory, EnronLucene);
+            if (Directory.Exists(storagePath))
+                Directory.Delete(storagePath, true);
 
             var sp = Stopwatch.StartNew();
             var indexOnlySp = new Stopwatch();
 
-            using var dir = FSDirectory.Open(outputDirectory);
+            using var dir = FSDirectory.Open(storagePath);
             var analyzer = new StandardAnalyzer(Lucene.Net.Util.LuceneVersion.LUCENE_48);
             using var writer = new IndexWriter(dir, new IndexWriterConfig(Lucene.Net.Util.LuceneVersion.LUCENE_48, analyzer));
 

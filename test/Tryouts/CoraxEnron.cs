@@ -14,14 +14,15 @@ namespace Tryouts
     {
         public const string DirectoryEnron = "enron-corax";
 
-        public static void IndexInCorax(bool recreateDatabase = true, string outputDirectory = DirectoryEnron)
+        public static void Index(bool recreateDatabase = true, string outputDirectory = ".")
         {
             var path = Path.Join("..", Enron.DatasetFile);
 
-            if (Directory.Exists(DirectoryEnron))
-                Directory.Delete(DirectoryEnron, true);
+            string storagePath = Path.Join(outputDirectory, DirectoryEnron);
+            if (Directory.Exists(storagePath))
+                Directory.Delete(storagePath, true);
 
-            using var options = StorageEnvironmentOptions.ForPath(outputDirectory);
+            using var options = StorageEnvironmentOptions.ForPath(storagePath);
             using var env = new StorageEnvironment(options);
 
             var sp = Stopwatch.StartNew();
@@ -34,7 +35,8 @@ namespace Tryouts
             int i = 0;
             long ms = 0;
             long justIndex = 0;
-            using var ctx = JsonOperationContext.ShortTermSingleUse();
+            
+            var ctx = JsonOperationContext.ShortTermSingleUse();
             while (tar.MoveToNextEntry())
             {
                 if (tar.Entry.IsDirectory)
@@ -92,7 +94,7 @@ namespace Tryouts
                     indexWriter.Dispose();
                     
                     indexWriter = new IndexWriter(env);
-                    ctx.Reset();
+                    ctx = JsonOperationContext.ShortTermSingleUse();
                 }
 
                 i++;

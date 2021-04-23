@@ -23,8 +23,10 @@ namespace Tryouts
             //CoraxEnron.IndexInCorax(true);
             //LuceneEnron.IndexInLucene(true);
 
-            CoraxReddit.IndexInCorax(true, "Z:\\corax");
-            //LuceneReddit.IndexInLucene(true);
+            //CoraxReddit.Index(true, "Z:\\corax");
+            //LuceneReddit.Index(true, "Z:\\corax");
+            CoraxReddit.SearchExact("Z:\\corax");
+            //LuceneReddit.SearchExact("Z:\\corax");
 
             //using (var searcher = new IndexSearcher(env))
             //{
