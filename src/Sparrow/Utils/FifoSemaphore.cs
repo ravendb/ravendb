@@ -28,47 +28,81 @@ namespace Sparrow.Utils
     /// </remarks>
     internal class FifoSemaphore
     {
-        private readonly Queue<OneTimeWaiter> _waitQueue;
+        internal readonly List<OneTimeWaiter> _waitQueue;
 
-        protected readonly object _Lock;
+        private readonly object _lock;
 
-        protected int _Tokens;
+        private int _tokens;
 
         public FifoSemaphore(int tokens)
         {
             if (tokens <= 0)
                 throw new ArgumentException(nameof(tokens));
 
-            _Tokens = tokens;
-            _Lock = new object();
-            _waitQueue = new Queue<OneTimeWaiter>();
+            _tokens = tokens;
+            _lock = new object();
+            _waitQueue = new List<OneTimeWaiter>();
         }
 
         public bool TryAcquire(TimeSpan timeout, CancellationToken token)
         {
             OneTimeWaiter waiter;
 
-            lock (_Lock)
+            lock (_lock)
             {
-                if (_Tokens > 0)
+                if (_tokens > 0)
                 {
-                    _Tokens--;
+                    _tokens--;
                     return true;
                 }
 
+                token.ThrowIfCancellationRequested();
+
+                _forTestingPurposes?.JustBeforeAddingToWaitQueue?.Invoke();
+
                 waiter = new OneTimeWaiter();
-                _waitQueue.Enqueue(waiter);
+                _waitQueue.Add(waiter);
             }
 
             using (waiter)
             {
-                return waiter.TryWait(timeout, token);
+                try
+                {
+
+                    var result = waiter.TryWait(timeout, token);
+                    if (result == false)
+                        RemoveWaiter(waiter);
+
+                    return result;
+                }
+                catch
+                {
+                    RemoveWaiter(waiter);
+
+                    throw;
+                }
+            }
+
+            void RemoveWaiter(OneTimeWaiter w)
+            {
+                lock (_lock)
+                {
+                    _waitQueue.Remove(w);
+                }
             }
         }
 
         public void Acquire(CancellationToken token)
         {
-            TryAcquire(Timeout.InfiniteTimeSpan, token);
+            var result = TryAcquire(Timeout.InfiniteTimeSpan, token);
+
+            if (result == false)
+                ThrowCouldNotAcquireLock();
+        }
+
+        private static void ThrowCouldNotAcquireLock()
+        {
+            throw new InvalidOperationException("Could not acquire the lock");
         }
 
         public void Release()
@@ -78,28 +112,31 @@ namespace Sparrow.Utils
 
         public void ReleaseMany(int tokens)
         {
-            lock (_Lock)
+            lock (_lock)
             {
                 for (int i = 0; i < tokens; i++)
                 {
                     if (_waitQueue.Count > 0)
                     {
-                        var waiter = _waitQueue.Dequeue();
+                        var waiter = _waitQueue[0];
+
+                        _waitQueue.RemoveAt(0);
+
                         waiter.Release();
                     }
                     else
                     {
                         //We've got no one waiting, so add a token
-                        _Tokens++;
+                        _tokens++;
                     }
                 }
             }
         }
 
-        private class OneTimeWaiter : IDisposable
+        internal class OneTimeWaiter : IDisposable
         {
             private readonly ManualResetEventSlim _mre = new ManualResetEventSlim(false);
-            
+
             public bool TryWait(TimeSpan timeout, CancellationToken token)
             {
                 return _mre.Wait(timeout, token);
@@ -114,6 +151,22 @@ namespace Sparrow.Utils
             {
                 _mre?.Dispose();
             }
+        }
+
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action JustBeforeAddingToWaitQueue;
+
         }
     }
 }
