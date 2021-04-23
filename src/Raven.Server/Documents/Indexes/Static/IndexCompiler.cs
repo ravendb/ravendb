@@ -436,7 +436,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     var references = new HashSet<MetadataReference>();
 
                     RegisterPackage(package, userDefined: true, references);
-                    }
+
+                    NuGetNativeLibraryResolver.EnsureAssembliesRegisteredToNativeLibraries();
 
                     return references;
                 }
@@ -460,7 +461,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 AdditionalAssemblies.Value.TryAdd(assemblyName.FullName, additionalAssembly);
 
                 if (additionalAssemblyByName == null || additionalAssemblyByName.AssemblyName.Version < assemblyName.Version)
-                AdditionalAssemblies.Value.TryAdd(assemblyName.Name, additionalAssembly);
+                    AdditionalAssemblies.Value.TryAdd(assemblyName.Name, additionalAssembly);
 
                 return additionalAssembly.AssemblyMetadataReference;
             }
@@ -486,10 +487,17 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (package == null)
                     return;
 
-                foreach (string library in package.Libraries)
+                using (DisableMatchingAdditionalAssembliesByName())
                 {
-                    var assembly = LoadAssembly(library);
-                    references.Add(RegisterAssembly(assembly));
+                    foreach (string library in package.Libraries)
+                    {
+                        var assembly = LoadAssembly(library);
+
+                        if (userDefined)
+                            NuGetNativeLibraryResolver.RegisterAssembly(assembly);
+
+                        references.Add(RegisterAssembly(assembly));
+                    }
                 }
 
                 if (userDefined)
