@@ -52,6 +52,8 @@ namespace Raven.Client.Documents
 
         event EventHandler<TopologyUpdatedEventArgs> OnTopologyUpdated;
 
+        event EventHandler<SessionDisposingEventArgs> OnSessionDisposing;
+
         /// <summary>
         /// Subscribe to change notifications from the server
         /// </summary>

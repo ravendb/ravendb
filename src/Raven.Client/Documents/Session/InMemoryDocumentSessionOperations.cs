@@ -84,6 +84,8 @@ namespace Raven.Client.Documents.Session
 
         public event EventHandler<AfterConversionToEntityEventArgs> OnAfterConversionToEntity;
 
+        public event EventHandler<SessionDisposingEventArgs> OnSessionDisposing;
+
         /// <summary>
         /// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
         /// </summary>
@@ -1339,6 +1341,8 @@ more responsive application.
         {
             if (_isDisposed)
                 return;
+
+            OnSessionDisposing?.Invoke(this, new SessionDisposingEventArgs(this));
 
             var asyncTasksCounter = Interlocked.Read(ref _asyncTasksCounter);
             if (asyncTasksCounter != 0)
