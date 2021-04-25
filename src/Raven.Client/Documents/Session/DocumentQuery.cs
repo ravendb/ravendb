@@ -1067,6 +1067,14 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        long IDocumentQueryBase<T>.LongCount()
+        {
+            Take(0);
+            var queryResult = GetQueryResult();
+            return queryResult.LongTotalResults;
+        }
+
+        /// <inheritdoc />
         Lazy<int> IDocumentQueryBase<T>.CountLazily()
         {
             if (QueryOperation == null)
