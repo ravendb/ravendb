@@ -4,6 +4,7 @@ using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -56,6 +57,38 @@ namespace FastTests.Client.Queries
                 _ = await session.Query<A>().Where(x => x.B == new B { Char = (char)1 }).ToArrayAsync();
                 _ = await session.Query<A>().Where(x => x.B == new B { Byte = 1 }).ToArrayAsync();
                 _ = await session.Query<A>().Where(x => x.B == new B { Sbyte = 1 }).ToArrayAsync();
+            }
+        }
+
+        [Fact]
+        public void CanUseLongCount()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new User
+                    {
+                        Name = "Ayende Rahien"
+                    });
+
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    QueryStatistics stats;
+
+                    var longCount = s.Query<User>()
+                        .Statistics(out stats)
+                        .Search(u => u.Name, "Ayende")
+                        .LongCount();
+
+                    WaitForUserToContinueTheTest(store);
+
+                    Assert.Equal(1, longCount);
+                    Assert.Equal("Auto/Users/BySearch(Name)", stats.IndexName);
+                }
             }
         }
 
