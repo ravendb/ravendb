@@ -1065,33 +1065,54 @@ namespace Raven.Server.Documents
             using (context.OpenReadTransaction())
             {
                 var allDatabasesRecords = _serverStore.Cluster.GetAllDatabases(context);
-                var parentDir = configuration.Core.DataDirectory.FullPath;
 
                 foreach (var currRecord in allDatabasesRecords)
                 {
                     if (currRecord.DatabaseName.Equals(databaseName))
                         continue;
 
-                    RavenConfiguration currConfiguration;
+                    RavenConfiguration currentConfiguration;
                     try
                     {
-                        currConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true, 
+                        currentConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true, 
                             ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: currRecord);
                     }
                     catch (Exception e)
                     {
-                        currConfiguration = null;
                         if (_logger.IsInfoEnabled)
                             _logger.Info("Could not create database configuration", e);
+                        continue;
                     }
 
-                    var currDir = currConfiguration?.Core.DataDirectory.FullPath;
-                    if (PathUtil.IsSubDirectory(currDir, parentDir))
-                    {
-                        throw new InvalidOperationException($"Cannot delete database {databaseName} from {parentDir}. " +
-                                                            $"There is an intersection with database {currRecord.DatabaseName} located in {currDir}.");
-                    }
+                    CheckConfigurationPaths(configuration, currentConfiguration, databaseName, currRecord.DatabaseName);
                 }
+            }
+        }
+
+        private void CheckConfigurationPaths(RavenConfiguration parentConfiguration, RavenConfiguration currentConfiguration, string databaseName, string currentDatabaseName)
+        {
+            if (PathUtil.IsSubDirectory(currentConfiguration.Core.DataDirectory.FullPath, parentConfiguration.Core.DataDirectory.FullPath))
+            {
+                throw new InvalidOperationException($"Cannot delete database {databaseName} from {parentConfiguration.Core.DataDirectory.FullPath}. " +
+                                                    $"There is an intersection with database {currentDatabaseName} located in {currentConfiguration.Core.DataDirectory.FullPath}.");
+            }
+            if (currentConfiguration.Storage.TempPath != null && parentConfiguration.Storage.TempPath != null
+                                                           && PathUtil.IsSubDirectory(currentConfiguration.Storage.TempPath.FullPath, parentConfiguration.Storage.TempPath.FullPath))
+            {
+                throw new InvalidOperationException($"Cannot delete database {databaseName} from {parentConfiguration.Storage.TempPath.FullPath}. " +
+                                                    $"There is an intersection with database {currentDatabaseName} Temp file located in {currentConfiguration.Storage.TempPath.FullPath}.");
+            }
+            if (currentConfiguration.Indexing.StoragePath != null && parentConfiguration.Indexing.StoragePath != null
+                                                               && PathUtil.IsSubDirectory(currentConfiguration.Indexing.StoragePath.FullPath, parentConfiguration.Indexing.StoragePath.FullPath))
+            {
+                throw new InvalidOperationException($"Cannot delete database {databaseName} from {parentConfiguration.Indexing.StoragePath.FullPath}. " +
+                                                    $"There is an intersection with database {currentDatabaseName} located in {currentConfiguration.Indexing.StoragePath.FullPath}.");
+            }
+            if (currentConfiguration.Indexing.TempPath != null && parentConfiguration.Indexing.TempPath != null
+                                                            && PathUtil.IsSubDirectory(currentConfiguration.Indexing.TempPath.FullPath, parentConfiguration.Indexing.TempPath.FullPath))
+            {
+                throw new InvalidOperationException($"Cannot delete database {databaseName} from {parentConfiguration.Indexing.TempPath.FullPath}. " +
+                                                    $"There is an intersection with database {currentDatabaseName} Temp file located in {currentConfiguration.Indexing.TempPath.FullPath}.");
             }
         }
     }

@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
+using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -33,18 +34,54 @@ namespace FastTests.Server
         [Fact]
         public void CannotDeleteEntireDbFolder()
         {
+            // Checking Core.DataDirectory.FullPath
             var p1 = NewDataPath(forceCreateDir: true);
 
             var db1 = CreateDatabaseWithName(false, p1, null, "someDB1");
             Assert.NotNull(db1);
+
             var db2 = CreateDatabaseWithName(false, Path.Combine(p1, "someDB2"), null, "someDB2");
             Assert.NotNull(db2);
 
             var origFiles = Directory.GetFileSystemEntries(Path.Combine(p1, "someDB2"));
 
-            Assert.Throws<RavenException>(()=> DeleteDatabase("someDB1"));
+            Assert.Throws<RavenException>(() => DeleteDatabase("someDB1"));
 
             var currFiles = Directory.GetFileSystemEntries(Path.Combine(p1, "someDB2"));
+
+            Assert.True(CheckFiles(currFiles, origFiles));
+        }
+
+        [Fact]
+        public void CannotDeleteEntireDbFolder2()
+        {
+            // Checking Storage.TempPath.FullPath
+            var p1 = NewDataPath(forceCreateDir: true);
+
+            var db1 = CreateDatabaseWithName(false, p1, configuration =>
+            {
+                configuration.Add(RavenConfiguration.GetKey(x => x.Storage.TempPath), p1);
+            }
+                , "someDB1");
+            Assert.NotNull(db1);
+
+            var db2 = CreateDatabaseWithName(false, NewDataPath(forceCreateDir: true), configuration =>
+            {
+                configuration.Add(RavenConfiguration.GetKey(x => x.Storage.TempPath), Path.Combine(p1, "someDB2"));
+            }, "someDB2");
+            Assert.NotNull(db2);
+
+            var origFiles = Directory.GetFileSystemEntries(Path.Combine(p1, "someDB2"));
+
+            Assert.Throws<RavenException>(() => DeleteDatabase("someDB1"));
+
+            var currFiles = Directory.GetFileSystemEntries(Path.Combine(p1, "someDB2"));
+
+            Assert.True(CheckFiles(currFiles, origFiles));
+        }
+
+        private static bool CheckFiles(string[] currFiles, string[] origFiles)
+        {
             string[] filesWithoutExtension = new string[currFiles.Length];
             int i = 0;
             foreach (var currFile in currFiles)
@@ -52,18 +89,13 @@ namespace FastTests.Server
                 filesWithoutExtension[i] = Path.GetFileNameWithoutExtension(currFile);
                 i++;
             }
-
-            bool isExist = true;
             foreach (var file in origFiles)
             {
                 var filename = Path.GetFileNameWithoutExtension(file);
                 if (filesWithoutExtension.Contains(filename) == false)
-                {
-                    isExist = false;
-                    break;
-                }
+                    return false;
             }
-            Assert.True(isExist);
+            return true;
         }
     }
 }
