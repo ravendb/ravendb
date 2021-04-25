@@ -65,6 +65,9 @@ namespace Raven.Client.Exceptions.Commercial
         AdditionalAssembliesFromNuGet,
         
         [Description("Monitoring Endpoints")]
-        MonitoringEndpoints
+        MonitoringEndpoints,
+
+        [Description("Read Only Certificates")]
+        ReadOnlyCertificates
     }
 }

@@ -1141,6 +1141,8 @@ namespace Raven.Server.Web.Authentication
                 throw new ArgumentException("The certificate expiration date must be in the future.");
 
             ValidatePermissions(certificate, serverStore);
+
+            serverStore.LicenseManager.AssertCanAddReadOnlyCertificates(certificate);
         }
 
         private static void ValidatePermissions(CertificateDefinition certificate, ServerStore serverStore)

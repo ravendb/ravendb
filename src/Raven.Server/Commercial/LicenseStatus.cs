@@ -124,6 +124,8 @@ namespace Raven.Server.Commercial
         
         public bool HasMonitoringEndpoints => GetValue<bool>("monitoringEndpoints");
 
+        public bool HasReadOnlyCertificates => GetValue<bool>("readOnlyCertificates");
+
         public bool HasHighlyAvailableTasks => GetValue<bool>("highlyAvailableTasks");
 
         public bool HasPullReplicationAsHub => GetValue<bool>("pullReplicationAsHub");
