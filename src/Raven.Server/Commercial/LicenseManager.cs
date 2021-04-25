@@ -24,6 +24,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Json;
@@ -1322,6 +1323,21 @@ namespace Raven.Server.Commercial
 
             const string details = "Your current license doesn't include the monitoring endpoints feature";
             throw GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: false);
+        }
+
+        public void AssertCanAddReadOnlyCertificates(CertificateDefinition certificate)
+        {
+            if (certificate.Permissions.All(x => x.Value == DatabaseAccess.Read) == false)
+                return;
+
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasReadOnlyCertificates)
+                return;
+
+            const string details = "Your current license doesn't include the read only certificates feature";
+            throw GenerateLicenseLimit(LimitType.ReadOnlyCertificates, details);
         }
 
         public bool CanUseSnmpMonitoring(bool withNotification)
