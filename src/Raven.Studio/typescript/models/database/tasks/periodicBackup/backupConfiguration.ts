@@ -2,7 +2,7 @@
 import localSettings = require("models/database/tasks/periodicBackup/localSettings");
 import s3Settings = require("viewmodels/database/tasks/destinations/s3Settings");
 import glacierSettings = require("models/database/tasks/periodicBackup/glacierSettings");
-import azureSettings = require("models/database/tasks/periodicBackup/azureSettings");
+import azureSettings = require("viewmodels/database/tasks/destinations/azureSettings");
 import ftpSettings = require("models/database/tasks/periodicBackup/ftpSettings");
 import getBackupLocationCommand = require("commands/database/tasks/getBackupLocationCommand");
 import getServerWideBackupLocationCommand = require("commands/serverWide/tasks/getServerWideBackupLocationCommand");
@@ -61,7 +61,7 @@ abstract class backupConfiguration {
         this.localSettings(!dto.LocalSettings ? localSettings.empty("backup") : new localSettings(dto.LocalSettings, "backup"));
         this.s3Settings(!dto.S3Settings ? s3Settings.empty(serverLimits.AllowedAwsRegions, "Backup") : new s3Settings(dto.S3Settings, serverLimits.AllowedAwsRegions, "Backup"));
         this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty(serverLimits.AllowedAwsRegions) : new glacierSettings(dto.GlacierSettings, serverLimits.AllowedAwsRegions));
-        this.azureSettings(!dto.AzureSettings ? azureSettings.empty() : new azureSettings(dto.AzureSettings));
+        this.azureSettings(!dto.AzureSettings ? azureSettings.empty("Backup") : new azureSettings(dto.AzureSettings, "Backup"));
         this.googleCloudSettings(!dto.GoogleCloudSettings ? googleCloudSettings.empty() : new googleCloudSettings(dto.GoogleCloudSettings));
         this.ftpSettings(!dto.FtpSettings ? ftpSettings.empty() : new ftpSettings(dto.FtpSettings));
         this.isServerWide(isServerWide);

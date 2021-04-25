@@ -1,6 +1,8 @@
 ﻿import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import jsonUtil = require("common/jsonUtil");
 import genUtils = require("common/generalUtils");
+import popoverUtils = require("common/popoverUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class azureSettings extends backupSettings {
     storageContainer = ko.observable<string>();
@@ -9,7 +11,9 @@ class azureSettings extends backupSettings {
     accountKey = ko.observable<string>();
     sasToken = ko.observable<string>();
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.AzureSettings) {
+    targetOperation: string;
+
+    constructor(dto: Raven.Client.Documents.Operations.Backups.AzureSettings, targetOperation: string) {
         super(dto, "Azure");
 
         this.storageContainer(dto.StorageContainer);
@@ -17,6 +21,8 @@ class azureSettings extends backupSettings {
         this.accountName(dto.AccountName);
         this.accountKey(dto.AccountKey);
         this.sasToken(dto.SasToken);
+
+        this.targetOperation = targetOperation;
 
         this.initValidation();
 
@@ -28,6 +34,13 @@ class azureSettings extends backupSettings {
             this.accountKey,
             this.configurationScriptDirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
+    }
+
+    compositionComplete(view: Element, container: HTMLElement) {
+        popoverUtils.longWithHover($(".storage-container-info", container),
+            {
+                content: tasksCommonContent.textForPopover("Storage container", this.targetOperation)
+            });
     }
 
     initValidation() {
@@ -92,7 +105,7 @@ class azureSettings extends backupSettings {
         return genUtils.trimProperties(dto, ["RemoteFolderName", "AccountName"]);
     }
 
-    static empty(): azureSettings {
+    static empty(targetOperation: string): azureSettings {
         return new azureSettings({
             Disabled: true,
             StorageContainer: null,
@@ -101,7 +114,7 @@ class azureSettings extends backupSettings {
             AccountKey: null,
             SasToken: null,
             GetBackupConfigurationScript: null
-        });
+        }, targetOperation);
     }
 }
 
