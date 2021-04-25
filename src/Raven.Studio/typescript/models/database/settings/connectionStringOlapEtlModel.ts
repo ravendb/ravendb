@@ -9,11 +9,13 @@ import generalUtils = require("common/generalUtils");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 import database = require("models/resources/database");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
+import azureSettings = require("viewmodels/database/tasks/destinations/azureSettings");
 
 class connectionStringOlapEtlModel extends connectionStringModel {
 
     s3Settings = ko.observable<s3Settings>();
     localSettings = ko.observable<localSettings>();
+    azureSettings = ko.observable<azureSettings>();
     
     destinationsChecked: KnockoutComputed<boolean>;
     
@@ -44,6 +46,7 @@ class connectionStringOlapEtlModel extends connectionStringModel {
         this.connectionStringName(dto.Name);
         this.s3Settings(dto.S3Settings ? new s3Settings(dto.S3Settings, null, "OLAP") : s3Settings.empty(null, "OLAP"));
         this.localSettings(dto.LocalSettings ? new localSettings(dto.LocalSettings, "connectionString") : localSettings.empty("connectionString"));
+        this.azureSettings(dto.AzureSettings ? new azureSettings(dto.AzureSettings, "OLAP") : azureSettings.empty("OLAP"));
     }
     
     initObservables() {
@@ -57,7 +60,8 @@ class connectionStringOlapEtlModel extends connectionStringModel {
         this.dirtyFlag = new ko.DirtyFlag([
             this.connectionStringName,
             this.s3Settings().dirtyFlag().isDirty,
-            this.localSettings().dirtyFlag().isDirty
+            this.localSettings().dirtyFlag().isDirty,
+            this.azureSettings().dirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.localSettings().folderPath.throttle(300).subscribe((newPathValue) => {
@@ -74,7 +78,8 @@ class connectionStringOlapEtlModel extends connectionStringModel {
         this.destinationsChecked = ko.pureComputed(() => {
             const localEnabled = this.localSettings().enabled();
             const s3Enabled = this.s3Settings().enabled();
-            return localEnabled || s3Enabled;
+            const azureEnabled = this.azureSettings().enabled();
+            return localEnabled || s3Enabled || azureEnabled;
         });
     }
 
@@ -101,7 +106,8 @@ class connectionStringOlapEtlModel extends connectionStringModel {
             Type: "Olap",
             Name: "",
             S3Settings: s3Settings.empty(null, "OLAP").toDto(),
-            LocalSettings: localSettings.empty("connectionString").toDto()
+            LocalSettings: localSettings.empty("connectionString").toDto(),
+            AzureSettings: azureSettings.empty("OLAP").toDto()
         } , true, []);
     }
     
@@ -110,7 +116,8 @@ class connectionStringOlapEtlModel extends connectionStringModel {
             Type: "Olap",
             Name: this.connectionStringName(),
             S3Settings: this.s3Settings().enabled() ? this.s3Settings().toDto() : undefined,
-            LocalSettings: this.localSettings().enabled() ? this.localSettings().toDto() : undefined
+            LocalSettings: this.localSettings().enabled() ? this.localSettings().toDto() : undefined,
+            AzureSettings: this.azureSettings().enabled() ? this.azureSettings().toDto() : undefined
         };
     }
 

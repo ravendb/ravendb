@@ -19,10 +19,10 @@ class connectionStrings extends viewModelBase {
 
     ravenEtlConnectionStringsNames = ko.observableArray<string>([]);
     sqlEtlConnectionStringsNames = ko.observableArray<string>([]);
-    olapEtlConnectionStringsNames = ko.observableArray<string>([]); 
+    olapEtlConnectionStringsNames = ko.observableArray<string>([]);
 
     // Mapping from { connection string } to { taskId, taskName, taskType }
-    connectionStringsTasksInfo: dictionary<Array<{ TaskId: number, TaskName: string, TaskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType }>> = {}; 
+    connectionStringsTasksInfo: dictionary<Array<{ TaskId: number, TaskName: string, TaskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType }>> = {};
     
     editedRavenEtlConnectionString = ko.observable<connectionStringRavenEtlModel>(null);
     editedSqlEtlConnectionString = ko.observable<connectionStringSqlEtlModel>(null);
@@ -309,6 +309,10 @@ class connectionStrings extends viewModelBase {
         this.editedOlapEtlConnectionString().s3Settings().awsRegionName.subscribe(() => this.clearTestResult());
         this.editedOlapEtlConnectionString().s3Settings().remoteFolderName.subscribe(() => this.clearTestResult());
 
+        this.editedOlapEtlConnectionString().azureSettings().storageContainer.subscribe(() => this.clearTestResult());
+        this.editedOlapEtlConnectionString().azureSettings().accountName.subscribe(() => this.clearTestResult());
+        this.editedOlapEtlConnectionString().azureSettings().accountKey.subscribe(() => this.clearTestResult());
+        
         this.editedRavenEtlConnectionString(null);
         this.editedSqlEtlConnectionString(null);
     }
@@ -465,6 +469,10 @@ class connectionStrings extends viewModelBase {
         if (s3Settings.enabled() && !this.isValid(s3Settings.effectiveValidationGroup()))
             isValid = false;
 
+        const azureSettings = editedOlapEtl.azureSettings();
+        if (azureSettings.enabled() && !this.isValid(azureSettings.effectiveValidationGroup()))
+            isValid = false;
+        
         return isValid;
     }
     
