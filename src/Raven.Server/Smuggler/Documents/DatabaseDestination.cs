@@ -244,8 +244,10 @@ namespace Raven.Server.Smuggler.Documents
                 _command = new MergedBatchPutCommand(database, buildType, log, _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
                 {
                     IsRevision = isRevision,
-                    ThrowOnCollectionMismatchError = _throwOnCollectionMismatchError
                 };
+
+                if (_throwOnCollectionMismatchError == false)
+                    _command.DocumentCollectionMismatchHandler = item => _duplicateDocsHandler.AddDocument(item);
             }
 
             public void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress)
@@ -484,8 +486,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     using (prevCommand)
                     {
-                        BatchPutWithDuplicateCollectionHandling(prevCommand, prevCommandTask);
-
+                        prevCommandTask.GetAwaiter().GetResult();
                         Debug.Assert(prevCommand.IsDisposed == false,
                             "we rely on reusing this context on the next batch, so it has to be disposed here");
                     }
@@ -495,8 +496,10 @@ namespace Raven.Server.Smuggler.Documents
                     _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
                 {
                     IsRevision = _isRevision,
-                    ThrowOnCollectionMismatchError = _throwOnCollectionMismatchError
                 };
+
+                if (_throwOnCollectionMismatchError == false)
+                    _command.DocumentCollectionMismatchHandler = item => _duplicateDocsHandler.AddDocument(item);
             }
 
             private void FinishBatchOfDocuments()
@@ -504,9 +507,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_prevCommand != null)
                 {
                     using (_prevCommand)
-                    {
-                        BatchPutWithDuplicateCollectionHandling(_prevCommand, _prevCommandTask);
-                    }
+                        AsyncHelpers.RunSync(() => _prevCommandTask);
 
                     _prevCommand = null;
                 }
@@ -515,29 +516,12 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     if (_command.Documents.Count > 0)
                     {
-                        BatchPutWithDuplicateCollectionHandling(_command, _database.TxMerger.Enqueue(_command));
+                        AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_command));
                     }
                 }
 
                 _command = null;
             }
-
-            private void BatchPutWithDuplicateCollectionHandling(MergedBatchPutCommand command, Task task)
-            {
-                AsyncHelpers.RunSync(() => task);
-
-                if (command.DocumentsWithDuplicateCollection == null)
-                    return;
-
-                if (command.DocumentsWithDuplicateCollection.Count == 0)
-                    return;
-
-                foreach (var item in command.DocumentsWithDuplicateCollection)
-                {
-                    _duplicateDocsHandler.AddDocument(item);
-                }
-            }
-
         }
 
         private class DatabaseCompareExchangeActions : ICompareExchangeActions
@@ -931,14 +915,13 @@ namespace Raven.Server.Smuggler.Documents
         public class MergedBatchPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             public bool IsRevision;
-            public bool ThrowOnCollectionMismatchError;
+            public Action<DocumentItem> DocumentCollectionMismatchHandler;
 
             private readonly DocumentDatabase _database;
             private readonly BuildVersionType _buildType;
             private readonly Logger _log;
 
             public readonly List<DocumentItem> Documents = new List<DocumentItem>();
-            public List<DocumentItem> DocumentsWithDuplicateCollection; 
             public StreamsTempFile AttachmentStreamsTempFile;
 
             private IDisposable _resetContext;
@@ -1135,11 +1118,10 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     catch (DocumentCollectionMismatchException)
                     {
-                        if (ThrowOnCollectionMismatchError)
+                        if (DocumentCollectionMismatchHandler == null)
                             throw;
 
-                        DocumentsWithDuplicateCollection ??= new List<DocumentItem>();
-                        DocumentsWithDuplicateCollection.Add(documentType);
+                        DocumentCollectionMismatchHandler.Invoke(documentType);
                     }
                 }
 

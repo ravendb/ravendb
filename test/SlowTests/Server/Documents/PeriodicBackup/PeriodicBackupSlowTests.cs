@@ -20,6 +20,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
@@ -1596,6 +1597,87 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.NotNull(revision);
                         Assert.NotEmpty(revision);
                     }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Should_throw_on_document_with_changed_collection_when_no_tombstones_processed()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                const string documentId = "Users/1";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 1 1 *" };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                var fullBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: true, backupTaskId);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Person { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                var incBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: false, backupTaskId);
+                Assert.NotEqual(fullBackupOpId, incBackupOpId);
+
+                // to have a different count of docs in databases
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Person { Name = "EGOR" }, "Users/2");
+                    await session.SaveChangesAsync();
+                }
+
+                string backupFolder = Directory.GetDirectories(backupPath).OrderBy(Directory.GetCreationTime).Last();
+                var backupFilesToRestore = Directory.GetFiles(backupFolder).Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
+                var databaseName = GetDatabaseName() + "_restore";
+                using (EnsureDatabaseDeletion(databaseName, store))
+                {
+                    var restoreOperation = new RestoreBackupOperation(new RestoreBackupConfiguration
+                    {
+                        BackupLocation = backupFolder,
+                        DatabaseName = databaseName,
+                        LastFileNameToRestore = backupFilesToRestore.First()
+                    });
+
+                    var operation = await store.Maintenance.Server.SendAsync(restoreOperation);
+                    var res = (RestoreResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
+                    Assert.Equal(1, res.Documents.ReadCount);
+
+                    using (var session = store.OpenAsyncSession(databaseName))
+                    {
+                        var bestUser = await session.LoadAsync<User>("users/1");
+                        Assert.NotNull(bestUser);
+                        Assert.Equal("Grisha", bestUser.Name);
+
+                        var metadata = session.Advanced.GetMetadataFor(bestUser);
+                        var expectedCollection = store.Conventions.GetCollectionName(typeof(User));
+                        Assert.True(metadata.TryGetValue(Constants.Documents.Metadata.Collection, out string collection));
+                        Assert.Equal(expectedCollection, collection);
+                        var stats = store.Maintenance.ForDatabase(databaseName).Send(new GetStatisticsOperation());
+                        Assert.Equal(1, stats.CountOfDocuments);
+                    }
+
+                    var options = new DatabaseSmugglerImportOptions();
+                    options.OperateOnTypes &= ~DatabaseItemType.Tombstones;
+                    var opRes = await store.Smuggler.ForDatabase(databaseName).ImportAsync(options, backupFilesToRestore.Last());
+                    await Assert.ThrowsAsync<DocumentCollectionMismatchException>(async () => await opRes.WaitForCompletionAsync(TimeSpan.FromSeconds(60)));
                 }
             }
         }
