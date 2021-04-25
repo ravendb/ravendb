@@ -350,12 +350,6 @@ namespace Raven.Server.Documents
                     {
                         configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true,
                             databaseRecord: record);
-
-                        CheckDatabasePathsIntersection(dbName, configuration);
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        throw;
                     }
                     catch (Exception ex)
                     {
@@ -363,6 +357,8 @@ namespace Raven.Server.Documents
                         if (_logger.IsInfoEnabled)
                             _logger.Info("Could not create database configuration", ex);
                     }
+
+                    CheckDatabasePathsIntersection(dbName, configuration);
 
                     // this can happen if the database record was already deleted
                     if (configuration != null)
@@ -1076,14 +1072,25 @@ namespace Raven.Server.Documents
                     if (currRecord.DatabaseName.Equals(databaseName))
                         continue;
 
-                    var currConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true,
-                        ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: currRecord);
+                    RavenConfiguration currConfiguration;
+                    try
+                    {
+                        currConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true, 
+                            ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: currRecord);
+                    }
+                    catch (Exception e)
+                    {
+                        currConfiguration = null;
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Could not create database configuration", e);
+                    }
 
-                    var currDir = currConfiguration.Core.DataDirectory.FullPath;
-
+                    var currDir = currConfiguration?.Core.DataDirectory.FullPath;
                     if (PathUtil.IsSubDirectory(currDir, parentDir))
+                    {
                         throw new InvalidOperationException($"Cannot delete database {databaseName} from {parentDir}. " +
                                                             $"There is an intersection with database {currRecord.DatabaseName} located in {currDir}.");
+                    }
                 }
             }
         }
