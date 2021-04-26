@@ -190,7 +190,7 @@ namespace Raven.Client.Documents.Session
             AttemptNumber = attemptNumber;
         }
     }
-    
+
     public class SucceedRequestEventArgs : EventArgs
     {
         public string Database { get; }
@@ -216,6 +216,16 @@ namespace Raven.Client.Documents.Session
         internal TopologyUpdatedEventArgs(Topology topology)
         {
             Topology = topology;
+        }
+    }
+
+    public class SessionDisposingEventArgs : EventArgs
+    {
+        public InMemoryDocumentSessionOperations Session { get; }
+
+        internal SessionDisposingEventArgs(InMemoryDocumentSessionOperations session)
+        {
+            Session = session;
         }
     }
 }
