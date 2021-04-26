@@ -1740,8 +1740,8 @@ class ongoingTasksStats extends viewModelBase {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== element) {
-            const tooltipHtml = "Gap start time: " + element.start.toLocaleTimeString() +
-                "<br/>Gap duration: " + generalUtils.formatMillis(element.durationInMillis);
+            const tooltipHtml = '<div class="tooltip-li">Gap start time: <div class="value">' + element.start.toLocaleTimeString() + '</div></div>' +
+                '<div class="tooltip-li">Gap duration: <div class="value">' + generalUtils.formatMillis(element.durationInMillis) + '</div></div>';
             this.handleTooltip(element, x, y, tooltipHtml);
         }
     }
@@ -1750,9 +1750,9 @@ class ongoingTasksStats extends viewModelBase {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== itemInfo) {
-            let tooltipHtml = `<strong>*** ${itemInfo.title} ***</strong> <br/>`;
-            tooltipHtml += `Duration: ${generalUtils.formatMillis(itemInfo.duration)} <br/>`;
-            tooltipHtml += `Client URI: <strong>${itemInfo.clientUri}</strong>`;
+            let tooltipHtml = `<div class="tooltip-header"> ${itemInfo.title} </div>`;
+            tooltipHtml += `<div class="tooltip-li">Duration: <div class="value">${generalUtils.formatMillis(itemInfo.duration)} </div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Client URI: <div class="value">${itemInfo.clientUri} </div></div>`;
             this.handleTooltip(itemInfo, x, y, tooltipHtml);
         }
     }
@@ -1761,15 +1761,15 @@ class ongoingTasksStats extends viewModelBase {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== itemInfo) {
-            let tooltipHtml = `<strong>*** ${itemInfo.title} ***</strong> <br/>`;
-            tooltipHtml += `Duration: ${generalUtils.formatMillis(itemInfo.duration)} <br/>`;
-            tooltipHtml += `Client URI: <strong>${itemInfo.clientUri}</strong> <br/>`;
-            tooltipHtml += `Strategy: ${itemInfo.strategy} <br/>`;
-            tooltipHtml += `Number of batches acknowledged: ${itemInfo.batchCount.toLocaleString()} <br/>`;
-            tooltipHtml += `Size of all batches: ${generalUtils.formatBytesToSize(itemInfo.totalBatchSize)}`;
+            let tooltipHtml = `<div class="tooltip-header"> ${itemInfo.title} </div>`;
+            tooltipHtml += `<div class="tooltip-li">Duration: <div class="value">${generalUtils.formatMillis(itemInfo.duration)} </div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Client URI: <div class="value">${itemInfo.clientUri} </div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Strategy: <div class="value">${itemInfo.strategy} </div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Number of batches acknowledged: <div class="value">${itemInfo.batchCount.toLocaleString()} </div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Size of all batches: <div class="value">${generalUtils.formatBytesToSize(itemInfo.totalBatchSize)} </div></div>`;
             
             if (itemInfo.exceptionText) {
-                tooltipHtml += `<br>Message: ${itemInfo.exceptionText}`;
+                tooltipHtml += `<div class="tooltip-li">Message: <div class="value">${itemInfo.exceptionText}</div></div>`;
             }
             
             this.handleTooltip(itemInfo, x, y, tooltipHtml);
@@ -1780,10 +1780,10 @@ class ongoingTasksStats extends viewModelBase {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== itemInfo) {
-            let tooltipHtml = `<strong>*** ${itemInfo.title} ***</strong> <br/>`;
-            tooltipHtml += `Client URI: <strong>${itemInfo.clientUri}</strong> <br/>`;
-            tooltipHtml += `Strategy: ${itemInfo.strategy} <br/>`;
-            tooltipHtml += `Message: ${itemInfo.exceptionText}`;
+            let tooltipHtml = `<div class="tooltip-header">  ${itemInfo.title} </div>`;
+            tooltipHtml += `<div class="tooltip-li">Client URI: <div class="value">${itemInfo.clientUri} </div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Strategy: <div class="value">${itemInfo.strategy} </div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Message: <div class="value">${itemInfo.exceptionText} </div></div>`;
             this.handleTooltip(itemInfo, x, y, tooltipHtml);
         }
     }
@@ -1803,62 +1803,62 @@ class ongoingTasksStats extends viewModelBase {
                 sectionName = this.getTaskTypeDescription(type);
             }
             
-            let tooltipHtml = `<strong>*** ${sectionName} ***</strong><br/>`;
-            tooltipHtml += (isRootItem ? "Total duration" : "Duration") + ": " + generalUtils.formatMillis(context.item.DurationInMs) + "<br/>";
+            let tooltipHtml = `<div class="tooltip-header"> ${sectionName} </div>`;
+            tooltipHtml += '<div class="tooltip-li">' + (isRootItem ? "Total duration" : "Duration") + ': <div class="value">' + generalUtils.formatMillis(context.item.DurationInMs) + "</div></div>";
             
             if (isRootItem) {
                 switch (type) {
                     case "IncomingPush":
                     case "IncomingPull": {
                         const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.IncomingReplicationPerformanceStats;
-                        tooltipHtml += `Received last Etag: ${elementWithData.ReceivedLastEtag}<br/>`;
-                        tooltipHtml += `Network input count: ${elementWithData.Network.InputCount.toLocaleString()}<br/>`;
-                        tooltipHtml += `Documents read count: ${elementWithData.Network.DocumentReadCount.toLocaleString()}<br/>`;
-                        tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentReadCount.toLocaleString()}<br/>`;
+                        tooltipHtml += `<div class="tooltip-li">Received last Etag: <div class="value">${elementWithData.ReceivedLastEtag} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Network input count: <div class="value">${elementWithData.Network.InputCount.toLocaleString()} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Documents read count: <div class="value">${elementWithData.Network.DocumentReadCount.toLocaleString()} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Attachments read count: <div class="value">${elementWithData.Network.AttachmentReadCount.toLocaleString()} </div></div>`;
                     }
                         break;
                     case "OutgoingPush":
                     case "OutgoingPull": {
                         const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.OutgoingReplicationPerformanceStats;
-                        tooltipHtml += `Sent last Etag: ${elementWithData.SendLastEtag}<br/>`;
-                        tooltipHtml += `Storage input count: ${elementWithData.Storage.InputCount.toLocaleString()}<br/>`;
-                        tooltipHtml += `Documents output count: ${elementWithData.Network.DocumentOutputCount.toLocaleString()}<br/>`;
-                        tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentOutputCount.toLocaleString()}<br/>`;
+                        tooltipHtml += `<div class="tooltip-li">Sent last Etag: <div class="value">${elementWithData.SendLastEtag}</div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Storage input count: <div class="value">${elementWithData.Storage.InputCount.toLocaleString()}</div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Documents output count: <div class="value">${elementWithData.Network.DocumentOutputCount.toLocaleString()}</div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Attachments read count: <div class="value">${elementWithData.Network.AttachmentOutputCount.toLocaleString()}</div></div>`;
                     }
                         break;
                     case "Raven":
                     case "Sql": {
                         const elementWithData = context.rootStats as EtlPerformanceBaseWithCache;
                         if (elementWithData.BatchCompleteReason) {
-                            tooltipHtml += `Batch complete reason: ${elementWithData.BatchCompleteReason}<br/>`;
+                            tooltipHtml += `<div class="tooltip-li">Batch complete reason: <div class="value">${elementWithData.BatchCompleteReason} </div></div>`;
                         }
 
                         if (elementWithData.CurrentlyAllocated && elementWithData.CurrentlyAllocated.SizeInBytes) {
-                            tooltipHtml += `Currently allocated: ${generalUtils.formatBytesToSize(elementWithData.CurrentlyAllocated.SizeInBytes)} <br/>`;
+                            tooltipHtml += `<div class="tooltip-li">Currently allocated: <div class="value">${generalUtils.formatBytesToSize(elementWithData.CurrentlyAllocated.SizeInBytes)} </div></div>`;
                         }
 
                         if (elementWithData.BatchSize && elementWithData.BatchSize.SizeInBytes) {
-                            tooltipHtml += `Batch size: ${generalUtils.formatBytesToSize(elementWithData.BatchSize.SizeInBytes)} <br/>`;
+                            tooltipHtml += `<div class="tooltip-li">Batch size: <div class="value">${generalUtils.formatBytesToSize(elementWithData.BatchSize.SizeInBytes)} </div></div>`;
                         }
                     }
                         break;
                     case "SubscriptionBatch": {
                         const elementWithData = context.rootStats as SubscriptionBatchPerformanceStatsWithCache;
                        
-                        tooltipHtml += `Documents sent in batch: ${elementWithData.NumberOfDocuments.toLocaleString()} <br/>`;
-                        tooltipHtml += `Documents size: ${generalUtils.formatBytesToSize(elementWithData.SizeOfDocumentsInBytes)} <br/>`;
-                        tooltipHtml += `Included Documents: ${elementWithData.NumberOfIncludedDocuments.toLocaleString()} <br/>`;
-                        tooltipHtml += `Included Counters: ${elementWithData.NumberOfIncludedCounters.toLocaleString()} <br/>`;
-                        tooltipHtml += `Included Time Series entries: ${elementWithData.NumberOfIncludedTimeSeriesEntries.toLocaleString()}`;
+                        tooltipHtml += `<div class="tooltip-li">Documents sent in batch: <div class="value">${elementWithData.NumberOfDocuments.toLocaleString()} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Documents size: <div class="value">${generalUtils.formatBytesToSize(elementWithData.SizeOfDocumentsInBytes)} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Included Documents: <div class="value">${elementWithData.NumberOfIncludedDocuments.toLocaleString()} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Included Counters: <div class="value">${elementWithData.NumberOfIncludedCounters.toLocaleString()} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Included Time Series entries: <div class="value">${elementWithData.NumberOfIncludedTimeSeriesEntries.toLocaleString()} </div></div>`;
 
                         if (elementWithData.Exception) {
-                            tooltipHtml += `<br>Message: ${elementWithData.Exception} <br/>`;
+                            tooltipHtml += `<div class="tooltip-li">Message: <div class="value">${elementWithData.Exception} </div></div>`;
                         }
                     }
                         break;
                     case "AggregatedBatchesInfo": {
                         const elementWithData = context.rootStats as SubscriptionBatchPerformanceStatsWithCache;
-                        tooltipHtml += `Number of batches sent: ${elementWithData.AggregatedBatchesCount.toLocaleString()}`;
+                        tooltipHtml += `<div class="tooltip-li">Number of batches sent: <div class="value">${elementWithData.AggregatedBatchesCount.toLocaleString()} </div></div>`;
                     }
                         break;
                 }
@@ -1866,8 +1866,8 @@ class ongoingTasksStats extends viewModelBase {
                 if (isReplication) {
                     const baseElement = context.rootStats as Raven.Client.Documents.Replication.ReplicationPerformanceBase;
                     if (baseElement.Errors) {
-                        tooltipHtml += `<span style=color:Crimson;"><strong>Errors:</strong></span><br/>`;
-                        baseElement.Errors.forEach(err => tooltipHtml += `Errors: ${err.Error}<br/>`);
+                        tooltipHtml += `<div class="tooltip-header text-danger">Errors:</div>`;
+                        baseElement.Errors.forEach(err => tooltipHtml += `<div class="tooltip-li">Errors: <div class="value">${err.Error} </div></div>`);
                     }
                 }
             } else { // child item
@@ -1877,51 +1877,51 @@ class ongoingTasksStats extends viewModelBase {
                         case "Extract":
                             _.forIn(baseElement.NumberOfExtractedItems, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
                                 if (value) {
-                                    tooltipHtml += `Extracted ${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()}<br/>`;
+                                    tooltipHtml += `<div class="tooltip-li">Extracted <div class="value">${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()} </div></div>`;
                                 }
                             });
 
                             _.forIn(baseElement.LastFilteredOutEtags, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
                                 if (value) {
-                                    tooltipHtml += `Last filtered out Etag for ${key}: ${value}<br/>`;
+                                    tooltipHtml += `<div class="tooltip-li">Last filtered out Etag for ${key}: <div class="value">${value} </div></div>`;
                                 }
                             });
                             break;
                         case "Transform":
                             _.forIn(baseElement.NumberOfTransformedItems, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
                                 if (value) {
-                                    tooltipHtml += `Transformed ${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()}<br/>`;
+                                    tooltipHtml += `<div class="tooltip-li">Transformed ${ongoingTasksStats.etlItemTypeToUi(key)}: <div class="value">${value.toLocaleString()} </div></div>`;
                                     
                                     if (baseElement.DurationInMs) {
                                         const durationInSec = context.item.DurationInMs / 1000;
-                                        tooltipHtml += `${ongoingTasksStats.etlItemTypeToUi(key)} Processing Speed: ${Math.floor(value / durationInSec).toLocaleString()} docs/sec<br/>`;
+                                        tooltipHtml += `<div class="tooltip-li">${ongoingTasksStats.etlItemTypeToUi(key)} Processing Speed: <div class="value">${Math.floor(value / durationInSec).toLocaleString()} docs/sec </div></div>`;
                                     }
                                 }
                             });
 
                             _.forIn(baseElement.NumberOfTransformedTombstones, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
                                 if (value) {
-                                    tooltipHtml += `Transformed ${ongoingTasksStats.etlItemTypeToUi(key)} tombstones: ${value.toLocaleString()}<br/>`;
+                                    tooltipHtml += `<div class="tooltip-li">Transformed ${ongoingTasksStats.etlItemTypeToUi(key)} tombstones: <div class="value">${value.toLocaleString()} </div></div>`;
                                 }
                             });
                             
                             if (baseElement.TransformationErrorCount) {
-                                tooltipHtml += `Transformation error count: ${baseElement.TransformationErrorCount.toLocaleString()}<br/>`;
+                                tooltipHtml += `<div class="tooltip-li">Transformation error count: <div class="value">${baseElement.TransformationErrorCount.toLocaleString()} </div></div>`;
                             }
 
                             _.forIn(baseElement.LastTransformedEtags, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
                                 if (value) {
-                                    tooltipHtml += `Last transformed Etag for ${key}: ${value}<br/>`;
+                                    tooltipHtml += `<div class="tooltip-li">Last transformed Etag for ${key}: <div class="value">${value} </div></div>`;
                                 }
                             });
                             break;
                         case "Load":
                             if (baseElement.SuccessfullyLoaded != null) {
-                                tooltipHtml += `Successfully loaded: ${baseElement.SuccessfullyLoaded ? "Yes": "No"}<br/>`;
+                                tooltipHtml += `<div class="tooltip-li">Successfully loaded: <div class="value">${baseElement.SuccessfullyLoaded ? "Yes" : "No"} </div></div>`;
                             }
 
                             if (baseElement.LastLoadedEtag) {
-                                tooltipHtml += `Last loaded Etag: ${baseElement.LastLoadedEtag}<br/>`;
+                                tooltipHtml += `<div class="tooltip-li">Last loaded Etag: <div class="value">${baseElement.LastLoadedEtag} </div></div>`;
                             }
                             break;
                     }
@@ -1929,8 +1929,8 @@ class ongoingTasksStats extends viewModelBase {
                     // used for batches stripes only 
                     const title = context.item.Name === "BatchWaitForAcknowledge" ? "Waiting for ACK" : "Sending Documents";
                     
-                    tooltipHtml = `<strong>*** ${title} ***</strong><br/>`;
-                    tooltipHtml += "Duration: " + generalUtils.formatMillis(context.item.DurationInMs) + "<br/>";
+                    tooltipHtml = `<div class="tooltip-header"> ${title} </div>`;
+                    tooltipHtml += '<div class="tooltip-li">Duration:  <div class="value">' + generalUtils.formatMillis(context.item.DurationInMs) + ' </div></div>';
                 }
             }
             
