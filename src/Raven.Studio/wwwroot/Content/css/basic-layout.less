@@ -389,6 +389,33 @@ body {
 
 .tooltip {
     .slidein-style;
+
+    .tooltip-header {
+        text-transform: uppercase;
+        letter-spacing: .1em;
+        color: @text-emphasis;
+    }
+
+    .tooltip-li {
+        display: flex;
+        font-size: 12px;
+        text-align: left;
+        margin-top: @gutter-xxs/2;
+
+        .value {
+            display: block;
+            flex-grow: 1;
+            font-size: 12px;
+            text-align: right;
+            color: @text-emphasis;
+            margin-left: @gutter-sm;
+        }
+
+        & + .tooltip-li {
+            border-top: 1px solid fadeout(@text-color, 70%);
+            padding-top: @gutter-xxs/2;
+        }
+    }
 }
 
 .json-preview {
