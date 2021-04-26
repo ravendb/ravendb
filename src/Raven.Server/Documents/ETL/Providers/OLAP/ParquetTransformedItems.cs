@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private DateTimeOffset[] _dtoArr;
         private TimeSpan[] _tsArr;
         private readonly Logger _logger;
-        private OlapEtlConfiguration _configuration;
+        private readonly OlapEtlConfiguration _configuration;
 
         public ParquetTransformedItems(string name, string key, string tmpPath, string fileNamePrefix, OlapEtlConfiguration configuration, Logger logger) : base(OlapEtlFileFormat.Parquet)
         {
@@ -291,14 +291,14 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 {
                     // data type change
 
-                    if ((dataType == DataType.Int64 || dataType == DataType.Decimal) && TryChangeDataType(propType, data, out data))
+                    if (TryChangeDataType(dataType, propType, data, out data))
                     {
                         // change previous data from 'long' to 'double' / 'decimal'
                         // or from 'decimal' to 'double'
                         UpdateField(dataType = propType, propName, data, group, addDefaultData: false);
                     }
 
-                    else if ((propType == DataType.Int64 || propType == DataType.Decimal) && TryChangeValueType(dataType, prop.Value, out var newValue))
+                    else if (TryChangeValueType(dataType, propType, prop.Value, out var newValue))
                     {
                         // change current value from 'long' to 'double' / 'decimal'
                         // or from 'decimal' to 'double'
@@ -329,47 +329,77 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             group.Count++;
         }
 
-        private static bool TryChangeDataType(DataType propType, IList data, out IList newData)
+        private static bool TryChangeDataType(DataType dataType, DataType propType, IList data, out IList newData)
         {
+            newData = data;
+
             switch (propType)
             {
                 case DataType.Double:
                 {
-                    newData = new List<double>();
-
-                    foreach (var number in data)
+                    switch (dataType)
                     {
-                        var asDouble = Convert.ToDouble(number);
+                        case DataType.Int64:
+                        case DataType.Decimal:
+                            newData = new List<double>();
+                            foreach (var number in data)
+                            {
+                                newData.Add(Convert.ToDouble(number));
+                            }
+                            return true;
+                        default:
+                            return false;
 
-                        newData.Add(asDouble);
                     }
-
-                    return true;
                 }
 
                 case DataType.Decimal:
                 {
-                    newData = new List<decimal>();
-
-                    foreach (var number in data)
+                    switch (dataType)
                     {
-                        var asDecimal = Convert.ToDecimal(number);
+                        case DataType.Int64:
+                            newData = new List<decimal>();
+                            foreach (var number in data)
+                            {
+                                newData.Add(Convert.ToDecimal(number));
+                            }
+                            return true;
+                        default:
+                            return false;
+                    }
+                }
 
-                        newData.Add(asDecimal);
+                case DataType.Int64:
+                {
+                    if (data.Count != 0)
+                        return false;
+
+                    switch (dataType)
+                    {
+                        // edge case : data might have been initialized to List<long> / List<decimal>
+                        case DataType.Double:
+                            newData = new List<double>();
+                            break;
+                        case DataType.Decimal:
+                            newData = new List<decimal>();
+                            break;
                     }
 
-                    return true;
+                    // no need for field update
+                    return false;
                 }
 
                 default:
-                    newData = data;
                     return false;
             }
         }
 
-        private static bool TryChangeValueType(DataType dataType, object value, out object newValue)
+        private static bool TryChangeValueType(DataType dataType, DataType propType, object value, out object newValue)
         {
             newValue = default;
+
+            if (propType != DataType.Int64 && propType != DataType.Decimal)
+                return false;
 
             switch (dataType)
             {
