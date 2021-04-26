@@ -20,12 +20,15 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.Logging;
 using Voron.Util.Settings;
 
 namespace Raven.Server.Config
 {
     public class RavenConfiguration
     {
+        private readonly Logger _logger;
+
         private readonly string _customConfigPath;
 
         private readonly IConfigurationBuilder _configBuilder;
@@ -94,6 +97,8 @@ namespace Raven.Server.Config
 
         private RavenConfiguration(string resourceName, ResourceType resourceType, string customConfigPath = null)
         {
+            _logger = LoggingSource.Instance.GetLogger<RavenConfiguration>(resourceName);
+
             ResourceName = resourceName;
             ResourceType = resourceType;
             _customConfigPath = customConfigPath;
@@ -200,7 +205,18 @@ namespace Raven.Server.Config
             if (ResourceType != ResourceType.Server)
                 return;
 
-            SecurityConfiguration.Validate(this);
+            try
+            {
+                SecurityConfiguration.Validate(this);
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.OperationsAsync("Invalid security configuration. Stopping RavenDB server startup", e)
+                        .Wait(UnhandledExceptions.TimeToWaitForLog); // using async version to wait and ensure that we'll wait for the log to be written to disk since we're gonna break the service startup
+
+                throw;
+            }
         }
 
         public void SetSetting(string key, string value)
