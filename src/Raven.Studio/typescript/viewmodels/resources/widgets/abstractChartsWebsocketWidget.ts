@@ -86,7 +86,7 @@ abstract class abstractChartsWebsocketWidget<
         this.charts.forEach(chart => chart.draw());
     }
 
-    protected afterComponentResized() {
+    afterComponentResized() {
         super.afterComponentResized();
         this.charts.forEach(chart => chart.onResize());
         this.charts.forEach(chart => chart.draw());

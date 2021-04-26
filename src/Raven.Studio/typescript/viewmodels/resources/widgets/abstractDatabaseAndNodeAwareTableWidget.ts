@@ -61,7 +61,7 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
         this.gridController().reset(false);
     }
 
-    protected afterComponentResized() {
+    afterComponentResized() {
         super.afterComponentResized();
         this.gridController().reset(true, true);
     }

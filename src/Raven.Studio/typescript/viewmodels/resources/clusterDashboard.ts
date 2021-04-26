@@ -16,7 +16,6 @@ import welcomeWidget = require("viewmodels/resources/widgets/welcomeWidget");
 import databaseIndexingWidget = require("viewmodels/resources/widgets/databaseIndexingWidget");
 import databaseStorageWidget = require("viewmodels/resources/widgets/databaseStorageWidget");
 import databaseTrafficWidget = require("viewmodels/resources/widgets/databaseTrafficWidget");
-import EVENTS = require("common/constants/events");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 
 interface savedWidgetsLayout {
@@ -37,6 +36,7 @@ class clusterDashboard extends viewModelBase {
     static localStorageName = storageKeyProvider.storageKeyFor("clusterDashboardLayout");
     
     private packery: PackeryStatic;
+    resizeObserver: ResizeObserver;
     initialized = ko.observable<boolean>(false);
     readonly currentServerNodeTag: string;
     
@@ -125,16 +125,14 @@ class clusterDashboard extends viewModelBase {
         $("#page-host").css("overflow-y", "scroll");
     }
 
-    createPostboxSubscriptions(): Array<KnockoutSubscription> {
-        return [
-            ko.postbox.subscribe(EVENTS.Menu.Resized, () => {
-                this.packery.layout();
-            })
-        ];
-    }
-
-    compositionComplete() {
+    compositionComplete(child?: HTMLElement) {
         super.compositionComplete();
+        
+        const throttledLayout = _.debounce(() => this.onResized(), 400);
+        
+        this.resizeObserver = new ResizeObserver(throttledLayout);
+        this.resizeObserver.observe(child);
+        
         
         if (this.nodes().length) {
             this.initDashboard();
@@ -278,6 +276,10 @@ class clusterDashboard extends viewModelBase {
     
     detached() {
         super.detached();
+
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+        }
         
         $("#page-host").css("overflow-y", "");
     }
@@ -293,6 +295,14 @@ class clusterDashboard extends viewModelBase {
     
     addWidget(widget: widget<any>) {
         this.widgets.push(widget);
+    }
+    
+    onResized() {
+        this.layout();
+
+        for (const widget of this.widgets()) {
+            widget.afterComponentResized();
+        }
     }
 
     layout(withDelay: boolean = true, mode: "shift" | "full" = "full") {
