@@ -153,15 +153,31 @@ namespace SlowTests.Issues
                 store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName1, hardDelete: true));
                 store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName2, hardDelete: true));
                 store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName3, hardDelete: true));
-
-                static void AssertLockMode(IDocumentStore store, string databaseName, DatabaseLockMode mode)
-                {
-                    var databaseRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(databaseName));
-                    Assert.Equal(mode, databaseRecord.LockMode);
-                }
             }
         }
 
+        [Fact]
+        public void CanLockDatabase_Disabled()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var databaseName = $"{store.Database}_LockMode_1";
+
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName)));
+
+                AssertLockMode(store, databaseName, DatabaseLockMode.Unlock);
+
+                store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(databaseName, disable: true));
+
+                store.Maintenance.Server.Send(new SetDatabasesLockOperation(databaseName, DatabaseLockMode.PreventDeletesError));
+
+                AssertLockMode(store, databaseName, DatabaseLockMode.PreventDeletesError);
+
+                store.Maintenance.Server.Send(new SetDatabasesLockOperation(databaseName, DatabaseLockMode.Unlock));
+
+                store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true));
+            }
+        }
 
         [Fact]
         public void CanLockDatabase_Backup_Restore()
@@ -213,6 +229,12 @@ namespace SlowTests.Issues
                     store.Maintenance.Server.Send(new SetDatabasesLockOperation(databaseName2, DatabaseLockMode.Unlock));
                 }
             }
+        }
+
+        private static void AssertLockMode(IDocumentStore store, string databaseName, DatabaseLockMode mode)
+        {
+            var databaseRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(databaseName));
+            Assert.Equal(mode, databaseRecord.LockMode);
         }
     }
 }
