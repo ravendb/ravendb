@@ -220,8 +220,6 @@ class menu {
             this.width(width);
             document.documentElement.style.setProperty('--menu-width', requestedWidth.toString() + 'px');
 
-            ko.postbox.publish(EVENTS.Menu.Resized, width);
-            
             studioSettings.default.globalSettings()
                 .done(settings => {
                     settings.menuWidth.setValue(this.width());

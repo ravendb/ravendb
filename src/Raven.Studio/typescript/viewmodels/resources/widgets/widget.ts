@@ -59,7 +59,10 @@ abstract class widget<TConfig = unknown, TState = unknown> {
 
         this.fullscreen.subscribe(
             () => setTimeout(
-                () => this.afterComponentResized(), widget.resizeAnimationDuration));
+                () => {
+                    this.afterComponentResized();
+                    this.controller.layout();
+                }, widget.resizeAnimationDuration));
     }
     
     abstract getType(): widgetType;
@@ -95,8 +98,8 @@ abstract class widget<TConfig = unknown, TState = unknown> {
         // empty by default
     }
     
-    protected afterComponentResized() {
-        this.controller.layout();
+    afterComponentResized() {
+        // empty by default
     }
     
     restoreState(state: TState) {
