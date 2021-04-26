@@ -236,11 +236,14 @@
                         <div class="infogrid margin-right margin-right-sm">
                             <div class="infogrid-label">
                                 <div class="absolute-center loading" data-bind="visible: $root.spinners.loading"><div class="global-spinner"></div></div>
-                                <div data-bind="style: { visibility: $root.spinners.loading()? 'hidden' : 'visible' }"> <!-- using visibility here to reserve space -->
-                                    # Docs <br />indexed/s<br/>
+                                <div data-bind="style: { visibility: $root.spinners.loading()? 'hidden' : 'visible' }">
+                                    <!-- using visibility here to reserve space -->
+                                    <div class="margin-bottom margin-bottom-sm"><small class="text-muted">Map indexes</small></div>
+                                    # Docs <br />indexed/s<br />
                                     <i class="indexed-legend legend-rect"></i>
                                     <strong data-bind="text: totalIndexedPerSecond().toLocaleString()"></strong>
                                 </div>
+                                
                             </div>
                             <div class="infogrid-graph">
                                 <div class="graph-container" id="indexingChart"></div>
@@ -248,6 +251,7 @@
                             <div class="separator"></div>
                             <div class="infogrid-label">
                                 <div class="absolute-center loading" data-bind="visible: $root.spinners.loading"><div class="global-spinner"></div></div>
+                                <div class="margin-bottom margin-bottom-sm"><small class="text-muted">Map-Reduce indexes</small></div>
                                 <div class="margin-bottom margin-bottom-sm" data-bind="style: { visibility: $root.spinners.loading()? 'hidden' : 'visible' }">
                                     Docs mapped/s<br />
                                     <i class="mapped-legend legend-rect"></i>
@@ -258,6 +262,7 @@
                                     <i class="reduced-legend legend-rect"></i>
                                     <strong data-bind="text: totalReducedPerSecond().toLocaleString()"></strong>
                                 </div>
+
                             </div>
                             <div class="infogrid-graph">
                                 <div class="graph-container" id="reduceChart"></div>
