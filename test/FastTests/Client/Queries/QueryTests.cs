@@ -61,38 +61,6 @@ namespace FastTests.Client.Queries
         }
 
         [Fact]
-        public void CanUseLongCount()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var s = store.OpenSession())
-                {
-                    s.Store(new User
-                    {
-                        Name = "Ayende Rahien"
-                    });
-
-                    s.SaveChanges();
-                }
-
-                using (var s = store.OpenSession())
-                {
-                    QueryStatistics stats;
-
-                    var longCount = s.Query<User>()
-                        .Statistics(out stats)
-                        .Search(u => u.Name, "Ayende")
-                        .LongCount();
-
-                    WaitForUserToContinueTheTest(store);
-
-                    Assert.Equal(1, longCount);
-                    Assert.Equal("Auto/Users/BySearch(Name)", stats.IndexName);
-                }
-            }
-        }
-
-        [Fact]
         public async Task Query_WhenUsingDateTimeNowInWhereClause_ShouldSendRequestForEachQuery()
         {
             using var store = GetDocumentStore();
