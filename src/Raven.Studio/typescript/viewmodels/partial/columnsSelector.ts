@@ -200,7 +200,8 @@ class columnsSelector<T> {
     compositionComplete() {
         this.registerSortable();
         $("#custom_column_binding").tooltip({
-            trigger: 'focus'
+            trigger: "focus",
+            container: "body"
         });
     }
     
