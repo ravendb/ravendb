@@ -1509,8 +1509,8 @@ class ioStatsGraph {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== element) {
-            const tooltipHtml = "Gap start time: " + (element).start.toLocaleTimeString() +
-                "<br/>Gap duration: " + generalUtils.formatMillis((element).durationInMillis);
+            const tooltipHtml = '<div class="tooltip-li">Gap start time: <span class="value">' + (element).start.toLocaleTimeString() + '</span></div>'
+                + '<div class="tooltip-li">Gap duration:  <span class="value">' + generalUtils.formatMillis((element).durationInMillis) + '</span></div>';
             this.handleTooltip(element, x, y, tooltipHtml);
         }
     }
@@ -1542,29 +1542,29 @@ class ioStatsGraph {
         if (currentDatum !== element) {
             const typeString = ioStatsGraph.getMeterTypeFriendlyName(element.Type);
 
-            let tooltipHtml = `*** ${typeString} ***<br/>`;
+            let tooltipHtml = `<div class="tooltip-header"> ${typeString} </div>`;
             const duration = (element.Duration === 0) ? "0" : generalUtils.formatMillis((element).Duration);
-            tooltipHtml += `Duration: ${duration}<br/>`;
+            tooltipHtml += `<div class="tooltip-li">Duration: <span class="value">${duration}</span></div>`;
 
             if (element.Type !== "Compression") {
-                tooltipHtml += `Size: ${generalUtils.formatBytesToSize(element.Size)}<br/>`;
-                tooltipHtml += `Size (bytes): ${element.Size.toLocaleString()}<br/>`;
-                tooltipHtml += `Allocated Size: ${generalUtils.formatBytesToSize(element.FileSize)}<br/>`;
-                tooltipHtml += `Allocated Size (bytes): ${element.FileSize.toLocaleString()}<br/>`;
+                tooltipHtml += `<div class="tooltip-li">Size: <span class="value">${generalUtils.formatBytesToSize(element.Size)}</span></div>`;
+                tooltipHtml += `<div class="tooltip-li">Size (bytes): <span class="value">${element.Size.toLocaleString()}</span></div>`;
+                tooltipHtml += `<div class="tooltip-li">Allocated Size: <span class="value">${generalUtils.formatBytesToSize(element.FileSize)}</span></div>`;
+                tooltipHtml += `<div class="tooltip-li">Allocated Size (bytes): <span class="value">${element.FileSize.toLocaleString()}</span></div>`;
 
                 const speed = element.Duration ? generalUtils.formatBytesToSize(element.Size / element.Duration * 1000) + " / s" : "unknown";
-                tooltipHtml += `Speed: ${speed}<br />`;
+                tooltipHtml += `<div class="tooltip-li">Speed: <span class="value">${speed}</span></div>`;
 
             } else {
                 const compressionElement = element as Raven.Server.Utils.IoMetrics.IOMetricsRecentStatsAdditionalTypes;
-                tooltipHtml += `Original Size: ${generalUtils.formatBytesToSize(compressionElement.OriginalSize)}<br/>`;
-                tooltipHtml += `Original Size (bytes): ${compressionElement.OriginalSize.toLocaleString()}<br/>`;
-                tooltipHtml += `Compressed Size: ${generalUtils.formatBytesToSize(compressionElement.CompressedSize)}<br/>`;
-                tooltipHtml += `Compressed Size (bytes): ${compressionElement.CompressedSize.toLocaleString()}<br/>`;
-                tooltipHtml += `Compression Ratio: ${(compressionElement.CompressionRatio * 100).toFixed(2)}%<br/>`;
+                tooltipHtml += `<div class="tooltip-li">Original Size: <span class="value">${generalUtils.formatBytesToSize(compressionElement.OriginalSize)}</span></div>`;
+                tooltipHtml += `<div class="tooltip-li">Original Size (bytes): <span class="value">${compressionElement.OriginalSize.toLocaleString()}</span></div>`;
+                tooltipHtml += `<div class="tooltip-li">Compressed Size: <span class="value">${generalUtils.formatBytesToSize(compressionElement.CompressedSize)}</span></div>`;
+                tooltipHtml += `<div class="tooltip-li">Compressed Size (bytes): <span class="value">${compressionElement.CompressedSize.toLocaleString()}</span></div>`;
+                tooltipHtml += `<div class="tooltip-li">Compression Ratio: <span class="value">${(compressionElement.CompressionRatio * 100).toFixed(2)}%</span></div>`;
 
                 const compressionSpeed = element.Duration ? generalUtils.formatBytesToSize(compressionElement.OriginalSize / element.Duration * 1000) + " / s" : "unknown";
-                tooltipHtml += `Compression speed: ${compressionSpeed}`;
+                tooltipHtml += `<div class="tooltip-li">Compression speed: <span class="value">${compressionSpeed}</span></div>`;
             }
 
             this.handleTooltip(element, x, y, tooltipHtml);
