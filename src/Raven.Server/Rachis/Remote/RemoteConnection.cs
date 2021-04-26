@@ -378,18 +378,19 @@ namespace Raven.Server.Rachis.Remote
 
         private void DisposeInternal()
         {
-            try
-            {
-                _disconnect(); // force disconnection, to abort read/write
-            }
-            catch (Exception)
-            {
-                // even if we get an error , we must continue to the actual disposal
-            }
             using (_disposerLock.StartDisposing())
             {
                 RemoteConnectionsList.TryRemove(_info);
-                _stream?.Dispose();
+
+                try
+                {
+                    _disconnect(); // force disconnection, to abort read/write
+                }
+                catch (Exception)
+                {
+                    // even if we get an error , we must continue to the actual disposal
+                }
+
                 _releaseBuffer?.Dispose();
                 _context?.Dispose();
             }
