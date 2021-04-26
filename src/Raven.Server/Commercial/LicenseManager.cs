@@ -1336,7 +1336,7 @@ namespace Raven.Server.Commercial
             if (LicenseStatus.HasReadOnlyCertificates)
                 return;
 
-            const string details = "Your current license doesn't include the read only certificates feature";
+            const string details = "Your current license doesn't include the read-only certificates feature";
             throw GenerateLicenseLimit(LimitType.ReadOnlyCertificates, details);
         }
 
