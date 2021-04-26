@@ -67,7 +67,7 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Monitoring Endpoints")]
         MonitoringEndpoints,
 
-        [Description("Read Only Certificates")]
+        [Description("Read-only Certificates")]
         ReadOnlyCertificates
     }
 }
