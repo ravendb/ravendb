@@ -136,7 +136,9 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         protected override void AfterAllBatchesCompleted(DateTime lastBatchTime)
         {
-            UpdateEtlProcessState(LastProcessState, lastBatchTime);
+            if (Statistics.LastProcessedEtag > 0)
+                UpdateEtlProcessState(LastProcessState, lastBatchTime);
+            
             UpdateTimer(lastBatchTime);
         }
 
