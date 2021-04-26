@@ -1441,7 +1441,7 @@ namespace Raven.Server.Web.System
                 if (parameters.DatabaseNames == null || parameters.DatabaseNames.Length == 0)
                     throw new ArgumentNullException(nameof(parameters.DatabaseNames));
 
-                var databasesToUpdate = new List<string>();
+                var databasesToUpdate = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 using (context.OpenReadTransaction())
                 {
                     foreach (var databaseName in parameters.DatabaseNames)
@@ -1462,7 +1462,7 @@ namespace Raven.Server.Web.System
                     long index = 0;
                     foreach (var databaseName in databasesToUpdate)
                     {
-                        var result = await ServerStore.SendToLeaderAsync(new EditLockModeCommand(databaseName, parameters.Mode, raftRequestId));
+                        var result = await ServerStore.SendToLeaderAsync(new EditLockModeCommand(databaseName, parameters.Mode, $"{databaseName}/{raftRequestId}"));
                         index = result.Index;
                     }
 

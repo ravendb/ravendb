@@ -2,6 +2,7 @@
 using System.IO;
 using FastTests;
 using Orders;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
@@ -103,6 +104,64 @@ namespace SlowTests.Issues
                     Assert.True(databaseRecord.DeletionInProgress != null && databaseRecord.DeletionInProgress.Count > 0);
             }
         }
+
+        [Fact]
+        public void CanLockDatabase_Multiple()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var databaseName1 = $"{store.Database}_LockMode_1";
+                var databaseName2 = $"{store.Database}_LockMode_2";
+                var databaseName3 = $"{store.Database}_LockMode_3";
+
+                var databases = new[] { databaseName1, databaseName2, databaseName3 };
+
+                Assert.Throws<DatabaseDoesNotExistException>(() => store.Maintenance.Server.Send(new SetDatabasesLockOperation(new SetDatabasesLockOperation.Parameters { DatabaseNames = databases, Mode = DatabaseLockMode.PreventDeletesError })));
+
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName1)));
+
+                Assert.Throws<DatabaseDoesNotExistException>(() => store.Maintenance.Server.Send(new SetDatabasesLockOperation(new SetDatabasesLockOperation.Parameters { DatabaseNames = databases, Mode = DatabaseLockMode.PreventDeletesError })));
+
+                AssertLockMode(store, databaseName1, DatabaseLockMode.Unlock);
+
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName3)));
+
+                AssertLockMode(store, databaseName2, DatabaseLockMode.Unlock);
+                AssertLockMode(store, databaseName3, DatabaseLockMode.Unlock);
+
+                store.Maintenance.Server.Send(new SetDatabasesLockOperation(new SetDatabasesLockOperation.Parameters { DatabaseNames = databases, Mode = DatabaseLockMode.PreventDeletesError }));
+
+                AssertLockMode(store, databaseName1, DatabaseLockMode.PreventDeletesError);
+                AssertLockMode(store, databaseName2, DatabaseLockMode.PreventDeletesError);
+                AssertLockMode(store, databaseName3, DatabaseLockMode.PreventDeletesError);
+
+                store.Maintenance.Server.Send(new SetDatabasesLockOperation(databaseName2, DatabaseLockMode.PreventDeletesIgnore));
+
+                AssertLockMode(store, databaseName1, DatabaseLockMode.PreventDeletesError);
+                AssertLockMode(store, databaseName2, DatabaseLockMode.PreventDeletesIgnore);
+                AssertLockMode(store, databaseName3, DatabaseLockMode.PreventDeletesError);
+
+                store.Maintenance.Server.Send(new SetDatabasesLockOperation(new SetDatabasesLockOperation.Parameters { DatabaseNames = databases, Mode = DatabaseLockMode.PreventDeletesIgnore }));
+
+                AssertLockMode(store, databaseName1, DatabaseLockMode.PreventDeletesIgnore);
+                AssertLockMode(store, databaseName2, DatabaseLockMode.PreventDeletesIgnore);
+                AssertLockMode(store, databaseName3, DatabaseLockMode.PreventDeletesIgnore);
+
+                store.Maintenance.Server.Send(new SetDatabasesLockOperation(new SetDatabasesLockOperation.Parameters { DatabaseNames = databases, Mode = DatabaseLockMode.Unlock }));
+
+                store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName1, hardDelete: true));
+                store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName2, hardDelete: true));
+                store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName3, hardDelete: true));
+
+                static void AssertLockMode(IDocumentStore store, string databaseName, DatabaseLockMode mode)
+                {
+                    var databaseRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(databaseName));
+                    Assert.Equal(mode, databaseRecord.LockMode);
+                }
+            }
+        }
+
 
         [Fact]
         public void CanLockDatabase_Backup_Restore()
