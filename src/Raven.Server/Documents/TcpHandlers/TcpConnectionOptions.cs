@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public override string ToString()
         {
-            return "Tcp Connection " + _debugTag;
+            return $"TCP Connection ('{Operation}') {_debugTag}";
         }
         public IDisposable ConnectionProcessingInProgress(string debugTag)
         {
@@ -74,8 +74,21 @@ namespace Raven.Server.Documents.TcpHandlers
             GC.SuppressFinalize(this);
 #endif
 
-            Stream?.Dispose();
-            TcpClient?.Dispose();
+            using (TcpClient)
+            using (Stream)
+            {
+                if (Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
+                {
+                    try
+                    {
+                        TcpClient?.Client?.Disconnect(reuseSocket: false);
+                    }
+                    catch
+                    {
+                        // nothing we can do
+                    }
+                }
+            }
 
             _running.Wait();
             try
