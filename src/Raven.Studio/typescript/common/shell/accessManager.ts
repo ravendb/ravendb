@@ -26,6 +26,11 @@ class accessManager {
 
     isValidUser = ko.pureComputed<boolean>(() => this.securityClearance() === "ValidUser");
 
+
+    isAdminByDbName(dbName: string) {
+        return this.getDatabaseAccessLevelTextByDbName(dbName) === "Admin";
+    }
+    
     getEffectiveDatabaseAccessLevel(dbName: string) {
         if (this.isOperatorOrAbove()) {
             return "Admin";
@@ -95,7 +100,7 @@ class accessManager {
     
     isReadWriteAccessOrAbove = ko.pureComputed(() => {
         const accessLevel = this.activeDatabaseAccessLevel();
-        return accessLevel === 'ReadWrite' || accessLevel === 'Admin'; 
+        return accessLevel === 'ReadWrite' || accessLevel === 'Admin';
     });
     
     isAdminAccessOrAbove = ko.pureComputed(() => {

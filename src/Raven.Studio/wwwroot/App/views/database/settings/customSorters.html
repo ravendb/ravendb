@@ -3,7 +3,7 @@
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-header flex-horizontal">
                 <div>
-                    <a class="btn btn-primary" data-bind="attr: { href: addUrl }, requiredAccess: 'ReadWrite'">
+                    <a class="btn btn-primary" data-bind="attr: { href: addUrl }, requiredAccess: 'Admin'">
                         <i class="icon-plus"></i><span>Add a Database Custom Sorter</span>
                     </a>
                 </div>
@@ -31,13 +31,13 @@
                                 <button type="button" data-bind="click: $root.enterTestSorterMode.bind($root, $data)"
                                         class="btn btn-default"><i class="icon-rocket" title="Test custom sorter"></i>
                                 </button>
-                                <button type="button" data-bind="click: $root.editSorter.bind($root, $data), visible: !$root.isReadOnlyAccess()"
+                                <button type="button" data-bind="click: $root.editSorter.bind($root, $data), visible: $root.isAdminAccessOrAbove"
                                         class="btn btn-default"><i class="icon-edit" title="Edit custom sorter"></i>
                                 </button>
-                                <button type="button" data-bind="click: $root.editSorter.bind($root, $data), visible: $root.isReadOnlyAccess"
+                                <button type="button" data-bind="click: $root.editSorter.bind($root, $data), visible: !$root.isAdminAccessOrAbove()"
                                         class="btn btn-default"><i class="icon-preview" title="View custom sorter"></i>
                                 </button>
-                                <button type="button" data-bind="click: $root.confirmRemoveSorter.bind($root, $data), requiredAccess: 'ReadWrite'"
+                                <button type="button" data-bind="click: $root.confirmRemoveSorter.bind($root, $data), requiredAccess: 'Admin'"
                                         class="btn btn-danger"><i class="icon-trash" title="Delete custom sorter"></i>
                                 </button>
                             </div>

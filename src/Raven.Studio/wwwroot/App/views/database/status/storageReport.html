@@ -16,7 +16,7 @@
             <i data-bind="visible: $index() < $root.currentPath().length - 1" class="icon-arrow-filled-right"></i>
         </span>
     </div>
-    <div class="flex-horizontal flex-noshrink">
+    <div class="flex-horizontal flex-noshrink" data-bind="visible: accessManager.canCompactDatabase">
         <div class="flex-separator"></div>
         <button class="btn btn-sm btn-default" data-bind="click: compactDatabase">
             <i class="icon-compact"></i><span>Compact Database</span>

@@ -17,7 +17,10 @@ import accessManager = require("common/shell/accessManager");
 class viewModelBase {
 
     protected activeDatabase = activeDatabaseTracker.default.database;
+    
     protected isReadOnlyAccess = accessManager.default.isReadOnlyAccess;
+    protected isReadWriteAccessOrAbove = accessManager.default.isReadWriteAccessOrAbove;
+    protected isAdminAccessOrAbove = accessManager.default.isAdminAccessOrAbove;
     
     downloader = new downloader();
 
