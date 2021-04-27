@@ -2,7 +2,7 @@
     <form data-bind="submit: saveConfiguration" novalidate>
         <div class="content-margin">
             <div class="toolbar margin-bottom margin-bottom-lg flex-horizontal">
-                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }, requiredAccess: 'ReadWrite'">
+                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }, requiredAccess: 'Admin'">
                     <i class="icon-save"></i><span>Save</span>
                 </button>
             </div>
@@ -52,7 +52,7 @@
                                     <div class="checkbox">
                                         <input id="checkboxSeparator" type="checkbox"
                                                data-bind="checked: model.isDefined, checkedValue: 'identityPartsSeparator', enable: canEditSettings, validationElement: model.identityPartsSeparator,
-                                                          requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }">
+                                                          requiredAccess: 'Admin', requiredAccessOptions: { strategy: 'disable' }">
                                         <label for="checkboxSeparator">
                                             Identity parts separator
                                         </label>
@@ -81,7 +81,7 @@
                                     <div class="checkbox">
                                         <input id="checkboxMaxRequests" type="checkbox" min="0"
                                                data-bind="checked: model.isDefined, checkedValue: 'maxNumberOfRequestsPerSession', enable: canEditSettings, validationElement: model.maxNumberOfRequestsPerSession,
-                                                          requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }">
+                                                          requiredAccess: 'Admin', requiredAccessOptions: { strategy: 'disable' }">
                                         <label for="checkboxMaxRequests">
                                             Maximum number of requests per session
                                         </label>
@@ -110,7 +110,7 @@
                                     <div class="checkbox">
                                         <input id="useSessionContextToggle" type="checkbox"
                                                data-bind="checked: model.isDefined, checkedValue: 'useSessionContextForLoadBehavior', enable: canEditSettings(),
-                                                          requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }">
+                                                          requiredAccess: 'Admin', requiredAccessOptions: { strategy: 'disable' }">
                                         <label for="useSessionContextToggle">
                                             Use Session Context for Load Balancing
                                         </label>
@@ -139,7 +139,7 @@
                                     <div class="checkbox">
                                         <input id="checkboxReadBalance" type="checkbox"
                                                data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior', enable: canEditSettings(),
-                                                          requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }">
+                                                          requiredAccess: 'Admin', requiredAccessOptions: { strategy: 'disable' }">
                                         <label for="checkboxReadBalance">
                                             Read balance behavior
                                         </label>

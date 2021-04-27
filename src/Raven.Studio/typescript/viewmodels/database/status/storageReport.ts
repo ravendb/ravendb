@@ -1,6 +1,7 @@
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
+import accessManager = require("common/shell/accessManager");
 import getStorageReportCommand = require("commands/database/debug/getStorageReportCommand");
 import getEnvironmentStorageReportCommand = require("commands/database/debug/getEnvironmentStorageReportCommand");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
@@ -16,6 +17,8 @@ type positionAndSizes = {
 }
 
 class storageReport extends viewModelBase {
+    
+    accessManager = accessManager.default.databasesView;
 
     static readonly animationLength = 200;
 

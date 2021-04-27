@@ -1,6 +1,6 @@
 <form class="flex-vertical absolute-fill flex-form content-margin" data-bind="submit: save">
     <div class="flex-header">
-        <button type="submit" class="btn btn-primary" data-bind="enable: dirtyFlag().isDirty, requiredAccess: 'ReadWrite'">
+        <button type="submit" class="btn btn-primary" data-bind="enable: dirtyFlag().isDirty, requiredAccess: 'Admin'">
             <i class="icon-save"></i>
             <span>Save</span>
         </button>
@@ -8,7 +8,7 @@
             <i class="icon-cancel"></i>
             <span>Cancel</span>
         </button>
-        <label for="importFilePicker" class="btn btn-default pull-right" title="Upload custom sorter from file" data-bind="requiredAccess: 'ReadWrite'">
+        <label for="importFilePicker" class="btn btn-default pull-right" title="Upload custom sorter from file" data-bind="requiredAccess: 'Admin'">
             <i class="icon-import"></i><span>Load from file</span>
         </label>
         <div class="input-group file-input">
@@ -26,7 +26,7 @@
         </div>
         <label>Code:</label>
         <pre class="form-control margin-top flex-grow"
-             data-bind="aceEditor: { code: code, lang:'ace/mode/csharp', readOnly: $root.isReadOnlyAccess() }, 
+             data-bind="aceEditor: { code: code, lang:'ace/mode/csharp', readOnly: !$root.isAdminAccessOrAbove() }, 
                         validationOptions: { errorsAsTitle: false }, validationElement: code" style="height: 300px;">
         </pre>
         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: code">

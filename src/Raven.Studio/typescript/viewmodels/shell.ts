@@ -288,9 +288,7 @@ class shell extends viewModelBase {
                                         </div>`).join("")
                 : "No access granted";
             
-            popoverUtils.longWithHover($(".js-client-cert"),
-                {
-                    content: `<dl class="dl-horizontal margin-none client-certificate-info">
+            const authenticationInfo = `<dl class="dl-horizontal margin-none client-certificate-info">
                             <dt>Client Certificate</dt>
                             <dd><strong>${this.clientCertificate().Name}</strong></dd>
                             <dt>Thumbprint</dt>
@@ -299,8 +297,21 @@ class shell extends viewModelBase {
                             <dd><strong>${certificateModel.clearanceLabelFor(this.clientCertificate().SecurityClearance)}</strong></dd>
                             <dt><span>Access to databases:</span></dt>
                             <dd><span>${allowedDatabasesText}</span></dd>
-                          </dl>`
-                    ,
+                          </dl>`;
+            
+            popoverUtils.longWithHover($(".js-client-cert"),
+                {
+                    content: authenticationInfo,
+                    placement: 'top'
+                });
+        }
+        
+        if (!this.clientCertificate()) {
+            const authenticationInfo = "No authentication is set. Running in an unsecure mode.";
+            
+            popoverUtils.longWithHover($(".js-client-cert"),
+                {
+                    content: authenticationInfo,
                     placement: 'top'
                 });
         }

@@ -29,7 +29,7 @@
                             </li>
                         </ul>
                     </div>
-                    <div class="btn-group">
+                    <div class="btn-group" data-bind="visible: accessManager.canDelete">
                         <button type="button" class="btn btn-default dropdown-toggle" title="Set the delete lock mode for the selected databases"
                                 data-bind="enable: selectedDatabases().length && !spinners.globalToggleDisable(), 
                                                        css: { 'btn-spinner': spinners.globalToggleDisable() }" data-toggle="dropdown" aria-haspopup="true">
@@ -220,8 +220,9 @@
                                         <i class="icon-database-cutout icon-addon-cancel" data-bind="visible: !inProgressAction() && !disabled()"></i>
                                         <span data-bind="visible: !inProgressAction() && !disabled()">Disable</span>
                                     </button>
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" 
-                                            data-bind="disable: isBeingDeleted() || inProgressAction(), visible: online() || $root.isAboveUserAccess()">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                                            data-bind="disable: isBeingDeleted() || inProgressAction(), 
+                                                       visible: online() && $root.isAdminAccessByDbName($data.name)">
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
@@ -236,18 +237,18 @@
                                                 <i class="icon-play"></i> Resume indexing
                                             </a>
                                         </li>
-                                        <li data-bind="visible: $root.accessManager.canDisableIndexing() && !indexingDisabled()">
+                                        <li data-bind="visible: !indexingDisabled() && $root.accessManager.canDisableIndexing()">
                                             <a href="#" data-bind="click: $root.toggleDisableDatabaseIndexing">
                                                 <i class="icon-cancel"></i> Disable indexing
                                             </a>
                                         </li>
-                                        <li data-bind="visible: indexingDisabled()">
+                                        <li data-bind="visible: indexingDisabled() && $root.accessManager.canDisableIndexing()">
                                             <a href="#" data-bind="click: $root.toggleDisableDatabaseIndexing">
                                                 <i class="icon-play"></i> Enable indexing
                                             </a>
                                         </li>
                                         <li class="divider" data-bind="visible: $root.createIsLocalDatabaseObservable(name)"></li>
-                                        <li data-bind="visible: $root.accessManager.canCompactDatabase() && $root.createIsLocalDatabaseObservable(name)()">
+                                        <li data-bind="visible: $root.createIsLocalDatabaseObservable(name)() && $root.accessManager.canCompactDatabase()">
                                             <a data-bind="visible: disabled" title="The database is disabled" class="has-disable-reason disabled" data-placement="top">
                                                 <i class="icon-compact"></i> Compact database
                                             </a>
@@ -261,7 +262,9 @@
                                     <i class="icon-refresh-stats"></i>
                                 </button>
                                 <div class="btn-group" data-bind="visible: $root.accessManager.canDelete">
-                                    <button class="btn" data-bind="click: $root.deleteDatabase, disable: isBeingDeleted() || lockMode() !== 'Unlock', css: { 'btn-danger': lockMode() === 'Unlock', 'btn-default': lockMode() !== 'Unlock', 'btn-spinner': isBeingDeleted() || _.includes($root.spinners.localLockChanges(), name) }, attr: { title: lockMode() === 'Unlock' ? 'Remove database' : 'Database cannot be deleted because of the set lock mode' }">
+                                    <button class="btn" data-bind="click: $root.deleteDatabase, disable: isBeingDeleted() || lockMode() !== 'Unlock',
+                                                                   css: { 'btn-danger': lockMode() === 'Unlock', 'btn-default': lockMode() !== 'Unlock', 'btn-spinner': isBeingDeleted() || _.includes($root.spinners.localLockChanges(), name) },
+                                                                   attr: { title: lockMode() === 'Unlock' ? 'Remove database' : 'Database cannot be deleted because of the set lock mode' }">
                                         <i class="icon-trash" data-bind="visible: lockMode() === 'Unlock'"></i>
                                         <i class="icon-trash-cutout icon-addon-cancel" data-bind="visible: lockMode() === 'PreventDeletesIgnore'"></i>
                                         <i class="icon-trash-cutout icon-addon-exclamation" data-bind="visible: lockMode() === 'PreventDeletesError'"></i>
@@ -289,7 +292,6 @@
                                     </ul>
                                 </div>
                             </div>
-                            
                         </div>
                     </div>
                 </div>
