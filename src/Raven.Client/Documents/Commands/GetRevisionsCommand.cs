@@ -13,7 +13,6 @@ namespace Raven.Client.Documents.Commands
     {
         private readonly string _changeVector;
         public readonly string[] ChangeVectors;
-
         private readonly string _id;
         private readonly int? _start;
         private readonly int? _pageSize;
@@ -45,7 +44,6 @@ namespace Raven.Client.Documents.Commands
             ChangeVectors = changeVectors ?? throw new ArgumentNullException(nameof(changeVectors));
             _metadataOnly = metadataOnly;
         }
-
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var request = new HttpRequestMessage
@@ -53,10 +51,25 @@ namespace Raven.Client.Documents.Commands
                 Method = HttpMethod.Get
             };
 
-            var pathBuilder = new StringBuilder(node.Url);
-            pathBuilder.Append("/databases/")
+            var pathBuilder = new StringBuilder(node.Url)
+                .Append("/databases/")
                 .Append(node.Database)
                 .Append("/revisions?");
+            GetRequestQueryString(pathBuilder);
+
+            url = pathBuilder.ToString();
+            return request;
+        }
+
+        public string GetRequestQueryString()
+        {
+            var sb = new StringBuilder("?");
+            GetRequestQueryString(sb);
+            return sb.ToString();
+        }
+        
+        private void GetRequestQueryString(StringBuilder pathBuilder)
+        {
 
             if (_id != null)
                 pathBuilder.Append("&id=").Append(Uri.EscapeDataString(_id));
@@ -69,6 +82,7 @@ namespace Raven.Client.Documents.Commands
                     pathBuilder.Append("&changeVector=").Append(Uri.EscapeDataString(changeVector));
                 }
             }
+
             if (_before.HasValue)
                 pathBuilder.Append("&before=").Append(_before.Value.GetDefaultRavenFormat());
             if (_start.HasValue)
@@ -77,9 +91,6 @@ namespace Raven.Client.Documents.Commands
                 pathBuilder.Append("&pageSize=").Append(_pageSize);
             if (_metadataOnly)
                 pathBuilder.Append("&metadataOnly=true");
-
-            url = pathBuilder.ToString();
-            return request;
         }
 
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
