@@ -71,7 +71,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns the number of revisions for specified document.
         /// </summary>
-        Task<long> GetCountForAsync(string id, CancellationToken token = default);//
+        Task<long> GetCountForAsync(string id, CancellationToken token = default);
 
     }
 

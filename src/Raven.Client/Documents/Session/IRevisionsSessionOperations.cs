@@ -10,7 +10,7 @@ using Raven.Client.Json;
 
 namespace Raven.Client.Documents.Session
 {
-    
+
     public enum ForceRevisionStrategy
     {
         // Don't force revision
@@ -74,5 +74,22 @@ namespace Raven.Client.Documents.Session
         /// Returns the number of revisions for specified document.
         /// </summary>
         long GetCountFor(string id);
+        
+        /// <summary>
+        /// Access the lazy revisions operations 
+        /// </summary>
+        ILazyRevisionsOperations Lazily { get;}
+    }
+    /// <summary>
+    /// Revisions advanced synchronous Lazy session operations
+    /// </summary>
+    public interface ILazyRevisionsOperations
+    {
+        Lazy<List<T>> GetFor<T>(string id, int start = 0, int pageSize = 25);
+        Lazy<T> Get<T>(string changeVector); 
+        Lazy<List<MetadataAsDictionary>> GetMetadataFor(string id, int start = 0, int pageSize = 25); 
+        Lazy<Dictionary<string, T>> Get<T>(IEnumerable<string> changeVectors);  
+        Lazy<T> Get<T>(string id, DateTime date); 
+        
     }
 }
