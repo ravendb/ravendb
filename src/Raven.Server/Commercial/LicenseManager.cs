@@ -1327,7 +1327,8 @@ namespace Raven.Server.Commercial
 
         public void AssertCanAddReadOnlyCertificates(CertificateDefinition certificate)
         {
-            if (certificate.Permissions.All(x => x.Value == DatabaseAccess.Read) == false)
+            if (certificate.Permissions.Count == 0 || 
+                certificate.Permissions.All(x => x.Value == DatabaseAccess.Read) == false)
                 return;
 
             if (IsValid(out var licenseLimit) == false)
