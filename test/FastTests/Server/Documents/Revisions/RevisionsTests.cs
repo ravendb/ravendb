@@ -35,7 +35,194 @@ namespace FastTests.Server.Documents.Revisions
         public RevisionsTests(ITestOutputHelper output) : base(output)
         {
         }
+        [Fact]
+        public async Task CanGetRevisionsByChangeVectorsLazily()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = "users/1";
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenSession())
+                {
+                     session.Store(new User {Name = "Omer"}, id);
+                     session.SaveChanges();
+                }
 
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var user =  session.Load<Company>(id);
+                        user.Name = "Omer" + i;
+                        session.SaveChanges();
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var revisionsMetadata =  session.Advanced.Revisions.GetMetadataFor(id);
+                    Assert.Equal(11, revisionsMetadata.Count);
+
+                    var changeVectors = revisionsMetadata.Select(x => x.GetString(Constants.Documents.Metadata.ChangeVector)).ToList();
+                    
+                    var revisionsLazy  = session.Advanced.Revisions.Lazily.Get<User>(changeVectors);
+                    var lazyResult =  revisionsLazy.Value;
+                    var revisions  =   session.Advanced.Revisions.Get<User>(changeVectors);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(revisions.Keys, lazyResult.Keys);
+                    
+                    Assert.Equal(revisions.Values.Select(x=>x!=null), lazyResult.Values.Select(x=>x!=null));
+                }
+            }
+        }
+        [Fact]
+        public async Task CanGetForLazily()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = "users/1";
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenSession())
+                {
+                     session.Store(new User {Name = "Omer"}, id);
+                     session.SaveChanges();
+                }
+        
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var user =  session.Load<Company>(id);
+                        user.Name = "Omer " + i;
+                        session.SaveChanges();
+                    }
+                }
+                using (var session = store.OpenSession())
+                {
+                    var revision = session.Advanced.Revisions.GetFor<User>("users/1");
+                    var revisionLazily =  session.Advanced.Revisions.Lazily.GetFor<User>("users/1");
+                    var revisionLazilyResult = revisionLazily.Value;
+
+         
+                    Assert.Equal(revision.Select(x => x.Name), revisionLazilyResult.Select(x => x.Name));
+                    Assert.Equal(revision.Select(x => x.Id), revisionLazilyResult.Select(x => x.Id));
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    
+                }
+            }
+        }
+        [Fact]
+        public async Task CanGetRevisionsByIdAndTimeLazily()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = "users/1";
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Omer"}, id);
+                    session.SaveChanges();
+                }
+        
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var user =  session.Load<Company>(id);
+                        user.Name = "Omer " + i;
+                        session.SaveChanges();
+                    }
+                }
+                using (var session = store.OpenSession())
+                {
+                    var revision                 =  session.Advanced.Revisions.Get<User>("users/1", DateTime.Now);
+                    var revisionLazily  =  session.Advanced.Revisions.Lazily.Get<User>("users/1",DateTime.UtcNow);
+                    var revisionLazilyResult =  revisionLazily.Value;
+                    
+                    Assert.Equal(revision.Id, revisionLazilyResult.Id);
+                    Assert.Equal(revision.Name, revisionLazilyResult.Name);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+        [Fact]
+        public async Task CanGetMetadataForLazily()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = "users/1";
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenSession())
+                {
+                     session.Store(new User {Name = "Omer"}, id);
+                     session.SaveChanges();
+                }
+        
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var user =  session.Load<Company>(id);
+                        user.Name = "Omer " + i;
+                        session.SaveChanges();
+                    }
+                }
+                using (var session = store.OpenSession())
+                {
+                    var revisionsMetadata =  session.Advanced.Revisions.GetMetadataFor(id);
+                    var revisionsMetaDataLazily   = session.Advanced.Revisions.Lazily.GetMetadataFor(id);
+                    var revisionsMetaDataLazilyResult =  revisionsMetaDataLazily.Value;
+        
+                    
+                    Assert.Equal(
+                        revisionsMetadata.Select(x => x["@id"]),
+                        revisionsMetaDataLazilyResult.Select(x =>  x["@id"])
+                    );
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    
+                }
+            }
+        }
+        [Fact]
+        public async Task CanGetRevisionsByChangeVectorLazily()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = "users/1";
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenSession())
+                {
+                     session.Store(new User {Name = "Omer"}, id);
+                     session.SaveChanges();
+                }
+
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var user =  session.Load<Company>(id);
+                        user.Name = "Omer " + i;
+                        session.SaveChanges();
+                    }
+                }
+
+                var database =  await GetDocumentDatabaseInstanceFor(store);
+                var dbId =  database.DbBase64Id;
+                var cv = $"A:21-{dbId}";
+
+                using (var session = store.OpenSession())
+                {
+                    var revisions =  session.Advanced.Revisions.Get<User>(cv);
+                    var revisionsLazily = session.Advanced.Revisions.Lazily.Get<User>(cv);
+                    var revisionsLazilyValue =  revisionsLazily.Value;
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(revisions.Id, revisionsLazilyValue.Id);
+                    Assert.Equal(revisions.Name, revisionsLazilyValue.Name);
+                }
+            }
+        }
         [Fact]
         public async Task CanGetForAsyncLazily()
         {
@@ -111,7 +298,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
         [Fact]
-        public async Task CanGetRevisionsByIdAndTimeLazily()
+        public async Task CanGetRevisionsByIdAndTimeAsyncLazily()
         {
             using (var store = GetDocumentStore())
             {
@@ -145,7 +332,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
         [Fact]
-        public async Task CanGetRevisionsByChangeVectorLazily()
+        public async Task CanGetRevisionsByChangeVectorAsyncLazily()
         {
             using (var store = GetDocumentStore())
             {
@@ -185,7 +372,7 @@ namespace FastTests.Server.Documents.Revisions
         }
 
         [Fact]
-        public async Task CanGetRevisionsByChangeVectorsLazily()
+        public async Task CanGetRevisionsByChangeVectorsAsyncLazily()
         {
             using (var store = GetDocumentStore())
             {
