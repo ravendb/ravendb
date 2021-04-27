@@ -6,8 +6,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json;
 
 namespace Raven.Client.Documents.Session
@@ -17,6 +19,11 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public interface IRevisionsSessionOperationsAsync
     {
+        /// <summary>
+        /// Access the lazy revisions operations
+        /// </summary>
+        ILazyRevisionsOperationsAsync Lazily { get; }
+
         /// <summary>
         /// Returns all previous document revisions for specified document (with paging).
         /// </summary>
@@ -64,6 +71,17 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns the number of revisions for specified document.
         /// </summary>
-        Task<long> GetCountForAsync(string id, CancellationToken token = default);
+        Task<long> GetCountForAsync(string id, CancellationToken token = default);//
+
+    }
+
+    public interface ILazyRevisionsOperationsAsync
+    {
+        Lazy<Task<List<T>>> GetForAsync<T>(string id, int start = 0, int pageSize = 25, CancellationToken token = default);
+        Lazy<Task<T>> GetAsync<T>(string changeVector, CancellationToken token = default); 
+        Lazy<Task<List<MetadataAsDictionary>>> GetMetadataForAsync(string id, int start = 0, int pageSize = 25, CancellationToken token = default); 
+        Lazy<Task<Dictionary<string, T>>> GetAsync<T>(IEnumerable<string> changeVectors, CancellationToken token = default);  
+        Lazy<Task<T>> GetAsync<T>(string id, DateTime date, CancellationToken token = default); 
+        
     }
 }
