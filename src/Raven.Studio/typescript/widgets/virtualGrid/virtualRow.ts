@@ -65,15 +65,21 @@ class virtualRow {
             } else {
                 this.element.text("");
             }
+
+            let hasChangedSelectedStatus = this.isItemSelected !== isSelected;
             
-            if (customRowClasses) {
+            if (customRowClasses && customRowClasses.length) {
                 this.element.attr("class", "virtual-row " + customRowClasses.join(" "));
+                
+                // since we force unselected state above - mark selection state to be updated if needed
+                if (isSelected) {
+                    hasChangedSelectedStatus = true;
+                }
             }
 
             // Update the selected status. Displays as a different row color.
-            const hasChangedSelectedStatus = this.isItemSelected !== isSelected;
             if (hasChangedSelectedStatus) {
-                this.element.toggleClass("selected");
+                this.element.toggleClass("selected", isSelected);
                 this.isItemSelected = isSelected;
             }
             
