@@ -12,10 +12,9 @@
     width: 100%;
     padding-bottom: @gutter;
     opacity: 0;
-    
     transition: opacity 0.5s ease-in-out;
     transition-delay: 0.5s;
-    
+
     &.initialized {
         opacity: 1;
     }
@@ -279,7 +278,7 @@
                         position: relative;
                     }
                 }
-                
+
                 .spinner {
                     .node-label {
                         &::before {
@@ -476,46 +475,6 @@
                             text-align: right;
                         }
                     }
-
-                    &:nth-of-type(10n+1) {
-                        --node-color: @color-4;
-                    }
-
-                    &:nth-of-type(10n+2) {
-                        --node-color: @color-5;
-                    }
-
-                    &:nth-of-type(10n+3) {
-                        --node-color: @color-1;
-                    }
-
-                    &:nth-of-type(10n+4) {
-                        --node-color: @color-2;
-                    }
-
-                    &:nth-of-type(10n+5) {
-                        --node-color: @color-3;
-                    }
-
-                    &:nth-of-type(10n+6) {
-                        --node-color: @color-4-2;
-                    }
-
-                    &:nth-of-type(10n+7) {
-                        --node-color: @color-5-2;
-                    }
-
-                    &:nth-of-type(10n+8) {
-                        --node-color: @color-1-2;
-                    }
-
-                    &:nth-of-type(10n+9) {
-                        --node-color: @color-2-2;
-                    }
-
-                    &:nth-of-type(10n) {
-                        --node-color: @color-3-2;
-                    }
                 }
 
                 &.nodes-storage {
@@ -556,51 +515,12 @@
                 .line {
                     fill: none;
                     stroke-width: 2;
+                    stroke: var(--node-color);
                 }
 
                 .fill {
                     fill-opacity: 0.3;
                     stroke: none;
-                }
-
-                .node-a .line {
-                    stroke: @color-4;
-                }
-
-                .node-b .line {
-                    stroke: @color-5;
-                }
-
-                .node-c .line {
-                    stroke: @color-1;
-                }
-
-                .node-d .line {
-                    stroke: @color-2;
-                }
-
-                .node-e .line {
-                    stroke: @color-3;
-                }
-
-                .node-f .line {
-                    stroke: @color-4-2;
-                }
-
-                .node-g .line {
-                    stroke: @color-5-2;
-                }
-
-                .node-h .line {
-                    stroke: @color-1-2;
-                }
-
-                .node-i .line {
-                    stroke: @color-2-2;
-                }
-
-                .node-j .line {
-                    stroke: @color-3-2;
                 }
             }
         }
@@ -881,7 +801,7 @@
     }
 
     .node-label {
-        background-color: @gray-300;
+        background-color: var(--node-color);
         color: @well-bg;
         font-size: 10px;
         font-weight: 800;
@@ -893,48 +813,8 @@
         border-radius: 15px;
         margin-right: 7.0820917px;
         flex-shrink: 0;
-
-        &.node-a {
-            background-color: @color-4;
-        }
-
-        &.node-b {
-            background-color: @color-5;
-        }
-
-        &.node-c {
-            background-color: @color-1;
-        }
-
-        &.node-d {
-            background-color: @color-2;
-        }
-
-        &.node-e {
-            background-color: @color-3;
-        }
-
-        &.node-f {
-            background-color: @color-4-2;
-        }
-
-        &.node-g {
-            background-color: @color-5-2;
-        }
-
-        &.node-h {
-            background-color: @color-1-2;
-        }
-
-        &.node-i {
-            background-color: @color-2-2;
-        }
-
-        &.node-j {
-            background-color: @color-3-2;
-        }
     }
-    
+
     svg {
         .pointer-line {
             fill: none;
