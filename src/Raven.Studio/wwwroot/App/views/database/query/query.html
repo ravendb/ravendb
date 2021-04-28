@@ -251,12 +251,12 @@
             </button>
             <!-- ko foreach: timeSeriesGraphs -->
             <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToTimeSeriesTab, css: { active: $parent.currentTab() === $data }">
-                <i class="icon-stats"></i> <span data-bind="text: 'Time Series'"></span> &nbsp; <span class="label label-primary" data-bind="click: $root.closeTimeSeriesTab"><i class="icon-cancel"></i></span>
+                <i class="icon-stats"></i> <span data-bind="text: 'Time Series'"></span> &nbsp; <span class="text-primary" data-bind="click: $root.closeTimeSeriesTab"><i class="icon-cancel"></i></span>
             </button>
             <!-- /ko -->
             <!-- ko foreach: timeSeriesTables -->
             <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToTimeSeriesTab, css: { active: $parent.currentTab() === $data }">
-                <i class="icon-table"></i> <span data-bind="text: documentId + ' - ' + name"></span> &nbsp; <span class="label label-primary" data-bind="click: $root.closeTimeSeriesTab"><i class="icon-cancel"></i></span>
+                <i class="icon-table"></i> <span data-bind="text: documentId + ' - ' + name"></span> &nbsp; <span class="text-primary" data-bind="click: $root.closeTimeSeriesTab"><i class="icon-cancel"></i></span>
             </button>
             <!-- /ko -->
         </div>

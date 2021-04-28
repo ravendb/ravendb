@@ -56,7 +56,7 @@
 #queryContainer {
 
     #spatialMap {
-        
+
         #mapid {
             height: 100%;
             width: 100%;
@@ -115,7 +115,7 @@
             padding-top: 15px;
             padding-right: 30px;
         }
-        
+
         .number-of-markers {
             background-color: lighten(@brand-info, 30%);
             border-radius: 5px;
@@ -133,7 +133,7 @@
             }
         }
     }
-    
+
     svg {
         .levelName {
             fill: @text-emphasis;
@@ -141,27 +141,28 @@
             font-weight: bold;
             font-size: 28px;
         }
-        
+
         .duration {
             fill: @text-color;
             font-size: 20px;
             text-anchor: middle;
         }
     }
-    
+
     .color-def (@innerName, @color) {
         path {
             &.@{innerName} {
                 fill: @color;
             }
         }
+
         .item-rect {
             &.@{innerName} {
                 background-color: @color;
             }
         }
     }
-    
+
     .timings {
         path {
             fill: @gray;
@@ -170,7 +171,7 @@
         .item-rect {
             background-color: @gray;
         }
-        
+
         .color-def(~'optimizer', @color-5-3);
         .color-def(~'query', @color-1);
         .color-def(~'retriever', @color-1-2);
@@ -190,12 +191,13 @@
 
     .query-results-container {
         .results-btn {
-            color: @gray-500;
-            background-color: @gray-800;
+            color: @text-color;
+            background-color: fadeout(@panel-bg, 30%);
+            border: none;
 
             &.active {
-                background-color: @gray-600;
-                color: @gray-100;
+                color: @text-emphasis;
+                background-color: @panel-bg;
             }
         }
     }
