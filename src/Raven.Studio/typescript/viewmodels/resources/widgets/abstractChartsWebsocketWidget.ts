@@ -37,7 +37,7 @@ abstract class abstractChartsWebsocketWidget<
     protected static tooltipContent(date: Date | null) {
         if (date) {
             const dateFormatted = moment(date).format(lineChart.timeFormat);
-            return `<div class="tooltip-inner">Time: <strong>${dateFormatted}</strong></div>`;
+            return `<div class="tooltip-inner"><div class="tooltip-li">Time: <div class="value">${dateFormatted}</div></div></div>`;
         } else {
             return null;
         }

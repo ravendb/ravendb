@@ -595,18 +595,6 @@ class genUtils {
         return code;
     };
     
-    static findLongestLine(htmlText: string, lineSeparator: string = "<br/>") : string {
-        // Find and return the longest line in an html text
-        const textLines = htmlText.split(lineSeparator);
-        return textLines.reduce((a, b) => (a.length > b.length) ? a : b, "");
-    }
-
-    static findNumberOfLines(htmlText: string, lineSeparator: string = "<br/>"): number {
-        // Find and return the number of lines in an html text
-        const textLines = htmlText.split(lineSeparator);
-        return textLines.length;
-    }
-    
     static canConsumeDelegatedEvent(event: JQueryEventObject) {
         const target = event.target;
         const currentTarget = event.currentTarget;
