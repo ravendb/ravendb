@@ -423,41 +423,12 @@ i {
 .btn {
     [class*=" icon-"],
     [class^="icon-"] {
-        margin-left: -3px;
-        margin-right: -3px;
+        top: .1em;
+        transform: scale(1.1);
+        display: inline-block;
 
         + span {
             margin-left: 9px;
-        }
-    }
-
-    &:not(.btn-sm .btn-xs) {
-        [class*=" icon-"],
-        [class^="icon-"] {
-            font-size: 170%;
-            line-height: 60%;
-            top: 4px;
-            margin-left: -3px;
-        }
-    }
-
-    &.btn-sm {
-        [class*=" icon-"],
-        [class^="icon-"] {
-            font-size: 110%;
-            line-height: 60%;
-            top: 2px;
-        }
-    }
-
-    &.btn-xs {
-        [class*=" icon-"],
-        [class^="icon-"] {
-            top: 1px;
-
-            + span {
-                margin-left: 3px;
-            }
         }
     }
 }
