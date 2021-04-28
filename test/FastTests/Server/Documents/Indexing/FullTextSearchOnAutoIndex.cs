@@ -41,6 +41,19 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal(1, count);
                     Assert.Equal("Auto/Users/BySearch(Name)", stats.IndexName);
                 }
+
+                using (var s = store.OpenAsyncSession())
+                {
+                    QueryStatistics stats;
+
+                    var count = await s.Query<User>()
+                        .Statistics(out stats)
+                        .Where(u => u.Name == "Ayende")
+                        .CountAsync();
+
+                    Assert.Equal(0, count);
+                    Assert.Equal("Auto/Users/BySearch(Name)", stats.IndexName);
+                }
             }
         }
 
