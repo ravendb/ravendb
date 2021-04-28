@@ -90,8 +90,7 @@ namespace Raven.Server.Utils.IoMetrics
 
             _basePath = result.Environments[0].Path;
             
-            AddEnvironmentTypeToPathIfNeeded(result.Environments[0]);
-
+            
             foreach (var environment in result.Environments)
             {
                 var folder = environment.Path;
@@ -192,11 +191,6 @@ namespace Raven.Server.Utils.IoMetrics
                     preparedMetricsResponse.Environments.Add(currentEnvironment);
                 }
 
-                if (currentEnvironment.Path == _basePath)
-                {
-                    AddEnvironmentTypeToPathIfNeeded(currentEnvironment);
-                }
-
                 // 5. Prepare response, add recent items.  Note: History items are not added since studio does not display them anyway
                 var preparedFilesInfo = currentEnvironment.Files.FirstOrDefault(x => x.File == file.Name) ?? new IOMetricsFileStats
                 {
@@ -228,25 +222,7 @@ namespace Raven.Server.Utils.IoMetrics
 
             return preparedMetricsResponse;
         }
-
-        private void AddEnvironmentTypeToPathIfNeeded(IOMetricsEnvironment environment)
-        {
-            switch (environment.Type)
-            {
-                case StorageEnvironmentWithType.StorageEnvironmentType.Documents:
-                    environment.Path = Path.Combine(_basePath, "Documents");
-                    break;
-                case StorageEnvironmentWithType.StorageEnvironmentType.System:
-                case StorageEnvironmentWithType.StorageEnvironmentType.Configuration:
-                case StorageEnvironmentWithType.StorageEnvironmentType.Index:
-                    // those envs already contain env type in path
-                    Debug.Assert(environment.Path.Contains(environment.Type.ToString()), "environment.Path.Contains(environment.Type.ToString())");
-                    break;
-                default:
-                    throw new InvalidOperationException("Unknown type: " + environment.Type);
-            }
-        }
-
+        
         private void OnIOChange(IoChange recentFileIoItem)
         {
             // recentFileIoItem is the recent item that was written to disk by the server
