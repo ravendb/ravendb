@@ -247,7 +247,7 @@
                                                 <i class="icon-play"></i> Enable indexing
                                             </a>
                                         </li>
-                                        <li class="divider" data-bind="visible: $root.createIsLocalDatabaseObservable(name)"></li>
+                                        <li class="divider" data-bind="visible: $root.createIsLocalDatabaseObservable(name) &&  $root.accessManager.canCompactDatabase()"></li>
                                         <li data-bind="visible: $root.createIsLocalDatabaseObservable(name)() && $root.accessManager.canCompactDatabase()">
                                             <a data-bind="visible: disabled" title="The database is disabled" class="has-disable-reason disabled" data-placement="top">
                                                 <i class="icon-compact"></i> Compact database

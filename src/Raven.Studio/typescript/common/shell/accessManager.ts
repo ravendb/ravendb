@@ -26,9 +26,8 @@ class accessManager {
 
     isValidUser = ko.pureComputed<boolean>(() => this.securityClearance() === "ValidUser");
 
-
     isAdminByDbName(dbName: string) {
-        return this.getDatabaseAccessLevelTextByDbName(dbName) === "Admin";
+        return this.getEffectiveDatabaseAccessLevel(dbName) === "Admin";
     }
     
     getEffectiveDatabaseAccessLevel(dbName: string) {
