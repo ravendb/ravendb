@@ -8,6 +8,8 @@ using Raven.Server.Dashboard;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Collections;
@@ -153,9 +155,11 @@ namespace Raven.Server.NotificationCenter
             return _notificationsStorage.GetPerformanceHintCount();
         }
 
-        public void Dismiss(string id)
+        public void Dismiss(string id, RavenTransaction existingTransaction = null, bool sendNotificationEvenIfDoesntExist = true)
         {
-            _notificationsStorage.Delete(id);
+            var deleted = _notificationsStorage.Delete(id, existingTransaction);
+            if (deleted == false && sendNotificationEvenIfDoesntExist == false)
+                return;
 
             // send this notification even when notification doesn't exist
             // we don't persist all notifications
