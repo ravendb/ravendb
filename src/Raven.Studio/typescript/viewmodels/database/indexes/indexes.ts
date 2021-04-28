@@ -377,18 +377,27 @@ class indexes extends viewModelBase {
         const typeFilter = this.indexStatusFilter();
         const withIndexingErrorsOnly = this.showOnlyIndexesWithIndexingErrors();
         
-        this.selectedIndexesName([]);
+        const selectedIndexes = this.selectedIndexesName();
+        let selectionChanged = false;
+        
         this.indexGroups().forEach(indexGroup => {
             let hasAnyInGroup = false;
             indexGroup.indexes().forEach(index => {
                 const match = index.filter(filterLower, typeFilter, withIndexingErrorsOnly);
                 if (match) {
                     hasAnyInGroup = true;
+                } else if (_.includes(selectedIndexes, index.name)) {
+                    _.pull(selectedIndexes, index.name);
+                    selectionChanged = true;
                 }
             });
 
             indexGroup.groupHidden(!hasAnyInGroup);
         });
+        
+        if (selectionChanged) {
+            this.selectedIndexesName(selectedIndexes);    
+        }
     }
     
     private getIndexesProgress() {
