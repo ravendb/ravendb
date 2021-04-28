@@ -1952,32 +1952,28 @@ class ongoingTasksStats extends viewModelBase {
     private handleTooltip(element: taskOperation | timeGapInfo | performanceBaseWithCache | subscriptionErrorItemInfo | subscriptionPendingItemInfo,
                           x: number, y: number, tooltipHtml: string) {
         if (element && !this.dialogVisible) {
-            const canvas = this.canvas.node() as HTMLCanvasElement;
-            const context = canvas.getContext("2d");
-            context.font = this.tooltip.style("font");
+            this.tooltip
+                .style('display', undefined)
+                .html(tooltipHtml)
+                .datum(element);
 
-            const longestLine = generalUtils.findLongestLine(tooltipHtml);
-            const tooltipWidth = context.measureText(longestLine).width + 60;
-
-            const numberOfLines = generalUtils.findNumberOfLines(tooltipHtml);
-            const tooltipHeight = numberOfLines * 30 + 60;
-
+            const $tooltip = $(this.tooltip.node());
+            const tooltipWidth = $tooltip.width();
+            const tooltipHeight = $tooltip.height();
+            
             x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
             y = Math.min(y, Math.max(this.totalHeight - tooltipHeight, 0));
 
             this.tooltip
                 .style("left", (x + 10) + "px")
-                .style("top", (y + 10) + "px")
-                .style('display', undefined);
+                .style("top", (y + 10) + "px");
 
             this.tooltip
                 .transition()
                 .duration(250)
                 .style("opacity", 1);
 
-            this.tooltip
-                .html(tooltipHtml)
-                .datum(element);
+           
         } else {
             this.hideTooltip();
         }
