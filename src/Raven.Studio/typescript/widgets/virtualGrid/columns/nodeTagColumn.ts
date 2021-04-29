@@ -14,7 +14,7 @@ class nodeTagColumn<T extends { nodeTag: string, database: string }> extends hyp
     
     private valueProvider(item: T) {
         const nodeTag = item.nodeTag;
-        return `<span class="node-label node-${nodeTag.toLocaleLowerCase()}">${nodeTag}</span>`;
+        return `<span class="node-label node-${nodeTag}">${nodeTag}</span>`;
     }
 
     toDto(): virtualColumnDto {

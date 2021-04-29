@@ -35,6 +35,8 @@ class clusterDashboard extends viewModelBase {
 
     static localStorageName = storageKeyProvider.storageKeyFor("clusterDashboardLayout");
     
+    private static readonly nodeColors = ["#2f9ef3", "#945ab5", "#f06582", "#f0b362", "#7bd85d", "#7069ee", "#d85b9a", "#f38a66", "#edcd51", "#37c4ac"];
+    
     private packery: PackeryStatic;
     resizeObserver: ResizeObserver;
     initialized = ko.observable<boolean>(false);
@@ -121,12 +123,26 @@ class clusterDashboard extends viewModelBase {
     
     attached() {
         super.attached();
-
+        
         $("#page-host").css("overflow-y", "scroll");
+    }
+    
+    syncStyles(nodes: clusterNode[]) {
+        const styles = document.getElementById("cluster-dashboard-node-styles") as HTMLStyleElement;
+        
+        const rules = nodes.map((node, idx) => {
+            const color = clusterDashboard.nodeColors[idx % clusterDashboard.nodeColors.length];
+            return `.node-${node.tag()} { --node-color: ${color}; } `; 
+        });
+        
+        styles.innerHTML = rules.join(" ");
     }
 
     compositionComplete(child?: HTMLElement) {
         super.compositionComplete();
+
+        this.syncStyles(this.nodes());
+        this.registerDisposable(this.nodes.subscribe(nodes => this.syncStyles(nodes)));
         
         const throttledLayout = _.debounce(() => this.onResized(), 400);
         

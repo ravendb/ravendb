@@ -14,7 +14,7 @@
         <div class="property">
             <div class="flex-horizontal">
                 <div class="nodes-container" data-bind="foreach: nodeStats">
-                    <div class="nodes-item">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
                         <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
@@ -35,7 +35,7 @@
         <div class="property">
             <div class="flex-horizontal">
                 <div class="nodes-container" data-bind="foreach: nodeStats">
-                    <div class="nodes-item">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
                         <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
@@ -53,7 +53,7 @@
         <div class="property">
             <div class="flex-horizontal">
                 <div class="nodes-container" data-bind="foreach: nodeStats">
-                    <div class="nodes-item">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
                         <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">

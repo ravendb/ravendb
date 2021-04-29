@@ -14,7 +14,7 @@
         <div class="property">
             <div class="flex-horizontal">
                 <div class="nodes-container" data-bind="foreach: nodeStats">
-                    <div class="nodes-item" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag }, css: { 'no-data': !currentItem(), 'spinner': spinner }">
                         <div class="nodes-item-header">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
@@ -40,7 +40,7 @@
                 </button>
 
                 <div class="nodes-container" data-bind="foreach: nodeStats">
-                    <div class="nodes-item" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag }, css: { 'no-data': !currentItem(), 'spinner': spinner }">
                         <div class="nodes-item-header">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
@@ -84,7 +84,7 @@
                 </button>
 
                 <div class="nodes-container" data-bind="foreach: nodeStats">
-                    <div class="nodes-item" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag }, css: { 'no-data': !currentItem(), 'spinner': spinner }">
                         <div class="nodes-item-header">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
