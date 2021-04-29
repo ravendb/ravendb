@@ -18,11 +18,11 @@
                     </button>
                 </div>
                 <div data-bind="visible: !inSortableMode()">
-                    <button class="btn btn-default" data-bind="click: enableNodesSort, enable: nodes().length > 1">
+                    <button class="btn btn-default" data-bind="click: enableNodesSort, enable: nodes().length > 1, requiredAccess: 'Operator'">
                         <i class="icon-reorder"></i>
                         <span>Reorder nodes</span>
                     </button>
-                    <button class="btn btn-primary" data-bind="click: addNode, enable: addNodeEnabled">
+                    <button class="btn btn-primary" data-bind="click: addNode, enable: addNodeEnabled, requiredAccess: 'Operator'">
                         <i class="icon-plus"></i>
                         <span>Add node to group</span>
                     </button>
@@ -32,7 +32,8 @@
                             <i class="icon-settings"></i><span>Settings</span>
                             <span class="caret"></span>
                         </button>
-                        <div class="dropdown-menu settings-menu" data-bind="dropdownPanel: true, template: { name: 'db-group-settings-template' }">
+                        <div class="dropdown-menu settings-menu" 
+                             data-bind="dropdownPanel: true, template: { name: 'db-group-settings-template' }">
                         </div>
                     </div>
                 </div>
@@ -56,7 +57,6 @@
                     </div>
                 </div>
             </div>
-            
             <div class="scroll flex-grow nodes-list" data-bind="css: { 'sort-mode' : inSortableMode }">
                 <div class="not-deleted-nodes" data-bind="foreach: nodes">
                     <div class="panel destination-item panel-hover">
@@ -89,7 +89,6 @@
                                     </div>-->
                                 </div>
                             </div>
-
                             <div class="actions-container" data-bind="visible: !$root.inSortableMode()">
                                 <div class="actions">
                                     <!-- TODO:
@@ -102,7 +101,7 @@
                                             <li><a href="#">Promote node immediately</a></li>
                                         </ul>
                                     </div>-->
-                                    <div class="dropdown dropdown-right">
+                                    <div class="dropdown dropdown-right" data-bind="requiredAccess: 'Operator'">
                                         <button class="btn btn-danger dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                             <i class="icon-disconnected"></i> <span>Delete from group</span>
                                             <span class="caret"></span>
@@ -181,7 +180,8 @@
                 <div class="control-label flex-grow">Allow dynamic database distribution</div>
                 <div class="flex-noshrink">
                     <div class="toggle">
-                        <input type="checkbox" class="styled" data-bind="checked: dynamicDatabaseDistribution, enable:!$root.showDynamicDatabaseDistributionWarning()">
+                        <input type="checkbox" class="styled" data-bind="checked: dynamicDatabaseDistribution, enable:!$root.showDynamicDatabaseDistributionWarning(),
+                                                                         requiredAccess: 'Operator', requiredAccessOptions: { strategy: 'disable' }">
                         <label></label>
                     </div>
                 </div>
@@ -191,5 +191,4 @@
             </div>
         </div>
     </div>
-
 </script>

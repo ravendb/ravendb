@@ -22,6 +22,9 @@ class viewModelBase {
     protected isReadWriteAccessOrAbove = accessManager.default.isReadWriteAccessOrAbove;
     protected isAdminAccessOrAbove = accessManager.default.isAdminAccessOrAbove;
     
+    protected isOperatorOrAbove = accessManager.default.isOperatorOrAbove;
+    protected isClusterAdminOrClusterNode = accessManager.default.isClusterAdminOrClusterNode;
+    
     downloader = new downloader();
 
     isBusy = ko.observable<boolean>(false);

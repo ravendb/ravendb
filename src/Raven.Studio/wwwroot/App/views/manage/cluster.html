@@ -68,14 +68,15 @@
                                     <i class="icon-demote"></i> <span>Demote</span>
                                 </button>
 
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: connected() && !isPassive()">
+                                <div class="btn-group" data-bind="visible: $root.isOperatorOrAbove">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" 
+                                            data-bind="enable: connected() && !isPassive()">
                                         <span>Operations</span>
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-right">
-                                        <li>
+                                        <li data-bind="visible: $root.isClusterAdminOrClusterNode">
                                             <a href="#" data-bind="click: _.partial($parent.assignCores, $data)">
                                                 <i class="icon-reassign-cores"></i>
                                                 <span>Reassign cores</span>
@@ -95,7 +96,7 @@
                                     </ul>
                                 </div>
                                 <button class="btn btn-danger" 
-                                        data-bind="click: _.partial($parent.deleteNode, $data), enable: $root.canDeleteNodes() && !_.includes($root.spinners.delete(), tag()), 
+                                        data-bind="click: _.partial($parent.deleteNode, $data), enable: $root.canDeleteNodes() && !_.includes($root.spinners.delete(), tag()),
                                                    css: { 'btn-spinner': _.includes($root.spinners.delete(), tag()) }, visible: $root.accessManager.canDeleteNode" 
                                         title="Remove node from cluster">
                                     <i class="icon-trash"></i>

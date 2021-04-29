@@ -2,7 +2,7 @@
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6">
             <div class="flex-header flex-horizontal">
-                <div class="form-inline">
+                <div class="form-inline" data-bind="requiredAccess: 'Admin'">
                     <div class="checkbox checkbox-primary checkbox-inline align-checkboxes" title="Select all or none">
                         <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }" />
                         <label></label>
@@ -10,8 +10,7 @@
                     <div class="toolbar-actions">
                         <div class="btn-group btn-group-label" data-label="Selection" data-bind="css: { active: selectedItems().length }">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: selectedItems().length">
-                                <i class="icon-play"></i><span>Set status</span>
-                                &nbsp;&nbsp;
+                                <i class="icon-play"></i><span class="margin-right margin-right-sm">Set status</span>
                                 <span class="caret"></span>
                                 <span class="sr-only">Toggle Dropdown</span>
                             </button>
@@ -53,12 +52,12 @@
                 <div class="row" data-bind="visible: perCollectionConfigurations().length === 0">
                     <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                         <i class="icon-xl icon-empty-set text-muted"></i>
-                        <h2 class="text-center text-muted">No collection specific configuration has been created.</h2>    
+                        <h2 class="text-center text-muted">No collection specific configuration has been created.</h2>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-sm-12 col-lg-6">
+        <div class="col-sm-12 col-lg-6" data-bind="requiredAccess: 'Admin'">
             <div class="flex-header">
                 <button class="btn btn-default" data-bind="click: addCollectionSpecificConfiguration">
                     <i class="icon-plus"></i>
@@ -104,7 +103,7 @@
                         <h5>Rollup Policies</h5>
                         <hr>
                         <a class="aggregation-info margin-left margin-left-sm" data-toggle="tooltip">
-                            <i class="icon-info text-info"></i>    
+                            <i class="icon-info text-info"></i>
                         </a>
                     </div>
                     <div class="margin-bottom">
@@ -253,7 +252,7 @@
         <div class="state" data-bind="attr: { 'data-state-text': hasPoliciesOrRetentionConfig() && disabled() ? 'disabled' : 'enabled' }, 
                                       css: { 'state-success': !hasPoliciesOrRetentionConfig() || !disabled(), 'state-warning': hasPoliciesOrRetentionConfig() && disabled() }"></div>
         <div class="padding padding-sm flex-horizontal">
-            <div class="checkbox" data-bind="visible: hasPoliciesOrRetentionConfig">
+            <div class="checkbox" data-bind="visible: hasPoliciesOrRetentionConfig, requiredAccess: 'Admin'">
                 <input type="checkbox" class="styled" data-bind="checked: $root.selectedItems, checkedValue: $data">
                 <label></label>
             </div>
@@ -262,7 +261,7 @@
             </div>
             <div class="flex-grow">
             </div>
-            <div class="actions-container">
+            <div class="actions-container" data-bind="requiredAccess: 'Admin'">
                 <div class="actions">
                     <button class="btn btn-default" data-bind="visible: hasPoliciesOrRetentionConfig() && !disabled(), click: $root.disableConfiguration">
                         <i class="icon-stop"></i><span>Disable</span>

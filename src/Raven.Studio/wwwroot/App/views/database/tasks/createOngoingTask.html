@@ -6,49 +6,51 @@
         </div>
         <div class="modal-body">
             <div class="padding padding-sm text-center">
-                <div class="hr-title">
-                    <h5>Replication</h5>
-                    <hr />
+                <div data-bind="requiredAccess: 'Admin'">
+                    <div class="hr-title">
+                        <h5>Replication</h5>
+                        <hr />
+                    </div>
+                    <div class="row row-sm flex-row">
+                        <div class="col-sm-4 margin-bottom" title="Create new External Replication task">
+                            <a href="#" class="external-replication" data-bind="click: newReplicationTask">
+                                <i class="icon-external-replication"></i><br />External Replication
+                            </a>
+                        </div>
+                        <div class="col-sm-4 margin-bottom" title="Create new Replication Hub task">
+                            <a href="#" class="pull-replication-hub" data-bind="click: newReplicationHubTask">
+                                <i class="icon-pull-replication-hub"></i><br />Replication Hub
+                            </a>
+                        </div>
+                        <div class="col-sm-4 margin-bottom" title="Create new Replication Sink task">
+                            <a href="#" class="pull-replication-sink" data-bind="click: newReplicationSinkTask">
+                                <i class="icon-pull-replication-agent"></i><br />Replication Sink
+                            </a>
+                        </div>
+                    </div>
+                    <div class="hr-title">
+                        <h5>ETL</h5>
+                        <hr />
+                    </div>
+                    <div class="row row-sm flex-row">
+                        <div class="col-sm-4 margin-bottom" title="Create new RavenDB ETL task">
+                            <a href="#" class="ravendb-etl" data-bind="click: newRavenEtlTask">
+                                <i class="icon-ravendb-etl"></i><br />RavenDB ETL
+                            </a>
+                        </div>
+                        <div class="col-sm-4 margin-bottom" title="Create new SQL ETL task">
+                            <a href="#" class="sql-etl" data-bind="click: newSqlEtlTask">
+                                <i class="icon-sql-etl"></i><br />SQL ETL
+                            </a>
+                        </div>
+                    </div>
+                    <div class="hr-title">
+                        <h5>Backups & subscriptions</h5>
+                        <hr />
+                    </div>
                 </div>
                 <div class="row row-sm flex-row">
-                    <div class="col-sm-4 margin-bottom" title="Create new External Replication task">
-                        <a href="#" class="external-replication" data-bind="click: newReplicationTask">
-                            <i class="icon-external-replication"></i><br />External Replication
-                        </a>
-                    </div>
-                    <div class="col-sm-4 margin-bottom" title="Create new Replication Hub task">
-                        <a href="#" class="pull-replication-hub" data-bind="click: newReplicationHubTask">
-                            <i class="icon-pull-replication-hub"></i><br />Replication Hub
-                        </a>
-                    </div>
-                    <div class="col-sm-4 margin-bottom" title="Create new Replication Sink task">
-                        <a href="#" class="pull-replication-sink" data-bind="click: newReplicationSinkTask">
-                            <i class="icon-pull-replication-agent"></i><br />Replication Sink
-                        </a>
-                    </div>
-                </div>
-                <div class="hr-title">
-                    <h5>ETL</h5>
-                    <hr />
-                </div>
-                <div class="row row-sm flex-row">
-                    <div class="col-sm-4 margin-bottom" title="Create new RavenDB ETL task">
-                        <a href="#" class="ravendb-etl" data-bind="click: newRavenEtlTask">
-                            <i class="icon-ravendb-etl"></i><br />RavenDB ETL
-                        </a>
-                    </div>
-                    <div class="col-sm-4 margin-bottom" title="Create new SQL ETL task">
-                        <a href="#" class="sql-etl" data-bind="click: newSqlEtlTask">
-                            <i class="icon-sql-etl"></i><br />SQL ETL
-                        </a>
-                    </div>
-                </div>
-                <div class="hr-title">
-                    <h5>Backups & subscriptions</h5>
-                    <hr />
-                </div>
-                <div class="row row-sm flex-row">
-                    <div class="col-sm-4 margin-bottom" title="Create new Backup task">
+                    <div class="col-sm-4 margin-bottom" title="Create new Backup task" data-bind="requiredAccess: 'Admin'">
                         <a href="#" class="periodic-backup" data-bind="click: newBackupTask">
                             <i class="icon-backups"></i><br />Periodic Backup
                         </a>
