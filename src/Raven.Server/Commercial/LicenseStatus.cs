@@ -186,6 +186,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasSqlEtl)] = HasSqlEtl,
                 [nameof(HasSnmpMonitoring)] = HasSnmpMonitoring,
                 [nameof(HasMonitoringEndpoints)] = HasMonitoringEndpoints,
+                [nameof(HasReadOnlyCertificates)] = HasReadOnlyCertificates,
                 [nameof(DistributedCluster)] = DistributedCluster,
                 [nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks,
                 [nameof(HasPullReplicationAsHub)] = HasPullReplicationAsHub,
