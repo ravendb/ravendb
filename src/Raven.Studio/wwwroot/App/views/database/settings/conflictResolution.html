@@ -3,15 +3,15 @@
         <div class="col-xs-12 col-lg-6 flex-vertical">
             <form class="flex-form" data-bind="submit: save">
                 <div class="flex-header">
-                    <button type="submit" class="btn btn-primary" 
-                            data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }, requiredAccess: 'ReadWrite'">
+                    <button type="submit" class="btn btn-primary"
+                            data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }, requiredAccess: 'Admin'">
                         <i class="icon-save"></i><span>Save</span>
                     </button>
                 </div>
                 <div class="flex-header">
                     <div class="flex-row">
                         <h3 class="on-base-background">Collection-specific conflict resolution scripts:</h3>
-                        <button type="button" id="addNewScript" data-bind="click: addNewScript, requiredAccess: 'ReadWrite'"
+                        <button type="button" id="addNewScript" data-bind="click: addNewScript, requiredAccess: 'Admin'"
                                 title="Add a per-collection conflict resolution script" class="btn btn-info pull-right">
                             <i class="icon-plus"></i><span>Add</span>
                         </button>
@@ -36,10 +36,10 @@
                                         </div>
                                         <div class="actions">
                                             <button data-bind="click: $root.editScript.bind($parent, $data)" class="btn btn-default">
-                                                <span data-bind="visible: !$root.isReadOnlyAccess()"><i class="icon-edit" title="Edit script"></i></span>
-                                                <span data-bind="visible: $root.isReadOnlyAccess"><i class="icon-preview" title="View script"></i></span>
+                                                <span data-bind="visible: $root.isAdminAccessOrAbove"><i class="icon-edit" title="Edit script"></i></span>
+                                                <span data-bind="visible: !$root.isAdminAccessOrAbove()"><i class="icon-preview" title="View script"></i></span>
                                             </button>
-                                            <button data-bind="click: $root.removeScript, requiredAccess: 'ReadWrite'" class="btn btn-danger">
+                                            <button data-bind="click: $root.removeScript, requiredAccess: 'Admin'" class="btn btn-danger">
                                                 <i class="icon-trash" title="Delete script"></i>
                                             </button>
                                         </div>
@@ -51,7 +51,7 @@
                 </div>
                 <div class="form-group">
                     <div class="toggle on-base-background">
-                        <input id="resolveToLatest" type="checkbox" data-bind="checked: model().resolveToLatest, requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }">
+                        <input id="resolveToLatest" type="checkbox" data-bind="checked: model().resolveToLatest, requiredAccess: 'Admin', requiredAccessOptions: { strategy: 'disable' }">
                         <label for="resolveToLatest">If no script was defined for a collection, resolve the conflict using the latest version.</label>
                     </div>
                 </div>
@@ -67,7 +67,7 @@
                                  data-bind="validationOptions: { insertMessages: false }, validationElement: collection">
                                 <div class="dropdown btn-block">
                                     <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                                           data-bind="textInput: collection, attr: { disable: $root.collections().length === 0 }"
+                                           data-bind="textInput: collection, attr: { disable: $root.collections().length === 0 }, requiredAccess: 'Admin', requiredAccessOptions: { strategy: 'disable' }"
                                            placeholder="Select a collection">
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                     <ul class="dropdown-menu"
@@ -84,7 +84,7 @@
                         <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
                         <div data-bind="validationElement: script">
                         <pre class="form-control editor margin-bottom"
-                             data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript', readOnly: $root.isReadOnlyAccess() },
+                             data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript', readOnly: !$root.isAdminAccessOrAbove() },
                                         validationOptions: { errorsAsTitle: false }, validationElement: script"
                              style="height: 300px;"></pre>
                             <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
@@ -93,7 +93,7 @@
                         </div>
                         <div class="flex-noshrink">
                             <button type="button" class="btn btn-success"
-                                    data-bind="click: $root.saveEditedScript, attr: { title : ($root.model().scriptSelectedForEdit() ? 'Update' : 'Add') + ' this conflict resolution script' }, requiredAccess: 'ReadWrite'">
+                                    data-bind="click: $root.saveEditedScript, attr: { title : ($root.model().scriptSelectedForEdit() ? 'Update' : 'Add') + ' this conflict resolution script' }, requiredAccess: 'Admin'">
                                 <i class="icon-tick"></i> <span data-bind="text: $root.model().scriptSelectedForEdit() ? 'Update' : 'Add'"></span>
                             </button>
                             <button type="button" title="Cancel" class="btn btn-default"

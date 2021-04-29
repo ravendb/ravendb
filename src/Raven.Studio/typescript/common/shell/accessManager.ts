@@ -107,24 +107,40 @@ class accessManager {
         return accessLevel === 'Admin';
     });
     
-    canHandleOperation(requiredAccess: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
+    canHandleOperation(requiredAccess: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess |
+                                       Raven.Client.ServerWide.Operations.Certificates.SecurityClearance,
+                                       isSecurityClearance: boolean) {
+                
         return ko.pureComputed(() => {
-            const activeDatabaseAccess = this.activeDatabaseAccessLevel();
             
-            if (!activeDatabaseAccess) {
-                return false;
-            }
-            
-            if (activeDatabaseAccess === 'Read' &&
-                (requiredAccess === 'ReadWrite' || requiredAccess === 'Admin')) {
-                return false;
-            }
+            if (isSecurityClearance) {
+                switch (requiredAccess) {
+                    case "ClusterAdmin":
+                    case "ClusterNode":
+                        return this.isClusterAdminOrClusterNode();
+                    case "Operator":
+                        return this.isOperatorOrAbove();
+                    case "ValidUser":
+                        return this.isValidUser();
+                }
+            } else {
+                const activeDatabaseAccess = this.activeDatabaseAccessLevel();
 
-            if (activeDatabaseAccess === 'ReadWrite' && requiredAccess === 'Admin') {
-                return false;
-            }
+                if (!activeDatabaseAccess) {
+                    return false;
+                }
 
-            return true;
+                if (activeDatabaseAccess === 'Read' &&
+                    (requiredAccess === 'ReadWrite' || requiredAccess === 'Admin')) {
+                    return false;
+                }
+
+                if (activeDatabaseAccess === 'ReadWrite' && requiredAccess === 'Admin') {
+                    return false;
+                }
+
+                return true;
+            }
         })
     }
     
@@ -233,8 +249,7 @@ class accessManager {
         showDatabaseSettingsMenuItem: this.isOperatorOrAbove,
         showDatabaseRecordMenuItem: this.isOperatorOrAbove,
         showDatabaseIDsMenuItem: this.isOperatorOrAbove,
-        disableConnectionStringsMenuItem: this.disableIfNotAdminAccessPerDatabaseOrAbove,
-        disableConflictResolutionMenuItem: this.disableIfNotAdminAccessPerDatabaseOrAbove
+        disableConnectionStringsMenuItem: this.disableIfNotAdminAccessPerDatabaseOrAbove
     };
     
     databaseDocumentsMenu = {

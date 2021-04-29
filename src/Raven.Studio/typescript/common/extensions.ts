@@ -209,11 +209,15 @@ class extensions {
                    allBindings) => {
                 
                 const requiredAccessLevel = ko.unwrap(valueAccessor());
-                const levelTypes = ["Read", "ReadWrite", "Admin"];
+                const databaseAccessLevelTypes = ["Read", "ReadWrite", "Admin", "Operator"];
+                const securityClearanceLevelTypes = ["ValidUser", "Operator", "ClusterAdmin", "ClusterNode"];
 
-                if (!_.includes(levelTypes, requiredAccessLevel)) {
-                    throw new Error(`Invalid requiredAccess level. Value provided: ${requiredAccessLevel}. Possible values are: ${levelTypes}.`);
+                if (!_.includes(databaseAccessLevelTypes, requiredAccessLevel) && !_.includes(securityClearanceLevelTypes, requiredAccessLevel)) {
+                    throw new Error(`Invalid Access Level. Value provided: ${requiredAccessLevel}.
+                                     Possible Database Access values are: ${databaseAccessLevelTypes}.
+                                     Possible Security Clearance values are: ${securityClearanceLevelTypes}.`);
                 }
+                
                 const bindings = allBindings();
                 const bindingsArray = Object.keys(bindings);
                 const requiredAccessBindingLocation = bindingsArray.indexOf("requiredAccess");
@@ -271,6 +275,9 @@ class extensions {
                     const requiredAccessLevel = ko.unwrap(valueAccessor());
                     const strategy = bindings.requiredAccessOptions ? bindings.requiredAccessOptions.strategy : 'hide';
                     
+                    const securityClearanceLevelTypes = ["ValidUser", "Operator", "ClusterAdmin", "ClusterNode"];
+                    const isSecurityClearance = _.includes(securityClearanceLevelTypes, requiredAccessLevel);
+                    
                     switch (strategy) {
                         case 'hide': {
                             const visibleBinding = bindings.visible;
@@ -282,7 +289,7 @@ class extensions {
                             const shouldBeVisibleByKo = visibleValue && !hiddenValue;
                             const isElementVisible = element.style.display !== "none";
 
-                            if (accessManager.default.canHandleOperation(requiredAccessLevel)()) {
+                            if (accessManager.default.canHandleOperation(requiredAccessLevel, isSecurityClearance)()) {
                                 if (!isElementVisible && shouldBeVisibleByKo) {
                                     element.style.display = "";
                                 }
@@ -304,7 +311,7 @@ class extensions {
                             const shouldBeEnabledByKo = !disableValue && enableValue;
                             const isElementDisabled = element.hasAttribute("disabled");
 
-                            if (accessManager.default.canHandleOperation(requiredAccessLevel)()) {
+                            if (accessManager.default.canHandleOperation(requiredAccessLevel, isSecurityClearance)()) {
                                 if (isElementDisabled && shouldBeEnabledByKo) {
                                     element.setAttribute("disabled", false)
                                 }
