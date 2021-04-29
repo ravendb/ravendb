@@ -256,7 +256,7 @@
                 <div class="btn-group btn-group-justified btn-tabs" role="group">
                     <div class="btn-group" role="group">
                         <button type="button" class="btn btn-xs btn-default doc-attachments" data-bind="css: { active: isAttachmentsActive() }, click: activateAttachments, disable: !$root.canViewAttachments()">
-                            <div class="icon-attachment"></div>
+                            <i class="icon-attachment"></i>
                             Attachments
                             <div data-bind="text: $root.getBadgeText($root.crudActionsProvider().attachmentsCount),
                                             attr: { class: $root.getBadgeClasses($root.crudActionsProvider().attachmentsCount),
@@ -266,7 +266,7 @@
                     </div>
                     <div class="btn-group" role="group">
                         <button type="button" class="btn btn-xs btn-default doc-counters" data-bind="css: { active: isCountersActive() }, click: activateCounters, disable: !$root.canViewCounters()">
-                            <div class="icon-new-counter"></div>
+                            <i class="icon-new-counter"></i>
                             Counters
                             <div data-bind="text: $root.getBadgeText($root.crudActionsProvider().countersCount),
                                             attr: { class: $root.getBadgeClasses($root.crudActionsProvider().countersCount),
@@ -276,7 +276,7 @@
                     </div>
                     <div class="btn-group" role="group">
                         <button type="button" class="btn btn-xs btn-default doc-time-series" data-bind="css: { active: isTimeSeriesActive() }, click: activateTimeSeries, disable: !$root.canViewTimeSeries()">
-                            <div class="icon-new-time-series"></div>
+                            <i class="icon-new-time-series"></i>
                             Time Series
                             <div data-bind="text: $root.getBadgeText($root.crudActionsProvider().timeSeriesCount),
                                             attr: { class: $root.getBadgeClasses($root.crudActionsProvider().timeSeriesCount),
@@ -286,7 +286,7 @@
                     </div>
                     <div class="btn-group" id="revisions_pane" role="group">
                         <button type="button" class="btn btn-xs btn-default doc-revisions" data-bind="css: { active: isRevisionsActive() }, click: _.partial(activateRevisions, false), disable: !$root.canViewRevisions()">
-                            <div class="icon-revisions"></div>
+                            <i class="icon-revisions"></i>
                             Revisions
                             <div data-bind="text: $root.getBadgeText($root.crudActionsProvider().revisionsCount),
                                             attr: { class: $root.getBadgeClasses($root.crudActionsProvider().revisionsCount),
@@ -296,13 +296,13 @@
                     </div>
                     <div class="btn-group" role="group">
                         <button type="button" class="btn btn-xs btn-default doc-related" data-bind="css: { active: isRelatedActive() }, click: activateRelated, disable: !$root.canViewRelated()">
-                            <div class="icon-link"></div>
+                            <i class="icon-link"></i>
                             Related
                         </button>
                     </div>
                     <div class="btn-group" role="group">
                         <button type="button" class="btn btn-xs btn-default doc-recent" data-bind="css: { active: isRecentActive() }, click: activateRecent">
-                            <div class="icon-recent"></div>
+                            <i class="icon-recent"></i>
                             Recent
                         </button>
                     </div>
