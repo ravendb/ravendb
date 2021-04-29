@@ -116,6 +116,14 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<result
         const withCache = perf as IndexingPerformanceStatsWithCache;
         withCache.CompletedAsDate = perf.Completed ? liveIndexPerformanceWebSocketClient.isoParser.parse(perf.Completed) : undefined;
         withCache.StartedAsDate = liveIndexPerformanceWebSocketClient.isoParser.parse(perf.Started);
+        withCache.WaitOperation = perf.Details.Operations.find(x => x.Name === "Wait/ConcurrentlyRunningIndexesLimit");
+        const waitTime = withCache.WaitOperation?.DurationInMs ?? 0;
+        withCache.StartedAsDateExcludingWaitTime = moment(withCache.StartedAsDate).add(waitTime, "milliseconds").toDate();
+        withCache.DetailsExcludingWaitTime = {
+            ...withCache.Details,
+            DurationInMs: withCache.Details.DurationInMs - waitTime,
+            Operations: withCache.Details.Operations.filter(x => x.Name !== "Wait/ConcurrentlyRunningIndexesLimit")
+        }
 
         const detailsWithParent = perf.Details as IndexingPerformanceOperationWithParent;
         detailsWithParent.Parent = perf;
