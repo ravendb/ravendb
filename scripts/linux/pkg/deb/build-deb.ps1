@@ -28,13 +28,19 @@ $outputDir = $env:OUTPUT_DIR
 
 Write-Host "Build DEB of RavenDB $ravenVersion for distro $distName $distVer $distVerName $env:DEB_ARCHITECTURE"
 
-$DOCKER_FILE = "./ubuntu.Dockerfile"
+if ($env:DEB_ARCHITECTURE -eq "amd64") {
+    $DOCKER_FILE = "./ubuntu_amd64.Dockerfile"
+} else {
+    $DOCKER_FILE = "./ubuntu_multiarch.Dockerfile"
+}
+
 $DEB_BUILD_ENV_IMAGE = "ravendb-deb_ubuntu_$env:DEB_ARCHITECTURE"
 
 docker build `
     --platform $env:DOCKER_BUILDPLATFORM `
     --build-arg "DISTRO_VERSION_NAME=$env:DISTRO_VERSION_NAME" `
     --build-arg "DISTRO_VERSION=$env:DISTRO_VERSION" `
+    --build-arg "QEMU_ARCH=$env:QEMU_ARCH" `
     -t $DEB_BUILD_ENV_IMAGE `
     -f $DOCKER_FILE .
 
@@ -61,5 +67,6 @@ docker run --rm -it `
     -e "DOTNET_DEPS_VERSION=$env:DOTNET_DEPS_VERSION" `
     -e "DISTRO_VERSION_NAME=$env:DISTRO_VERSION_NAME" `
     -e "RAVEN_PLATFORM=$env:RAVEN_PLATFORM" `
+    -e "QEMU_ARCH=$env:QEMU_ARCH" `
     $DEB_BUILD_ENV_IMAGE 
 
