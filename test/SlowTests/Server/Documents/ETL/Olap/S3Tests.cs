@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Server.Basic.Entities;
@@ -30,6 +32,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
 
         private const string S3TestsPrefix = "olap/tests";
         private const string CollectionName = "Orders";
+        private static readonly HashSet<char> SpecialChars = new HashSet<char> { '&', '@', ':', ',', '$', '=', '+', '?', ';', ' ', '"', '^', '`', '>', '<', '{', '}', '[', ']', '#', '\'', '~', '|' };
 
         [AmazonS3Fact]
         public async Task CanUploadToS3()
@@ -104,7 +107,6 @@ loadToOrders(partitionBy(key),
                 await DeleteObjects(settings);
             }
         }
-
 
         [AmazonS3Fact]
         public async Task SimpleTransformation()
@@ -807,7 +809,160 @@ loadToOrders(partitionBy(key),
             }
         }
 
-        private void SetupS3OlapEtl(DocumentStore store, string script, S3Settings settings, string customPrefix = null)
+        [Fact]
+        public async Task CanHandleSpecialCharsInEtlName()
+        {
+            var settings = GetS3Settings();
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+
+                    WaitForIndexing(store);
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    var script = @"
+loadToOrders(noPartition(), {
+    Company: this.Company,
+    OrderedAt: this.OrderedAt
+});"
+;
+                    SetupS3OlapEtl(store, script, settings, transformationName: "script#1=$'/orders'");
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    using (var s3Client = new RavenAwsS3Client(settings))
+                    {
+                        var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
+
+                        Assert.Equal(1, cloudObjects.FileInfoDetails.Count);
+                        Assert.Contains("script#1=$'_orders'", cloudObjects.FileInfoDetails[0].FullPath);
+                        Assert.Contains(".Parquet", cloudObjects.FileInfoDetails[0].FullPath);
+                    }
+                }
+            }
+            finally
+            {
+                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}", delimiter: string.Empty);
+
+            }
+        }
+
+        [Fact]
+        public async Task CanHandleSpecialCharsInFolderPath()
+        {
+            var settings = GetS3Settings();
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    using (var session= store.OpenAsyncSession())
+                    {
+                        var today = DateTime.Today;
+                        await session.StoreAsync(new Order
+                        {
+                            OrderedAt = today,
+                            Lines = new List<OrderLine>
+                            {
+                                new OrderLine
+                                {
+                                    ProductName = "Wimmers gute Semmelknödel",
+                                    PricePerUnit = 12
+                                },
+                                new OrderLine
+                                {
+                                    ProductName = "Guaraná Fantástica",
+                                    PricePerUnit = 42
+                                },
+
+                                new OrderLine
+                                {
+                                    ProductName = "Thüringer Rostbratwurst",
+                                    PricePerUnit = 19
+                                }
+                            }
+                        });
+
+                        await session.StoreAsync(new Order
+                        {
+                            OrderedAt = today.AddYears(-1),
+                            Lines = new List<OrderLine>
+                            {
+                                new OrderLine
+                                {
+                                    ProductName = "Uncle Bob's Cajon Sauce",
+                                    PricePerUnit = 11
+                                },
+                                new OrderLine
+                                {
+                                    ProductName = "Côte de Blaye",
+                                    PricePerUnit = 25
+                                }
+                            }
+                        });
+
+                        await session.StoreAsync(new Order
+                        {
+                            OrderedAt = today.AddYears(-2),
+                            Lines = new List<OrderLine>
+                            {
+                                new OrderLine
+                                {
+                                    ProductName = "גבינה צהובה",
+                                    PricePerUnit = 20
+                                },
+                                new OrderLine
+                                {
+                                    ProductName = "במבה",
+                                    PricePerUnit = 7
+                                }
+                            }
+                        });
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    var script = @"
+for (var i = 0; i < this.Lines.length; i++){
+    var line  = this.Lines[i];
+    loadToOrders(partitionBy([['product-name', line.ProductName]]), {
+        PricePerUnit: line.PricePerUnit,
+        OrderedAt: this.OrderedAt
+})}";
+                    SetupS3OlapEtl(store, script, settings);
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    using (var s3Client = new RavenAwsS3Client(settings))
+                    {
+                        var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
+
+                        Assert.Equal(7, cloudObjects.FileInfoDetails.Count);
+
+                        Assert.Contains("Côte de Blaye", cloudObjects.FileInfoDetails[0].FullPath);
+                        Assert.Contains("Guaraná Fantástica", cloudObjects.FileInfoDetails[1].FullPath);
+                        Assert.Contains("Thüringer Rostbratwurst", cloudObjects.FileInfoDetails[2].FullPath);
+                        Assert.Contains("Uncle Bob's Cajon Sauce", cloudObjects.FileInfoDetails[3].FullPath);
+                        Assert.Contains("Wimmers gute Semmelknödel", cloudObjects.FileInfoDetails[4].FullPath);
+                        Assert.Contains("במבה", cloudObjects.FileInfoDetails[5].FullPath);
+                        Assert.Contains("גבינה צהובה", cloudObjects.FileInfoDetails[6].FullPath);
+                    }
+                }
+            }
+            finally
+            {
+                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}", delimiter: string.Empty, replaceSpecialChars: true);
+
+            }
+        }
+
+        private void SetupS3OlapEtl(DocumentStore store, string script, S3Settings settings, string customPrefix = null, string transformationName = null)
         {
             var connectionStringName = $"{store.Database} to S3";
 
@@ -821,7 +976,7 @@ loadToOrders(partitionBy(key),
                 {
                     new Transformation
                     {
-                        Name = "MonthlyOrders",
+                        Name = transformationName ?? "MonthlyOrders",
                         Collections = new List<string> {"Orders"},
                         Script = script
                     }
@@ -881,7 +1036,7 @@ loadToOrders(partitionBy(key),
             await DeleteObjects(s3Settings, prefix: $"{s3Settings.RemoteFolderName}/{additionalTable}", delimiter: string.Empty);
         }
 
-        private static async Task DeleteObjects(S3Settings s3Settings, string prefix, string delimiter, bool listFolder = false)
+        private static async Task DeleteObjects(S3Settings s3Settings, string prefix, string delimiter, bool listFolder = false, bool replaceSpecialChars = false)
         {
             if (s3Settings == null)
                 return;
@@ -896,8 +1051,14 @@ loadToOrders(partitionBy(key),
 
                     if (listFolder == false)
                     {
-                        var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
-                        s3Client.DeleteMultipleObjects(pathsToDelete);
+                        var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath);
+
+                        if (replaceSpecialChars)
+                        {
+                            pathsToDelete = pathsToDelete.Select(EnsureSafeName);
+                        }
+
+                        s3Client.DeleteMultipleObjects(pathsToDelete.ToList());
                         return;
                     }
 
@@ -921,6 +1082,23 @@ loadToOrders(partitionBy(key),
             }
 
             return files;
+        }
+
+        private static string EnsureSafeName(string str)
+        {
+            var builder = new StringBuilder(str.Length);
+            foreach (char @char in str)
+            {
+                if (SpecialChars.Contains(@char))
+                {
+                    builder.AppendFormat("%{0:X2}", (int)@char);
+                    continue;
+                }
+
+                builder.Append(@char);
+            }
+
+            return builder.ToString();
         }
     }
 }

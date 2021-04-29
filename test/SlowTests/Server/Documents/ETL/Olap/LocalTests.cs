@@ -1710,7 +1710,7 @@ for (var i = 0; i < this.Lines.length; i++) {
     
     // load to 'sales' table
 
-    loadToSales(partitionBy(key), {
+    loadToSales(partitionBy([['name', this.Company]]), {
         Qty: line.Quantity,
         Product: line.Product,
         Cost: line.PricePerUnit
@@ -1771,20 +1771,19 @@ for (var i = 0; i < this.Lines.length; i++) {
             return Directory.CreateDirectory(Path.Combine(tmpPath, caller, collection)).FullName;
         }
 
-        private void SetupLocalOlapEtl(DocumentStore store, string script, string path, string frequency = null)
+        private void SetupLocalOlapEtl(DocumentStore store, string script, string path, string frequency = null, string transformationName = null)
         {
             var connectionStringName = $"{store.Database} to local";
             var configuration = new OlapEtlConfiguration
             {
                 Name = "olap-test",
                 ConnectionStringName = connectionStringName,
-                RunFrequency = frequency ?? DefaultFrequency
-                ,
+                RunFrequency = frequency ?? DefaultFrequency,
                 Transforms =
                 {
                     new Transformation
                     {
-                        Name = "MonthlyOrders",
+                        Name = transformationName ?? "MonthlyOrders",
                         Collections = new List<string> {"Orders"},
                         Script = script
                     }

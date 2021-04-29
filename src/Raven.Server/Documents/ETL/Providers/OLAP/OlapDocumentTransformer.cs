@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private const string PartitionKeys = "$partition_keys";
         private const string DefaultPartitionColumnName = "_dt";
 
-        public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config, string processName, Logger logger)
+        public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config, string fileNamePrefix, Logger logger)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.OlapEtl), null)
         {
             _config = config;
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _tmpFilePath = localSettings?.FolderPath ??
                            (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).FullPath;
 
-            _fileNamePrefix = $"{Database.Name}_{processName}";
+            _fileNamePrefix = fileNamePrefix;
 
             LoadToDestinations = transformation.GetCollectionsFromScript();
         }
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
         }
 
-        private void LoadToFunction( string tableName, string key, ScriptRunnerResult runnerResult)
+        private void LoadToFunction(string tableName, string key, ScriptRunnerResult runnerResult)
         {
             if (key == null)
                 ThrowLoadParameterIsMandatory(nameof(key));
@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 if (tuple.Length != 2)
                     ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) items in array {PartitionKeys} of argument 'key' must be array instances of size 2, but got '{tuple.Length}'");
 
-                sb.Append('/').Append(tuple[0]).Append(UrlEscapedEqualsSign);
+                sb.Append('/').Append(tuple[0]).Append('=');
                 var val = tuple[1].IsDate()
                     ? tuple[1].AsDate().ToDateTime().ToString(DateFormat)
                     : tuple[1];
