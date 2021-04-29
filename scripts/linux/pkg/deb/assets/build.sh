@@ -7,6 +7,16 @@ export RAVENDB_VERSION_MINOR=$( egrep -o -e '^[0-9]+.[0-9]+' <<< "$RAVENDB_VERSI
 
 set -e
 
+MS_DEB_NAME="/cache/packages-microsoft-prod_${DISTRO_VERSION}.deb"
+if ! (test -f "${MS_DEB_NAME}" \
+    || wget -O "${MS_DEB_NAME}" "https://packages.microsoft.com/config/ubuntu/${DISTRO_VERSION}/packages-microsoft-prod.deb"); then
+     echo "Could not obtain packages-microsoft-prod.deb"
+     exit 1
+fi
+
+dpkg -i $MS_DEB_NAME
+apt update
+
 DOWNLOAD_URL=https://daily-builds.s3.amazonaws.com/RavenDB-${RAVENDB_VERSION}-${RAVEN_PLATFORM}.tar.bz2 
 
 export TARBALL="ravendb-${RAVENDB_VERSION}-${RAVEN_PLATFORM}.tar.bz2"
