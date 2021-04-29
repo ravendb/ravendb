@@ -93,7 +93,7 @@ abstract class abstractChartsWebsocketWidget<
     }
     
     private static chartKey(nodeTag: string) {
-        return "node-" + nodeTag.toLocaleLowerCase();
+        return "node-" + nodeTag;
     }
 
     onData(nodeTag: string, data: TPayload) {

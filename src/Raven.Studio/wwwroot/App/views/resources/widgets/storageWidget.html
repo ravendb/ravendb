@@ -12,7 +12,7 @@
         <div class="property">
             <div class="flex-horizontal">
                 <div class="nodes-container nodes-storage" data-bind="foreach: nodeStats">
-                    <div class="nodes-item">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
                         <div class="nodes-item-header">
                             <div class="node-label" data-bind="text: tag"></div>
                         </div>
