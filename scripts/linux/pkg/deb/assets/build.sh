@@ -5,7 +5,6 @@ DEST_DIR=/build
 
 export RAVENDB_VERSION_MINOR=$( egrep -o -e '^[0-9]+.[0-9]+' <<< "$RAVENDB_VERSION" )
 
-
 set -e
 
 DOWNLOAD_URL=https://daily-builds.s3.amazonaws.com/RavenDB-${RAVENDB_VERSION}-${RAVEN_PLATFORM}.tar.bz2 
@@ -13,7 +12,10 @@ DOWNLOAD_URL=https://daily-builds.s3.amazonaws.com/RavenDB-${RAVENDB_VERSION}-${
 export TARBALL="ravendb-${RAVENDB_VERSION}-${RAVEN_PLATFORM}.tar.bz2"
 export CACHED_TARBALL="${TARBALL_CACHE_DIR}/${TARBALL}"
 
-test -f "${CACHED_TARBALL}" || wget -O ${CACHED_TARBALL} -N --progress=dot:mega ${DOWNLOAD_URL}
+if ! (test -f "${CACHED_TARBALL}" || wget -O ${CACHED_TARBALL} -N --progress=dot:mega ${DOWNLOAD_URL}); then
+    echo "Failed to download $DOWNLOAD_URL"
+    exit 1
+fi
 
 DOTNET_FULL_VERSION=`tar xf ${CACHED_TARBALL} RavenDB/runtime.txt -O | sed 's/\r$//' | sed -n "s/.NET Core Runtime: \([0-9.]\)/\1/p" `
 DOTNET_VERSION_MINOR=$(egrep -o -e '^[0-9]+.[0-9]+' <<< $DOTNET_FULL_VERSION)

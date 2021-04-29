@@ -4,6 +4,6 @@ $env:DISTRO_VERSION_NAME ="bionic"
 
 $env:OUTPUT_DIR = "$PSScriptRoot/dist"
 
-$env:RAVENDB_VERSION = "4.2.112"
+./set-raven-version-env.ps1
 
 ./test-deb-vagrant.ps1
