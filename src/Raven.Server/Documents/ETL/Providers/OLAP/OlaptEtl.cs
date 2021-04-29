@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Changes;
@@ -36,12 +37,18 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private readonly BackupResult _uploadResult;
         private readonly OperationCancelToken _operationCancelToken;
         private static readonly IEnumerator<ToOlapItem> EmptyEnumerator = Enumerable.Empty<ToOlapItem>().GetEnumerator();
+        private static readonly HashSet<char> SpecialChars = new HashSet<char> { '&', '@', ':', ',', '$', '=', '+', '?', ';', ' ', '"', '^', '`', '>', '<', '{', '}', '[', ']', '#', '\'', '~', '|' };
+        private StringBuilder _builder;
+        private const string Format = "%{0:X2}";
+        private readonly string _fileNamePrefix;
 
         public OlapEtl(Transformation transformation, OlapEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, OlaptEtlTag)
         {
             Metrics = OlapMetrics;
             Name = $"{Configuration.Name}_{Transformation.Name}";
+
+            _fileNamePrefix = EnsureSafeName(Name, isFolderPath: false);
 
             _s3Settings = BackupTask.GetBackupConfigurationFromScript(configuration.Connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
                     Database, updateServerWideSettingsFunc: null, serverWide: false);
@@ -111,13 +118,12 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         protected override EtlTransformer<ToOlapItem, OlapTransformedItems> GetTransformer(DocumentsOperationContext context)
         {
-            return new OlapDocumentTransformer(Transformation, Database, context, Configuration, Name, Logger);
+            return new OlapDocumentTransformer(Transformation, Database, context, Configuration, _fileNamePrefix, Logger);
         }
 
         protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context)
         {
             var count = 0;
-
             foreach (var transformed in records)
             {
                 var localPath = transformed.GenerateFileFromItems(out var folderName, out var fileName);
@@ -247,7 +253,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 S3Settings = _s3Settings,
                 AzureSettings = _azureSettings,
                 FilePath = localPath,
-                FolderName = folderName,
+                FolderName = EnsureSafeName(folderName),
                 FileName = fileName,
                 DatabaseName = Database.Name,
                 TaskName = Name
@@ -255,6 +261,33 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             var backupUploader = new BackupUploader(uploaderSettings, new RetentionPolicyBaseParameters(), Logger, _uploadResult, onProgress: ProgressNotification, _operationCancelToken);
             backupUploader.Execute();
+        }
+
+
+        private string EnsureSafeName(string str, bool isFolderPath = true)
+        {
+            _builder ??= new StringBuilder();
+            foreach (char @char in str)
+            {
+                if (SpecialChars.Contains(@char) || @char <= 31 || @char == 127)
+                {
+                    _builder.AppendFormat(Format, (int)@char);
+                    continue;
+                }
+
+                if (isFolderPath == false && @char == '/')
+                {
+                    _builder.Append('_');
+                    continue;
+                }
+
+                _builder.Append(@char);
+            }
+
+            var val = _builder.ToString();
+            _builder.Clear();
+
+            return val;
         }
 
         private static void ProgressNotification(IOperationProgress progress)
