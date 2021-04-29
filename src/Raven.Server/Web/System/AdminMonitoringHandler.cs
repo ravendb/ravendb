@@ -181,8 +181,8 @@ namespace Raven.Server.Web.System
         {
             var result = new DiskMetrics();
             var environmentStats = Server.ServerStore._env.Stats();
-            result.SystemStoreUsedDataFileSizeInMb = new Size(environmentStats.UsedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-            result.SystemStoreTotalDataFileSizeInMb = new Size(environmentStats.AllocatedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+            result.SystemStoreUsedDataFileSizeInMb = new Size(environmentStats.UsedDataFileSizeInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+            result.SystemStoreTotalDataFileSizeInMb = new Size(environmentStats.AllocatedDataFileSizeInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
 
             if (ServerStore.Configuration.Core.RunInMemory == false)
             {
@@ -421,11 +421,11 @@ namespace Raven.Server.Web.System
                 }
             }
 
-            result.DocumentsAllocatedDataFileInMb = new Size(documentsAllocatedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-            result.DocumentsUsedDataFileInMb = new Size(documentsUsedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-            result.IndexesAllocatedDataFileInMb = new Size(indexesAllocatedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-            result.IndexesUsedDataFileInMb = new Size(indexesUsedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-            result.TotalAllocatedStorageFileInMb = new Size(totalAllocatedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+            result.DocumentsAllocatedDataFileInMb = new Size(documentsAllocatedDataFileSizeInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+            result.DocumentsUsedDataFileInMb = new Size(documentsUsedDataFileSizeInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+            result.IndexesAllocatedDataFileInMb = new Size(indexesAllocatedDataFileSizeInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+            result.IndexesUsedDataFileInMb = new Size(indexesUsedDataFileSizeInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+            result.TotalAllocatedStorageFileInMb = new Size(totalAllocatedDataFileSizeInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
 
             result.TotalFreeSpaceInMb = -1;
 
