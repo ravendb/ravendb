@@ -5,7 +5,7 @@
             <i class="icon-trash"></i>
         </button>
         <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
-            <i class="icon-fullscreen"></i>
+            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen }"></i>
         </button>
     </div>
     <div class="property-container padding padding-lg">
