@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
@@ -17,7 +18,7 @@ namespace Raven.Server.Smuggler.Documents.Data
     {
         IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion);
         IDatabaseRecordActions DatabaseRecord();
-        IDocumentActions Documents();
+        IDocumentActions Documents(bool throwOnCollectionMismatchError = true);
         IDocumentActions RevisionDocuments();
         IDocumentActions Tombstones();
         IDocumentActions Conflicts();
@@ -36,6 +37,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         void WriteTombstone(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress);
         void WriteConflict(DocumentConflict conflict, SmugglerProgressBase.CountsWithLastEtag progress);
         void DeleteDocument(string id);
+        IEnumerable<DocumentItem> GetDocumentsWithDuplicateCollection();
     }
 
     public interface INewDocumentActions

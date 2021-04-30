@@ -58,5 +58,10 @@ namespace Raven.Client.Documents.Indexes
             public static string SaveOutputDocuments = "SaveOutputDocuments";
             public static string DeleteOutputDocuments = "DeleteOutputDocuments";
         }
+
+        internal static class Wait
+        {
+            public const string AcquireConcurrentlyRunningIndexesLock = "Wait/ConcurrentlyRunningIndexesLimit";
+        }
     }
 }
