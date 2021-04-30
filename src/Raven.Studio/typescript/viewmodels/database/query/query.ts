@@ -697,8 +697,8 @@ class query extends viewModelBase {
         const valuesCount = timeSeriesQueryResult.detectValuesCount(tab.value);
         const maybeArrayPresenter: (columnName: string) => (dto: timeSeriesQueryGroupedItemResultDto | timeSeriesRawItemResultDto) => string | number
             = valuesCount === 1
-            ? (columnName => dto => (dto as any)[columnName][0])
-            : (columnName => dto => "[" + (dto as any)[columnName].join(", ") + "]");
+            ? (columnName => dto => (dto as any)[columnName][0]?.toLocaleString() ?? "-")
+            : (columnName => dto => ((dto as any)[columnName]).map((x: number) => x?.toLocaleString() ?? "-").join("; "));
 
         const formatTimeSeriesDate = (input: string) => {
             const dateToFormat = moment.utc(input);
