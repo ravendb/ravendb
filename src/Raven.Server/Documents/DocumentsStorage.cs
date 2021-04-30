@@ -241,7 +241,6 @@ namespace Raven.Server.Documents
             options.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = DocumentDatabase.Configuration.Storage.EnablePrefetching;
             options.TimeToSyncAfterFlushInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
-            options.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.AddToInitLog = _addToInitLog;
             options.Encryption.MasterKey = DocumentDatabase.MasterKey?.ToArray();
             options.Encryption.RegisterForJournalCompressionHandler();

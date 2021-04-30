@@ -187,7 +187,6 @@ namespace Raven.Server.Documents
             options.OnIntegrityErrorOfAlreadySyncedData += documentDatabase.HandleOnDatabaseIntegrityErrorOfAlreadySyncedData;
             options.CompressTxAboveSizeInBytes = configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.TimeToSyncAfterFlushInSec = (int)configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
-            options.NumOfConcurrentSyncsPerPhysDrive = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.Encryption.MasterKey = key?.ToArray(); // clone 
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (configuration.Storage.MaxScratchBufferSize.HasValue)

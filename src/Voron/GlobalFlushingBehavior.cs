@@ -13,6 +13,8 @@ namespace Voron
     {
         private const string FlushingThreadName = "Voron Global Flushing Thread";
 
+        public static int NumberOfConcurrentSyncsPerPhysicalDrive = 3;
+
         internal static readonly Lazy<GlobalFlushingBehavior> GlobalFlusher = new Lazy<GlobalFlushingBehavior>(() =>
         {
             var flusher = new GlobalFlushingBehavior();
@@ -52,7 +54,6 @@ namespace Voron
 
         public bool HasLowNumberOfFlushingResources => _concurrentFlushesAvailable.CurrentCount <= _lowNumberOfFlushingResources;
 
-
         private void VoronEnvironmentFlushing()
         {
             NativeMemory.EnsureRegistered();
@@ -66,7 +67,7 @@ namespace Voron
                 while (true)
                 {
                     avoidDuplicates.Clear();
-                    
+
                     if (_flushWriterEvent.Wait(5000) == false)
                     {
                         if (_envsToSync.Count == 0)
@@ -136,7 +137,7 @@ namespace Voron
 
             foreach (var mountPoint in _mountPoints)
             {
-                int parallelSyncsPerIo = Math.Min(StorageEnvironment.NumOfConcurrentSyncsPerPhysDrive, mountPoint.Value.StorageEnvironments.Count);
+                int parallelSyncsPerIo = Math.Min(NumberOfConcurrentSyncsPerPhysicalDrive, mountPoint.Value.StorageEnvironments.Count);
 
                 for (int i = 0; i < parallelSyncsPerIo; i++)
                 {
@@ -158,7 +159,7 @@ namespace Voron
         private void SyncEnvironment(EnvSyncReq req)
         {
             var storageEnvironment = req.Env;
-            if (storageEnvironment  == null || storageEnvironment.Disposed || storageEnvironment.Options.ManualSyncing)
+            if (storageEnvironment == null || storageEnvironment.Disposed || storageEnvironment.Options.ManualSyncing)
                 return;
 
             try
