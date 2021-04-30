@@ -135,7 +135,7 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseRecordActions(_writer, _context);
         }
 
-        public IDocumentActions Documents()
+        public IDocumentActions Documents(bool throwOnDuplicateCollection)
         {
             return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, "Docs");
         }
@@ -979,6 +979,11 @@ namespace Raven.Server.Smuggler.Documents
             {
                 // no-op
                 return default;
+            }
+
+            public IEnumerable<DocumentItem> GetDocumentsWithDuplicateCollection()
+            {
+                yield break;
             }
 
             public Stream GetTempStream()

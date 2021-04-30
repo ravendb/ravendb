@@ -355,8 +355,11 @@ declare module studio.settings {
 }
 
 interface IndexingPerformanceStatsWithCache extends Raven.Client.Documents.Indexes.IndexingPerformanceStats {
-    StartedAsDate: Date; // used for caching
-    CompletedAsDate: Date; // user for caching
+    StartedAsDate: Date;
+    StartedAsDateExcludingWaitTime: Date;
+    WaitOperation: Raven.Client.Documents.Indexes.IndexingPerformanceOperation;
+    CompletedAsDate: Date;
+    DetailsExcludingWaitTime: Raven.Client.Documents.Indexes.IndexingPerformanceOperation;
 }
 
 interface IOMetricsRecentStatsWithCache extends Raven.Server.Utils.IoMetrics.IOMetricsRecentStats {

@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -48,6 +49,7 @@ namespace Raven.Server.Smuggler.Documents
     public class DatabaseDestination : ISmugglerDestination
     {
         private readonly DocumentDatabase _database;
+        internal DuplicateDocsHandler _duplicateDocsHandler;
 
         private readonly Logger _log;
         private BuildVersionType _buildType;
@@ -57,13 +59,19 @@ namespace Raven.Server.Smuggler.Documents
         {
             _database = database;
             _log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
+            _duplicateDocsHandler = new DuplicateDocsHandler(_database);
         }
 
         public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
             _buildType = BuildVersion.Type(buildVersion);
             _options = options;
-            return null;
+
+            return new AsyncDisposableAction(() =>
+            {
+                _duplicateDocsHandler.Dispose();
+                return Task.CompletedTask;
+            });
         }
 
         public IDatabaseRecordActions DatabaseRecord()
@@ -71,24 +79,24 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseRecordActions(_database, log: _log);
         }
 
-        public IDocumentActions Documents()
+        public IDocumentActions Documents(bool throwOnCollectionMismatchError = true)
         {
-            return new DatabaseDocumentActions(_database, _buildType, isRevision: false, log: _log);
+            return new DatabaseDocumentActions(_database, _buildType, isRevision: false, _log, _duplicateDocsHandler, throwOnCollectionMismatchError);
         }
 
         public IDocumentActions RevisionDocuments()
         {
-            return new DatabaseDocumentActions(_database, _buildType, isRevision: true, log: _log);
+            return new DatabaseDocumentActions(_database, _buildType, isRevision: true, _log, _duplicateDocsHandler, throwOnCollectionMismatchError: true);
         }
 
         public IDocumentActions Tombstones()
         {
-            return new DatabaseDocumentActions(_database, _buildType, isRevision: false, log: _log);
+            return new DatabaseDocumentActions(_database, _buildType, isRevision: false, _log, _duplicateDocsHandler, throwOnCollectionMismatchError: true);
         }
 
         public IDocumentActions Conflicts()
         {
-            return new DatabaseDocumentActions(_database, _buildType, isRevision: false, log: _log);
+            return new DatabaseDocumentActions(_database, _buildType, isRevision: false, _log, _duplicateDocsHandler, throwOnCollectionMismatchError: true);
         }
 
         public IKeyValueActions<long> Identities()
@@ -177,6 +185,43 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        public class DuplicateDocsHandler : IDisposable
+        {
+            private readonly DocumentDatabase _database;
+            private DocumentsOperationContext _context;
+            private IDisposable _returnContext;
+
+            public List<DocumentItem> DocumentsWithDuplicateCollection;
+            internal bool _markForDispose;
+
+            public DuplicateDocsHandler(DocumentDatabase database)
+            {
+                _database = database;
+            }
+
+            private void InitializeIfNeeded()
+            {
+                _returnContext ??= _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+                DocumentsWithDuplicateCollection ??= new List<DocumentItem>();
+            }
+
+            public void AddDocument(DocumentItem item)
+            {
+                InitializeIfNeeded();
+
+                DocumentsWithDuplicateCollection.Add(new DocumentItem
+                {
+                    Document = item.Document.Clone(_context)
+                });
+            }
+
+            public void Dispose()
+            {
+                _returnContext?.Dispose();
+                _returnContext = null;
+            }
+        }
+
         public class DatabaseDocumentActions : IDocumentActions
         {
             private readonly DocumentDatabase _database;
@@ -198,21 +243,28 @@ namespace Raven.Server.Smuggler.Documents
             private readonly Sparrow.Size _enqueueThreshold;
             private readonly ConcurrentDictionary<string, CollectionName> _missingDocumentsForRevisions;
             private readonly HashSet<string> _documentIdsOfMissingAttachments;
+            private readonly DuplicateDocsHandler _duplicateDocsHandler;
+            private bool _throwOnCollectionMismatchError;
 
-            public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType, bool isRevision, Logger log)
+            public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType, bool isRevision, Logger log, DuplicateDocsHandler duplicateDocsHandler, bool throwOnCollectionMismatchError)
             {
                 _database = database;
                 _buildType = buildType;
                 _isRevision = isRevision;
                 _log = log;
                 _enqueueThreshold = new Size(database.Is32Bits ? 2 : 32, SizeUnit.Megabytes);
+                _duplicateDocsHandler = duplicateDocsHandler;
+                _throwOnCollectionMismatchError = throwOnCollectionMismatchError;
 
                 _missingDocumentsForRevisions = isRevision || buildType == BuildVersionType.V3 ? new ConcurrentDictionary<string, CollectionName>() : null;
                 _documentIdsOfMissingAttachments = isRevision ? null : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 _command = new MergedBatchPutCommand(database, buildType, log, _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
                 {
-                    IsRevision = isRevision
+                    IsRevision = isRevision,
                 };
+
+                if (_throwOnCollectionMismatchError == false)
+                    _command.DocumentCollectionMismatchHandler = item => _duplicateDocsHandler.AddDocument(item);
             }
 
             public async ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
@@ -252,6 +304,22 @@ namespace Raven.Server.Smuggler.Documents
                 await _database.TxMerger.Enqueue(new DeleteDocumentCommand(id, null, _database));
             }
 
+            public IEnumerable<DocumentItem> GetDocumentsWithDuplicateCollection()
+            {
+                if (_duplicateDocsHandler.DocumentsWithDuplicateCollection == null)
+                    yield break;
+
+                if (_duplicateDocsHandler.DocumentsWithDuplicateCollection.Count == 0)
+                    yield break;
+
+                foreach (var item in _duplicateDocsHandler.DocumentsWithDuplicateCollection)
+                {
+                    yield return item;
+                }
+
+                _duplicateDocsHandler._markForDispose = true;
+            }
+
             public Stream GetTempStream()
             {
                 if (_command.AttachmentStreamsTempFile == null)
@@ -271,6 +339,9 @@ namespace Raven.Server.Smuggler.Documents
                 await FinishBatchOfDocumentsAsync();
                 await FixDocumentMetadataIfNecessaryAsync();
                 await DeleteRevisionsForNonExistingDocumentsAsync();
+
+                if (_duplicateDocsHandler._markForDispose)
+                    _duplicateDocsHandler.Dispose();
             }
 
             private async ValueTask FixDocumentMetadataIfNecessaryAsync()
@@ -441,8 +512,11 @@ namespace Raven.Server.Smuggler.Documents
                 _command = new MergedBatchPutCommand(_database, _buildType, _log,
                     _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
                 {
-                    IsRevision = _isRevision
+                    IsRevision = _isRevision,
                 };
+
+                if (_throwOnCollectionMismatchError == false)
+                    _command.DocumentCollectionMismatchHandler = item => _duplicateDocsHandler.AddDocument(item);
             }
 
             private async ValueTask FinishBatchOfDocumentsAsync()
@@ -924,6 +998,7 @@ namespace Raven.Server.Smuggler.Documents
         public class MergedBatchPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             public bool IsRevision;
+            public Action<DocumentItem> DocumentCollectionMismatchHandler;
 
             private readonly DocumentDatabase _database;
             private readonly BuildVersionType _buildType;
@@ -1122,8 +1197,17 @@ namespace Raven.Server.Smuggler.Documents
                     newEtag = _database.DocumentsStorage.GenerateNextEtag();
                     document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
                     databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
+                    try
+                    {
+                        _database.DocumentsStorage.Put(context, id, expectedChangeVector: null, document.Data, document.LastModified.Ticks, document.ChangeVector, document.Flags, document.NonPersistentFlags);
+                    }
+                    catch (DocumentCollectionMismatchException)
+                    {
+                        if (DocumentCollectionMismatchHandler == null)
+                            throw;
 
-                    _database.DocumentsStorage.Put(context, id, null, document.Data, document.LastModified.Ticks, document.ChangeVector, document.Flags, document.NonPersistentFlags);
+                        DocumentCollectionMismatchHandler.Invoke(documentType);
+                    }
                 }
 
                 context.LastDatabaseChangeVector = databaseChangeVector;

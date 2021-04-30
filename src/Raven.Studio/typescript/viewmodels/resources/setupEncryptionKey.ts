@@ -53,8 +53,12 @@ abstract class setupEncryptionKey {
     syncQrCode() {
         const key = this.key();
         const qrContainer = document.getElementById("encryption_qrcode");
-        qrContainer.innerHTML = "";
-
+        
+        if (qrContainer.innerHTML && !this.qrCode) {
+            // clean up old instances
+            qrContainer.innerHTML = "";
+        }
+        
         const isKeyValid = this.key.isValid();
 
         if (isKeyValid) {
