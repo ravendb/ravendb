@@ -112,11 +112,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         private bool MaybeReadAllFromCache(JsonOperationContext ctx, AggressiveCacheOptions options)
         {
-            if (_cached != null)
-            {
-                _cached.Dispose();
-                _cached = null;
-            }
+            DisposeCache();
 
             bool readAllFromCache = options != null;
             var trackChanges = readAllFromCache && options.Mode == AggressiveCacheMode.TrackChanges;
@@ -129,8 +125,11 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 var cachedItem = _httpCache.Get(ctx, cacheKey, out var changeVector, out var cached);
                 if (cached == null)
                 {
-                    readAllFromCache = false;
-                    continue;
+                    using (cachedItem)
+                    {
+                        readAllFromCache = false;
+                        continue;
+                    }
                 }
 
                 if (readAllFromCache && (trackChanges && cachedItem.MightHaveBeenModified || cachedItem.Age > options.Duration || command.CanCacheAggressively == false))
@@ -192,7 +191,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                     MaybeSetCache(getResponse, command);
 
                     Result.Add(_cached != null && getResponse.StatusCode == HttpStatusCode.NotModified
-                        ? new GetResponse {Result = _cached.Values[i].Cached.Clone(context), StatusCode = HttpStatusCode.NotModified}
+                        ? new GetResponse { Result = _cached.Values[i].Cached.Clone(context), StatusCode = HttpStatusCode.NotModified }
                         : getResponse);
 
                     i++;
@@ -320,7 +319,16 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         public override bool IsReadRequest => false;
 
-        public void Dispose() => _cached?.Dispose();
+        public void Dispose()
+        {
+            DisposeCache();
+        }
+
+        private void DisposeCache()
+        {
+            _cached?.Dispose();
+            _cached = null;
+        }
 
         private class Cached : IDisposable
         {
@@ -335,7 +343,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
             public void Dispose()
             {
-                if(Values == null)
+                if (Values == null)
                     return;
                 for (int i = 0; i < _size; i++)
                 {
