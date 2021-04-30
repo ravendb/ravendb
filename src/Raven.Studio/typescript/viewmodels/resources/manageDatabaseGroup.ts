@@ -26,6 +26,7 @@ class manageDatabaseGroup extends viewModelBase {
     deletionInProgress = ko.observableArray<string>([]);
     isEncrypted = ko.observable<boolean>(false);
     
+    lockMode = ko.observable<Raven.Client.ServerWide.DatabaseLockMode>();
     priorityOrder = ko.observableArray<string>([]);
     
     fixOrder = ko.observable<boolean>(false);
@@ -122,6 +123,8 @@ class manageDatabaseGroup extends viewModelBase {
 
     compositionComplete(): void {
         super.compositionComplete();
+        
+        this.setupDisableReasons();
 
         this.registerDisposableHandler($(document), "fullscreenchange", () => {
             $("body").toggleClass("fullscreen", $(document).fullScreen());
@@ -233,6 +236,7 @@ class manageDatabaseGroup extends viewModelBase {
         this.isEncrypted(incomingDbInfo.isEncrypted());
         this.dynamicDatabaseDistribution(incomingDbInfo.dynamicDatabaseDistribution());
         this.priorityOrder(incomingDbInfo.priorityOrder());
+        this.lockMode(incomingDbInfo.lockMode());
         this.fixOrder(incomingDbInfo.priorityOrder() && incomingDbInfo.priorityOrder().length > 0);
     }
     
