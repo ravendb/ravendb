@@ -2,7 +2,7 @@
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6">
             <div class="flex-header flex-horizontal">
-                <div class="form-inline" data-bind="requiredAccess: 'Admin'">
+                <div class="form-inline" data-bind="requiredAccess: 'DatabaseAdmin'">
                     <div class="checkbox checkbox-primary checkbox-inline align-checkboxes" title="Select all or none">
                         <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }" />
                         <label></label>
@@ -57,7 +57,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm-12 col-lg-6" data-bind="requiredAccess: 'Admin'">
+        <div class="col-sm-12 col-lg-6" data-bind="requiredAccess: 'DatabaseAdmin'">
             <div class="flex-header">
                 <button class="btn btn-default" data-bind="click: addCollectionSpecificConfiguration">
                     <i class="icon-plus"></i>
@@ -252,7 +252,7 @@
         <div class="state" data-bind="attr: { 'data-state-text': hasPoliciesOrRetentionConfig() && disabled() ? 'disabled' : 'enabled' }, 
                                       css: { 'state-success': !hasPoliciesOrRetentionConfig() || !disabled(), 'state-warning': hasPoliciesOrRetentionConfig() && disabled() }"></div>
         <div class="padding padding-sm flex-horizontal">
-            <div class="checkbox" data-bind="visible: hasPoliciesOrRetentionConfig, requiredAccess: 'Admin'">
+            <div class="checkbox" data-bind="visible: hasPoliciesOrRetentionConfig, requiredAccess: 'DatabaseAdmin'">
                 <input type="checkbox" class="styled" data-bind="checked: $root.selectedItems, checkedValue: $data">
                 <label></label>
             </div>
@@ -261,7 +261,7 @@
             </div>
             <div class="flex-grow">
             </div>
-            <div class="actions-container" data-bind="requiredAccess: 'Admin'">
+            <div class="actions-container" data-bind="requiredAccess: 'DatabaseAdmin'">
                 <div class="actions">
                     <button class="btn btn-default" data-bind="visible: hasPoliciesOrRetentionConfig() && !disabled(), click: $root.disableConfiguration">
                         <i class="icon-stop"></i><span>Disable</span>

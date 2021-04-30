@@ -4,12 +4,12 @@
             <div class="clearfix">
                 <div class="btn-group">
                     <button type="button" class="btn btn-primary"
-                            data-bind="click: newDocument, requiredAccess: 'ReadWrite'">
+                            data-bind="click: newDocument, requiredAccess: 'DatabaseReadWrite'">
                         <i class="icon-new-document"></i>
                         <span>New document</span>
                     </button>
                     <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                            data-bind="enable: inSpecificCollection, requiredAccess: 'ReadWrite'">
+                            data-bind="enable: inSpecificCollection, requiredAccess: 'DatabaseReadWrite'">
                         <span class="caret"></span>
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
@@ -19,7 +19,7 @@
                 </div>
                 <div class="btn-group-label" data-bind="css: { active: selectedItemsCount }" data-label="Selection" role="group">
                     <button type="button" class="btn btn-danger"
-                            data-bind="click: deleteSelected, css: { 'btn-spinner': spinners.delete() }, enable: deleteEnabled, requiredAccess: 'ReadWrite'">
+                            data-bind="click: deleteSelected, css: { 'btn-spinner': spinners.delete() }, enable: deleteEnabled, requiredAccess: 'DatabaseReadWrite'">
                         <span class="icon-trash"></span> <span>Delete</span>
                     </button>
                     <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': copyDisabledReason().reason }">

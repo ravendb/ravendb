@@ -3,7 +3,7 @@
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-header flex-horizontal">
                 <div>
-                    <a class="btn btn-primary" data-bind="attr: { href: addUrl }, requiredAccess: 'Admin'">
+                    <a class="btn btn-primary" data-bind="attr: { href: addUrl }, requiredAccess: 'DatabaseAdmin'">
                         <i class="icon-plus"></i><span>Add a Database Custom Analyzer</span>
                     </a>
                 </div>
@@ -34,7 +34,7 @@
                                 <button type="button" data-bind="click: _.partial($root.editAnalyzer, $data), visible: !$root.isAdminAccessOrAbove()"
                                         class="btn btn-default"><i class="icon-preview" title="View custom analyzer"></i>
                                 </button>
-                                <button type="button" data-bind="click: _.partial($root.confirmRemoveAnalyzer, $data), requiredAccess: 'Admin'"
+                                <button type="button" data-bind="click: _.partial($root.confirmRemoveAnalyzer, $data), requiredAccess: 'DatabaseAdmin'"
                                         class="btn btn-danger"><i class="icon-trash" title="Delete custom analyzer"></i>
                                 </button>
                             </div>

@@ -133,7 +133,7 @@
                 </div>
                 <div class="pull-right" role="group">
                     <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': deleteDocumentDisableReason }, visible: currentTab() === 'results'">
-                        <button type="button" class="btn btn-danger btn-sm" data-bind="enable: canDeleteDocumentsMatchingQuery, click: deleteDocsMatchingQuery, requiredAccess: 'ReadWrite'"
+                        <button type="button" class="btn btn-danger btn-sm" data-bind="enable: canDeleteDocumentsMatchingQuery, click: deleteDocsMatchingQuery, requiredAccess: 'DatabaseReadWrite'"
                                 title="Delete all documents matching the query">
                             <i class="icon-trash"></i> <span>Delete documents</span>
                         </button>

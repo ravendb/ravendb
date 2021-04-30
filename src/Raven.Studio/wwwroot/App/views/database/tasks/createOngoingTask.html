@@ -6,7 +6,7 @@
         </div>
         <div class="modal-body">
             <div class="padding padding-sm text-center">
-                <div data-bind="requiredAccess: 'Admin'">
+                <div data-bind="requiredAccess: 'DatabaseAdmin'">
                     <div class="hr-title">
                         <h5>Replication</h5>
                         <hr />
@@ -50,7 +50,7 @@
                     </div>
                 </div>
                 <div class="row row-sm flex-row">
-                    <div class="col-sm-4 margin-bottom" title="Create new Backup task" data-bind="requiredAccess: 'Admin'">
+                    <div class="col-sm-4 margin-bottom" title="Create new Backup task" data-bind="requiredAccess: 'DatabaseAdmin'">
                         <a href="#" class="periodic-backup" data-bind="click: newBackupTask">
                             <i class="icon-backups"></i><br />Periodic Backup
                         </a>
