@@ -13,6 +13,7 @@ using Voron;
 using Voron.Data.Tables;
 using System.Linq;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Replication;
 using Sparrow.Server;
@@ -693,9 +694,7 @@ namespace Raven.Server.Documents
 
         private static void ThrowInvalidCollectionNameChange(string id, CollectionName oldCollectionName, CollectionName collectionName)
         {
-            throw new InvalidOperationException(
-                $"Changing '{id}' from '{oldCollectionName.Name}' to '{collectionName.Name}' via update is not supported.{Environment.NewLine}" +
-                $"Delete it and recreate the document {id}.");
+            DocumentCollectionMismatchException.ThrowFor(id, oldCollectionName.Name, collectionName.Name);
         }
 
         private static void ThrowConcurrentException(string id, string expectedChangeVector, string oldChangeVector)

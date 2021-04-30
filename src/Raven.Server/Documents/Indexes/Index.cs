@@ -1191,14 +1191,10 @@ namespace Raven.Server.Documents.Indexes
 
                         bool didWork = false;
 
-                        IndexingStatsAggregator stats = null;
-                        
-                        DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock?.Acquire(_indexingProcessCancellationTokenSource.Token);
+                        var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
 
                         try
                         {
-                            stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
-
                             if (_logger.IsInfoEnabled)
                                 _logger.Info($"Starting indexing for '{Name}'.");
 
@@ -1211,6 +1207,17 @@ namespace Raven.Server.Documents.Indexes
                                 try
                                 {
                                     _indexingProcessCancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                                    if (DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock != null)
+                                    {
+                                        if (DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock.TryAcquire(TimeSpan.Zero, _indexingProcessCancellationTokenSource.Token) == false)
+                                        {
+                                            using (scope.For(IndexingOperation.Wait.AcquireConcurrentlyRunningIndexesLock))
+                                            {
+                                                DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock.Acquire(_indexingProcessCancellationTokenSource.Token);
+                                            }
+                                        }
+                                    }
 
                                     try
                                     {
@@ -1234,6 +1241,8 @@ namespace Raven.Server.Documents.Indexes
                                     }
                                     finally
                                     {
+                                        DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock?.Release();
+
                                         _indexingInProgress.Release();
 
                                         if (_batchStopped)
@@ -1373,9 +1382,7 @@ namespace Raven.Server.Documents.Indexes
                         }
                         finally
                         {
-                            DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock?.Release();
-
-                            stats?.Complete();
+                            stats.Complete();
                         }
 
                         if (batchCompleted)
