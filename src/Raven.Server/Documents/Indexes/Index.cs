@@ -269,7 +269,7 @@ namespace Raven.Server.Documents.Indexes
                     throw new ArgumentException($"Unknown index source type: {sourceType}");
             }
 
-            _disposeOne = new DisposeOnce<SingleAttempt>(() =>
+            _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
             {
                 using (DrainRunningQueries())
                     DisposeIndex();
@@ -549,7 +549,7 @@ namespace Raven.Server.Documents.Indexes
 
         public AsyncManualResetEvent.FrozenAwaiter GetIndexingBatchAwaiter()
         {
-            if (_disposeOne.Disposed)
+            if (_disposeOnce.Disposed)
                 ThrowObjectDisposed();
 
             return _indexingBatchCompleted.GetFrozenAwaiter();
@@ -562,11 +562,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected void Initialize(DocumentDatabase documentDatabase, IndexingConfiguration configuration, PerformanceHintsConfiguration performanceHints)
         {
-            if (configuration.EnableMetrics)
-            {
-                ReducesPerSec = new MeterMetric();
-                MapsPerSec = new MeterMetric();
-            }
+            InitializeMetrics(configuration);
 
             _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
             using (DrainRunningQueries())
@@ -590,6 +586,20 @@ namespace Raven.Server.Documents.Indexes
                     options.Dispose();
                     throw;
                 }
+            }
+        }
+
+        private void InitializeMetrics(IndexingConfiguration configuration)
+        {
+            if (configuration.EnableMetrics)
+            {
+                ReducesPerSec = new MeterMetric();
+                MapsPerSec = new MeterMetric();
+            }
+            else
+            {
+                ReducesPerSec = null;
+                MapsPerSec = null;
             }
         }
 
@@ -659,7 +669,7 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (OperationCanceledException)
             {
-                if (_disposeOne.Disposed)
+                if (_disposeOnce.Disposed)
                     ThrowObjectDisposed();
 
                 throw new TimeoutException("After waiting for 10 seconds for all running queries ");
@@ -676,7 +686,7 @@ namespace Raven.Server.Documents.Indexes
         {
             configuration.InitializeAnalyzers(documentDatabase.Name);
 
-            if (_disposeOne.Disposed)
+            if (_disposeOnce.Disposed)
                 throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
 
             using (DrainRunningQueries())
@@ -775,7 +785,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual void Start()
         {
-            if (_disposeOne.Disposed)
+            if (_disposeOnce.Disposed)
                 throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
 
             if (_initialized == false)
@@ -823,7 +833,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (ObjectDisposedException ode)
                 {
-                    if (_disposeOne.Disposed == false)
+                    if (_disposeOnce.Disposed == false)
                     {
                         ReportUnexpectedIndexingError(ode);
                     }
@@ -858,7 +868,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual void Stop(bool disableIndex = false)
         {
-            if (_disposeOne.Disposed)
+            if (_disposeOnce.Disposed)
                 throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
 
             if (_initialized == false)
@@ -908,6 +918,7 @@ namespace Raven.Server.Documents.Indexes
             Debug.Assert(Type.IsStatic());
 
             configuration.InitializeAnalyzers(DocumentDatabase.Name);
+            InitializeMetrics(configuration);
 
             using (DrainRunningQueries())
             {
@@ -920,7 +931,7 @@ namespace Raven.Server.Documents.Indexes
                 Definition = definition;
                 Configuration = configuration;
 
-                if (Configuration.ThrottlingTimeInterval?.AsTimeSpan != _mre.ThrottlingInterval) 
+                if (Configuration.ThrottlingTimeInterval?.AsTimeSpan != _mre.ThrottlingInterval)
                     _mre.Update(Configuration.ThrottlingTimeInterval?.AsTimeSpan);
 
                 OnInitialization();
@@ -932,11 +943,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private DisposeOnce<SingleAttempt> _disposeOne;
+        private DisposeOnce<SingleAttempt> _disposeOnce;
 
         public void Dispose()
         {
-            _disposeOne.Dispose();
+            _disposeOnce.Dispose();
         }
 
         public bool IsStale(QueryOperationContext queryContext, long? cutoff = null, List<string> stalenessReasons = null)
@@ -1204,7 +1215,7 @@ namespace Raven.Server.Documents.Indexes
                         bool didWork = false;
 
                         IndexingStatsAggregator stats = null;
-                        
+
                         DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock?.Acquire(_indexingProcessCancellationTokenSource.Token);
 
                         try
@@ -1345,7 +1356,7 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.OrdinalIgnoreCase);
                                         _isReplacing = true;
-                                        
+
                                         if (batchCompleted)
                                         {
                                             // this side-by-side index will be replaced in a second, notify about indexing success
@@ -1424,7 +1435,7 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     // if there is nothing to do and no work has been scheduled already (when running in throttled mode) then
                                     // immediately cleanup everything 
-                                    timeToWaitForMemoryCleanup = 0; 
+                                    timeToWaitForMemoryCleanup = 0;
                                 }
 
                                 // at any rate, we'll reduce the budget for this index to what it currently has allocated to avoid
@@ -2331,7 +2342,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 queryContext.AssertOpenedTransactions();
 
-                var disposed = DocumentDatabase.DatabaseShutdown.IsCancellationRequested || _disposeOne.Disposed;
+                var disposed = DocumentDatabase.DatabaseShutdown.IsCancellationRequested || _disposeOnce.Disposed;
                 if (valid == false || disposed)
                 {
                     var progress = new IndexProgress
@@ -2903,7 +2914,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
                                 resultToFill.RegisterSpatialProperties(query);
-                                
+
                                 resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
                                 resultToFill.LongTotalResults = resultToFill.TotalResults;
                                 resultToFill.SkippedResults = skippedResults.Value;
@@ -3262,7 +3273,7 @@ namespace Raven.Server.Documents.Indexes
             if (_initialized == false)
                 ThrowNotInitialized();
 
-            if (_disposeOne.Disposed)
+            if (_disposeOnce.Disposed)
                 ThrowWasDisposed();
 
             if (assertState && State == IndexState.Error)
@@ -4276,7 +4287,7 @@ namespace Raven.Server.Documents.Indexes
             IndexPersistence.Dispose();
 
             _environment.Dispose();
-            
+
             return new DisposableAction(() =>
             {
                 // restart environment
@@ -4565,7 +4576,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void AssertNotDisposed()
         {
-            if (_disposeOne.Disposed)
+            if (_disposeOnce.Disposed)
                 ThrowObjectDisposed();
         }
 

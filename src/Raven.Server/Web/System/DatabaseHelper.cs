@@ -7,7 +7,6 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Utils;
-using Sparrow.Json;
 
 namespace Raven.Server.Web.System
 {
@@ -27,7 +26,7 @@ namespace Raven.Server.Web.System
                 {
                     foreach (var configurationEntryAttribute in categoryProperty.GetCustomAttributes<ConfigurationEntryAttribute>())
                     {
-                        if (configurationEntryAttribute.Scope == ConfigurationEntryScope.ServerWideOrPerDatabase)
+                        if (configurationEntryAttribute.Scope == ConfigurationEntryScope.ServerWideOrPerDatabase || configurationEntryAttribute.Scope == ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)
                             continue;
 
                         Array.Resize(ref keys, keys.Length + 1);
@@ -37,24 +36,6 @@ namespace Raven.Server.Web.System
             }
 
             return keys;
-        }
-
-        public static bool CheckExistingDatabaseName(BlittableJsonReaderObject database, string id, string dbId, string etag, out string errorMessage)
-        {
-            var isExistingDatabase = database != null;
-            if (isExistingDatabase && etag == null)
-            {
-                errorMessage = $"Database with the name '{id}' already exists";
-                return false;
-            }
-            if (!isExistingDatabase && etag != null)
-            {
-                errorMessage = $"Database with the name '{id}' doesn't exist";
-                return false;
-            }
-
-            errorMessage = null;
-            return true;
         }
 
         public static void DeleteDatabaseFiles(RavenConfiguration configuration)

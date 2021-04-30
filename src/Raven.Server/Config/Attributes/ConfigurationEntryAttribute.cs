@@ -35,6 +35,7 @@ namespace Raven.Server.Config.Attributes
     public enum ConfigurationEntryScope
     {
         ServerWideOnly,
-        ServerWideOrPerDatabase
+        ServerWideOrPerDatabase,
+        ServerWideOrPerDatabaseOrPerIndex
     }
 }
