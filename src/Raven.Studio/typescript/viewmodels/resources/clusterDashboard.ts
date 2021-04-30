@@ -229,9 +229,7 @@ class clusterDashboard extends viewModelBase {
                     }
                 });
         } else {
-            const welcome = new welcomeWidget(this);
-            welcome.fullscreen(true);
-            this.addWidget(welcome);
+            this.addWidget(new welcomeWidget(this));
             this.addWidget(new cpuUsageWidget(this));
             this.addWidget(new memoryUsageWidget(this));
             this.addWidget(new licenseWidget(this));
