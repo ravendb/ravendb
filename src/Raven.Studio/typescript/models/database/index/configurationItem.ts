@@ -4,14 +4,33 @@ import configuration = require("configuration");
 
 class configurationItem {
 
-    static readonly ServerWideIndexingConfigurationOptions = [        
-        configuration.indexing.globalScratchSpaceLimit,
-        configuration.indexing.cleanupInterval,
-        configuration.indexing.maxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit
+    static readonly PerDatabaseIndexingConfigurationOptions: Array<string> = [
+        "Indexing.Analyzers.Default",
+        "Indexing.Analyzers.Exact.Default",
+        "Indexing.Analyzers.NGram.MaxGram",
+        "Indexing.Analyzers.NGram.MinGram",
+        "Indexing.Analyzers.Search.Default",
+        "Indexing.Encrypted.TransactionSizeLimitInMb",
+        "Indexing.IndexEmptyEntries",
+        "Indexing.IndexMissingFieldsAsNull",
+        "Indexing.LargeSegmentSizeToMergeInMb",
+        "Indexing.ManagedAllocationsBatchSizeLimitInMb",
+        "Indexing.MapBatchSize",
+        "Indexing.MapTimeoutAfterEtagReachedInMin",
+        "Indexing.MapTimeoutInSec",
+        "Indexing.MaximumSizePerSegmentInMb",
+        "Indexing.MaxStepsForScript",
+        "Indexing.MaxTimeForDocumentTransactionToRemainOpenInSec",
+        "Indexing.MaxTimeForMergesToKeepRunningInSec",
+        "Indexing.MergeFactor",
+        "Indexing.Metrics.Enabled",
+        "Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory",
+        "Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory",
+        "Indexing.NumberOfLargeSegmentsToMergeInSingleBatch",
+        "Indexing.ScratchSpaceLimitInMb",
+        "Indexing.Throttling.TimeIntervalInMs",
+        "Indexing.TransactionSizeLimitInMb"
     ];
-
-    static readonly PerDatabaseIndexingConfigurationOptions: Array<string> = _.sortBy(_.pullAll(_.values<string>(configuration.indexing), 
-                                                                                                 configurationItem.ServerWideIndexingConfigurationOptions));       
     
     key = ko.observable<string>();
     value = ko.observable<string>();
