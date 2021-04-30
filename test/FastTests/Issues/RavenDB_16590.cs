@@ -4,17 +4,21 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_16590
+    public class RavenDB_16590 : NoDisposalNeeded
     {
+        public RavenDB_16590(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void StudioListsOfIndexScopedSettings()
         {
