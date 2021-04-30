@@ -3,7 +3,7 @@
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-header flex-horizontal">
                 <div>
-                    <button data-bind="click: addNewOngoingTask, requiredAccess: 'ReadWrite'" class="btn btn-primary">
+                    <button data-bind="click: addNewOngoingTask, requiredAccess: 'DatabaseReadWrite'" class="btn btn-primary">
                         <i class="icon-plus"></i><span>Add a Database Task</span>
                     </button>
                 </div>
@@ -311,7 +311,7 @@
                                         <button class="btn backup-now" data-bind="click: backupNow, enable: isBackupNowEnabled(), visible: isBackupNowVisible(),
                                              css: { 'btn-default': !neverBackedUp(), 'btn-info': backupNowInProgress, 'btn-spinner': backupNowInProgress, 'btn-warning': !backupNowInProgress() && neverBackedUp() },
                                              attr: { 'title':  disabledBackupNowReason() || 'Click to trigger the backup task now' },
-                                             requiredAccess: 'Admin'">
+                                             requiredAccess: 'DatabaseAdmin'">
                                             <i class="icon-backups"></i><span data-bind="text: backupNowInProgress() ? 'Show backup progress' : 'Backup now'"></span>
                                         </button>
                                         <button class="btn btn-default" data-bind="click: refreshBackupInfo" title="Refresh info"><i class="icon-refresh"></i></button>
@@ -596,7 +596,7 @@
 <script type="text/html" id="state-template">
     <div class="btn-group">
         <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false" 
-                data-bind="requiredAccess: 'Admin', requiredAccessOptions: { strategy: 'disable' }">
+                data-bind="requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
             <!--set-size-->
             <span data-bind="text: stateText()"></span><span class="caret"></span>
         </button>
@@ -627,8 +627,8 @@
     <div class="actions-container">
         <div class="actions">
             <button class="btn btn-default" data-bind="click: _.partial($root.toggleDetails, $data)" title="Click for details"><i class="icon-info"></i></button>
-            <button class="btn btn-default" title="Edit task" data-bind="visible: !isServerWide(), click: editTask, requiredAccess: 'Admin'"><i class="icon-edit"></i></button>
-            <button class="btn btn-danger" data-bind="visible: !isServerWide(), click: $root.confirmRemoveOngoingTask, requiredAccess: 'Admin'" title="Delete task"><i class="icon-trash"></i></button>
+            <button class="btn btn-default" title="Edit task" data-bind="visible: !isServerWide(), click: editTask, requiredAccess: 'DatabaseAdmin'"><i class="icon-edit"></i></button>
+            <button class="btn btn-danger" data-bind="visible: !isServerWide(), click: $root.confirmRemoveOngoingTask, requiredAccess: 'DatabaseAdmin'" title="Delete task"><i class="icon-trash"></i></button>
         </div>
     </div>
 </script>
@@ -637,8 +637,8 @@
     <div class="actions-container">
         <div class="actions">
             <button class="btn btn-default" data-bind="click: _.partial($root.toggleDetails, $data)" title="Click for details"><i class="icon-info"></i></button>
-            <button class="btn btn-default" title="Edit task" data-bind="visible: !isServerWide(), click: editTask, requiredAccess: 'ReadWrite'"><i class="icon-edit"></i></button>
-            <button class="btn btn-danger" data-bind="visible: !isServerWide(), click: $root.confirmRemoveOngoingTask, requiredAccess: 'ReadWrite'" title="Delete task"><i class="icon-trash"></i></button>
+            <button class="btn btn-default" title="Edit task" data-bind="visible: !isServerWide(), click: editTask, requiredAccess: 'DatabaseReadWrite'"><i class="icon-edit"></i></button>
+            <button class="btn btn-danger" data-bind="visible: !isServerWide(), click: $root.confirmRemoveOngoingTask, requiredAccess: 'DatabaseReadWrite'" title="Delete task"><i class="icon-trash"></i></button>
         </div>
     </div>
 </script>

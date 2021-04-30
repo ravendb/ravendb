@@ -24,8 +24,6 @@ class accessManager {
          return clearance === "ClusterAdmin" || clearance === "ClusterNode" || clearance === "Operator";
     });
 
-    isValidUser = ko.pureComputed<boolean>(() => this.securityClearance() === "ValidUser");
-
     isAdminByDbName(dbName: string) {
         return this.getEffectiveDatabaseAccessLevel(dbName) === "Admin";
     }
@@ -107,41 +105,31 @@ class accessManager {
         return accessLevel === 'Admin';
     });
     
-    canHandleOperation(requiredAccess: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess |
-                                       Raven.Client.ServerWide.Operations.Certificates.SecurityClearance,
-                                       isSecurityClearance: boolean) {
-                
-        return ko.pureComputed(() => {
-            
-            if (isSecurityClearance) {
-                switch (requiredAccess) {
-                    case "ClusterAdmin":
-                    case "ClusterNode":
-                        return this.isClusterAdminOrClusterNode();
-                    case "Operator":
-                        return this.isOperatorOrAbove();
-                    case "ValidUser":
-                        return this.isValidUser();
-                }
-            } else {
-                const activeDatabaseAccess = this.activeDatabaseAccessLevel();
+    canHandleOperation(requiredAccess: accessLevel) {
+        switch (requiredAccess) {
+            case "ClusterAdmin":
+            case "ClusterNode":
+                return this.isClusterAdminOrClusterNode();
+            case "Operator":
+                return this.isOperatorOrAbove();
+        }
+        
+        const activeDatabaseAccess = this.activeDatabaseAccessLevel();
 
-                if (!activeDatabaseAccess) {
-                    return false;
-                }
+        if (!activeDatabaseAccess) {
+            return false;
+        }
 
-                if (activeDatabaseAccess === 'Read' &&
-                    (requiredAccess === 'ReadWrite' || requiredAccess === 'Admin')) {
-                    return false;
-                }
+        if (activeDatabaseAccess === 'Read' &&
+            (requiredAccess === "DatabaseReadWrite" || requiredAccess === "DatabaseAdmin")) {
+            return false;
+        }
 
-                if (activeDatabaseAccess === 'ReadWrite' && requiredAccess === 'Admin') {
-                    return false;
-                }
+        if (activeDatabaseAccess === "ReadWrite" && requiredAccess === "DatabaseAdmin") {
+            return false;
+        }
 
-                return true;
-            }
-        })
+        return true;
     }
     
     private createSecurityRule(enabledPredicate: KnockoutObservable<boolean>, requiredRoles: string) {

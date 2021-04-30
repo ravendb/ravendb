@@ -814,3 +814,7 @@ interface cachedDateValue<T> {
 }
 
 type widgetType = Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType | "Welcome" | "License";
+
+type databaseAccessLevel = `Database${Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess}`;
+type securityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
+type accessLevel = databaseAccessLevel | securityClearance;

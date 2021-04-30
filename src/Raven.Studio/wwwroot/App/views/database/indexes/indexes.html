@@ -13,7 +13,7 @@
             <div class="clearfix toolbar" data-bind="if: sortedGroups().length">
                 <div class="pull-left">
                     <div class="form-inline">
-                        <div class="checkbox checkbox-primary checkbox-inline align-checkboxes" title="Select all or none" data-bind="requiredAccess: 'ReadWrite'">
+                        <div class="checkbox checkbox-primary checkbox-inline align-checkboxes" title="Select all or none" data-bind="requiredAccess: 'DatabaseReadWrite'">
                             <input type="checkbox" class="styled" data-bind="checkboxTriple: indexesSelectionState, event: { change: toggleSelectAll }" />
                             <label></label>
                         </div>
@@ -28,7 +28,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="indexesToolbar-actions", data-bind="requiredAccess: 'ReadWrite'">
+                        <div class="indexesToolbar-actions", data-bind="requiredAccess: 'DatabaseReadWrite'">
                             <div class="btn-group-label" data-bind="css: { active: selectedIndexesName().length }" data-label="Selection" role="group">
                                 <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes, enable: selectedIndexesName().length">
                                     <i class="icon-trash"></i><span>Delete</span>
@@ -129,7 +129,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="pull-right" id="toggleIndexing" data-bind="requiredAccess: 'ReadWrite'">
+                <div class="pull-right" id="toggleIndexing" data-bind="requiredAccess: 'DatabaseReadWrite'">
                     <button class="btn btn-default disable-indexing" title="Pause indexing process for ALL indexes until restart - Local node"
                             data-bind="click: stopIndexing, visible: $root.globalIndexingStatus() !== 'Paused', 
                                        attr: { title: 'Pause indexing process for ALL indexes until restart - On node ' + localNodeTag() },
@@ -185,7 +185,7 @@
             <div class="col-xs-12 col-sm-6 col-xl-4 info-container">
                 <div class="flex-horizontal">
 <!--                // TODO: may want to fix the below checkbox with strategy of invisibilityHidden ??? -->
-                    <div class="checkbox" data-bind="requiredAccess: 'ReadWrite'">
+                    <div class="checkbox" data-bind="requiredAccess: 'DatabaseReadWrite'">
                         <input type="checkbox" class="styled" data-bind="checked: $root.selectedIndexesName, checkedValue: name" />
                         <label></label>
                     </div>
@@ -217,7 +217,7 @@
                         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
                                 data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
                                            enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name),
-                                           requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }">
+                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }">
                             <span class="text-warning" data-bind="visible: isPausedState() && !isErrorState()">
                                 <i class="icon-cancel"></i>
                                 <span>Paused until restart</span>
@@ -285,7 +285,7 @@
                     <div class="btn-group properties-value">
                         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
                                 data-bind="css: { 'btn-spinner': _.includes($root.spinners.localPriority(), name) }, enable: !_.includes($root.spinners.localPriority(), name),
-                                           requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }">
+                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }">
                             <span data-bind="visible: isNormalPriority()">
                                 <i class="icon-check"></i>
                                 <span>Normal</span>
@@ -324,7 +324,7 @@
                     <div class="btn-group properties-value">
                         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
                                 data-bind="css: { 'btn-spinner': _.includes($root.spinners.localLockChanges(), name) }, enable: !_.includes($root.spinners.localLockChanges(), name),
-                                           requiredAccess: 'ReadWrite', requiredAccessOptions: { strategy: 'disable' }">
+                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }">
                             <span data-bind="visible: lockMode() === 'Unlock'">
                                 <i class="icon-unlock"></i><span>Unlocked</span>
                             </span>
@@ -417,8 +417,8 @@
                             <button class="btn btn-default" data-bind="click: $root.openFaultyIndex" title="Open index"><i class="icon-arrow-filled-up"></i></button>
                         </div>
                         <div class="btn-group" role="group">
-                            <button class="btn btn-default" data-bind="click: $root.resetIndex, requiredAccess: 'ReadWrite'" title="Reset index"><i class="icon-reset"></i></button>
-                            <button class="btn btn-danger" data-bind="click: $root.deleteIndex, requiredAccess: 'ReadWrite'" title="Delete the index"><i class="icon-trash"></i></button>
+                            <button class="btn btn-default" data-bind="click: $root.resetIndex, requiredAccess: 'DatabaseReadWrite'" title="Reset index"><i class="icon-reset"></i></button>
+                            <button class="btn btn-danger" data-bind="click: $root.deleteIndex, requiredAccess: 'DatabaseReadWrite'" title="Delete the index"><i class="icon-trash"></i></button>
                         </div>
                     </div>
                 </div>

@@ -3,7 +3,7 @@
         <div class="content-margin">
             <div class="toolbar no-margin">
                 <button type="submit" class="btn btn-primary"
-                        data-bind="disable: spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': spinners.save }, requiredAccess: 'Admin'">
+                        data-bind="disable: spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': spinners.save }, requiredAccess: 'DatabaseAdmin'">
                     <i class="icon-save"></i><span>Save</span>
                 </button>
             </div>
@@ -26,7 +26,7 @@
                                 </div>
                                 <div style="position: relative" class="margin-top margin-top-lg">
                                     <button class="btn btn-block dropdown-toggle" type="button" data-toggle="dropdown"
-                                            data-bind="requiredAccess: 'Admin', requiredAccessOptions: { strategy: 'disable' }">
+                                            data-bind="requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
                                         <span data-bind="text: model.environment"></span>
                                         <span class="caret"></span>
                                     </button>

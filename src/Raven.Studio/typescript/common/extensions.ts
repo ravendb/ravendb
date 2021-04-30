@@ -202,20 +202,18 @@ class extensions {
         }
     }
     
+    private static readonly accessLevels: accessLevel[] = ["DatabaseRead", "DatabaseReadWrite", "DatabaseAdmin", "Operator", "ClusterNode", "ClusterAdmin"];
+    
     private static installBindingHandlers() {
         ko.bindingHandlers["requiredAccess"] = {
             init: (element: Element,
-                   valueAccessor: KnockoutObservable<Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess>,
+                   valueAccessor: KnockoutObservable<accessLevel>,
                    allBindings) => {
                 
                 const requiredAccessLevel = ko.unwrap(valueAccessor());
-                const databaseAccessLevelTypes = ["Read", "ReadWrite", "Admin", "Operator"];
-                const securityClearanceLevelTypes = ["ValidUser", "Operator", "ClusterAdmin", "ClusterNode"];
 
-                if (!_.includes(databaseAccessLevelTypes, requiredAccessLevel) && !_.includes(securityClearanceLevelTypes, requiredAccessLevel)) {
-                    throw new Error(`Invalid Access Level. Value provided: ${requiredAccessLevel}.
-                                     Possible Database Access values are: ${databaseAccessLevelTypes}.
-                                     Possible Security Clearance values are: ${securityClearanceLevelTypes}.`);
+                if (!_.includes(extensions.accessLevels, requiredAccessLevel)) {
+                    throw new Error(`Invalid Access Level. Value provided: ${requiredAccessLevel}. Supported values: ${extensions.accessLevels.join(", ")}`);
                 }
                 
                 const bindings = allBindings();
@@ -248,7 +246,7 @@ class extensions {
                         throw new Error(`Invalid requiredAccess strategy. Value provided: ${strategy}. Possible values are: ${strategyTypes}`);
                     }
 
-                    if (strategy === 'disable') {
+                    if (strategy === "disable") {
                         const hasDisabledClass = $(element).hasClass("disabled");
                         if (hasDisabledClass) {
                             throw new Error("Error in 'requiredAccess' binding. Support for 'disabled' class is not implemented.");
@@ -265,7 +263,7 @@ class extensions {
                 }
             },
             update: (element: any,
-                     valueAccessor: KnockoutObservable<Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess>,
+                     valueAccessor: KnockoutObservable<accessLevel>,
                      allBindings) => {
 
                 const activeDatabase = activeDatabaseTracker.default.database();
@@ -274,9 +272,6 @@ class extensions {
                     
                     const requiredAccessLevel = ko.unwrap(valueAccessor());
                     const strategy = bindings.requiredAccessOptions ? bindings.requiredAccessOptions.strategy : 'hide';
-                    
-                    const securityClearanceLevelTypes = ["ValidUser", "Operator", "ClusterAdmin", "ClusterNode"];
-                    const isSecurityClearance = _.includes(securityClearanceLevelTypes, requiredAccessLevel);
                     
                     switch (strategy) {
                         case 'hide': {
@@ -289,7 +284,7 @@ class extensions {
                             const shouldBeVisibleByKo = visibleValue && !hiddenValue;
                             const isElementVisible = element.style.display !== "none";
 
-                            if (accessManager.default.canHandleOperation(requiredAccessLevel, isSecurityClearance)()) {
+                            if (accessManager.default.canHandleOperation(requiredAccessLevel)) {
                                 if (!isElementVisible && shouldBeVisibleByKo) {
                                     element.style.display = "";
                                 }
@@ -311,7 +306,7 @@ class extensions {
                             const shouldBeEnabledByKo = !disableValue && enableValue;
                             const isElementDisabled = element.hasAttribute("disabled");
 
-                            if (accessManager.default.canHandleOperation(requiredAccessLevel, isSecurityClearance)()) {
+                            if (accessManager.default.canHandleOperation(requiredAccessLevel)) {
                                 if (isElementDisabled && shouldBeEnabledByKo) {
                                     element.setAttribute("disabled", false)
                                 }

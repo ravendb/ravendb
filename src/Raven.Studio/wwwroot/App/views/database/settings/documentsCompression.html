@@ -1,7 +1,7 @@
 <form role="form" id="documentsCompression" class="flex-vertical absolute-fill content-margin" data-bind="submit: saveChanges" autocomplete="off">
     <div class="toolbar">
         <button type="submit" class="btn btn-primary" title="Save Changes" 
-                data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save() }, requiredAccess: 'Admin'">
+                data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save() }, requiredAccess: 'DatabaseAdmin'">
             <i class="icon-save"></i> <span>Save</span>
         </button>
     </div>
@@ -9,7 +9,7 @@
         <div class="col-sm-12 col-lg-6">
             <div class="panel">
                 <div class="padding padding-lg">
-                    <div class="flex-horizontal" data-bind="requiredAccess: 'Admin'">
+                    <div class="flex-horizontal" data-bind="requiredAccess: 'DatabaseAdmin'">
                         <div class="dropdown btn-group flex-grow">
                             <input class="form-control dropdown-toggle" placeholder="Select collection (or enter new collection)" data-toggle="dropdown"
                                    data-bind="textInput: collectionToAdd, attr: { id: 'collectionNameInput' }" />
@@ -52,7 +52,7 @@
             <div class="panel">
                 <div class="padding padding-lg">
                     <div class="toggle toggle-primary">
-                        <input id="revisionsToggle" class="styled" type="checkbox" data-bind="checked: compressRevisions, requiredAccess: 'Admin', requiredAccessOptions: { strategy: 'disable' }">
+                        <input id="revisionsToggle" class="styled" type="checkbox" data-bind="checked: compressRevisions, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
                         <label for="revisionsToggle">
                             Compress Revisions for All Collections
                         </label>

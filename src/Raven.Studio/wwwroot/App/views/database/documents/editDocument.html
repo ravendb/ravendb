@@ -52,17 +52,17 @@
                 <div class="pull-left-sm">
                     <button type="submit" class="btn btn-primary save-btn" 
                             data-bind="enable: isSaveEnabled, css: { 'btn-spinner': isSaving }, visible: !inReadOnlyMode() && !inDiffMode(), 
-                                       attr: { 'title': isSaveEnabled ? 'Save your changes' : ''}, requiredAccess: 'ReadWrite'">
+                                       attr: { 'title': isSaveEnabled ? 'Save your changes' : ''}, requiredAccess: 'DatabaseReadWrite'">
                         <i class="icon-save"></i>
                         <span>Save</span>
                     </button>
                     <button type="button" class="clone-btn btn btn-default" 
-                            data-bind="click: createClone, enable: !isCreatingNewDocument(), visible: !isDeleteRevision() && !inDiffMode(), requiredAccess: 'ReadWrite'">
+                            data-bind="click: createClone, enable: !isCreatingNewDocument(), visible: !isDeleteRevision() && !inDiffMode(), requiredAccess: 'DatabaseReadWrite'">
                         <i class="icon-clone"></i>
                         <span>Clone</span>
                     </button>
                     <button type="button" class="delete-btn btn btn-danger"
-                            data-bind="click: deleteDocument, enable: !isCreatingNewDocument(), visible: !inReadOnlyMode() && !inDiffMode(), requiredAccess: 'ReadWrite'">
+                            data-bind="click: deleteDocument, enable: !isCreatingNewDocument(), visible: !inReadOnlyMode() && !inDiffMode(), requiredAccess: 'DatabaseReadWrite'">
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>
@@ -311,9 +311,9 @@
                     <input type="search" class="form-control" data-bind="textInput: searchInput" placeholder="search" /><span class="icon-search"></span>
                 </div>
                 <div class="flex-window-head" data-bind="visible: isUploaderActive() && $root.canViewAttachments() && !$root.inReadOnlyMode(), 
-                                                         template: { name: 'uploader-template' }, requiredAccess: 'ReadWrite'">
+                                                         template: { name: 'uploader-template' }, requiredAccess: 'DatabaseReadWrite'">
                 </div>
-                <div class="flex-window-head" data-bind="visible: isCountersActive() && $root.canViewCounters() && !$root.inReadOnlyMode(), requiredAccess: 'ReadWrite'">
+                <div class="flex-window-head" data-bind="visible: isCountersActive() && $root.canViewCounters() && !$root.inReadOnlyMode(), requiredAccess: 'DatabaseReadWrite'">
                     <div class="padding padding-xs margin-top margin-top-sm">
                         <button type="button" class="btn btn-sm btn-primary btn-block" data-bind="click: _.partial($root.crudActionsProvider().setCounter, null)">
                             <i class="icon-new-counter"></i>
@@ -321,7 +321,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="flex-window-head" data-bind="visible: isTimeSeriesActive() && $root.canViewTimeSeries() && !$root.inReadOnlyMode(), requiredAccess: 'ReadWrite'">
+                <div class="flex-window-head" data-bind="visible: isTimeSeriesActive() && $root.canViewTimeSeries() && !$root.inReadOnlyMode(), requiredAccess: 'DatabaseReadWrite'">
                     <div class="padding padding-xs margin-top margin-top-sm">
                         <a class="btn btn-sm btn-primary btn-block" data-bind="attr: { href: $root.createTimeSeriesUrl() }">
                             <i class="icon-new-time-series"></i>
@@ -331,7 +331,7 @@
                 </div>
                 <div class="flex-window-head" data-bind="visible: isRevisionsActive() && $root.canViewRevisions() && !$root.inReadOnlyMode(),
                      attr: { title: $root.dirtyFlag().isDirty() ? 'Save your changes before creating a revision' : 'A revision will be created even if Revisions are Not configured for the collection' },
-                     requiredAccess: 'ReadWrite'">
+                     requiredAccess: 'DatabaseReadWrite'">
                     <div class="padding padding-xs margin-top margin-top-sm">
                         <button type="button" class="btn btn-sm btn-primary btn-block"
                                 data-bind="click: $root.forceCreateRevision, disable: $root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.isSaving }">
