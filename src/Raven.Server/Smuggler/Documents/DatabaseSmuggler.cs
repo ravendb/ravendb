@@ -201,6 +201,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 case DatabaseItemType.Tombstones:
                     counts = await ProcessTombstonesAsync(result, buildType);
+                    await ProcessDocumentsWithDuplicateCollectionAsync(result);
                     break;
 
                 case DatabaseItemType.Conflicts:
@@ -283,6 +284,28 @@ namespace Raven.Server.Smuggler.Documents
 
             result.AddInfo($"Finished processing {type}. {counts}");
             _onProgress.Invoke(result.Progress);
+        }
+
+        private async Task ProcessDocumentsWithDuplicateCollectionAsync(SmugglerResult result)
+        {
+            var didWork = false;
+            var count = 0;
+            await using (var actions = _destination.Documents())
+            {
+                foreach (var item in actions.GetDocumentsWithDuplicateCollection())
+                {
+                    if (didWork == false)
+                    {
+                        result.AddInfo("Starting to process documents with duplicate collection.");
+                        didWork = true;
+                    }
+                    await actions.WriteDocumentAsync(item, result.Documents);
+                    count++;
+                }
+            }
+
+            if (didWork)
+                result.AddInfo($"Finished processing '{count}' documents with duplicate collection.");
         }
 
         private async Task SkipTypeAsync(DatabaseItemType type, SmugglerResult result, bool ensureStepProcessed = true)
@@ -648,7 +671,9 @@ namespace Raven.Server.Smuggler.Documents
         {
             result.Documents.Start();
 
-            await using (var actions = _destination.Documents())
+            var throwOnCollectionMismatchError = _options.OperateOnTypes.HasFlag(DatabaseItemType.Tombstones) == false;
+
+            await using (var actions = _destination.Documents(throwOnCollectionMismatchError))
             {
                 List<LazyStringValue> legacyIdsToDelete = null;
 

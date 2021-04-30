@@ -1,5 +1,10 @@
+ARG QEMU_ARCH
 ARG DISTRO_VERSION
+FROM multiarch/qemu-user-static:x86_64-${QEMU_ARCH} as qemu
 FROM ubuntu:${DISTRO_VERSION} 
+
+ARG QEMU_ARCH
+COPY --from=qemu /usr/bin/qemu-${QEMU_ARCH}-static /usr/bin
 
 ARG DISTRO_VERSION_NAME
 ARG DISTRO_VERSION
@@ -32,4 +37,3 @@ RUN find /build -type f -print0 | xargs -0 dos2unix -v
 WORKDIR /build/ravendb
 
 CMD /build/build.sh
-    
