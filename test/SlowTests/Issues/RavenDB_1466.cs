@@ -9,7 +9,9 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -58,7 +60,7 @@ namespace SlowTests.Issues
         {
             new EmployeeByRegionAndSalary().Execute(store);
 
-            using (var session = store.OpenSession())
+            using (var session = store.OpenSession(new SessionOptions { NoCaching = true }))
             {
                 session.Store(new Employee
                 {
@@ -158,6 +160,19 @@ namespace SlowTests.Issues
                                                 .Where(x => x.Region == Region.East).AggregateBy(facets).Execute();
                 westSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
                                                 .Where(x => x.Region == Region.West).AggregateBy(facets).Execute();
+
+                AssertResults(northSalaryFacetQuery, southSalaryFacetQuery, eastSalaryFacetQuery, westSalaryFacetQuery);
+
+                // by using document query
+
+                northSalaryFacetQuery = session.Advanced.DocumentQuery<Employee, EmployeeByRegionAndSalary>()
+                    .WhereEquals(x => x.Region, Region.North).AggregateBy(facets).Execute();
+                southSalaryFacetQuery = session.Advanced.DocumentQuery<Employee, EmployeeByRegionAndSalary>()
+                    .WhereEquals(x => x.Region, Region.South).AggregateBy(facets).Execute();
+                eastSalaryFacetQuery = session.Advanced.DocumentQuery<Employee, EmployeeByRegionAndSalary>()
+                    .WhereEquals(x => x.Region, Region.East).AggregateBy(facets).Execute();
+                westSalaryFacetQuery = session.Advanced.DocumentQuery<Employee, EmployeeByRegionAndSalary>()
+                    .WhereEquals(x => x.Region, Region.West).AggregateBy(facets).Execute();
 
                 AssertResults(northSalaryFacetQuery, southSalaryFacetQuery, eastSalaryFacetQuery, westSalaryFacetQuery);
             }
