@@ -171,7 +171,7 @@ namespace Raven.Client.Documents.Session
 
         IAsyncAggregationDocumentQuery<T> AggregateBy(FacetBase facet);
 
-        IAsyncAggregationDocumentQuery<T> AggregateBy(IEnumerable<Facet> facets);
+        IAsyncAggregationDocumentQuery<T> AggregateBy(IEnumerable<FacetBase> facets);
 
         IAsyncAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentId);
 

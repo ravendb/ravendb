@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Session
             return new AggregationDocumentQuery<T>(this);
         }
 
-        public IAggregationDocumentQuery<T> AggregateBy(IEnumerable<Facet> facets)
+        public IAggregationDocumentQuery<T> AggregateBy(IEnumerable<FacetBase> facets)
         {
             foreach (var facet in facets)
                 base.AggregateBy(facet);
