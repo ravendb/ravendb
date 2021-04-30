@@ -101,7 +101,7 @@
                                             <li><a href="#">Promote node immediately</a></li>
                                         </ul>
                                     </div>-->
-                                    <div class="dropdown dropdown-right" data-bind="requiredAccess: 'Operator'">
+                                    <div class="dropdown dropdown-right" data-bind="visible: $root.lockMode() === 'Unlock', requiredAccess: 'Operator'">
                                         <button class="btn btn-danger dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                             <i class="icon-disconnected"></i> <span>Delete from group</span>
                                             <span class="caret"></span>
@@ -110,6 +110,14 @@
                                             <li><a href="#" data-bind="click: _.partial($parent.deleteNodeFromGroup, $data, false)"><i class="icon-trash"></i> <span>Soft Delete</span>&nbsp;&nbsp;<small>(stop replication and keep database files on the node)</small></a></li>
                                             <li><a href="#" data-bind="click: _.partial($parent.deleteNodeFromGroup, $data, true)"><i class="icon-alerts text-danger"></i> <span class="text-danger">Hard Delete</span>&nbsp;&nbsp;<small>(stop replication and remove database files on the node)</small></a></li>
                                         </ul>
+                                    </div>
+                                    <div class="has-disable-reason" data-original-title="Database cannot be deleted from node because of the set lock mode" 
+                                         data-bind="visible: $root.lockMode() !== 'Unlock', requiredAccess: 'Operator'">
+                                        <div class="btn btn-default disabled">
+                                            <i class="icon-trash-cutout" 
+                                               data-bind="css: { 'icon-addon-exclamation': $root.lockMode() === 'PreventDeletesError', 'icon-addon-cancel': $root.lockMode() === 'PreventDeletesIgnore' }"></i> 
+                                            <span>Delete from group</span>
+                                        </div>    
                                     </div>
                                 </div>
                             </div>
