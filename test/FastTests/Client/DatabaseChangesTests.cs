@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
@@ -84,8 +85,11 @@ namespace FastTests.Client
                 if (await Task.WhenAny(task, Task.Delay(timeout)) != task)
                     throw new TimeoutException($"{timeout}");
 
-                var e = await Assert.ThrowsAsync<AggregateException>(async () => await task);
-                Assert.Equal(typeof(DatabaseDoesNotExistException), e.InnerException?.GetType());
+                var e = await Assert.ThrowsAnyAsync<Exception>(() => task);
+                if (e is AggregateException ae)
+                    e = ae.ExtractSingleInnerException();
+
+                Assert.Equal(typeof(DatabaseDoesNotExistException), e.GetType());
             }
         }
 
