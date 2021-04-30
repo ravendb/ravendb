@@ -1195,17 +1195,6 @@ namespace Voron
         public DateTime? NonSafeTransactionExpiration { get; set; }
         public TimeSpan DisposeWaitTime { get; set; }
 
-        public int NumOfConcurrentSyncsPerPhysDrive
-        {
-            get
-            {
-                if (_numOfConcurrentSyncsPerPhysDrive < 1)
-                    _numOfConcurrentSyncsPerPhysDrive = 3;
-                return _numOfConcurrentSyncsPerPhysDrive;
-            }
-            set => _numOfConcurrentSyncsPerPhysDrive = value;
-        }
-
         public int TimeToSyncAfterFlushInSec
         {
             get
@@ -1231,7 +1220,6 @@ namespace Voron
 
         private readonly SortedList<long, string> _journalsForReuse = new SortedList<long, string>();
 
-        private int _numOfConcurrentSyncsPerPhysDrive;
         private int _timeToSyncAfterFlushInSec;
         public long CompressTxAboveSizeInBytes;
         private Guid _environmentId;

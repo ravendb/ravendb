@@ -47,8 +47,9 @@ namespace Raven.Server.Config.Categories
         public TimeSetting TimeToSyncAfterFlush { get; set; }
 
         [Description("Number of concurrent syncs per physical drive")]
+        [MinValue(3)]
         [DefaultValue(3)]
-        [ConfigurationEntry("Storage.NumberOfConcurrentSyncsPerPhysicalDrive", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Storage.NumberOfConcurrentSyncsPerPhysicalDrive", ConfigurationEntryScope.ServerWideOnly)]
         public int NumberOfConcurrentSyncsPerPhysicalDrive { get; set; }
 
         [Description("Compress transactions above size (value in KB)")]
