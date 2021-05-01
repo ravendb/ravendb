@@ -1325,7 +1325,8 @@ class indexPerformance extends viewModelBase {
     private hideTooltip() {
         this.tooltip.transition()
             .duration(250)
-            .style("opacity", 0);
+            .style("opacity", 0)
+            .each("end", () => this.tooltip.style("display", "none"));
          
         this.tooltip.datum(null);
     }
