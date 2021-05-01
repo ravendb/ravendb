@@ -145,11 +145,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         private bool MaybeReadAllFromCache(JsonOperationContext ctx, AggressiveCacheOptions options)
         {
-            if (_cached != null)
-            {
-                _cached.Dispose();
-                _cached = null;
-            }
+            DisposeCache();
 
             bool readAllFromCache = options != null;
             var trackChanges = readAllFromCache && options.Mode == AggressiveCacheMode.TrackChanges;
@@ -162,9 +158,12 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 var cachedItem = _httpCache.Get(ctx, cacheKey, out var changeVector, out var cached);
                 if (cached == null)
                 {
-                    readAllFromCache = false;
-                    continue;
-        }
+                    using (cachedItem)
+                    {
+                        readAllFromCache = false;
+                        continue;
+                    }
+                }
 
                 if (readAllFromCache && (trackChanges && cachedItem.MightHaveBeenModified || cachedItem.Age > options.Duration || command.CanCacheAggressively == false))
                     readAllFromCache = false;
@@ -353,7 +352,16 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         public override bool IsReadRequest => false;
 
-        public void Dispose() => _cached?.Dispose();
+        public void Dispose()
+        {
+            DisposeCache();
+        }
+
+        private void DisposeCache()
+        {
+            _cached?.Dispose();
+            _cached = null;
+        }
 
         private class Cached : IDisposable
         {
