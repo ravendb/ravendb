@@ -24,9 +24,9 @@ namespace Raven.Server.Extensions
             result[nameof(IndexDefinition.Reduce)] = definition.Reduce;
             result[nameof(IndexDefinition.Type)] = definition.Type.ToString();
             result[nameof(IndexDefinition.Maps)] = new DynamicJsonArray(definition.Maps);
-            result[nameof(IndexDefinition.ClusterIndex)] = new DynamicJsonValue()
+            result[nameof(IndexDefinition._clusterState)] = new DynamicJsonValue()
             {
-                [nameof(IndexDefinition.ClusterIndex.ClusterIndexForState)] = definition.ClusterIndex?.ClusterIndexForState ?? 0
+                [nameof(IndexDefinition._clusterState.LastStateIndex)] = definition._clusterState?.LastStateIndex ?? 0
             };
 
             var fields = new DynamicJsonValue();

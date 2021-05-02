@@ -906,7 +906,7 @@ namespace Raven.Server.Documents.Indexes
                     Stop();
 
                 _indexStorage.WriteDefinition(definition);
-                if (definition.ClusterIndex?.ClusterIndexForState > (Definition.ClusterIndex?.ClusterIndexForState ?? -1))
+                if (definition._clusterState?.LastStateIndex > (Definition._clusterState?.LastStateIndex ?? -1))
                 {
                     stateChanged = definition.State == IndexState.Normal;
                     SetState(definition.State);
@@ -919,7 +919,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _priorityChanged.Raise();
 
-                if ((status == IndexRunningStatus.Running) || (stateChanged))
+                if (status == IndexRunningStatus.Running || stateChanged)
                     Start();
             }
         }

@@ -193,7 +193,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             var fieldInfo = info as FieldInfo;
             if (fieldInfo != null)
             {
-                if ((fieldInfo.IsPublic == false) && (fieldInfo.IsDefined(typeof(JsonDeserializationDoNotIgnoreAttribute)) == false))
+                if ((fieldInfo.IsPublic == false) && (fieldInfo.IsDefined(typeof(JsonDeserializationNoIgnoreAttribute)) == false))
                     return true;
 
 #if NETSTANDARD2_0
@@ -218,6 +218,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             var propertyInfo = info as PropertyInfo;
             if (propertyInfo != null)
             {
+
 #if NETSTANDARD2_0
                 if (propertyInfo.PropertyType.IsByRef)
 #else

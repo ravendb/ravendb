@@ -20,7 +20,6 @@ namespace Raven.Client.Documents.Indexes
         public IndexDefinition()
         {
             _configuration = new IndexConfiguration();
-            ClusterIndex = new ClusterIndex();
         }
 
         /// <summary>
@@ -456,7 +455,7 @@ namespace Raven.Client.Documents.Indexes
                 ReduceOutputIndex = ReduceOutputIndex,
                 PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
                 PatternReferencesCollectionName = PatternReferencesCollectionName,
-                ClusterIndex = new ClusterIndex(){ClusterIndexForState = ClusterIndex?.ClusterIndexForState ?? 0}
+                _clusterState = _clusterState ?? new ClusterState(_clusterState)
             };
 
             foreach (var kvp in _configuration)

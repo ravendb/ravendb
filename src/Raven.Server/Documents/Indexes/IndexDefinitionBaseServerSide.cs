@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexState State { get; set; }
 
-        internal ClusterIndex ClusterIndex;
+        internal ClusterState _clusterState;
 
         public virtual bool HasDynamicFields => false;
 
@@ -154,7 +154,7 @@ namespace Raven.Server.Documents.Indexes
 
             MapFields = new Dictionary<string, IndexFieldBase>(StringComparer.Ordinal);
             IndexFields = new Dictionary<string, IndexField>(StringComparer.Ordinal);
-            ClusterIndex = new ClusterIndex();
+            _clusterState = new ClusterState();
 
             foreach (var field in mapFields)
             {
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Indexes
             Priority = priority;
             State = state;
             _indexVersion = indexVersion;
-            ClusterIndex.ClusterIndexForState = clusterIndexForState ?? 0;
+            _clusterState.LastStateIndex = clusterIndexForState ?? 0;
         }
 
         static IndexDefinitionBaseServerSide()
