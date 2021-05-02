@@ -63,6 +63,7 @@ class index {
     isNormalState: KnockoutComputed<boolean>;
     isPausedState: KnockoutComputed<boolean>;
 
+    isPending: KnockoutComputed<boolean>;
     isFaulty: KnockoutComputed<boolean>;
     isAutoIndex: KnockoutComputed<boolean>;
     isSideBySide: KnockoutComputed<boolean>;
@@ -180,6 +181,7 @@ class index {
             }
         });
 
+        this.isPending = ko.pureComputed(() => this.status() === "Pending");
         this.isFaulty = ko.pureComputed(() => this.type() === "Faulty");
         
         this.isAutoIndex = ko.pureComputed(() => {
@@ -350,8 +352,7 @@ class index {
         const statusMatch = this.matchesAnyStatus(allowedStatuses);
         const indexingErrorsMatch = !withIndexingErrorsOnly || (withIndexingErrorsOnly && !!this.errorsCount()); 
         
-        const matches = nameMatch && statusMatch && indexingErrorsMatch;
-        return matches;
+        return nameMatch && statusMatch && indexingErrorsMatch;
     }
 
     private matchesAnyStatus(status: indexStatus[]) {
@@ -359,16 +360,12 @@ class index {
             return false;
         }
         
-        if (_.includes(status, "Stale")         && this.isStale()                            ||
-           (_.includes(status, "Normal")        && this.isNormalState())                     ||
-           (_.includes(status, "ErrorOrFaulty") && (this.isErrorState() || this.isFaulty())) ||
-           (_.includes(status, "Paused")        && this.isPausedState())                     ||
-           (_.includes(status, "Disabled")      && this.isDisabledState())                   ||
-           (_.includes(status, "Idle")          && this.isIdleState())) 
-        {
-           return true;
-        }
-        return false;
+        return _.includes(status, "Stale") && this.isStale()
+                || _.includes(status, "Normal") && this.isNormalState()
+                || _.includes(status, "ErrorOrFaulty") && (this.isErrorState() || this.isFaulty())
+                || _.includes(status, "Paused") && this.isPausedState()
+                || _.includes(status, "Disabled") && this.isDisabledState()
+                || _.includes(status, "Idle") && this.isIdleState();
     }
 }
 
