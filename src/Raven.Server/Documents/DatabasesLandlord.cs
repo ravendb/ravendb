@@ -358,11 +358,12 @@ namespace Raven.Server.Documents
                             _logger.Info("Could not create database configuration", ex);
                     }
 
-                    CheckDatabasePathsIntersection(dbName, configuration);
+                    
 
                     // this can happen if the database record was already deleted
                     if (configuration != null)
                     {
+                        CheckDatabasePathsIntersection(dbName, configuration);
                         DatabaseHelper.DeleteDatabaseFiles(configuration);
                     }
                 }
