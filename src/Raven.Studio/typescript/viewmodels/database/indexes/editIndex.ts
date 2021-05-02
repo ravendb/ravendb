@@ -77,6 +77,22 @@ class editIndex extends viewModelBase {
     
     previewItem = ko.observable<Raven.Client.ServerWide.IndexHistoryEntry>();
     previewDefinition = ko.observable<string>();
+    
+    defaultRolling = ko.pureComputed(() => {
+        return "Server default"; 
+    });
+
+    effectiveRolling = ko.pureComputed(() => {
+        const index = this.editedIndex();
+        const rolling = index.rolling();
+        if (rolling) {
+            return "Rolling (deploy the index in one node at the time)";
+        }
+        if (rolling === false) {
+            return "Parallel (deploy the index on all nodes concurrently)";
+        }
+        return this.defaultRolling();
+    });
 
     constructor() {
         super();
@@ -401,10 +417,7 @@ class editIndex extends viewModelBase {
 
         const hasDefaultFieldOptions = ko.pureComputed(() => !!indexDef.defaultFieldOptions());
         const hasAnyDirtyDefaultFieldOptions = ko.pureComputed(() => {
-           if (hasDefaultFieldOptions() && indexDef.defaultFieldOptions().dirtyFlag().isDirty()) {
-               return true;
-           }
-           return false;
+           return hasDefaultFieldOptions() && indexDef.defaultFieldOptions().dirtyFlag().isDirty();
         });
 
         const hasAnyDirtyAdditionalAssembly = ko.pureComputed(() => {
@@ -419,6 +432,7 @@ class editIndex extends viewModelBase {
         
         this.dirtyFlag = new ko.DirtyFlag([
             indexDef.name, 
+            indexDef.rolling,
             indexDef.maps, 
             indexDef.reduce, 
             indexDef.numberOfFields,
