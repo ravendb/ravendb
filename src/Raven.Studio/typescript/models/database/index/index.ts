@@ -64,6 +64,7 @@ class index {
     isPausedState: KnockoutComputed<boolean>;
 
     isPending: KnockoutComputed<boolean>;
+    rollingDeploymentInProgress: KnockoutComputed<boolean>;
     isFaulty: KnockoutComputed<boolean>;
     isAutoIndex: KnockoutComputed<boolean>;
     isSideBySide: KnockoutComputed<boolean>;
@@ -183,6 +184,16 @@ class index {
 
         this.isPending = ko.pureComputed(() => this.status() === "Pending");
         this.isFaulty = ko.pureComputed(() => this.type() === "Faulty");
+        
+        this.rollingDeploymentInProgress = ko.pureComputed(() => {
+            const progress = this.progress();
+            if (progress && progress.rollingProgress()) {
+                const rolling = progress.rollingProgress();
+                return rolling.some(x => x.state() !== "Done");
+            }
+            
+            return false;
+        })
         
         this.isAutoIndex = ko.pureComputed(() => {
             switch (this.type()) {

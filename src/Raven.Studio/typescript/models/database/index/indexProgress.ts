@@ -130,6 +130,15 @@ class rollingProgress {
         this.started(incomingRolling.started());
         this.finished(incomingRolling.finished());
     }
+
+    markCompleted() {
+        if (this.state() !== "Done") {
+            this.state("Done");
+            
+            // we use approximate date here - server already cleaned up information about progress
+            this.finished(new Date());
+        }
+    }
 }
 
 class indexProgress {
@@ -167,6 +176,8 @@ class indexProgress {
             c.documentsProgress.markCompleted();
             c.tombstonesProgress.markCompleted();
         });
+        
+        this.rollingProgress().forEach(r => r.markCompleted());
     }
 
     public updateProgress(incomingProgress: indexProgress) {
