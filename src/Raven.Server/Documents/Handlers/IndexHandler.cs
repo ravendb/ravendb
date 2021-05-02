@@ -505,7 +505,7 @@ namespace Raven.Server.Documents.Handlers
                     try
                     {
                         var index = Database.IndexStore.GetIndex(name, throwOnPendingRollingIndex: false);
-                        var progress = index?.GetProgress(context, isStale: true);
+                        var progress = index?.GetProgress(context);
 
                         var existingIndexName = name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty,
                             StringComparison.OrdinalIgnoreCase);
