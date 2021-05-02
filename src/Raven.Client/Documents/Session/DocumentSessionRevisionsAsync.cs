@@ -20,11 +20,10 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public class DocumentSessionRevisionsAsync : DocumentSessionRevisionsBase, IRevisionsSessionOperationsAsync, ILazyRevisionsOperationsAsync
     {
-        private new AsyncDocumentSession Session { get; }
 
         public DocumentSessionRevisionsAsync(AsyncDocumentSession session) : base(session)
         {
-            Session = session;
+
         }
 
         public ILazyRevisionsOperationsAsync Lazily => this;
@@ -101,41 +100,41 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        Lazy<Task<List<T>>> ILazyRevisionsOperationsAsync.GetForAsync<T>(string id, int start = 0, int pageSize = 25, CancellationToken token = default)
+        Lazy<Task<List<T>>> ILazyRevisionsOperationsAsync.GetForAsync<T>(string id, int start, int pageSize , CancellationToken token)
         {
             var operation = new GetRevisionOperation(Session,id,start, pageSize);
             var lazyRevisionOperation = new LazyRevisionOperation<T>(operation, LazyRevisionOperation<T>.Mode.Multi);
-            return Session.AddLazyOperation<List<T>>(lazyRevisionOperation, null, token);
+            return ((AsyncDocumentSession )Session).AddLazyOperation<List<T>>(lazyRevisionOperation, null, token);
         }
-
-        Lazy<Task<T>> ILazyRevisionsOperationsAsync.GetAsync<T>(string changeVector, CancellationToken token = default)
+                                                                                                                                               
+        Lazy<Task<T>> ILazyRevisionsOperationsAsync.GetAsync<T>(string changeVector, CancellationToken token)
         {
             var operation = new GetRevisionOperation(Session, changeVector);
             var lazyRevisionOperation = new LazyRevisionOperation<T>(operation, LazyRevisionOperation<T>.Mode.Single);
-            return Session.AddLazyOperation<T>(lazyRevisionOperation, null, token);
+            return ((AsyncDocumentSession )Session).AddLazyOperation<T>(lazyRevisionOperation, null, token);
 
         }
 
-        Lazy<Task<T>> ILazyRevisionsOperationsAsync.GetAsync<T>(string id, DateTime dateTime, CancellationToken token = default)
+        Lazy<Task<T>> ILazyRevisionsOperationsAsync.GetAsync<T>(string id, DateTime dateTime, CancellationToken token)
         {
             var operation = new GetRevisionOperation(Session, id, dateTime);
             var lazyRevisionOperation = new LazyRevisionOperation<T>(operation, LazyRevisionOperation<T>.Mode.Single);
-            return Session.AddLazyOperation<T>(lazyRevisionOperation, null, token);
+            return ((AsyncDocumentSession )Session).AddLazyOperation<T>(lazyRevisionOperation, null, token);
         }
 
-        Lazy<Task<Dictionary<string, T>>> ILazyRevisionsOperationsAsync.GetAsync<T>(IEnumerable<string> changeVectors, CancellationToken token = default)
+        Lazy<Task<Dictionary<string, T>>> ILazyRevisionsOperationsAsync.GetAsync<T>(IEnumerable<string> changeVectors, CancellationToken token)
         {
   
             var operation = new GetRevisionOperation(Session,changeVectors);
             var lazyRevisionOperation = new LazyRevisionOperation<T>(operation, LazyRevisionOperation<T>.Mode.Map);
-            return Session.AddLazyOperation<Dictionary<string, T>>(lazyRevisionOperation, null, token);
+            return ((AsyncDocumentSession )Session).AddLazyOperation<Dictionary<string, T>>(lazyRevisionOperation, null, token);
         }
 
         Lazy<Task<List<MetadataAsDictionary>>> ILazyRevisionsOperationsAsync.GetMetadataForAsync(string id, int start, int pageSize, CancellationToken token)
         {
             var operation = new GetRevisionOperation(Session, id, start, pageSize);
             var lazyRevisionOperation = new LazyRevisionOperation<MetadataAsDictionary>(operation, LazyRevisionOperation<MetadataAsDictionary>.Mode.ListOfMetadata);
-            return Session.AddLazyOperation<List<MetadataAsDictionary>>(lazyRevisionOperation, null, token);
+            return ((AsyncDocumentSession )Session).AddLazyOperation<List<MetadataAsDictionary>>(lazyRevisionOperation, null, token);
 
         }
     }
