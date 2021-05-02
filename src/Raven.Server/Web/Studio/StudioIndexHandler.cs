@@ -14,6 +14,29 @@ namespace Raven.Server.Web.Studio
 {
     public class StudioIndexHandler : DatabaseRequestHandler
     {
+
+        [RavenAction("/databases/*/studio/index-defaults", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetIndexDefaults()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                bool rolling = Database.Configuration.Indexing.Rolling;
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName(nameof(IndexDefaults.Rolling));
+                    writer.WriteBool(rolling);
+                    writer.WriteEndObject();
+                }
+            }
+        }
+
+        public class IndexDefaults
+        {
+            public bool? Rolling { get; set; }
+        }
+        
         [RavenAction("/databases/*/studio/index-type", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PostIndexType()
         {
