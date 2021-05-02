@@ -142,9 +142,9 @@ class index {
         this.isErrorState = ko.pureComputed(() => this.state() === "Error");
         this.isNormalState = ko.pureComputed(() => {
             const stateIsNormal = this.state() === "Normal";
-            const localStatusIsNormal = this.status() === "Running";
+            const localStatusIsNormalOrPending = this.status() === "Running" || this.status() === "Pending";
             const globalStatusIsNotDisabled = this.globalIndexingStatus() === "Running";
-            return stateIsNormal && globalStatusIsNotDisabled && localStatusIsNormal;
+            return stateIsNormal && globalStatusIsNotDisabled && localStatusIsNormalOrPending;
         });
 
         this.canBePaused = ko.pureComputed(() => {
