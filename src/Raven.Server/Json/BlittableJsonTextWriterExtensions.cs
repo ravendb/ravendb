@@ -1091,6 +1091,13 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(indexDefinition.OutputReduceToCollection));
             writer.WriteString(indexDefinition.OutputReduceToCollection);
             writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(indexDefinition.Rolling));
+            if (indexDefinition.Rolling.HasValue)
+                writer.WriteBool(indexDefinition.Rolling.Value);
+            else 
+                writer.WriteNull();
+            writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.ReduceOutputIndex));
 

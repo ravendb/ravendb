@@ -21,6 +21,7 @@ namespace Raven.Server.Extensions
             result[nameof(IndexDefinition.PatternForOutputReduceToCollectionReferences)] = definition.PatternForOutputReduceToCollectionReferences;
             result[nameof(IndexDefinition.PatternReferencesCollectionName)] = definition.PatternReferencesCollectionName;
             result[nameof(IndexDefinition.ReduceOutputIndex)] = definition.ReduceOutputIndex;
+            result[nameof(IndexDefinition.Rolling)] = definition.Rolling;
             result[nameof(IndexDefinition.Name)] = definition.Name;
             result[nameof(IndexDefinition.Reduce)] = definition.Reduce;
             result[nameof(IndexDefinition.Type)] = definition.Type.ToString();
