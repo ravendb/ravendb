@@ -44,8 +44,7 @@ namespace Raven.Server.Documents
         public Task<IOperationResult> ExecutePatch(string collectionName, long start, long take, CollectionOperationOptions options, PatchRequest patch,
             BlittableJsonReaderObject patchArgs, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(collectionName, start, take, options, Context, onProgress,
-                key => new PatchDocumentCommand(Context, key, null, false, (patch, patchArgs), (null, null), Database, false, false, false, false), token);
+            return ExecuteOperation(collectionName, start, take, options, Context, onProgress, key => new PatchDocumentCommand(Context, key, null, false, (patch, patchArgs), (null, null), Database, false, false, false, false), token);
         }
 
         protected async Task<IOperationResult> ExecuteOperation(string collectionName, long start, long take, CollectionOperationOptions options, DocumentsOperationContext context,
