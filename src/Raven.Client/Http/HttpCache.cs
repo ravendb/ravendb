@@ -14,6 +14,8 @@ namespace Raven.Client.Http
 {
     public class HttpCache : IDisposable, ILowMemoryHandler
     {
+        public const string NotFoundResponse = "404 Response";
+
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<HttpCache>("Client");
 
         private readonly long _maxSize;
@@ -164,7 +166,7 @@ namespace Raven.Client.Http
             var flag = aggressivelyCached ? ItemFlags.AggressivelyCached : ItemFlags.None;
             var httpCacheItem = new HttpCacheItem
             {
-                ChangeVector = "404 Response",
+                ChangeVector = NotFoundResponse,
                 Ptr = null,
                 Size = 0,
                 Allocation = null,
