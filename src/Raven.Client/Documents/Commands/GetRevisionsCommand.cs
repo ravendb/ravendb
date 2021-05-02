@@ -61,16 +61,8 @@ namespace Raven.Client.Documents.Commands
             return request;
         }
 
-        public string GetRequestQueryString()
+        internal void GetRequestQueryString(StringBuilder pathBuilder)
         {
-            var sb = new StringBuilder("?");
-            GetRequestQueryString(sb);
-            return sb.ToString();
-        }
-        
-        private void GetRequestQueryString(StringBuilder pathBuilder)
-        {
-
             if (_id != null)
                 pathBuilder.Append("&id=").Append(Uri.EscapeDataString(_id));
             else if (_changeVector != null)

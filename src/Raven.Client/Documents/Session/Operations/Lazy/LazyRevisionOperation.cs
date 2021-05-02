@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Text;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Queries;
@@ -30,12 +31,13 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         public object Result { get; set; }
         public QueryResult QueryResult { get; set; }
         public bool RequiresRetry { get; set; }
-
+        
         public GetRequest CreateRequest(JsonOperationContext ctx)
         {
             GetRevisionsCommand getRevisionsCommand = _getRevisionOperation.CreateRequest();
-            string qs = getRevisionsCommand.GetRequestQueryString();
-            return new GetRequest {Method = HttpMethod.Get, Url = "/revisions", Query = qs};
+            var sb = new StringBuilder("?");
+            getRevisionsCommand.GetRequestQueryString(sb);
+            return new GetRequest {Method = HttpMethod.Get, Url = "/revisions", Query = sb.ToString()};
         }
 
         public void HandleResponse(GetResponse response)
