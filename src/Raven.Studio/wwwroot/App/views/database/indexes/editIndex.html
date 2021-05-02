@@ -44,6 +44,21 @@
                 </div>
             </div>
             <div class="row">
+                <div class="col-sm-2">Deployment Mode</div>
+                <div class="col-sm-10">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                            <span data-bind="text: $root.effectiveRolling"></span> <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a href="#" data-bind="click: editedIndex().rolling.bind(editedIndex().rolling, null)"><span data-bind="text: $root.defaultRolling"></span></a></li>
+                            <li><a href="#" data-bind="click: editedIndex().rolling.bind(editedIndex().rolling, true)"><span>Rolling (deploy the index in one node at the time)</span></a></li>
+                            <li><a href="#" data-bind="click: editedIndex().rolling.bind(editedIndex().rolling, false)"><span>Parallel (deploy the index on all nodes concurrently)</span></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
                 <div class="col-sm-2">
                     <h2 id="map-title" class="margin-bottom margin-bottom-xs on-base-background margin-top">Maps</h2>
                     <a href="#" data-bind="click: mapIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
