@@ -533,6 +533,7 @@ namespace Raven.Client.Documents.Indexes
             definition.ReduceOutputIndex = ReduceOutputIndex;
             definition.PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences;
             definition.PatternReferencesCollectionName = PatternReferencesCollectionName;
+            definition.Rolling = Rolling;
 
             foreach (var kvp in _configuration)
                 definition.Configuration[kvp.Key] = kvp.Value;
