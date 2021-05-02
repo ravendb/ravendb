@@ -672,6 +672,8 @@ namespace Raven.Server.Documents.Indexes
                 ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {_serverStore.Engine.OperationTimeout}.");
             }
 
+            _forTestingPurposes?.AfterIndexCreation?.Invoke(definition.Name);
+
             return GetIndex(definition.Name);
         }
 
@@ -1988,6 +1990,7 @@ namespace Raven.Server.Documents.Indexes
             private readonly IndexStore _parent;
             internal Action DuringIndexReplacement_AfterUpdatingCollectionOfIndexes;
             internal Action DuringIndexReplacement_OnOldIndexDeletion;
+            internal Action<string> AfterIndexCreation;
 
             public TestingStuff(IndexStore parent)
             {
