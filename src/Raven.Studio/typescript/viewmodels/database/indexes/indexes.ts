@@ -95,12 +95,12 @@ class indexes extends viewModelBase {
                 return;
             }
 
-            const hasStale = indexes.find(x => x.isStale() && !x.isDisabledState());
-            if (!hasStale) {
-                return;
-            }
+            const anyIndexStale = indexes.find(x => x.isStale() && !x.isDisabledState());
+            const anyRollingDeployment = indexes.find(x => x.rollingDeploymentInProgress() && !x.isDisabledState());
 
-            this.indexesProgressRefreshThrottle();
+            if (anyIndexStale || anyRollingDeployment) {
+                this.indexesProgressRefreshThrottle();
+            }
         }, 3000);
         
         this.indexesCount = ko.pureComputed(() => {
