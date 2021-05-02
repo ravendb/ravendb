@@ -109,9 +109,33 @@ class collectionProgress {
     }
 }
 
+class rollingProgress {
+    nodeTag: string;
+    state = ko.observable<Raven.Client.ServerWide.RollingIndexState>();
+    created = ko.observable<Date>();
+    started = ko.observable<Date>();
+    finished = ko.observable<Date>();
+    
+    constructor(nodeTag: string, deployment: Raven.Client.ServerWide.RollingIndexDeployment) {
+        this.nodeTag = nodeTag;
+        this.state(deployment.State);
+        this.created(moment.utc(deployment.CreatedAt).toDate());
+        this.started(deployment.StartedAt ? moment.utc(deployment.StartedAt).toDate() : null);
+        this.finished(deployment.FinishedAt ? moment.utc(deployment.FinishedAt).toDate() : null);
+    }
+
+    updateWith(incomingRolling: rollingProgress) {
+        this.state(incomingRolling.state());
+        this.created(incomingRolling.created());
+        this.started(incomingRolling.started());
+        this.finished(incomingRolling.finished());
+    }
+}
+
 class indexProgress {
 
     collections = ko.observableArray<collectionProgress>();
+    rollingProgress = ko.observableArray<rollingProgress>();
     globalProgress = ko.observable<progress>();
     isStale: boolean;
     name: string;
@@ -120,6 +144,7 @@ class indexProgress {
         this.isStale = dto.IsStale;
         this.name = dto.Name.toLowerCase();
         this.collections(_.map(dto.Collections, (value, key) => new collectionProgress(key, value, dto.IndexRunningStatus)));
+        this.rollingProgress(dto.RollingProgress ? _.map(dto.RollingProgress.ActiveDeployments, (value, key) => new rollingProgress(key, value)) : []);
         
         const total = _.reduce(this.collections(), (p, c) => {
             return p + c.documentsProgress.total() + c.tombstonesProgress.total();
@@ -156,7 +181,6 @@ class indexProgress {
         if (_.isEqual(incomingCollections, localCollections)) {
             // looks like collection names didn't change - let's update values 'in situ'
 
-
             this.collections().forEach(collection => {
                 const collectionName = collection.name;
 
@@ -167,6 +191,26 @@ class indexProgress {
         } else {
             // have we don't call updateWith on each collection to avoid animations
             this.collections(incomingProgress.collections());
+        }
+        
+        const incomingRolling = incomingProgress.rollingProgress().map(x => x.nodeTag);
+        incomingRolling.sort();
+        
+        const localRolling = this.rollingProgress().map(x => x.nodeTag);
+        localRolling.sort();
+        
+        if (_.isEqual(incomingRolling, localRolling)) {
+            // looks like rolling names didn't change - let's update values 'in situ'
+            
+            this.rollingProgress().forEach(rolling => {
+                const nodeTag = rolling.nodeTag;
+                
+                const newObject = incomingProgress.rollingProgress().find(x => x.nodeTag === nodeTag);
+                rolling.updateWith(newObject);
+            })
+        } else {
+            // node tag has changed - quite rare case but let's update entire collection
+            this.rollingProgress(incomingProgress.rollingProgress());
         }
     }
 }

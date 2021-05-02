@@ -436,6 +436,9 @@
         </div>
         <div data-bind="with: progress, visible: !isErrorState() && !isFaulty()">
             <hr class="small" />
+            <div class="panel panel-info">
+                <div data-bind="text: ko.toJSON(rollingProgress())"></div>
+            </div>
             <div class="progress-container">
                 <div class="progress-overall">
                     <div class="flex-horizontal" data-bind="with: globalProgress">

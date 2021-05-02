@@ -112,7 +112,7 @@ class indexes extends viewModelBase {
             let totalProcessedPerSecond = 0;
 
             this.indexGroups().forEach(indexGroup => {
-                var indexesInGroup = indexGroup.indexes().filter(i => !i.filteredOut());
+                const indexesInGroup = indexGroup.indexes().filter(i => !i.filteredOut());
                 indexesCount += indexesInGroup.length;
 
                 totalProcessedPerSecond += _.sum(indexesInGroup
