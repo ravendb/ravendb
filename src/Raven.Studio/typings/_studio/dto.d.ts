@@ -744,7 +744,7 @@ interface rawStackTraceResponseItem {
     StackTrace: string[];
 }
 
-type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle";
+type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle" | "RollingDeployment";
 
 interface MigratorPathConfiguration {
     HasMigratorPath: boolean;

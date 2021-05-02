@@ -372,6 +372,7 @@ class index {
         }
         
         return _.includes(status, "Stale") && this.isStale()
+                || _.includes(status, "RollingDeployment") && this.rollingDeploymentInProgress()
                 || _.includes(status, "Normal") && this.isNormalState()
                 || _.includes(status, "ErrorOrFaulty") && (this.isErrorState() || this.isFaulty())
                 || _.includes(status, "Paused") && this.isPausedState()

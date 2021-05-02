@@ -37,7 +37,7 @@ class indexes extends viewModelBase {
     hasAnyStateFilter: KnockoutComputed<boolean>;
     autoRefresh = ko.observable<boolean>(true);
     showOnlyIndexesWithIndexingErrors = ko.observable<boolean>(false);
-    indexStatusFilter = ko.observableArray<indexStatus>(["Normal", "ErrorOrFaulty", "Stale", "Paused", "Disabled", "Idle"]);
+    indexStatusFilter = ko.observableArray<indexStatus>(["Normal", "ErrorOrFaulty", "Stale", "Paused", "Disabled", "Idle", "RollingDeployment"]);
     lockModeCommon: KnockoutComputed<string>;
     selectedIndexesName = ko.observableArray<string>();
     indexesSelectionState: KnockoutComputed<checkbox>;
@@ -167,6 +167,8 @@ class indexes extends viewModelBase {
             case "Paused":
             case "Stale":
                 return status;
+            case "RollingDeployment":
+                return "Rolling deployment";
             case "ErrorOrFaulty":
                 return "Error, Faulty";
         }
@@ -373,7 +375,7 @@ class indexes extends viewModelBase {
             // do NOT touch visibility of indexes!
             return;
         }
-
+        
         const filterLower = this.searchText().toLowerCase();
         const typeFilter = this.indexStatusFilter();
         const withIndexingErrorsOnly = this.showOnlyIndexesWithIndexingErrors();
