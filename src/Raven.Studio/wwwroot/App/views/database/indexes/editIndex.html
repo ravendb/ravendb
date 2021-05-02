@@ -51,9 +51,9 @@
                             <span data-bind="text: $root.effectiveRolling"></span> <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu">
-                            <li><a href="#" data-bind="click: editedIndex().rolling.bind(editedIndex().rolling, null)"><span data-bind="text: $root.defaultRolling"></span></a></li>
-                            <li><a href="#" data-bind="click: editedIndex().rolling.bind(editedIndex().rolling, true)"><span>Rolling (deploy the index in one node at the time)</span></a></li>
-                            <li><a href="#" data-bind="click: editedIndex().rolling.bind(editedIndex().rolling, false)"><span>Parallel (deploy the index on all nodes concurrently)</span></a></li>
+                            <li><a href="#" data-bind="click: editedIndex().rolling.bind(editedIndex().rolling, null)"><span data-bind="text: $root.defaultRollingFormatted"></span></a></li>
+                            <li><a href="#" data-bind="click: editedIndex().rolling.bind(editedIndex().rolling, true)"><span data-bind="text: $root.formatRollingValue(true)"></span></a></li>
+                            <li><a href="#" data-bind="click: editedIndex().rolling.bind(editedIndex().rolling, false)"><span data-bind="text: $root.formatRollingValue(false)"></span></a></li>
                         </ul>
                     </div>
                 </div>

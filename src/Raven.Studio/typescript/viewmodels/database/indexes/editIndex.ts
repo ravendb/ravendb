@@ -38,6 +38,7 @@ import generalUtils = require("common/generalUtils");
 import documentHelpers = require("common/helpers/database/documentHelpers");
 import getCustomAnalyzersCommand = require("commands/database/settings/getCustomAnalyzersCommand");
 import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyzers/getServerWideCustomAnalyzersCommand");
+import getIndexDefaultsCommand = require("commands/database/index/getIndexDefaultsCommand");
 
 class editIndex extends viewModelBase {
 
@@ -78,20 +79,15 @@ class editIndex extends viewModelBase {
     previewItem = ko.observable<Raven.Client.ServerWide.IndexHistoryEntry>();
     previewDefinition = ko.observable<string>();
     
-    defaultRolling = ko.pureComputed(() => {
-        return "Server default"; 
+    defaultRolling = ko.observable<boolean>(false);
+    defaultRollingFormatted = ko.pureComputed(() => {
+        return this.defaultRolling() ? "Server default (rolling - one node at the time)" : "Server default (parallel - all nodes concurrently)";
     });
 
     effectiveRolling = ko.pureComputed(() => {
         const index = this.editedIndex();
         const rolling = index.rolling();
-        if (rolling) {
-            return "Rolling (deploy the index in one node at the time)";
-        }
-        if (rolling === false) {
-            return "Parallel (deploy the index on all nodes concurrently)";
-        }
-        return this.defaultRolling();
+        return this.formatRollingValue(rolling);
     });
 
     constructor() {
@@ -119,6 +115,16 @@ class editIndex extends viewModelBase {
         autoCompleteBindingHandler.install();
 
         this.initializeObservables();
+    }
+    
+    formatRollingValue(rolling: boolean | null) {
+        if (rolling) {
+            return "Rolling (one node at the time)";
+        }
+        if (rolling === false) {
+            return "Parallel (all nodes concurrently)";
+        }
+        return this.defaultRollingFormatted();
     }
 
     private initializeObservables() {
@@ -215,11 +221,14 @@ class editIndex extends viewModelBase {
             this.showIndexHistory(true);
         }
             
-        return $.when<any>(this.fetchCustomAnalyzers(), this.fetchServerWideCustomAnalyzers())
+        return $.when<any>(this.fetchCustomAnalyzers(), this.fetchServerWideCustomAnalyzers(), this.fetchIndexDefaults())
             .done(([analyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
-                   [serverWideAnalyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>]) => {
+                   [serverWideAnalyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
+                   [indexDefaults]: [Raven.Server.Web.Studio.StudioIndexHandler.IndexDefaults]) => {
                 const analyzersList = [...analyzers.map(x => x.Name), ...serverWideAnalyzers.map(x => x.Name)];
                 this.editedIndex().registerCustomAnalyzers(analyzersList);
+                
+                this.defaultRolling(indexDefaults.Rolling);
         });
     }
 
@@ -299,6 +308,11 @@ class editIndex extends viewModelBase {
 
     private fetchServerWideCustomAnalyzers(): JQueryPromise<Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>> {
         return new getServerWideCustomAnalyzersCommand()
+            .execute();
+    }
+    
+    private fetchIndexDefaults(): JQueryPromise<Raven.Server.Web.Studio.StudioIndexHandler.IndexDefaults> {
+        return new getIndexDefaultsCommand(this.activeDatabase())
             .execute();
     }
 
