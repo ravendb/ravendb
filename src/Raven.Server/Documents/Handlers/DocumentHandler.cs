@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
@@ -222,7 +223,9 @@ namespace Raven.Server.Documents.Handlers
                 }
                 if (document == null && ids.Count == 1)
                 {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    HttpContext.Response.StatusCode = GetStringFromHeaders("If-None-Match") == HttpCache.NotFoundResponse
+                        ?(int)HttpStatusCode.NotModified
+                        :(int)HttpStatusCode.NotFound;
                     return;
                 }
 
