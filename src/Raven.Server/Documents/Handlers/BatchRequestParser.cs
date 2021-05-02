@@ -37,6 +37,7 @@ namespace Raven.Server.Documents.Handlers
             public PatchRequest Patch;
             public BlittableJsonReaderObject PatchArgs;
             public PatchRequest PatchIfMissing;
+            public BlittableJsonReaderObject CreateIfMissing;
             public BlittableJsonReaderObject PatchIfMissingArgs;
             public LazyStringValue ChangeVector;
             public bool IdPrefixed;
@@ -180,6 +181,7 @@ namespace Raven.Server.Documents.Handlers
                                 skipPatchIfChangeVectorMismatch: false,
                                 (commandData.Patch, commandData.PatchArgs),
                                 (commandData.PatchIfMissing, commandData.PatchIfMissingArgs),
+                                createIfMissing: commandData.CreateIfMissing, // ---
                                 database,
                                 isTest: false,
                                 debugMode: false,
@@ -197,6 +199,7 @@ namespace Raven.Server.Documents.Handlers
                                 skipPatchIfChangeVectorMismatch: false,
                                 (commandData.Patch, commandData.PatchArgs),
                                 (commandData.PatchIfMissing, commandData.PatchIfMissingArgs),
+                                commandData.CreateIfMissing,
                                 database,
                                 isTest: false,
                                 debugMode: false,
@@ -561,6 +564,12 @@ namespace Raven.Server.Documents.Handlers
 
                         break;
 
+                    case CommandPropertyName.CreateIfMissing:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        var createIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                        commandData.CreateIfMissing = createIfMissing;
+                        break;
                     case CommandPropertyName.PatchIfMissing:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
@@ -846,6 +855,7 @@ namespace Raven.Server.Documents.Handlers
             ChangeVector,
             Patch,
             PatchIfMissing,
+            CreateIfMissing,
             IdPrefixed,
             Index,
             ReturnDocument,
@@ -994,6 +1004,12 @@ namespace Raven.Server.Documents.Handlers
                         *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 28001 &&
                         state.StringBuffer[14] == (byte)'e')
                         return CommandPropertyName.DestinationName;
+                    if (*(long*)state.StringBuffer == 7370533815693177411 &&
+                        *(int*)(state.StringBuffer + sizeof(long)) == 1936943437 &&
+                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 28265 &&
+                        state.StringBuffer[14] == (byte)'g')
+                        return CommandPropertyName.CreateIfMissing;
+
                     return CommandPropertyName.NoSuchProperty;
 
                 case 29:
