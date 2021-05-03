@@ -214,17 +214,7 @@ namespace SlowTests.Core.Commands
 
                     using (var session = store.OpenSession())
                     {
-                        var z = session
-                            .Query<Camera, CameraCost>()
-                            .AggregateUsing("facets/CameraFacets")
-                            .ToString();
-
                         var facetResults = session
-                            .Advanced
-                            .RawQuery<dynamic>(z)
-                            .AggregateRaw();
-
-                        var facetResults2 = session
                             .Query<Camera, CameraCost>()
                             .AggregateUsing("facets/CameraFacets")
                             .Execute();

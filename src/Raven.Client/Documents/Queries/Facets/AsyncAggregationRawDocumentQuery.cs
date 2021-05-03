@@ -7,8 +7,8 @@ namespace Raven.Client.Documents.Queries.Facets
     {
         private readonly IAsyncRawDocumentQuery<T> _source;
 
-        public AsyncAggregationRawDocumentQuery(IAsyncRawDocumentQuery<T> source, InMemoryDocumentSessionOperations session)
-            : base(session)
+        public AsyncAggregationRawDocumentQuery(IAsyncRawDocumentQuery<T> source, IAsyncDocumentSession session)
+            : base((InMemoryDocumentSessionOperations)session)
         {
             _source = source ?? throw new ArgumentNullException(nameof(source));
         }

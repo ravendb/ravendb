@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Session
             return new AggregationDocumentQuery<T>(this);
         }
 
-        public Dictionary<string, FacetResult> AggregateRaw()
+        public Dictionary<string, FacetResult> ExecuteAggregation()
         {
             var query = new AggregationRawDocumentQuery<T>(this, Session);
             return query.Execute();
