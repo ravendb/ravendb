@@ -65,6 +65,7 @@ namespace Raven.Client.Documents.Session
         IQueryBase<T, IRawDocumentQuery<T>>,
         IDocumentQueryBase<T>, IEnumerable<T>
     {
+        Dictionary<string, FacetResult> AggregateRaw();
     }
 
     public interface IGraphQuery<T> :
