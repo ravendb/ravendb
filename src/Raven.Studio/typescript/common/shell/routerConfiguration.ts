@@ -33,7 +33,8 @@ function convertToDurandalRoute(leaf: leafMenuItem): DurandalRouteConfiguration 
         title: leaf.title,
         moduleId: leaf.moduleId,
         nav: leaf.nav,
-        dynamicHash: leaf.dynamicHash
+        dynamicHash: leaf.dynamicHash,
+        requiredAccess: leaf.requiredAccess
     };
 }
 

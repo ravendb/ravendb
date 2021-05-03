@@ -1,5 +1,6 @@
 ﻿import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import appUrl = require("common/appUrl");
+import accessManager = require("common/shell/accessManager");
 
 function aboutItem() {
     return new leafMenuItem({
@@ -31,7 +32,7 @@ function clusterDashboard() {
         moduleId: 'viewmodels/resources/clusterDashboard',
         title: 'Cluster Dashboard',
         tooltip: "Cluster Dashboard",
-        nav: true,
+        nav: true, // todo - this needs issue RavenDB-16618 to work...
         css: 'icon-cluster-dashbaord',
         dynamicHash: appUrl.forClusterDashboard
     }); 

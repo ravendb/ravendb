@@ -236,7 +236,14 @@ class shell extends viewModelBase {
                     if (certificate) {
                         this.accessManager.securityClearance(certificate.SecurityClearance);
                         accessManager.clientCertificateThumbprint(certificate.Thumbprint);
-                        accessManager.databasesAccess = certificate.Permissions;
+
+                        let databasesAccess: dictionary<databaseAccessLevel> = {};
+                        for (let key in certificate.Permissions) {
+                            let access =  certificate.Permissions[key];
+                            databasesAccess[`${key}`] = `Database${access}` as databaseAccessLevel;
+                        }
+                        accessManager.databasesAccess = databasesAccess;
+                        
                     } else {
                         this.accessManager.securityClearance("ValidUser");
                     }

@@ -44,7 +44,8 @@ class databasesManager {
     init(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
         return this.refreshDatabases()
             .done(() => {
-                this.activateBasedOnCurrentUrl();
+                const dbNameFromUrl = appUrl.getDatabaseNameFromUrl();
+                this.activateBasedOnCurrentUrl(dbNameFromUrl, true);
                 router.activate();
                 this.initialized.resolve();
             });
@@ -62,22 +63,29 @@ class databasesManager {
             });
     }
 
-    activateBasedOnCurrentUrl(): JQueryPromise<canActivateResultDto> | boolean {
-        const dbUrl = appUrl.getDatabaseNameFromUrl();
-        if (dbUrl) {
-            const db = this.getDatabaseByName(dbUrl);
-            return this.activateIfDifferent(db, dbUrl);
+    activateBasedOnCurrentUrl(dbName: string, isViewAllowed: boolean): JQueryPromise<canActivateResultDto> | boolean {
+        if (dbName) {
+            const db = this.getDatabaseByName(dbName);
+            return this.activateIfDifferent(db, dbName, isViewAllowed);
         }
         return true;
     }
 
-    private activateIfDifferent(db: database, dbName: string): JQueryPromise<canActivateResultDto> {
+    private activateIfDifferent(db: database, dbName: string, isViewAllowed: boolean): JQueryPromise<canActivateResultDto> {
         const task = $.Deferred<canActivateResultDto>();
+        const databasesListView = appUrl.forDatabases();
 
         const incomingDatabaseName = db ? db.name : undefined;
 
         this.initialized.done(() => {
             const currentActiveDatabase = this.activeDatabaseTracker.database();
+
+            if (!isViewAllowed) {
+                messagePublisher.reportError("Redirecting. Invalid access level.");
+                task.resolve({ redirect: appUrl.forDatabases() });
+                return task;
+            }
+            
             if (currentActiveDatabase != null && currentActiveDatabase.name === incomingDatabaseName) {
                 task.resolve({ can: true });
                 return;
@@ -91,17 +99,17 @@ class databasesManager {
             } else if (db && db.disabled()) {
                 messagePublisher.reportError(`${db.fullTypeName} '${db.name}' is disabled!`,
                     `You can't access any section of the ${db.fullTypeName.toLowerCase()} while it's disabled.`, null, false);
-                router.navigate(appUrl.forDatabases());
-                task.reject();
+                task.resolve({ redirect: databasesListView });
+                return task;
             } else if (db && !db.relevant()) {
                 messagePublisher.reportError(`${db.fullTypeName} '${db.name}' is not relevant on this node!`,
                     `You can't access any section of the ${db.fullTypeName.toLowerCase()} while it's not relevant.`, null, false);
-                router.navigate(appUrl.forDatabases());
-                task.reject();
+                task.resolve({ redirect: databasesListView });
+                return task;
             } else {
                 messagePublisher.reportError("The database " + dbName + " doesn't exist!", null, null, false);
-                router.navigate(appUrl.forDatabases());
-                task.reject();
+                task.resolve({ redirect: databasesListView });
+                return task;
             }
         });
 

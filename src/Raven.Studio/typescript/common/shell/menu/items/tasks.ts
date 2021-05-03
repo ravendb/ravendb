@@ -31,7 +31,8 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-import-database',
             dynamicHash: appUrls.importDatabaseFromFileUrl,
-            disableWithReason: access.disableImportDataItem
+            disableWithReason: access.disableImportDataItem,
+            requiredAccess: "DatabaseReadWrite"
         }),
         new leafMenuItem({
             route: 'databases/tasks/exportDatabase',
@@ -48,7 +49,8 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-create-sample-data',
             dynamicHash: appUrls.sampleDataUrl,
-            disableWithReason: access.disableCreateSampleDataItem
+            disableWithReason: access.disableCreateSampleDataItem,
+            requiredAccess: "DatabaseReadWrite"
         }),
         new leafMenuItem({
             route: 'databases/tasks/editExternalReplicationTask',

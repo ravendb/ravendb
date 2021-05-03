@@ -96,8 +96,8 @@ class certificateModel {
                 dbAccessInfo = certificateDefinition.Permissions;
         }
         
-        const dbAccessArray = _.map(dbAccessInfo, (accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess, dbName: string) => 
-            ({ accessLevel: accessLevel,  dbName: dbName }));
+        const dbAccessArray = _.map(dbAccessInfo, (accessLevel: databaseAccessLevel, dbName: string) =>
+            ({ accessLevel: `Database${accessLevel}` as databaseAccessLevel,  dbName: dbName }));
         
         return _.sortBy(dbAccessArray, x => x.dbName.toLowerCase());
     }

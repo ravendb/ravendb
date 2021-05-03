@@ -66,7 +66,21 @@ class viewModelBase {
         setTimeout(() => viewModelBase.showSplash(this.isAttached === false), 700);
         this.downloader.reset();
 
-        return this.databasesManager.activateBasedOnCurrentUrl();
+        const dbNameFromUrl = appUrl.getDatabaseNameFromUrl();
+        if (dbNameFromUrl) {
+            const dbAccessLevel = accessManager.default.getEffectiveDatabaseAccessLevel(dbNameFromUrl);
+            const requiredAccessForView = router.activeInstruction().config.requiredAccess;
+            const isViewAllowed = this.allowToAccessView(dbAccessLevel, requiredAccessForView);
+            
+            return this.databasesManager.activateBasedOnCurrentUrl(dbNameFromUrl, isViewAllowed);
+        } else {
+            return true;
+        }
+    }
+
+    protected allowToAccessView(dbAccessLevel: databaseAccessLevel, requiredAccessForView: accessLevel) {
+        // allow children views to override...
+        return accessManager.default.canHandleOperationDatabaseLevelCheck(dbAccessLevel, requiredAccessForView);
     }
 
     activate(args: any, parameters?: any) {
