@@ -138,7 +138,7 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteServerWideSorterCommand)] = 52_000,
 
             [nameof(EditLockModeCommand)] = 52_000,
-			[nameof(PutRollingIndexCommand)] = 52_000,
+            [nameof(PutRollingIndexCommand)] = 52_000,
         };
 
         public static bool CanPutCommand(string command)

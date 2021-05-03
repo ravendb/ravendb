@@ -19,6 +19,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
+using SlowTests.Rolling;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -221,6 +222,8 @@ namespace SlowTests.Issues
                     });
 
                     await WaitForDocumentInClusterAsync<dynamic>(store.GetRequestExecutor().Topology.Nodes, "items/1", predicate: null, TimeSpan.FromSeconds(15));
+                    await RollingIndexesClusterTests.WaitForRollingIndex(databaseName, "MyIndex", cluster.Nodes);
+
                     WaitForIndexingInTheCluster(store, timeout: TimeSpan.FromSeconds(60));
 
                     Operation operation = await store.Operations.SendAsync(new PatchByQueryOperation(new IndexQuery

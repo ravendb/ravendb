@@ -291,7 +291,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else
                 {
-                    var definition = Database.IndexStore.GetIndexDefinition(name);
+                    var definition = Database.IndexStore.GetIndexDefinition(name, throwIfNotExists: false);
                     if (definition == null)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -431,8 +431,11 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static IndexStats CreateStatsForRollingIndex(string indexName, IndexDefinition definition)
+        private IndexStats CreateStatsForRollingIndex(string indexName, IndexDefinition definition)
         {
+            var index = IndexCompilationCache.GetIndexInstance(definition, Database.Configuration);
+            var collections = index.Maps.Keys.ToDictionary(x=>x,_=> new IndexStats.CollectionStats());
+
             return new IndexStats
             {
                 Name = indexName,
@@ -442,19 +445,24 @@ namespace Raven.Server.Documents.Handlers
                 Priority = definition.Priority ?? IndexPriority.Normal,
                 State = definition.State ?? IndexState.Normal,
                 Status = IndexRunningStatus.Pending,
-                IsStale = true
+                IsStale = true,
+                Collections = collections
             };
         }
 
-        private static IndexProgress CreateProgressForRollingIndex(string indexName, IndexDefinition definition)
+        private IndexProgress CreateProgressForRollingIndex(string indexName, IndexDefinition definition)
         {
+            var index = IndexCompilationCache.GetIndexInstance(definition, Database.Configuration);
+            var collections = index.Maps.Keys.ToDictionary(x=>x,_=> new IndexProgress.CollectionStats());
+
             return new IndexProgress
             {
                 Name = indexName,
                 Type = definition.Type,
                 SourceType = definition.SourceType,
                 IndexRunningStatus = IndexRunningStatus.Pending,
-                IsStale = true
+                IsStale = true,
+                Collections = collections
             };
         }
 

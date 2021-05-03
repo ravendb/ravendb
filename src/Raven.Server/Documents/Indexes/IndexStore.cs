@@ -16,6 +16,7 @@ using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
@@ -720,7 +721,60 @@ namespace Raven.Server.Documents.Indexes
             return index;
         }
 
-        public IndexDefinition GetIndexDefinition(string name)
+        public void MaybeFinishRollingDeployment(Index index)
+        {
+            var definition = index.Definition;
+            var nodeTag = _serverStore.NodeTag;
+
+            IndexDefinition latestDef;
+
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name))
+            {
+                var rollingIndexes = rawRecord.RollingIndexes;
+
+                if (rollingIndexes == null)
+                    return;
+
+                if (rollingIndexes.TryGetValue(definition.Name, out var rollingIndex) == false)
+                    return;
+
+                if (rollingIndex.ActiveDeployments.TryGetValue(nodeTag, out var currentDeployment) == false)
+                    return;
+
+                if (currentDeployment.State != RollingIndexState.Running)
+                    return;
+
+                var replacementName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
+
+                if (_indexes.TryGetByName(replacementName, out _))
+                    return; // if exists, the replacement index should finish the rolling deployment 
+
+                latestDef = GetDefinitionFromRecord(rawRecord, index.Name);
+            }
+
+            // we need to identify a running side-by-side rolling index which hasn't started yet.
+            if (index.Definition.Compare(latestDef) != IndexDefinitionCompareDifferences.None)
+                return; 
+
+            if (index.IsStale())
+                return;
+
+            try
+            {
+                // We may send the command multiple times so we need a new Id every time.
+                var command = new PutRollingIndexCommand(_documentDatabase.Name, definition.Name, nodeTag, DateTime.UtcNow, RaftIdGenerator.NewId());
+                _serverStore.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{definition.Name}' in node {nodeTag}.", e);
+            }
+        }
+
+        public IndexDefinition GetIndexDefinition(string name, bool throwIfNotExists = true)
         {
             if (_indexes.TryGetByName(name, out Index index) == false)
             {
@@ -731,11 +785,15 @@ namespace Raven.Server.Documents.Indexes
                     var existingIndexName = name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty,
                         StringComparison.OrdinalIgnoreCase);
 
-                    return GetDefinitionFromRecord(record, existingIndexName);
+                    if (HasSideBySide(existingIndexName ,record))
+                        return GetDefinitionFromRecord(record, existingIndexName);
                 }
             }
 
-            return index.GetIndexDefinition();
+            if (index == null && throwIfNotExists)
+                IndexDoesNotExistException.ThrowFor(name);
+
+            return index?.GetIndexDefinition();
         }
 
         public Dictionary<string, RollingIndex> GetRollingIndexes()
@@ -1838,15 +1896,24 @@ namespace Raven.Server.Documents.Indexes
             return _indexes.GetForCollection(collection);
         }
 
-        private bool IsRollingSideBySide(string name, object definition, RawDatabaseRecord record)
+        private bool HasSideBySide(string name, object definition, RawDatabaseRecord record)
         {
-            if (_indexes.TryGetByName(name, out var current) == false)
+            var sideBySideName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
+
+            if (_indexes.TryGetByName(sideBySideName, out _))
+                return true;
+
+            // now let's check if rolling index has a side-by-side
+            if (record.RollingIndexes == null)
                 return false;
 
             if (record.RollingIndexes.TryGetValue(name, out var rolling) == false)
                 return false;
 
             if (rolling.ActiveDeployments.TryGetValue(_serverStore.NodeTag, out var deployment) == false)
+                return false;
+
+            if (_indexes.TryGetByName(name, out var current) == false)
                 return false;
             
             switch (deployment.State)
@@ -1864,6 +1931,52 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        private bool HasSideBySide(string name, RawDatabaseRecord record)
+        {
+            var sideBySideName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
+
+            if (_indexes.TryGetByName(sideBySideName, out _))
+                return true;
+
+            // now let's check if rolling index has a side-by-side
+            if (record.RollingIndexes == null)
+                return false;
+
+            if (record.RollingIndexes.TryGetValue(name, out var rolling) == false)
+                return false;
+
+            if (rolling.ActiveDeployments.TryGetValue(_serverStore.NodeTag, out var deployment) == false)
+                return false;
+
+            if (_indexes.TryGetByName(name, out var current) == false)
+                return false;
+            
+            switch (deployment.State)
+            {
+                case RollingIndexState.Pending:
+                    return true;
+                case RollingIndexState.Running:
+
+                    IndexDefinitionCompareDifferences diff = IndexDefinitionCompareDifferences.None;
+                    if (record.Indexes.TryGetValue(name, out var staticDefinition))
+                    {
+                        GetIndexCreationOptions(staticDefinition, current, out diff);
+                    }
+
+                    if (record.AutoIndexes.TryGetValue(name, out var autoIndexDefinition))
+                    {
+                        GetIndexCreationOptions(autoIndexDefinition, current, out diff);
+                    }
+
+                    // we need to distinguish between index being deployed and editing the index while the deployment is in progress  
+                    return (diff & IndexDefinitionCompareDifferences.ReIndexRequiredMask) != 0;
+                case RollingIndexState.Done:
+                    return false;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(RollingIndexState), deployment.State, "Unknown deployment type");
+            }
+        }
+
         public IEnumerable<string> GetNames()
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1873,7 +1986,7 @@ namespace Raven.Server.Documents.Indexes
                 foreach (var index in record.Indexes)
                 {
                     var name = index.Key;
-                    if (IsRollingSideBySide(index.Key, index.Value, record))
+                    if (HasSideBySide(name, index.Value, record))
                         yield return Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
 
                     yield return name;
@@ -1882,7 +1995,7 @@ namespace Raven.Server.Documents.Indexes
                 foreach (var index in record.AutoIndexes)
                 {
                     var name = index.Key;
-                    if (IsRollingSideBySide(index.Key, index.Value, record))
+                    if (HasSideBySide(name, index.Value, record))
                         yield return Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
 
                     yield return name;

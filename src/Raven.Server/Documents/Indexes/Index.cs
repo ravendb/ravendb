@@ -1299,7 +1299,7 @@ namespace Raven.Server.Documents.Indexes
                                     }
                                     else
                                     {
-                                        MaybeFinishRollingDeployment();
+                                        DocumentDatabase.IndexStore.MaybeFinishRollingDeployment(this);
                                     }
 
                                     if (_logger.IsInfoEnabled)
@@ -1558,50 +1558,8 @@ namespace Raven.Server.Documents.Indexes
         {
             internal Action<RawDatabaseRecord> OnRollingIndexNodeFinished;
         }
-        private void MaybeFinishRollingDeployment()
-        {
-            if (Definition.Rolling == false)
-                return;
 
-            var nodeTag = DocumentDatabase.ServerStore.NodeTag;
-
-            using (DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            using (var rawRecord = DocumentDatabase.ServerStore.Cluster.ReadRawDatabaseRecord(context, DocumentDatabase.Name))
-            {
-                var rollingIndexes = rawRecord.RollingIndexes;
-
-                if (rollingIndexes == null)
-                    return;
-
-                if (rollingIndexes.TryGetValue(Definition.Name, out var index) == false)
-                    return;
-
-                if (index.ActiveDeployments.TryGetValue(nodeTag, out var currentDeployment) == false)
-                    return;
-
-                if (currentDeployment.State != RollingIndexState.Running)
-                    return;
-
-                if (IndexIsStale())
-                    return;
-
-                try
-                {
-                    // We may send the command multiple times so we need a new Id every time.
-                    var command = new PutRollingIndexCommand(DocumentDatabase.Name, Definition.Name, nodeTag, DateTime.UtcNow, RaftIdGenerator.NewId());
-                    DocumentDatabase.ServerStore.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
-                    ForTestingPurposes?.OnRollingIndexNodeFinished?.Invoke(rawRecord);
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{Name}' in node {nodeTag}.", e);
-                }
-            }
-        }
-
-        private bool IndexIsStale()
+        public bool IsStale()
         {
             using (var queryOperationContext = QueryOperationContext.Allocate(DocumentDatabase, this))
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
