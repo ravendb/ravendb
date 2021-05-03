@@ -455,7 +455,7 @@ namespace Raven.Client.Documents.Indexes
                 ReduceOutputIndex = ReduceOutputIndex,
                 PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
                 PatternReferencesCollectionName = PatternReferencesCollectionName,
-                _clusterState = _clusterState ?? new ClusterState(_clusterState)
+                _clusterState = (_clusterState == null) ? null : new ClusterState(_clusterState)
             };
 
             foreach (var kvp in _configuration)
