@@ -265,17 +265,18 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private BlittableJsonReaderObject ExecuteScript(DocumentsOperationContext context, string id, ScriptRunner.SingleRun run, JsonOperationContext patchContext, object documentInstance, BlittableJsonReaderObject args)
+        private BlittableJsonReaderObject ExecuteScript(DocumentsOperationContext context, string id, ScriptRunner.SingleRun run, JsonOperationContext patchContext,
+            object documentInstance, BlittableJsonReaderObject args)
         {
             if (documentInstance == null)
             {
                 return _createIfMissing;
             }
 
+            //using() will dispose originalDoc.Dispose is already called at ScriptRunner 
             var scriptResult = run.Run(patchContext, context, "execute", id, new[] {documentInstance, args});
-            {
-                return scriptResult.TranslateToObject(_externalContext ?? context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-            }
+            return scriptResult.TranslateToObject(_externalContext ?? context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            
         }
 
         private NonPersistentDocumentFlags HandleMetadataUpdates(DocumentsOperationContext context, string id, ScriptRunner.SingleRun run)

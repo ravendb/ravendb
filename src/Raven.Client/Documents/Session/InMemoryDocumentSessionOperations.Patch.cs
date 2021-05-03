@@ -51,6 +51,38 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        public void AddOrIncrement<T, TU>(string id, T entity, Expression<Func<T, TU>> patch, TU valToAdd)
+        {
+            
+            var pathScript = patch.CompileToJavascript(_javascriptCompilationOptions);
+
+            var variable = $"this.{pathScript}";
+            var value = $"args.val_{_valsCount}";
+
+            var patchRequest = new PatchRequest {Script = $"{variable} = {variable} ? {variable} + {value} : {value};", Values = {[$"val_{_valsCount}"] = valToAdd}};
+            
+
+            string collectionName = _requestExecutor.Conventions.GetCollectionName(entity);
+            string clrType = _requestExecutor.Conventions.GetClrTypeName(entity);
+            
+            var newInstance = JsonConverter.ToBlittable(
+                entity,
+                new DocumentInfo
+                {
+                    Id = id,
+                    Collection = collectionName,
+                    MetadataInstance = new MetadataAsDictionary
+                    {
+                        [Constants.Documents.Metadata.Collection] = collectionName,
+                        [Constants.Documents.Metadata.RavenClrType] = clrType
+                    }
+                });
+            
+            _valsCount++;
+
+            Defer(new PatchCommandData(id, null, patchRequest) {CreateIfMissing = newInstance});
+        }
+
         public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, List<TU>>> patch, Expression<Func<JavaScriptArray<TU>, object>> arrayAdder)
         {
             var extension = new JavascriptConversionExtensions.CustomMethods {Suffix = _customCount++};
@@ -77,6 +109,7 @@ namespace Raven.Client.Documents.Session
                         [Constants.Documents.Metadata.Collection] = collectionName, [Constants.Documents.Metadata.RavenClrType] = clrType
                     }
                 });
+            
             _valsCount++;
 
             Defer(new PatchCommandData(id, null, patchRequest) {CreateIfMissing = newInstance});
@@ -84,9 +117,6 @@ namespace Raven.Client.Documents.Session
 
         public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, TU>> patch, TU value)
         {
-            if (string.IsNullOrEmpty(id))
-                throw new ArgumentNullException(nameof(id));
-
             var patchScript = patch.CompileToJavascript(_javascriptCompilationOptions);
             var valueToUse = AddTypeNameToValueIfNeeded(patch.Body.Type, value);
             var patchRequest = new PatchRequest {Script = $"this.{patchScript} = args.val_{_valsCount};", Values = {[$"val_{_valsCount}"] = valueToUse}};
@@ -103,6 +133,7 @@ namespace Raven.Client.Documents.Session
                         [Constants.Documents.Metadata.Collection] = collectionName, [Constants.Documents.Metadata.RavenClrType] = clrType
                     }
                 });
+            
             _valsCount++;
 
             Defer(new PatchCommandData(id, null, patchRequest) {CreateIfMissing = newInstance});

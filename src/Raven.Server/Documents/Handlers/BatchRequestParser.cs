@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Handlers
                                 skipPatchIfChangeVectorMismatch: false,
                                 (commandData.Patch, commandData.PatchArgs),
                                 (commandData.PatchIfMissing, commandData.PatchIfMissingArgs),
-                                createIfMissing: commandData.CreateIfMissing, // ---
+                                createIfMissing: commandData.CreateIfMissing,
                                 database,
                                 isTest: false,
                                 debugMode: false,
