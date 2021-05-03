@@ -12,7 +12,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
-using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Documents.ETL;
 using Tests.Infrastructure;
@@ -100,8 +99,7 @@ loadToOrders(key,
                         Collections = new List<string> {"Orders"}, 
                         Script = script
                     }},
-                    MentorNode = server.ServerStore.NodeTag,
-                    KeepFilesOnDisk = true
+                    MentorNode = server.ServerStore.NodeTag
                 };
                 AddEtl(store,
                     configuration,

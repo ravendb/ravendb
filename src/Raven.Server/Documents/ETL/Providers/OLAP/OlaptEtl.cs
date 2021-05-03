@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
                 UploadToServer(localPath, folderName, fileName);
 
-                if (Configuration.KeepFilesOnDisk)
+                if (Configuration.Connection.LocalSettings != null)
                     continue;
 
                 File.Delete(localPath);
