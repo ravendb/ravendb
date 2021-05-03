@@ -800,9 +800,8 @@ interface indexHistoryCommandResult {
 
 interface databaseAccessInfo {
     dbName: string;
-    accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess;
+    accessLevel: databaseAccessLevel;
 }
-
 
 interface databaseAndNodeAwareStats {
     database: string;

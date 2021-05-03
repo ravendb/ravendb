@@ -24,7 +24,8 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-manage-connection-strings',
             dynamicHash: appUrls.connectionStrings,
-            disableWithReason: access.disableConnectionStringsMenuItem
+            disableWithReason: access.disableConnectionStringsMenuItem,
+            requiredAccess: "DatabaseAdmin"
         }),
         new leafMenuItem({
             route: 'databases/settings/conflictResolution',

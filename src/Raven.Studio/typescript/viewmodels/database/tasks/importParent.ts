@@ -15,7 +15,8 @@ class importParent {
                     title: 'Import database from file',
                     nav: true,
                     tabName: "From file (.ravendbdump)",
-                    dynamicHash: appUrl.forCurrentDatabase().importDatabaseFromFileUrl
+                    dynamicHash: appUrl.forCurrentDatabase().importDatabaseFromFileUrl,
+                    requiredAccess: "DatabaseReadWrite"
                 },
                 {
                     route: 'databases/tasks/import/migrateRavenDB',
@@ -23,7 +24,8 @@ class importParent {
                     title: 'Import database from another RavenDB',
                     tabName: "From RavenDB",
                     nav: true,
-                    dynamicHash: appUrl.forCurrentDatabase().migrateRavenDbDatabaseUrl
+                    dynamicHash: appUrl.forCurrentDatabase().migrateRavenDbDatabaseUrl,
+                    requiredAccess: "DatabaseReadWrite"
                 },
                 {
                     route: 'databases/tasks/import/csv',
@@ -31,7 +33,8 @@ class importParent {
                     title: 'Import collection from CSV file',
                     tabName: "From CSV file",
                     nav: true,
-                    dynamicHash: appUrl.forCurrentDatabase().importCollectionFromCsv
+                    dynamicHash: appUrl.forCurrentDatabase().importCollectionFromCsv,
+                    requiredAccess: "DatabaseReadWrite"
                 },
                 {
                     route: 'databases/tasks/import/sql',
@@ -39,7 +42,8 @@ class importParent {
                     title: 'Import from SQL Database',
                     tabName: "From SQL",
                     nav: true,
-                    dynamicHash: appUrl.forCurrentDatabase().importDatabaseFromSql
+                    dynamicHash: appUrl.forCurrentDatabase().importDatabaseFromSql,
+                    requiredAccess: "DatabaseReadWrite"
                 },
                 {
                     route: 'databases/tasks/import/migrate',
@@ -47,7 +51,8 @@ class importParent {
                     title: 'Migrate database',
                     tabName: "From other",
                     nav: true,
-                    dynamicHash: appUrl.forCurrentDatabase().migrateDatabaseUrl
+                    dynamicHash: appUrl.forCurrentDatabase().migrateDatabaseUrl,
+                    requiredAccess: "DatabaseReadWrite"
                 }
             ])
             .buildNavigationModel();

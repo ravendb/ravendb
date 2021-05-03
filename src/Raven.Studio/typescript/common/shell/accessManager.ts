@@ -6,8 +6,8 @@ class accessManager {
     static default = new accessManager();
     
     static clientCertificateThumbprint = ko.observable<string>();
-    
-    static databasesAccess: dictionary<Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess> = {};
+   
+    static databasesAccess: dictionary<databaseAccessLevel> = {};
     
     securityClearance = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>();
 
@@ -24,67 +24,67 @@ class accessManager {
          return clearance === "ClusterAdmin" || clearance === "ClusterNode" || clearance === "Operator";
     });
 
-    isAdminByDbName(dbName: string) {
-        return this.getEffectiveDatabaseAccessLevel(dbName) === "Admin";
+    isAdminByDbName(dbName: string): boolean {
+        return this.getEffectiveDatabaseAccessLevel(dbName) === "DatabaseAdmin";
     }
     
-    getEffectiveDatabaseAccessLevel(dbName: string) {
+    getEffectiveDatabaseAccessLevel(dbName: string): databaseAccessLevel {
         if (this.isOperatorOrAbove()) {
-            return "Admin";
+            return "DatabaseAdmin";
         }
         
         return accessManager.databasesAccess[dbName];
     }
 
-    getDatabaseAccessLevelTextByDbName(dbName: string) {
+    getDatabaseAccessLevelTextByDbName(dbName: string): string {
         const accessLevel = this.getEffectiveDatabaseAccessLevel(dbName);
         return accessLevel ? this.getAccessLevelText(accessLevel) : null;
     }
     
-    getAccessLevelText(accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
+    getAccessLevelText(accessLevel: databaseAccessLevel): string {
         switch (accessLevel) {
-            case "Admin":
+            case "DatabaseAdmin":
                 return "Admin";
-            case "ReadWrite":
+            case "DatabaseReadWrite":
                 return "Read/Write";
-            case "Read":
+            case "DatabaseRead":
                 return "Read Only";
         }
     }
 
-    getAccessColorByDbName(dbName: string) {
+    getAccessColorByDbName(dbName: string): string {
         const accessLevel = this.getEffectiveDatabaseAccessLevel(dbName);
         return this.getAccessColor(accessLevel);
     }
     
-    getAccessColor(accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
+    getAccessColor(accessLevel: databaseAccessLevel): string {
         switch (accessLevel) {
-            case "Admin":
+            case "DatabaseAdmin":
                 return "text-success";
-            case "ReadWrite":
+            case "DatabaseReadWrite":
                 return "text-warning";
-            case "Read":
+            case "DatabaseRead":
                 return "text-danger";
         }
     }
 
-    getAccessIconByDbName(dbName: string) {
+    getAccessIconByDbName(dbName: string): string {
         const accessLevel = this.getEffectiveDatabaseAccessLevel(dbName);
         return this.getAccessIcon(accessLevel);
     }
     
-    getAccessIcon(accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
+    getAccessIcon(accessLevel: databaseAccessLevel): string {
         switch (accessLevel) {
-            case "Admin":
+            case "DatabaseAdmin":
                 return "icon-access-admin";
-            case "ReadWrite":
+            case "DatabaseReadWrite":
                 return "icon-access-read-write";
-            case "Read":
+            case "DatabaseRead":
                 return "icon-access-read";
         }
     }
     
-    activeDatabaseAccessLevel = ko.pureComputed<Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess>(() => {
+    activeDatabaseAccessLevel = ko.pureComputed<databaseAccessLevel>(() => {
         const activeDatabase = activeDatabaseTracker.default.database();
         if (activeDatabase) {
             return this.getEffectiveDatabaseAccessLevel(activeDatabase.name);
@@ -93,18 +93,18 @@ class accessManager {
         return null;
     });
     
-    isReadOnlyAccess = ko.pureComputed(() => this.activeDatabaseAccessLevel() === 'Read');
+    isReadOnlyAccess = ko.pureComputed(() => this.activeDatabaseAccessLevel() === "DatabaseRead");
     
     isReadWriteAccessOrAbove = ko.pureComputed(() => {
         const accessLevel = this.activeDatabaseAccessLevel();
-        return accessLevel === 'ReadWrite' || accessLevel === 'Admin';
+        return accessLevel === "DatabaseReadWrite" || accessLevel === "DatabaseAdmin";
     });
     
     isAdminAccessOrAbove = ko.pureComputed(() => {
         const accessLevel = this.activeDatabaseAccessLevel();
-        return accessLevel === 'Admin';
+        return accessLevel === "DatabaseAdmin";
     });
-    
+
     canHandleOperation(requiredAccess: accessLevel) {
         switch (requiredAccess) {
             case "ClusterAdmin":
@@ -113,19 +113,27 @@ class accessManager {
             case "Operator":
                 return this.isOperatorOrAbove();
         }
-        
+
         const activeDatabaseAccess = this.activeDatabaseAccessLevel();
 
         if (!activeDatabaseAccess) {
             return false;
         }
 
-        if (activeDatabaseAccess === 'Read' &&
-            (requiredAccess === "DatabaseReadWrite" || requiredAccess === "DatabaseAdmin")) {
+        return this.canHandleOperationDatabaseLevelCheck(activeDatabaseAccess, requiredAccess as databaseAccessLevel);
+    }
+    
+    canHandleOperationDatabaseLevelCheck(actualLevel: databaseAccessLevel, requiredLevel: accessLevel) {
+        if (!requiredLevel) {
+            return true;
+        }
+        
+        if (actualLevel === "DatabaseRead" &&
+            (requiredLevel === "DatabaseReadWrite" || requiredLevel === "DatabaseAdmin")) {
             return false;
         }
 
-        if (activeDatabaseAccess === "ReadWrite" && requiredAccess === "DatabaseAdmin") {
+        if (actualLevel === "DatabaseReadWrite" && requiredLevel === "DatabaseAdmin") {
             return false;
         }
 
@@ -157,7 +165,6 @@ class accessManager {
         });
     }
     
-    
     private getRuleHtml(title: string, required: string, actual: string) {
         return `<div class="text-left">
                             <h4>${title}</h4>
@@ -173,8 +180,8 @@ class accessManager {
     disableIfNotClusterAdminOrClusterNode = this.createSecurityRule(this.isClusterAdminOrClusterNode, "Cluster Admin");
     disableIfNotOperatorOrAbove = this.createSecurityRule(this.isOperatorOrAbove, "Cluster Admin or Operator");
     
-    disableIfNotAdminAccessPerDatabaseOrAbove = this.createDatabaseSecurityRule(this.isAdminAccessOrAbove, 'Admin');
-    disableIfNotReadWriteAccessPerDatabaseOrAbove = this.createDatabaseSecurityRule(this.isReadWriteAccessOrAbove, 'Read/Write');
+    disableIfNotAdminAccessPerDatabaseOrAbove = this.createDatabaseSecurityRule(this.isAdminAccessOrAbove, "DatabaseAdmin");
+    disableIfNotReadWriteAccessPerDatabaseOrAbove = this.createDatabaseSecurityRule(this.isReadWriteAccessOrAbove, "DatabaseRead/Write");
     
     dashboardView = {
         showCertificatesLink: this.isOperatorOrAbove
@@ -230,7 +237,7 @@ class accessManager {
         disableSystemIoStats: this.disableIfNotOperatorOrAbove,
         disableAdvancedMenuItem: this.disableIfNotOperatorOrAbove,
         disableCaptureStackTraces: this.disableIfNotOperatorOrAbove,
-        enableRecordTransactionCommands: this.isOperatorOrAbove
+        showRecordTransactionCommands: this.isOperatorOrAbove
     };
     
     databaseSettingsMenu = {

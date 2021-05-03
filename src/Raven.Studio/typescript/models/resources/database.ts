@@ -20,7 +20,7 @@ class database {
     environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
     environmentClass = database.createEnvironmentColorComputed("label", this.environment);
 
-    databaseAccess = ko.observable<Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess>();
+    databaseAccess = ko.observable<databaseAccessLevel>();
     databaseAccessText = ko.observable<string>();
     databaseAccessColor = ko.observable<string>();
     
