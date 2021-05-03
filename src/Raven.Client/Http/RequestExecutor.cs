@@ -327,8 +327,14 @@ namespace Raven.Client.Http
 
         private static readonly Exception ServerCertificateCustomValidationCallbackRegistrationException;
 
+        private static readonly bool? CheckCertificateRevocationList;
+
         static RequestExecutor()
         {
+            var checkCertificateRevocationListAsString = Environment.GetEnvironmentVariable("RAVEN_CHECK_CERTIFICATE_REVOCATION_LIST");
+            if (string.IsNullOrWhiteSpace(checkCertificateRevocationListAsString) == false)
+                CheckCertificateRevocationList = bool.Parse(checkCertificateRevocationListAsString);
+
             try
             {
                 using (var handler = new HttpClientHandler())
@@ -885,7 +891,8 @@ namespace Raven.Client.Http
                 command.FailoverTopologyEtag = _nodeSelector?.Topology?.Etag ?? InitialTopologyEtag;
 
             var request = CreateRequest(context, chosenNode, command, out string url);
-            if (request == null) return;
+            if (request == null)
+                return;
 
             var noCaching = sessionInfo?.NoCaching ?? false;
 
@@ -1364,7 +1371,8 @@ namespace Raven.Client.Http
         internal HttpRequestMessage CreateRequest<TResult>(JsonOperationContext ctx, ServerNode node, RavenCommand<TResult> command, out string url)
         {
             var request = command.CreateRequest(ctx, node, out url);
-            if (request == null) return null;
+            if (request == null)
+                return null;
 
             var builder = new UriBuilder(url);
 
@@ -1848,7 +1856,7 @@ namespace Raven.Client.Http
             _disposeOnceRunner.Dispose();
         }
 
-        public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false)
+        public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false, bool? checkCertificateRevocationList = null)
         {
             HttpClientHandler httpMessageHandler;
 
@@ -1863,6 +1871,9 @@ namespace Raven.Client.Http
             {
                 httpMessageHandler = new HttpClientHandler();
             }
+
+            if (checkCertificateRevocationList.HasValue)
+                httpMessageHandler.CheckCertificateRevocationList = checkCertificateRevocationList.Value;
 
             if (httpMessageHandler.SupportsAutomaticDecompression)
             {
@@ -1904,7 +1915,8 @@ namespace Raven.Client.Http
             var httpMessageHandler = CreateHttpMessageHandler(Certificate,
                 setSslProtocols: true,
                 useCompression: Conventions.UseCompression,
-                hasExplicitlySetCompressionUsage: Conventions.HasExplicitlySetCompressionUsage);
+                hasExplicitlySetCompressionUsage: Conventions.HasExplicitlySetCompressionUsage,
+                checkCertificateRevocationList: CheckCertificateRevocationList ?? Conventions.CheckCertificateRevocationList);
 
             return new HttpClient(httpMessageHandler)
             {
@@ -2209,12 +2221,12 @@ namespace Raven.Client.Http
 
         private async Task EnsureNodeSelector()
         {
-            if(_disableTopologyUpdates == false)
+            if (_disableTopologyUpdates == false)
                 await WaitForTopologyUpdate(_firstTopologyUpdate).ConfigureAwait(false);
 
             _nodeSelector ??= new NodeSelector(new Topology
             {
-                Nodes = TopologyNodes.ToList(), 
+                Nodes = TopologyNodes.ToList(),
                 Etag = TopologyEtag
             });
         }

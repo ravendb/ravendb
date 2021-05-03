@@ -237,6 +237,7 @@ namespace Raven.Client.Documents.Conventions
         private OperationStatusFetchMode _operationStatusFetchMode;
         private string _topologyCacheLocation;
         private Version _httpVersion;
+        private bool? _checkCertificateRevocationList;
         private bool _sendApplicationIdentifier;
         private Size _maxContextSizeToKeep;
 
@@ -271,6 +272,16 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _httpVersion = value;
+            }
+        }
+
+        public bool? CheckCertificateRevocationList
+        {
+            get => _checkCertificateRevocationList;
+            set
+            {
+                AssertNotFrozen();
+                _checkCertificateRevocationList = value;
             }
         }
 
