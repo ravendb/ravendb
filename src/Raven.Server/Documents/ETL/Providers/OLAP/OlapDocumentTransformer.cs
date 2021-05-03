@@ -28,10 +28,9 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private EtlStatsScope _stats;
         private readonly Logger _logger;
 
-        private static readonly string UrlEscapedEqualsSign = System.Net.WebUtility.UrlEncode("=");
         private ObjectInstance _noPartition;
         private const string PartitionKeys = "$partition_keys";
-        private const string DefaultPartitionColumnName = "_dt";
+        private const string DefaultPartitionColumnName = "_partition";
 
         public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config, string fileNamePrefix, Logger logger)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.OlapEtl), null)

@@ -162,7 +162,7 @@ loadToOrders(partitionBy(key),
 
                         Assert.Equal(1, cloudObjects.FileInfoDetails.Count);
 
-                        var fullPath = cloudObjects.FileInfoDetails[0].FullPath.Replace("dt=", "dt%3D");
+                        var fullPath = cloudObjects.FileInfoDetails[0].FullPath.Replace("=", "%3D");
                         var blob = await s3Client.GetObjectAsync(fullPath);
 
                         await using var ms = new MemoryStream();
@@ -332,7 +332,7 @@ loadToOrders(partitionBy(key), orderData);
                         Assert.Contains("2020-01-01", cloudObjects.FileInfoDetails[0].FullPath);
                         Assert.Contains("2020-02-01", cloudObjects.FileInfoDetails[1].FullPath);
 
-                        var fullPath = cloudObjects.FileInfoDetails[0].FullPath.Replace("dt=", "dt%3D");
+                        var fullPath = cloudObjects.FileInfoDetails[0].FullPath.Replace("=", "%3D");
                         var blob = await s3Client.GetObjectAsync(fullPath);
 
                         await using var ms = new MemoryStream();
@@ -365,7 +365,7 @@ loadToOrders(partitionBy(key), orderData);
                         Assert.Contains("2020-01-01", cloudObjects.FileInfoDetails[0].FullPath);
                         Assert.Contains("2020-02-01", cloudObjects.FileInfoDetails[1].FullPath);
 
-                        var fullPath = cloudObjects.FileInfoDetails[1].FullPath.Replace("dt=", "dt%3D");
+                        var fullPath = cloudObjects.FileInfoDetails[1].FullPath.Replace("=", "%3D");
                         var blob = await s3Client.GetObjectAsync(fullPath);
 
                         await using var ms = new MemoryStream();
@@ -809,7 +809,7 @@ loadToOrders(partitionBy(key),
             }
         }
 
-        [Fact]
+        [AmazonS3Fact]
         public async Task CanHandleSpecialCharsInEtlName()
         {
             var settings = GetS3Settings();
@@ -851,7 +851,7 @@ loadToOrders(noPartition(), {
             }
         }
 
-        [Fact]
+        [AmazonS3Fact]
         public async Task CanHandleSpecialCharsInFolderPath()
         {
             var settings = GetS3Settings();

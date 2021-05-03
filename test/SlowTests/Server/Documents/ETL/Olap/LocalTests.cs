@@ -244,7 +244,7 @@ loadToOrders(partitionBy(key), o);
                                         Assert.Equal(expected, val);
                                         break;
                                     case "Total":
-                                        var expectedTotal = count * count * 10;
+                                        var expectedTotal = count * 1.25M * 10;
                                         Assert.Equal(expectedTotal, val);
                                         break;
                                 }
@@ -909,8 +909,7 @@ loadToOrders(partitionBy(key), o);
                                 Collections = new List<string> {"Orders"},
                                 Script = transformationScript
                             }
-                        },
-                        KeepFilesOnDisk = true
+                        }
                     };
 
                     AddEtl(store, configuration, connectionString);
@@ -1252,9 +1251,7 @@ loadToOrders(partitionBy(key), o);
                                 TableName = "Orders",
                                 DocumentIdColumn = idColumn
                             }
-                        },
-
-                        KeepFilesOnDisk = true
+                        }
                     };
 
 
@@ -1616,8 +1613,7 @@ loadToOrders(partitionBy([
                                 Collections = new List<string> {"Users"},
                                 Script = script
                             }
-                        },
-                        KeepFilesOnDisk = true
+                        }
                     };
 
                     SetupLocalOlapEtl(store, configuration, path, connectionStringName);
@@ -1710,7 +1706,7 @@ for (var i = 0; i < this.Lines.length; i++) {
     
     // load to 'sales' table
 
-    loadToSales(partitionBy([['name', this.Company]]), {
+    loadToSales(partitionBy(key), {
         Qty: line.Quantity,
         Product: line.Product,
         Cost: line.PricePerUnit
@@ -1722,6 +1718,270 @@ for (var i = 0; i < this.Lines.length; i++) {
 
                     var files = Directory.GetFiles(path);
                     Assert.Equal(expectedCount, files.Length);
+                }
+            }
+            finally
+            {
+                var di = new DirectoryInfo(path);
+                foreach (var file in di.EnumerateFiles())
+                {
+                    file.Delete();
+                }
+
+                di.Delete();
+            }
+        }
+
+        [Fact]
+        public async Task CanSpecifyColumnTypeInScript()
+        {
+            var path = GetTempPath("Orders");
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var today = DateTime.Today;
+                        await session.StoreAsync(new Order
+                        {
+                            OrderedAt = today,
+                            Lines = new List<OrderLine>
+                            {
+                                new OrderLine
+                                {
+                                    ProductName = "Cheese",
+                                    PricePerUnit = 18,
+                                    Quantity = 1
+                                },
+                                new OrderLine
+                                {
+                                    ProductName = "Eggs",
+                                    PricePerUnit = 12.75M,
+                                    Quantity = 2
+                                },
+                                new OrderLine
+                                {
+                                    ProductName = "Chicken",
+                                    PricePerUnit = 42.99M,
+                                    Quantity = 2
+                                }
+                            }
+                        });
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    var script = @"
+for (var i = 0; i < this.Lines.length; i++) {
+    var line = this.Lines[i];
+    
+    // load to 'sales' table
+
+    loadToSales(noPartition(), {
+        Quantity: line.Quantity,
+        Product: line.ProductName,
+        Cost: { Value: line.PricePerUnit, Type: 'Double' }
+    });
+}";
+                    SetupLocalOlapEtl(store, script, path);
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    var files = Directory.GetFiles(path);
+                    Assert.Equal(1, files.Length);
+
+                    var expectedFields = new[] { "Quantity", "Product", "Cost", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
+
+                    using (var fs = File.OpenRead(files[0]))
+                    using (var parquetReader = new ParquetReader(fs))
+                    {
+                        Assert.Equal(1, parquetReader.RowGroupCount);
+                        Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
+
+                        using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
+                        foreach (var field in parquetReader.Schema.Fields)
+                        {
+                            Assert.True(field.Name.In(expectedFields));
+
+                            var dataField = (DataField)field;
+                            var data = rowGroupReader.ReadColumn(dataField).Data;
+
+                            Assert.True(data.Length == 3);
+
+                            if (field.Name != "Cost")
+                                continue;
+
+                            Assert.Equal(DataType.Double, dataField.DataType);
+
+                            var count = 0;
+                            var expectedValues = new[]
+                            {
+                                18, 12.75, 42.99
+                            };
+
+                            foreach (var val in data)
+                            {
+                                Assert.Equal(expectedValues[count++], val);
+                            }
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                var di = new DirectoryInfo(path);
+                foreach (var file in di.EnumerateFiles())
+                {
+                    file.Delete();
+                }
+
+                di.Delete();
+            }
+        }
+
+        [Fact]
+        public async Task CanSpecifyColumnTypeInScript2()
+        {
+            var path = GetTempPath("Users");
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User
+                        {
+                            Byte = 1,
+                            Decimal = 2.02M,
+                            Double = 3.033,
+                            Float = 4.0444F,
+                            Int16 = 5,
+                            Int32 = 6,
+                            Int64 = 7L,
+                            SByte = 8,
+                            UInt16 = 9,
+                            UInt32 = 10,
+                            UInt64 = 11L
+                        });
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    
+                    //todo int16
+                    var script = @"
+loadToUsers(noPartition(), {
+    Byte: { Value: this.Byte, Type: 'Byte' },
+    Decimal: { Value: this.Decimal, Type: 'Decimal' },
+    Double: { Value: this.Double, Type: 'Double' },
+    Float: { Value: this.Float, Type: 'Single' },
+    //Int16: { Value: this.Int16, Type: 'Int16' },
+    Int32: { Value: this.Int32, Type: 'Int32' },
+    Int64: { Value: this.Int64, Type: 'Int64' },
+    SByte: { Value: this.SByte, Type: 'SByte' },
+    UInt16: { Value: this.UInt16, Type: 'UInt16' },
+    UInt32: { Value: this.UInt32, Type: 'UInt32' },
+    UInt64: { Value: this.UInt64, Type: 'UInt64' }
+});
+";
+                    var connectionStringName = $"{store.Database} to local";
+                    var configuration = new OlapEtlConfiguration
+                    {
+                        Name = "olap-test",
+                        ConnectionStringName = connectionStringName,
+                        RunFrequency = DefaultFrequency,
+                        Transforms =
+                        {
+                            new Transformation
+                            {
+                                Name = "UsersData",
+                                Collections = new List<string> {"Users"},
+                                Script = script
+                            }
+                        }
+                    };
+
+                    SetupLocalOlapEtl(store, configuration, path, connectionStringName);
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    var files = Directory.GetFiles(path);
+                    Assert.Equal(1, files.Length);
+
+                    using (var fs = File.OpenRead(files[0]))
+                    using (var parquetReader = new ParquetReader(fs))
+                    {
+                        Assert.Equal(1, parquetReader.RowGroupCount);
+                        Assert.Equal(12, parquetReader.Schema.Fields.Count); // todo int16
+
+                        using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
+                        foreach (var field in parquetReader.Schema.Fields)
+                        {
+                            var dataField = (DataField)field;
+                            var data = rowGroupReader.ReadColumn(dataField).Data;
+                            Assert.Equal(1, data.Length);
+
+                            object expected = default;
+                            switch (field.Name)
+                            {
+                                case nameof(User.Byte):
+                                    Assert.Equal(DataType.Byte, dataField.DataType);
+                                    expected = (byte)1;
+                                    break;
+                                case nameof(User.Decimal):
+                                    Assert.Equal(DataType.Decimal, dataField.DataType);
+                                    expected = 2.02M;
+                                    break;
+                                case nameof(User.Double):
+                                    Assert.Equal(DataType.Double, dataField.DataType);
+                                    expected = 3.033;
+                                    break;
+                                case nameof(User.Float):
+                                    Assert.Equal(DataType.Float, dataField.DataType);
+                                    expected = 4.0444F;
+                                    break;
+                                case nameof(User.Int16):
+                                    Assert.Equal(DataType.Int16, dataField.DataType);
+                                    expected = (short)5;
+                                    break;
+                                case nameof(User.Int32):
+                                    Assert.Equal(DataType.Int32, dataField.DataType);
+                                    expected = 6;
+                                    break;
+                                case nameof(User.Int64):
+                                    Assert.Equal(DataType.Int64, dataField.DataType);
+                                    expected = 7L;
+                                    break;
+                                case nameof(User.SByte):
+                                    Assert.Equal(DataType.SignedByte, dataField.DataType);
+                                    expected = (sbyte)8;
+                                    break;
+                                case nameof(User.UInt16):
+                                    Assert.Equal(DataType.UnsignedInt16, dataField.DataType);
+                                    expected = (ushort)9;
+                                    break;
+                                case nameof(User.UInt32):
+                                    Assert.Equal(DataType.UnsignedInt32, dataField.DataType);
+                                    expected = (uint)10;
+                                    break;
+                                case nameof(User.UInt64):
+                                    Assert.Equal(DataType.UnsignedInt64, dataField.DataType);
+                                    expected = (ulong)11;
+                                    break;
+                                case ParquetTransformedItems.DefaultIdColumn:
+                                case ParquetTransformedItems.LastModifiedColumn:
+                                    continue;
+                            }
+
+                            foreach (var value in data)
+                            {
+                                Assert.Equal(expected, value);
+                            }
+                        }
+                    }
                 }
             }
             finally
@@ -1787,8 +2047,7 @@ for (var i = 0; i < this.Lines.length; i++) {
                         Collections = new List<string> {"Orders"},
                         Script = script
                     }
-                },
-                KeepFilesOnDisk = true
+                }
             };
 
             SetupLocalOlapEtl(store, configuration, path, connectionStringName);
@@ -1810,7 +2069,27 @@ for (var i = 0; i < this.Lines.length; i++) {
 
         private class User
         {
+            public decimal Decimal { get; set; }
+
+            public long Int64 { get; set; }
+
             public double Double { get; set; }
+
+            public byte Byte { get; set; }
+
+            public sbyte SByte { get; set; }
+
+            public float Float { get; set; } 
+
+            public short Int16 { get; set; }
+
+            public int Int32 { get; set; }
+
+            public ushort UInt16 { get; set; }
+
+            public uint UInt32 { get; set; }
+
+            public ulong UInt64 { get; set; }
         }
     }
 }
