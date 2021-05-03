@@ -247,7 +247,7 @@ namespace FastTests
                     };
 
                     var pathToUse = options.Path;
-                    if (options.ReplicationFactor > 1)
+                    if (options.ReplicationFactor > 1 || IsGlobalOrLocalServer(serverToUse) == false)
                     {
                         if (pathToUse == null)
                         {

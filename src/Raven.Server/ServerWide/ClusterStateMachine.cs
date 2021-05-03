@@ -1178,6 +1178,19 @@ namespace Raven.Server.ServerWide
                             }
                         }
 
+                        if (record.RollingIndexes != null)
+                        {
+                            foreach (var rollingIndex in record.RollingIndexes)
+                            {
+                                if (rollingIndex.Value.ActiveDeployments.TryGetValue(removed, out var deployment))
+                                {
+                                    var dummy = new PutRollingIndexCommand(record.DatabaseName, rollingIndex.Key, removed, DateTime.Now, "dummy update");
+                                    dummy.UpdateDatabaseRecord(record, index);
+                                    rollingIndex.Value.ActiveDeployments.Remove(removed);
+                                }
+                            }
+                        }
+
                         var updated = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(record, context);
 
                         UpdateValue(index, items, lowerKey, key, updated);

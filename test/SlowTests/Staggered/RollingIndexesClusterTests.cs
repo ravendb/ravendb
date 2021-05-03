@@ -88,6 +88,18 @@ namespace SlowTests.Rolling
         }
 
         [Fact]
+        public async Task RemoveNodeFromClusterWhileRollingDeployment()
+        {
+           
+        }
+
+        [Fact]
+        public async Task RemoveNodeFromDatabaseGroupWhileRollingDeployment()
+        {
+           
+        }
+
+        [Fact]
         public async Task ForceIndexDeployed()
         {
             
@@ -103,13 +115,13 @@ namespace SlowTests.Rolling
 
             foreach (var node in cluster.Nodes)
             {
-                await WaitForIndex(dbName, indexDefinition.Name, node);
+                await WaitForRollingIndex(dbName, indexDefinition.Name, node);
             }
 
             return indexDefinition.Name;
         }
 
-        private static async Task<Index> WaitForIndex(string database, string name, RavenServer server)
+        public static async Task<Index> WaitForRollingIndex(string database, string name, RavenServer server)
         {
             var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
 
@@ -127,6 +139,14 @@ namespace SlowTests.Rolling
                 catch (PendingRollingIndexException)
                 {
                 }
+            }
+        }
+
+        public static async Task WaitForRollingIndex(string database, string name, List<RavenServer> servers)
+        {
+            foreach (var server in servers)
+            {
+                await WaitForRollingIndex(database, name, server);
             }
         }
 
