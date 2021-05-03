@@ -70,6 +70,10 @@ namespace Raven.Client.Documents.Session
         IQueryBase<T, IAsyncRawDocumentQuery<T>>,
         IAsyncDocumentQueryBase<T>
     {
+        /// <summary>
+        ///    Execute raw query aggregated by facet
+        /// </summary>
+        Task<Dictionary<string, FacetResult>> ExecuteAggregationAsync(CancellationToken token = default);
     }
 
     public interface IAsyncGraphQuery<T> :
