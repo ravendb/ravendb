@@ -32,6 +32,24 @@ namespace FastTests.Voron
             }
         }
         
+        
+        [Fact]
+        public void CanHandleVeryLargeKey()
+        {
+            using (var wtx = Env.WriteTransaction())
+            {
+                var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                tree.Add(new string('a', 577), 5);
+                wtx.Commit();
+            }
+            using (var rtx = Env.ReadTransaction())
+            {
+                var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");
+                Assert.True(tree.TryGetValue(new string('a', 577), out var r));
+                Assert.Equal(5, r);
+            }
+        }
+        
         [Fact]
         public void CanDeleteItem()
         {
