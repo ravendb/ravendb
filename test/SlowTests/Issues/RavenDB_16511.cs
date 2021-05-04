@@ -1,21 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Exceptions;
-using Raven.Client.Util;
-using Raven.Server.Config;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Documents.Queries;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -28,7 +18,6 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ReplaceIndexShouldWork()
         {
-
             using (var database = CreateDocumentDatabase(runInMemory: false))
             {
                 var testingStuff = database.IndexStore.ForTestingPurposesOnly(); 
