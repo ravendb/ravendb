@@ -83,7 +83,7 @@ class viewModelBase {
     protected canAccessView(dbName?: string) {
         // allow child view to override...
         const requiredAccessForView = router.activeInstruction().config.requiredAccess ?? 'DatabaseRead';
-        return accessManager.default.canHandleOperation(requiredAccessForView, dbName);
+        return !accessManager.default.isAccessForbidden(requiredAccessForView, dbName);
     }
 
     activate(args: any, parameters?: any) {
@@ -113,7 +113,7 @@ class viewModelBase {
         viewModelBase.showSplash(false);
     }
 
-    compositionComplete() {        
+    compositionComplete() {
         this.dirtyFlag().reset(); //Resync Changes
     }
    

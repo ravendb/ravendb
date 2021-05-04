@@ -1,21 +1,20 @@
 ﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
-import accessManager = require("common/shell/accessManager");
 
 export = getSettingsMenuItem;
 
 function getSettingsMenuItem(appUrls: computedAppUrls) {
-    const access = accessManager.default.databaseSettingsMenu;
     
     const settingsItems: menuItem[] = [
         new leafMenuItem({
             route: ['databases/settings/databaseSettings'],
             moduleId: 'viewmodels/database/settings/databaseSettings',
             title: 'Database Settings',
-            nav: access.showDatabaseSettingsMenuItem,
+            nav: true,
             css: 'icon-database-settings',
-            dynamicHash: appUrls.databaseSettings
+            dynamicHash: appUrls.databaseSettings,
+            requiredAccess: "Operator"
         }),
         new leafMenuItem({
             route: 'databases/settings/connectionStrings',
@@ -24,7 +23,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-manage-connection-strings',
             dynamicHash: appUrls.connectionStrings,
-            disableWithReason: access.disableConnectionStringsMenuItem,
             requiredAccess: "DatabaseAdmin"
         }),
         new leafMenuItem({
@@ -146,17 +144,19 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             route: 'databases/advanced/databaseRecord',
             moduleId: 'viewmodels/database/advanced/databaseRecord',
             title: 'Database Record',
-            nav: access.showDatabaseRecordMenuItem,
+            nav: true,
             css: 'icon-database-record',
-            dynamicHash: appUrls.databaseRecord
+            dynamicHash: appUrls.databaseRecord,
+            requiredAccess: "Operator"
         }),
         new leafMenuItem({
             route: 'databases/advanced/databaseIDs',
             moduleId: 'viewmodels/database/advanced/databaseIDs',
             title: 'Unused Database IDs',
-            nav: access.showDatabaseIDsMenuItem,
+            nav: true,
             css: 'icon-database-id',
-            dynamicHash: appUrls.databaseIDs
+            dynamicHash: appUrls.databaseIDs,
+            requiredAccess: "Operator"
         })
     ];
 

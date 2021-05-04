@@ -41,8 +41,15 @@ class accessManager {
         return accessLevel ? this.getAccessLevelText(accessLevel) : null;
     }
     
-    getAccessLevelText(accessLevel: databaseAccessLevel): string {
+    getAccessLevelText(accessLevel: accessLevel): string {
         switch (accessLevel) {
+            case "ClusterNode":
+            case "ClusterAdmin":
+                return "Cluster Admin/Node";
+            case "Operator":
+                return "Operator";
+            case "ValidUser":
+                return "Valid User";
             case "DatabaseAdmin":
                 return "Admin";
             case "DatabaseReadWrite":
@@ -84,83 +91,58 @@ class accessManager {
         }
     }
     
-    activeDatabaseAccessLevel = ko.pureComputed<databaseAccessLevel>(() => {
+    activeDatabaseEffectiveAccessLevel = ko.pureComputed<databaseAccessLevel>(() => {
         const activeDatabase = activeDatabaseTracker.default.database();
         if (activeDatabase) {
             return this.getEffectiveDatabaseAccessLevel(activeDatabase.name);
-        } 
-        
+        }
         return null;
     });
     
-    isReadOnlyAccess = ko.pureComputed(() => this.activeDatabaseAccessLevel() === "DatabaseRead");
+    isReadOnlyAccess = ko.pureComputed(() => this.activeDatabaseEffectiveAccessLevel() === "DatabaseRead");
     
     isReadWriteAccessOrAbove = ko.pureComputed(() => {
-        const accessLevel = this.activeDatabaseAccessLevel();
+        const accessLevel = this.activeDatabaseEffectiveAccessLevel();
         return accessLevel === "DatabaseReadWrite" || accessLevel === "DatabaseAdmin";
     });
     
     isAdminAccessOrAbove = ko.pureComputed(() => {
-        const accessLevel = this.activeDatabaseAccessLevel();
+        const accessLevel = this.activeDatabaseEffectiveAccessLevel();
         return accessLevel === "DatabaseAdmin";
     });
 
-
-    canHandleOperation(requiredAccess: accessLevel, dbName: string = null): boolean {
+    isAccessForbidden(requiredAccess: accessLevel, dbName: string = null): string {
+        const requiredText = this.getAccessLevelText(requiredAccess);
+        
         if (dbName) {
-            const actualDatabaseAccess = this.getEffectiveDatabaseAccessLevel(dbName);
-            if (!actualDatabaseAccess) {
-                return false;
-            }
-
-            if (actualDatabaseAccess === "DatabaseRead" &&
-                (requiredAccess === "DatabaseReadWrite" || requiredAccess === "DatabaseAdmin")) {
-                return false;
-            }
-
-            if (actualDatabaseAccess === "DatabaseReadWrite" && requiredAccess === "DatabaseAdmin") {
-                return false;
-            }
-            return true;
+            const effectiveDatabaseAccess = this.getEffectiveDatabaseAccessLevel(dbName);
+            const effectiveText = this.getAccessLevelText(effectiveDatabaseAccess);
             
+            if ((effectiveDatabaseAccess === "DatabaseRead" && requiredAccess === "DatabaseReadWrite") ||
+                (effectiveDatabaseAccess === "DatabaseRead" && requiredAccess === "DatabaseAdmin") ||
+                (effectiveDatabaseAccess === "DatabaseReadWrite" && requiredAccess === "DatabaseAdmin")) {
+                return this.getRuleHtml("Insufficient database access", requiredText, effectiveText);
+            }
+            
+            return null;
+
         } else {
+            const effectiveSecurityText = this.getAccessLevelText(this.securityClearance());
+            
             switch (requiredAccess) {
                 case "DatabaseRead":
-                    return true;
+                    return null;
                 case "Operator":
-                    return this.isOperatorOrAbove();
+                    return this.isOperatorOrAbove() ? null :
+                        this.getRuleHtml("Insufficient security clearance", requiredText, effectiveSecurityText);
                 case "ClusterAdmin":
                 case "ClusterNode":
-                    return this.isClusterAdminOrClusterNode();
+                    return this.isClusterAdminOrClusterNode() ? null :
+                        this.getRuleHtml("Insufficient security clearance", requiredText, effectiveSecurityText);
                 default:
                     throw new Error("RequiredAccess for a 'Server View' must be either: ClusterAdmin, ClusterNode, Operator");
             }
         }
-    }
-    
-    private createSecurityRule(enabledPredicate: KnockoutObservable<boolean>, requiredRoles: string) {
-        return ko.pureComputed(() => {
-            if (enabledPredicate()) {
-                return undefined;
-            }
-            return this.getRuleHtml("Insufficient security clearance", requiredRoles, this.securityClearance());
-        });
-    }
-
-    private createDatabaseSecurityRule(enabledPredicate: KnockoutObservable<boolean>, 
-                                       requiredDatabaseAccess: string) {
-        return ko.pureComputed(() => {
-            if  (enabledPredicate()) {
-                return undefined;
-            }
-
-            if (!activeDatabaseTracker.default.database()) {
-                return undefined;
-            }
-            
-            return this.getRuleHtml("Insufficient database access", requiredDatabaseAccess,
-                                    this.getDatabaseAccessLevelTextByDbName(activeDatabaseTracker.default.database().name));
-        });
     }
     
     private getRuleHtml(title: string, required: string, actual: string) {
@@ -174,12 +156,6 @@ class accessManager {
     }
 
     static activeDatabaseTracker = activeDatabaseTracker.default;
-
-    disableIfNotClusterAdminOrClusterNode = this.createSecurityRule(this.isClusterAdminOrClusterNode, "Cluster Admin");
-    disableIfNotOperatorOrAbove = this.createSecurityRule(this.isOperatorOrAbove, "Cluster Admin or Operator");
-    
-    disableIfNotAdminAccessPerDatabaseOrAbove = this.createDatabaseSecurityRule(this.isAdminAccessOrAbove, "DatabaseAdmin");
-    disableIfNotReadWriteAccessPerDatabaseOrAbove = this.createDatabaseSecurityRule(this.isReadWriteAccessOrAbove, "DatabaseRead/Write");
     
     dashboardView = {
         showCertificatesLink: this.isOperatorOrAbove
@@ -218,42 +194,6 @@ class accessManager {
     mainMenu = {
         showManageServerMenuItem: this.allLevels
     };
-    
-    manageServerMenu = {
-        disableClusterMenuItem: undefined as KnockoutComputed<string>,
-        disableClientConfigurationMenuItem: this.disableIfNotOperatorOrAbove,
-        disableStudioConfigurationMenuItem: this.disableIfNotOperatorOrAbove,
-        disableAdminJSConsoleMenuItem: this.disableIfNotClusterAdminOrClusterNode,
-        disableCertificatesMenuItem: this.disableIfNotOperatorOrAbove,
-        disableServerWideTasksMenuItem: this.disableIfNotClusterAdminOrClusterNode,
-        disableServerWideCustomAnalyzersMenuItem: this.disableIfNotClusterAdminOrClusterNode,
-        disableServerWideCustomSortersMenuItem: this.disableIfNotClusterAdminOrClusterNode,
-        disableAdminLogsMenuItem: this.disableIfNotOperatorOrAbove,
-        disableTrafficWatchMenuItem: this.disableIfNotOperatorOrAbove,
-        disableGatherDebugInfoMenuItem: this.disableIfNotOperatorOrAbove,
-        disableSystemStorageReport: this.disableIfNotOperatorOrAbove,
-        disableSystemIoStats: this.disableIfNotOperatorOrAbove,
-        disableAdvancedMenuItem: this.disableIfNotOperatorOrAbove,
-        disableCaptureStackTraces: this.disableIfNotOperatorOrAbove,
-        showRecordTransactionCommands: this.isOperatorOrAbove
-    };
-    
-    databaseSettingsMenu = {
-        showDatabaseSettingsMenuItem: this.isOperatorOrAbove,
-        showDatabaseRecordMenuItem: this.isOperatorOrAbove,
-        showDatabaseIDsMenuItem: this.isOperatorOrAbove,
-        disableConnectionStringsMenuItem: this.disableIfNotAdminAccessPerDatabaseOrAbove
-    };
-    
-    databaseDocumentsMenu = {
-        disablePatchMenuItem: this.disableIfNotReadWriteAccessPerDatabaseOrAbove
-    }
-
-    databaseTasksMenu = {
-        disableImportDataItem: this.disableIfNotReadWriteAccessPerDatabaseOrAbove,
-        disableCreateSampleDataItem: this.disableIfNotReadWriteAccessPerDatabaseOrAbove,
-        disableExportDatabaseItem: this.disableIfNotReadWriteAccessPerDatabaseOrAbove
-    }
 }
 
 export = accessManager;

@@ -285,13 +285,13 @@ class extensions {
                             const isElementVisible = element.style.display !== "none";
 
                             const activeDbName = activeDatabase.name;
-                            if (accessManager.default.canHandleOperation(requiredAccessLevel, activeDbName)) {
-                                if (!isElementVisible && shouldBeVisibleByKo) {
-                                    element.style.display = "";
-                                }
-                            } else {
+                            if (accessManager.default.isAccessForbidden(requiredAccessLevel, activeDbName)) {
                                 if (isElementVisible) {
                                     element.style.display = "none";
+                                }
+                            } else {
+                                if (!isElementVisible && shouldBeVisibleByKo) {
+                                    element.style.display = "";
                                 }
                             }
                         }
@@ -308,13 +308,13 @@ class extensions {
                             const isElementDisabled = element.hasAttribute("disabled");
 
                             const activeDbName = activeDatabase.name;
-                            if (accessManager.default.canHandleOperation(requiredAccessLevel, activeDbName)) {
-                                if (isElementDisabled && shouldBeEnabledByKo) {
-                                    element.setAttribute("disabled", false)
-                                }
-                            } else {
+                            if (accessManager.default.isAccessForbidden(requiredAccessLevel, activeDbName)) {
                                 if (!isElementDisabled) {
                                     element.setAttribute("disabled", true);
+                                }
+                            } else {
+                                if (isElementDisabled && shouldBeEnabledByKo) {
+                                    element.setAttribute("disabled", false)
                                 }
                             }
                         }
