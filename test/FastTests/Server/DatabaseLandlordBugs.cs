@@ -59,23 +59,23 @@ namespace FastTests.Server
             var p1 = NewDataPath(forceCreateDir: true);
 
             var db1 = CreateDatabaseWithName(false, p1, configuration =>
-            {
-                configuration.Add(RavenConfiguration.GetKey(x => x.Storage.TempPath), p1);
-            }
-                , "someDB1");
+                {
+                    configuration.Add(RavenConfiguration.GetKey(x => x.Storage.TempPath), p1);
+                }
+                , "ravenDB1");
             Assert.NotNull(db1);
 
             var db2 = CreateDatabaseWithName(false, NewDataPath(forceCreateDir: true), configuration =>
             {
-                configuration.Add(RavenConfiguration.GetKey(x => x.Storage.TempPath), Path.Combine(p1, "someDB2"));
-            }, "someDB2");
+                configuration.Add(RavenConfiguration.GetKey(x => x.Storage.TempPath), Path.Combine(p1, "ravenDB2"));
+            }, "ravenDB2");
             Assert.NotNull(db2);
 
-            var origFiles = Directory.GetFileSystemEntries(Path.Combine(p1, "someDB2"));
+            var origFiles = Directory.GetFileSystemEntries(Path.Combine(p1, "ravenDB2"));
 
-            Assert.Throws<RavenException>(() => DeleteDatabase("someDB1"));
+            Assert.Throws<RavenException>(() => DeleteDatabase("ravenDB1"));
 
-            var currFiles = Directory.GetFileSystemEntries(Path.Combine(p1, "someDB2"));
+            var currFiles = Directory.GetFileSystemEntries(Path.Combine(p1, "ravenDB2"));
 
             Assert.True(CheckFiles(currFiles, origFiles));
         }
