@@ -43,7 +43,7 @@ namespace Raven.Server.Config.Categories
         public Size? MaxBatchSize { get; protected set; }
 
         [Description("Max number of extracted documents in OLAP ETL batch")]
-        [DefaultValue(50 * 1024)]
+        [DefaultValue(65536)]
         [ConfigurationEntry("ETL.OLAP.MaxNumberOfExtractedDocuments", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int? OlapMaxNumberOfExtractedDocuments { get; protected set; }
     }

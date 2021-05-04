@@ -20,14 +20,14 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             if (S3Settings != null)
             {
                 if (S3Settings.HasSettings() == false)
-                    errors.Add($"{nameof(S3Settings)} has no valid setting");
+                    errors.Add($"{nameof(S3Settings)} has no valid setting. '{nameof(S3Settings.BucketName)}' and '{nameof(GetBackupConfigurationScript)}' are both null");
 
                 return;
             }
             if (AzureSettings != null)
             {
                 if (AzureSettings.HasSettings() == false)
-                    errors.Add($"{nameof(AzureSettings)} has no valid setting");
+                    errors.Add($"{nameof(AzureSettings)} has no valid setting. '{nameof(AzureSettings.StorageContainer)}' and '{nameof(GetBackupConfigurationScript)}' are both null");
 
                 return;
             }

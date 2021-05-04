@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _timer?.Dispose();
 
             if (Logger.IsOperationsEnabled)
-                Logger.Operations($"Next OLAP ETL run is in {nextRun.TimeSpan.TotalMinutes} minutes.");
+                Logger.Operations($"OLAP ETL '{Name}' : Next run is in {nextRun.TimeSpan.TotalMinutes} minutes.");
 
             var timer = new Timer(_ => _waitForChanges.Set(), state: nextRun, dueTime: nextRun.TimeSpan, period: Timeout.InfiniteTimeSpan);
 
@@ -292,7 +292,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private static void ProgressNotification(IOperationProgress progress)
         {
-            // todo RavenDB-16341
+            // RavenDB-16341
         }
 
     }

@@ -730,7 +730,11 @@ var key = new Date(year, month);
 loadToOrders(partitionBy(key), o);
 ";
 
-                    SetupLocalOlapEtl(store, script, path, "*/2 * * * *"); // every 2nd minute
+                    var frequency = DateTime.UtcNow.Minute % 2 == 1 
+                        ? "1-59/2 * * * *" // every uneven minute
+                        : "*/2 * * * *"; // every 2nd minute (even minutes)
+
+                    SetupLocalOlapEtl(store, script, path, frequency);
                     etlDone.Wait(TimeSpan.FromMinutes(1));
                     var sw = new Stopwatch();
                     sw.Start();
@@ -1872,7 +1876,6 @@ for (var i = 0; i < this.Lines.length; i++) {
 
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                    //todo int16  https://github.com/elastacloud/parquet-dotnet/issues/467
                     var script = @"
 loadToUsers(noPartition(), {
     Byte: { Value: this.Byte, Type: 'Byte' },

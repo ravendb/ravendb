@@ -76,7 +76,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(key,
+loadToOrders(partitionBy(key),
     {
         OrderId: id(this),
         Company : this.Company,
@@ -136,6 +136,7 @@ loadToOrders(key,
                     await session.SaveChangesAsync();
                 }
 
+                etlDone.Reset();
                 etlDone.Wait(TimeSpan.FromMinutes(1));
                 files = Directory.GetFiles(path);
                 Assert.Equal(2, files.Length);
