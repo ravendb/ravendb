@@ -81,8 +81,12 @@ namespace SlowTests.Issues
                     Assert.Equal(1, result.Count);
                     Assert.Equal("Kotler", result[0].LastName);
 
+                    var indexesCount = WaitForValue(() => database.IndexStore.Count, 1);
+                    Assert.Equal(1, indexesCount);
+
                     mreAfterSecondQuery.Set();
                 }
+
 
                 await nameQuery;
             }
