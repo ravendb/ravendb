@@ -257,7 +257,10 @@ namespace Raven.Server.Documents.Replication
 
             if (resolved.Doc == null)
             {
-                using (Slice.External(context.Allocator, resolved.LowerId, out var lowerId))
+                // we have to call Slice.From to ensure lowerId will get its own memory
+                // resolved parameter was created from a tombstone that might be deleted during below Delete()
+                // that can invalidate and override memory occupied by resolved.LowerId
+                using (Slice.From(context.Allocator, resolved.LowerId, out var lowerId))
                 {
                     _database.DocumentsStorage.Delete(context, lowerId, resolved.Id, null,null, changeVector, new CollectionName(resolved.Collection),
                         documentFlags: resolved.Flags | DocumentFlags.Resolved | DocumentFlags.HasRevisions, nonPersistentFlags: NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved);
