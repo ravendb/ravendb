@@ -43,7 +43,7 @@ class debugAdvanced {
                     moduleId: 'viewmodels/manage/debugAdvancedRecordTransactionCommands',
                     title: 'Record Transaction Commands',
                     tabName: "Record Transaction Commands",
-                    nav: accessManager.default.manageServerMenu.showRecordTransactionCommands(),
+                    nav: true,
                     hash: appUrl.forDebugAdvancedRecordTransactionCommands(),
                     requiredAccess: "Operator"
                 },

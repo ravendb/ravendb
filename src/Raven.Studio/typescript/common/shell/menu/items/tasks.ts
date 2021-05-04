@@ -1,10 +1,7 @@
 ﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
-import accessManager = require("common/shell/accessManager");
 
 export = getTasksMenuItem;
-
-const access = accessManager.default.databaseTasksMenu;
 
 function getTasksMenuItem(appUrls: computedAppUrls) {
     var tasksItems: menuItem[] = [
@@ -31,7 +28,6 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-import-database',
             dynamicHash: appUrls.importDatabaseFromFileUrl,
-            disableWithReason: access.disableImportDataItem,
             requiredAccess: "DatabaseReadWrite"
         }),
         new leafMenuItem({
@@ -49,7 +45,6 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-create-sample-data',
             dynamicHash: appUrls.sampleDataUrl,
-            disableWithReason: access.disableCreateSampleDataItem,
             requiredAccess: "DatabaseReadWrite"
         }),
         new leafMenuItem({

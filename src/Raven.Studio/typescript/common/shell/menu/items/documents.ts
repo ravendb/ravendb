@@ -2,11 +2,8 @@
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import collectionMenuItem = require("common/shell/menu/collectionMenuItem");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
-import accessManager = require("common/shell/accessManager");
 
 export = getDocumentsMenuItem;
-
-const access = accessManager.default.databaseDocumentsMenu;
 
 function getDocumentsMenuItem(appUrls: computedAppUrls) {
     let documentsItems = [
@@ -34,7 +31,6 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             moduleId: "viewmodels/database/patch/patch",
             css: "icon-patch",
             dynamicHash: appUrls.patch,
-            disableWithReason: access.disablePatchMenuItem,
             requiredAccess: "DatabaseReadWrite"
         }),
         new leafMenuItem({

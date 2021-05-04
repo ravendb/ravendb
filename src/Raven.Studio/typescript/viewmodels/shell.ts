@@ -52,6 +52,7 @@ import saveGlobalStudioConfigurationCommand = require("commands/resources/saveGl
 import saveStudioConfigurationCommand = require("commands/resources/saveStudioConfigurationCommand");
 import studioSetting = require("common/settings/studioSetting");
 import genUtils = require("common/generalUtils");
+import leafMenuItem = require("common/shell/menu/leafMenuItem");
 
 class shell extends viewModelBase {
 
@@ -141,7 +142,7 @@ class shell extends viewModelBase {
             viewModelBase.clientVersion(v.Version));
 
         buildInfo.serverBuildVersion.subscribe(buildVersionDto => {
-            this.initAnalytics([ buildVersionDto ]);        
+            this.initAnalytics([ buildVersionDto ]);
         });
 
         activeDatabaseTracker.default.database.subscribe(newDatabase => footer.default.forDatabase(newDatabase));
@@ -158,7 +159,7 @@ class shell extends viewModelBase {
             this.currentUrlHash(location.hash);
         });
         
-        this.cloudClusterAdmin = ko.pureComputed(() => {        
+        this.cloudClusterAdmin = ko.pureComputed(() => {
             const isCloud = license.cloudLicense();
             const isClusterAdmin = accessManager.default.securityClearance() === "ClusterAdmin";
             return isCloud && isClusterAdmin;
@@ -239,7 +240,7 @@ class shell extends viewModelBase {
 
                         let databasesAccess: dictionary<databaseAccessLevel> = {};
                         for (let key in certificate.Permissions) {
-                            let access =  certificate.Permissions[key];
+                            let access = certificate.Permissions[key];
                             databasesAccess[`${key}`] = `Database${access}` as databaseAccessLevel;
                         }
                         accessManager.databasesAccess = databasesAccess;
@@ -400,16 +401,6 @@ class shell extends viewModelBase {
         return appUrl.forCluster();
     }
 
-    private getIndexingDisbaledValue(indexingDisabledString: string) {
-        if (indexingDisabledString === undefined || indexingDisabledString == null)
-            return false;
-
-        if (indexingDisabledString.toLowerCase() === "true")
-            return true;
-
-        return false;
-    }
-
     connectToRavenServer() {
         return this.databasesManager.init();
     }
@@ -417,7 +408,7 @@ class shell extends viewModelBase {
     fetchServerBuildVersion() {
         new getServerBuildVersionCommand()
             .execute()
-            .done((serverBuildResult: serverBuildVersionDto, status: string,  response: JQueryXHR) => {            
+            .done((serverBuildResult: serverBuildVersionDto, status: string, response: JQueryXHR) => {
                
                 serverTime.default.calcTimeDifference(response.getResponseHeader("Date"));
                 serverTime.default.setStartUpTime(response.getResponseHeader("Server-Startup-Time"));
@@ -561,7 +552,22 @@ class shell extends viewModelBase {
 
     disableColorCustomization() {
         this.colorCustomizationDisabled(true);
-}
+    }
+    
+    accessForbidden(menuItem: leafMenuItem) {
+        return ko.pureComputed(() => {
+            const requiredAccess = menuItem.requiredAccess || 'DatabaseRead';
+
+            const activeDatabase = activeDatabaseTracker.default.database();
+            let dbName = activeDatabase ? activeDatabase.name : null;
+            
+            if (requiredAccess === "Operator" || requiredAccess === "ClusterAdmin" || requiredAccess === "ClusterNode") {
+                dbName = null;
+            }
+            
+            return accessManager.default.isAccessForbidden(requiredAccess, dbName);
+        })
+    }
 }
 
 export = shell;

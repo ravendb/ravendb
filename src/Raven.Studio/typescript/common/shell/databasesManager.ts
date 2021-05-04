@@ -248,7 +248,6 @@ class databasesManager {
     private onNoLongerRelevant(db: database) {
         changesContext.default.disconnectIfCurrent(db, "DatabaseIsNotRelevant");
     }
-   
 }
 
 export = databasesManager;

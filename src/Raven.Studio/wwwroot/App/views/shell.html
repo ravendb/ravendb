@@ -211,7 +211,8 @@
         </li>
         <li>
             <!-- ko with: $root.collectionsTracker.getRevisionsBinCollection() -->
-            <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForRevisionsBin() }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
+            <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForRevisionsBin() }, 
+                          css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
                 <i class="icon-revisions-bin"></i>
                 <span>Revisions Bin</span>
             </a>
@@ -225,7 +226,8 @@
             <ul>
                 <!-- ko foreach: $root.collectionsTracker.collections -->
                 <li>
-                    <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data), title: name }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }, visible: !isAllDocuments">
+                    <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data), title: name },
+                                  css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }, visible: !isAllDocuments">
                         <span data-bind="text: name"></span>
                         <div class="collection-count" data-bind="attr: {title: documentCount().toLocaleString()}, css: { 'bounce' : hasBounceClass }">
                             <div class="value label label-default" data-bind="text: countPrefix"></div>
@@ -241,7 +243,9 @@
 
     <script type="text/html" id="leafMenuItem">
         <li data-bind="with: item">
-            <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav, attr: { href: path, title: disableWithReason && disableWithReason(), 'data-toggle': disableWithReason && disableWithReason() ? 'tooltip' : undefined }, css: { 'active': $parent.menu.activeItem() === $data, 'disabled': disableWithReason && disableWithReason() }">
+            <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav,
+                          attr: { href: path, title: $root.accessForbidden($data)(), 'data-toggle':  $root.accessForbidden($data)() ? 'tooltip' : undefined },
+                          css: { 'active': $parent.menu.activeItem() === $data, 'disabled': $root.accessForbidden($data)() }">
                 <i data-bind="css: css"></i>
                 <span data-bind="text: title"></span>
                 <div data-bind="if: badgeData() != null">
