@@ -685,6 +685,18 @@ namespace FastTests
             return await WaitForPredicateAsync(t => t.Equals(expectedVal), act, timeout, interval);
         }
 
+        protected async Task<T> WaitForGreaterThanAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) where T : IComparable
+        {
+            return await WaitForPredicateAsync(t => t.CompareTo(expectedVal) > 0, act, timeout, interval);
+        }
+
+        protected async Task<T> WaitAndAssertForGreaterThanAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) where T : IComparable
+        {
+            var actualValue = await WaitForGreaterThanAsync(act, expectedVal, timeout, interval);
+            Assert.True(actualValue.CompareTo(expectedVal) > 0);
+            return actualValue;
+        }
+
         protected async Task WaitAndAssertForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
         {
             var val = await WaitForPredicateAsync(t => t.Equals(expectedVal), act, timeout, interval);
