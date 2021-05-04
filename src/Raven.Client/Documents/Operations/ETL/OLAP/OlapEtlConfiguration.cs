@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public OlapEtlFileFormat Format { get; set; }
 
-        public string CustomPrefix { get; set; }
+        public string CustomField { get; set; }
 
         public List<OlapEtlTable> OlapTables { get; set; }
 
@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
         {
             var json = base.ToJson();
 
-            json[nameof(CustomPrefix)] = CustomPrefix;
+            json[nameof(CustomField)] = CustomField;
             json[nameof(RunFrequency)] = RunFrequency;
             json[nameof(OlapTables)] = new DynamicJsonArray(OlapTables.Select(x => x.ToJson()));
 

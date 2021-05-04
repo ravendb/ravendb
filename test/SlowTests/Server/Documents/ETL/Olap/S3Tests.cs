@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Server.Basic.Entities;
@@ -397,7 +396,6 @@ loadToOrders(partitionBy(key), orderData);
             }
         }
 
-
         [AmazonS3Fact]
         public async Task CanModifyPartitionColumnName()
         {
@@ -736,10 +734,9 @@ loadToOrders(partitionBy([
         }
 
         [AmazonS3Fact]
-        public async Task CanUseCustomPrefix()
+        public async Task CanPartitionByCustomDataFieldViaScript()
         {
             var settings = GetS3Settings();
-            const string customPrefix = "custom-prefix.1";
             try
             {
                 using (var store = GetDocumentStore())
@@ -778,34 +775,36 @@ loadToOrders(partitionBy([
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
 var year = orderDate.getFullYear();
-var month = orderDate.getMonth();
-var key = new Date(year, month);
+var month = orderDate.getMonth() + 1;
 
-loadToOrders(partitionBy(key),
-    {
-        Company : this.Company,
-        ShipVia : this.ShipVia
-    })
+loadToOrders(partitionBy([['year', year], ['month', month], ['source', $custom_field]]),
+{
+    Company : this.Company,
+    ShipVia : this.ShipVia
+});
 ";
-                    SetupS3OlapEtl(store, script, settings, customPrefix);
+
+                    const string customField = "shop-16";
+                    SetupS3OlapEtl(store, script, settings, customPrefix: customField);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
                     using (var s3Client = new RavenAwsS3Client(settings))
                     {
-                        var prefix = $"{settings.RemoteFolderName}/{customPrefix}/{CollectionName}";
-                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
-
-                        Assert.Equal(2, cloudObjects.FileInfoDetails.Count);
-                        Assert.Contains("2020-01-01", cloudObjects.FileInfoDetails[0].FullPath);
-                        Assert.Contains("2020-02-01", cloudObjects.FileInfoDetails[1].FullPath);
+                        var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: "/", listFolders: true);
+                        Assert.Equal(1, cloudObjects.FileInfoDetails.Count);
+                        
+                        var files = await ListAllFilesInFolders(s3Client, cloudObjects);
+                        Assert.Equal(2, files.Count);
+                        Assert.Contains($"/Orders/year=2020/month=1/source={customField}/", files[0]);
+                        Assert.Contains($"/Orders/year=2020/month=2/source={customField}/", files[1]);
                     }
                 }
             }
-
             finally
             {
-                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{customPrefix}/{CollectionName}", delimiter: string.Empty);
+                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}/", delimiter: "/", listFolder: true);
             }
         }
 
@@ -971,7 +970,7 @@ for (var i = 0; i < this.Lines.length; i++){
                 Name = "olap-s3-test",
                 ConnectionStringName = connectionStringName,
                 RunFrequency = LocalTests.DefaultFrequency,
-                CustomPrefix = customPrefix,
+                CustomField = customPrefix,
                 Transforms =
                 {
                     new Transformation

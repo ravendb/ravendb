@@ -1871,15 +1871,15 @@ for (var i = 0; i < this.Lines.length; i++) {
                     }
 
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-                    
-                    //todo int16
+
+                    //todo int16  https://github.com/elastacloud/parquet-dotnet/issues/467
                     var script = @"
 loadToUsers(noPartition(), {
     Byte: { Value: this.Byte, Type: 'Byte' },
     Decimal: { Value: this.Decimal, Type: 'Decimal' },
     Double: { Value: this.Double, Type: 'Double' },
     Float: { Value: this.Float, Type: 'Single' },
-    //Int16: { Value: this.Int16, Type: 'Int16' },
+    Int16: { Value: this.Int16, Type: 'Int16' }, 
     Int32: { Value: this.Int32, Type: 'Int32' },
     Int64: { Value: this.Int64, Type: 'Int64' },
     SByte: { Value: this.SByte, Type: 'SByte' },
@@ -1915,7 +1915,7 @@ loadToUsers(noPartition(), {
                     using (var parquetReader = new ParquetReader(fs))
                     {
                         Assert.Equal(1, parquetReader.RowGroupCount);
-                        Assert.Equal(12, parquetReader.Schema.Fields.Count); // todo int16
+                        Assert.Equal(13, parquetReader.Schema.Fields.Count);
 
                         using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
                         foreach (var field in parquetReader.Schema.Fields)
@@ -1944,7 +1944,7 @@ loadToUsers(noPartition(), {
                                     expected = 4.0444F;
                                     break;
                                 case nameof(User.Int16):
-                                    Assert.Equal(DataType.Int16, dataField.DataType);
+                                    Assert.Equal(DataType.Short, dataField.DataType);
                                     expected = (short)5;
                                     break;
                                 case nameof(User.Int32):

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using Jint;
 using Jint.Native;
@@ -31,6 +32,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private ObjectInstance _noPartition;
         private const string PartitionKeys = "$partition_keys";
         private const string DefaultPartitionColumnName = "_partition";
+        private const string CustomFieldName = "$custom_field";
 
         public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config, string fileNamePrefix, Logger logger)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.OlapEtl), null)
@@ -58,11 +60,16 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             {
                 var name = Transformation.LoadTo + table;
                 DocumentScript.ScriptEngine.SetValue(name, new ClrFunctionInstance(DocumentScript.ScriptEngine, name,
-                    (self, args) => LoadToS3FunctionTranslator(table, args)));
+                    (self, args) => LoadToFunctionTranslator(table, args)));
             }
 
             DocumentScript.ScriptEngine.SetValue("partitionBy", new ClrFunctionInstance(DocumentScript.ScriptEngine, "partitionBy", PartitionBy));
             DocumentScript.ScriptEngine.SetValue("noPartition", new ClrFunctionInstance(DocumentScript.ScriptEngine, "noPartition", NoPartition));
+
+            if (_config.CustomField != null)
+            {
+                DocumentScript.ScriptEngine.SetValue(CustomFieldName, new JsString(_config.CustomField));
+            }
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -133,7 +140,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         }
 
 
-        private JsValue LoadToS3FunctionTranslator(string name, JsValue[] args)
+        private JsValue LoadToFunctionTranslator(string name, JsValue[] args)
         {
             if (args.Length != 2)
                 ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) must be called with exactly 2 parameters");
@@ -227,17 +234,13 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return _noPartition;
         }
 
-        public override IEnumerable<OlapTransformedItems> GetTransformedResults()  
-        {
-            return _tables.Values;
-        }
+        public override IEnumerable<OlapTransformedItems> GetTransformedResults() => _tables.Values;
 
         public override void Transform(ToOlapItem item, EtlStatsScope stats, EtlProcessState state)
         {
+            Debug.Assert(item.IsDelete == false, $"Invalid item '{item.DocumentId}', OLAP ETL should not handle tombstones");
+            
             _stats = stats;
-            if (item.IsDelete)
-                return;
-
             Current = item;
             DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
         }

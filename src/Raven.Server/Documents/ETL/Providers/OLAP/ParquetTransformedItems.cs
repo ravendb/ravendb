@@ -19,9 +19,9 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         public const string DefaultIdColumn = "_id";
         public const string LastModifiedColumn = "_lastModifiedTicks";
 
-        public Dictionary<string, DataField> Fields => _fields ??= GenerateDataFields();
-
         public override int Count => _count;
+
+        public Dictionary<string, DataField> Fields => _fields ??= GenerateDataFields();
 
         private readonly RowGroup _group;
         private readonly Dictionary<string, DataType> _dataTypes;
@@ -47,7 +47,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private DateTimeOffset[] _dtoArr;
         private TimeSpan[] _tsArr;
 
-
         public ParquetTransformedItems(string name, string key, string tmpPath, string fileNamePrefix, OlapEtlConfiguration configuration, Logger logger) : base(OlapEtlFileFormat.Parquet)
         {
             _tableName = name;
@@ -62,7 +61,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private void SetPath(string tmpFilePath, string fileNamePrefix)
         {
-            string idColumn = default;
             if (_configuration.OlapTables != null)
             {
                 foreach (var olapTable in _configuration.OlapTables)
@@ -70,14 +68,12 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     if (olapTable.TableName != _tableName)
                         continue;
 
-                    idColumn = olapTable.DocumentIdColumn;
+                    _documentIdColumn = olapTable.DocumentIdColumn;
                     break;
                 }
             }
 
-            _documentIdColumn = string.IsNullOrEmpty(idColumn)
-                ? DefaultIdColumn
-                : idColumn;
+            _documentIdColumn ??= DefaultIdColumn;
 
             _fileName = $"{fileNamePrefix}_{Guid.NewGuid()}.{Format}";
             _localPath = Path.Combine(tmpFilePath, _fileName);
@@ -87,10 +83,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             fileName = _fileName;
             folderName = _key;
-            if (string.IsNullOrEmpty(_configuration.CustomPrefix) == false)
-            {
-                folderName = $"{_configuration.CustomPrefix}/{folderName}";
-            }
 
             using (Stream fileStream = File.Open(_localPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
             using (var parquetWriter = new ParquetWriter(new Schema(Fields.Values), fileStream))
@@ -101,7 +93,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             _count = _group.Count;
             _group.Clear();
-
             return _localPath;
         }
 
@@ -148,7 +139,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                         case DataType.SignedByte:
                             array = _sbyteArr ??= new sbyte[data.Count];
                             break;
-                        case DataType.Int16:
+                        case DataType.Short:
                             array = _shortArr ??= new short[data.Count];
                             break;
                         case DataType.Int32:
@@ -402,7 +393,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                         break;
                     case DbType.Int16:
                         value = Convert.ToInt16(fieldValue);
-                        propType = DataType.Int16;
+                        // using ' DataType.Short' instead of ' DataType.Int16' as a workaround  : https://github.com/elastacloud/parquet-dotnet/issues/467
+                        propType = DataType.Short;
                         data ??= new List<short>();
                         break;
                     case DbType.Int32:
@@ -557,7 +549,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 case DataType.SignedByte:
                     data?.Add((sbyte)value);
                     break;
-                case DataType.Int16:
+                case DataType.Short:
                     data?.Add((short)value);
                     break;
                 case DataType.Int32:
@@ -630,7 +622,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 case DataType.SignedByte:
                     AddDefaultData<sbyte>(data, count);
                     break;
-                case DataType.Int16:
+                case DataType.Short:
                     AddDefaultData<short>(data, count);
                     break;
                 case DataType.Int32:
@@ -684,8 +676,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             if (_logger?.IsInfoEnabled ?? false)
             {
-                _logger.Info($"Inserted {_group.Count} records to '{_tableName}/{_key}' table " +
-                            $"from the following documents: {string.Join(", ", _group.Ids)}");
+                _logger.Info($"Inserted {_group.Count} records to '{_tableName}/{_key}' table");
             }
         }
 
