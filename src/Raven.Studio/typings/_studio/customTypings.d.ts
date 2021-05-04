@@ -315,7 +315,7 @@ interface DurandalRouteConfiguration {
     tooltip?: string;
     dynamicHash?: KnockoutObservable<string> | (() => string);
     tabName?: string;
-    requiredAccess: accessLevel;
+    requiredAccess?: accessLevel;
 }
 
 declare module AceAjax {

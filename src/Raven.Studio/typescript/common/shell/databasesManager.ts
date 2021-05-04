@@ -44,8 +44,6 @@ class databasesManager {
     init(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
         return this.refreshDatabases()
             .done(() => {
-                const dbNameFromUrl = appUrl.getDatabaseNameFromUrl();
-                this.activateBasedOnCurrentUrl(dbNameFromUrl, true);
                 router.activate();
                 this.initialized.resolve();
             });
@@ -63,15 +61,16 @@ class databasesManager {
             });
     }
 
-    activateBasedOnCurrentUrl(dbName: string, isViewAllowed: boolean): JQueryPromise<canActivateResultDto> | boolean {
+    activateBasedOnCurrentUrl(dbName: string): JQueryPromise<canActivateResultDto> | boolean {
         if (dbName) {
             const db = this.getDatabaseByName(dbName);
-            return this.activateIfDifferent(db, dbName, isViewAllowed);
+            return this.activateIfDifferent(db, dbName);
         }
+        
         return true;
     }
 
-    private activateIfDifferent(db: database, dbName: string, isViewAllowed: boolean): JQueryPromise<canActivateResultDto> {
+    private activateIfDifferent(db: database, dbName: string): JQueryPromise<canActivateResultDto> {
         const task = $.Deferred<canActivateResultDto>();
         const databasesListView = appUrl.forDatabases();
 
@@ -79,12 +78,6 @@ class databasesManager {
 
         this.initialized.done(() => {
             const currentActiveDatabase = this.activeDatabaseTracker.database();
-
-            if (!isViewAllowed) {
-                messagePublisher.reportError("Redirecting. Invalid access level.");
-                task.resolve({ redirect: appUrl.forDatabases() });
-                return task;
-            }
             
             if (currentActiveDatabase != null && currentActiveDatabase.name === incomingDatabaseName) {
                 task.resolve({ can: true });

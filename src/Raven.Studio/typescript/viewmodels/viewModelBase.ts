@@ -10,6 +10,7 @@ import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import eventsCollector = require("common/eventsCollector");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import accessManager = require("common/shell/accessManager");
+import messagePublisher = require("common/messagePublisher");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -67,20 +68,22 @@ class viewModelBase {
         this.downloader.reset();
 
         const dbNameFromUrl = appUrl.getDatabaseNameFromUrl();
-        if (dbNameFromUrl) {
-            const dbAccessLevel = accessManager.default.getEffectiveDatabaseAccessLevel(dbNameFromUrl);
-            const requiredAccessForView = router.activeInstruction().config.requiredAccess;
-            const isViewAllowed = this.allowToAccessView(dbAccessLevel, requiredAccessForView);
-            
-            return this.databasesManager.activateBasedOnCurrentUrl(dbNameFromUrl, isViewAllowed);
-        } else {
-            return true;
+        const canAccessView = this.canAccessView(dbNameFromUrl);
+          
+        if (!canAccessView) {
+            const task = $.Deferred<canActivateResultDto>();
+            messagePublisher.reportError("Access is forbidden. Redirecting to databases view.");
+            task.resolve({ redirect: appUrl.forDatabases() });
+            return task;
         }
+        
+        return this.databasesManager.activateBasedOnCurrentUrl(dbNameFromUrl);
     }
 
-    protected allowToAccessView(dbAccessLevel: databaseAccessLevel, requiredAccessForView: accessLevel) {
-        // allow children views to override...
-        return accessManager.default.canHandleOperationDatabaseLevelCheck(dbAccessLevel, requiredAccessForView);
+    protected canAccessView(dbName: string) {
+        // allow child view to override...
+        const requiredAccessForView = router.activeInstruction().config.requiredAccess ?? 'DatabaseRead';
+        return accessManager.default.canHandleOperation(requiredAccessForView, dbName);
     }
 
     activate(args: any, parameters?: any) {

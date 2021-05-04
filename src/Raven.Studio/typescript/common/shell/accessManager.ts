@@ -105,39 +105,37 @@ class accessManager {
         return accessLevel === "DatabaseAdmin";
     });
 
-    canHandleOperation(requiredAccess: accessLevel) {
-        switch (requiredAccess) {
-            case "ClusterAdmin":
-            case "ClusterNode":
-                return this.isClusterAdminOrClusterNode();
-            case "Operator":
-                return this.isOperatorOrAbove();
-        }
 
-        const activeDatabaseAccess = this.activeDatabaseAccessLevel();
+    canHandleOperation(requiredAccess: accessLevel, dbName: string = null): boolean {
+        if (dbName) {
+            const actualDatabaseAccess = this.getEffectiveDatabaseAccessLevel(dbName);
+            if (!actualDatabaseAccess) {
+                return false;
+            }
 
-        if (!activeDatabaseAccess) {
-            return false;
-        }
+            if (actualDatabaseAccess === "DatabaseRead" &&
+                (requiredAccess === "DatabaseReadWrite" || requiredAccess === "DatabaseAdmin")) {
+                return false;
+            }
 
-        return this.canHandleOperationDatabaseLevelCheck(activeDatabaseAccess, requiredAccess as databaseAccessLevel);
-    }
-    
-    canHandleOperationDatabaseLevelCheck(actualLevel: databaseAccessLevel, requiredLevel: accessLevel) {
-        if (!requiredLevel) {
+            if (actualDatabaseAccess === "DatabaseReadWrite" && requiredAccess === "DatabaseAdmin") {
+                return false;
+            }
             return true;
+            
+        } else {
+            switch (requiredAccess) {
+                case "DatabaseRead":
+                    return true;
+                case "Operator":
+                    return this.isOperatorOrAbove();
+                case "ClusterAdmin":
+                case "ClusterNode":
+                    return this.isClusterAdminOrClusterNode();
+                default:
+                    throw new Error("RequiredAccess for a 'Server View' must be either: ClusterAdmin, ClusterNode, Operator");
+            }
         }
-        
-        if (actualLevel === "DatabaseRead" &&
-            (requiredLevel === "DatabaseReadWrite" || requiredLevel === "DatabaseAdmin")) {
-            return false;
-        }
-
-        if (actualLevel === "DatabaseReadWrite" && requiredLevel === "DatabaseAdmin") {
-            return false;
-        }
-
-        return true;
     }
     
     private createSecurityRule(enabledPredicate: KnockoutObservable<boolean>, requiredRoles: string) {
