@@ -38,6 +38,7 @@
     <None Remove="Data\RavenDB_15700\Bewerbung.csv" />
     <None Remove="Data\RavenDB_15700\Vakanz.csv" />
     <None Remove="Data\RavenDB_15898\1.ravendbdump" />
+    <None Remove="Data\RavenDB_16378\RavenDB-16401-NRE.ravendb-snapshot" />
     <None Remove="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
     <None Remove="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
   </ItemGroup>
@@ -99,6 +100,7 @@
     <EmbeddedResource Include="Data\RavenDB_15700\Bewerbung.csv" />
     <EmbeddedResource Include="Data\RavenDB_15700\Vakanz.csv" />
     <EmbeddedResource Include="Data\RavenDB_15898\1.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_16378\RavenDB-16401-NRE.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
