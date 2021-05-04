@@ -284,7 +284,7 @@ class extensions {
                             const shouldBeVisibleByKo = visibleValue && !hiddenValue;
                             const isElementVisible = element.style.display !== "none";
 
-                            const activeDbName = activeDatabaseTracker.default.database().name;
+                            const activeDbName = activeDatabase.name;
                             if (accessManager.default.canHandleOperation(requiredAccessLevel, activeDbName)) {
                                 if (!isElementVisible && shouldBeVisibleByKo) {
                                     element.style.display = "";
@@ -307,7 +307,7 @@ class extensions {
                             const shouldBeEnabledByKo = !disableValue && enableValue;
                             const isElementDisabled = element.hasAttribute("disabled");
 
-                            const activeDbName = activeDatabaseTracker.default.database().name;
+                            const activeDbName = activeDatabase.name;
                             if (accessManager.default.canHandleOperation(requiredAccessLevel, activeDbName)) {
                                 if (isElementDisabled && shouldBeEnabledByKo) {
                                     element.setAttribute("disabled", false)

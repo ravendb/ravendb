@@ -80,7 +80,7 @@ class viewModelBase {
         return this.databasesManager.activateBasedOnCurrentUrl(dbNameFromUrl);
     }
 
-    protected canAccessView(dbName: string) {
+    protected canAccessView(dbName?: string) {
         // allow child view to override...
         const requiredAccessForView = router.activeInstruction().config.requiredAccess ?? 'DatabaseRead';
         return accessManager.default.canHandleOperation(requiredAccessForView, dbName);
