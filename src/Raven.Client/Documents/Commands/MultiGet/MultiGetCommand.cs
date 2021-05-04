@@ -156,7 +156,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
                 var cacheKey = GetCacheKey(command, out _);
                 var cachedItem = _httpCache.Get(ctx, cacheKey, out var changeVector, out var cached);
-                if (cached == null)
+                if (cachedItem.Item == null)
                 {
                     using (cachedItem)
                     {
@@ -182,7 +182,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                     {
                         // ReSharper disable once PossibleNullReferenceException
                         var (_, cached) = _cached.Values[i];
-                        Result.Add(new GetResponse { Result = cached.Clone(ctx), StatusCode = HttpStatusCode.NotModified });
+                        Result.Add(new GetResponse { Result = cached?.Clone(ctx), StatusCode = HttpStatusCode.NotModified });
                     }
                 }
 
@@ -224,7 +224,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                     MaybeSetCache(getResponse, command);
 
                     Result.Add(_cached != null && getResponse.StatusCode == HttpStatusCode.NotModified
-                        ? new GetResponse { Result = _cached.Values[i].Cached.Clone(context), StatusCode = HttpStatusCode.NotModified }
+                        ? new GetResponse { Result = _cached.Values[i].Cached?.Clone(context), StatusCode = HttpStatusCode.NotModified }
                         : getResponse);
 
                     i++;
@@ -341,7 +341,10 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
             var result = getResponse.Result as BlittableJsonReaderObject;
             if (result == null)
+            {
+                _httpCache.SetNotFound(cacheKey, AggressivelyCached);
                 return;
+            }
 
             var changeVector = getResponse.Headers.GetEtagHeader();
             if (changeVector == null)

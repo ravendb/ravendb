@@ -1720,7 +1720,7 @@ namespace Raven.Server.Documents
                     GenerateNextEtagForReplicatedTombstoneMissingDocument(context),
                     collectionName,
                     null,
-                    DateTime.UtcNow.Ticks,
+                    modifiedTicks,
                     changeVector,
                     documentFlags,
                     nonPersistentFlags).Etag;
