@@ -19,7 +19,64 @@ namespace Voron.Data.CompactTrees
         internal CompactTreeState State => _state;
         internal LowLevelTransaction Llt => _llt;
 
-        private unsafe struct CursorState
+        private struct Encoder
+        {
+            public fixed byte Buffer[10];
+            public int Length;
+
+            public void ZigZagEncode(long value)
+            {
+                ulong uv = (ulong)((value << 1) ^ (value >> 63));
+                Encode7Bits(uv);
+            }
+            
+            public void Encode7Bits(ulong uv)
+            {
+                Length = 0;
+                while (uv > 0x7Fu)
+                {
+                    Buffer[Length++] = ((byte)((uint)uv | ~0x7Fu));
+                    uv >>= 7;
+                }
+                Buffer[Length++] = ((byte)uv);
+            }
+
+            public static long ZigZagDecode(byte* buffer, out int length)
+            {
+                ulong result = Decode7Bits(buffer, out length);
+                return (long)((result & 1) != 0 ? (result >> 1) - 1 : (result >> 1));
+            }
+            
+            public static ulong Decode7Bits(byte* buffer, out int length)
+            {
+                ulong result = 0;
+                byte byteReadJustNow;
+                length = 0;
+
+                const int maxBytesWithoutOverflow = 9;
+                for (int shift = 0; shift < maxBytesWithoutOverflow * 7; shift += 7)
+                {
+                    byteReadJustNow = buffer[length++];
+                    result |= (byteReadJustNow & 0x7Ful) << shift;
+
+                    if (byteReadJustNow <= 0x7Fu)
+                    {
+                        return result;
+                    }
+                }
+
+                byteReadJustNow = buffer[length];
+                if (byteReadJustNow > 0b_1u)
+                {
+                    throw new ArgumentOutOfRangeException("result", "Bad var int value");
+                }
+
+                result |= (ulong)byteReadJustNow << (maxBytesWithoutOverflow * 7);
+                return result;
+            }
+        }
+        
+        private struct CursorState
         {
             public Page Page;
             public int LastMatch;
@@ -223,16 +280,12 @@ namespace Voron.Data.CompactTrees
             ushort* entriesOffsets = GetEntriesOffsets(state.Page.Pointer);
             EnsureValidPosition(ref state, state.LastSearchPosition);
             var entry = state.Page.Pointer + entriesOffsets[state.LastSearchPosition];
-            var keyLen = *entry++;
-            entry += keyLen;
-            var valLen = *entry++;
-            long l;
-            Debug.Assert(valLen <= sizeof(long));
-            Memory.Copy(&l, entry, valLen);
-            oldValue = l;
-            var totalEntrySize = 1 + keyLen + 1 + valLen;
+            var keyLen = (int)Encoder.Decode7Bits(entry, out var lenOfKeyLen);
+            entry += keyLen + lenOfKeyLen;
+            oldValue = Encoder.ZigZagDecode(entry, out var valLen);
+            var totalEntrySize = lenOfKeyLen + keyLen + valLen;
             state.Header->FreeSpace += (ushort)(sizeof(ushort) + totalEntrySize);
-            state.Header->Lower -= sizeof(short);// the upper will be fixed on defrag
+             state.Header->Lower -= sizeof(short);// the upper will be fixed on defrag
             Memory.Move((byte*)(entriesOffsets + state.LastSearchPosition),
                 (byte*)(entriesOffsets + state.LastSearchPosition + 1),
                 (state.Header->NumberOfEntries - state.LastSearchPosition) * sizeof(ushort));
@@ -371,8 +424,8 @@ namespace Voron.Data.CompactTrees
         {
             if (value < 0)
                 throw new ArgumentOutOfRangeException(nameof(value), "Only positive values are allowed");
-            if (key.Length > 255 || key.Length == 0)
-                throw new ArgumentOutOfRangeException(nameof(key), "key must be between 1 and 255 bytes in size");
+            if (key.Length > 1024 || key.Length == 0)
+                throw new ArgumentOutOfRangeException(nameof(key), "key must be between 1 and 1024 bytes in size");
 
             FindPageFor(key);
             AddToPage(key, value);
@@ -383,15 +436,17 @@ namespace Voron.Data.CompactTrees
             ref var state = ref _stk[_pos];
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
 
-            int valLen = VarintLength(value);
+            var valueEncoder = new Encoder();
+            valueEncoder.ZigZagEncode(value);
             ushort* entriesOffsets = GetEntriesOffsets(state.Page.Pointer);
             if (state.LastSearchPosition >= 0) // update
             {
-                GetValueSpan(ref state, state.LastSearchPosition, out var b, out var len);
-                if (len == valLen)
+                GetValuePointer(ref state, state.LastSearchPosition, out var b);
+                Encoder.ZigZagDecode(b, out var len);
+                if (len == valueEncoder.Length)
                 {
-                    Debug.Assert(valLen <= sizeof(long));
-                    Memory.Copy(b, (byte*)&value, valLen);
+                    Debug.Assert(valueEncoder.Length <= sizeof(long));
+                    Memory.Copy(b, valueEncoder.Buffer, valueEncoder.Length);
                     return;
                 }
 
@@ -405,7 +460,9 @@ namespace Voron.Data.CompactTrees
             {
                 state.LastSearchPosition = ~state.LastSearchPosition;
             }
-            var requiredSize = key.Length + sizeof(byte) + valLen + sizeof(byte);
+            var keySizeEncoder = new Encoder();
+            keySizeEncoder.Encode7Bits((ulong)key.Length);
+            var requiredSize = key.Length + keySizeEncoder.Length + valueEncoder.Length;
             if (state.Header->Upper - state.Header->Lower < requiredSize + sizeof(short))
             {
                 if (state.Header->FreeSpace >= requiredSize + sizeof(short))
@@ -425,10 +482,12 @@ namespace Voron.Data.CompactTrees
             Debug.Assert(state.Header->FreeSpace >= requiredSize + sizeof(ushort));
             state.Header->FreeSpace -= (ushort)(requiredSize + sizeof(ushort));
             state.Header->Upper -= (ushort)requiredSize;
-            state.Page.Pointer[state.Header->Upper] = (byte)key.Length;
-            key.CopyTo(new Span<byte>(state.Page.Pointer + state.Header->Upper + 1, key.Length));
-            state.Page.Pointer[state.Header->Upper + 1 + key.Length] = (byte)valLen;
-            Memory.Copy(state.Page.Pointer + state.Header->Upper + 1 + key.Length + 1, (byte*)&value, valLen);
+            byte* writePos = state.Page.Pointer + state.Header->Upper;
+            Memory.Copy(writePos, keySizeEncoder.Buffer, keySizeEncoder.Length);
+            writePos += keySizeEncoder.Length;
+            key.CopyTo(new Span<byte>(writePos, key.Length));
+            writePos += key.Length;
+            Memory.Copy(writePos, valueEncoder.Buffer, valueEncoder.Length);
             entriesOffsets[state.LastSearchPosition] = state.Header->Upper;
         }
 
@@ -469,7 +528,7 @@ namespace Voron.Data.CompactTrees
         {
             // sequential write up, no need to actually split
             int numberOfEntries = state.Header->NumberOfEntries;
-            if (numberOfEntries == ~state.LastSearchPosition && state.LastMatch > 0)
+            if (numberOfEntries == state.LastSearchPosition && state.LastMatch > 0)
             {
                 return causeForSplit;
             }
@@ -514,15 +573,15 @@ namespace Voron.Data.CompactTrees
             state.Header->Lower = DictionarySize + PageHeader.SizeOf + sizeof(ushort);
             state.Header->FreeSpace = Constants.Storage.PageSize - (PageHeader.SizeOf + DictionarySize);
 
-            int varLen = VarintLength(cpy);
-            var size = 1 + 1 + varLen;
+            var encoder = new Encoder();
+            encoder.ZigZagEncode(cpy);
+            var size = 1 + encoder.Length;
             state.Header->Upper = (ushort)(Constants.Storage.PageSize - size);
             state.Header->FreeSpace -= (ushort)(size + sizeof(ushort));
             GetEntriesOffsets(state.Page.Pointer)[0] = state.Header->Upper;
             byte* entryPos = state.Page.Pointer + state.Header->Upper;
             *entryPos++ = 0; // zero len key
-            *entryPos++ = (byte)varLen;
-            Memory.Copy(entryPos, (byte*)&cpy, varLen);
+            Memory.Copy(entryPos, encoder.Buffer, encoder.Length);
             InsertToStack(new CursorState
             {
                 Page = page,
@@ -568,21 +627,6 @@ namespace Voron.Data.CompactTrees
                     tmpHeader->Upper - tmpHeader->Lower);
                 Debug.Assert(state.Header->FreeSpace == (state.Header->Upper - state.Header->Lower));
             }
-        }
-
-        private static int VarintLength(long n)
-        {
-            return (
-                n < 1L << 4 ? 1
-                : n < 1L << 12 ? 2
-                : n < 1L << 20 ? 3
-                : n < 1L << 28 ? 4
-                : n < 1L << 36 ? 5
-                : n < 1L << 44 ? 6
-                : n < 1L << 52 ? 7
-                : n < 1L << 60 ? 8
-                : 9
-            );
         }
 
         private void FindPageFor(ReadOnlySpan<byte> key)
@@ -635,25 +679,24 @@ namespace Voron.Data.CompactTrees
         {
             EnsureValidPosition(page, pos);
             ushort entryOffset = GetEntriesOffsets(page.Pointer)[pos];
-            return new ReadOnlySpan<byte>(page.Pointer + entryOffset + 1, page.Pointer[entryOffset]);
+            var entryPos = page.Pointer + entryOffset;
+            var keyLen = Encoder.Decode7Bits(entryPos, out var lenOfKeyLen);
+            return new ReadOnlySpan<byte>(page.Pointer + entryOffset + lenOfKeyLen,  (int)keyLen);
         }
 
         private long GetValue(ref CursorState state, int pos)
         {
-            GetValueSpan(ref state, pos, out var p, out var len);
-            long result;
-            Memory.Copy((byte*)&result, p, len);
-            return result;
+            GetValuePointer(ref state, pos, out var p);
+            return Encoder.ZigZagDecode(p, out _);
         }
 
-        private void GetValueSpan(ref CursorState state, int pos, out byte* p, out int len)
+        private void GetValuePointer(ref CursorState state, int pos, out byte* p)
         {
             EnsureValidPosition(ref state, pos);
             ushort entryOffset = GetEntriesOffsets(state.Page.Pointer)[pos];
             p = state.Page.Pointer + entryOffset;
-            var keyLen = *p++;
-            p += keyLen;
-            len = *p++;
+            var keyLen = (int)Encoder.Decode7Bits(p, out var lenKeyLen);
+            p += keyLen + lenKeyLen;
         }
 
         [Conditional("DEBUG")]
@@ -667,14 +710,10 @@ namespace Voron.Data.CompactTrees
         {
             ushort entryOffset = GetEntriesOffsets(page.Pointer)[pos];
             byte* entryPos = page.Pointer + entryOffset;
-            var keyLen = *entryPos++;
-            key = new Span<byte>(entryPos, keyLen);
-            entryPos += keyLen;
-            var valLen = *entryPos++;
-            long l;
-            Debug.Assert(valLen <= sizeof(long));
-            Memory.Copy((byte*)&l, entryPos, valLen);
-            value = l;
+            var keyLen = (int)Encoder.Decode7Bits(entryPos, out var lenKeyLen);
+            key = new Span<byte>(entryPos + lenKeyLen, keyLen);
+            entryPos += keyLen + lenKeyLen;
+            value = Encoder.ZigZagDecode(entryPos, out var valLen);
             entryPos += valLen;
             return (int)(entryPos - page.Pointer - entryOffset);
         }
@@ -684,9 +723,9 @@ namespace Voron.Data.CompactTrees
             EnsureValidPosition(page, pos);
             ushort entryOffset = GetEntriesOffsets(page.Pointer)[pos];
             byte* entryPos = b = page.Pointer + entryOffset;
-            var keyLen = *entryPos;
-            var valLen = entryPos[1 + keyLen];
-            len = 1 + keyLen + 1 + valLen;
+            var keyLen = (int)Encoder.Decode7Bits(entryPos, out var lenKeyLen);
+            Encoder.ZigZagDecode(entryPos + keyLen + lenKeyLen, out var valLen);
+            len = lenKeyLen + keyLen + valLen;
         }
 
         [Conditional("DEBUG")]
