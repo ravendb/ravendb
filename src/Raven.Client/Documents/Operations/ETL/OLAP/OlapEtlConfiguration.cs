@@ -26,6 +26,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public override bool UsingEncryptedCommunicationChannel()
         {
+            //RavenDB - 16627
             throw new NotImplementedException();
         }
 

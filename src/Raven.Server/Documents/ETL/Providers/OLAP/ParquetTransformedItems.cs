@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             
             foreach (var prop in item.Properties)
             {
-                names.Add(prop.Id);
+                names.Add(prop.Name);
                 AddProperty(item.DocumentId, prop);
             }
 
@@ -235,9 +235,9 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _group.Count++;
         }
 
-        private void AddProperty(LazyStringValue docId, SqlColumn prop)
+        private void AddProperty(LazyStringValue docId, OlapColumn prop)
         {
-            var propName = prop.Id;
+            var propName = prop.Name;
 
             var newField = _dataTypes.TryGetValue(propName, out var dataType) == false;
             _group.Data.TryGetValue(propName, out var data);
@@ -294,11 +294,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             catch (Exception e)
             {
                 throw new InvalidOperationException($"Failed to add value '{prop.Value}' to DataField of type '{dataType}'. " +
-                                                    $"On document '{docId}', property '{prop.Id}'", e);
+                                                    $"On document '{docId}', property '{prop.Name}'", e);
             }
         }
 
-        private static DataType GetPropertyDataType(LazyStringValue docId, SqlColumn prop, ref IList data)
+        private static DataType GetPropertyDataType(LazyStringValue docId, OlapColumn prop, ref IList data)
         {
             DataType propType;
             switch (prop.Type & BlittableJsonReaderBase.TypesMask)
@@ -357,13 +357,13 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     break;
                 default:
                     throw new NotSupportedException($"Unsupported {nameof(BlittableJsonToken)} '{prop.Type}'. " +
-                                                    $"On document '{docId}', property '{prop.Id}'");
+                                                    $"On document '{docId}', property '{prop.Name}'");
             }
 
             return propType;
         }
 
-        private static DataType GetTypeFromObject(LazyStringValue docId, SqlColumn prop, ref IList data)
+        private static DataType GetTypeFromObject(LazyStringValue docId, OlapColumn prop, ref IList data)
         {
             using (var objectValue = (BlittableJsonReaderObject)prop.Value)
             {
@@ -393,7 +393,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                         break;
                     case DbType.Int16:
                         value = Convert.ToInt16(fieldValue);
-                        // using ' DataType.Short' instead of ' DataType.Int16' as a workaround  : https://github.com/elastacloud/parquet-dotnet/issues/467
                         propType = DataType.Short;
                         data ??= new List<short>();
                         break;
@@ -438,7 +437,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                         data ??= new List<decimal>();
                         break;
                     default:
-                        throw new NotSupportedException($"Unsupported type '{dbType}' in object '{prop.Id}', On document '{docId}'");
+                        throw new NotSupportedException($"Unsupported type '{dbType}' in object '{prop.Name}', On document '{docId}'");
                 }
 
                 prop.Value = value;

@@ -957,7 +957,6 @@ for (var i = 0; i < this.Lines.length; i++){
             finally
             {
                 await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}", delimiter: string.Empty, replaceSpecialChars: true);
-
             }
         }
 
@@ -1050,14 +1049,18 @@ for (var i = 0; i < this.Lines.length; i++){
 
                     if (listFolder == false)
                     {
-                        var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath);
-
-                        if (replaceSpecialChars)
+                        if (replaceSpecialChars == false)
                         {
-                            pathsToDelete = pathsToDelete.Select(EnsureSafeName);
+                            var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
+                            s3Client.DeleteMultipleObjects(pathsToDelete);
+                            return;
                         }
 
-                        s3Client.DeleteMultipleObjects(pathsToDelete.ToList());
+                        foreach (var path in cloudObjects.FileInfoDetails.Select(x => EnsureSafeName(x.FullPath)))
+                        {
+                            s3Client.DeleteObject(path);
+                        }
+
                         return;
                     }
 

@@ -740,7 +740,6 @@ loadToOrders(partitionBy([
         public async Task CanUseCustomPrefix()
         {
             var settings = GetAzureSettings();
-            const string customPrefix = "custom-prefix.1";
             try
             {
                 using (var store = GetDocumentStore())
@@ -774,40 +773,39 @@ loadToOrders(partitionBy([
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
 var year = orderDate.getFullYear();
-var month = orderDate.getMonth();
-var key = new Date(year, month);
+var month = orderDate.getMonth() + 1;
 
-loadToOrders(partitionBy(key),
-    {
-        Company : this.Company,
-        ShipVia : this.ShipVia
-    })
+loadToOrders(partitionBy([['year', year], ['month', month], ['source', $custom_field]]),
+{
+    Company : this.Company,
+    ShipVia : this.ShipVia
+});
 ";
-                    SetupAzureEtl(store, script, settings, customPrefix);
+                    const string customField = "shop-16";
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    SetupAzureEtl(store, script, settings, customField);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
                     using (var client = new RavenAzureClient(settings))
                     {
-                        var prefix = $"{settings.RemoteFolderName}/{customPrefix}/{CollectionName}";
+                        var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
                         var list = cloudObjects.List.ToList();
 
                         Assert.Equal(2, list.Count);
-                        Assert.Contains("2020-01-01", list[0].Name);
-                        Assert.Contains("2020-02-01", list[1].Name);
+                        Assert.Contains($"/Orders/year=2020/month=1/source={customField}/", list[0].Name);
+                        Assert.Contains($"/Orders/year=2020/month=2/source={customField}/", list[1].Name);
                     }
                 }
             }
 
             finally
             {
-                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{customPrefix}/{CollectionName}", delimiter: string.Empty);
+                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}", delimiter: string.Empty);
             }
         }
 

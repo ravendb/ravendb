@@ -2,13 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
-using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
-using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
@@ -84,15 +82,15 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 ThrowLoadParameterIsMandatory(nameof(key));
 
             var result = runnerResult.TranslateToObject(Context);
-            var props = new List<SqlColumn>(result.Count);
+            var props = new List<OlapColumn>(result.Count);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
             for (var i = 0; i < result.Count; i++)
             {
                 result.GetPropertyByIndex(i, ref prop);
-                props.Add(new SqlColumn
+                props.Add(new OlapColumn
                 {
-                    Id = prop.Name,
+                    Name = prop.Name,
                     Value = prop.Value,
                     Type = prop.Token
                 });
@@ -111,6 +109,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
         {
+            throw new NotSupportedException("Attachments aren't supported by OLAP ETL");
         }
 
         protected override void AddLoadedCounter(JsValue reference, string name, long value)
@@ -138,7 +137,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             return table;
         }
-
 
         private JsValue LoadToFunctionTranslator(string name, JsValue[] args)
         {
@@ -238,7 +236,9 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         public override void Transform(ToOlapItem item, EtlStatsScope stats, EtlProcessState state)
         {
-            Debug.Assert(item.IsDelete == false, $"Invalid item '{item.DocumentId}', OLAP ETL should not handle tombstones");
+            // Tombstones extraction is skipped by OLAP ETL. This must never happen
+            Debug.Assert(item.IsDelete == false, 
+                $"Invalid item '{item.DocumentId}', OLAP ETL shouldn't handle tombstones");
             
             _stats = stats;
             Current = item;

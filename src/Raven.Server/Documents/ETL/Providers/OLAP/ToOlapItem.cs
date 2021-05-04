@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Raven.Server.Documents.ETL.Providers.SQL;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
@@ -19,6 +18,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
         }
 
-        public List<SqlColumn> Properties { get; set; }
+        public List<OlapColumn> Properties { get; set; }
     }
 }
