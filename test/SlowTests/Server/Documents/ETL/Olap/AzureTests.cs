@@ -820,7 +820,7 @@ loadToOrders(partitionBy(key),
                 Name = "olap-azure-test",
                 ConnectionStringName = connectionStringName,
                 RunFrequency = LocalTests.DefaultFrequency,
-                CustomPrefix = customPrefix,
+                CustomField = customPrefix,
                 Transforms =
                 {
                     new Transformation
