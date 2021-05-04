@@ -443,12 +443,7 @@ namespace SlowTests.Bugs.Caching
                     Assert.Equal(0, session.Advanced.NumberOfRequests);
                 }
             }
-
-#if DEBUG
-            await Task.Delay(10000);
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-#endif
+            //If not all of the `HttpCacheItem`s were released we will get an exception in the `HttpCacheItem` finalizer
         }
 
         [Fact]

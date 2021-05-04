@@ -14,7 +14,7 @@ namespace Raven.Client.Http
 {
     public class HttpCache : IDisposable, ILowMemoryHandler
     {
-        public const string NotFoundResponse = "404 Response";
+        internal const string NotFoundResponse = "404 Response";
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<HttpCache>("Client");
 
