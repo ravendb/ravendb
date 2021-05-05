@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using NuGet.Common;
@@ -17,6 +18,7 @@ using NuGet.Packaging.Signing;
 using NuGet.ProjectManagement;
 using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Indexes.Static.NuGet
 {
@@ -29,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
         private readonly FrameworkReducer _frameworkReducer = new FrameworkReducer();
         private readonly NuGetFramework _framework = GetCurrentNuGetFramework();
 
-        private readonly ConcurrentDictionary<(string Package, string Version), Lazy<Task<List<string>>>> _pendingPackages = new ConcurrentDictionary<(string Package, string Version), Lazy<Task<List<string>>>>();
+        private readonly ConcurrentDictionary<(string Package, string Version), Lazy<Task<NuGetPackage>>> _pendingPackages = new ConcurrentDictionary<(string Package, string Version), Lazy<Task<NuGetPackage>>>();
 
         public NuGetFetcher(string packageSourceUrl, string rootPath)
         {
@@ -58,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
             }
         }
 
-        public async Task<List<string>> DownloadAsync(string package, string version, CancellationToken token = default)
+        public async Task<NuGetPackage> DownloadAsync(string package, string version, CancellationToken token = default)
         {
             var resource = await _sourceRepository.GetResourceAsync<PackageMetadataResource>(token);
             var identity = new PackageIdentity(package, NuGetVersion.Parse(version));
@@ -67,22 +69,37 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
                 return null;
 
             var nearest = _frameworkReducer.GetNearest(_framework, metadata.DependencySets.Select(x => x.TargetFramework));
-            var downloadTasks = new List<Task<List<string>>>();
+            var dependencyTasks = new List<Task<NuGetPackage>>();
             var dependencies = metadata.DependencySets.FirstOrDefault(x => x.TargetFramework == nearest);
             if (dependencies != null)
             {
                 foreach (var depPkg in dependencies.Packages)
                 {
                     var key = (depPkg.Id, depPkg.VersionRange.MinVersion.ToString());
-                    var task = _pendingPackages.GetOrAdd(key, _ => new Lazy<Task<List<string>>>(() => DownloadAsync(depPkg.Id, depPkg.VersionRange.MinVersion.ToString(), token)));
-                    downloadTasks.Add(task.Value);
+                    var task = _pendingPackages.GetOrAdd(key, _ => new Lazy<Task<NuGetPackage>>(() => DownloadAsync(depPkg.Id, depPkg.VersionRange.MinVersion.ToString(), token)));
+                    dependencyTasks.Add(task.Value);
                 }
             }
 
-            downloadTasks.Add(DownloadPackageAsync(metadata.Identity, token));
-            await Task.WhenAll(downloadTasks);
+            var packageTask = DownloadPackageAsync(metadata.Identity, token);
 
-            return new List<string>(downloadTasks.SelectMany(x => x.Result).Distinct());
+            await Task.WhenAll(dependencyTasks);
+            await packageTask;
+
+            var pckg = packageTask.Result;
+            if (pckg == null)
+                return null;
+
+            foreach (var dependencyTask in dependencyTasks)
+            {
+                var dependency = dependencyTask.Result;
+                if (dependency == null)
+                    continue;
+
+                pckg.Dependencies.Add(dependency);
+            }
+                
+            return pckg;
         }
 
         private static NuGetFramework GetCurrentNuGetFramework()
@@ -94,7 +111,7 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
             return NuGetFramework.Parse(frameworkName);
         }
 
-        private async Task<List<string>> DownloadPackageAsync(PackageIdentity identity, CancellationToken token)
+        private async Task<NuGetPackage> DownloadPackageAsync(PackageIdentity identity, CancellationToken token)
         {
             var settings = Settings.LoadDefaultSettings(_rootPath);
             var packageSourceProvider = new PackageSourceProvider(settings);
@@ -132,18 +149,105 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
             var frameworkSpecificGroups = (await archiveReader.GetReferenceItemsAsync(token)).ToList();
             var nearest = _frameworkReducer.GetNearest(_framework, frameworkSpecificGroups.Select(x => x.TargetFramework));
             var match = frameworkSpecificGroups.FirstOrDefault(x => x.TargetFramework == nearest);
-            if (match == null)
-                return new List<string>();
+            var hasNative = (await archiveReader.GetSupportedFrameworksAsync(token)).Select(x => x.Framework).Contains("native");
 
-            var list = new List<string>();
-            var installedPackagedFolder = project.GetInstalledPath(identity);
-            foreach (var item in match.Items)
+            if (match == null && hasNative == false)
+                return null;
+
+            var package = new NuGetPackage
             {
-                if (string.Equals(".dll", Path.GetExtension(item), StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
-                list.Add(Path.GetFullPath(Path.Combine(installedPackagedFolder, item)));
+                Path = project.GetInstalledPath(identity)
+            };
+
+            if (match != null)
+            {
+                foreach (var item in match.Items)
+                {
+                    var itemExtension = Path.GetExtension(item);
+
+                    if (string.Equals(".dll", itemExtension, StringComparison.OrdinalIgnoreCase) == false)
+                        continue;
+
+                    package.Libraries.Add(Path.GetFullPath(Path.Combine(package.Path, item)));
+                }
             }
-            return list;
+
+            if (hasNative)
+            {
+                var runtimeNativeDirectory = GetRuntimeNativeDirectory();
+                package.NativePath = Path.GetFullPath(Path.Combine(package.Path, runtimeNativeDirectory));
+            }
+
+            return package;
+        }
+
+        private static string GetRuntimeNativeDirectory()
+        {
+            string path = "runtimes";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                path += "/linux";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                path += "/osx";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                path += "/win";
+            }
+            else
+            {
+                throw new NotSupportedException("TODO ppekrol");
+            }
+
+            if (RuntimeInformation.ProcessArchitecture == Architecture.Arm)
+                path += "-arm";
+            else if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+                path += "-arm64";
+            else if (PlatformDetails.Is32Bits)
+                path += "-x86";
+            else
+                path += "-x64";
+
+            path += "/native";
+
+            return path;
+        }
+
+        public class NuGetPackage
+        {
+            public string Path { get; set; }
+
+            public string NativePath { get; set; }
+
+            public HashSet<string> Libraries { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            public HashSet<NuGetPackage> Dependencies { get; set; } = new HashSet<NuGetPackage>();
+
+            protected bool Equals(NuGetPackage other)
+            {
+                return string.Equals(Path, other.Path, StringComparison.OrdinalIgnoreCase)
+                       && string.Equals(NativePath, other.NativePath, StringComparison.OrdinalIgnoreCase)
+                       && Equals(Libraries, other.Libraries);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != GetType()) return false;
+                return Equals((NuGetPackage)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                var hashCode = new HashCode();
+                hashCode.Add(Path, StringComparer.OrdinalIgnoreCase);
+                hashCode.Add(NativePath, StringComparer.OrdinalIgnoreCase);
+                hashCode.Add(Libraries);
+                return hashCode.ToHashCode();
+            }
         }
     }
 }

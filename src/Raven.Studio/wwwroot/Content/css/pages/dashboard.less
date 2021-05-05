@@ -14,7 +14,6 @@
 #dashboard-container {
     
     .js-animate {
-        position: absolute;
         overflow: hidden;
     }
 
@@ -394,11 +393,15 @@
     }
 
     .panel-title {
+        display: flex;
+        align-items: center;
+
         i {
-            top: 6px;
+            top: 0;
         }
+        
         span {
-            padding-left: 20px;
+            margin-left: @gutter-xs;
         }
     }
 
@@ -491,10 +494,6 @@
 
         .list-container {
             min-height: 70px;
-        }
-        
-        i {
-            top: 16px;
         }
     }
 

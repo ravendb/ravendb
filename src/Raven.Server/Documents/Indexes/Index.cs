@@ -195,6 +195,8 @@ namespace Raven.Server.Documents.Indexes
         private readonly AsyncLocal<bool> _isRunningQueriesWriteLockTaken = new AsyncLocal<bool>();
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
         private readonly MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
+        internal bool HadRealIndexingWork => _hadRealIndexingWorkToDo.IsRaised();
+
         private readonly MultipleUseFlag _definitionChanged = new MultipleUseFlag();
         private Size _initialManagedAllocations;
 
@@ -1189,14 +1191,10 @@ namespace Raven.Server.Documents.Indexes
 
                         bool didWork = false;
 
-                        IndexingStatsAggregator stats = null;
-                        
-                        DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock?.Acquire(_indexingProcessCancellationTokenSource.Token);
+                        var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
 
                         try
                         {
-                            stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
-
                             if (_logger.IsInfoEnabled)
                                 _logger.Info($"Starting indexing for '{Name}'.");
 
@@ -1209,6 +1207,17 @@ namespace Raven.Server.Documents.Indexes
                                 try
                                 {
                                     _indexingProcessCancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                                    if (DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock != null)
+                                    {
+                                        if (DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock.TryAcquire(TimeSpan.Zero, _indexingProcessCancellationTokenSource.Token) == false)
+                                        {
+                                            using (scope.For(IndexingOperation.Wait.AcquireConcurrentlyRunningIndexesLock))
+                                            {
+                                                DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock.Acquire(_indexingProcessCancellationTokenSource.Token);
+                                            }
+                                        }
+                                    }
 
                                     try
                                     {
@@ -1232,6 +1241,8 @@ namespace Raven.Server.Documents.Indexes
                                     }
                                     finally
                                     {
+                                        DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock?.Release();
+
                                         _indexingInProgress.Release();
 
                                         if (_batchStopped)
@@ -1331,7 +1342,7 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.OrdinalIgnoreCase);
                                         _isReplacing = true;
-
+                                        
                                         if (batchCompleted)
                                         {
                                             // this side-by-side index will be replaced in a second, notify about indexing success
@@ -1371,9 +1382,7 @@ namespace Raven.Server.Documents.Indexes
                         }
                         finally
                         {
-                            DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock?.Release();
-
-                            stats?.Complete();
+                            stats.Complete();
                         }
 
                         if (batchCompleted)
@@ -4230,8 +4239,10 @@ namespace Raven.Server.Documents.Indexes
 
             onBeforeEnvironmentDispose?.Invoke();
 
-            _environment.Dispose();
+            IndexPersistence.Dispose();
 
+            _environment.Dispose();
+            
             return new DisposableAction(() =>
             {
                 // restart environment

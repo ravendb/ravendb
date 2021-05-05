@@ -1877,6 +1877,7 @@ namespace Raven.Server
                             if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.TestConnection ||
                                 header.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
                             {
+                                tcp.Dispose();
                                 tcp = null;
                                 return;
                             }
@@ -2208,7 +2209,7 @@ namespace Raven.Server
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
             {
                 var tcpClient = tcp.TcpClient.Client;
-                ServerStore.ClusterAcceptNewConnection(tcp, header, () => tcpClient.Disconnect(false), tcpClient.RemoteEndPoint);
+                ServerStore.ClusterAcceptNewConnection(tcp, header, tcp.Dispose, tcpClient.RemoteEndPoint);
                 return true;
             }
 

@@ -28,8 +28,8 @@ namespace Raven.Server.ServerWide
             if (path.StartsWith("."))
                 path = path.Substring(1);
 
-            path = string.IsNullOrWhiteSpace(prefix) == false ?
-                Path.Combine(prefix, $"{path}.json") :
+            path = string.IsNullOrWhiteSpace(prefix) == false ? 
+                $"{prefix}/{path}.json" : // .ZIP File Format Specification 4.4.17 file name: (Variable)
                 $"{path}.json";
 
             return path;

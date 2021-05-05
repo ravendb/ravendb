@@ -106,7 +106,8 @@ class indexDefinition {
         }
         
         this.hasDuplicateFieldsNames = ko.pureComputed(() => {
-            return _.uniqBy(this.fields(), field => field.name()).length !== this.fields().length;
+            const nonEmptyFields = this.fields().filter(x => x.name());
+            return _.uniqBy(nonEmptyFields, field => field.name()).length !== nonEmptyFields.length;
         });
         
         if (!this.isAutoIndex()) {

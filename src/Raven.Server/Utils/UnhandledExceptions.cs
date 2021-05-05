@@ -6,7 +6,7 @@ namespace Raven.Server.Utils
 {
     public class UnhandledExceptions
     {
-        private static readonly TimeSpan TimeToWaitForLog = TimeSpan.FromSeconds(15);
+        internal static readonly TimeSpan TimeToWaitForLog = TimeSpan.FromSeconds(15);
 
         public static void Track(Logger logger)
         {

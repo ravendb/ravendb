@@ -189,10 +189,6 @@ namespace Raven.Server.Config.Categories
 
                 var isServerUrlHttps = uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
 
-                var serverAddresses = DetermineServerIp(uri);
-                var unsecuredAccessAddressRange = configuration.Security.UnsecuredAccessAllowed;
-                var serverIsWithinUnsecuredAccessRange = serverAddresses.Any(x => SecurityUtils.IsUnsecuredAccessAllowedForAddress(unsecuredAccessAddressRange, x));
-
                 if (configuration.Security.AuthenticationEnabled)
                 {
                     if (isServerUrlHttps == false)
@@ -204,6 +200,11 @@ namespace Raven.Server.Config.Categories
                 {
                     if (isServerUrlHttps)
                         throw new InvalidOperationException($"Configured server address { string.Join(", ", configuration.Core.ServerUrls) } requires HTTPS. Please set up certification information under { RavenConfiguration.GetKey(x => x.Security.CertificatePath) } configuration key.");
+
+                    var serverAddresses = DetermineServerIp(uri);
+                    var unsecuredAccessAddressRange = configuration.Security.UnsecuredAccessAllowed;
+
+                    var serverIsWithinUnsecuredAccessRange = serverAddresses.Any(x => SecurityUtils.IsUnsecuredAccessAllowedForAddress(unsecuredAccessAddressRange, x));
 
                     if (serverIsWithinUnsecuredAccessRange == false)
                     {
@@ -231,7 +232,14 @@ namespace Raven.Server.Config.Categories
                 if (getHostAddressesTask.Wait(TimeSpan.FromSeconds(30)) == false)
                     throw new InvalidOperationException($"Could not obtain IP address from DNS {serverUri.DnsSafeHost} for 30 seconds.");
 
-                addresses = getHostAddressesTask.Result;
+                try
+                {
+                    addresses = getHostAddressesTask.Result;
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Failed to get IP address of {serverUri.DnsSafeHost} host", e);
+                }
             }
 
             if (addresses.Length == 0)

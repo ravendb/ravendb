@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
@@ -21,7 +22,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         IDatabaseRecordActions DatabaseRecord();
 
-        IDocumentActions Documents();
+        IDocumentActions Documents(bool throwOnCollectionMismatchError = true);
 
         IDocumentActions RevisionDocuments();
 
@@ -55,6 +56,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         ValueTask WriteConflictAsync(DocumentConflict conflict, SmugglerProgressBase.CountsWithLastEtag progress);
 
         ValueTask DeleteDocumentAsync(string id);
+        IEnumerable<DocumentItem> GetDocumentsWithDuplicateCollection();
     }
 
     public interface INewDocumentActions
