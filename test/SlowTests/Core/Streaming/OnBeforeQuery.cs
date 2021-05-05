@@ -48,7 +48,6 @@ namespace SlowTests.Core.Streaming
                         session.Query<Article>().Where(article => article.Deleted == false);
 
                     List<Article> queryResult = await query.ToListAsync();
-                    Console.WriteLine(queryResult.Count);
                     Assert.Equal(2, queryResult.Count);
                     Assert.True(queryResult.All(x => x.TenantId.Equals(tenantA, StringComparison.Ordinal)));
 
@@ -64,9 +63,8 @@ namespace SlowTests.Core.Streaming
                 }
             }
         }
-
-
-        public class Article
+        
+        private class Article
         {
             public Article(string tenantId, string title, bool deleted)
             {
