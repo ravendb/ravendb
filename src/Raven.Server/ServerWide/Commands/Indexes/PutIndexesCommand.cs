@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -34,7 +35,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            var setting = PutIndexCommand.GetGlobalRollingSetting(record);
+            var setting = IndexStore.GetGlobalRollingSetting(record);
 
             if (Static != null)
             {
