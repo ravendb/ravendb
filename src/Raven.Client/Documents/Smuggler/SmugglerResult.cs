@@ -268,6 +268,10 @@ namespace Raven.Client.Documents.Smuggler
 
             public bool LockModeUpdated { get; set; }
 
+            public bool OlapEtlsUpdated { get; set; }
+
+            public bool OlapConnectionStringsUpdated { get; set; }
+
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
@@ -328,6 +332,12 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (LockModeUpdated)
                     json[nameof(LockModeUpdated)] = LockModeUpdated;
+
+                if (OlapConnectionStringsUpdated)
+                    json[nameof(OlapConnectionStringsUpdated)] = OlapConnectionStringsUpdated;
+
+                if (OlapEtlsUpdated)
+                    json[nameof(OlapEtlsUpdated)] = OlapEtlsUpdated;
 
                 return json;
             }
@@ -391,6 +401,12 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (LockModeUpdated)
                     sb.AppendLine("- Lock Mode");
+
+                if (OlapConnectionStringsUpdated)
+                    sb.AppendLine("- OLAP Connection Strings");
+
+                if (OlapEtlsUpdated)
+                    sb.AppendLine("- OLAP ETLs");
 
                 if (sb.Length == 0)
                     return string.Empty;

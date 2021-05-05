@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Queries.Sorting;
@@ -475,6 +476,51 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         if (_log.IsInfoEnabled)
                             _log.Info("Wasn't able to import the database lock mode from smuggler file. Skipping.", e);
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.OlapEtls), out BlittableJsonReaderArray olapEtls) &&
+                    olapEtls != null)
+                {
+                    databaseRecord.OlapEtls = new List<OlapEtlConfiguration>();
+                    foreach (BlittableJsonReaderObject etl in olapEtls)
+                    {
+                        try
+                        {
+                            databaseRecord.OlapEtls.Add(JsonDeserializationCluster.OlapEtlConfiguration(etl));
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import the OLAP ETLs configuration from smuggler file. Skipping.", e);
+                        }
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.OlapConnectionStrings), out BlittableJsonReaderObject olapConnectionStrings) &&
+                    olapConnectionStrings != null)
+                {
+                    try
+                    {
+                        foreach (var connectionName in olapConnectionStrings.GetPropertyNames())
+                        {
+                            if (olapConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
+                            {
+                                if (_log.IsInfoEnabled)
+                                    _log.Info($"Wasn't able to import the OLAP connection string {connectionName} from smuggler file. Skipping.");
+
+                                continue;
+                            }
+
+                            var connectionString = JsonDeserializationCluster.OlapConnectionString(connection);
+                            databaseRecord.OlapConnectionStrings[connectionName] = connectionString;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        databaseRecord.OlapConnectionStrings.Clear();
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the OLAP connection strings from smuggler file. Skipping.", e);
                     }
                 }
             });
