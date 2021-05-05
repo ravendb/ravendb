@@ -100,7 +100,7 @@ namespace Voron.Impl
 
         public readonly byte* MapBase; // { get; set; }
 
-        private bool _released;
+        internal bool _released;
 
         public void Release()
         {
@@ -153,7 +153,7 @@ namespace Voron.Impl
 #endif
         }
 
-        private void ThrowInvalidPagerState()
+        internal void ThrowInvalidPagerState()
         {
             throw new ObjectDisposedException("Cannot add reference to a disposed pager state for " + _pager.FileName);
         }
