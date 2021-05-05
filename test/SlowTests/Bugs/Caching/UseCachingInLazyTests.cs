@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
-using Esprima.Ast;
 using FastTests;
-using Lextm.SharpSnmpLib.Messaging;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Session;
@@ -419,6 +418,61 @@ namespace SlowTests.Bugs.Caching
                 }
 
                 await session.SaveChangesAsync();
+            }
+        }
+
+        [Fact]
+        public async Task LazilyLoad_WhenUseNotFoundCacheItem_ShouldUseItReleaseAtTheEnd()
+        {
+            const string notExistDocId = "NotExistDocId";
+
+            using (var store = GetDocumentStore())
+            {
+                store.AggressivelyCache();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    //Add "NotExistDocId" to cache
+                    await session.Advanced.Lazily.LoadAsync<TestObj>(notExistDocId).Value;
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    //Add "NotExistDocId" to cache
+                    await session.Advanced.Lazily.LoadAsync<TestObj>(notExistDocId).Value;
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
+                }
+            }
+            //If not all of the `HttpCacheItem`s were released we will get an exception in the `HttpCacheItem` finalizer
+        }
+
+        [Fact]
+        public async Task LazilyLoad_WhenQueryForNotFoundNotModified_ShouldUseCache()
+        {
+            const string notExistDocId = "NotExistDocId";
+
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                //Add "NotExistDocId" to cache
+                await session.Advanced.Lazily.LoadAsync<TestObj>(notExistDocId).Value;
+            }
+
+            var requestExecutor = store.GetRequestExecutor();
+            using (var session = store.OpenAsyncSession())
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+            {
+                var multiGetOperation = new MultiGetOperation((AsyncDocumentSession)session);
+                var requests = new List<GetRequest>
+                {
+                    new GetRequest { Url = "/docs", Query = $"?&id={Uri.EscapeDataString(notExistDocId)}" },
+                };
+                using var multiGetCommand = multiGetOperation.CreateRequest(requests);
+
+                //Should use the cache here and release it in after that
+                await requestExecutor.ExecuteAsync(multiGetCommand, context).ConfigureAwait(false);
+                Assert.Equal(HttpStatusCode.NotModified, multiGetCommand.Result.First().StatusCode);
             }
         }
 

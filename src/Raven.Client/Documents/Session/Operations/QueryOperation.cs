@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
@@ -30,6 +31,7 @@ namespace Raven.Client.Documents.Session.Operations
         private readonly FieldsToFetchToken _fieldsToFetch;
         private Stopwatch _sp;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<QueryOperation>("Client");
+        private static readonly PropertyInfo[] _facetResultProperties = typeof(FacetResult).GetProperties();
 
         public QueryResult CurrentQueryResults => _currentQueryResults;
 
@@ -143,7 +145,26 @@ namespace Raven.Client.Documents.Session.Operations
             for (int i = 0; i < queryResult.Results.Length; i++)
             {
                 var document = (BlittableJsonReaderObject)queryResult.Results[i];
-                var metadata = document.GetMetadata();
+                BlittableJsonReaderObject metadata;
+
+                try
+                {
+                    metadata = document.GetMetadata();
+                }
+                catch (InvalidOperationException)
+                {
+                    if (document.Count != _facetResultProperties.Length)
+                        throw;
+
+                    foreach (var prop in _facetResultProperties)
+                    {
+                        if (document.TryGetMember(prop.Name, out _) == false)
+                            throw;
+                    }
+
+                    throw new InvalidOperationException("Raw query with aggregation by facet should be called by " +
+                                                        $"{nameof(IRawDocumentQuery<T>.ExecuteAggregation)} or {nameof(IAsyncRawDocumentQuery<T>.ExecuteAggregationAsync)} method.");
+                }
 
                 metadata.TryGetId(out var id);
 
