@@ -1513,6 +1513,33 @@ namespace Raven.Server
             {
                 throw new InsufficientTransportLayerProtectionException(WrongProtocolMessage);
             }
+
+            public void SetBasedOnCertificateDefinition(CertificateDefinition definition)
+            {
+                Definition = definition;
+
+                if (definition.SecurityClearance == SecurityClearance.ClusterAdmin)
+                {
+                    Status = AuthenticationStatus.ClusterAdmin;
+                }
+                else if (definition.SecurityClearance == SecurityClearance.ClusterNode)
+                {
+                    Status = AuthenticationStatus.ClusterAdmin;
+                }
+                else if (definition.SecurityClearance == SecurityClearance.Operator)
+                {
+                    Status = AuthenticationStatus.Operator;
+                }
+                else
+                {
+                    Status = AuthenticationStatus.Allowed;
+
+                    foreach (var kvp in definition.Permissions)
+                    {
+                        AuthorizedDatabases.Add(kvp.Key, kvp.Value);
+                    }
+                }
+            }
         }
 
         internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo)
@@ -1559,27 +1586,8 @@ namespace Raven.Server
                     if (cert != null)
                     {
                         var definition = JsonDeserializationServer.CertificateDefinition(cert);
-                        authenticationStatus.Definition = definition;
-                        if (definition.SecurityClearance == SecurityClearance.ClusterAdmin)
-                        {
-                            authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
-                        }
-                        else if (definition.SecurityClearance == SecurityClearance.ClusterNode)
-                        {
-                            authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
-                        }
-                        else if (definition.SecurityClearance == SecurityClearance.Operator)
-                        {
-                            authenticationStatus.Status = AuthenticationStatus.Operator;
-                        }
-                        else
-                        {
-                            authenticationStatus.Status = AuthenticationStatus.Allowed;
-                            foreach (var kvp in definition.Permissions)
-                            {
-                                authenticationStatus.AuthorizedDatabases.Add(kvp.Key, kvp.Value);
-                            }
-                        }
+
+                        authenticationStatus.SetBasedOnCertificateDefinition(definition);
                     }
                 }
             }

@@ -6,11 +6,13 @@
 
 using System;
 using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Raven.Client.Http;
+using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.Dashboard;
 using Raven.Server.Dashboard.Cluster;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -25,10 +27,10 @@ namespace Raven.Server.NotificationCenter.Handlers
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ClusterDashboardHandler>("Server");
 
         [RavenAction("/cluster-dashboard/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
-        public async Task Get()
+        public async Task Watch()
         {
             var nodeTag = GetStringQueryString("node", required: true);
-            
+
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
                 try
@@ -37,12 +39,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                     {
                         var canAccessDatabase = GetDatabaseAccessValidationFunc();
 
-                        using (var notifications = new ClusterDashboardNotifications(Server, canAccessDatabase, ServerStore.ServerShutdown))
-                        using (var connection = new ClusterDashboardConnection(webSocket, canAccessDatabase, notifications,
-                            ServerStore.ContextPool, ServerStore.ServerShutdown))
-                        {
-                            await connection.Handle();
-                        }
+                        await SendNotifications(canAccessDatabase, webSocket);
                     }
                     else
                     {
@@ -61,7 +58,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                             throw new InvalidOperationException($"Could not find node url for node tag '{nodeTag}'");
                         }
 
-                        using (var connection = new ProxyWebSocketConnection(webSocket, remoteNodeUrl, $"/cluster-dashboard/watch?node={nodeTag}", ServerStore.ContextPool, ServerStore.ServerShutdown))
+                        var currentCert = GetCurrentCertificate();
+
+                        using (var connection = new ProxyWebSocketConnection(webSocket, remoteNodeUrl, $"/cluster-dashboard/remote/watch?thumbprint={currentCert?.Thumbprint}", ServerStore.ContextPool, ServerStore.ServerShutdown))
                         {
                             await connection.Establish(Server.Certificate?.Certificate);
 
@@ -75,33 +74,98 @@ namespace Raven.Server.NotificationCenter.Handlers
                 }
                 catch (Exception ex)
                 {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info("Error encountered in cluster dashboard handler", ex);
+                    await HandleException(ex, webSocket);
+                }
+            }
+        }
 
-                    try
+        [RavenAction("/cluster-dashboard/remote/watch", "GET", AuthorizationStatus.ClusterAdmin, SkipUsagesCount = true)]
+        public async Task RemoteWatch()
+        {
+            var thumbprint = GetStringQueryString("thumbprint", required: false);
+
+            CertificateDefinition clientConnectedCertificate = null;
+
+            var canAccessDatabase = GetDatabaseAccessValidationFunc();
+
+            if (string.IsNullOrEmpty(thumbprint) == false)
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                {
+                    using (ctx.OpenReadTransaction())
                     {
-                        using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                        using (var ms = new MemoryStream())
-                        {
-                            using (var writer = new BlittableJsonTextWriter(context, ms))
-                            {
-                                context.Write(writer, new DynamicJsonValue
-                                {
-                                    ["Type"] = "Error",
-                                    ["Exception"] = ex.ToString()
-                                });
-                            }
+                        var certByThumbprint = ServerStore.Cluster.GetCertificateByThumbprint(ctx, thumbprint) ?? ServerStore.Cluster.GetLocalStateByThumbprint(ctx, thumbprint);
 
-                            ms.TryGetBuffer(out ArraySegment<byte> bytes);
-                            await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, ServerStore.ServerShutdown);
+                        if (certByThumbprint != null)
+                        {
+                            clientConnectedCertificate = JsonDeserializationServer.CertificateDefinition(certByThumbprint);
                         }
                     }
-                    catch (Exception)
+
+                    if (clientConnectedCertificate != null)
                     {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info("Failed to send the error in cluster dashboard handler to the client", ex);
+                        // we're already connected as ClusterAdmin, here we're just limiting the access to databases based on the thumbprint of the originally connected certificated
+                        // so we'll send notifications only about relevant databases
+
+                        var authenticationStatus = new RavenServer.AuthenticateConnection();
+
+                        authenticationStatus.SetBasedOnCertificateDefinition(clientConnectedCertificate);
+
+                        canAccessDatabase = (dbName, requireWrite) => authenticationStatus.CanAccess(dbName, requireAdmin: false, requireWrite: requireWrite);
                     }
                 }
+            }
+
+            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            {
+                try
+                {
+                    await SendNotifications(canAccessDatabase, webSocket);
+                }
+                catch (OperationCanceledException)
+                {
+                    // ignored 
+                }
+                catch (Exception ex)
+                {
+                    await HandleException(ex, webSocket);
+                }
+            }
+        }
+
+        private async Task SendNotifications(CanAccessDatabase canAccessDatabase, WebSocket webSocket)
+        {
+            using (var notifications = new ClusterDashboardNotifications(Server, canAccessDatabase, ServerStore.ServerShutdown))
+            using (var connection = new ClusterDashboardConnection(webSocket, canAccessDatabase, notifications,
+                ServerStore.ContextPool, ServerStore.ServerShutdown))
+            {
+                await connection.Handle();
+            }
+        }
+
+        private async Task HandleException(Exception ex, WebSocket webSocket)
+        {
+            if (Logger.IsInfoEnabled)
+                Logger.Info("Error encountered in cluster dashboard handler", ex);
+
+            try
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var ms = new MemoryStream())
+                {
+                    using (var writer = new BlittableJsonTextWriter(context, ms))
+                    {
+                        context.Write(writer, new DynamicJsonValue { ["Type"] = "Error", ["Exception"] = ex.ToString() });
+                    }
+
+                    ms.TryGetBuffer(out ArraySegment<byte> bytes);
+                    await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, ServerStore.ServerShutdown);
+                }
+            }
+            catch (Exception)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failed to send the error in cluster dashboard handler to the client", ex);
             }
         }
     }
