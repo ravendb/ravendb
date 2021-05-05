@@ -213,6 +213,7 @@ namespace Raven.Client.Documents.Smuggler
         private async Task<Operation> ImportInternalAsync(DatabaseSmugglerImportOptions options, Stream stream, bool leaveOpen, CancellationToken token = default)
         {
             var disposeStream = leaveOpen ? null : new DisposeStreamOnce(stream);
+            IDisposable returnContext = null;
 
             try
             {
@@ -223,8 +224,7 @@ namespace Raven.Client.Documents.Smuggler
                 if (_requestExecutor == null)
                     throw new InvalidOperationException("Cannot use Smuggler without a database defined, did you forget to call ForDatabase?");
 
-                using (_requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
+                returnContext = _requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
                     var getOperationIdCommand = new GetNextOperationIdCommand();
                     await _requestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
                     var operationId = getOperationIdCommand.Result;
@@ -238,6 +238,7 @@ namespace Raven.Client.Documents.Smuggler
                     var requestTask = task
                         .ContinueWith(t =>
                         {
+                        returnContext?.Dispose();
                             cancellationTokenRegistration.Dispose();
                             using (disposeStream)
                             {
@@ -263,10 +264,11 @@ namespace Raven.Client.Documents.Smuggler
 
                     return new Operation(_requestExecutor, () => _store.Changes(_databaseName, getOperationIdCommand.NodeTag), _requestExecutor.Conventions, operationId,
                         nodeTag: getOperationIdCommand.NodeTag, additionalTask: task);
+
                 }
-            }
             catch (Exception e)
             {
+                returnContext?.Dispose();
                 disposeStream?.Dispose();
                 throw e.ExtractSingleInnerException();
             }
