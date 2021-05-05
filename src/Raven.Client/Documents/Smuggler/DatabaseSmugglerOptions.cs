@@ -32,7 +32,9 @@
                                                                                   DatabaseRecordItemType.TimeSeries |
                                                                                   DatabaseRecordItemType.DocumentsCompression |
                                                                                   DatabaseRecordItemType.Analyzers |
-                                                                                  DatabaseRecordItemType.LockMode;
+                                                                                  DatabaseRecordItemType.LockMode |
+                                                                                  DatabaseRecordItemType.OlapConnectionStrings |
+                                                                                  DatabaseRecordItemType.OlapEtls;
 
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 

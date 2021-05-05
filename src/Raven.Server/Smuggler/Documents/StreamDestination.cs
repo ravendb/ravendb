@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Replication;
@@ -353,6 +354,20 @@ namespace Raven.Server.Smuggler.Documents
                             WriteSinkPullReplications(databaseRecord.SinkPullReplications);
                         }
 
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.OlapConnectionStrings))
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.OlapConnectionStrings));
+                            WriteOlapConnectionStrings(databaseRecord.OlapConnectionStrings);
+                        }
+
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.OlapEtls))
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.OlapEtls));
+                            WriteOlapEtls(databaseRecord.OlapEtls);
+                        }
+
                         break;
                 }
 
@@ -526,6 +541,27 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndArray();
             }
 
+            private void WriteOlapEtls(List<OlapEtlConfiguration> olapEtlConfiguration)
+            {
+                if (olapEtlConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _writer.WriteStartArray();
+
+                var first = true;
+                foreach (var etl in olapEtlConfiguration)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+                    _context.Write(_writer, etl.ToJson());
+                }
+
+                _writer.WriteEndArray();
+            }
+
             private void WriteExternalReplications(List<ExternalReplication> externalReplication)
             {
                 if (externalReplication == null)
@@ -663,6 +699,25 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WritePropertyName(sqlConnectionString.Key);
 
                     _context.Write(_writer, sqlConnectionString.Value.ToJson());
+                }
+
+                _writer.WriteEndObject();
+            }
+
+            private void WriteOlapConnectionStrings(Dictionary<string, OlapConnectionString> connections)
+            {
+                _writer.WriteStartObject();
+
+                var first = true;
+                foreach (var olapConnectionString in connections)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+
+                    _writer.WritePropertyName(olapConnectionString.Key);
+
+                    _context.Write(_writer, olapConnectionString.Value.ToJson());
                 }
 
                 _writer.WriteEndObject();

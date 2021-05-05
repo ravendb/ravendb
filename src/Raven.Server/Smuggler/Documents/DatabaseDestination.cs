@@ -973,6 +973,37 @@ namespace Raven.Server.Smuggler.Documents
                     progress.LockModeUpdated = true;
                 }
 
+                if (databaseRecord.OlapEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.OlapEtls))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring OLAP ETLs configuration from smuggler");
+                    foreach (var etl in databaseRecord.OlapEtls)
+                    {
+                        currentDatabaseRecord?.OlapEtls.ForEach(x =>
+                        {
+                            if (x.Name.Equals(etl.Name, StringComparison.OrdinalIgnoreCase))
+                            {
+                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.OlapEtl, _database.Name, RaftIdGenerator.DontCareId)));
+                            }
+                        });
+                        etl.TaskId = 0;
+                        etl.Disabled = true;
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddOlapEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
+                    }
+                    progress.OlapEtlsUpdated = true;
+                }
+
+                if (databaseRecord.OlapConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.OlapConnectionStrings))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring OLAP connection strings from smuggler");
+                    foreach (var connectionString in databaseRecord.OlapConnectionStrings)
+                    {
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutOlapConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
+                    }
+                    progress.OlapConnectionStringsUpdated = true;
+                }
+
                 if (tasks.Count == 0)
                     return;
 
