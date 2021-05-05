@@ -33,7 +33,63 @@ namespace SlowTests.Server.Documents.ETL.Olap
         }
 
         [Fact]
-        public async Task SimpleTransformation()
+        public Task SimpleTransformation()
+        {
+            var script = @"
+var orderDate = new Date(this.OrderedAt);
+var year = orderDate.getFullYear();
+var month = orderDate.getMonth();
+var key = new Date(year, month);
+
+loadToOrders(partitionBy(key),
+    {
+        Company : this.Company,
+        ShipVia : this.ShipVia
+    });
+";
+            return SimpleTransformationInternal(script);
+
+        }
+
+        [Fact]
+        public Task SimpleTransformation_DifferentLoadTo_Syntax1()
+        {
+            var script = @"
+var orderDate = new Date(this.OrderedAt);
+var year = orderDate.getFullYear();
+var month = orderDate.getMonth();
+var key = new Date(year, month);
+
+loadTo('Orders', partitionBy(key),
+    {
+        Company : this.Company,
+        ShipVia : this.ShipVia
+    });
+";
+
+            return SimpleTransformationInternal(script);
+        }
+
+        [Fact]
+        public Task SimpleTransformation_DifferentLoadTo_Syntax2()
+        {
+            var script = @"
+var orderDate = new Date(this.OrderedAt);
+var year = orderDate.getFullYear();
+var month = orderDate.getMonth();
+var key = new Date(year, month);
+
+loadTo(""Orders"", partitionBy(key),
+    {
+        Company : this.Company,
+        ShipVia : this.ShipVia
+    });
+";
+
+            return SimpleTransformationInternal(script);
+        }
+
+        private async Task SimpleTransformationInternal(string script)
         {
             var path = GetTempPath("Orders");
             try
@@ -71,18 +127,6 @@ namespace SlowTests.Server.Documents.ETL.Olap
 
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                    var script = @"
-var orderDate = new Date(this.OrderedAt);
-var year = orderDate.getFullYear();
-var month = orderDate.getMonth();
-var key = new Date(year, month);
-
-loadToOrders(partitionBy(key),
-    {
-        Company : this.Company,
-        ShipVia : this.ShipVia
-    });
-";
                     SetupLocalOlapEtl(store, script, path);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
@@ -230,7 +274,7 @@ loadToOrders(partitionBy(key), o);
 
                             if (field.Name == ParquetTransformedItems.LastModifiedColumn)
                                 continue;
-                            
+
                             long count = 1;
                             foreach (var val in data)
                             {
@@ -488,8 +532,8 @@ loadToOrders(partitionBy(key), o);
                         {
                             var o = new Query.Order
                             {
-                                Id = $"orders/{i}", 
-                                OrderedAt = baseline.AddDays(i), 
+                                Id = $"orders/{i}",
+                                OrderedAt = baseline.AddDays(i),
                                 Company = $"companies/{i}"
                             };
 
@@ -537,7 +581,7 @@ loadToOrders(partitionBy(key), o);
                         Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
 
                         using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
-                        foreach (var field in  parquetReader.Schema.Fields)
+                        foreach (var field in parquetReader.Schema.Fields)
                         {
                             Assert.True(field.Name.In(expectedFields));
 
@@ -730,7 +774,7 @@ var key = new Date(year, month);
 loadToOrders(partitionBy(key), o);
 ";
 
-                    var frequency = DateTime.UtcNow.Minute % 2 == 1 
+                    var frequency = DateTime.UtcNow.Minute % 2 == 1
                         ? "1-59/2 * * * *" // every uneven minute
                         : "*/2 * * * *"; // every 2nd minute (even minutes)
 
@@ -894,7 +938,7 @@ loadToOrders(partitionBy(key), o);
                         {
                             GetBackupConfigurationScript = new GetBackupConfigurationScript
                             {
-                                Exec = command, 
+                                Exec = command,
                                 Arguments = scriptPath
                             }
                         }
@@ -984,7 +1028,7 @@ loadToOrders(partitionBy(key), o);
                     Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                     var files = Directory.GetFiles(path);
-                    Assert.Equal(1, files.Length); 
+                    Assert.Equal(1, files.Length);
 
                     // disable and re enable the database
 
@@ -1520,8 +1564,8 @@ loadToOrders(partitionBy([
 
                                 var count = data.Length switch
                                 {
-                                    31 => 0, 
-                                    28 => 31, 
+                                    31 => 0,
+                                    28 => 31,
                                     27 => 365 + 33,
                                     10 => 365 + 33 + 27
                                 };
@@ -1691,7 +1735,8 @@ loadToOrders(partitionBy([
                         var query = session.Query<Order>()
                             .GroupBy(o => new
                             {
-                                o.OrderedAt.Year, o.OrderedAt.Month
+                                o.OrderedAt.Year,
+                                o.OrderedAt.Month
                             });
 
                         expectedCount = await query.CountAsync();
@@ -2082,7 +2127,7 @@ loadToUsers(noPartition(), {
 
             public sbyte SByte { get; set; }
 
-            public float Float { get; set; } 
+            public float Float { get; set; }
 
             public short Int16 { get; set; }
 

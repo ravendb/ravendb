@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
@@ -53,6 +54,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         public override void Initialize(bool debugMode)
         {
             base.Initialize(debugMode);
+
+            DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadTo, LoadToFunctionTranslator));
 
             foreach (var table in LoadToDestinations)
             {
@@ -138,23 +141,50 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return table;
         }
 
-        private JsValue LoadToFunctionTranslator(string name, JsValue[] args)
+        private JsValue LoadToFunctionTranslator(JsValue self, JsValue[] args)
         {
-            if (args.Length != 2)
-                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) must be called with exactly 2 parameters");
+            var methodSignature = "loadTo(name, key, obj)";
+
+            if (args.Length != 3)
+                ThrowInvalidScriptMethodCall($"{methodSignature} must be called with exactly 3 parameters");
+
+            if (args[0].IsString() == false)
+                ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
 
             if (args[1].IsObject() == false)
-                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'obj' must be an object");
+                ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be an object");
+
+            if (args[2].IsObject() == false)
+                ThrowInvalidScriptMethodCall($"{methodSignature} third argument must be an object");
+
+            return LoadToFunctionTranslatorInternal(args[0].AsString(), args[1].AsObject(), args[2].AsObject(), methodSignature);
+        }
+
+        private JsValue LoadToFunctionTranslator(string name, JsValue[] args)
+        {
+            var methodSignature = $"loadTo{name}(key, obj)";
+
+            if (args.Length != 2)
+                ThrowInvalidScriptMethodCall($"{methodSignature} must be called with exactly 2 parameters");
+
+            if (args[1].IsObject() == false)
+                ThrowInvalidScriptMethodCall($"{methodSignature} argument 'obj' must be an object");
 
             if (args[0].IsObject() == false)
-                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must be an object");
+                ThrowInvalidScriptMethodCall($"{methodSignature} argument 'key' must be an object");
 
-            var objectInstance = args[0].AsObject();
+            return LoadToFunctionTranslatorInternal(name, args[0].AsObject(), args[1].AsObject(), methodSignature);
+        }
+
+        private JsValue LoadToFunctionTranslatorInternal(string name, ObjectInstance key, ObjectInstance obj, string methodSignature)
+        {
+            var objectInstance = key;
             if (objectInstance.HasOwnProperty(PartitionKeys) == false)
-                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) argument 'key' must have {PartitionKeys} property. Did you forget to use 'partitionBy(p)' / 'noPartition()' ? ");
+                ThrowInvalidScriptMethodCall(
+                    $"{methodSignature} argument 'key' must have {PartitionKeys} property. Did you forget to use 'partitionBy(p)' / 'noPartition()' ? ");
 
             var partitionBy = objectInstance.GetOwnProperty(PartitionKeys).Value;
-            var result = new ScriptRunnerResult(DocumentScript, args[1].AsObject());
+            var result = new ScriptRunnerResult(DocumentScript, obj);
 
             if (partitionBy.IsNull())
             {
@@ -164,18 +194,19 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
 
             if (partitionBy.IsArray() == false)
-                ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) property {PartitionKeys} of argument 'key' must be an array instance");
+                ThrowInvalidScriptMethodCall($"{methodSignature} property {PartitionKeys} of argument 'key' must be an array instance");
 
             StringBuilder sb = new StringBuilder(name);
             var arr = partitionBy.AsArray();
             foreach (var item in arr)
             {
                 if (item.IsArray() == false)
-                    ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) items in array {PartitionKeys} of argument 'key' must be array instances");
+                    ThrowInvalidScriptMethodCall($"{methodSignature} items in array {PartitionKeys} of argument 'key' must be array instances");
 
                 var tuple = item.AsArray();
                 if (tuple.Length != 2)
-                    ThrowInvalidScriptMethodCall($"loadTo{name}(key, obj) items in array {PartitionKeys} of argument 'key' must be array instances of size 2, but got '{tuple.Length}'");
+                    ThrowInvalidScriptMethodCall(
+                        $"{methodSignature} items in array {PartitionKeys} of argument 'key' must be array instances of size 2, but got '{tuple.Length}'");
 
                 sb.Append('/').Append(tuple[0]).Append('=');
                 var val = tuple[1].IsDate()
@@ -183,7 +214,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     : tuple[1];
 
                 sb.Append(val);
-
             }
 
             LoadToFunction(name, sb.ToString(), result);
@@ -237,9 +267,9 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         public override void Transform(ToOlapItem item, EtlStatsScope stats, EtlProcessState state)
         {
             // Tombstones extraction is skipped by OLAP ETL. This must never happen
-            Debug.Assert(item.IsDelete == false, 
+            Debug.Assert(item.IsDelete == false,
                 $"Invalid item '{item.DocumentId}', OLAP ETL shouldn't handle tombstones");
-            
+
             _stats = stats;
             Current = item;
             DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
