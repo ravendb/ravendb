@@ -10,7 +10,7 @@ using Raven.Client.Json;
 
 namespace Raven.Client.Documents.Session
 {
-    
+
     public enum ForceRevisionStrategy
     {
         // Don't force revision
@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Session
     }
     
     /// <summary>
-    ///     Revisions advanced synchronous session operations
+    /// Revisions advanced synchronous session operations
     /// </summary>
     public interface IRevisionsSessionOperations
     {
@@ -74,5 +74,41 @@ namespace Raven.Client.Documents.Session
         /// Returns the number of revisions for specified document.
         /// </summary>
         long GetCountFor(string id);
+        
+        /// <summary>
+        /// Access the lazy revisions operations 
+        /// </summary>
+        ILazyRevisionsOperations Lazily { get;}
+    }
+    /// <summary>
+    /// Revisions advanced synchronous Lazy session operations
+    /// </summary>
+    public interface ILazyRevisionsOperations
+    {
+        /// <summary>
+        /// Returns all previous document revisions for specified document (with paging) ordered by most recent revision first.
+        /// </summary>
+        Lazy<List<T>> GetFor<T>(string id, int start = 0, int pageSize = 25);
+        
+        /// <summary>
+        /// Returns all previous document revisions metadata for specified document (with paging).
+        /// </summary>
+        Lazy<List<MetadataAsDictionary>> GetMetadataFor(string id, int start = 0, int pageSize = 25); 
+        
+        /// <summary>
+        /// Returns a document revision by change vector.
+        /// </summary>
+        Lazy<T> Get<T>(string changeVector); 
+        
+        /// <summary>
+        /// Returns document revisions by change vectors.
+        /// </summary>
+        Lazy<Dictionary<string, T>> Get<T>(IEnumerable<string> changeVectors);  
+        
+        /// <summary>
+        /// Returns the first revision for this document that happens before or at the specified date.
+        /// </summary>
+        Lazy<T> Get<T>(string id, DateTime date); 
+        
     }
 }

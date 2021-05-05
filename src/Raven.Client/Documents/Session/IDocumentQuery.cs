@@ -82,6 +82,10 @@ namespace Raven.Client.Documents.Session
         IDocumentQueryBase<T>
     {
         IRawDocumentQuery<T> Projection(ProjectionBehavior projectionBehavior);
+        /// <summary>
+        ///    Execute raw query aggregated by facet
+        /// </summary>
+        Dictionary<string, FacetResult> ExecuteAggregation();
     }
 
     public interface IGraphQuery<T> :
