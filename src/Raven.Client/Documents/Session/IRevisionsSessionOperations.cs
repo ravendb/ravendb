@@ -106,8 +106,7 @@ namespace Raven.Client.Documents.Session
         Lazy<Dictionary<string, T>> Get<T>(IEnumerable<string> changeVectors);  
         
         /// <summary>
-        /// Returns the first revision for this document that happens before or at
-        /// the specified date
+        /// Returns the first revision for this document that happens before or at the specified date.
         /// </summary>
         Lazy<T> Get<T>(string id, DateTime date); 
         
