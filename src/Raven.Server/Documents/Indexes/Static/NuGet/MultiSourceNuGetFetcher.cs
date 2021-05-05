@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
             _initialized = true;
         }
 
-        public async Task<List<string>> DownloadAsync(string packageName, string packageVersion, string packageSourceUrl, CancellationToken token = default)
+        public async Task<NuGetFetcher.NuGetPackage> DownloadAsync(string packageName, string packageVersion, string packageSourceUrl, CancellationToken token = default)
         {
             AssertInitialized();
 

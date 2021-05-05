@@ -1,0 +1,8 @@
+{
+    "ServerUrl": "http://127.0.0.1:53700",
+    "Setup.Mode": "Initial",
+    "Logs.RetentionTimeInHrs": 336,
+    "Security.AuditLog.Compress": true,
+    "Security.AuditLog.RetentionTimeInHrs": "52560",
+    "License.Eula.Accepted": true
+}

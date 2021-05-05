@@ -3,11 +3,11 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Resources;
 
-[assembly: AssemblyCopyright("© Hibernating Rhinos 2009 - 2020 All rights reserved.")]
+[assembly: AssemblyCopyright("© Hibernating Rhinos 2009 - 2021 All rights reserved.")]
 
-[assembly: AssemblyVersion("5.1.7")]
-[assembly: AssemblyFileVersion("5.1.7.51")]
-[assembly: AssemblyInformationalVersion("5.1.7")]
+[assembly: AssemblyVersion("5.1.8")]
+[assembly: AssemblyFileVersion("5.1.8.51")]
+[assembly: AssemblyInformationalVersion("5.1.8")]
 
 #if DEBUG
 [assembly: AssemblyConfiguration("Debug")]

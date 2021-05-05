@@ -17,8 +17,8 @@
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.1.0" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="1.1.142101" />
-    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.217401" />
-    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.66" />
+    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.221401" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.67" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />

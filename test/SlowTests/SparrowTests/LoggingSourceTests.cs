@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -342,11 +344,14 @@ namespace SlowTests.SparrowTests
 
                 return Math.Abs(size - retentionSize) <= threshold;
             }, true, 10_000, 1_000);
+            string errorMessage = isRetentionPolicyApplied 
+                ? string.Empty
+                : $"{TempInfoToInvestigate(loggingSource, path)}. " +
+                  $"ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})" + 
+                  Environment.NewLine + 
+                  FileNamesWithSize(afterEndFiles);
 
-            Assert.True(isRetentionPolicyApplied,
-                $"{TempInfoToInvestigate(loggingSource)}. ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})" +
-                Environment.NewLine +
-                FileNamesWithSize(afterEndFiles));
+            Assert.True(isRetentionPolicyApplied, errorMessage);
 
             loggingSource.EndLogging();
         }
@@ -358,13 +363,50 @@ namespace SlowTests.SparrowTests
             return logsAroundError;
         }
 
-        private static string TempInfoToInvestigate(LoggingSource loggingSource)
+        private static string TempInfoToInvestigate(LoggingSource loggingSource, string path)
         {
             if (loggingSource.Compressing)
             {
+                var loggedInfo = new StringBuilder();
+                var logDirectory = new DirectoryInfo(path);
+                var logs = logDirectory.GetFiles();
+                foreach (var fileInfo in logs)
+                {
+                    using var file = fileInfo.OpenRead();
+
+                    Stream stream;
+                    if (fileInfo.Name.EndsWith(".log.gz"))
+                    {
+                        stream = new GZipStream(file, CompressionMode.Decompress);
+                    }
+                    else if (fileInfo.Name.EndsWith(".log"))
+                    {
+                        stream = file;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    using var reader = new StreamReader(stream);
+
+                    string line;
+                    while ((line = reader.ReadLine()) != null && line.Contains("Something went wrong while compressing log files") == false)
+                    {
+
+                    }
+                    if(line == null)
+                        continue;
+                    do
+                    {
+                        loggedInfo.AppendLine(line);
+                    } while ((line = reader.ReadLine()) != null);
+                    break;
+                }
+
                 var compressLoggingThread = loggingSource.GetType().GetField("_compressLoggingThread", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(loggingSource) as Thread;
                 if(compressLoggingThread != null)
-                    return $"compressLoggingThread.IsAlive {compressLoggingThread.IsAlive}";
+                    return $"compressLoggingThread: {{IsAlive :{compressLoggingThread.IsAlive}, ThreadState :{compressLoggingThread.ThreadState}}} \n{loggedInfo}";
             }
 
             return "";

@@ -156,6 +156,7 @@ class indexPerformance extends viewModelBase {
     private static readonly brushSectionIndexesWorkHeight = 22;
     private static readonly brushSectionLineWidth = 1;
     private static readonly trackHeight = 18; // height used for callstack item
+    private static readonly waitTrackPadding = 4;
     private static readonly stackPadding = 1; // space between call stacks
     private static readonly trackMargin = 4;
     private static readonly closedTrackPadding = 2;
@@ -248,6 +249,7 @@ class indexPerformance extends viewModelBase {
         stripeTextColor: undefined as string,
         progressStripes: undefined as string,
         tracks: {
+            "Wait/ConcurrentlyRunningIndexesLimit": undefined as string,
             "Collection": undefined as string,
             "Indexing": undefined as string,
             "Cleanup": undefined as string,
@@ -830,7 +832,7 @@ class indexPerformance extends viewModelBase {
         this.data.forEach(indexStats => {
             indexStats.Performance.forEach(perfStat => {
                 const perfStatsWithCache = perfStat as IndexingPerformanceStatsWithCache;
-                const start = perfStatsWithCache.StartedAsDate;
+                const start = perfStatsWithCache.StartedAsDateExcludingWaitTime;
                 let end: Date;
                 if (perfStat.Completed) {
                     end = perfStatsWithCache.CompletedAsDate;
@@ -957,7 +959,8 @@ class indexPerformance extends viewModelBase {
                 const perfLength = performance.length;
                 for (let perfIdx = 0; perfIdx < perfLength; perfIdx++) {
                     const perf = performance[perfIdx];
-                    const startDate = (perf as IndexingPerformanceStatsWithCache).StartedAsDate;
+                    const perfWithCache = perf as IndexingPerformanceStatsWithCache;
+                    const startDate = perfWithCache.StartedAsDate;
 
                     const startDateAsInt = startDate.getTime();
                     if (visibleEndDateAsInt < startDateAsInt) {
@@ -967,20 +970,22 @@ class indexPerformance extends viewModelBase {
                     if (startDateAsInt + perf.DurationInMs < visibleStartDateAsInt)
                         continue;
                     
+                    if (perfWithCache.WaitOperation && perfWithCache.WaitOperation.DurationInMs > 1) {
+                        this.drawWaitTime(context, xScale(perfWithCache.StartedAsDate), stripesYStart, extentFunc, yOffset !== 0, perfWithCache.WaitOperation);
+                    }
                     
-                    const x1 = xScale(startDate);
-                    
-                    this.drawStripes(0, perf, context, [perf.Details], x1, stripesYStart, yOffset, extentFunc, perfStat.Name);
+                    const x1 = xScale(perfWithCache.StartedAsDateExcludingWaitTime);
+                    this.drawStripes(0, perf, context, [perfWithCache.DetailsExcludingWaitTime], x1, stripesYStart, yOffset, extentFunc, perfStat.Name);
 
                     if (!perf.Completed) {
-                        this.findInProgressAction(context, perf, extentFunc, x1, stripesYStart, yOffset);
+                        this.findInProgressAction(context, perfWithCache, extentFunc, x1, stripesYStart, yOffset);
                     }
                 }
             }
         });
     }
 
-    private findInProgressAction(context: CanvasRenderingContext2D, perf: Raven.Client.Documents.Indexes.IndexingPerformanceStats, extentFunc: (duration: number) => number,
+    private findInProgressAction(context: CanvasRenderingContext2D, perf: IndexingPerformanceStatsWithCache, extentFunc: (duration: number) => number,
         xStart: number, yStart: number, yOffset: number): void {
 
         const extractor = (perfs: Raven.Client.Documents.Indexes.IndexingPerformanceOperation[], xStart: number, yStart: number, yOffset: number) => {
@@ -999,7 +1004,7 @@ class indexPerformance extends viewModelBase {
             });
         };
 
-        extractor([perf.Details], xStart, yStart, yOffset);
+        extractor([perf.DetailsExcludingWaitTime], xStart, yStart, yOffset);
     }
 
     private getColorForOperation(operationName: string): string {
@@ -1015,6 +1020,18 @@ class indexPerformance extends viewModelBase {
         throw new Error("Unable to find color for: " + operationName);
     }
 
+    
+    private drawWaitTime(context: CanvasRenderingContext2D, xStart: number, yStart: number, extentFunc: (duration: number) => number, trackIsOpened: boolean, op: Raven.Client.Documents.Indexes.IndexingPerformanceOperation) {
+        context.fillStyle = this.getColorForOperation("Wait/ConcurrentlyRunningIndexesLimit");
+        const dx = extentFunc(op.DurationInMs);
+        
+        context.fillRect(xStart, yStart + indexPerformance.waitTrackPadding, dx, indexPerformance.trackHeight - 2 * indexPerformance.waitTrackPadding);
+        
+        if (trackIsOpened && dx >= 0.8) {
+            this.hitTest.registerTrackItem(xStart, yStart + indexPerformance.waitTrackPadding, dx, indexPerformance.trackHeight - 2 * indexPerformance.waitTrackPadding, op);
+        }
+    }
+    
     private drawStripes(level: number, rootPerf:Raven.Client.Documents.Indexes.IndexingPerformanceStats, 
                         context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, 
                         xStart: number, yStart: number, yOffset: number, extentFunc: (duration: number) => number, indexName?: string) {
@@ -1309,7 +1326,8 @@ class indexPerformance extends viewModelBase {
     private hideTooltip() {
         this.tooltip.transition()
             .duration(250)
-            .style("opacity", 0);
+            .style("opacity", 0)
+            .each("end", () => this.tooltip.style("display", "none"));
          
         this.tooltip.datum(null);
     }
@@ -1416,7 +1434,14 @@ class indexPerformance extends viewModelBase {
             exportFileName = `indexPerf of ${this.activeDatabase().name} ${moment().format("YYYY-MM-DD HH-mm")}`; 
         }
 
-        const keysToIgnore: Array<keyof IndexingPerformanceStatsWithCache | keyof IndexingPerformanceOperationWithParent> = ["StartedAsDate", "CompletedAsDate", "Parent"];
+        const keysToIgnore: Array<keyof IndexingPerformanceStatsWithCache | keyof IndexingPerformanceOperationWithParent> = [
+            "StartedAsDate", 
+            "CompletedAsDate", 
+            "Parent",
+            "StartedAsDateExcludingWaitTime",
+            "WaitOperation",
+            "DetailsExcludingWaitTime"
+        ];
         fileDownloader.downloadAsJson(this.data, exportFileName + ".json", exportFileName, (key, value) => {
             if (_.includes(keysToIgnore, key)) {
                 return undefined;

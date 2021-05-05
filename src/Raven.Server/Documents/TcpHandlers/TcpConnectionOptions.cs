@@ -8,11 +8,12 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 using Voron.Util;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
-    public class TcpConnectionOptions: IDisposable
+    public class TcpConnectionOptions : IDisposable
     {
         private static long _sequence;
 
@@ -25,7 +26,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private bool _isDisposed;
 
         public DocumentDatabase DocumentDatabase;
-        
+
         public TcpConnectionHeaderMessage.OperationTypes Operation;
 
         public Stream Stream;
@@ -55,7 +56,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public override string ToString()
         {
-            return "Tcp Connection " + _debugTag;
+            return $"TCP Connection ('{Operation}') {_debugTag}";
         }
         public IDisposable ConnectionProcessingInProgress(string debugTag)
         {
@@ -69,8 +70,25 @@ namespace Raven.Server.Documents.TcpHandlers
             if (_isDisposed)
                 return;
 
-            Stream?.Dispose();
-            TcpClient?.Dispose();
+#if !RELEASE
+            GC.SuppressFinalize(this);
+#endif
+
+            using (TcpClient)
+            using (Stream)
+            {
+                if (Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
+                {
+                    try
+                    {
+                        TcpClient?.Client?.Disconnect(reuseSocket: false);
+                    }
+                    catch
+                    {
+                        // nothing we can do
+                    }
+                }
+            }
 
             _running.Wait();
             try
@@ -95,6 +113,13 @@ namespace Raven.Server.Documents.TcpHandlers
             // a possible race condition on dispose
         }
 
+#if !RELEASE
+        ~TcpConnectionOptions()
+        {
+            throw new LowMemoryException($"Detected a leak on TcpConnectionOptions ('{ToString()}') when running the finalizer.");
+        }
+#endif
+
         public void RegisterBytesSent(long bytesAmount)
         {
             _bytesSentMetric?.Mark(bytesAmount);
@@ -108,7 +133,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public bool CheckMatch(long? minSecondsDuration, long? maxSecondsDuration, string ip,
             TcpConnectionHeaderMessage.OperationTypes? operationType)
         {
-            var totalSeconds = (long) (DateTime.UtcNow - _connectedAt).TotalSeconds;
+            var totalSeconds = (long)(DateTime.UtcNow - _connectedAt).TotalSeconds;
 
             if (totalSeconds < minSecondsDuration)
                 return false;
@@ -151,7 +176,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             _bytesReceivedMetric?.SetMinimalMeterData("Received", stats);
             _bytesSentMetric?.SetMinimalMeterData("Sent", stats);
-                        
+
             return stats;
         }
     }

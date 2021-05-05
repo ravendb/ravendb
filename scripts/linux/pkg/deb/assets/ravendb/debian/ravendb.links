@@ -1,0 +1,2 @@
+usr/lib/ravendb/server/rvn /usr/bin/rvn
+usr/lib/ravendb/server/libmscordaccore.so usr/lib/ravendb/server/libmscordaccore/libmscordaccore.so
