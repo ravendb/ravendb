@@ -77,10 +77,29 @@ namespace Raven.Client.Documents.Session
 
     public interface ILazyRevisionsOperationsAsync
     {
+        /// <summary>
+        /// Returns all previous document revisions for specified document (with paging) ordered by most recent revision first.
+        /// </summary>
         Lazy<Task<List<T>>> GetForAsync<T>(string id, int start = 0, int pageSize = 25, CancellationToken token = default);
+        
+        /// <summary>
+        /// Returns a document revision by change vector.
+        /// </summary>
         Lazy<Task<T>> GetAsync<T>(string changeVector, CancellationToken token = default); 
+        
+        /// <summary>
+        /// Returns all previous document revisions metadata for specified document (with paging).
+        /// </summary>
         Lazy<Task<List<MetadataAsDictionary>>> GetMetadataForAsync(string id, int start = 0, int pageSize = 25, CancellationToken token = default); 
+        
+        /// <summary>
+        /// Returns document revisions by change vectors.
+        /// </summary>
         Lazy<Task<Dictionary<string, T>>> GetAsync<T>(IEnumerable<string> changeVectors, CancellationToken token = default);  
+        
+        /// <summary>
+        /// Returns the first revision for this document that happens before or at the specified date.
+        /// </summary>
         Lazy<Task<T>> GetAsync<T>(string id, DateTime date, CancellationToken token = default); 
         
     }
