@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow;
@@ -47,7 +48,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                     throw new InvalidOperationException($"Can not add index: {Definition.Name} because an index with the same name but different casing already exist");
                 }
 
-                var globalRollingSetting = GetGlobalRollingSetting(record);
+                var globalRollingSetting = IndexStore.GetGlobalRollingSetting(record);
 
                 record.AddIndex(Definition, Source, CreatedAt, etag, RevisionsToKeep, globalRollingSetting);
 
@@ -56,17 +57,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             {
                 throw new RachisApplyException("Failed to update index", e);
             }
-        }
-
-        public static bool GetGlobalRollingSetting(DatabaseRecord record)
-        {
-            if (record.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Rolling), out var value) == false)
-                return false;
-
-            if (bool.TryParse(value, out var result) == false)
-                return false;
-
-            return result;
         }
 
         public override void FillJson(DynamicJsonValue json)

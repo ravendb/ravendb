@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexState State { get; set; }
 
-        public bool Rolling { get; set; } = true; //todo
+        public bool? Rolling { get; set; }
 
         public virtual bool HasDynamicFields => false;
 
@@ -149,9 +149,10 @@ namespace Raven.Server.Documents.Indexes
         private long _indexVersion;
         private int? _cachedHashCode;
 
-        protected IndexDefinitionBase(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexState state, T[] mapFields, long indexVersion)
+        protected IndexDefinitionBase(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexState state, T[] mapFields, long indexVersion, bool? rolling)
         {
             Name = name;
+            Rolling = rolling;
             Collections = new HashSet<string>(collections, StringComparer.OrdinalIgnoreCase);
 
             MapFields = new Dictionary<string, IndexFieldBase>(StringComparer.Ordinal);

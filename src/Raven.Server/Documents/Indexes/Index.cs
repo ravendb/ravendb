@@ -171,6 +171,19 @@ namespace Raven.Server.Documents.Indexes
 
         private bool _didWork;
         private bool _isReplacing;
+        public bool IsRolling => Definition.Rolling ?? DocumentDatabase.Configuration.Indexing.Rolling;
+        public string NormalizedName => Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty);
+
+        public bool IsPending
+        {
+            get
+            {
+                if (State == IndexState.Normal)
+                    return DocumentDatabase.IndexStore.ShouldSkipThisNodeWhenRolling(this, out _);
+
+                return false;
+            }
+        }
 
         protected readonly bool HandleAllDocs;
 
@@ -540,6 +553,9 @@ namespace Raven.Server.Documents.Indexes
                 if (Configuration.Disabled || State == IndexState.Disabled)
                     return IndexRunningStatus.Disabled;
 
+                if (IsPending)
+                    return IndexRunningStatus.Pending;
+
                 return IndexRunningStatus.Paused;
             }
         }
@@ -800,11 +816,31 @@ namespace Raven.Server.Documents.Indexes
                 Dispose();
                 return;
             }
-
+            
             using (DrainRunningQueries())
             {
                 StartIndexingThread();
             }
+        }
+
+        private ManualResetEventSlim _rollingEvent;
+        private ManualResetEventSlim RollingEvent
+        {
+            get
+            {
+                if (_rollingEvent != null)
+                    return _rollingEvent;
+
+                Interlocked.CompareExchange(ref _rollingEvent, new ManualResetEventSlim(), null);
+
+                return _rollingEvent;
+            }
+        }
+
+        public void RollIfNeeded()
+        {
+            if (IsPending == false)
+                RollingEvent?.Set();
         }
 
         private void StartIndexingThread()
@@ -832,6 +868,7 @@ namespace Raven.Server.Documents.Indexes
                     PoolOfThreads.LongRunningWork.CurrentPooledThread.SetThreadAffinity(
                         DocumentDatabase.Configuration.Server.NumberOfUnusedCoresByIndexes,
                         DocumentDatabase.Configuration.Server.IndexingAffinityMask);
+                    
                     LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
                     ExecuteIndexing();
                 }
@@ -848,6 +885,8 @@ namespace Raven.Server.Documents.Indexes
                     ReportUnexpectedIndexingError(e);
                 }
             }, null, IndexingThreadName);
+
+            RollIfNeeded();
         }
 
         private void ReportUnexpectedIndexingError(Exception e)
@@ -1190,6 +1229,8 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
+                    RollingEvent?.Wait(_indexingProcessCancellationTokenSource.Token);
+
                     storageEnvironment.OnLogsApplied += HandleLogsApplied;
 
                     SubscribeToChanges(DocumentDatabase);
@@ -2412,7 +2453,7 @@ namespace Raven.Server.Documents.Indexes
                         Type = Type,
                         SourceType = SourceType,
                         IndexRunningStatus = Status,
-                        Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase)
+                        Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase),
                     };
 
                     if (disposed)
@@ -2435,7 +2476,7 @@ namespace Raven.Server.Documents.Indexes
                         SourceType = SourceType,
                         IsStale = isStale ?? IsStale(queryContext, context),
                         IndexRunningStatus = Status,
-                        Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase)
+                        Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase),
                     };
 
                     var stats = _indexStorage.ReadStats(tx);
@@ -2449,6 +2490,11 @@ namespace Raven.Server.Documents.Indexes
 
         private void UpdateIndexProgress(QueryOperationContext queryContext, IndexProgress progress, IndexStats stats)
         {
+            if (IsRolling)
+            {
+                progress.RollingProgress = DocumentDatabase.IndexStore.GetRollingProgress(NormalizedName);
+            }
+
             if (progress.IndexRunningStatus == IndexRunningStatus.Running)
             {
                 var indexingPerformance = _lastStats?.ToIndexingPerformanceLiveStats();

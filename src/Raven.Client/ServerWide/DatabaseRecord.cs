@@ -222,7 +222,7 @@ namespace Raven.Client.ServerWide
         {
             AddIndex(definition, DateTime.UtcNow, 0, false);
         }
-        
+
         internal void AddIndex(AutoIndexDefinition definition, DateTime createdAt, long raftIndex, bool globalRollingSetting)
         {
             IndexDefinitionCompareDifferences? differences = null;
@@ -250,7 +250,7 @@ namespace Raven.Client.ServerWide
             }
         }
 
-        private bool IsRolling(bool? fromDefinition, bool fromSetting)
+        internal static bool IsRolling(bool? fromDefinition, bool fromSetting)
         {
             if (fromDefinition == false)
                 return false;

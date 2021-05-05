@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -37,6 +38,9 @@ namespace Raven.Server.Documents.Queries
             var index = Database.IndexStore.GetIndex(indexName);
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(indexName);
+            
+            if (index.IsPending)
+                throw new PendingRollingIndexException($"Cannot use index `{indexName}` on node {Database.ServerStore.NodeTag} because a rolling index deployment is still pending on this node.");
 
             return index;
         }

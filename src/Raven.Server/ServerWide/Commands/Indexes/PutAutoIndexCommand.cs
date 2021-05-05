@@ -33,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         {
             try
             {
-                var setting = PutIndexCommand.GetGlobalRollingSetting(record);
+                var setting = IndexStore.GetGlobalRollingSetting(record);
                 record.AddIndex(Definition, CreatedAt, etag, setting);
             }
             catch (Exception e)
