@@ -13,7 +13,7 @@ namespace Voron.Impl
 
         event Action<IPagerLevelTransactionState> OnDispose;
         event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
-        void EnsurePagerStateReference(PagerState state);
+        void EnsurePagerStateReference(ref PagerState state);
         StorageEnvironment Environment { get; }
         bool IsWriteTransaction { get; }
     }
