@@ -214,6 +214,7 @@ namespace Raven.Client.Documents.Smuggler
         private async Task<Operation> ImportInternalAsync(DatabaseSmugglerImportOptions options, Stream stream, bool leaveOpen, CancellationToken token = default)
         {
             var disposeStream = leaveOpen ? null : new DisposeStreamOnce(stream);
+            IDisposable returnContext = null;
 
             try
             {
@@ -224,50 +225,51 @@ namespace Raven.Client.Documents.Smuggler
                 if (_requestExecutor == null)
                     throw new InvalidOperationException("Cannot use Smuggler without a database defined, did you forget to call ForDatabase?");
 
-                using (_requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    var getOperationIdCommand = new GetNextOperationIdCommand();
-                    await _requestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
-                    var operationId = getOperationIdCommand.Result;
+                returnContext = _requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
+                var getOperationIdCommand = new GetNextOperationIdCommand();
+                await _requestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
+                var operationId = getOperationIdCommand.Result;
 
-                    var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
+                var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
-                    var command = new ImportCommand(_requestExecutor.Conventions, context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
+                var command = new ImportCommand(_requestExecutor.Conventions, context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
 
-                    var task = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
-                    var requestTask = task
-                        .ContinueWith(t =>
+                var task = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
+                var requestTask = task
+                    .ContinueWith(t =>
+                    {
+                        returnContext?.Dispose();
+                        cancellationTokenRegistration.Dispose();
+                        using (disposeStream)
                         {
-                            cancellationTokenRegistration.Dispose();
-                            using (disposeStream)
+                            if (t.IsFaulted)
                             {
-                                if (t.IsFaulted)
-                                {
-                                    tcs.TrySetException(t.Exception);
+                                tcs.TrySetException(t.Exception);
 
-                                    if (Logger.IsOperationsEnabled)
-                                        Logger.Operations("Could not execute import", t.Exception);
-                                }
+                                if (Logger.IsOperationsEnabled)
+                                    Logger.Operations("Could not execute import", t.Exception);
                             }
-                        }, token);
+                        }
+                    }, token);
 
-                    try
-                    {
-                        await tcs.Task.ConfigureAwait(false);
-                    }
-                    catch (Exception)
-                    {
-                        await requestTask.ConfigureAwait(false);
-                        await tcs.Task.ConfigureAwait(false);
-                    }
-
-                    return new Operation(_requestExecutor, () => _store.Changes(_databaseName, getOperationIdCommand.NodeTag), _requestExecutor.Conventions, operationId,
-                        nodeTag: getOperationIdCommand.NodeTag, additionalTask: task);
+                try
+                {
+                    await tcs.Task.ConfigureAwait(false);
                 }
+                catch (Exception)
+                {
+                    await requestTask.ConfigureAwait(false);
+                    await tcs.Task.ConfigureAwait(false);
+                }
+
+                return new Operation(_requestExecutor, () => _store.Changes(_databaseName, getOperationIdCommand.NodeTag), _requestExecutor.Conventions, operationId,
+                    nodeTag: getOperationIdCommand.NodeTag, additionalTask: task);
+
             }
             catch (Exception e)
             {
+                returnContext?.Dispose();
                 disposeStream?.Dispose();
                 throw e.ExtractSingleInnerException();
             }
