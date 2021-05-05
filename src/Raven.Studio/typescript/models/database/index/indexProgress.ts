@@ -1,5 +1,8 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import genericProgress = require("common/helpers/database/genericProgress");
+import serverTime = require("common/helpers/database/serverTime");
+import timeHelpers = require("common/timeHelpers");
+import generalUtils = require("common/generalUtils");
 
 class progress extends genericProgress {
     
@@ -116,12 +119,37 @@ class rollingProgress {
     started = ko.observable<Date>();
     finished = ko.observable<Date>();
     
+    elapsedText: KnockoutComputed<string>;
+    finishedText: KnockoutComputed<string>;
+    
     constructor(nodeTag: string, deployment: Raven.Client.ServerWide.RollingIndexDeployment) {
         this.nodeTag = nodeTag;
         this.state(deployment.State);
         this.created(moment.utc(deployment.CreatedAt).toDate());
         this.started(deployment.StartedAt ? moment.utc(deployment.StartedAt).toDate() : null);
         this.finished(deployment.FinishedAt ? moment.utc(deployment.FinishedAt).toDate() : null);
+        
+        this.elapsedText = ko.pureComputed(() => {
+            const end = this.finished() ? moment.utc(this.finished()) : null;
+            const endTime = end || serverTime.default.getAdjustedTime(timeHelpers.utcNowWithSecondPrecision());
+
+            const diff = Math.max(endTime.diff(this.started()), 0);
+            const duration = moment.duration({
+                milliseconds: diff
+            });
+            return generalUtils.formatDuration(duration, true, 2, true);
+        });
+        
+        this.finishedText = ko.pureComputed(() => {
+            const end = this.finished() ? moment.utc(this.finished()) : null;
+            const endTime = end || serverTime.default.getAdjustedTime(timeHelpers.utcNowWithSecondPrecision());
+
+            const diff = Math.max(endTime.diff(serverTime.default.getAdjustedTime(moment.utc())), 0);
+            const duration = moment.duration({
+                milliseconds: diff
+            });
+            return generalUtils.formatDuration(duration, true, 2, true);
+        });
     }
 
     updateWith(incomingRolling: rollingProgress) {
@@ -153,7 +181,8 @@ class indexProgress {
         this.isStale = dto.IsStale;
         this.name = dto.Name.toLowerCase();
         this.collections(_.map(dto.Collections, (value, key) => new collectionProgress(key, value, dto.IndexRunningStatus)));
-        this.rollingProgress(dto.RollingProgress ? _.map(dto.RollingProgress.ActiveDeployments, (value, key) => new rollingProgress(key, value)) : []);
+        const rolling: rollingProgress[] = dto.RollingProgress ? _.map(dto.RollingProgress.ActiveDeployments, (value, key) => new rollingProgress(key, value)) : [];
+        this.rollingProgress(rolling.reverse());
         
         const total = _.reduce(this.collections(), (p, c) => {
             return p + c.documentsProgress.total() + c.tombstonesProgress.total();
@@ -221,7 +250,7 @@ class indexProgress {
             })
         } else {
             // node tag has changed - quite rare case but let's update entire collection
-            this.rollingProgress(incomingProgress.rollingProgress());
+            this.rollingProgress(incomingProgress.rollingProgress().reverse());
         }
     }
 }

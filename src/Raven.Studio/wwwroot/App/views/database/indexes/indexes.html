@@ -436,54 +436,83 @@
         </div>
         <div data-bind="with: progress, visible: !isErrorState() && !isFaulty()">
             <hr class="small" />
-            <div class="panel panel-info" data-bind="foreach: rollingProgress">
-                <div data-bind="text: ko.toJSON($data)"></div>
-            </div>
-            <div class="progress-container">
-                <div class="progress-overall">
-                    <div class="flex-horizontal" data-bind="with: globalProgress">
-                        <h3 class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></h3>
-                        <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
+            <div data-bind="foreach: rollingProgress">
+                <div class="flex-horizontal">
+                    <div data-bind="text: 'Node ' + nodeTag"></div>
+                    <div>
+                        <i class="icon-check text-success" data-bind="visible: state() === 'Done'"></i>
+                        <i class="icon-waiting" data-bind="visible: state() === 'Pending'"></i>
+                        <span class="global-spinner spinner-sm" data-bind="visible: state() === 'Running'"></span>
+                        <span data-bind="text: state"></span>
                     </div>
-                    <div class="progress" data-bind="with: globalProgress">
+                    <div data-bind="visible: state() === 'Done' && $root.localNodeTag() !== nodeTag">
+                        Indexing duration: <span data-bind="text: elapsedText"></span>. Completed: <span data-bind="text: finishedText"></span> ago
+                    </div>
+                    <div data-bind="visible: state() === 'Running' && $root.localNodeTag() !== nodeTag">
+                        Indexing duration: <span data-bind="text: elapsedText"></span> 
+                        <a target="_blank" data-bind="attr: { href: $root.createIndexesUrlObservableForNode(nodeTag)}">
+                            show details <i class="icon-newtab"></i>
+                        </a>
+                    </div>
+                    <div data-bind="visible: state() === 'Pending'">
+                        Waiting for indexing to complete on other nodes 
+                    </div>
+                    <div class="flex-grow" data-bind="with: $root.localNodeTag() === nodeTag ? $parent : null">
+                        <div data-bind="template: { name: 'indexes-progress-template' }"></div>
+                    </div>
+                </div>
+            </div>
+            <div data-bind="if: !rollingProgress().length">
+                <div data-bind="template: { name: 'indexes-progress-template' }"></div>    
+            </div>
+        </div>
+    </div>
+</script>
+
+<script type="text/html" id="indexes-progress-template">
+    <div class="progress-container">
+        <div class="progress-overall">
+            <div class="flex-horizontal" data-bind="with: globalProgress">
+                <h3 class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></h3>
+                <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
+            </div>
+            <div class="progress" data-bind="with: globalProgress">
+                <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                     class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                    <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
+                </div>
+            </div>
+        </div>
+        <div class="collections-container">
+            <!-- ko foreach: collections -->
+            <div class="panel collection-progress">
+                <div class="collection-name" data-bind="text: name, attr: { title: name }"></div>
+                <div class="documents">
+                    <div class="clearfix" data-bind="with: documentsProgress">
+                        <small class="name">Documents</small>
+                        <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress}"></small>
+                    </div>
+                    <div class="progress" data-bind="with: documentsProgress">
                         <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
                              class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                             <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
                         </div>
                     </div>
                 </div>
-                <div class="collections-container">
-                    <!-- ko foreach: collections -->
-                    <div class="panel collection-progress">
-                        <div class="collection-name" data-bind="text: name, attr: { title: name }"></div>
-                        <div class="documents">
-                            <div class="clearfix" data-bind="with: documentsProgress">
-                                <small class="name">Documents</small>
-                                <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress}"></small>
-                            </div>
-                            <div class="progress" data-bind="with: documentsProgress">
-                                <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
-                                     class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                    <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="tombstones">
-                            <div class="clearfix" data-bind="with: tombstonesProgress">
-                                <small class="name">Tombstones</small>
-                                <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
-                            </div>
-                            <div class="progress" data-bind="with: tombstonesProgress">
-                                <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
-                                     class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                    <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
-                                </div>
-                            </div>
+                <div class="tombstones">
+                    <div class="clearfix" data-bind="with: tombstonesProgress">
+                        <small class="name">Tombstones</small>
+                        <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
+                    </div>
+                    <div class="progress" data-bind="with: tombstonesProgress">
+                        <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                             class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                            <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
                         </div>
                     </div>
-                    <!-- /ko -->
                 </div>
             </div>
+            <!-- /ko -->
         </div>
     </div>
 </script>
