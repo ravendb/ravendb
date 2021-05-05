@@ -40,8 +40,15 @@ namespace Raven.Client.Documents.Session
 
             var variable = $"this.{pathScript}";
             var value = $"args.val_{_valsCount}";
-
-            var patchRequest = new PatchRequest {Script = $"{variable} = {variable} ? {variable} + {value} : {value};", Values = {[$"val_{_valsCount}"] = valToAdd}};
+             
+            var patchRequest = new PatchRequest
+            {
+                Script = $"{variable} = {variable} ? {variable} + {value} : {value};",
+                Values =
+                {
+                    [$"val_{_valsCount}"] = valToAdd
+                }
+            };
 
             _valsCount++;
 
@@ -55,16 +62,19 @@ namespace Raven.Client.Documents.Session
         {
             
             var pathScript = patch.CompileToJavascript(_javascriptCompilationOptions);
-
             var variable = $"this.{pathScript}";
             var value = $"args.val_{_valsCount}";
-
-            var patchRequest = new PatchRequest {Script = $"{variable} = {variable} ? {variable} + {value} : {value};", Values = {[$"val_{_valsCount}"] = valToAdd}};
+            var patchRequest = new PatchRequest
+            {
+                Script = $"{variable} = {variable} ? {variable} + {value} : {value};",
+                Values =
+                {
+                    [$"val_{_valsCount}"] = valToAdd
+                }
+            };
             
-
             string collectionName = _requestExecutor.Conventions.GetCollectionName(entity);
             string clrType = _requestExecutor.Conventions.GetClrTypeName(entity);
-            
             var newInstance = JsonConverter.ToBlittable(
                 entity,
                 new DocumentInfo

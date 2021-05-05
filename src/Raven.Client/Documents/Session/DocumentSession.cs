@@ -31,12 +31,7 @@ namespace Raven.Client.Documents.Session
         /// property to avoid cluttering the API
         /// </remarks>
         public IAdvancedSessionOperations Advanced => this;
-
-        public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, List<TU>>> patch, Expression<Action<List<TU>>> value)
-        {
-            throw new NotImplementedException();
-        }
-
+        
         /// <summary>
         /// Access the eager operations
         /// </summary>
