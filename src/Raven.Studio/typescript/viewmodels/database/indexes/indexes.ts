@@ -402,6 +402,14 @@ class indexes extends viewModelBase {
             this.selectedIndexesName(selectedIndexes);    
         }
     }
+
+    createIndexesUrlObservableForNode(nodeTag: string) {
+        return ko.pureComputed(() => {
+            const nodeInfo = this.clusterManager.getClusterNodeByTag(nodeTag);
+            const link = appUrl.forIndexes(this.activeDatabase());
+            return appUrl.toExternalUrl(nodeInfo.serverUrl(), link);
+        });
+    }
     
     private getIndexesProgress() {
         if (!this.autoRefresh()) {
