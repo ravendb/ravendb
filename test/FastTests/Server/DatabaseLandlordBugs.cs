@@ -32,9 +32,10 @@ namespace FastTests.Server
 
 
         [Fact]
-        public void CannotDeleteEntireDbFolder()
+        public async Task CannotDeleteEntireDbFolder()
         {
-            // Checking Core.DataDirectory.FullPath
+            DoNotReuseServer();
+
             var p1 = NewDataPath(forceCreateDir: true);
 
             var db1 = CreateDatabaseWithName(false, p1, null, "someDB1");
@@ -50,15 +51,19 @@ namespace FastTests.Server
             var currFiles = Directory.GetFileSystemEntries(Path.Combine(p1, "someDB2"));
 
             Assert.True(CheckFiles(currFiles, origFiles));
+
+            DeleteDatabase("someDB2");
+            DeleteDatabase("someDB1");
         }
 
         [Fact]
-        public void CannotDeleteEntireDbFolder2()
+        public async Task CannotDeleteEntireDbFolder2()
         {
-            // Checking Storage.TempPath.FullPath
+            DoNotReuseServer();
+
             var p1 = NewDataPath(forceCreateDir: true);
 
-            var db1 = CreateDatabaseWithName(false, p1, configuration =>
+            var db1 = CreateDatabaseWithName(false, NewDataPath(forceCreateDir: true), configuration =>
                 {
                     configuration.Add(RavenConfiguration.GetKey(x => x.Storage.TempPath), p1);
                 }
@@ -78,6 +83,9 @@ namespace FastTests.Server
             var currFiles = Directory.GetFileSystemEntries(Path.Combine(p1, "ravenDB2"));
 
             Assert.True(CheckFiles(currFiles, origFiles));
+
+            DeleteDatabase("ravenDB2");
+            DeleteDatabase("ravenDB1");
         }
 
         private static bool CheckFiles(string[] currFiles, string[] origFiles)
