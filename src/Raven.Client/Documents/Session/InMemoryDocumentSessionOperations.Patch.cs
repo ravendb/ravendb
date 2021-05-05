@@ -54,7 +54,10 @@ namespace Raven.Client.Documents.Session
 
             if (TryMergePatches(id, patchRequest) == false)
             {
-                Defer(new PatchCommandData(id, null, patchRequest, null));
+                Defer(new PatchCommandData(id,
+                    null,
+                    patchRequest,
+                    null));
             }
         }
 
@@ -62,8 +65,10 @@ namespace Raven.Client.Documents.Session
         {
             
             var pathScript = patch.CompileToJavascript(_javascriptCompilationOptions);
+            
             var variable = $"this.{pathScript}";
             var value = $"args.val_{_valsCount}";
+            
             var patchRequest = new PatchRequest
             {
                 Script = $"{variable} = {variable} ? {variable} + {value} : {value};",
@@ -90,7 +95,12 @@ namespace Raven.Client.Documents.Session
             
             _valsCount++;
 
-            Defer(new PatchCommandData(id, null, patchRequest) {CreateIfMissing = newInstance});
+            Defer(new PatchCommandData(id,
+                null,
+                patchRequest)
+                  {
+                CreateIfMissing = newInstance
+            });
         }
 
         public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, List<TU>>> patch, Expression<Func<JavaScriptArray<TU>, object>> arrayAdder)
@@ -129,7 +139,14 @@ namespace Raven.Client.Documents.Session
         {
             var patchScript = patch.CompileToJavascript(_javascriptCompilationOptions);
             var valueToUse = AddTypeNameToValueIfNeeded(patch.Body.Type, value);
-            var patchRequest = new PatchRequest {Script = $"this.{patchScript} = args.val_{_valsCount};", Values = {[$"val_{_valsCount}"] = valueToUse}};
+            var patchRequest = new PatchRequest
+            {
+                Script = $"this.{patchScript} = args.val_{_valsCount};",
+                Values =
+                {
+                    [$"val_{_valsCount}"] = valueToUse
+                }
+            };
 
             string collectionName = _requestExecutor.Conventions.GetCollectionName(entity);
             string clrType = _requestExecutor.Conventions.GetClrTypeName(entity);
@@ -146,7 +163,12 @@ namespace Raven.Client.Documents.Session
             
             _valsCount++;
 
-            Defer(new PatchCommandData(id, null, patchRequest) {CreateIfMissing = newInstance});
+            Defer(new PatchCommandData(id,
+                null,
+                patchRequest)
+            {
+                CreateIfMissing = newInstance
+            });
         }
 
         public void Patch<T, U>(T entity, Expression<Func<T, U>> path, U value)
