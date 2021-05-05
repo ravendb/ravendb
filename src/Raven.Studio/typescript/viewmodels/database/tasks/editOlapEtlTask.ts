@@ -24,7 +24,7 @@ import getPeriodicBackupConfigCommand = require("commands/database/tasks/getPeri
 
 class editOlapEtlTask extends viewModelBase {
 
-    static readonly scriptNamePrefix = "Script #";
+    static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskOlapEtlTransformationModel.isApplyToAll;
     
     editedOlapEtl = ko.observable<ongoingTaskOlapEtlEditModel>();
@@ -132,12 +132,14 @@ class editOlapEtlTask extends viewModelBase {
                 content: `<small>Keep output parquet files on disk even when 'Local' is not defined in conection string</small>`
             });
 
-        popoverUtils.longWithHover($(".custom-prefix"),
+        popoverUtils.longWithHover($(".custom-field"),
             {
                 content: `<ul class="margin-top margin-top-xs margin-right">
-                              <li><small>A prefix that is added to the target parquet file location</small></li>
-                              <li><small>i.e.: <code>{RemoteFolderName}/{customPrefix}/{CollectionName}</code></small></li>
-                              <li><small>Useful to differentiate locations when using the same connection string</small></li>
+                              <li><small>A <strong>value</strong> that is given to the <strong>custom partition field</strong> in the target parquet file path</small></li>
+                              <li><small>The custom partition field itself is defined inside the script</small></li>
+                              <li><small>Example path: <code>{RemoteFolderName}/{CollectionName}/{customPartitionField=customFieldValue} </code></small></li>
+                              <li><small>Useful to differentiate file locations when using the same connection string</small></li>
+                              <li><small>Queries can be made on the custom partition as well</small></li>
                           </ul>`
             });
 
@@ -206,7 +208,7 @@ class editOlapEtlTask extends viewModelBase {
 
             // override transforms - use only current transformation
             const transformationScriptDto = this.editedTransformationScriptSandbox().toDto();
-            transformationScriptDto.Name = "Script #1"; // assign fake name
+            transformationScriptDto.Name = "Script_1"; // assign fake name
             dto.Transforms = [transformationScriptDto];
 
             if (!dto.Name) {
