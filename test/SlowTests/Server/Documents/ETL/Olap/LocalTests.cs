@@ -33,6 +33,42 @@ namespace SlowTests.Server.Documents.ETL.Olap
         }
 
         [Fact]
+        public void NameUniqueness()
+        {
+            var script = @"
+var orderDate = new Date(this.OrderedAt);
+var year = orderDate.getFullYear();
+var month = orderDate.getMonth();
+var key = new Date(year, month);
+
+loadToOrders(partitionBy(key),
+    {
+        Company : this.Company,
+        ShipVia : this.ShipVia
+    });
+";
+
+            var path = GetTempPath("Orders");
+
+            using (var store = GetDocumentStore())
+            {
+                SetupLocalOlapEtl(store, script, path, name: null);
+                SetupLocalOlapEtl(store, script, path, name: null);
+
+                var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(2, record.OlapEtls.Count);
+
+                var name1 = record.OlapEtls[0].Name;
+                var name2 = record.OlapEtls[1].Name;
+
+                Assert.NotEqual(name1, name2);
+                Assert.Contains(name1, name2);
+                Assert.Equal($"{name1} #2", name2);
+
+            }
+        }
+
+        [Fact]
         public Task SimpleTransformation()
         {
             var script = @"
@@ -778,7 +814,7 @@ loadToOrders(partitionBy(key), o);
                         ? "1-59/2 * * * *" // every uneven minute
                         : "*/2 * * * *"; // every 2nd minute (even minutes)
 
-                    SetupLocalOlapEtl(store, script, path, frequency);
+                    SetupLocalOlapEtl(store, script, path, frequency: frequency);
                     etlDone.Wait(TimeSpan.FromMinutes(1));
                     var sw = new Stopwatch();
                     sw.Start();
@@ -1024,7 +1060,7 @@ loadToOrders(partitionBy(key), o);
 
                     var sw = new Stopwatch();
                     sw.Start();
-                    SetupLocalOlapEtl(store, script, path, "*/3 * * * *"); // every 3rd minute
+                    SetupLocalOlapEtl(store, script, path, frequency: "*/3 * * * *"); // every 3rd minute
                     Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                     var files = Directory.GetFiles(path);
@@ -2079,12 +2115,12 @@ loadToUsers(noPartition(), {
             return Directory.CreateDirectory(Path.Combine(tmpPath, caller, collection)).FullName;
         }
 
-        private void SetupLocalOlapEtl(DocumentStore store, string script, string path, string frequency = null, string transformationName = null)
+        private void SetupLocalOlapEtl(DocumentStore store, string script, string path, string name = "olap-test", string frequency = null, string transformationName = null)
         {
             var connectionStringName = $"{store.Database} to local";
             var configuration = new OlapEtlConfiguration
             {
-                Name = "olap-test",
+                Name = name,
                 ConnectionStringName = connectionStringName,
                 RunFrequency = frequency ?? DefaultFrequency,
                 Transforms =
