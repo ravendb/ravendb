@@ -20,9 +20,9 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Olap
 {
-    public class Failover : ClusterTestBase
+    public class FailoverTests : ClusterTestBase
     {
-        public Failover(ITestOutputHelper output) : base(output)
+        public FailoverTests(ITestOutputHelper output) : base(output)
         {
         }
 
