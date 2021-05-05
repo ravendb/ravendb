@@ -777,6 +777,7 @@ var orderDate = new Date(this.OrderedAt);
 var year = orderDate.getFullYear();
 var month = orderDate.getMonth() + 1;
 
+// The order of the following array values determines the partitions order in parquet file path
 loadToOrders(partitionBy([['year', year], ['month', month], ['source', $custom_field]]),
 {
     Company : this.Company,

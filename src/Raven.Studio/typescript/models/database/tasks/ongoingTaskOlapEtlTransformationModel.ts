@@ -130,7 +130,7 @@ class ongoingTaskOlapEtlTransformationModel {
     }
 
     getCollectionEntry(collectionName: string) {
-        return collectionsTracker.default.getCollectionColorIndex(collectionName);       
+        return collectionsTracker.default.getCollectionColorIndex(collectionName);
     }
 
     hasUpdates(oldItem: this) {

@@ -118,32 +118,16 @@ loadToOrders(orderData);`;
     });
 
     static readonly olapEtlSampleText =
-`var orderData = {
-    Company : this.Company,
-    RequireAt : new Date(this.RequireAt),
-    ItemsCount: this.Lines.length,
-    TotalCost: 0
-};
-
-var orderDate = new Date(this.OrderedAt);
+`var orderDate = new Date(this.OrderedAt);
 var year = orderDate.getFullYear();
-var month = orderDate.getMonth();
-var key = new Date(year, month);
+var month = orderDate.getMonth() + 1;
 
-for (var i = 0; i < this.Lines.length; i++) {
-    var line = this.Lines[i];
-    orderData.TotalCost += (line.PricePerUnit * line.Quantity);
-    
-    // load to 'sales' table
-    loadToSales(partitionBy(key), {
-        Qty: line.Quantity,
-        Product: line.Product,
-        Cost: line.PricePerUnit
-    });
-}
-
-// load to 'orders' table
-loadToOrders(partitionBy(key), orderData);`;
+// The order of the following array values determines the partitions order in parquet file path
+loadToOrders(partitionBy([['year', year], ['month', month], ['source', $custom_field]]),
+{
+    Company : this.Company,
+    ShipVia : this.ShipVia
+});`;
 
     olapEtlSampleHtml = ko.pureComputed(() => {
         return Prism.highlight(transformationScriptSyntax.olapEtlSampleText, (Prism.languages as any).javascript);

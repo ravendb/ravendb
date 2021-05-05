@@ -7,10 +7,8 @@ import cronEditor = require("viewmodels/common/cronEditor");
 class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
     connectionStringName = ko.observable<string>();
     
-    customPrefix = ko.observable<string>();
-    customPrefixEnabled = ko.observable<boolean>(false);
-    
-    keepFilesOnDisk = ko.observable<boolean>(false);
+    customField = ko.observable<string>();
+    customFieldEnabled = ko.observable<boolean>(false);
         
     runFrequency = ko.observable<string>();
     runFrequencyCronEditor = ko.observable<cronEditor>();
@@ -39,9 +37,8 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             this.connectionStringName,
             this.mentorNode,
             this.manualChooseMentor,
-            this.customPrefix,
-            this.customPrefixEnabled,
-            this.keepFilesOnDisk,
+            this.customField,
+            this.customFieldEnabled,
             this.runFrequency
         ])
     }
@@ -62,9 +59,9 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             ]
         });
 
-        this.customPrefix.extend({
+        this.customField.extend({
             required: {
-                onlyIf: () => this.customPrefixEnabled()
+                onlyIf: () => this.customFieldEnabled()
             }
         });
 
@@ -73,7 +70,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             olapTables: this.olapTables,
             transformationScripts: this.transformationScripts,
             mentorNode: this.mentorNode,
-            customPrefix: this.customPrefix,
+            customField: this.customField,
             runFrequency: this.runFrequency
         });
     }
@@ -86,10 +83,8 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             this.connectionStringName(configuration.ConnectionStringName);
             this.manualChooseMentor(!!configuration.MentorNode);
             
-            this.customPrefix(configuration.CustomPrefix);
-            this.customPrefixEnabled(!!configuration.CustomPrefix);
-            
-            this.keepFilesOnDisk(configuration.KeepFilesOnDisk);
+            this.customField(configuration.CustomField);
+            this.customFieldEnabled(!!configuration.CustomField);
                        
             this.runFrequency(configuration.RunFrequency || ongoingTaskOlapEtlEditModel.defaultRunFrequency);
             this.runFrequencyCronEditor(new cronEditor(this.runFrequency));
@@ -117,8 +112,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             Disabled: false,
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             Transforms: this.transformationScripts().map(x => x.toDto()),
-            CustomPrefix: this.customPrefixEnabled() ? this.customPrefix() : null,
-            KeepFilesOnDisk: this.keepFilesOnDisk(),
+            CustomField: this.customFieldEnabled() ? this.customField() : null,
             RunFrequency: this.runFrequency(),
             OlapTables: this.olapTables().map(x => x.toDto())
         } as Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration;
@@ -133,8 +127,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
                 TaskState: "Enabled",
                 TaskConnectionStatus: "Active",
                 Configuration: {
-                    CustomPrefix: "",
-                    KeepFilesOnDisk: false,
+                    CustomField: "",
                     RunFrequency: this.defaultRunFrequency,
                     Transforms: [],
                     OlapTables: []

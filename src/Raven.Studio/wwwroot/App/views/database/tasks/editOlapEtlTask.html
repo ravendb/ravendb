@@ -47,24 +47,17 @@
                             </div>
                             <div class="form-group">
                                 <label class="control-label">&nbsp;</label>
-                                <div class="toggle keep-files-on-disk">
-                                    <input id="keepFiles" type="checkbox" data-bind="checked: keepFilesOnDisk" />
-                                    <label for="keepFiles">Keep files on disk</label>
+                                <div class="toggle custom-field">
+                                    <input id="setCustomField" type="checkbox" data-bind="checked: customFieldEnabled" />
+                                    <label for="setCustomField">Set custom partition field value</label>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label class="control-label">&nbsp;</label>
-                                <div class="toggle custom-prefix">
-                                    <input id="setCustomPrefix" type="checkbox" data-bind="checked: customPrefixEnabled" />
-                                    <label for="setCustomPrefix">Set custom prefix</label>
-                                </div>
-                            </div>
-                            <div data-bind="validationElement: customPrefix, collapse: customPrefixEnabled">
-                                <div class="form-group" data-bind="validationElement: customPrefix">
-                                    <label for="taskName" class="control-label">Custom Prefix</label>
+                            <div data-bind="validationElement: customField, collapse: customFieldEnabled">
+                                <div class="form-group" data-bind="validationElement: customField">
+                                    <label for="taskName" class="control-label">Custom Field Value</label>
                                     <div class="flex-grow">
-                                        <input type="text" class="form-control" id="customPrefix"
-                                               placeholder="Enter a custom prefix" data-bind="textInput: customPrefix" />
+                                        <input type="text" class="form-control" id="customField"
+                                               placeholder="Enter a value for the custom partition field" data-bind="textInput: customField" />
                                     </div>
                                 </div>
                             </div>
