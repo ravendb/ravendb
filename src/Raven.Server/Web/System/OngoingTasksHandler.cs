@@ -115,6 +115,10 @@ namespace Raven.Server.Web.System
             PullReplicationAsSink sinkReplication, 
             List<IncomingReplicationHandler> handlers)
         {
+            connectionStrings.TryGetValue(sinkReplication.ConnectionStringName, out var connection);
+            sinkReplication.Database = connection?.Database;
+            sinkReplication.ConnectionString = connection;
+            
             var tag = Database.WhoseTaskIsIt(dbTopology, sinkReplication, null);
 
             (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.NotActive);
@@ -135,8 +139,6 @@ namespace Raven.Server.Web.System
             {
                 res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
             }
-
-            connectionStrings.TryGetValue(sinkReplication.ConnectionStringName, out var connection);
 
             var sinkInfo = new OngoingTaskPullReplicationAsSink
             {
@@ -254,6 +256,7 @@ namespace Raven.Server.Web.System
         {
             connectionStrings.TryGetValue(watcher.ConnectionStringName, out var connection);
             watcher.Database = connection?.Database;
+            watcher.ConnectionString = connection;
             
             var taskStatus = ReplicationLoader.GetExternalReplicationState(ServerStore, Database.Name, watcher.TaskId);
             var tag = Database.WhoseTaskIsIt(databaseTopology, watcher, taskStatus);
