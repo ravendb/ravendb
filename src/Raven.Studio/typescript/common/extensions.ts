@@ -285,13 +285,15 @@ class extensions {
                             const isElementVisible = element.style.display !== "none";
 
                             const activeDbName = activeDatabase.name;
-                            if (accessManager.default.isAccessForbidden(requiredAccessLevel, activeDbName)) {
-                                if (isElementVisible) {
-                                    element.style.display = "none";
-                                }
-                            } else {
+                            const effectiveDbAccess = activeDbName ? accessManager.default.getEffectiveDatabaseAccessLevel(activeDbName) : null;
+
+                            if (accessManager.default.canHandleOperation(requiredAccessLevel, effectiveDbAccess)) {
                                 if (!isElementVisible && shouldBeVisibleByKo) {
                                     element.style.display = "";
+                                }
+                            } else {
+                                if (isElementVisible) {
+                                    element.style.display = "none";
                                 }
                             }
                         }
@@ -308,13 +310,15 @@ class extensions {
                             const isElementDisabled = element.hasAttribute("disabled");
 
                             const activeDbName = activeDatabase.name;
-                            if (accessManager.default.isAccessForbidden(requiredAccessLevel, activeDbName)) {
-                                if (!isElementDisabled) {
-                                    element.setAttribute("disabled", true);
-                                }
-                            } else {
+                            const effectiveDbAccess = activeDbName ? accessManager.default.getEffectiveDatabaseAccessLevel(activeDbName) : null;
+
+                            if (accessManager.default.canHandleOperation(requiredAccessLevel, effectiveDbAccess)) {
                                 if (isElementDisabled && shouldBeEnabledByKo) {
                                     element.setAttribute("disabled", false)
+                                }
+                            } else {
+                                if (!isElementDisabled) {
+                                    element.setAttribute("disabled", true);
                                 }
                             }
                         }

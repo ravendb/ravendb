@@ -161,7 +161,7 @@ class shell extends viewModelBase {
         
         this.cloudClusterAdmin = ko.pureComputed(() => {
             const isCloud = license.cloudLicense();
-            const isClusterAdmin = accessManager.default.securityClearance() === "ClusterAdmin";
+            const isClusterAdmin = this.accessManager.securityClearance() === "ClusterAdmin";
             return isCloud && isClusterAdmin;
         });
         
@@ -290,8 +290,8 @@ class shell extends viewModelBase {
             const allowedDatabasesText = dbAccessArray.length ?
                 dbAccessArray.map(x => `<div>
                                             <strong>${genUtils.escapeHtml(x.dbName)}</strong>
-                                            <span class="${accessManager.default.getAccessColor(x.accessLevel)} margin-left">
-                                                         ${accessManager.default.getAccessLevelText(x.accessLevel)}
+                                            <span class="${this.accessManager.getAccessColor(x.accessLevel)} margin-left">
+                                                         ${this.accessManager.getAccessLevelText(x.accessLevel)}
                                             </span>
                                         </div>`).join("")
                 : "No access granted";
@@ -554,8 +554,8 @@ class shell extends viewModelBase {
         this.colorCustomizationDisabled(true);
     }
     
-    accessForbidden(menuItem: leafMenuItem) {
-        return ko.pureComputed(() => {
+    disableReason(menuItem: leafMenuItem) {
+        return ko.pureComputed<string>(() => {
             const requiredAccess = menuItem.requiredAccess || 'DatabaseRead';
 
             const activeDatabase = activeDatabaseTracker.default.database();
@@ -565,7 +565,11 @@ class shell extends viewModelBase {
                 dbName = null;
             }
             
-            return accessManager.default.isAccessForbidden(requiredAccess, dbName);
+            const effectiveDatabaseAccess = dbName ? this.accessManager.getEffectiveDatabaseAccessLevel(dbName) : null;
+            
+            const canHandleOperation = this.accessManager.canHandleOperation(requiredAccess, effectiveDatabaseAccess);
+                      
+            return canHandleOperation ? "" : this.accessManager.getDisableReasonHtml(dbName, requiredAccess, effectiveDatabaseAccess);
         })
     }
 }

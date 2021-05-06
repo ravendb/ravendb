@@ -83,7 +83,9 @@ class viewModelBase {
     protected canAccessView(dbName?: string) {
         // allow child view to override...
         const requiredAccessForView = router.activeInstruction().config.requiredAccess ?? 'DatabaseRead';
-        return !accessManager.default.isAccessForbidden(requiredAccessForView, dbName);
+        const effectiveDbAccess = dbName ? accessManager.default.getEffectiveDatabaseAccessLevel(dbName) : null;
+        
+        return accessManager.default.canHandleOperation(requiredAccessForView, effectiveDbAccess);
     }
 
     activate(args: any, parameters?: any) {
