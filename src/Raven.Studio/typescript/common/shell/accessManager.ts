@@ -111,48 +111,50 @@ class accessManager {
         return accessLevel === "DatabaseAdmin";
     });
 
-    isAccessForbidden(requiredAccess: accessLevel, dbName: string = null): string {
-        const requiredText = this.getAccessLevelText(requiredAccess);
+    canHandleOperation(requiredAccess: accessLevel, effectiveDatabaseAccess: databaseAccessLevel): boolean {
+        if (requiredAccess === "DatabaseRead") {
+            return true;
+        }
         
-        if (dbName) {
-            const effectiveDatabaseAccess = this.getEffectiveDatabaseAccessLevel(dbName);
-            const effectiveText = this.getAccessLevelText(effectiveDatabaseAccess);
-            
-            if ((effectiveDatabaseAccess === "DatabaseRead" && requiredAccess === "DatabaseReadWrite") ||
-                (effectiveDatabaseAccess === "DatabaseRead" && requiredAccess === "DatabaseAdmin") ||
-                (effectiveDatabaseAccess === "DatabaseReadWrite" && requiredAccess === "DatabaseAdmin")) {
-                return this.getRuleHtml("Insufficient database access", requiredText, effectiveText);
-            }
-            
-            return null;
-
-        } else {
-            const effectiveSecurityText = this.getAccessLevelText(this.securityClearance());
-            
+        if (effectiveDatabaseAccess) {
             switch (requiredAccess) {
-                case "DatabaseRead":
-                    return null;
+                case "DatabaseReadWrite":
+                    return effectiveDatabaseAccess !== "DatabaseRead";
+                case "DatabaseAdmin":
                 case "Operator":
-                    return this.isOperatorOrAbove() ? null :
-                        this.getRuleHtml("Insufficient security clearance", requiredText, effectiveSecurityText);
                 case "ClusterAdmin":
                 case "ClusterNode":
-                    return this.isClusterAdminOrClusterNode() ? null :
-                        this.getRuleHtml("Insufficient security clearance", requiredText, effectiveSecurityText);
+                    return effectiveDatabaseAccess === "DatabaseAdmin";
+            }
+        } else {
+            switch (requiredAccess) {
+                case "Operator":
+                    return this.isOperatorOrAbove();
+                case "ClusterAdmin":
+                case "ClusterNode":
+                    return this.isClusterAdminOrClusterNode();
                 default:
                     throw new Error("RequiredAccess for a 'Server View' must be either: ClusterAdmin, ClusterNode, Operator");
             }
         }
     }
     
-    private getRuleHtml(title: string, required: string, actual: string) {
+    getDisableReasonHtml(dbName: string, requiredAccess: accessLevel, effectiveDbAccess: databaseAccessLevel) {
+        const title = dbName ? "Insufficient database access" :
+                               "Insufficient security clearance";
+        
+        const requiredText = this.getAccessLevelText(requiredAccess);
+        
+        const actualText = dbName ? this.getAccessLevelText(effectiveDbAccess) :
+                                    this.getAccessLevelText(this.securityClearance());
+        
         return `<div class="text-left">
-                            <h4>${title}</h4>
-                            <ul>
-                                <li>Required: <strong>${required}</strong></li>
-                                <li>Actual: <strong>${actual}</strong></li>
-                            </ul>
-                        </div>`;
+                    <h4>${title}</h4>
+                    <ul>
+                        <li>Required: <strong>${requiredText}</strong></li>
+                        <li>Actual: <strong>${actualText}</strong></li>
+                    </ul>
+                </div>`;
     }
 
     static activeDatabaseTracker = activeDatabaseTracker.default;
