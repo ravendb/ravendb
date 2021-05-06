@@ -7,6 +7,7 @@
 using System;
 using System.IO;
 using System.Net.WebSockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -88,7 +89,9 @@ namespace Raven.Server.NotificationCenter.Handlers
 
             var canAccessDatabase = GetDatabaseAccessValidationFunc();
 
-            if (string.IsNullOrEmpty(thumbprint) == false)
+            var currentCertificate = GetCurrentCertificate();
+
+            if (string.IsNullOrEmpty(thumbprint) == false && currentCertificate != null && thumbprint != currentCertificate.Thumbprint)
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
@@ -111,7 +114,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                         authenticationStatus.SetBasedOnCertificateDefinition(clientConnectedCertificate);
 
-                        canAccessDatabase = (dbName, requireWrite) => authenticationStatus.CanAccess(dbName, requireAdmin: false, requireWrite: requireWrite);
+                        canAccessDatabase = GetDatabaseAccessValidationFunc(authenticationStatus);
                     }
                 }
             }
