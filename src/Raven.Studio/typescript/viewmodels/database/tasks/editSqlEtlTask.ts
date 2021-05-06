@@ -173,7 +173,7 @@ class sqlTaskTestMode {
 
 class editSqlEtlTask extends viewModelBase {
 
-    static readonly scriptNamePrefix = "Script #";
+    static readonly scriptNamePrefix = "Script_";
 
     enableTestArea = ko.observable<boolean>(false);
     
@@ -349,7 +349,7 @@ class editSqlEtlTask extends viewModelBase {
 
             // override transforms - use only current transformation
             const transformationScriptDto = this.editedTransformationScriptSandbox().toDto();
-            transformationScriptDto.Name = "Script #1"; // assign fake name
+            transformationScriptDto.Name = "Script_1"; // assign fake name
             dto.Transforms = [transformationScriptDto];
 
             if (!dto.Name) {
