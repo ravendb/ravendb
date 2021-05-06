@@ -51,7 +51,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
 
         public override DynamicJsonValue ToJsonWithFilter(CanAccessDatabase filter)
         {
-            throw new NotImplementedException();
+            return ToJson();
         }
     }
 }
