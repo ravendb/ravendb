@@ -7,7 +7,6 @@
 using System;
 using System.IO;
 using System.Net.WebSockets;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -61,7 +60,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                         var currentCert = GetCurrentCertificate();
 
-                        using (var connection = new ProxyWebSocketConnection(webSocket, remoteNodeUrl, $"/cluster-dashboard/remote/watch?thumbprint={currentCert?.Thumbprint}", ServerStore.ContextPool, ServerStore.ServerShutdown))
+                        using (var connection = new ProxyWebSocketConnection(webSocket, remoteNodeUrl, $"/admin/cluster-dashboard/remote/watch?thumbprint={currentCert?.Thumbprint}", ServerStore.ContextPool, ServerStore.ServerShutdown))
                         {
                             await connection.Establish(Server.Certificate?.Certificate);
 
@@ -80,7 +79,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             }
         }
 
-        [RavenAction("/cluster-dashboard/remote/watch", "GET", AuthorizationStatus.ClusterAdmin, SkipUsagesCount = true)]
+        [RavenAction("/admin/cluster-dashboard/remote/watch", "GET", AuthorizationStatus.ClusterAdmin, SkipUsagesCount = true)]
         public async Task RemoteWatch()
         {
             var thumbprint = GetStringQueryString("thumbprint", required: false);
