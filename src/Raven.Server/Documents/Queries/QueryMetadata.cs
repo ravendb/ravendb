@@ -546,6 +546,17 @@ namespace Raven.Server.Documents.Queries
 
                                 AddInclude(include, fieldName.Value, ref compareExchangeValueIncludes);
                                 break;
+                            
+                            case MethodType.Revisions: //TODO: Change validateIncludeCounter
+                                QueryValidator.ValidateIncludeCounter(me.Arguments, QueryText, parameters);
+
+                                if (CounterIncludes == null)
+                                {
+                                    CounterIncludes = new CounterIncludesField();
+                                }
+
+                                AddToCounterIncludes(CounterIncludes, me, parameters);
+                                break;
 
                             default:
                                 throw new InvalidQueryException($"Unable to figure out how to deal with include method '{methodType}'", QueryText, parameters);

@@ -44,9 +44,11 @@
         Timings,
 
         Counters,
+        
+        Revisions,
 
         TimeSeries,
 
-        Unknown,
+        Unknown
     }
 }
