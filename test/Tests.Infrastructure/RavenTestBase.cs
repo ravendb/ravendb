@@ -764,6 +764,13 @@ namespace FastTests
         protected async Task<T> WaitForNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class =>
             await WaitForPredicateAsync(a => a == null, act, timeout, interval);
 
+        protected async Task<T> WaitAndAssertForGreaterThanAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) where T : IComparable
+        {
+            var actualValue = await WaitForGreaterThanAsync(act, expectedVal, timeout, interval);
+            Assert.True(actualValue.CompareTo(expectedVal) > 0);
+            return actualValue;
+        }
+
         private static async Task<T> WaitForPredicateAsync<T>(Predicate<T> predicate, Func<Task<T>> act, int timeout = 15000, int interval = 100)
         {
             if (Debugger.IsAttached)

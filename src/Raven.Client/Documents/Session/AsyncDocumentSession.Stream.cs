@@ -173,17 +173,19 @@ namespace Raven.Client.Documents.Session
             {
                 var documentQuery = (IAbstractDocumentQueryImpl<T>)query;
                 var fieldsToFetch = documentQuery.FieldsToFetchToken;
+                
+                var queryOperation = documentQuery.InitializeQueryOperation();
+                queryOperation.NoTracking = true;
+                
                 var indexQuery = query.GetIndexQuery();
-
+                
                 var streamOperation = new StreamOperation(this, streamQueryStats);
                 var command = streamOperation.CreateRequest(indexQuery);
                 await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
                 streamOperation.EnsureIsAcceptable(query.IndexName, command.Result);
 
                 var result = await streamOperation.SetResultAsync(command.Result, token).ConfigureAwait(false);
-
-                var queryOperation = documentQuery.InitializeQueryOperation();
-                queryOperation.NoTracking = true;
+                
                 return new YieldStream<T>(this, result, documentQuery, fieldsToFetch, token);
             }
         }

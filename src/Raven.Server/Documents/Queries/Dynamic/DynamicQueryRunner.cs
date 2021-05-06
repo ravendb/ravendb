@@ -147,13 +147,22 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var map = DynamicQueryMapping.Create(query);
             bool hasCreatedAutoIndex = false;
-            if (TryMatchExistingIndexToQuery(map, out var index) == false)
+
+            Index index;
+
+            while (TryMatchExistingIndexToQuery(map, out index) == false)
             {
                 if (createAutoIndexIfNoMatchIsFound == false)
                     throw new IndexDoesNotExistException("Could not find index for a given query.");
 
                 var definition = map.CreateAutoIndexDefinition();
                 index = await _indexStore.CreateIndex(definition, RaftIdGenerator.NewId());
+                if (index == null)
+                {
+                    // the index was deleted, we'll try to find a better match (replaced by a wider index)
+                    continue;
+                }
+
                 hasCreatedAutoIndex = true;
 
                 if (query.WaitForNonStaleResultsTimeout.HasValue == false)
@@ -180,6 +189,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     Database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan ==
                     TimeSpan.Zero)
                     await t; // this is used in testing, mainly
+
+                break;
             }
 
             return (index, hasCreatedAutoIndex);

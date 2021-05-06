@@ -291,13 +291,13 @@ namespace Voron.Impl.Paging
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte* AcquirePagePointerInternal(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState)
         {
+            var state = pagerState;
+
             if (DisposeOnceRunner.Disposed)
                 goto AlreadyDisposed;
 
             if (pageNumber > NumberOfAllocatedPages || pageNumber < 0)
                 goto InvalidPageNumber;
-
-            var state = pagerState;
 
             if (state == null)
             {
@@ -307,7 +307,10 @@ namespace Voron.Impl.Paging
                     goto AlreadyDisposed;
             }
 
-            tx?.EnsurePagerStateReference(state);
+            tx?.EnsurePagerStateReference(ref state);
+            
+            if (state._released)
+                goto InvalidPagerState;
 
             return state.MapBase + pageNumber * Constants.Storage.PageSize;
 
@@ -315,6 +318,10 @@ namespace Voron.Impl.Paging
             ThrowAlreadyDisposedException();
         InvalidPageNumber:
             ThrowOnInvalidPageNumber(pageNumber);
+        InvalidPagerState:
+            // ReSharper disable once PossibleNullReferenceException
+            state.ThrowInvalidPagerState();
+
             return null; // Will never happen. 
         }
 

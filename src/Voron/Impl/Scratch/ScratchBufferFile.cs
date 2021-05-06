@@ -139,7 +139,7 @@ namespace Voron.Impl.Scratch
         public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate)
         {
             var pagerState = _scratchPager.EnsureContinuous(_lastUsedPage, sizeToAllocate);
-            tx?.EnsurePagerStateReference(pagerState);
+            tx?.EnsurePagerStateReference(ref pagerState);
 
             var result = new PageFromScratchBuffer(_scratchNumber, _lastUsedPage, sizeToAllocate, numberOfPages);
             _allocatedPagesCount += numberOfPages;
