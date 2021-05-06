@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
@@ -82,7 +85,7 @@ loadToOrders(partitionBy(key),
                 {
                     OperateOnDatabaseRecordTypes = DatabaseRecordItemType.Analyzers
                 }, source.Smuggler.ForDatabase(destination2.Database));
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                 var destinationRecord2 = await source.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(destination2.Database));
                 Assert.Equal(0, destinationRecord2.OlapConnectionStrings.Count);
@@ -91,14 +94,90 @@ loadToOrders(partitionBy(key),
                 var exportPath = NewDataPath();
 
                 operation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportPath);
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                 operation = await source.Smuggler.ForDatabase(destination3.Database).ImportAsync(new DatabaseSmugglerImportOptions { OperateOnDatabaseRecordTypes = DatabaseRecordItemType.Analyzers }, exportPath);
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                 var destinationRecord3 = await source.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(destination3.Database));
                 Assert.Equal(0, destinationRecord3.OlapConnectionStrings.Count);
                 Assert.Equal(0, destinationRecord3.OlapEtls.Count);
+            }
+        }
+
+        [Theory]
+        [InlineData(BackupType.Backup)]
+        [InlineData(BackupType.Snapshot)]
+        public async Task CanBackupAndRestoreOlapEtl(BackupType backupType)
+        {
+            var script = @"
+var orderDate = new Date(this.OrderedAt);
+var year = orderDate.getFullYear();
+var month = orderDate.getMonth();
+var key = new Date(year, month);
+
+loadToOrders(partitionBy(key),
+    {
+        Company : this.Company,
+        ShipVia : this.ShipVia
+    });
+";
+
+            var olapEtlPath = NewDataPath();
+            var backupPath = NewDataPath();
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company { Name = "HR" });
+                    await session.SaveChangesAsync();
+                }
+
+                SetupLocalOlapEtl(store, script, olapEtlPath);
+
+                var operation = await store.Maintenance.SendAsync(new BackupOperation(new BackupConfiguration
+                {
+                    BackupType = backupType,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    }
+                }));
+
+                var result = (BackupResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+
+                var databaseName = $"{store}_Restore";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = Path.Combine(backupPath, result.LocalBackup.BackupDirectory), DatabaseName = databaseName }))
+                {
+                    var sourceRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    var restoreRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+
+                    Assert.Equal(sourceRecord.OlapEtls.Count, restoreRecord.OlapEtls.Count);
+                    Assert.Equal(sourceRecord.OlapConnectionStrings.Count, restoreRecord.OlapConnectionStrings.Count);
+
+                    var sourceOlapEtl = sourceRecord.OlapEtls[0];
+                    var restoreOlapEtl = restoreRecord.OlapEtls[0];
+
+                    Assert.False(sourceOlapEtl.Disabled);
+                    Assert.False(restoreOlapEtl.Disabled);
+
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        var sourceOlapEtlJson = store.Conventions.Serialization.DefaultConverter.ToBlittable(sourceOlapEtl, session.Advanced.Context);
+                        var restoreOlapEtlJson = store.Conventions.Serialization.DefaultConverter.ToBlittable(restoreOlapEtl, session.Advanced.Context);
+
+                        var changed = BlittableOperation.EntityChanged(restoreOlapEtlJson, new DocumentInfo { Id = "", Document = sourceOlapEtlJson }, changes: null);
+                        Assert.False(changed);
+
+                        var sourceOlapConnectionStringJson = store.Conventions.Serialization.DefaultConverter.ToBlittable(sourceRecord.OlapConnectionStrings.Values.First(), session.Advanced.Context);
+                        var destinationOlapConnectionStringJson = store.Conventions.Serialization.DefaultConverter.ToBlittable(restoreRecord.OlapConnectionStrings.Values.First(), session.Advanced.Context);
+
+                        changed = BlittableOperation.EntityChanged(destinationOlapConnectionStringJson, new DocumentInfo { Id = "", Document = sourceOlapConnectionStringJson }, changes: null);
+                        Assert.False(changed);
+                    }
+                }
             }
         }
 
