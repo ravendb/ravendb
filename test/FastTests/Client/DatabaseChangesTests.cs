@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -79,16 +80,18 @@ namespace FastTests.Client
             await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true)).ConfigureAwait(false);
             using (var changes = store.Changes())
             {
+                var message = string.Empty;
+                changes.OnError += exception => Volatile.Write(ref message, exception.Message);
                 var obs = changes.ForDocumentsInCollection<User>();
                 var task = obs.EnsureSubscribedNow();
                 var timeout = TimeSpan.FromSeconds(30);
                 if (await Task.WhenAny(task, Task.Delay(timeout)) != task)
-                    throw new TimeoutException($"{timeout}");
+                    throw new TimeoutException($"{timeout} {message}");
 
                 var e = await Assert.ThrowsAnyAsync<Exception>(() => task);
                 if (e is AggregateException ae)
                     e = ae.ExtractSingleInnerException();
-
+                
                 Assert.Equal(typeof(DatabaseDoesNotExistException), e.GetType());
             }
         }
