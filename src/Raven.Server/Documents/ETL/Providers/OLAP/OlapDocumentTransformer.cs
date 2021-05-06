@@ -222,11 +222,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private JsValue PartitionBy(JsValue self, JsValue[] args)
         {
-            if (args.Length != 1)
-                ThrowInvalidScriptMethodCall("partitionBy(key) must be called with exactly 1 parameter");
+            if (args.Length == 0)
+                ThrowInvalidScriptMethodCall("partitionBy(args) cannot be called with 0 arguments");
 
             JsValue array;
-            if (args[0].IsArray() == false)
+            if (args.Length == 1 && args[0].IsArray() == false)
             {
                 array = JsValue.FromObject(DocumentScript.ScriptEngine, new[]
                 {
@@ -235,11 +235,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                         new JsString(DefaultPartitionColumnName), args[0]
                     })
                 });
-
             }
             else
             {
-                array = args[0].AsArray();
+                array = JsValue.FromObject(DocumentScript.ScriptEngine, args);
             }
 
             var o = new ObjectInstance(DocumentScript.ScriptEngine);

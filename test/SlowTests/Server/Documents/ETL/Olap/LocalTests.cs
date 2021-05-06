@@ -1524,10 +1524,10 @@ loadToOrders(noPartition(),
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
 
-loadToOrders(partitionBy([
+loadToOrders(partitionBy(
     ['year', orderDate.getFullYear()],
     ['month', orderDate.getMonth()]
-]),
+),  
     {
         Company : this.Company,
         ShipVia : this.ShipVia,
