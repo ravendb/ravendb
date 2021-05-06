@@ -1223,38 +1223,44 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         _indexingInProgress.Wait(_indexingProcessCancellationTokenSource.Token);
 
-                                        TimeSpentIndexing.Start();
+                                        try
+                                        {
 
-                                        didWork = DoIndexingWork(scope, _indexingProcessCancellationTokenSource.Token);
+                                            TimeSpentIndexing.Start();
 
-                                        if (_lowMemoryPressure > 0)
-                                            LowMemoryOver();
+                                            didWork = DoIndexingWork(scope, _indexingProcessCancellationTokenSource.Token);
 
-                                        batchCompleted = true;
-                                    }
-                                    catch
-                                    {
-                                        // need to call it here to the let the index continue running
-                                        // we'll stop when we reach the index error threshold
-                                        _mre.Set();
-                                        throw;
+                                            if (_lowMemoryPressure > 0)
+                                                LowMemoryOver();
+
+                                            batchCompleted = true;
+                                        }
+                                        catch
+                                        {
+                                            // need to call it here to the let the index continue running
+                                            // we'll stop when we reach the index error threshold
+                                            _mre.Set();
+                                            throw;
+                                        }
+                                        finally
+                                        {
+                                            _indexingInProgress.Release();
+
+                                            if (_batchStopped)
+                                            {
+                                                _batchStopped = false;
+                                                DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Release();
+                                            }
+
+                                            _threadAllocations.CurrentlyAllocatedForProcessing = 0;
+                                            _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
+
+                                            TimeSpentIndexing.Stop();
+                                        }
                                     }
                                     finally
                                     {
                                         DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock?.Release();
-
-                                        _indexingInProgress.Release();
-
-                                        if (_batchStopped)
-                                        {
-                                            _batchStopped = false;
-                                            DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Release();
-                                        }
-
-                                        _threadAllocations.CurrentlyAllocatedForProcessing = 0;
-                                        _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
-
-                                        TimeSpentIndexing.Stop();
                                     }
 
                                     _indexingBatchCompleted.SetAndResetAtomically();
@@ -1342,7 +1348,7 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.OrdinalIgnoreCase);
                                         _isReplacing = true;
-                                        
+
                                         if (batchCompleted)
                                         {
                                             // this side-by-side index will be replaced in a second, notify about indexing success
@@ -2594,7 +2600,7 @@ namespace Raven.Server.Documents.Indexes
         public bool NoQueryInLast10Minutes()
         {
             var last = _lastQueryingTime;
-            return last.HasValue == false || 
+            return last.HasValue == false ||
                    DocumentDatabase.Time.GetUtcNow() - last.Value > TimeSpan.FromMinutes(10);
         }
 
@@ -4242,7 +4248,7 @@ namespace Raven.Server.Documents.Indexes
             IndexPersistence.Dispose();
 
             _environment.Dispose();
-            
+
             return new DisposableAction(() =>
             {
                 // restart environment
