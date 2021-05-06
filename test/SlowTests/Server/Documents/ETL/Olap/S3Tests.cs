@@ -444,7 +444,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(partitionBy([['order_date', key]]),
+loadToOrders(partitionBy(['order_date', key]),
     {
         Company : this.Company,
         ShipVia : this.ShipVia
@@ -648,10 +648,10 @@ loadToOrders(noPartition(),
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
 
-loadToOrders(partitionBy([
+loadToOrders(partitionBy(
     ['year', orderDate.getFullYear()],
     ['month', orderDate.getMonth() + 1]
-]),
+),
     {
         Company : this.Company,
         ShipVia : this.ShipVia,
@@ -778,7 +778,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth() + 1;
 
 // The order of the following array values determines the partitions order in parquet file path
-loadToOrders(partitionBy([['year', year], ['month', month], ['source', $custom_field]]),
+loadToOrders(partitionBy(['year', year], ['month', month], ['source', $custom_field]),
 {
     Company : this.Company,
     ShipVia : this.ShipVia
@@ -930,7 +930,7 @@ loadToOrders(noPartition(), {
                     var script = @"
 for (var i = 0; i < this.Lines.length; i++){
     var line  = this.Lines[i];
-    loadToOrders(partitionBy([['product-name', line.ProductName]]), {
+    loadToOrders(partitionBy(['product-name', line.ProductName]), {
         PricePerUnit: line.PricePerUnit,
         OrderedAt: this.OrderedAt
 })}";

@@ -443,7 +443,7 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
 var key = new Date(year, month);
 
-loadToOrders(partitionBy([['order_date', key]]),
+loadToOrders(partitionBy(['order_date', key]),
     {
         Company : this.Company,
         ShipVia : this.ShipVia
@@ -648,10 +648,10 @@ loadToOrders(noPartition(),
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
 
-loadToOrders(partitionBy([
+loadToOrders(partitionBy(
     ['year', orderDate.getFullYear()],
     ['month', orderDate.getMonth() + 1]
-]),
+),
     {
         Company : this.Company,
         ShipVia : this.ShipVia,
@@ -674,8 +674,6 @@ loadToOrders(partitionBy([
                         Assert.Contains("Orders/year=2020/", list[0].Name);
                         Assert.Contains("Orders/year=2021/", list[1].Name);
 
-                        // todo
-
                         for (var index = 1; index <= list.Count; index++)
                         {
                             var folder = list[index - 1];
@@ -691,7 +689,7 @@ loadToOrders(partitionBy([
 
                         foreach (var filePath in files)
                         {
-                            var blob = await client.GetBlobAsync(filePath/*.Replace("=", "%3D")*/);
+                            var blob = await client.GetBlobAsync(filePath);
                             await using var ms = new MemoryStream();
                             blob.Data.CopyTo(ms);
 
@@ -778,7 +776,7 @@ var orderDate = new Date(this.OrderedAt);
 var year = orderDate.getFullYear();
 var month = orderDate.getMonth() + 1;
 
-loadToOrders(partitionBy([['year', year], ['month', month], ['source', $custom_field]]),
+loadToOrders(partitionBy(['year', year], ['month', month], ['source', $custom_field]),
 {
     Company : this.Company,
     ShipVia : this.ShipVia
