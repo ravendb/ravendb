@@ -174,12 +174,14 @@ namespace Raven.Server.Documents.Indexes
         public bool IsRolling => Definition.Rolling ?? DocumentDatabase.Configuration.Indexing.Rolling;
         public string NormalizedName => Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty);
 
+        private string _lastPendingReason;
+
         public bool IsPending
         {
             get
             {
                 if (State == IndexState.Normal)
-                    return DocumentDatabase.IndexStore.ShouldSkipThisNodeWhenRolling(this, out _);
+                    return DocumentDatabase.IndexStore.ShouldSkipThisNodeWhenRolling(this, out _lastPendingReason);
 
                 return false;
             }
@@ -823,24 +825,12 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private ManualResetEventSlim _rollingEvent;
-        private ManualResetEventSlim RollingEvent
-        {
-            get
-            {
-                if (_rollingEvent != null)
-                    return _rollingEvent;
-
-                Interlocked.CompareExchange(ref _rollingEvent, new ManualResetEventSlim(), null);
-
-                return _rollingEvent;
-            }
-        }
+        private readonly ManualResetEventSlim _rollingEvent = new ManualResetEventSlim();
 
         public void RollIfNeeded()
         {
             if (IsPending == false)
-                RollingEvent?.Set();
+                _rollingEvent.Set();
         }
 
         private void StartIndexingThread()
@@ -1229,7 +1219,7 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    RollingEvent?.Wait(_indexingProcessCancellationTokenSource.Token);
+                    _rollingEvent.Wait(_indexingProcessCancellationTokenSource.Token);
 
                     storageEnvironment.OnLogsApplied += HandleLogsApplied;
 
