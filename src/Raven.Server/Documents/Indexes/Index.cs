@@ -1066,40 +1066,44 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         _indexingInProgress.Wait(_indexingProcessCancellationTokenSource.Token);
 
-                                        TimeSpentIndexing.Start();
+                                        try
+                                        {
 
-                                        didWork = DoIndexingWork(scope, _indexingProcessCancellationTokenSource.Token);
+                                            TimeSpentIndexing.Start();
 
-                                        if (_lowMemoryPressure > 0)
-                                            LowMemoryOver();
+                                            didWork = DoIndexingWork(scope, _indexingProcessCancellationTokenSource.Token);
 
-                                        batchCompleted = true;
+                                            if (_lowMemoryPressure > 0)
+                                                LowMemoryOver();
 
-                                        
-                                    }
-                                    catch
-                                    {
-                                        // need to call it here to the let the index continue running
-                                        // we'll stop when we reach the index error threshold 
-                                        _mre.Set();
-                                        throw;
+                                            batchCompleted = true;
+                                        }
+                                        catch
+                                        {
+                                            // need to call it here to the let the index continue running
+                                            // we'll stop when we reach the index error threshold 
+                                            _mre.Set();
+                                            throw;
+                                        }
+                                        finally
+                                        {
+                                            _indexingInProgress.Release();
+
+                                            if (_batchStopped)
+                                            {
+                                                _batchStopped = false;
+                                                DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Release();
+                                            }
+
+                                            _threadAllocations.CurrentlyAllocatedForProcessing = 0;
+                                            _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
+
+                                            TimeSpentIndexing.Stop();
+                                        }
                                     }
                                     finally
                                     {
                                         DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock?.Release();
-
-                                        _indexingInProgress.Release();
-
-                                        if (_batchStopped)
-                                        {
-                                            _batchStopped = false;
-                                            DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Release();
-                                        }
-
-                                        _threadAllocations.CurrentlyAllocatedForProcessing = 0;
-                                        _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
-
-                                        TimeSpentIndexing.Stop();
                                     }
 
                                     _indexingBatchCompleted.SetAndResetAtomically();
