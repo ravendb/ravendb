@@ -98,9 +98,15 @@ namespace Raven.Server.NotificationCenter.Handlers
 
     public abstract class ServerNotificationHandlerBase : RequestHandler
     {
-        protected CanAccessDatabase GetDatabaseAccessValidationFunc()
+        protected CanAccessDatabase GetDatabaseAccessValidationFunc(RavenServer.AuthenticateConnection authenticationStatus = null)
         {
-            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            RavenServer.AuthenticateConnection feature;
+
+            if (authenticationStatus != null)
+                feature = authenticationStatus;
+            else
+                feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+
             var status = feature?.Status;
             switch (status)
             {
