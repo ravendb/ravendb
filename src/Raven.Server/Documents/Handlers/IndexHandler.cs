@@ -50,16 +50,15 @@ namespace Raven.Server.Documents.Handlers
             if (oldIndex == null && newIndex == null)
                 throw new IndexDoesNotExistException($"Could not find '{name}' and '{replacementName}' indexes.");
 
+            using (var token = CreateOperationToken(TimeSpan.FromMinutes(15)))
+            {
+                Database.IndexStore.ReplaceIndexes(name, newIndex.Name, token.Token);
+            }
+
             if (newIndex.IsRolling)
             {
                 var command = new PutRollingIndexCommand(Database.Name, name, ServerStore.NodeTag, DateTime.UtcNow, RaftIdGenerator.NewId());
                 await ServerStore.SendToLeaderAsync(command);
-                return;
-            }
-
-            using (var token = CreateOperationToken(TimeSpan.FromMinutes(15)))
-            {
-                Database.IndexStore.ReplaceIndexes(name, newIndex.Name, token.Token);
             }
         }
 
@@ -596,7 +595,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
 
                     writer.WritePropertyName(nameof(IndexingStatus.IndexStatus.Status));
-                    writer.WriteString(index.Status.ToString());
+                    writer.WriteString(index.IsPending ? IndexRunningStatus.Pending.ToString() : index.Status.ToString());
 
                     writer.WriteEndObject();
                 }

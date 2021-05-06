@@ -2128,7 +2128,7 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     using (IndexLock(newIndex.Name))
                                     {
-                                        newIndex.Stop(disableIndex: true);
+                                        newIndex.Stop(disableIndex: false);
                                     }
                                 });
                             }
