@@ -187,12 +187,7 @@ namespace Voron.Impl
 
             try
             {
-                foreach (var scratchOrDataPagerState in previous._pagerStates)
-                {
-                    var pagerState = scratchOrDataPagerState;
-
-                    EnsurePagerStateReference(ref pagerState);
-                }
+                CopyPagerStatesFromPreviousTx(previous);
 
                 _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
 
@@ -255,25 +250,9 @@ namespace Voron.Impl
                 journalFile.AddRef();
             }
 
-            var pagers = new HashSet<AbstractPager>();
-
             try
             {
-                foreach (var scratchOrDataPagerState in previous._pagerStates)
-                {
-                    // in order to avoid "dragging" pager state ref on non active scratch - we will not copy disposed scratches from previous async tx. RavenDB-6766
-                    if (scratchOrDataPagerState.DiscardOnTxCopy)
-                        continue;
-
-                    // copy the "current pager" which is the last pager used, and by that do not "drag" old non used pager state refs to the next async commit (i.e. older views of data file). RavenDB-6949
-                    var currentPager = scratchOrDataPagerState.CurrentPager;
-                    if (pagers.Add(currentPager) == false)
-                        continue;
-
-                    var pagerState = scratchOrDataPagerState;
-
-                    EnsurePagerStateReference(ref pagerState);
-                }
+                CopyPagerStatesFromPreviousTx(previous);
 
                 EnsureNoDuplicateTransactionId(_id);
 
@@ -315,6 +294,27 @@ namespace Voron.Impl
                 }
 
                 throw;
+            }
+        }
+
+        private void CopyPagerStatesFromPreviousTx(LowLevelTransaction previous)
+        {
+            var pagers = new HashSet<AbstractPager>();
+
+            foreach (var scratchOrDataPagerState in previous._pagerStates)
+            {
+                // in order to avoid "dragging" pager state ref on non active scratch - we will not copy disposed scratches from previous async tx. RavenDB-6766
+                if (scratchOrDataPagerState.DiscardOnTxCopy)
+                    continue;
+
+                // copy the "current pager" which is the last pager used, and by that do not "drag" old non used pager state refs to the next async commit (i.e. older views of data file). RavenDB-6949
+                var currentPager = scratchOrDataPagerState.CurrentPager;
+                if (pagers.Add(currentPager) == false)
+                    continue;
+
+                var pagerState = scratchOrDataPagerState;
+
+                EnsurePagerStateReference(ref pagerState);
             }
         }
 
@@ -1229,7 +1229,7 @@ namespace Voron.Impl
             // release scratch file page allocated for the transaction header
             Allocator.Release(ref _txHeaderMemory);
 
-            using (_env.PreventNewReadTransactions())
+            using (_env.IsInPreventNewTransactionsMode == false ? _env.PreventNewTransactions() : (IDisposable)null)
             {
                 _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
                 _env.Journal.UpdateCacheForJournalSnapshots();

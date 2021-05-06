@@ -13,6 +13,7 @@ using Sparrow.Server.Exceptions;
 using Sparrow.Threading;
 using Voron.Exceptions;
 using Voron.Impl.Paging;
+using Voron.Util;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Scratch
@@ -501,19 +502,33 @@ namespace Voron.Impl.Scratch
                     }
                 }
 
-                // we need to ensure that no access to _recycleArea and _scratchBuffers will take place in the same time
-                // and only methods that access this are used within write transaction
+                IDisposable exitPreventNewTransactions = null;
+
                 try
                 {
-                    using (_env.WriteTransaction(context: byteStringContext))
+                    // we need to ensure that no access to _recycleArea and _scratchBuffers will take place in the same time
+                    // and only methods that access this are used within write transaction
+
+                    using (_env.WriteTransaction())
                     {
-                        var removedInactive = RemoveInactiveScratches(_current);
-
-                        var removedInactiveRecycled = RemoveInactiveRecycledScratches();
-
-                        if (_logger.IsInfoEnabled)
+                        // additionally we must not allow to start any transaction (even read one) to start because it uses GetPagerStatesOfAllScratches() which
+                        // returns _pagerStatesAllScratchesCache that we're updating here
+                        
+                        if (_env.TryPreventNewReadTransactions(TimeSpan.Zero, out exitPreventNewTransactions))
                         {
-                            _logger.Info($"Cleanup of {nameof(ScratchBufferPool)} removed: {removedInactive} inactive scratches and {removedInactiveRecycled} inactive from the recycle area");
+                            var removedInactive = RemoveInactiveScratches(_current);
+
+                            var removedInactiveRecycled = RemoveInactiveRecycledScratches();
+
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info(
+                                    $"Cleanup of {nameof(ScratchBufferPool)} removed: {removedInactive} inactive scratches and {removedInactiveRecycled} inactive from the recycle area");
+                            }
+
+                            _forTestingPurposes?.ActionToCallDuringCleanupRightAfterRemovingInactiveJournals?.Invoke();
+                            
+                            // UpdateCacheForPagerStatesOfAllScratches(); - no need to call it explicitly, it is called by Rollback() of the write transaction
                         }
                     }
                 }
@@ -525,10 +540,44 @@ namespace Voron.Impl.Scratch
                 {
 
                 }
+                finally
+                {
+                    exitPreventNewTransactions?.Dispose();
+                }
             }
             finally
             {
                 byteStringContext.Dispose();
+            }
+        }
+
+
+        internal TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff(this);
+        }
+
+        internal class TestingStuff
+        {
+            private readonly ScratchBufferPool _env;
+
+            internal Action ActionToCallDuringCleanupRightAfterRemovingInactiveJournals;
+
+            public TestingStuff(ScratchBufferPool env)
+            {
+                _env = env;
+            }
+
+            internal IDisposable CallDuringCleanupRightAfterRemovingInactiveJournals(Action action)
+            {
+                ActionToCallDuringCleanupRightAfterRemovingInactiveJournals = action;
+
+                return new DisposableAction(() => ActionToCallDuringCleanupRightAfterRemovingInactiveJournals = null);
             }
         }
 
