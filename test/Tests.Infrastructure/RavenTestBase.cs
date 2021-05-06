@@ -247,7 +247,9 @@ namespace FastTests
                     };
 
                     var pathToUse = options.Path;
-                    if (options.ReplicationFactor > 1 || IsGlobalOrLocalServer(serverToUse) == false)
+                    var useExternalServer = IsGlobalOrLocalServer(serverToUse) == false;
+
+                    if (options.ReplicationFactor > 1)
                     {
                         if (pathToUse == null)
                         {
@@ -260,7 +262,11 @@ namespace FastTests
                     }
                     else
                     {
-                        if (pathToUse == null)
+                        if (useExternalServer)
+                        {
+                            // your responsibility to do it right
+                        }
+                        else if (pathToUse == null)
                         {
                             pathToUse = NewDatabasePath(serverToUse.Configuration.Core.DataDirectory.FullPath, name);
                         }
@@ -269,10 +275,11 @@ namespace FastTests
                             hardDelete = false;
                             runInMemory = false;
                         }
-                    
-                        doc.Settings.Add(RavenConfiguration.GetKey(x => x.Core.DataDirectory), pathToUse);
                     }
                     
+                    if (pathToUse != null)
+                        doc.Settings.Add(RavenConfiguration.GetKey(x => x.Core.DataDirectory), pathToUse);
+
                     doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
 
                     if (options.Encrypted)

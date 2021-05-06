@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         public override IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition)
         {
-            return IndexDefinitionCompareDifferences.All;
+            return GetOrCreateIndexDefinitionInternal().Compare(indexDefinition);
         }
 
         protected override int ComputeRestOfHash(int hashCode)

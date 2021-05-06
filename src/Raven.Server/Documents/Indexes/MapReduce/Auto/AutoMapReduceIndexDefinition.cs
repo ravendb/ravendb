@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public override IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition)
         {
-            return IndexDefinitionCompareDifferences.All;
+            return GetOrCreateIndexDefinitionInternal().Compare(indexDefinition);
         }
 
         public static AutoMapReduceIndexDefinition Load(StorageEnvironment environment)
