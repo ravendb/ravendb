@@ -166,7 +166,7 @@ class indexingSpeedSection {
             const indexed = data.values['indexing'];
             return `<div class="tooltip-inner">
                 <div class="tooltip-li">Time: <div class="value">${date}</div></div>
-                <div class="tooltip-li"># Documents indexed/s: <div class="value">${indexed.toLocaleString()}</div></div>
+                <div class="tooltip-li">Indexed Documents/s: <div class="value">${indexed.toLocaleString()}</div></div>
                 </div>`;
         }
         
@@ -180,8 +180,8 @@ class indexingSpeedSection {
             const reduce = data.values['reduce'];
             return `<div class="tooltip-inner">
                 <div class="tooltip-li">Time: <div class="value">${date}</div></div>
-                <div class="tooltip-li"># Documents mapped/s: <div class="value">${map.toLocaleString()}</div></div>
-                <div class="tooltip-li"># Mapped entries reduced/s: <div class="value">${reduce.toLocaleString()}</div></div>
+                <div class="tooltip-li">Mapped Documents/s: <div class="value">${map.toLocaleString()}</div></div>
+                <div class="tooltip-li">Reduced Mapped Entries/s: <div class="value">${reduce.toLocaleString()}</div></div>
                 </div>`;
         }
         return null;
