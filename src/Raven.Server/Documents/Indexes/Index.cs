@@ -183,6 +183,7 @@ namespace Raven.Server.Documents.Indexes
                 if (State == IndexState.Normal)
                     return DocumentDatabase.IndexStore.ShouldSkipThisNodeWhenRolling(this, out _lastPendingReason);
 
+                _lastPendingReason = $"Not pending due to state: {State}";
                 return false;
             }
         }
@@ -554,9 +555,6 @@ namespace Raven.Server.Documents.Indexes
 
                 if (Configuration.Disabled || State == IndexState.Disabled)
                     return IndexRunningStatus.Disabled;
-
-                if (IsPending)
-                    return IndexRunningStatus.Pending;
 
                 return IndexRunningStatus.Paused;
             }
