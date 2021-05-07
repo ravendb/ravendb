@@ -399,11 +399,11 @@ namespace Raven.Server.Documents.ETL
 
         public bool Load(IEnumerable<TTransformed> items, DocumentsOperationContext context, EtlStatsScope stats)
         {
-            using (stats.For(EtlOperations.Load))
+            using (var loadScope = stats.For(EtlOperations.Load))
             {
                 try
                 {
-                    var count = LoadInternal(items, context);
+                    var count = LoadInternal(items, context, loadScope);
 
                     stats.RecordLastLoadedEtag(stats.LastTransformedEtags.Values.Max());
 
@@ -445,7 +445,7 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        protected abstract int LoadInternal(IEnumerable<TTransformed> items, DocumentsOperationContext context);
+        protected abstract int LoadInternal(IEnumerable<TTransformed> items, DocumentsOperationContext context, EtlStatsScope scope);
     
         private bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, int batchSize, DocumentsOperationContext ctx)
         {

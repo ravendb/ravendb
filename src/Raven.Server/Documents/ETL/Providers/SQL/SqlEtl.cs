@@ -5,11 +5,11 @@ using System.Linq;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
-using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
 using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
 using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         }
 
         public override EtlType EtlType => EtlType.Sql;
-        
+
         protected override IEnumerator<ToSqlItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
         {
             return new DocumentsToSqlItems(docs, collection);
@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         }
 
         public override bool ShouldTrackCounters() => false;
-        
+
         public override bool ShouldTrackTimeSeries() => false;
 
         protected override EtlTransformer<ToSqlItem, SqlTableWithRecords> GetTransformer(DocumentsOperationContext context)
@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new SqlDocumentTransformer(Transformation, Database, context, Configuration);
         }
 
-        protected override int LoadInternal(IEnumerable<SqlTableWithRecords> records, DocumentsOperationContext context)
+        protected override int LoadInternal(IEnumerable<SqlTableWithRecords> records, DocumentsOperationContext context, EtlStatsScope scope)
         {
             var count = 0;
 
@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         public SqlEtlTestScriptResult RunTest(DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite, bool performRolledBackTransaction)
         {
             var summaries = new List<TableQuerySummary>();
-            
+
             if (performRolledBackTransaction)
             {
                 try

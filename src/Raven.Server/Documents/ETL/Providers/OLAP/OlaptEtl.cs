@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Util;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Retention;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -121,15 +122,28 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return new OlapDocumentTransformer(Transformation, Database, context, Configuration, _fileNamePrefix, Logger);
         }
 
-        protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context)
+        protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context, EtlStatsScope scope)
         {
             var count = 0;
+
+            var file = scope.For(EtlOperations.LoadFile, start: false);
+            var upload = scope.For(EtlOperations.LoadUpload, start: false);
+
             foreach (var transformed in records)
             {
-                var localPath = transformed.GenerateFileFromItems(out var folderName, out var fileName);
-                count += transformed.Count;
+                string localPath;
+                string folderName;
+                string fileName;
+                using (file.Start())
+                {
+                    localPath = transformed.GenerateFileFromItems(out folderName, out fileName);
+                    count += transformed.Count;
+                }
 
-                UploadToServer(localPath, folderName, fileName);
+                using (upload.Start())
+                {
+                    UploadToServer(localPath, folderName, fileName);
+                }
 
                 if (Configuration.Connection.LocalSettings != null)
                     continue;
@@ -144,7 +158,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             if (Statistics.LastProcessedEtag > 0)
                 UpdateEtlProcessState(LastProcessState, lastBatchTime);
-            
+
             UpdateTimer(lastBatchTime);
         }
 

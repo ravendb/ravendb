@@ -99,7 +99,9 @@ loadTo(""Orders"", partitionBy(key),
 
                     using (var session = store.OpenAsyncSession())
                     {
-                        for (int i = 0; i < 31; i++)
+                        var numberOfOrders = 31;
+                        var numberOfOrders2 = 28;
+                        for (int i = 0; i < numberOfOrders; i++)
                         {
                             await session.StoreAsync(new Query.Order
                             {
@@ -110,14 +112,14 @@ loadTo(""Orders"", partitionBy(key),
                             });
                         }
 
-                        for (int i = 0; i < 28; i++)
+                        for (int i = 0; i < numberOfOrders2; i++)
                         {
                             await session.StoreAsync(new Query.Order
                             {
-                                Id = $"orders/{i + 31}",
+                                Id = $"orders/{i + numberOfOrders}",
                                 OrderedAt = baseline.AddMonths(1).AddDays(i),
-                                ShipVia = $"shippers/{i + 31}",
-                                Company = $"companies/{i + 31}"
+                                ShipVia = $"shippers/{i + numberOfOrders}",
+                                Company = $"companies/{i + numberOfOrders}"
                             });
                         }
 
@@ -2072,10 +2074,9 @@ loadToUsers(noPartition(), {
             return scriptPath;
         }
 
-        private static string GetTempPath(string collection, [CallerMemberName] string caller = null)
+        private string GetTempPath(string collection, [CallerMemberName] string caller = null)
         {
-            var tmpPath = Path.GetTempPath();
-            return Directory.CreateDirectory(Path.Combine(tmpPath, caller, collection)).FullName;
+            return NewDataPath(forceCreateDir: true);
         }
 
         private void SetupLocalOlapEtl(DocumentStore store, string script, string path, string name = "olap-test", string frequency = null, string transformationName = null)

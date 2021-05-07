@@ -400,6 +400,8 @@ class ongoingTasksStats extends viewModelBase {
             "Extract": undefined as string,
             "Transform": undefined as string,
             "Load" : undefined as string,
+            "Load/File" : undefined as string,
+            "Load/Upload" : undefined as string,
             "ConnectionPending": undefined as string,
             "ConnectionActive": undefined as string,
             "Batch": undefined as string,
