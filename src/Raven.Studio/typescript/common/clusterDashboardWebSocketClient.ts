@@ -14,7 +14,7 @@ class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Serv
     private static readonly welcomeMessageId = -1;
 
     constructor(nodeTag: string, onData: (data: Raven.Server.Dashboard.Cluster.WidgetMessage) => void, onConnection: () => void, onDisconnect: () => void) {
-        super(null);
+        super(null, { nodeTag });
         this.nodeTag = nodeTag;
         this.onData = onData;
         this.onConnection = onConnection;
@@ -46,8 +46,8 @@ class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Serv
         return "Cluster Dashboard";
     }
 
-    protected webSocketUrlFactory() {
-        return endpoints.global.clusterDashboard.clusterDashboardWatch + "?node=" + this.nodeTag;
+    protected webSocketUrlFactory(args: { nodeTag: string }) {
+        return endpoints.global.clusterDashboard.clusterDashboardWatch + "?node=" + args.nodeTag;
     }
 
     get autoReconnect() {
