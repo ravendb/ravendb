@@ -44,11 +44,7 @@ using Raven.Server.SqlMigration.Model;
 using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
 using Sparrow.Json;
-using Raven.Server.ServerWide;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
-using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Server.Smuggler.Documents;
 
 namespace Raven.Server.Json
 {
