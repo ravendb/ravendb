@@ -3,6 +3,8 @@ import license = require("models/auth/licenseModel");
 import appUrl = require("common/appUrl");
 import generalUtils = require("common/generalUtils");
 import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
+import accessManager = require("common/shell/accessManager");
+import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 
 interface serverCertificateInfo {
     dateFormatted: string;
@@ -16,7 +18,7 @@ class licenseWidget extends widget {
     usingHttps = location.protocol === "https:";
     
     spinners = {
-        serverCertificate: ko.observable<boolean>(this.usingHttps)
+        serverCertificate: ko.observable<boolean>()
     }
     
     licenseTypeText = license.licenseTypeText;
@@ -26,10 +28,20 @@ class licenseWidget extends widget {
 
     aboutPageUrl = appUrl.forAbout();
     
+    constructor(controller: clusterDashboard) {
+        super(controller);
+        
+        this.spinners.serverCertificate(this.canLoadCertificateInfo());
+    }
+
+    private canLoadCertificateInfo() {
+        return this.usingHttps && accessManager.default.isOperatorOrAbove();
+    }
+
     compositionComplete() {
         super.compositionComplete();
         
-        if (this.usingHttps) {
+        if (this.canLoadCertificateInfo()) {
             this.loadServerCertificate();
             this.refreshIntervalId = setInterval(() => this.loadServerCertificate(), 3600 * 1000);
         }
