@@ -41,6 +41,7 @@ class clusterDashboard extends viewModelBase {
     resizeObserver: ResizeObserver;
     initialized = ko.observable<boolean>(false);
     readonly currentServerNodeTag: string;
+    private htmlElement: HTMLElement;
     
     widgets = ko.observableArray<widget<any>>([]);
     
@@ -79,6 +80,8 @@ class clusterDashboard extends viewModelBase {
     }
     
     private afterLayoutInitialized() {
+        this.resizeObserver.observe(this.htmlElement);
+        
         const throttledLayoutSave = _.debounce(() => {
             const packeryWidth = this.packery.packer.width;
             const layout = this.widgets().map(x => {
@@ -140,6 +143,8 @@ class clusterDashboard extends viewModelBase {
 
     compositionComplete(child?: HTMLElement) {
         super.compositionComplete();
+        
+        this.htmlElement = child;
 
         this.syncStyles(this.nodes());
         this.registerDisposable(this.nodes.subscribe(nodes => this.syncStyles(nodes)));
@@ -147,8 +152,6 @@ class clusterDashboard extends viewModelBase {
         const throttledLayout = _.debounce(() => this.onResized(), 400);
         
         this.resizeObserver = new ResizeObserver(throttledLayout);
-        this.resizeObserver.observe(child);
-        
         
         if (this.nodes().length) {
             this.initDashboard();
@@ -254,8 +257,9 @@ class clusterDashboard extends viewModelBase {
         const nodes = clusterTopologyManager.default.topology().nodes();
 
         for (const node of nodes) {
+            const tag = node.tag();
             const client: clusterDashboardWebSocketClient =
-                new clusterDashboardWebSocketClient(node.tag(), d => this.onData(node.tag(), d), () => this.onWebSocketConnected(client), () => this.onWebSocketDisconnected(client));
+                new clusterDashboardWebSocketClient(tag, d => this.onData(tag, d), () => this.onWebSocketConnected(client), () => this.onWebSocketDisconnected(client));
             this.liveClients.push(client);
         }
     }
@@ -311,7 +315,7 @@ class clusterDashboard extends viewModelBase {
         this.widgets.push(widget);
     }
     
-    onResized() {
+    private onResized() {
         this.layout();
 
         for (const widget of this.widgets()) {

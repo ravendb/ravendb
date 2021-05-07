@@ -21,7 +21,6 @@ abstract class abstractWebSocketClient<T> {
         this.connectToWebSocketTask = $.Deferred<void>();
 
         if ("WebSocket" in window) {
-            // let children classes to fully initialize
             this.connect(() => this.connectWebSocket(connectArgs));
         } else {
             //The browser doesn't support websocket
