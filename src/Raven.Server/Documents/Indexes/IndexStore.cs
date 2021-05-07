@@ -1004,9 +1004,6 @@ namespace Raven.Server.Documents.Indexes
         private void ValidateAutoIndex(IndexDefinitionBase definition)
         {
             ValidateIndexName(definition.Name, isStatic: false);
-
-            if (definition.Rolling == true || _documentDatabase.Configuration.Indexing.Rolling)
-                _serverStore.LicenseManager.AssertCanUseRollingIndexes();
         }
 
         private void ValidateStaticIndex(IndexDefinition definition)
@@ -1036,9 +1033,6 @@ namespace Raven.Server.Documents.Indexes
                 if (string.IsNullOrEmpty(definition.PatternForOutputReduceToCollectionReferences) == false)
                     OutputReferencesPattern.ValidatePattern(definition.PatternForOutputReduceToCollectionReferences, out _);
             }
-
-            if (definition.Rolling == true || _documentDatabase.Configuration.Indexing.Rolling)
-                _serverStore.LicenseManager.AssertCanUseRollingIndexes();
 
         }
 

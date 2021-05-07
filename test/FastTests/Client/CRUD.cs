@@ -76,29 +76,31 @@ namespace FastTests.Client
         {
             const string id = "id1";
             const string value = "Value";
-            
-            using var store = GetDocumentStore();
-            using (var session = store.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide}))
+
+            using (var store = GetDocumentStore())
             {
-                var executor = store.GetRequestExecutor();
-                using var dis = executor.ContextPool.AllocateOperationContext(out var context);
-                var p = context.ReadObject(new DynamicJsonValue
+                using (var session = store.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide}))
                 {
-                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    var executor = store.GetRequestExecutor();
+                    using var dis = executor.ContextPool.AllocateOperationContext(out var context);
+                    var p = context.ReadObject(new DynamicJsonValue
                     {
-                        [metadataPropNameToTest] = value
+                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                        {
+                            [metadataPropNameToTest] = value
 
-                    }
-                }, $"{nameof(metadataPropNameToTest)} {metadataPropNameToTest}");
-                await session.StoreAsync(p, null, id);
-                await session.SaveChangesAsync();
-            }
+                        }
+                    }, $"{nameof(metadataPropNameToTest)} {metadataPropNameToTest}");
+                    await session.StoreAsync(p, null, id);
+                    await session.SaveChangesAsync();
+                }
 
-            using (var session = store.OpenAsyncSession())
-            {
-                var entity = await session.LoadAsync<DynamicJsonValue>(id);
-                var metadata = session.Advanced.GetMetadataFor(entity);
-                Assert.Equal(value, metadata[metadataPropNameToTest]);
+                using (var session = store.OpenAsyncSession())
+                {
+                    var entity = await session.LoadAsync<DynamicJsonValue>(id);
+                    var metadata = session.Advanced.GetMetadataFor(entity);
+                    Assert.Equal(value, metadata[metadataPropNameToTest]);
+                }
             }
         }
 
