@@ -127,7 +127,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             var count = 0;
 
             var file = scope.For(EtlOperations.LoadFile, start: false);
-            var upload = scope.For(EtlOperations.LoadUpload, start: false);
 
             foreach (var transformed in records)
             {
@@ -140,10 +139,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     count += transformed.Count;
                 }
 
-                using (upload.Start())
-                {
-                    UploadToServer(localPath, folderName, fileName);
-                }
+                UploadToServer(localPath, folderName, fileName, scope);
 
                 if (Configuration.Connection.LocalSettings != null)
                     continue;
@@ -258,7 +254,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             };
         }
 
-        private void UploadToServer(string localPath, string folderName, string fileName)
+        private void UploadToServer(string localPath, string folderName, string fileName, EtlStatsScope scope)
         {
             CancellationToken.ThrowIfCancellationRequested();
 
@@ -274,7 +270,13 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             };
 
             var backupUploader = new BackupUploader(uploaderSettings, new RetentionPolicyBaseParameters(), Logger, _uploadResult, onProgress: ProgressNotification, _operationCancelToken);
-            backupUploader.Execute();
+
+            EtlStatsScope uploadScope = null;
+            if (backupUploader.AnyUploads)
+                uploadScope = scope.For(EtlOperations.LoadUpload, start: true);
+
+            using (uploadScope)
+                backupUploader.Execute();
         }
 
 

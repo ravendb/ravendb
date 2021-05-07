@@ -59,6 +59,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             _onProgress = onProgress;
         }
 
+        public bool AnyUploads => BackupConfiguration.CanBackupUsing(_uploaderSettings.S3Settings)
+                                   || BackupConfiguration.CanBackupUsing(_uploaderSettings.GlacierSettings)
+                                   || BackupConfiguration.CanBackupUsing(_uploaderSettings.AzureSettings)
+                                   || BackupConfiguration.CanBackupUsing(_uploaderSettings.GoogleCloudSettings)
+                                   || BackupConfiguration.CanBackupUsing(_uploaderSettings.FtpSettings);
+
         public void Execute()
         {
             CreateUploadTaskIfNeeded(_uploaderSettings.S3Settings, UploadToS3, _backupResult.S3Backup, S3Name);
