@@ -38,7 +38,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public PutRavenConnectionStringCommand(RavenConnectionString connectionString, string databaseName, string uniqueRequestId) : base(connectionString, databaseName, uniqueRequestId)
         {
-            
+
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
@@ -86,18 +86,9 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            try
-            {
-                record.OlapConnectionStrings[ConnectionString.Name] = ConnectionString;
-
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+            record.OlapConnectionStrings[ConnectionString.Name] = ConnectionString;
         }
     }
 
-    
+
 }
