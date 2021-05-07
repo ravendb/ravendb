@@ -67,6 +67,28 @@ namespace FastTests.Sparrow
         }
 
         [Fact]
+        public unsafe void XXHash32_EqualityImplementationPointerAndSpan()
+        {
+            var rng = new Random();
+            for (int it = 0; it < 1000; it++)
+            {
+                byte[] values = new byte[it];
+                rng.NextBytes(values);
+
+                for (int i = 0; i < 100; i++)
+                {
+                    fixed (byte* ptr = values)
+                    {
+                        uint h1 = Hashing.XXHash32.CalculateInline(values.AsSpan());
+                        uint h2 = Hashing.XXHash32.CalculateInline(ptr, values.Length);
+
+                        Assert.Equal(h1, h2);
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public void XXHash32()
         {
             string value = "abcd";
