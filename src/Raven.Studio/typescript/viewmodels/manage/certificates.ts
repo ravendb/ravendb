@@ -109,7 +109,7 @@ class certificates extends viewModelBase {
         
         this.addNotification(changesContext.default.serverNotifications().watchAllAlerts(alert => this.onAlert(alert)));
 
-        $('.certificates [data-toggle="tooltip"]').tooltip({ html: true });
+        $('.certificates [data-toggle="tooltip"]').tooltip();
         
         popoverUtils.longWithHover($("#download-certificates"),
             {
@@ -177,7 +177,6 @@ class certificates extends viewModelBase {
                 html: true,
                 placement: "top"
             });
-
         $('.certificates [data-toggle="tooltip"]').tooltip();
     }
     
@@ -229,11 +228,8 @@ class certificates extends viewModelBase {
         return accessManager.default.getAccessColor(accessLevel);
     }
 
-    getAccessInfoText(dbName: string, accessLevel: databaseAccessLevel) {
-        return `<div class="text-left padding padding-xs">
-                   <strong>Name</strong>: ${dbName === "All" ? "All databases" : generalUtils.escapeHtml(dbName) }<br/>
-                   <strong>Access</strong>: ${accessManager.default.getAccessLevelText(accessLevel) }
-                </div>`
+    getAccessInfoText(accessLevel: databaseAccessLevel) {
+        return accessManager.default.getAccessLevelText(accessLevel);
     }
     
     canBeAutomaticallyRenewed(thumbprints: string[]) {

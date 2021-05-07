@@ -220,22 +220,17 @@ class extensions {
                 const bindingsArray = Object.keys(bindings);
                 const requiredAccessBindingLocation = bindingsArray.indexOf("requiredAccess");
                 
-                const activeDatabase = activeDatabaseTracker.default.database();
-                if (activeDatabase) {
-                    if (bindings.visible) {
-                        this.verifyBindingLocation(bindingsArray, "visible", requiredAccessBindingLocation);
-                    }
-                    if (bindings.hidden) {
-                        this.verifyBindingLocation(bindingsArray, "hidden", requiredAccessBindingLocation);
-                    }
-                    if (bindings.disable) {
-                        this.verifyBindingLocation(bindingsArray, "disable", requiredAccessBindingLocation);
-                    }
-                    if (bindings.enable) {
-                        this.verifyBindingLocation(bindingsArray, "enable", requiredAccessBindingLocation);
-                    }
-                } else {
-                    throw new Error("Cannot use the 'requiredAccess' binding - no database is active.");
+                if (bindings.visible) {
+                    this.verifyBindingLocation(bindingsArray, "visible", requiredAccessBindingLocation);
+                }
+                if (bindings.hidden) {
+                    this.verifyBindingLocation(bindingsArray, "hidden", requiredAccessBindingLocation);
+                }
+                if (bindings.disable) {
+                    this.verifyBindingLocation(bindingsArray, "disable", requiredAccessBindingLocation);
+                }
+                if (bindings.enable) {
+                    this.verifyBindingLocation(bindingsArray, "enable", requiredAccessBindingLocation);
                 }
 
                 const strategyTypes = ["hide", "disable"]; // todo: "visibilityHidden"
@@ -267,63 +262,57 @@ class extensions {
                      allBindings) => {
 
                 const activeDatabase = activeDatabaseTracker.default.database();
-                if (activeDatabase) {
-                    const bindings = allBindings();
-                    
-                    const requiredAccessLevel = ko.unwrap(valueAccessor());
-                    const strategy = bindings.requiredAccessOptions ? bindings.requiredAccessOptions.strategy : 'hide';
-                    
-                    switch (strategy) {
-                        case 'hide': {
-                            const visibleBinding = bindings.visible;
-                            const visibleValue = visibleBinding != null ? ko.unwrap(visibleBinding) : true;
+                const bindings = allBindings();
+                
+                const requiredAccessLevel = ko.unwrap(valueAccessor());
+                const strategy = bindings.requiredAccessOptions ? bindings.requiredAccessOptions.strategy : 'hide';
 
-                            const hiddenBinding = bindings.hidden;
-                            const hiddenValue = hiddenBinding != null ? ko.unwrap(hiddenBinding) : false;
+                const actualAccess = accessManager.resolveActualAccess(requiredAccessLevel, activeDatabase?.name);
+                
+                switch (strategy) {
+                    case 'hide': {
+                        const visibleBinding = bindings.visible;
+                        const visibleValue = visibleBinding != null ? ko.unwrap(visibleBinding) : true;
 
-                            const shouldBeVisibleByKo = visibleValue && !hiddenValue;
-                            const isElementVisible = element.style.display !== "none";
+                        const hiddenBinding = bindings.hidden;
+                        const hiddenValue = hiddenBinding != null ? ko.unwrap(hiddenBinding) : false;
 
-                            const activeDbName = activeDatabase.name;
-                            const effectiveDbAccess = activeDbName ? accessManager.default.getEffectiveDatabaseAccessLevel(activeDbName) : null;
+                        const shouldBeVisibleByKo = visibleValue && !hiddenValue;
+                        const isElementVisible = element.style.display !== "none";
 
-                            if (accessManager.default.canHandleOperation(requiredAccessLevel, effectiveDbAccess)) {
-                                if (!isElementVisible && shouldBeVisibleByKo) {
-                                    element.style.display = "";
-                                }
-                            } else {
-                                if (isElementVisible) {
-                                    element.style.display = "none";
-                                }
+                        if (accessManager.default.canHandleOperation(requiredAccessLevel, actualAccess)) {
+                            if (!isElementVisible && shouldBeVisibleByKo) {
+                                element.style.display = "";
+                            }
+                        } else {
+                            if (isElementVisible) {
+                                element.style.display = "none";
                             }
                         }
-                            break;
-
-                        case 'disable': {
-                            const disableBinding = bindings.disable;
-                            const disableValue = disableBinding != null ? ko.unwrap(disableBinding) : false;
-
-                            const enableBinding = bindings.enable;
-                            const enableValue = enableBinding != null ? ko.unwrap(enableBinding) : true;
-
-                            const shouldBeEnabledByKo = !disableValue && enableValue;
-                            const isElementDisabled = element.hasAttribute("disabled");
-
-                            const activeDbName = activeDatabase.name;
-                            const effectiveDbAccess = activeDbName ? accessManager.default.getEffectiveDatabaseAccessLevel(activeDbName) : null;
-
-                            if (accessManager.default.canHandleOperation(requiredAccessLevel, effectiveDbAccess)) {
-                                if (isElementDisabled && shouldBeEnabledByKo) {
-                                    element.setAttribute("disabled", false)
-                                }
-                            } else {
-                                if (!isElementDisabled) {
-                                    element.setAttribute("disabled", true);
-                                }
-                            }
-                        }
-                            break;
                     }
+                        break;
+
+                    case 'disable': {
+                        const disableBinding = bindings.disable;
+                        const disableValue = disableBinding != null ? ko.unwrap(disableBinding) : false;
+
+                        const enableBinding = bindings.enable;
+                        const enableValue = enableBinding != null ? ko.unwrap(enableBinding) : true;
+
+                        const shouldBeEnabledByKo = !disableValue && enableValue;
+                        const isElementDisabled = element.hasAttribute("disabled");
+
+                        if (accessManager.default.canHandleOperation(requiredAccessLevel, actualAccess)) {
+                            if (isElementDisabled && shouldBeEnabledByKo) {
+                                element.setAttribute("disabled", "false")
+                            }
+                        } else {
+                            if (!isElementDisabled) {
+                                element.setAttribute("disabled", "true");
+                            }
+                        }
+                    }
+                        break;
                 }
             }
         };
