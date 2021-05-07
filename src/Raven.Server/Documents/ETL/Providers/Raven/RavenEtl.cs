@@ -10,6 +10,7 @@ using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
@@ -97,7 +98,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             return new CountersToRavenEtlItems(context, counters, collection);
         }
-        
+
         protected override IEnumerator<RavenEtlItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
         {
             return new TimeSeriesToRavenEtlItems(timeSeries, collection);
@@ -142,7 +143,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return new RavenEtlDocumentTransformer(Transformation, Database, context, _script);
         }
 
-        protected override int LoadInternal(IEnumerable<ICommandData> items, DocumentsOperationContext context)
+        protected override int LoadInternal(IEnumerable<ICommandData> items, DocumentsOperationContext context, EtlStatsScope scope)
         {
             var commands = items as List<ICommandData>;
 
