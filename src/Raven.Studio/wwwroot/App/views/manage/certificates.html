@@ -359,21 +359,21 @@
                                         <div data-bind="validationOptions: { insertMessages: false }">
                                             <div class="radio radio-default radio-inline">
                                                 <input type="radio" value="Admin"
-                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_admin_' + $index(), name: 'accessLevel_' + $index() }">
+                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_admin_' + $index(), name: 'accessLevel_' + $index() }" />
                                                 <label class="text-success" data-bind="attr: { for: 'accessLevel_admin_' + $index() }"> Admin </label>
                                             </div>
                                             <div class="radio radio-default radio-inline">
                                                 <input type="radio" value="ReadWrite"
-                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_rw_' + $index(), name: 'accessLevel_' + $index() }">
+                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_rw_' + $index(), name: 'accessLevel_' + $index() }" />
                                                 <label class="text-warning" data-bind="attr: { for: 'accessLevel_rw_' + $index() }"> Read/Write </label>
                                             </div>
                                             <div class="radio radio-default radio-inline">
                                                 <input type="radio" value="Read"
-                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_r_' + $index(), name: 'accessLevel_' + $index() }">
+                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_r_' + $index(), name: 'accessLevel_' + $index() }" />
                                                 <label class='text-danger' data-bind="attr: { for: 'accessLevel_r_' + $index() }"> Read </label>
                                             </div>
                                         </div>
-                                        <a href="#" data-bind="click: _.partial($root.deletePermission, $data)" title="Delete this database permision">
+                                        <a href="#" data-bind="click: _.partial($root.deletePermission, $data)" title="Delete this database permission">
                                             <i class="icon-trash"></i>
                                         </a>
                                     </li>

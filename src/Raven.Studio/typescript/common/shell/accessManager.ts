@@ -48,8 +48,6 @@ class accessManager {
                 return "Cluster Admin/Node";
             case "Operator":
                 return "Operator";
-            case "ValidUser":
-                return "Valid User";
             case "DatabaseAdmin":
                 return "Admin";
             case "DatabaseReadWrite":
@@ -110,51 +108,69 @@ class accessManager {
         const accessLevel = this.activeDatabaseEffectiveAccessLevel();
         return accessLevel === "DatabaseAdmin";
     });
-
-    canHandleOperation(requiredAccess: accessLevel, effectiveDatabaseAccess: databaseAccessLevel): boolean {
-        if (requiredAccess === "DatabaseRead") {
-            return true;
+    
+    static isServerWideAccessLevel(access: accessLevel): access is accessLevel {
+        return access === "ClusterAdmin" || access === "ClusterNode" || access === "Operator";
+    }
+    
+    static resolveActualAccess(requiredAccessLevel: accessLevel, dbName?: string): accessLevel {
+        if (accessManager.isServerWideAccessLevel(requiredAccessLevel)) {
+            const clearance = accessManager.default.securityClearance();
+            return clearance === "ValidUser" ? null : clearance;
         }
         
-        if (effectiveDatabaseAccess) {
-            switch (requiredAccess) {
-                case "DatabaseReadWrite":
-                    return effectiveDatabaseAccess !== "DatabaseRead";
-                case "DatabaseAdmin":
-                case "Operator":
-                case "ClusterAdmin":
-                case "ClusterNode":
-                    return effectiveDatabaseAccess === "DatabaseAdmin";
-            }
-        } else {
-            switch (requiredAccess) {
-                case "Operator":
-                    return this.isOperatorOrAbove();
-                case "ClusterAdmin":
-                case "ClusterNode":
-                    return this.isClusterAdminOrClusterNode();
-                default:
-                    throw new Error("RequiredAccess for a 'Server View' must be either: ClusterAdmin, ClusterNode, Operator");
-            }
+        return accessManager.databasesAccess[dbName];
+    }
+
+    canHandleOperation(requiredAccess: accessLevel, actualAccessLevel: accessLevel): boolean {
+        if (!actualAccessLevel) {
+            return false;
+        }
+        
+        const clusterAdminOrNode = actualAccessLevel === "ClusterAdmin" || actualAccessLevel === "ClusterNode";
+        const operator = actualAccessLevel === "Operator";
+        const dbAdmin = actualAccessLevel === "DatabaseAdmin";
+        const dbReadWrite = actualAccessLevel === "DatabaseReadWrite";
+        const dbRead = actualAccessLevel === "DatabaseRead";
+        
+        switch (requiredAccess) {
+            case "ClusterAdmin":
+            case "ClusterNode":
+                return clusterAdminOrNode;
+            case "Operator":
+                return clusterAdminOrNode || operator;
+            case "DatabaseAdmin":
+                return clusterAdminOrNode || operator || dbAdmin;
+            case "DatabaseReadWrite":
+                return clusterAdminOrNode || operator || dbAdmin || dbReadWrite;
+            case "DatabaseRead":
+                return clusterAdminOrNode || operator || dbAdmin || dbReadWrite || dbRead;
+            default: 
+                return false;
         }
     }
     
-    getDisableReasonHtml(dbName: string, requiredAccess: accessLevel, effectiveDbAccess: databaseAccessLevel) {
-        const title = dbName ? "Insufficient database access" :
-                               "Insufficient security clearance";
-        
+    getDisableReasonHtml(requiredAccess: accessLevel, actualAccessLevel: accessLevel) {
         const requiredText = this.getAccessLevelText(requiredAccess);
         
-        const actualText = dbName ? this.getAccessLevelText(effectiveDbAccess) :
-                                    this.getAccessLevelText(this.securityClearance());
-        
-        return `<div class="text-left">
-                    <h4>${title}</h4>
+        if (actualAccessLevel) {
+            const actualText = this.getAccessLevelText(actualAccessLevel);
+
+            return `<div class="text-left">
+                    <h4>Insufficient access</h4>
                     <ul>
                         <li>Required: <strong>${requiredText}</strong></li>
                         <li>Actual: <strong>${actualText}</strong></li>
                     </ul>
                 </div>`;
+        } else {
+            return `<div class="text-left">
+                    <h4>Insufficient access</h4>
+                    <ul>
+                        <li>Required: <strong>${requiredText}</strong></li>
+                    </ul>
+                </div>`;
+        }
     }
 
     static activeDatabaseTracker = activeDatabaseTracker.default;

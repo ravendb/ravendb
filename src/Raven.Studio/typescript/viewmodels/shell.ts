@@ -556,20 +556,18 @@ class shell extends viewModelBase {
     
     disableReason(menuItem: leafMenuItem) {
         return ko.pureComputed<string>(() => {
-            const requiredAccess = menuItem.requiredAccess || 'DatabaseRead';
+            const requiredAccess = menuItem.requiredAccess;
+            if (!requiredAccess) {
+                return "";
+            }
 
             const activeDatabase = activeDatabaseTracker.default.database();
-            let dbName = activeDatabase ? activeDatabase.name : null;
             
-            if (requiredAccess === "Operator" || requiredAccess === "ClusterAdmin" || requiredAccess === "ClusterNode") {
-                dbName = null;
-            }
+            const actualAccess = accessManager.resolveActualAccess(requiredAccess, activeDatabase?.name);
             
-            const effectiveDatabaseAccess = dbName ? this.accessManager.getEffectiveDatabaseAccessLevel(dbName) : null;
-            
-            const canHandleOperation = this.accessManager.canHandleOperation(requiredAccess, effectiveDatabaseAccess);
+            const canHandleOperation = this.accessManager.canHandleOperation(requiredAccess, actualAccess);
                       
-            return canHandleOperation ? "" : this.accessManager.getDisableReasonHtml(dbName, requiredAccess, effectiveDatabaseAccess);
+            return canHandleOperation ? "" : this.accessManager.getDisableReasonHtml(requiredAccess, actualAccess);
         })
     }
 }
