@@ -21,7 +21,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
             _databasesInfoRetriever = databasesInfoRetriever;
         }
 
-        protected override TimeSpan NotificationInterval => _databasesInfoRetriever.RefreshRate;
+        protected override TimeSpan NotificationInterval => DatabasesInfoRetriever.RefreshRate;
 
         protected override AbstractClusterDashboardNotification CreateNotification()
         {

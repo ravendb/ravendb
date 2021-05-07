@@ -39,7 +39,7 @@ namespace Raven.Server.Dashboard
             Initialize();
         }
 
-        public TimeSpan RefreshRate { get; } = TimeSpan.FromSeconds(3);
+        public static TimeSpan RefreshRate { get; } = TimeSpan.FromSeconds(3);
 
         public void Initialize()
         {
@@ -111,12 +111,14 @@ namespace Raven.Server.Dashboard
                             continue;
                         }
 
+                        var rate = (int)RefreshRate.TotalSeconds;
+                        
                         var indexingSpeedItem = new IndexingSpeedItem
                         {
                             Database = database.Name,
-                            IndexedPerSecond = database.Metrics.MapIndexes.IndexedPerSec.OneSecondRate,
-                            MappedPerSecond = database.Metrics.MapReduceIndexes.MappedPerSec.OneSecondRate,
-                            ReducedPerSecond = database.Metrics.MapReduceIndexes.ReducedPerSec.OneSecondRate
+                            IndexedPerSecond = database.Metrics.MapIndexes.IndexedPerSec.GetRate(rate),
+                            MappedPerSecond = database.Metrics.MapReduceIndexes.MappedPerSec.GetRate(rate),
+                            ReducedPerSecond = database.Metrics.MapReduceIndexes.ReducedPerSec.GetRate(rate)
                         };
                         indexingSpeed.Items.Add(indexingSpeedItem);
 
@@ -127,16 +129,16 @@ namespace Raven.Server.Dashboard
                         var trafficWatchItem = new TrafficWatchItem
                         {
                             Database = database.Name,
-                            RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.OneSecondRate,
+                            RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.GetRate(rate),
                             AverageRequestDuration = database.Metrics.Requests.AverageDuration.GetRate(),
-                            DocumentWritesPerSecond = (int)database.Metrics.Docs.PutsPerSec.OneSecondRate,
-                            AttachmentWritesPerSecond = (int)database.Metrics.Attachments.PutsPerSec.OneSecondRate,
-                            CounterWritesPerSecond = (int)database.Metrics.Counters.PutsPerSec.OneSecondRate,
-                            TimeSeriesWritesPerSecond = (int)database.Metrics.TimeSeries.PutsPerSec.OneSecondRate,
-                            DocumentsWriteBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.OneSecondRate,
-                            AttachmentsWriteBytesPerSecond = database.Metrics.Attachments.BytesPutsPerSec.OneSecondRate,
-                            CountersWriteBytesPerSecond = database.Metrics.Counters.BytesPutsPerSec.OneSecondRate,
-                            TimeSeriesWriteBytesPerSecond = database.Metrics.TimeSeries.BytesPutsPerSec.OneSecondRate
+                            DocumentWritesPerSecond = (int)database.Metrics.Docs.PutsPerSec.GetRate(rate),
+                            AttachmentWritesPerSecond = (int)database.Metrics.Attachments.PutsPerSec.GetRate(rate),
+                            CounterWritesPerSecond = (int)database.Metrics.Counters.PutsPerSec.GetRate(rate),
+                            TimeSeriesWritesPerSecond = (int)database.Metrics.TimeSeries.PutsPerSec.GetRate(rate),
+                            DocumentsWriteBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.GetRate(rate),
+                            AttachmentsWriteBytesPerSecond = database.Metrics.Attachments.BytesPutsPerSec.GetRate(rate),
+                            CountersWriteBytesPerSecond = database.Metrics.Counters.BytesPutsPerSec.GetRate(rate),
+                            TimeSeriesWriteBytesPerSecond = database.Metrics.TimeSeries.BytesPutsPerSec.GetRate(rate)
                         };
                         trafficWatch.Items.Add(trafficWatchItem);
 
