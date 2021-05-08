@@ -5,7 +5,7 @@ namespace Raven.Client.Documents.Session
     public enum TransactionMode
     {
         SingleNode,
-        ClusterWide
+        ClusterWide,
     }
 
     public class SessionOptions
@@ -23,5 +23,11 @@ namespace Raven.Client.Documents.Session
         /// Any document store or delete will be part of this session's cluster transaction.
         /// </summary>
         public TransactionMode TransactionMode { get; set; }
+
+        /// <summary>
+        /// EXPERT: When the TransactionMode is 'ClusterWide', will disable atomic document writes and validate only compare exchange
+        /// values that are manually added to the user.
+        /// </summary>
+        public bool? DisableAtomicDocumentWritesInClusterWideTransaction { get; set; }
     }
 }

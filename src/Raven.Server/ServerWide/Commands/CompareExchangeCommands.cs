@@ -146,10 +146,14 @@ namespace Raven.Server.ServerWide.Commands
                 if (items.ReadByKey(keySlice, out var reader))
                 {
                     currentIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
+
+                    if (index == -1)
+                        return true;
+
                     return Index == currentIndex;
                 }
             }
-            return index == 0;
+            return index == 0 || index == -1;
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)

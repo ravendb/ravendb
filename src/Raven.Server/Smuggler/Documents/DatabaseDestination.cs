@@ -21,8 +21,10 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -583,17 +585,96 @@ namespace Raven.Server.Smuggler.Documents
                 await SendCommandsAsync(_context);
             }
 
+            private class UpdateClusterTransactionIndex : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IReplayableCommandDto<UpdateClusterTransactionIndex>
+            {
+                public long Index;
+                public readonly List<string> DocumentIds = new List<string>();
+                public readonly List<string> CompareExchangeToRemove = new List<string>();
+
+                protected override long ExecuteCmd(DocumentsOperationContext context)
+                {
+                    long count = 0;
+                    foreach (var docId in DocumentIds)
+                    {
+                        using var document = context.DocumentDatabase.DocumentsStorage.Get(context, docId);
+                        if (document == null)
+                        {
+                            CompareExchangeToRemove.Add(docId);
+                            continue;
+                        }
+
+                        count++;
+                       
+                        var changeVectorList = document.ChangeVector.ToChangeVectorList();
+                        for (int i = 0; i < changeVectorList.Count; i++)
+                        {
+                            if (changeVectorList[i].DbId != context.DocumentDatabase.ClusterTransactionId) 
+                                continue;
+                            
+                            changeVectorList.RemoveAt(i);
+                            i--;
+                        }
+                        changeVectorList.Add(new ChangeVectorEntry
+                        {
+                            Etag = Index,
+                            DbId = context.DocumentDatabase.ClusterTransactionId,
+                            NodeTag = ChangeVectorParser.TrxnInt
+                        });
+                        var newChangeVector = changeVectorList.SerializeVector();
+
+                        var newDoc = context.ReadObject(document.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        context.DocumentDatabase.DocumentsStorage.Put(context, docId, null, newDoc, document.LastModified.Ticks,
+                            changeVector: newChangeVector,
+                            flags: document.Flags);
+                    }
+
+                    return count;
+                }
+
+                public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+                {
+                    return this;
+                }
+
+                public UpdateClusterTransactionIndex ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+                {
+                    return this;
+                }
+            }
+
+
             private async ValueTask SendCommandsAsync(JsonOperationContext context)
             {
                 if (_compareExchangeAddOrUpdateCommands.Count > 0)
                 {
                     var compareExchangeAddOrUpdateCommands = _compareExchangeAddOrUpdateCommands;
-                    await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context, RaftIdGenerator.DontCareId));
+                    var (index, _) = await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context, RaftIdGenerator.DontCareId));
                     foreach (var command in compareExchangeAddOrUpdateCommands)
                     {
                         command.Value.Dispose();
                     }
+                    var updateClusterTransactionIndex = new UpdateClusterTransactionIndex
+                    {
+                        Index = index
+                    };
+                    foreach (AddOrUpdateCompareExchangeCommand cmd in _compareExchangeAddOrUpdateCommands)
+                    {
+                        if(ClusterTransactionCommand.IsAtomicGuardKey(cmd.Key, out var docId) == false)
+                            continue;
+                        
+                        updateClusterTransactionIndex.DocumentIds.Add(docId);
+                    }
                     _compareExchangeAddOrUpdateCommands.Clear();
+
+                    if (updateClusterTransactionIndex.DocumentIds.Count > 0)
+                    {
+                        await _database.TxMerger.Enqueue(updateClusterTransactionIndex);
+                        foreach (var docId in updateClusterTransactionIndex.CompareExchangeToRemove)
+                        {
+                            _compareExchangeRemoveCommands.Add(new RemoveCompareExchangeCommand(_database.Name,
+                                ClusterTransactionCommand.GetAtomicGuardKey(docId),0, context, RaftIdGenerator.DontCareId, fromBackup: true));
+                        }    
+                    }
                 }
 
                 if (_compareExchangeRemoveCommands.Count > 0)
@@ -1227,7 +1308,8 @@ namespace Raven.Server.Smuggler.Documents
                                 parentDocument.Data = parentDocument.Data.Clone(context);
 
                             _database.DocumentsStorage.Put(context, parentDocument.Id, null,
-                                parentDocument.Data, parentDocument.LastModified.Ticks, document.ChangeVector, parentDocument.Flags, parentDocument.NonPersistentFlags);
+                                parentDocument.Data, parentDocument.LastModified.Ticks, document.ChangeVector, null,
+                                parentDocument.Flags, parentDocument.NonPersistentFlags);
                         }
 
                         continue;
@@ -1240,7 +1322,7 @@ namespace Raven.Server.Smuggler.Documents
                     databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
                     try
                     {
-                        _database.DocumentsStorage.Put(context, id, expectedChangeVector: null, document.Data, document.LastModified.Ticks, document.ChangeVector, document.Flags, document.NonPersistentFlags);
+                        _database.DocumentsStorage.Put(context, id, expectedChangeVector: null, document.Data, document.LastModified.Ticks, document.ChangeVector, null, document.Flags, document.NonPersistentFlags);
                     }
                     catch (DocumentCollectionMismatchException)
                     {

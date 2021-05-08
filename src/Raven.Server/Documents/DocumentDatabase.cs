@@ -89,6 +89,7 @@ namespace Raven.Server.Documents
         private long _preventUnloadCounter;
 
         public string DatabaseGroupId;
+        public string ClusterTransactionId;
 
         public readonly ClusterTransactionWaiter ClusterTransactionWaiter;
 
@@ -1185,6 +1186,7 @@ namespace Raven.Server.Documents
                     try
                     {
                         DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
+                        ClusterTransactionId = record.Topology.ClusterTransactionIdBase64;
 
                         SetUnusedDatabaseIds(record);
                         InitializeFromDatabaseRecord(record);

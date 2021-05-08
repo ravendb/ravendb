@@ -124,7 +124,10 @@ namespace Raven.Client.Documents
         /// <returns></returns>
         public override IDocumentSession OpenSession()
         {
-            return OpenSession(new SessionOptions());
+            return OpenSession(new SessionOptions
+            {
+                DisableAtomicDocumentWritesInClusterWideTransaction = Conventions.DisableAtomicDocumentWritesInClusterWideTransaction
+            });
         }
 
         /// <summary>
@@ -134,7 +137,8 @@ namespace Raven.Client.Documents
         {
             return OpenSession(new SessionOptions
             {
-                Database = database
+                Database = database,
+                DisableAtomicDocumentWritesInClusterWideTransaction = Conventions.DisableAtomicDocumentWritesInClusterWideTransaction
             });
         }
 
