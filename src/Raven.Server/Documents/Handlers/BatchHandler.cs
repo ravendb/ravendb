@@ -66,6 +66,7 @@ namespace Raven.Server.Documents.Handlers
                     BatchTrafficWatch(command.ParsedCommands);
                 }
 
+                var disableAtomicDocumentWrites = GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ?? false;
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
                 var waitForIndexThrow = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
                 var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndex"];
@@ -82,7 +83,8 @@ namespace Raven.Server.Documents.Handlers
                         {
                             WaitForIndexesTimeout = waitForIndexesTimeout,
                             WaitForIndexThrow = waitForIndexThrow,
-                            SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null
+                            SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null,
+                            DisableAtomicDocumentWrites = disableAtomicDocumentWrites
                         };
                         await HandleClusterTransaction(context, command, options);
                     }

@@ -18,6 +18,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public string Name { get; } = null;
         public string ChangeVector { get; }
         public CommandType Type { get; } = CommandType.DELETE;
+        public BlittableJsonReaderObject Document { get; set; }
 
         public virtual DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
@@ -25,7 +26,8 @@ namespace Raven.Client.Documents.Commands.Batches
             {
                 [nameof(Id)] = Id,
                 [nameof(ChangeVector)] = ChangeVector,
-                [nameof(Type)] = Type.ToString()
+                [nameof(Type)] = Type.ToString(),
+                [nameof(Document)] = Document
             };
         }
 

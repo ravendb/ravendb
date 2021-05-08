@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Json;
@@ -69,6 +70,7 @@ namespace Raven.Server.ServerWide.Commands
             public TimeSpan? WaitForIndexesTimeout;
             public bool WaitForIndexThrow;
             public List<string> SpecifiedIndexesQueryString;
+            public bool DisableAtomicDocumentWrites;
 
             public ClusterTransactionOptions() { }
 
@@ -85,6 +87,7 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(WaitForIndexesTimeout)] = WaitForIndexesTimeout,
                     [nameof(WaitForIndexThrow)] = WaitForIndexThrow,
                     [nameof(SpecifiedIndexesQueryString)] = SpecifiedIndexesQueryString != null ? new DynamicJsonArray(SpecifiedIndexesQueryString) : null,
+                    [nameof(DisableAtomicDocumentWrites)] = DisableAtomicDocumentWrites
                 };
             }
         }
@@ -94,6 +97,8 @@ namespace Raven.Server.ServerWide.Commands
 
         [JsonDeserializationIgnore]
         public ClusterTransactionOptions Options;
+        
+        public bool DisableAtomicDocumentWrites;
 
         [JsonDeserializationIgnore]
         public readonly List<ClusterTransactionDataCommand> DatabaseCommands = new List<ClusterTransactionDataCommand>();
@@ -106,6 +111,7 @@ namespace Raven.Server.ServerWide.Commands
             DatabaseName = databaseName;
             DatabaseRecordId = recordId ?? System.Guid.NewGuid().ToBase64Unpadded();
             Options = options;
+            DisableAtomicDocumentWrites = options.DisableAtomicDocumentWrites;
 
             foreach (var commandData in commandParsedCommands)
             {
@@ -131,17 +137,21 @@ namespace Raven.Server.ServerWide.Commands
 
         private static void ClusterCommandValidation(ClusterTransactionDataCommand command, char identityPartsSeparator)
         {
-            if(string.IsNullOrWhiteSpace(command.Id))
+            if (string.IsNullOrWhiteSpace(command.Id))
                 throw new RachisApplyException($"In {nameof(ClusterTransactionDataCommand)} document id cannot be null, empty or white spaces as part of cluster transaction. " +
                                                $"{nameof(command.Type)}:({command.Type}), {nameof(command.Index)}:({command.Index})");
-                
+
             var lastChar = command.Id[^1];
             if (lastChar == identityPartsSeparator || lastChar == '|')
                 throw new RachisApplyException($"Document id {command.Id} cannot end with '|' or '{identityPartsSeparator}' as part of cluster transaction");
-            }
+        }
 
         public List<string> ExecuteCompareExchangeCommands(ClusterOperationContext context, long index, Table items)
         {
+            if (DisableAtomicDocumentWrites == false)
+            {
+                EnsureAtomicDocumentWrites(context, index);
+            }
             if (ClusterCommands == null || ClusterCommands.Count == 0)
                 return null;
 
@@ -190,7 +200,65 @@ namespace Raven.Server.ServerWide.Commands
 
             return null;
         }
-        
+
+        private void EnsureAtomicDocumentWrites(ClusterOperationContext context, long index)
+        {
+            if (SerializedDatabaseCommands.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray commands))
+            {
+                ClusterCommands ??= new List<ClusterTransactionDataCommand>();
+                foreach (BlittableJsonReaderObject dbCmd in commands)
+                {
+                    var cmdType = dbCmd[nameof(ClusterTransactionDataCommand.Type)].ToString();
+                    var docId = dbCmd[nameof(ClusterTransactionDataCommand.Id)].ToString();
+                    var atomicGuardKey = "rvn-atomic-guard-" + docId;
+                    var document = (BlittableJsonReaderObject)dbCmd[nameof(ClusterTransactionDataCommand.Document)];
+                    switch (cmdType)
+                    {
+                        case nameof(CommandType.PUT):
+                            if (document.TryGetWithoutThrowingOnError(Constants.Documents.Metadata.Key,
+                                    out BlittableJsonReaderObject metadata) == false ||
+                                metadata.TryGetWithoutThrowingOnError(Constants.Documents.Metadata.ClusterTransactionIndex,
+                                    out long putIndex) == false)
+                            {
+                                putIndex = 0; // new cmp xchg entry, so no need to take an action 
+                            }
+
+                            ClusterCommands.Add(new ClusterTransactionDataCommand
+                            {
+                                Type = CommandType.CompareExchangePUT,
+                                Id = atomicGuardKey,
+                                Index = putIndex,
+                                Document = context.ReadObject(new DynamicJsonValue {["Id"] = docId}, "cmp-xchg-content")
+                            });
+                            if (metadata != null) // just to be on the safe side, should never happen
+                            {
+                                metadata.Modifications = new DynamicJsonValue(metadata) {[Constants.Documents.Metadata.ClusterTransactionIndex] = index};
+                            }
+
+                            break;
+                        case nameof(CommandType.DELETE):
+                            if (document.TryGetWithoutThrowingOnError(Constants.Documents.Metadata.ClusterTransactionIndex,
+                                out long deleteIndex))
+                            {
+                                // this can happen if the user tried to delete without first loading the document
+                                // we can safely assume that such a blind write doesn't care about the state of the document
+                                // and just proceed normally
+                                deleteIndex = -1;
+                            }
+
+                            ClusterCommands.Add(new ClusterTransactionDataCommand
+                            {
+                                Type = CommandType.CompareExchangeDELETE,
+                                Id = atomicGuardKey,
+                                Index = deleteIndex,
+                                Document = context.ReadObject(new DynamicJsonValue {["Id"] = docId}, "cmp-xchg-content")
+                            });
+                            break;
+                    }
+                }
+            }
+        }
+
         public unsafe void SaveCommandsBatch(ClusterOperationContext context, long index)
         {
             if (HasDocumentsInTransaction == false)
@@ -198,7 +266,7 @@ namespace Raven.Server.ServerWide.Commands
 
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsCountPerDatabase);
-            var commands = SerializedDatabaseCommands.Clone(context);
+            var commands = context.ReadObject(SerializedDatabaseCommands, "serialized-tx-commands");
 
             using (GetPrefix(context, DatabaseName, out var databaseSlice))
             {
@@ -231,7 +299,7 @@ namespace Raven.Server.ServerWide.Commands
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             using (GetPrefix(context, database, out var prefixSlice))
             {
-                if (items.SeekOnePrimaryKeyPrefix(prefixSlice,out var reader) == false)
+                if (items.SeekOnePrimaryKeyPrefix(prefixSlice, out var reader) == false)
                     return null;
 
                 return ReadCommand(context, reader);
@@ -261,7 +329,7 @@ namespace Raven.Server.ServerWide.Commands
                     {
                         lowerBufferStart[i] = char.ToLowerInvariant(pDb[i]);
                     }
-                    
+
                     var dbLen = Encoding.UTF8.GetBytes(lowerBufferStart, database.Length, prefixBuffer.Ptr, prefixBuffer.Length);
                     prefixBuffer.Ptr[dbLen] = Separator;
                     var actualSize = dbLen + 1;

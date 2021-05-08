@@ -995,7 +995,13 @@ more responsive application.
                             OnBeforeDeleteInvoke(new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity));
                         }
 
-                        result.SessionCommands.Add(new DeleteCommandData(documentInfo.Id, changeVector));
+                        var deleteCommandData = new DeleteCommandData(documentInfo.Id, changeVector);
+                        if (TransactionMode == TransactionMode.ClusterWide)
+                        {
+                            // we need this to send the cluster transaction index to the cluster state machine
+                            deleteCommandData.Document = documentInfo.Metadata;
+                        }
+                        result.SessionCommands.Add(deleteCommandData);
                     }
                 }
             }

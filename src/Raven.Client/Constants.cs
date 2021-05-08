@@ -225,6 +225,8 @@ namespace Raven.Client
                 public const string HasValue = "HasValue";
 
                 public const string Etag = "@etag";
+
+                public const string ClusterTransactionIndex = "@cluster-transaction-index";
             }
 
             public class Collections
