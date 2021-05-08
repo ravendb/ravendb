@@ -210,6 +210,7 @@ namespace Raven.Server.Documents.Patch
                                     result.ModifiedDocument,
                                     lastModifiedTicks: null,
                                     changeVector: null,
+                                    oldChangeVectorForClusterTransactionIndexCheck: null,
                                     originalDocument.Flags.Strip(DocumentFlags.FromClusterTransaction),
                                     nonPersistentFlags);
                             }

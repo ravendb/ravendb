@@ -117,5 +117,10 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(10_000)]
         [ConfigurationEntry("Cluster.MaxChangeVectorDistance", ConfigurationEntryScope.ServerWideOnly)]
         public long MaxChangeVectorDistance { get; set; }
+        
+        [Description("EXPERT: Disable automatic atomic writes with cluster write transactions. If set to 'true', will only consider explicitly added compare exchange values to validate cluster wide transactions.")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Cluster.DisableAtomicDocumentWrites", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool DisableAtomicDocumentWrites { get; set; }
     }
 }

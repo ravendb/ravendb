@@ -79,7 +79,7 @@ namespace SlowTests
                         using (var blittableJson = await context.ReadForMemoryAsync(stringStream, "Reading of foo/bar"))
                         {
                             var result = new InMemoryDocumentSessionOperations.SaveChangesData((InMemoryDocumentSessionOperations)session2);
-                            result.SessionCommands.Add(new PutCommandDataWithBlittableJson("users/1", null, blittableJson));
+                            result.SessionCommands.Add(new PutCommandDataWithBlittableJson("users/1", null, null, blittableJson));
                             var sbc = new SingleNodeBatchCommand(DocumentConventions.Default, context, result.SessionCommands, result.Options);
                             await requestExecutor.ExecuteAsync(sbc, context);
                         }

@@ -277,10 +277,13 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                     WriteDictionary(iDictionary);
                     break;
                 case DynamicJsonValue val:
+                    _manualBlittableJsonDocumentBuilder.StartWriteObject();
                     foreach (var prop in val.Properties)
                     {
+                        _manualBlittableJsonDocumentBuilder.WritePropertyName(prop.Name);
                         WritePropertyValue(prop.Name, prop.Value);
                     }
+                    _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
                     break;
                 case IEnumerable enumerable:
                     _manualBlittableJsonDocumentBuilder.StartWriteArray();

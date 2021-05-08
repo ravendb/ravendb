@@ -2,11 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Extensions;
 using Sparrow.Json;
@@ -22,6 +26,7 @@ namespace Raven.Server.ServerWide.Commands
         public string DatabaseName;
 
         public string DatabaseRecordId;
+        public string ClusterTransactionId;
 
         public long DatabaseCommandsCount;
 
@@ -32,6 +37,7 @@ namespace Raven.Server.ServerWide.Commands
             public BlittableJsonReaderObject Document;
             public string ChangeVector;
             public long Index;
+            public string Error;
 
             public static ClusterTransactionDataCommand FromCommandData(BatchRequestParser.CommandData command)
             {
@@ -43,7 +49,7 @@ namespace Raven.Server.ServerWide.Commands
                 return new ClusterTransactionDataCommand
                 {
                     Id = command.Id,
-                    ChangeVector = command.ChangeVector,
+                    ChangeVector = command.OldChangeVector ?? command.ChangeVector,
                     Document = command.Document,
                     Index = command.Index,
                     Type = command.Type
@@ -58,7 +64,8 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(Id)] = Id,
                     [nameof(Index)] = Index,
                     [nameof(ChangeVector)] = ChangeVector,
-                    [nameof(Document)] = Document?.Clone(context)
+                    [nameof(Document)] = Document?.Clone(context),
+                    [nameof(Error)] = Error
                 };
             }
         }
@@ -69,6 +76,7 @@ namespace Raven.Server.ServerWide.Commands
             public TimeSpan? WaitForIndexesTimeout;
             public bool WaitForIndexThrow;
             public List<string> SpecifiedIndexesQueryString;
+            public bool DisableAtomicDocumentWrites;
 
             public ClusterTransactionOptions() { }
 
@@ -85,6 +93,7 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(WaitForIndexesTimeout)] = WaitForIndexesTimeout,
                     [nameof(WaitForIndexThrow)] = WaitForIndexThrow,
                     [nameof(SpecifiedIndexesQueryString)] = SpecifiedIndexesQueryString != null ? new DynamicJsonArray(SpecifiedIndexesQueryString) : null,
+                    [nameof(DisableAtomicDocumentWrites)] = DisableAtomicDocumentWrites
                 };
             }
         }
@@ -94,18 +103,22 @@ namespace Raven.Server.ServerWide.Commands
 
         [JsonDeserializationIgnore]
         public ClusterTransactionOptions Options;
+        
+        public bool DisableAtomicDocumentWrites;
 
         [JsonDeserializationIgnore]
         public readonly List<ClusterTransactionDataCommand> DatabaseCommands = new List<ClusterTransactionDataCommand>();
 
         public ClusterTransactionCommand() { }
 
-        public ClusterTransactionCommand(string databaseName, char identityPartsSeparator, string recordId, ArraySegment<BatchRequestParser.CommandData> commandParsedCommands,
+        public ClusterTransactionCommand(string databaseName, char identityPartsSeparator, DatabaseTopology topology, ArraySegment<BatchRequestParser.CommandData> commandParsedCommands,
             ClusterTransactionOptions options, string uniqueRequestId) : base(uniqueRequestId)
         {
             DatabaseName = databaseName;
-            DatabaseRecordId = recordId ?? System.Guid.NewGuid().ToBase64Unpadded();
+            DatabaseRecordId = topology.DatabaseTopologyIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
+            ClusterTransactionId = topology.DatabaseTopologyIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
             Options = options;
+            DisableAtomicDocumentWrites = options.DisableAtomicDocumentWrites;
 
             foreach (var commandData in commandParsedCommands)
             {
@@ -131,17 +144,21 @@ namespace Raven.Server.ServerWide.Commands
 
         private static void ClusterCommandValidation(ClusterTransactionDataCommand command, char identityPartsSeparator)
         {
-            if(string.IsNullOrWhiteSpace(command.Id))
+            if (string.IsNullOrWhiteSpace(command.Id))
                 throw new RachisApplyException($"In {nameof(ClusterTransactionDataCommand)} document id cannot be null, empty or white spaces as part of cluster transaction. " +
                                                $"{nameof(command.Type)}:({command.Type}), {nameof(command.Index)}:({command.Index})");
-                
+
             var lastChar = command.Id[^1];
             if (lastChar == identityPartsSeparator || lastChar == '|')
                 throw new RachisApplyException($"Document id {command.Id} cannot end with '|' or '{identityPartsSeparator}' as part of cluster transaction");
-            }
+        }
 
-        public List<string> ExecuteCompareExchangeCommands(ClusterOperationContext context, long index, Table items)
+        public List<string> ExecuteCompareExchangeCommands(DatabaseTopology dbTopology, ClusterOperationContext context, long index, Table items)
         {
+            if (DisableAtomicDocumentWrites == false)
+            {
+                EnsureAtomicDocumentWrites(dbTopology, context, items, index);
+            }
             if (ClusterCommands == null || ClusterCommands.Count == 0)
                 return null;
 
@@ -150,12 +167,18 @@ namespace Raven.Server.ServerWide.Commands
             foreach (var clusterCommand in ClusterCommands)
             {
                 long current;
+                long actualIndex = clusterCommand.Index == -1 ? 0 : clusterCommand.Index;
+                bool ignoreIndex = clusterCommand.Index == -1;
                 switch (clusterCommand.Type)
                 {
                     case CommandType.CompareExchangePUT:
-                        var put = new AddOrUpdateCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Document, clusterCommand.Index, context, null);
+                        var put = new AddOrUpdateCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Document, actualIndex, context, null, ignoreIndex);
                         if (put.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
+                            if(clusterCommand.Error != null)
+                            {
+                                errors.Add(clusterCommand.Error);
+                            }
                             errors.Add(
                                 $"Concurrency check failed for putting the key '{clusterCommand.Id}'. Requested index: {clusterCommand.Index}, actual index: {current}");
                             continue;
@@ -163,9 +186,13 @@ namespace Raven.Server.ServerWide.Commands
                         toExecute.Add(put);
                         break;
                     case CommandType.CompareExchangeDELETE:
-                        var delete = new RemoveCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Index, context, null);
+                        var delete = new RemoveCompareExchangeCommand(DatabaseName, clusterCommand.Id, actualIndex, context, null, ignoreIndex);
                         if (delete.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
+                            if (clusterCommand.Error != null)
+                            {
+                                errors.Add(clusterCommand.Error);
+                            }
                             errors.Add($"Concurrency check failed for deleting the key '{clusterCommand.Id}'. Requested index: {clusterCommand.Index}, actual index: {current}");
                             continue;
                         }
@@ -190,7 +217,58 @@ namespace Raven.Server.ServerWide.Commands
 
             return null;
         }
-        
+
+        private void EnsureAtomicDocumentWrites(DatabaseTopology dbTopology, ClusterOperationContext context, Table items, long index)
+        {
+            if (SerializedDatabaseCommands == null)
+                return;
+            if(SerializedDatabaseCommands.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray commands) == false)
+                return;
+            
+            ClusterCommands ??= new List<ClusterTransactionDataCommand>();
+            foreach (BlittableJsonReaderObject dbCmd in commands)
+            {
+                var cmdType = dbCmd[nameof(ClusterTransactionDataCommand.Type)].ToString();
+                var docId = dbCmd[nameof(ClusterTransactionDataCommand.Id)].ToString();
+                var atomicGuardKey = GetAtomicGuardKey(docId);
+                var changeVector = dbCmd[nameof(ClusterTransactionDataCommand.ChangeVector)]?.ToString();
+                long changeVectorIndex = -1;
+                if (changeVector != null)
+                    changeVectorIndex = ChangeVectorUtils.GetEtagById(changeVector, dbTopology.ClusterTransactionIdBase64);
+                ClusterCommands.Add(new ClusterTransactionDataCommand
+                {
+                    Type = cmdType switch {
+                    
+                        nameof(CommandType.PUT) =>CommandType.CompareExchangePUT,
+                        nameof(CommandType.DELETE) => CommandType.CompareExchangeDELETE,
+                        _ => throw new ArgumentOutOfRangeException()   
+                    },
+                    Id = atomicGuardKey,
+                    Index = changeVectorIndex,
+                    Document = context.ReadObject(new DynamicJsonValue { ["Id"] = docId }, "cmp-xchg-content"),
+                    Error = $"Guard compare exchange value '{atomicGuardKey}' index does not match the transaction index's {changeVectorIndex} change vector on {docId}"
+                });
+            }
+        }
+
+        const string RvnAtomicPrefix = "rvn-atomic/";
+        public static bool IsAtomicGuardKey(string id, out string docId)
+        {
+            if (id.StartsWith(RvnAtomicPrefix) == false)
+            {
+                docId = null;
+                return false;
+            }
+
+            docId = id.Substring(RvnAtomicPrefix.Length);
+            return true;
+        }
+
+        public static string GetAtomicGuardKey(string docId)
+        {
+            return RvnAtomicPrefix + docId;
+        }
+
         public unsafe void SaveCommandsBatch(ClusterOperationContext context, long index)
         {
             if (HasDocumentsInTransaction == false)
@@ -198,7 +276,7 @@ namespace Raven.Server.ServerWide.Commands
 
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsCountPerDatabase);
-            var commands = SerializedDatabaseCommands.Clone(context);
+            var commands = context.ReadObject(SerializedDatabaseCommands, "serialized-tx-commands");
 
             using (GetPrefix(context, DatabaseName, out var databaseSlice))
             {
@@ -231,7 +309,7 @@ namespace Raven.Server.ServerWide.Commands
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             using (GetPrefix(context, database, out var prefixSlice))
             {
-                if (items.SeekOnePrimaryKeyPrefix(prefixSlice,out var reader) == false)
+                if (items.SeekOnePrimaryKeyPrefix(prefixSlice, out var reader) == false)
                     return null;
 
                 return ReadCommand(context, reader);
@@ -261,7 +339,7 @@ namespace Raven.Server.ServerWide.Commands
                     {
                         lowerBufferStart[i] = char.ToLowerInvariant(pDb[i]);
                     }
-                    
+
                     var dbLen = Encoding.UTF8.GetBytes(lowerBufferStart, database.Length, prefixBuffer.Ptr, prefixBuffer.Length);
                     prefixBuffer.Ptr[dbLen] = Separator;
                     var actualSize = dbLen + 1;
@@ -289,6 +367,7 @@ namespace Raven.Server.ServerWide.Commands
             public long Index;
             public long PreviousCount;
             public string Database;
+            public bool DisableAtomicDocumentWrites;
 
             public DynamicJsonValue ToJson()
             {
@@ -297,6 +376,7 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(Database)] = Database,
                     [nameof(PreviousCount)] = PreviousCount,
                     [nameof(Index)] = Index,
+                    [nameof(DisableAtomicDocumentWrites)] = DisableAtomicDocumentWrites,
                     [nameof(Options)] = Options.ToJson(),
                     [nameof(Index)] = new DynamicJsonArray(Commands)
                 };
@@ -369,6 +449,10 @@ namespace Raven.Server.ServerWide.Commands
             {
                 options = JsonDeserializationServer.ClusterTransactionOptions(blittableOptions);
             }
+            if (blittable.TryGet(nameof(DisableAtomicDocumentWrites), out bool disable) == false) 
+            {
+                disable = true;
+            }
 
             var index = *(long*)reader.Read((int)TransactionCommandsColumn.RaftIndex, out _);
             var keyPtr = reader.Read((int)TransactionCommandsColumn.Key, out size);
@@ -379,6 +463,7 @@ namespace Raven.Server.ServerWide.Commands
                 Options = options,
                 Commands = array,
                 Index = index,
+                DisableAtomicDocumentWrites = disable,
                 PreviousCount = Bits.SwapBytes(*(long*)(keyPtr + size - sizeof(long))),
                 Database = database
             };
@@ -409,17 +494,20 @@ namespace Raven.Server.ServerWide.Commands
             var djv = base.ToJson(context);
             djv[nameof(ClusterCommands)] = new DynamicJsonArray(ClusterCommands.Select(x => x.ToJson(context)));
             djv[nameof(SerializedDatabaseCommands)] = SerializedDatabaseCommands?.Clone(context);
+            djv[nameof(DisableAtomicDocumentWrites)] = DisableAtomicDocumentWrites;
             if (SerializedDatabaseCommands == null && DatabaseCommands.Count > 0)
             {
                 var databaseCommands = new DynamicJsonValue
                 {
                     [nameof(DatabaseCommands)] = new DynamicJsonArray(DatabaseCommands.Select(x => x.ToJson(context))),
                     [nameof(Options)] = Options.ToJson(),
+                    [nameof(DisableAtomicDocumentWrites)] = DisableAtomicDocumentWrites
                 };
                 djv[nameof(SerializedDatabaseCommands)] = context.ReadObject(databaseCommands, "read database commands");
             }
             djv[nameof(DatabaseName)] = DatabaseName;
             djv[nameof(DatabaseRecordId)] = DatabaseRecordId;
+            djv[nameof(ClusterTransactionId)] = ClusterTransactionId;
             djv[nameof(DatabaseCommandsCount)] = DatabaseCommandsCount;
 
             return djv;

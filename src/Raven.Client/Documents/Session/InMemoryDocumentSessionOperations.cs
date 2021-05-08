@@ -59,6 +59,8 @@ namespace Raven.Client.Documents.Session
 
         private BatchOptions _saveChangesOptions;
 
+        internal readonly bool? DisableAtomicDocumentWritesInClusterWideTransaction;
+
         public TransactionMode TransactionMode;
 
         private bool _isDisposed;
@@ -234,6 +236,7 @@ namespace Raven.Client.Documents.Session
             JsonConverter = _requestExecutor.Conventions.Serialization.CreateConverter(this);
             _sessionInfo = new SessionInfo(this, options, _documentStore, asyncCommandRunning: false);
             TransactionMode = options.TransactionMode;
+            DisableAtomicDocumentWritesInClusterWideTransaction = options.DisableAtomicDocumentWritesInClusterWideTransaction;
 
             _javascriptCompilationOptions = new JavascriptCompilationOptions(
                 flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
@@ -607,8 +610,7 @@ more responsive application.
             if (id == null)
                 throw new ArgumentNullException(nameof(id));
             string changeVector = null;
-            DocumentInfo documentInfo;
-            if (DocumentsById.TryGetValue(id, out documentInfo))
+            if (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo))
             {
                 using (var newObj = JsonConverter.ToBlittable(documentInfo.Entity, documentInfo))
                 {
@@ -631,7 +633,7 @@ more responsive application.
             _knownMissingIds.Add(id);
             changeVector = UseOptimisticConcurrency ? changeVector : null;
             _countersByDocId?.Remove(id);
-            Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector));
+            Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector, expectedChangeVector ?? documentInfo?.ChangeVector));
         }
 
         /// <summary>
@@ -926,11 +928,32 @@ more responsive application.
             {
                 foreach (var prop in documentInfo.MetadataInstance.Keys)
                 {
-                    documentInfo.Metadata.Modifications[prop] = documentInfo.MetadataInstance[prop];
+                    var result = documentInfo.MetadataInstance[prop];
+                    if(result is IMetadataDictionary md)
+                    {
+                        result = HandleDictionaryObject(md);
+                    }
+                    documentInfo.Metadata.Modifications[prop] =  result;
                 }
             }
 
             return true;
+        }
+
+        private static object HandleDictionaryObject(IMetadataDictionary md)
+        {
+            var djv = new DynamicJsonValue();
+            foreach (var item in md)
+            {
+                var v = item.Value;
+                if(v is IMetadataDictionary nested)
+                {
+                    RuntimeHelpers.EnsureSufficientExecutionStack();
+                    v = HandleDictionaryObject(nested);
+                }
+                djv[item.Key] = v;
+            }
+            return djv;
         }
 
         private void PrepareForCreatingRevisionsFromIds(SaveChangesData result)
@@ -989,14 +1012,21 @@ more responsive application.
                             result.OnSuccess.RemoveDocumentById(documentInfo.Id);
                         }
 
-                        changeVector = UseOptimisticConcurrency ? changeVector : null;
-
+                        if (UseOptimisticConcurrency == false)
+                            changeVector = null;
+                       
                         if (deletedEntity.ExecuteOnBeforeDelete)
                         {
                             OnBeforeDeleteInvoke(new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity));
                         }
 
-                        result.SessionCommands.Add(new DeleteCommandData(documentInfo.Id, changeVector));
+                        var deleteCommandData = new DeleteCommandData(documentInfo.Id, changeVector, documentInfo.ChangeVector);
+                        if (TransactionMode == TransactionMode.ClusterWide)
+                        {
+                            // we need this to send the cluster transaction index to the cluster state machine
+                            deleteCommandData.Document = documentInfo.Metadata;
+                        }
+                        result.SessionCommands.Add(deleteCommandData);
                     }
                 }
             }
@@ -1099,7 +1129,7 @@ more responsive application.
                         }
                     }
 
-                    result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document, forceRevisionCreationStrategy));
+                    result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, entity.Value.ChangeVector, document, forceRevisionCreationStrategy));
                 }
             }
         }

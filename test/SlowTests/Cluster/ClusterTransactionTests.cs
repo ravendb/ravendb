@@ -322,7 +322,10 @@ namespace SlowTests.Cluster
                 // we kill one server so we would not clean the pending cluster transactions.
                 await DisposeAndRemoveServer(toDispose);
 
-                using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                using (var session = store.OpenAsyncSession(new SessionOptions {
+                    TransactionMode = TransactionMode.ClusterWide,
+                    DisableAtomicDocumentWritesInClusterWideTransaction = true
+                }))
                 {
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/karmel", user1);
                     await session.StoreAsync(user1, "foo/bar");
@@ -401,7 +404,8 @@ namespace SlowTests.Cluster
             using (var store = GetDocumentStore())
             using (var session = store.OpenAsyncSession(new SessionOptions
             {
-                TransactionMode = TransactionMode.ClusterWide
+                TransactionMode = TransactionMode.ClusterWide,
+                DisableAtomicDocumentWritesInClusterWideTransaction = true
             }))
             {
                 session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
@@ -472,7 +476,8 @@ namespace SlowTests.Cluster
             {
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
-                    TransactionMode = TransactionMode.ClusterWide
+                    TransactionMode = TransactionMode.ClusterWide,
+                    DisableAtomicDocumentWritesInClusterWideTransaction = true
                 }))
                 {
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
@@ -484,7 +489,8 @@ namespace SlowTests.Cluster
 
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
-                    TransactionMode = TransactionMode.ClusterWide
+                    TransactionMode = TransactionMode.ClusterWide,
+                    DisableAtomicDocumentWritesInClusterWideTransaction = true
                 }))
                 {
                     session.Advanced.ClusterTransaction.DeleteCompareExchangeValue("usernames/ayende", store.GetLastTransactionIndex(store.Database) ?? 0);
@@ -496,7 +502,8 @@ namespace SlowTests.Cluster
 
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
-                    TransactionMode = TransactionMode.ClusterWide
+                    TransactionMode = TransactionMode.ClusterWide,
+                    DisableAtomicDocumentWritesInClusterWideTransaction = true
                 }))
                 {
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
@@ -834,7 +841,8 @@ namespace SlowTests.Cluster
 
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
-                    TransactionMode = TransactionMode.ClusterWide
+                    TransactionMode = TransactionMode.ClusterWide,
+                    DisableAtomicDocumentWritesInClusterWideTransaction = true
                 }))
                 {
                     await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
@@ -843,7 +851,8 @@ namespace SlowTests.Cluster
 
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
-                    TransactionMode = TransactionMode.ClusterWide
+                    TransactionMode = TransactionMode.ClusterWide,
+                    DisableAtomicDocumentWritesInClusterWideTransaction = true
                 }))
                 {
                     await session.StoreAsync(new User { Name = "Aviv2" }, "users/1");
@@ -855,7 +864,8 @@ namespace SlowTests.Cluster
 
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
-                    TransactionMode = TransactionMode.ClusterWide
+                    TransactionMode = TransactionMode.ClusterWide,
+                    DisableAtomicDocumentWritesInClusterWideTransaction = true
                 }))
                 {
                     session.Delete("users/1");
@@ -883,7 +893,8 @@ namespace SlowTests.Cluster
             {
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
-                    TransactionMode = TransactionMode.ClusterWide
+                    TransactionMode = TransactionMode.ClusterWide,
+                    DisableAtomicDocumentWritesInClusterWideTransaction = true
                 }))
                 {
                     await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
@@ -892,7 +903,8 @@ namespace SlowTests.Cluster
 
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
-                    TransactionMode = TransactionMode.ClusterWide
+                    TransactionMode = TransactionMode.ClusterWide,
+                    DisableAtomicDocumentWritesInClusterWideTransaction = true
                 }))
                 {
                     await session.StoreAsync(new Employee { FirstName = "Aviv2" }, "users/1");
@@ -911,7 +923,8 @@ namespace SlowTests.Cluster
 
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
-                    TransactionMode = TransactionMode.ClusterWide
+                    TransactionMode = TransactionMode.ClusterWide,
+                    DisableAtomicDocumentWritesInClusterWideTransaction = true
                 }))
                 {
                     await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
@@ -920,7 +933,8 @@ namespace SlowTests.Cluster
 
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
-                    TransactionMode = TransactionMode.ClusterWide
+                    TransactionMode = TransactionMode.ClusterWide,
+                    DisableAtomicDocumentWritesInClusterWideTransaction = true
                 }))
                 {
                     await session.StoreAsync(new Employee { FirstName = "Aviv2" }, "users/1");

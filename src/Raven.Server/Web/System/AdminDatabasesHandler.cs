@@ -448,11 +448,13 @@ namespace Raven.Server.Web.System
             }
             else
             {
-                if (databaseRecord.Topology == null)
-                    databaseRecord.Topology = new DatabaseTopology();
+                databaseRecord.Topology ??= new DatabaseTopology();
 
                 databaseRecord.Topology.ReplicationFactor = Math.Min(replicationFactor, clusterTopology.AllNodes.Count);
             }
+
+            databaseRecord.Topology.ClusterTransactionIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
+            databaseRecord.Topology.DatabaseTopologyIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
 
             var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);

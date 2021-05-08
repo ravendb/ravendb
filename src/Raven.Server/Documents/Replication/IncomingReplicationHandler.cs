@@ -1256,7 +1256,7 @@ namespace Raven.Server.Documents.Replication
                                             }
 
                                             database.DocumentsStorage.Put(context, doc.Id, null, resolvedDocument, doc.LastModifiedTicks,
-                                                rcvdChangeVector, flags, nonPersistentFlags);
+                                                rcvdChangeVector, null, flags, nonPersistentFlags);
                                         }
                                         else
                                         {
