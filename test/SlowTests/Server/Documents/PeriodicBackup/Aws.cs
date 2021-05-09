@@ -4,19 +4,19 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Json;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
-using Raven.Server.Exceptions.PeriodicBackup;
+using SlowTests.Server.Documents.PeriodicBackup.Restore;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
-    public class Aws : NoDisposalNeeded
+    public class Aws : RestoreFromS3
     {
         public Aws(ITestOutputHelper output) : base(output)
         {
@@ -27,92 +27,57 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         private const string AwsSessionToken = "<aws_session_token>";
         private const string EastRegion1 = "us-east-1";
         private const string WestRegion2 = "us-west-2";
-        
-        [Theory(Skip = "Requires Amazon AWS Credentials")]
-        [InlineData(EastRegion1)]
-        [InlineData(WestRegion2)]
-        public async Task put_object(string region)
+
+        [AmazonS3Fact]
+        public async Task put_object()
         {
-            var bucketName = $"testing-{Guid.NewGuid()}";
-            var key = $"test-key-{Guid.NewGuid()}";
-
-            using (var client = new RavenAwsS3Client(GetS3Settings(region, bucketName)))
+            var settings = GetS3Settings();
+            using (var client = new RavenAwsS3Client(settings))
             {
-                // make sure that the bucket doesn't exist
-                client.DeleteBucket();
+                var blobs = GenerateBlobNames(settings, 1, out _);
+                Assert.Equal(1, blobs.Count);
+                var key = blobs[0];
 
-                try
-                {
-                    client.PutBucket();
-
-                    var value1 = Guid.NewGuid().ToString();
-                    var value2 = Guid.NewGuid().ToString();
-                    client.PutObject(key, new MemoryStream(Encoding.UTF8.GetBytes("231")), new Dictionary<string, string>
+                var value1 = Guid.NewGuid().ToString();
+                var value2 = Guid.NewGuid().ToString();
+                client.PutObject(key, new MemoryStream(Encoding.UTF8.GetBytes("231")), new Dictionary<string, string>
                     {
                         {"property1", value1},
                         {"property2", value2}
                     });
 
-                    // can't delete a bucket with existing objects
-                    var e = Assert.Throws<StorageException>(() => client.DeleteBucket());
-                    Assert.True(e.Message.Contains("The bucket you tried to delete is not empty"));
+                var @object = await client.GetObjectAsync(key);
+                Assert.NotNull(@object);
 
-                    var @object = await client.GetObjectAsync(key);
-                    Assert.NotNull(@object);
+                using (var reader = new StreamReader(@object.Data))
+                    Assert.Equal("231", reader.ReadToEnd());
 
-                    using (var reader = new StreamReader(@object.Data))
-                        Assert.Equal("231", reader.ReadToEnd());
+                var property1 = @object.Metadata.Keys.Single(x => x.Contains("property1"));
+                var property2 = @object.Metadata.Keys.Single(x => x.Contains("property2"));
 
-                    var property1 = @object.Metadata.Keys.Single(x => x.Contains("property1"));
-                    var property2 = @object.Metadata.Keys.Single(x => x.Contains("property2"));
-
-                    Assert.Equal(value1, @object.Metadata[property1]);
-                    Assert.Equal(value2, @object.Metadata[property2]);
-                }
-                finally
-                {
-                    client.DeleteObject(key);
-                    client.DeleteBucket();
-                }
+                Assert.Equal(value1, @object.Metadata[property1]);
+                Assert.Equal(value2, @object.Metadata[property2]);
             }
         }
 
-        [Theory(Skip = "Requires Amazon AWS Credentials")]
-        [InlineData(EastRegion1, WestRegion2)]
-        [InlineData(WestRegion2, EastRegion1)]
-        public void can_get_correct_error_s3(string region1, string region2)
+        [AmazonS3Fact]
+        public void can_get_correct_error_s3()
         {
-            var bucketName = $"testing-{Guid.NewGuid()}";
-            var key = Guid.NewGuid().ToString();
-
-            using (var clientRegion1 = new RavenAwsS3Client(GetS3Settings(region1, bucketName)))
-            using (var clientRegion2 = new RavenAwsS3Client(GetS3Settings(region2, bucketName)))
+            var settings = GetS3Settings();
+            string region1 = settings.AwsRegionName;
+            string region2 = settings.AwsRegionName = WestRegion2;
+            var bucketName = settings.BucketName;
+            using (var clientRegion2 = new RavenAwsS3Client(settings))
             {
-                // make sure that the bucket doesn't exist
-                clientRegion1.DeleteBucket();
-
-                try
+                var sb = new StringBuilder();
+                for (var i = 0; i < 1 * 1024 * 1024; i++)
                 {
-                    var sb = new StringBuilder();
-                    for (var i = 0; i < 1 * 1024 * 1024; i++)
-                    {
-                        sb.Append("a");
-                    }
-
-                    var error1 = Assert.Throws<BucketNotFoundException>(() =>
-                    {
-                        using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
-                        {
-                            clientRegion1.PutObject(key,
-                                memoryStream,
-                                new Dictionary<string, string>());
-                        }
-                    });
-                    Assert.Equal($"Bucket name '{bucketName}' doesn't exist!", error1.Message);
-
-                    clientRegion1.PutBucket();
-
-                    var error2 = Assert.Throws<InvalidOperationException>(() =>
+                    sb.Append("a");
+                }
+                var blobs = GenerateBlobNames(settings, 1, out _);
+                Assert.Equal(1, blobs.Count);
+                var key = blobs[0];
+                var error2 = Assert.Throws<InvalidOperationException>(() =>
                     {
                         using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
                         {
@@ -121,115 +86,79 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                                 new Dictionary<string, string>());
                         }
                     });
-                    Assert.Equal($"AWS location is set to {region2}, but the bucket named: '{bucketName}' is located in: {region1}", error2.Message);
-                }
-                finally
-                {
-                    clientRegion1.DeleteBucket();
-                }
+                Assert.Equal($"AWS location is set to \"{region2}\", but the bucket named: \"'{bucketName}'\" is located in: {region1}", error2.Message);
             }
         }
 
-        [Theory(Skip = "Requires Amazon AWS Credentials")]
-        [InlineData(EastRegion1, 5, false, UploadType.Regular)]
-        [InlineData(WestRegion2, 5, false, UploadType.Regular)]
-        [InlineData(EastRegion1, 5, true, UploadType.Regular)]
-        [InlineData(WestRegion2, 5, true, UploadType.Regular)]
-        [InlineData(EastRegion1, 10, false, UploadType.Regular)]
-        [InlineData(WestRegion2, 10, false, UploadType.Regular)]
-        [InlineData(EastRegion1, 10, true, UploadType.Regular)]
-        [InlineData(WestRegion2, 10, true, UploadType.Regular)]
-        [InlineData(EastRegion1, 11, false, UploadType.Chunked)]
-        [InlineData(WestRegion2, 11, false, UploadType.Chunked)]
-        [InlineData(EastRegion1, 11, true, UploadType.Chunked)]
-        [InlineData(WestRegion2, 11, true, UploadType.Chunked)]
-        [InlineData(EastRegion1, 13, false, UploadType.Chunked)]
-        [InlineData(WestRegion2, 13, false, UploadType.Chunked)]
-        [InlineData(EastRegion1, 13, true, UploadType.Chunked)]
-        [InlineData(WestRegion2, 13, true, UploadType.Chunked)]
-        [InlineData(EastRegion1, 14, false, UploadType.Chunked)]
-        [InlineData(WestRegion2, 14, false, UploadType.Chunked)]
-        [InlineData(EastRegion1, 14, true, UploadType.Chunked)]
-        [InlineData(WestRegion2, 14, true, UploadType.Chunked)]
+        [AmazonS3Theory]
+        [InlineData(5, false, UploadType.Regular)]
+        [InlineData(5, true, UploadType.Regular)]
+        [InlineData(11, false, UploadType.Chunked)]
+        [InlineData(11, true, UploadType.Chunked)]
         // ReSharper disable once InconsistentNaming
-        public async Task put_object_multipart(string region, int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
+        public async Task put_object_multipart(int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
         {
-            await PutObject(region, sizeInMB, testBlobKeyAsFolder, uploadType);
+            await PutObject(sizeInMB, testBlobKeyAsFolder, uploadType);
         }
 
         // ReSharper disable once InconsistentNaming
-        private static async Task PutObject(string region, 
-            int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
+        private async Task PutObject(int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
         {
-            var bucketName = $"testing-{Guid.NewGuid()}";
-            var key = testBlobKeyAsFolder == false ?
-                Guid.NewGuid().ToString() : 
-                $"{Guid.NewGuid()}/folder/testKey";
+            var settings = GetS3Settings();
+            var blobs = GenerateBlobNames(settings, 1, out _);
+            Assert.Equal(1, blobs.Count);
+            var key = $"{blobs[0]}";
+            if (testBlobKeyAsFolder)
+                key += "/";
 
             var progress = new Progress();
-            var maxUploadPutObjectInBytesSetter = ExpressionHelper.CreateFieldSetter<RavenAwsS3Client, int>("MaxUploadPutObjectSizeInBytes");
-            var minOnePartUploadSizeLimitInBytesSetter = ExpressionHelper.CreateFieldSetter<RavenAwsS3Client, int>("MinOnePartUploadSizeLimitInBytes");
-
-            using (var client = new RavenAwsS3Client(GetS3Settings(region, bucketName), progress))
+            using (var client = new RavenAwsS3Client(settings, progress))
             {
-                maxUploadPutObjectInBytesSetter(client, 10 * 1024 * 1024); // 10MB
-                minOnePartUploadSizeLimitInBytesSetter(client, 7 * 1024 * 1024); // 7MB
+                client.MaxUploadPutObjectSizeInBytes = 10 * 1024 * 1024; // 10MB
+                client.MinOnePartUploadSizeLimitInBytes = 7 * 1024 * 1024; // 7MB
 
-                // make sure that the bucket doesn't exist
-                client.DeleteBucket();
+                var value1 = Guid.NewGuid().ToString();
+                var value2 = Guid.NewGuid().ToString();
 
-                try
+                var sb = new StringBuilder();
+                for (var i = 0; i < sizeInMB * 1024 * 1024; i++)
                 {
-                    client.PutBucket();
+                    sb.Append("a");
+                }
 
-                    var value1 = Guid.NewGuid().ToString();
-                    var value2 = Guid.NewGuid().ToString();
-
-                    var sb = new StringBuilder();
-                    for (var i = 0; i < sizeInMB * 1024 * 1024; i++)
-                    {
-                        sb.Append("a");
-                    }
-
-                    long streamLength;
-                    using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
-                    {
-                        streamLength = memoryStream.Length;
-                        client.PutObject(key,
-                            memoryStream,
-                            new Dictionary<string, string>
-                            {
+                long streamLength;
+                using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
+                {
+                    streamLength = memoryStream.Length;
+                    client.PutObject(key,
+                        memoryStream,
+                        new Dictionary<string, string>
+                        {
                                 {"property1", value1},
                                 {"property2", value2}
-                            });
-                    }
-
-                    var @object = await client.GetObjectAsync(key);
-                    Assert.NotNull(@object);
-
-                    using (var reader = new StreamReader(@object.Data))
-                        Assert.Equal(sb.ToString(), reader.ReadToEnd());
-
-                    var property1 = @object.Metadata.Keys.Single(x => x.Contains("property1"));
-                    var property2 = @object.Metadata.Keys.Single(x => x.Contains("property2"));
-
-                    Assert.Equal(value1, @object.Metadata[property1]);
-                    Assert.Equal(value2, @object.Metadata[property2]);
-
-                    Assert.Equal(UploadState.Done, progress.UploadProgress.UploadState);
-                    Assert.Equal(uploadType, progress.UploadProgress.UploadType);
-                    Assert.Equal(streamLength, progress.UploadProgress.TotalInBytes);
-                    Assert.Equal(streamLength, progress.UploadProgress.UploadedInBytes);
+                        });
                 }
-                finally
-                {
-                    client.DeleteObject(key);
-                    client.DeleteBucket();
-                }
+
+                var @object = await client.GetObjectAsync(key);
+                Assert.NotNull(@object);
+
+                using (var reader = new StreamReader(@object.Data))
+                    Assert.Equal(sb.ToString(), reader.ReadToEnd());
+
+                var property1 = @object.Metadata.Keys.Single(x => x.Contains("property1"));
+                var property2 = @object.Metadata.Keys.Single(x => x.Contains("property2"));
+
+                Assert.Equal(value1, @object.Metadata[property1]);
+                Assert.Equal(value2, @object.Metadata[property2]);
+
+                Assert.Equal(UploadState.Done, progress.UploadProgress.UploadState);
+                Assert.Equal(uploadType, progress.UploadProgress.UploadType);
+                Assert.Equal(streamLength, progress.UploadProgress.TotalInBytes);
+                Assert.Equal(streamLength, progress.UploadProgress.UploadedInBytes);
             }
         }
 
-        [Theory(Skip = "Requires Amazon AWS Credentials")]
+        [Theory(Skip = "Requires Amazon AWS Glacier Credentials")]
         [InlineData(EastRegion1)]
         [InlineData(WestRegion2)]
         public void upload_archive(string region)
@@ -248,7 +177,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory(Skip = "Requires Amazon AWS Credentials")]
+        [Theory(Skip = "Requires Amazon AWS Glacier Credentials")]
         [InlineData(EastRegion1)]
         [InlineData(WestRegion2)]
         public void upload_archive_with_remote_folder_name(string region)
@@ -269,7 +198,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory(Skip = "Requires Amazon AWS Credentials")]
+        [Theory(Skip = "Requires Amazon AWS Glacier Credentials")]
         [InlineData(EastRegion1, WestRegion2)]
         [InlineData(WestRegion2, EastRegion1)]
         public void can_get_correct_error_glacier(string region1, string region2)
@@ -298,7 +227,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory(Skip = "Requires Amazon AWS Credentials")]
+        [Theory(Skip = "Requires Amazon AWS Glacier Credentials")]
         [InlineData(EastRegion1, 5, 2, UploadType.Regular)]
         [InlineData(EastRegion1, 5, 3, UploadType.Regular)]
         [InlineData(WestRegion2, 5, 2, UploadType.Regular)]
@@ -437,18 +366,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        private static S3Settings GetS3Settings(string region, string bucketName)
-        {
-            return new S3Settings
-            {
-                AwsAccessKey = AwsAccessKey,
-                AwsSecretKey = AwsSecretKey,
-                AwsSessionToken = AwsSessionToken,
-                AwsRegionName = region,
-                BucketName = bucketName
-            };
-        }
-
         private static GlacierSettings GetGlacierSettings(string region, string vaultName)
         {
             return new GlacierSettings
@@ -460,5 +377,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 VaultName = vaultName
             };
         }
+
     }
 }
