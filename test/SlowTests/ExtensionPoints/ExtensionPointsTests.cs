@@ -64,7 +64,7 @@ exit 0";
             UseNewLocalServer(customSettings: customSettings);
 
             // Creating dummy storage env options, so we can tell all the different paths
-            using (var options = StorageEnvironmentOptions.CreateMemoryOnly())
+            using (var systemOptions = StorageEnvironmentOptions.CreateMemoryOnly(Server.Configuration.Core.DataDirectory.Combine("System").ToFullPath(), null,null,null))
             {
                 using (var store = GetDocumentStore())
                 {
@@ -72,12 +72,14 @@ exit 0";
 
                     // the database loads after all indexes are loaded
                     var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var configEnvOptions = documentDatabase.ConfigurationStorage.Environment.Options;
+                    var docsEnvOptions = documentDatabase.DocumentsStorage.Environment.Options;
 
                     var lines = File.ReadAllLines(outputFile);
                     Assert.Equal(10, lines.Length);
-                    Assert.True(lines[0].Contains($"{DirectoryExecUtils.EnvironmentType.System} {SystemDbName} {options.BasePath} {options.TempPath} {options.JournalPath}"));
-                    Assert.True(lines[1].Contains($"{DirectoryExecUtils.EnvironmentType.Configuration} {store.Database} {options.BasePath} {options.TempPath} {options.JournalPath}"));
-                    Assert.True(lines[2].Contains($"{DirectoryExecUtils.EnvironmentType.Database} {store.Database} {options.BasePath} {options.TempPath} {options.JournalPath}"));
+                    Assert.True(lines[0].Contains($"{DirectoryExecUtils.EnvironmentType.System} {SystemDbName} {systemOptions.BasePath} {systemOptions.TempPath} {systemOptions.JournalPath}"));
+                    Assert.True(lines[1].Contains($"{DirectoryExecUtils.EnvironmentType.Configuration} {store.Database} {configEnvOptions.BasePath} {configEnvOptions.TempPath} {configEnvOptions.JournalPath}"));
+                    Assert.True(lines[2].Contains($"{DirectoryExecUtils.EnvironmentType.Database} {store.Database} {docsEnvOptions.BasePath} {docsEnvOptions.TempPath} {docsEnvOptions.JournalPath}"));
 
                     var indexes = documentDatabase.IndexStore.GetIndexes().ToArray();
 

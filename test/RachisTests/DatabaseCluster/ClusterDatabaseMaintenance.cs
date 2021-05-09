@@ -26,6 +26,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using SlowTests.Rolling;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -102,6 +103,9 @@ namespace RachisTests.DatabaseCluster
                     }, "users/1");
                     await session.SaveChangesAsync();
                 }
+
+                // we need to deploy the index before bringing the node down
+                await RollingIndexesClusterTests.WaitForRollingIndex(store.Database, index.IndexName, Servers);
                 await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
                 using (var session = store.OpenAsyncSession())
                 {
@@ -109,7 +113,7 @@ namespace RachisTests.DatabaseCluster
                     session.Delete("users/1");
                     await session.SaveChangesAsync();
                 }
-
+                
                 WaitForIndexing(store);
 
                 var database = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
