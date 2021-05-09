@@ -377,6 +377,5 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 VaultName = vaultName
             };
         }
-
     }
 }

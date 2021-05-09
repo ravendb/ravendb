@@ -145,6 +145,29 @@ namespace Raven.Client.Documents.Operations.Backups
         /// </summary>
         public string CustomServerUrl { get; set; }
 
+        public S3Settings()
+        {
+        }
+
+        internal S3Settings(S3Settings settings)
+        {
+            if (settings == null)
+                throw new ArgumentNullException(nameof(settings));
+
+            BucketName = settings.BucketName;
+            CustomServerUrl = settings.CustomServerUrl;
+            AwsRegionName = settings.AwsRegionName;
+            AwsAccessKey = settings.AwsAccessKey;
+            AwsSecretKey = settings.AwsSecretKey;
+            AwsSessionToken = settings.AwsSessionToken;
+
+            RemoteFolderName = settings.RemoteFolderName;
+            Disabled = settings.Disabled;
+
+            if (settings.GetBackupConfigurationScript != null)
+                GetBackupConfigurationScript = new GetBackupConfigurationScript(settings.GetBackupConfigurationScript);
+        }
+
         public override bool HasSettings()
         {
             if (base.HasSettings())
