@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
@@ -45,32 +44,32 @@ namespace SlowTests.Server.Documents.ETL.Olap
                 }.Initialize())
                 .ToList();
 
-            var path = GetTempPath("Orders");
-            try
+            var server = db.Servers.First(s => s != leader);
+            var store = stores.Single(s => s.Urls[0] == server.WebUrl);
+
+            Assert.Equal(store.Database, dbName);
+
+            var baseline = new DateTime(2020, 1, 1);
+
+            using (var session = store.OpenAsyncSession())
             {
-                var server = db.Servers.First(s => s != leader);
-                var store = stores.Single(s => s.Urls[0] == server.WebUrl);
-
-                Assert.Equal(store.Database, dbName);
-
-                var baseline = new DateTime(2020, 1, 1);
-
-                using (var session = store.OpenAsyncSession())
+                for (int i = 0; i < 31; i++)
                 {
-                    for (int i = 0; i < 31; i++)
+                    await session.StoreAsync(new Query.Order
                     {
-                        await session.StoreAsync(new Query.Order
-                        {
-                            Id = $"orders/{i}", OrderedAt = baseline.AddDays(i), ShipVia = $"shippers/{i}", Company = $"companies/{i}"
-                        });
-                    }
-
-                    await session.SaveChangesAsync();
+                        Id = $"orders/{i}",
+                        OrderedAt = baseline.AddDays(i),
+                        ShipVia = $"shippers/{i}",
+                        Company = $"companies/{i}"
+                    });
                 }
 
-                var etlDone = WaitForEtl(server, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
+                await session.SaveChangesAsync();
+            }
 
-                var script = @"
+            var etlDone = WaitForEtl(server, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
+
+            var script = @"
 var orderDate = new Date(this.OrderedAt);
 var year = orderDate.getFullYear();
 var month = orderDate.getMonth();
@@ -84,84 +83,66 @@ loadToOrders(partitionBy(key),
     });
 ";
 
-                var connectionStringName = $"{store.Database} to S3";
-                var configName = "olap-s3";
-                var transformationName = "MonthlyOrders";
-                
-                var configuration = new OlapEtlConfiguration
-                {
-                    Name = configName,
-                    ConnectionStringName = connectionStringName,
-                    RunFrequency = LocalTests.DefaultFrequency,
-                    Transforms = {new Transformation
+            var connectionStringName = $"{store.Database} to S3";
+            var configName = "olap-s3";
+            var transformationName = "MonthlyOrders";
+            var path = NewDataPath(forceCreateDir: true);
+
+            var configuration = new OlapEtlConfiguration
+            {
+                Name = configName,
+                ConnectionStringName = connectionStringName,
+                RunFrequency = LocalTests.DefaultFrequency,
+                Transforms = {new Transformation
                     {
-                        Name = transformationName, 
-                        Collections = new List<string> {"Orders"}, 
+                        Name = transformationName,
+                        Collections = new List<string> {"Orders"},
                         Script = script
                     }},
-                    MentorNode = server.ServerStore.NodeTag
-                };
-                AddEtl(store,
-                    configuration,
-                    new OlapConnectionString
-                    {
-                        Name = connectionStringName, 
-                        LocalSettings = new LocalSettings
-                        {
-                            FolderPath = path
-                        }
-                    });
-
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
-
-                var files = Directory.GetFiles(path);
-                Assert.Equal(1, files.Length);
-
-                DisposeServerAndWaitForFinishOfDisposal(server);
-
-                var store2 = stores.First(s => s != store);
-                using (var session = store2.OpenAsyncSession())
+                MentorNode = server.ServerStore.NodeTag
+            };
+            AddEtl(store,
+                configuration,
+                new OlapConnectionString
                 {
-                    for (int i = 0; i < 28; i++)
+                    Name = connectionStringName,
+                    LocalSettings = new LocalSettings
                     {
-                        await session.StoreAsync(new Query.Order
-                        {
-                            Id = $"orders/{i + 31}",
-                            OrderedAt = baseline.AddMonths(1).AddDays(i),
-                            ShipVia = $"shippers/{i + 31}",
-                            Company = $"companies/{i + 31}"
-                        });
+                        FolderPath = path
                     }
+                });
 
-                    await session.SaveChangesAsync();
-                }
+            Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
-                etlDone.Reset();
-                etlDone.Wait(TimeSpan.FromMinutes(1));
-                files = Directory.GetFiles(path);
-                Assert.Equal(2, files.Length);
-            }
-            finally
+            var files = Directory.GetFiles(path);
+            Assert.Equal(1, files.Length);
+
+            DisposeServerAndWaitForFinishOfDisposal(server);
+
+            var store2 = stores.First(s => s != store);
+            using (var session = store2.OpenAsyncSession())
             {
-                var di = new DirectoryInfo(path);
-                foreach (var file in di.EnumerateFiles())
+                for (int i = 0; i < 28; i++)
                 {
-                    file.Delete();
+                    await session.StoreAsync(new Query.Order
+                    {
+                        Id = $"orders/{i + 31}",
+                        OrderedAt = baseline.AddMonths(1).AddDays(i),
+                        ShipVia = $"shippers/{i + 31}",
+                        Company = $"companies/{i + 31}"
+                    });
                 }
 
-                di.Delete();
-
-                foreach (var item in stores)
-                {
-                    item.Dispose();
-                }
+                await session.SaveChangesAsync();
             }
+
+            etlDone.Reset();
+            etlDone.Wait(TimeSpan.FromMinutes(1));
+            files = Directory.GetFiles(path);
+            Assert.Equal(2, files.Length);
+
         }
-        private static string GetTempPath(string collection, [CallerMemberName] string caller = null)
-        {
-            var tmpPath = Path.GetTempPath();
-            return Directory.CreateDirectory(Path.Combine(tmpPath, caller, collection)).FullName;
-        }
+
 
         private ManualResetEventSlim WaitForEtl(RavenServer server, string databaseName, Func<string, EtlProcessStatistics, bool> predicate)
         {
