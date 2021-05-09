@@ -20,6 +20,8 @@ class documentsCompression extends viewModelBase {
     spinners = {
         save: ko.observable<boolean>(false)
     };
+
+    storageReportUrl: KnockoutComputed<string>;
     
     constructor() {
         super();
@@ -41,6 +43,8 @@ class documentsCompression extends viewModelBase {
         this.canAddAllCollections = ko.pureComputed(() => {
            return !!_.difference(this.allExistingCollections(), this.collectionsToCompress()).length;
         });
+        
+        this.storageReportUrl = ko.pureComputed(() => appUrl.forStatusStorageReport(this.activeDatabase().name));
     }
 
     canActivate(args: any): boolean | JQueryPromise<canActivateResultDto> {

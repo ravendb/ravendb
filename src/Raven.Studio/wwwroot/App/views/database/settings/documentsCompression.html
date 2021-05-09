@@ -1,9 +1,15 @@
 <form role="form" id="documentsCompression" class="flex-vertical absolute-fill content-margin" data-bind="submit: saveChanges" autocomplete="off">
-    <div class="toolbar">
-        <button type="submit" class="btn btn-primary" title="Save Changes" 
-                data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save() }, requiredAccess: 'DatabaseAdmin'">
-            <i class="icon-save"></i> <span>Save</span>
-        </button>
+    <div class="row">
+        <div class="toolbar flex-horizontal col-sm-12 col-lg-6">
+            <button type="submit" class="btn btn-primary" title="Save Changes"
+                    data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save() }, requiredAccess: 'DatabaseAdmin'">
+                <i class="icon-save"></i> <span>Save</span>
+            </button>
+            <div class="flex-separator"></div>
+            <small class="padding padding-xs margin-left" title="Go to the database storage report view">
+                <a target="_blank" data-bind="attr: { href: storageReportUrl }"><i class="icon-link margin-right margin-right-xs"></i>Storage Report</a>
+            </small>
+        </div>
     </div>
     <div class="row">
         <div class="col-sm-12 col-lg-6">
@@ -33,8 +39,8 @@
                             </button>
                         </div>
                     </div>
-                    <div>
-                        <div data-bind="visible: collectionsToCompress().length" class="margin-top">
+                    <div data-bind="visible: collectionsToCompress().length" class="margin-top">
+                        <div>
                             <label><strong>Collections Selected:</strong></label>
                             <ul class="well collection-list" data-bind="foreach: collectionsToCompress">
                                 <li data-bind="visible: $root.isAdminAccessOrAbove">
@@ -46,6 +52,22 @@
                                 </li>
                             </ul>
                         </div>
+                        <div class="bg-info text-info padding margin-top margin-top-lg flex-horizontal">
+                            <div class="flex-start">
+                                <small><i class="icon-info"></i></small>
+                            </div>
+                            <div>
+                                <div class="margin-left margin-left-xs"><small>Documents that will be compressed:</small></div>
+                                <ul class="no-margin">
+                                    <li><small>New documents created in the selected collections</small></li>
+                                    <li><small>Existing documents that are modified & saved</small></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center text-muted margin-top margin-top-lg" data-bind="visible: collectionsToCompress().length === 0">
+                        <i class="icon-lg icon-empty-set"></i>
+                        <h2 class="margin-top margin-top-sm">No collections have been selected</h2>
                     </div>
                 </div>
             </div>
@@ -57,16 +79,6 @@
                             Compress Revisions for All Collections
                         </label>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-sm-12 col-lg-6">
-            <div data-bind="visible: collectionsToCompress().length === 0">
-                <div class="text-muted text-center margin-top margin-top-lg">
-                    <i class="icon-xl icon-empty-set"></i>
-                    <h2 class="">No collections have been selected</h2>
                 </div>
             </div>
         </div>
