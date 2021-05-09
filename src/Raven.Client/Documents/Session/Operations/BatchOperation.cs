@@ -134,6 +134,9 @@ namespace Raven.Client.Documents.Session.Operations
                     case CommandType.PATCH:
                         HandlePatch(batchResult);
                         break;
+                    case CommandType.JsonPatch:
+                        HandleJsonPatch(batchResult);
+                        break;
                     case CommandType.AttachmentPUT:
                         HandleAttachmentPut(batchResult);
                         break;
@@ -387,6 +390,58 @@ namespace Raven.Client.Documents.Session.Operations
                     break;
             }
         }
+
+        private void HandleJsonPatch(BlittableJsonReaderObject batchResult)
+        {
+            if (batchResult.TryGet(nameof(PatchStatus), out string statusAsString) == false)
+                ThrowMissingField(CommandType.JsonPatch, nameof(PatchStatus));
+
+            if (Enum.TryParse(statusAsString, ignoreCase: true, out PatchStatus status) == false)
+                ThrowMissingField(CommandType.JsonPatch, nameof(PatchStatus));
+
+            switch (status)
+            {
+                case PatchStatus.Created:
+                case PatchStatus.Patched:
+                    if (batchResult.TryGet(nameof(PatchResult.ModifiedDocument), out BlittableJsonReaderObject document) == false)
+                        return;
+
+                    var id = GetLazyStringField(batchResult, CommandType.JsonPatch, nameof(ICommandData.Id));
+
+                    if (_session.DocumentsById.TryGetValue(id, out var sessionDocumentInfo) == false)
+                        return;
+
+                    var documentInfo = GetOrAddModifications(id, sessionDocumentInfo, applyModifications: true);
+
+                    var changeVector = GetLazyStringField(batchResult, CommandType.JsonPatch, nameof(Constants.Documents.Metadata.ChangeVector));
+                    var lastModified = GetLazyStringField(batchResult, CommandType.JsonPatch, nameof(Constants.Documents.Metadata.LastModified));
+
+                    documentInfo.ChangeVector = changeVector;
+
+                    documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata)
+                    {
+                        [Constants.Documents.Metadata.Id] = id,
+                        [Constants.Documents.Metadata.ChangeVector] = changeVector,
+                        [Constants.Documents.Metadata.LastModified] = lastModified
+                    };
+
+                    using (var old = documentInfo.Document)
+                    {
+                        documentInfo.Document = document;
+
+                        ApplyMetadataModifications(id, documentInfo);
+                    }
+
+                    if (documentInfo.Entity != null)
+                    {
+                        _session.JsonConverter.PopulateEntity(documentInfo.Entity, id, documentInfo.Document, _session.JsonSerializer);
+                        var afterSaveChangesEventArgs = new AfterSaveChangesEventArgs(_session, documentInfo.Id, documentInfo.Entity);
+                        _session.OnAfterSaveChangesInvoke(afterSaveChangesEventArgs);
+                    }
+                    break;
+            }
+        }
+
 
         private void HandleDelete(BlittableJsonReaderObject batchResult)
         {
