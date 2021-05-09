@@ -7,53 +7,58 @@
         </div>
         <div class="chart"></div>
     </div>
-    <div class="current-path">
-        <span data-bind="foreach: currentPath">
-            <a href="#" data-bind="click: _.partial($root.onClick, $data, false), attr: { class: type }">
-                <small data-bind="text: type"></small>
-                <span data-bind="text: name"></span>
-            </a>
-            <i data-bind="visible: $index() < $root.currentPath().length - 1" class="icon-arrow-filled-right"></i>
-        </span>
-    </div>
-    <div class="flex-horizontal flex-noshrink" data-bind="visible: accessManager.canCompactDatabase">
+    <div class="flex-horizontal">
+        <div class="current-path">
+            <span data-bind="foreach: currentPath">
+                <a href="#" data-bind="click: _.partial($root.onClick, $data, false), attr: { class: type }">
+                    <small data-bind="text: type"></small>
+                    <span data-bind="text: name"></span>
+                </a>
+                <i data-bind="visible: $index() < $root.currentPath().length - 1" class="icon-arrow-filled-right"></i>
+            </span>
+        </div>
         <div class="flex-separator"></div>
-        <button class="btn btn-sm btn-default" data-bind="click: compactDatabase">
-            <i class="icon-compact"></i><span>Compact Database</span>
-        </button>
+        <div class="padding padding-xs margin-right margin-right-sm" title="Set collections to be compressed - Navigate to Document Compression view">
+            <small>
+                <a target="_blank" data-bind="attr: { href: documentsCompressionUrl }"><i class="icon-link margin-right margin-right-xs"></i>Document Compression</a>
+            </small>
+        </div>
+        <div class="flex-horizontal flex-noshrink" data-bind="visible: accessManager.canCompactDatabase" title="Click to compact this database">
+            <button class="btn btn-sm btn-default" data-bind="click: compactDatabase">
+                <i class="icon-compact"></i><span>Compact Database</span>
+            </button>
+        </div>
     </div>
-    
-        <table class="table table-condensed table-striped on-base-background" data-bind="if: node() && node().internalChildren">
-            <thead>
-                <tr>
-                    <th>Type</th>
-                    <th class="column-min-width">Name</th>
-                    <th data-bind="visible: showPagesColumn()"># Pages</th>
-                    <th data-bind="visible: showEntriesColumn()">Entries</th>
-                    <th data-bind="visible: showTempFiles()">Data + Journals</th>
-                    <th data-bind="visible: showTempFiles()">Temporary Buffers</th>
-                    <th><span data-bind="visible: showTempFiles()">Total</span> Size (&sum; <span data-bind="text: node().formatSize(true)"></span>)</th>
-                    <th>% Total</th>
-                </tr>
-            </thead>
-            <tbody data-bind="foreach: node().internalChildren">
-                <tr>
-                    <td data-bind="text: _.upperFirst(type)"></td>
-                    <td class="position-relative">
-                        <div class="table-items">
-                            <a href="#" class="table-item-name text-elipsis" data-bind="text: name, click: _.partial($root.onClick, $data, true), visible: hasChildren(), attr: { title: name }"></a>
-                            <span href="#" class="table-item-name text-elipsis" data-bind="text: name, visible: !hasChildren(), attr: { title: name }"></span>
-                            <span data-bind="visible: recyclableJournal"><small data-toggle="tooltip" title="Stored in Journals directory"><i class="icon-info text-info"></i></small></span>
-                        </div>
-                    </td>
-                    <td data-bind="visible: $root.showPagesColumn(), text: pageCount ? pageCount.toLocaleString() : 0"></td>
-                    <td data-bind="visible: $root.showEntriesColumn(), text: numberOfEntries ? numberOfEntries.toLocaleString() : 0"></td>
-                    <td data-bind="visible: $root.showTempFiles, text: $root.dataSizeFormatted($data)"></td>
-                    <td data-bind="visible: $root.showTempFiles, text: $root.tempSizeFormatted($data)"></td>
-                    <td data-bind="html: formatSize(false)"></td>
-                    <td data-bind="text: formatPercentage($parent.node().size)"></td>
-                </tr>
-            </tbody>
-        </table>
-    
+    <table class="table table-condensed table-striped on-base-background margin-top margin-top-sm" data-bind="if: node() && node().internalChildren">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th class="column-min-width">Name</th>
+                <th data-bind="visible: showPagesColumn()"># Pages</th>
+                <th data-bind="visible: showEntriesColumn()">Entries</th>
+                <th data-bind="visible: showTempFiles()">Data + Journals</th>
+                <th data-bind="visible: showTempFiles()">Temporary Buffers</th>
+                <th><span data-bind="visible: showTempFiles()">Total</span> Size (&sum; <span data-bind="text: node().formatSize(true)"></span>)</th>
+                <th>% Total</th>
+            </tr>
+        </thead>
+        <tbody data-bind="foreach: node().internalChildren">
+            <tr>
+                <td data-bind="text: _.upperFirst(type)"></td>
+                <td class="position-relative">
+                    <div class="table-items">
+                        <a href="#" class="table-item-name text-elipsis" data-bind="text: name, click: _.partial($root.onClick, $data, true), visible: hasChildren(), attr: { title: name }"></a>
+                        <span href="#" class="table-item-name text-elipsis" data-bind="text: name, visible: !hasChildren(), attr: { title: name }"></span>
+                        <span data-bind="visible: recyclableJournal"><small data-toggle="tooltip" title="Stored in Journals directory"><i class="icon-info text-info"></i></small></span>
+                    </div>
+                </td>
+                <td data-bind="visible: $root.showPagesColumn(), text: pageCount ? pageCount.toLocaleString() : 0"></td>
+                <td data-bind="visible: $root.showEntriesColumn(), text: numberOfEntries ? numberOfEntries.toLocaleString() : 0"></td>
+                <td data-bind="visible: $root.showTempFiles, text: $root.dataSizeFormatted($data)"></td>
+                <td data-bind="visible: $root.showTempFiles, text: $root.tempSizeFormatted($data)"></td>
+                <td data-bind="html: formatSize(false)"></td>
+                <td data-bind="text: formatPercentage($parent.node().size)"></td>
+            </tr>
+        </tbody>
+    </table>
 </div>

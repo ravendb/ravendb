@@ -6,6 +6,7 @@ import getIndexNamesCommand = require("commands/database/index/getIndexNamesComm
 import compactDatabaseCommand = require("commands/resources/compactDatabaseCommand");
 import genUtils = require("common/generalUtils");
 import dialog = require("plugins/dialog");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class compactDatabaseDialog extends dialogViewModelBase {
     
@@ -25,6 +26,9 @@ class compactDatabaseDialog extends dialogViewModelBase {
     
     numberOfIndexesFormatted: KnockoutComputed<string>;
     numberOfSelectedIndexesFormatted: KnockoutComputed<string>;
+    
+    numberOfNodes: KnockoutComputed<number>;
+    currentNodeTag: KnockoutComputed<string>;
     
     constructor(db: databaseInfo) {
         super(); 
@@ -72,6 +76,14 @@ class compactDatabaseDialog extends dialogViewModelBase {
         this.selectAllIndexesEnabled = ko.pureComputed(() => {
             return !_.isEqual(this.allIndexes(), this.indexesToCompact());
         });
+        
+        this.numberOfNodes = ko.pureComputed(() => {
+            return clusterTopologyManager.default.topology().nodes().length;
+        });
+
+        this.currentNodeTag = ko.pureComputed(() => {
+            return clusterTopologyManager.default.topology().nodeTag();
+        });
     }   
     
     compactDatabase() {
@@ -92,7 +104,7 @@ class compactDatabaseDialog extends dialogViewModelBase {
 
     selectAllIndexes() {
         this.indexesToCompact([...this.allIndexes()]);
-    } 
+    }
 }
 
 export = compactDatabaseDialog;

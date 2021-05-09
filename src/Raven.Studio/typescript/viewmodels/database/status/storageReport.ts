@@ -46,6 +46,8 @@ class storageReport extends viewModelBase {
     showEntriesColumn: KnockoutObservable<boolean>;
     showTempFiles: KnockoutObservable<boolean>;
 
+    documentsCompressionUrl: KnockoutComputed<string>;
+
     constructor() {
         super();
         this.bindToCurrentInstance("onClick");
@@ -99,6 +101,8 @@ class storageReport extends viewModelBase {
         this.showTempFiles = ko.pureComputed(() => {
             return this.node() == this.root;
         })
+
+        this.documentsCompressionUrl = ko.pureComputed(() => appUrl.forDocumentsCompression(this.activeDatabase()));
     }
 
     private processData() {
