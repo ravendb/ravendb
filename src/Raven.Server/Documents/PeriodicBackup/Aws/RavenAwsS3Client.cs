@@ -27,8 +27,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
     public class RavenAwsS3Client : RavenAwsClient
     {
-        private const int MaxUploadPutObjectSizeInBytes = 256 * 1024 * 1024; // 256MB
-        private const int MinOnePartUploadSizeLimitInBytes = 100 * 1024 * 1024; // 100MB
+        internal int MaxUploadPutObjectSizeInBytes = 256 * 1024 * 1024; // 256MB
+        internal int MinOnePartUploadSizeLimitInBytes = 100 * 1024 * 1024; // 100MB
         private const long MultiPartUploadLimitInBytes = 5L * 1024 * 1024 * 1024 * 1024; // 5TB
 
         protected readonly string DefaultCustomRegion = string.Empty;
@@ -546,8 +546,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        public ListObjectsResult ListObjects(string prefix, string delimiter, bool listFolders, int? take = null, string continuationToken = null, string startAfter = null)
+        public ListObjectsResult ListObjects(string prefix, string delimiter, bool listFolders, bool includeFolders = false, int? take = null, string continuationToken = null, string startAfter = null)
         {
+            if (listFolders && string.IsNullOrEmpty(delimiter))
+                throw new InvalidOperationException("A response can listFolders only if you specify a delimiter.");
+
             var url = $"{GetUrl()}/?list-type=2";
             if (prefix != null)
                 url += $"&prefix={Uri.EscapeDataString(prefix)}";
@@ -624,10 +627,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     foreach (var content in contents)
                     {
                         var fullPath = content.Element(ns + "Key").Value;
-                        if (fullPath.EndsWith("/", StringComparison.OrdinalIgnoreCase))
+                        if (includeFolders == false && fullPath.EndsWith("/", StringComparison.OrdinalIgnoreCase))
                             continue; // folder
 
-                        if (BackupLocationDegree(fullPath) - BackupLocationDegree(prefix) > 2)
+                        if (includeFolders == false && BackupLocationDegree(fullPath) - BackupLocationDegree(prefix) > 2)
                             continue; // backup not in current folder or in sub folder
 
                         yield return new S3FileInfoDetails
@@ -653,8 +656,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        public async Task<ListObjectsResult> ListObjectsAsync(string prefix, string delimiter, bool listFolders, int? take = null, string continuationToken = null, string startAfter = null)
+        public async Task<ListObjectsResult> ListObjectsAsync(string prefix, string delimiter, bool listFolders, bool includeFolders = false, int? take = null, string continuationToken = null, string startAfter = null)
         {
+            if (listFolders && string.IsNullOrEmpty(delimiter))
+                throw new InvalidOperationException("A response can listFolders only if you specify a delimiter.");
+
             var url = $"{GetUrl()}/?list-type=2";
             if (prefix != null)
                 url += $"&prefix={Uri.EscapeDataString(prefix)}";
@@ -731,10 +737,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     foreach (var content in contents)
                     {
                         var fullPath = content.Element(ns + "Key").Value;
-                        if (fullPath.EndsWith("/", StringComparison.OrdinalIgnoreCase))
+                        if (includeFolders == false && fullPath.EndsWith("/", StringComparison.OrdinalIgnoreCase))
                             continue; // folder
 
-                        if (BackupLocationDegree(fullPath) - BackupLocationDegree(prefix) > 2)
+                        if (includeFolders == false && (BackupLocationDegree(fullPath) - BackupLocationDegree(prefix)) > 2)
                             continue; // backup not in current folder or in sub folder
 
                         yield return new S3FileInfoDetails

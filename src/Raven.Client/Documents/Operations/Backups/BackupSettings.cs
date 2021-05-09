@@ -101,7 +101,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public abstract class AmazonSettings : BackupSettings
+    public abstract class AmazonSettings : BackupSettings, ICloudBackupSettings
     {
         public string AwsAccessKey { get; set; }
 
@@ -228,7 +228,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class AzureSettings : BackupSettings
+    public class AzureSettings : BackupSettings, ICloudBackupSettings
     {
         /// <summary>
         /// Microsoft Azure Storage Container name.
@@ -335,7 +335,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return djv;
         }
     }
-    public class GoogleCloudSettings : BackupSettings
+    public class GoogleCloudSettings : BackupSettings, ICloudBackupSettings
     {
         /// <summary>
         /// Google cloud storage bucket name must be globally unique
@@ -378,5 +378,10 @@ namespace Raven.Client.Documents.Operations.Backups
 
             return djv;
         }
+    }
+
+    public interface ICloudBackupSettings
+    {
+        public string RemoteFolderName { get; set; }
     }
 }

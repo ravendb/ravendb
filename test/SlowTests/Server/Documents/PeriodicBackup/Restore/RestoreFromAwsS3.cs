@@ -66,27 +66,5 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             await incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key_internal();
         [AmazonS3Fact, Trait("Category", "Smuggler")]
         public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB() => await snapshot_encrypted_db_and_restore_to_encrypted_DB_internal();
-
-        protected override S3Settings GetS3Settings(string subPath = null)
-        {
-            var s3Settings = AmazonS3FactAttribute.S3Settings;
-
-            if (s3Settings == null)
-                return null;
-
-            var remoteFolderName = $"{s3Settings.RemoteFolderName}/{_cloudPathPrefix}";
-
-            if (string.IsNullOrEmpty(subPath) == false)
-                remoteFolderName = $"{remoteFolderName}/{subPath}";
-
-            return new S3Settings
-            {
-                BucketName = s3Settings.BucketName,
-                RemoteFolderName = remoteFolderName,
-                AwsAccessKey = s3Settings.AwsAccessKey,
-                AwsSecretKey = s3Settings.AwsSecretKey,
-                AwsRegionName = s3Settings.AwsRegionName
-            };
-        }
     }
 }
