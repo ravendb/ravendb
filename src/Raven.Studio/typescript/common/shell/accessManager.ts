@@ -113,16 +113,11 @@ class accessManager {
         return access === "ClusterAdmin" || access === "ClusterNode" || access === "Operator" || access === "ValidUser";
     }
     
-    static resolveActualAccess(requiredAccessLevel: accessLevel, dbName?: string): accessLevel {
-        if (accessManager.isSecurityClearanceLevel(requiredAccessLevel)) {
-            const clearance = accessManager.default.securityClearance();
-            return clearance === "ValidUser" ? null : clearance;
-        }
+    static canHandleOperation(requiredAccess: accessLevel, dbName: string = null): boolean {
+        const actualAccessLevel = accessManager.default.isOperatorOrAbove() 
+            ? accessManager.default.securityClearance()
+            : accessManager.databasesAccess[dbName];
         
-        return accessManager.databasesAccess[dbName];
-    }
-
-    static canHandleOperation(requiredAccess: accessLevel, actualAccessLevel: accessLevel): boolean {
         if (!actualAccessLevel) {
             return false;
         }
@@ -150,32 +145,17 @@ class accessManager {
         }
     }
     
-    static getDisableReasonHtml(requiredAccess: accessLevel, actualAccessLevel: accessLevel) {
+    static getDisableReasonHtml(requiredAccess: accessLevel) {
         const requiredText = accessManager.isSecurityClearanceLevel(requiredAccess)
             ? accessManager.getAccessLevelText(requiredAccess) 
             : "Database " + accessManager.getAccessLevelText(requiredAccess); 
         
-        if (actualAccessLevel) {
-            const actualText = accessManager.isSecurityClearanceLevel(actualAccessLevel)
-                ? accessManager.getAccessLevelText(actualAccessLevel)
-                : "Database " + accessManager.getAccessLevelText(actualAccessLevel);
-
-            return `<div class="text-left">
-                    <h4>Insufficient access</h4>
-                    <ul>
-                        <li>Required: <strong>${requiredText}</strong></li>
-                        <li>Actual: <strong>${actualText}</strong></li>
-                    </ul>
-                </div>`;
-        } else {
-            return `<div class="text-left">
-                    <h4>Insufficient access</h4>
-                    <ul>
-                        <li>Required: <strong>${requiredText}</strong></li>
-                        <li>Actual: <strong>Valid User</strong></li>
-                    </ul>
-                </div>`;
-        }
+        return `<div class="text-left">
+                <h4>Insufficient access</h4>
+                <ul>
+                    <li>Required: <strong>${requiredText}</strong></li>
+                </ul>
+            </div>`;
     }
 
     static activeDatabaseTracker = activeDatabaseTracker.default;

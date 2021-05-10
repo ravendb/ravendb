@@ -563,11 +563,9 @@ class shell extends viewModelBase {
 
             const activeDatabase = activeDatabaseTracker.default.database();
             
-            const actualAccess = accessManager.resolveActualAccess(requiredAccess, activeDatabase?.name);
-            
-            const canHandleOperation = accessManager.canHandleOperation(requiredAccess, actualAccess);
+            const canHandleOperation = accessManager.canHandleOperation(requiredAccess, activeDatabase?.name);
                       
-            return canHandleOperation ? "" : accessManager.getDisableReasonHtml(requiredAccess, actualAccess);
+            return canHandleOperation ? "" : accessManager.getDisableReasonHtml(requiredAccess);
         })
     }
 }
