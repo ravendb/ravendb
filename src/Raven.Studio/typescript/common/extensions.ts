@@ -267,8 +267,6 @@ class extensions {
                 const requiredAccessLevel = ko.unwrap(valueAccessor());
                 const strategy = bindings.requiredAccessOptions ? bindings.requiredAccessOptions.strategy : 'hide';
 
-                const actualAccess = accessManager.resolveActualAccess(requiredAccessLevel, activeDatabase?.name);
-                
                 switch (strategy) {
                     case 'hide': {
                         const visibleBinding = bindings.visible;
@@ -280,7 +278,7 @@ class extensions {
                         const shouldBeVisibleByKo = visibleValue && !hiddenValue;
                         const isElementVisible = element.style.display !== "none";
 
-                        if (accessManager.canHandleOperation(requiredAccessLevel, actualAccess)) {
+                        if (accessManager.canHandleOperation(requiredAccessLevel, activeDatabase?.name)) {
                             if (!isElementVisible && shouldBeVisibleByKo) {
                                 element.style.display = "";
                             }
@@ -302,7 +300,7 @@ class extensions {
                         const shouldBeEnabledByKo = !disableValue && enableValue;
                         const isElementDisabled = element.hasAttribute("disabled");
 
-                        if (accessManager.canHandleOperation(requiredAccessLevel, actualAccess)) {
+                        if (accessManager.canHandleOperation(requiredAccessLevel, activeDatabase?.name)) {
                             if (isElementDisabled && shouldBeEnabledByKo) {
                                 element.setAttribute("disabled", "false")
                             }
