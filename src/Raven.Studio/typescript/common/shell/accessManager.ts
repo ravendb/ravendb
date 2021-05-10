@@ -38,10 +38,10 @@ class accessManager {
 
     getDatabaseAccessLevelTextByDbName(dbName: string): string {
         const accessLevel = this.getEffectiveDatabaseAccessLevel(dbName);
-        return accessLevel ? this.getAccessLevelText(accessLevel) : null;
+        return accessLevel ? accessManager.getAccessLevelText(accessLevel) : null;
     }
     
-    getAccessLevelText(accessLevel: accessLevel): string {
+    static getAccessLevelText(accessLevel: accessLevel): string {
         switch (accessLevel) {
             case "ClusterNode":
             case "ClusterAdmin":
@@ -109,12 +109,12 @@ class accessManager {
         return accessLevel === "DatabaseAdmin";
     });
     
-    static isServerWideAccessLevel(access: accessLevel): access is accessLevel {
-        return access === "ClusterAdmin" || access === "ClusterNode" || access === "Operator";
+    static isSecurityClearanceLevel(access: accessLevel): access is securityClearance {
+        return access === "ClusterAdmin" || access === "ClusterNode" || access === "Operator" || access === "ValidUser";
     }
     
     static resolveActualAccess(requiredAccessLevel: accessLevel, dbName?: string): accessLevel {
-        if (accessManager.isServerWideAccessLevel(requiredAccessLevel)) {
+        if (accessManager.isSecurityClearanceLevel(requiredAccessLevel)) {
             const clearance = accessManager.default.securityClearance();
             return clearance === "ValidUser" ? null : clearance;
         }
@@ -122,7 +122,7 @@ class accessManager {
         return accessManager.databasesAccess[dbName];
     }
 
-    canHandleOperation(requiredAccess: accessLevel, actualAccessLevel: accessLevel): boolean {
+    static canHandleOperation(requiredAccess: accessLevel, actualAccessLevel: accessLevel): boolean {
         if (!actualAccessLevel) {
             return false;
         }
@@ -150,11 +150,15 @@ class accessManager {
         }
     }
     
-    getDisableReasonHtml(requiredAccess: accessLevel, actualAccessLevel: accessLevel) {
-        const requiredText = this.getAccessLevelText(requiredAccess);
+    static getDisableReasonHtml(requiredAccess: accessLevel, actualAccessLevel: accessLevel) {
+        const requiredText = accessManager.isSecurityClearanceLevel(requiredAccess)
+            ? accessManager.getAccessLevelText(requiredAccess) 
+            : "Database " + accessManager.getAccessLevelText(requiredAccess); 
         
         if (actualAccessLevel) {
-            const actualText = this.getAccessLevelText(actualAccessLevel);
+            const actualText = accessManager.isSecurityClearanceLevel(actualAccessLevel)
+                ? accessManager.getAccessLevelText(actualAccessLevel)
+                : "Database " + accessManager.getAccessLevelText(actualAccessLevel);
 
             return `<div class="text-left">
                     <h4>Insufficient access</h4>
@@ -168,6 +172,7 @@ class accessManager {
                     <h4>Insufficient access</h4>
                     <ul>
                         <li>Required: <strong>${requiredText}</strong></li>
+                        <li>Actual: <strong>Valid User</strong></li>
                     </ul>
                 </div>`;
         }

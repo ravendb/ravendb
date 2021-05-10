@@ -229,7 +229,7 @@ class certificates extends viewModelBase {
     }
 
     getAccessInfoText(accessLevel: databaseAccessLevel) {
-        return accessManager.default.getAccessLevelText(accessLevel);
+        return accessManager.getAccessLevelText(accessLevel);
     }
     
     canBeAutomaticallyRenewed(thumbprints: string[]) {

@@ -291,7 +291,7 @@ class shell extends viewModelBase {
                 dbAccessArray.map(x => `<div>
                                             <strong>${genUtils.escapeHtml(x.dbName)}</strong>
                                             <span class="${this.accessManager.getAccessColor(x.accessLevel)} margin-left">
-                                                         ${this.accessManager.getAccessLevelText(x.accessLevel)}
+                                                         ${accessManager.getAccessLevelText(x.accessLevel)}
                                             </span>
                                         </div>`).join("")
                 : "No access granted";
@@ -565,9 +565,9 @@ class shell extends viewModelBase {
             
             const actualAccess = accessManager.resolveActualAccess(requiredAccess, activeDatabase?.name);
             
-            const canHandleOperation = this.accessManager.canHandleOperation(requiredAccess, actualAccess);
+            const canHandleOperation = accessManager.canHandleOperation(requiredAccess, actualAccess);
                       
-            return canHandleOperation ? "" : this.accessManager.getDisableReasonHtml(requiredAccess, actualAccess);
+            return canHandleOperation ? "" : accessManager.getDisableReasonHtml(requiredAccess, actualAccess);
         })
     }
 }

@@ -192,8 +192,7 @@
                                     <div class="permissions">
                                         <h5><i class="icon-database"></i> DATABASE PERMISSIONS</h5>
                                         <div class="flex-horizontal flex-wrap" data-bind="foreach: $root.databasesAccessInfo($data)">
-                                            <div class="margin-right" data-placement="bottom" data-toggle="tooltip" data-animation="true"
-                                                 data-bind="attr: { title: $root.getAccessInfoText(dbName, accessLevel) }">
+                                            <div class="margin-right" data-bind="attr: { title: $root.getAccessInfoText(accessLevel) }">
                                                 <strong data-bind="text: dbName"></strong>
                                                 <i data-bind="attr: { class: $root.getAccessColor(accessLevel) + ' ' + $root.getAccessIcon(accessLevel) }"></i>
                                             </div>

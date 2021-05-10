@@ -87,7 +87,7 @@ class viewModelBase {
         }
         
         const actualAccess = accessManager.resolveActualAccess(requiredAccessForView, dbName);
-        return accessManager.default.canHandleOperation(requiredAccessForView, actualAccess);
+        return accessManager.canHandleOperation(requiredAccessForView, actualAccess);
     }
 
     activate(args: any, parameters?: any) {
