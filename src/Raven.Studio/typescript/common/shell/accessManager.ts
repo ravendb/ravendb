@@ -114,7 +114,7 @@ class accessManager {
     }
     
     static canHandleOperation(requiredAccess: accessLevel, dbName: string = null): boolean {
-        const actualAccessLevel = accessManager.default.isOperatorOrAbove() 
+        const actualAccessLevel = accessManager.default.isOperatorOrAbove()
             ? accessManager.default.securityClearance()
             : accessManager.databasesAccess[dbName];
         
@@ -146,16 +146,17 @@ class accessManager {
     }
     
     static getDisableReasonHtml(requiredAccess: accessLevel) {
-        const requiredText = accessManager.isSecurityClearanceLevel(requiredAccess)
-            ? accessManager.getAccessLevelText(requiredAccess) 
-            : "Database " + accessManager.getAccessLevelText(requiredAccess); 
-        
+        const securityClearance = accessManager.isSecurityClearanceLevel(requiredAccess);
+        const title = securityClearance ? "Insufficient security clearance" : "Insufficient database access";
+
+        const requiredText = accessManager.getAccessLevelText(requiredAccess);
+
         return `<div class="text-left">
-                <h4>Insufficient access</h4>
-                <ul>
-                    <li>Required: <strong>${requiredText}</strong></li>
-                </ul>
-            </div>`;
+                    <h4>${title}</h4>
+                    <ul>
+                        <li>Required: <strong>${requiredText}</strong></li>
+                    </ul>
+                </div>`;
     }
 
     static activeDatabaseTracker = activeDatabaseTracker.default;

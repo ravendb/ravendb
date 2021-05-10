@@ -4,7 +4,7 @@
             <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                 <i class="icon-xl icon-empty-set text-muted"></i>
                 <h2 class="text-center text-muted">No indexes have been created for this database.</h2>
-                <p class="lead text-center text-muted">Go ahead and <a href="#" data-bind="attr: { href: newIndexUrl }">create one now</a>.</p>
+                <p data-bind="requiredAccess: 'DatabaseReadWrite'" class="lead text-center text-muted">Go ahead and <a href="#" data-bind="attr: { href: newIndexUrl }">create one now</a>.</p>
             </div>
         </div>
     </div>
