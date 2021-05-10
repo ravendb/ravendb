@@ -44,7 +44,7 @@ class documentsCompression extends viewModelBase {
            return !!_.difference(this.allExistingCollections(), this.collectionsToCompress()).length;
         });
         
-        this.storageReportUrl = ko.pureComputed(() => appUrl.forStatusStorageReport(this.activeDatabase().name));
+        this.storageReportUrl = ko.pureComputed(() => appUrl.forStatusStorageReport(this.activeDatabase()));
     }
 
     canActivate(args: any): boolean | JQueryPromise<canActivateResultDto> {
