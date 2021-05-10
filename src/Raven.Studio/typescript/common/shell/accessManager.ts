@@ -10,6 +10,7 @@ class accessManager {
     static databasesAccess: dictionary<databaseAccessLevel> = {};
     
     securityClearance = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>();
+    unsecureServer = ko.observable<boolean>(false);
 
     private allLevels = ko.pureComputed(() => true);
     
@@ -42,6 +43,10 @@ class accessManager {
     }
     
     static getAccessLevelText(accessLevel: accessLevel): string {
+        if (this.unsecureServer) {
+            return "";
+        }
+        
         switch (accessLevel) {
             case "ClusterNode":
             case "ClusterAdmin":
