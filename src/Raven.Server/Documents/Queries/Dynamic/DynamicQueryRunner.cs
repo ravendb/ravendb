@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             Index index;
             if (query.Metadata.AutoIndexName != null)
             {
-                index = _indexStore.GetIndex(query.Metadata.AutoIndexName);
+                index = GetIndex(query.Metadata.AutoIndexName);
 
                 if (index != null)
                     return index;
@@ -294,7 +294,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 case DynamicQueryMatchType.Complete:
                 case DynamicQueryMatchType.CompleteButIdle:
-                    index = _indexStore.GetIndex(matchResult.IndexName);
+                    index = GetIndex(matchResult.IndexName);
                     if (index == null)
                     {
                         // the auto index was deleted
