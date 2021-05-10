@@ -280,7 +280,7 @@ class extensions {
                         const shouldBeVisibleByKo = visibleValue && !hiddenValue;
                         const isElementVisible = element.style.display !== "none";
 
-                        if (accessManager.default.canHandleOperation(requiredAccessLevel, actualAccess)) {
+                        if (accessManager.canHandleOperation(requiredAccessLevel, actualAccess)) {
                             if (!isElementVisible && shouldBeVisibleByKo) {
                                 element.style.display = "";
                             }
@@ -302,7 +302,7 @@ class extensions {
                         const shouldBeEnabledByKo = !disableValue && enableValue;
                         const isElementDisabled = element.hasAttribute("disabled");
 
-                        if (accessManager.default.canHandleOperation(requiredAccessLevel, actualAccess)) {
+                        if (accessManager.canHandleOperation(requiredAccessLevel, actualAccess)) {
                             if (isElementDisabled && shouldBeEnabledByKo) {
                                 element.setAttribute("disabled", "false")
                             }
