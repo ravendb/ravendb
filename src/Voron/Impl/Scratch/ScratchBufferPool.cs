@@ -397,14 +397,14 @@ namespace Voron.Impl.Scratch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddScratchBufferFile(ScratchBufferItem scratch)
         {
-            RemoveInactiveScratches(scratch);
+            RemoveInactiveScratches(scratch, updateCacheBeforeDisposingScratch: true);
 
             _scratchBuffers.AddOrUpdate(scratch.Number, scratch, (_, __) => scratch);
         }
 
-        private int RemoveInactiveScratches(ScratchBufferItem except)
+        private int RemoveInactiveScratches(ScratchBufferItem except, bool updateCacheBeforeDisposingScratch)
         {
-            var removed = 0;
+            List<ScratchBufferFile> scratchesToDispose = null;
 
             foreach (var item in _scratchBuffers)
             {
@@ -421,15 +421,37 @@ namespace Voron.Impl.Scratch
 
                 if (_recycleArea.Contains(scratchBufferItem) == false)
                 {
-                    scratchBufferItem.File.Dispose();
+                    if (scratchesToDispose == null)
+                        scratchesToDispose = new List<ScratchBufferFile>();
+                    
 
-                    _scratchSpaceMonitor.Decrease(scratchBufferItem.File.NumberOfAllocatedPages * Constants.Storage.PageSize);
-
-                    removed++;
+                    scratchesToDispose.Add(scratchBufferItem.File);
                 }
             }
 
-            return removed;
+            if (scratchesToDispose == null) 
+                return 0;
+            
+            if (updateCacheBeforeDisposingScratch)
+            {
+                using (_env.PreventNewTransactions())
+                {
+                    // we're about to dispose scratch pagers, we need to update the cache so next transactions won't attempt to EnsurePagerStateReference() on them
+
+                    UpdateCacheForPagerStatesOfAllScratches();
+                }
+            }
+
+            foreach (var scratch in scratchesToDispose)
+            {
+                scratch.Dispose();
+
+                _forTestingPurposes?.ActionToCallDuringRemovalsOfInactiveScratchesRightAfterDisposingScratch?.Invoke();
+
+                _scratchSpaceMonitor.Decrease(scratch.NumberOfAllocatedPages * Constants.Storage.PageSize);
+            }
+
+            return scratchesToDispose.Count;
         }
 
         private static void ThrowUnableToRemoveScratch(ScratchBufferItem scratchBufferItem)
@@ -516,7 +538,7 @@ namespace Voron.Impl.Scratch
                         
                         if (_env.TryPreventNewReadTransactions(TimeSpan.Zero, out exitPreventNewTransactions))
                         {
-                            var removedInactive = RemoveInactiveScratches(_current);
+                            var removedInactive = RemoveInactiveScratches(_current, updateCacheBeforeDisposingScratch: false); // no need to update cache because we're going do to it here anyway
 
                             var removedInactiveRecycled = RemoveInactiveRecycledScratches();
 
@@ -526,7 +548,7 @@ namespace Voron.Impl.Scratch
                                     $"Cleanup of {nameof(ScratchBufferPool)} removed: {removedInactive} inactive scratches and {removedInactiveRecycled} inactive from the recycle area");
                             }
 
-                            _forTestingPurposes?.ActionToCallDuringCleanupRightAfterRemovingInactiveJournals?.Invoke();
+                            _forTestingPurposes?.ActionToCallDuringCleanupRightAfterRemovingInactiveScratches?.Invoke();
                             
                             // UpdateCacheForPagerStatesOfAllScratches(); - no need to call it explicitly, it is called by Rollback() of the write transaction
                         }
@@ -566,18 +588,27 @@ namespace Voron.Impl.Scratch
         {
             private readonly ScratchBufferPool _env;
 
-            internal Action ActionToCallDuringCleanupRightAfterRemovingInactiveJournals;
+            internal Action ActionToCallDuringCleanupRightAfterRemovingInactiveScratches;
+
+            internal Action ActionToCallDuringRemovalsOfInactiveScratchesRightAfterDisposingScratch;
 
             public TestingStuff(ScratchBufferPool env)
             {
                 _env = env;
             }
 
-            internal IDisposable CallDuringCleanupRightAfterRemovingInactiveJournals(Action action)
+            internal IDisposable CallDuringCleanupRightAfterRemovingInactiveScratches(Action action)
             {
-                ActionToCallDuringCleanupRightAfterRemovingInactiveJournals = action;
+                ActionToCallDuringCleanupRightAfterRemovingInactiveScratches = action;
 
-                return new DisposableAction(() => ActionToCallDuringCleanupRightAfterRemovingInactiveJournals = null);
+                return new DisposableAction(() => ActionToCallDuringCleanupRightAfterRemovingInactiveScratches = null);
+            }
+
+            internal IDisposable CallDuringRemovalsOfInactiveScratchesRightAfterDisposingScratch(Action action)
+            {
+                ActionToCallDuringRemovalsOfInactiveScratchesRightAfterDisposingScratch = action;
+
+                return new DisposableAction(() => ActionToCallDuringRemovalsOfInactiveScratchesRightAfterDisposingScratch = null);
             }
         }
 
