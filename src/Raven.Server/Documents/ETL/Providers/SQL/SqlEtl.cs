@@ -18,7 +18,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    public class SqlEtl : EtlProcess<ToSqlItem, SqlTableWithRecords, SqlEtlConfiguration, SqlConnectionString>
+    public class SqlEtl : EtlProcess<ToSqlItem, SqlTableWithRecords, SqlEtlConfiguration, SqlConnectionString, EtlStatsScope, EtlPerformanceOperation>
     {
         public const string SqlEtlTag = "SQL ETL";
 
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public override bool ShouldTrackTimeSeries() => false;
 
-        protected override EtlTransformer<ToSqlItem, SqlTableWithRecords> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<ToSqlItem, SqlTableWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
         {
             return new SqlDocumentTransformer(Transformation, Database, context, Configuration);
         }
@@ -122,6 +122,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                         $"for the following documents: {string.Join(", ", table.Inserts.Select(x => x.DocumentId))}");
                 }
             }
+        }
+
+        protected override EtlStatsScope CreateScope(EtlRunStats stats)
+        {
+            return new EtlStatsScope(stats);
         }
 
         protected override bool ShouldFilterOutHiLoDocument()

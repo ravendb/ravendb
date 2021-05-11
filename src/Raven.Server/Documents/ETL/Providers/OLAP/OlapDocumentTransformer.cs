@@ -19,13 +19,13 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    internal class OlapDocumentTransformer : EtlTransformer<ToOlapItem, OlapTransformedItems>
+    internal class OlapDocumentTransformer : EtlTransformer<ToOlapItem, OlapTransformedItems, OlapEtlStatsScope, OlapEtlPerformanceOperation>
     {
         private const string DateFormat = "yyyy-MM-dd-HH-mm";
         private readonly OlapEtlConfiguration _config;
         private readonly Dictionary<string, OlapTransformedItems> _tables;
         private readonly string _fileNamePrefix, _tmpFilePath;
-        private EtlStatsScope _stats;
+        private OlapEtlStatsScope _stats;
         private readonly Logger _logger;
 
         private ObjectInstance _noPartition;
@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         public override IEnumerable<OlapTransformedItems> GetTransformedResults() => _tables.Values;
 
-        public override void Transform(ToOlapItem item, EtlStatsScope stats, EtlProcessState state)
+        public override void Transform(ToOlapItem item, OlapEtlStatsScope stats, EtlProcessState state)
         {
             // Tombstones extraction is skipped by OLAP ETL. This must never happen
             Debug.Assert(item.IsDelete == false,

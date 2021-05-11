@@ -142,9 +142,9 @@ namespace Raven.Server.Documents.ETL
                     var etl = etlAndPerformanceStatsList.Handler;
                     var performance = etlAndPerformanceStatsList.Performance;
 
-                    var itemsToSend = new List<EtlStatsAggregator>(performance.Count);
+                    var itemsToSend = new List<IEtlStatsAggregator>(performance.Count);
 
-                    while (performance.TryTake(out EtlStatsAggregator stats))
+                    while (performance.TryTake(out IEtlStatsAggregator stats))
                     {
                         itemsToSend.Add(stats);
                     }
@@ -190,7 +190,7 @@ namespace Raven.Server.Documents.ETL
             writer.WriteEtlTaskPerformanceStats(context, stats);
         }
 
-        private class EtlProcessAndPerformanceStatsList : HandlerAndPerformanceStatsList<EtlProcess, EtlStatsAggregator>
+        private class EtlProcessAndPerformanceStatsList : HandlerAndPerformanceStatsList<EtlProcess, IEtlStatsAggregator>
         {
             public EtlProcessAndPerformanceStatsList(EtlProcess etl) : base(etl)
             {

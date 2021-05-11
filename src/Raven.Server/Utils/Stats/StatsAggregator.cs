@@ -3,7 +3,16 @@ using Raven.Client.Util;
 
 namespace Raven.Server.Utils.Stats
 {
-    public abstract class StatsAggregator<TStats, TStatsScope> where TStats : class, new() where TStatsScope : StatsScope<TStats, TStatsScope>
+    public interface IStatsAggregator
+    {
+        DateTime StartTime { get; }
+
+        IStatsScope StatsScope { get; }
+    }
+
+    public abstract class StatsAggregator<TStats, TStatsScope> : IStatsAggregator
+        where TStats : class, new() 
+        where TStatsScope : StatsScope<TStats, TStatsScope>
     {
         public readonly int Id;
 
@@ -13,13 +22,14 @@ namespace Raven.Server.Utils.Stats
 
         protected TStatsScope Scope;
 
+        public IStatsScope StatsScope => Scope;
 
-        protected StatsAggregator(int id, StatsAggregator<TStats, TStatsScope> lastStats)
+        protected StatsAggregator(int id, IStatsAggregator lastStats)
         {
             Id = id;
 
             var now = SystemTime.UtcNow;
-            var currentScope = lastStats?.Scope;
+            var currentScope = lastStats?.StatsScope;
             if (currentScope == null)
             {
                 StartTime = now;

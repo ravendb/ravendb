@@ -226,6 +226,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                                 }
                             };
 
+                            uploadProgress.ChangeState(UploadState.Uploading);
+
                             uploadToServer(settings, fileStream, progress);
 
                             AddInfo($"Total uploaded: {totalToUpload}, took: {MsToHumanReadableString(uploadProgress.UploadTimeInMs)}");

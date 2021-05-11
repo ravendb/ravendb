@@ -27,7 +27,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
-    public class RavenEtlDocumentTransformer : EtlTransformer<RavenEtlItem, ICommandData>
+    public class RavenEtlDocumentTransformer : EtlTransformer<RavenEtlItem, ICommandData, EtlStatsScope, EtlPerformanceOperation>
     {
         private readonly Transformation _transformation;
         private readonly ScriptInput _script;

@@ -18,7 +18,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
-    public class RavenEtl : EtlProcess<RavenEtlItem, ICommandData, RavenEtlConfiguration, RavenConnectionString>
+    public class RavenEtl : EtlProcess<RavenEtlItem, ICommandData, RavenEtlConfiguration, RavenConnectionString, EtlStatsScope, EtlPerformanceOperation>
     {
         private readonly RavenEtlConfiguration _configuration;
         private readonly ServerStore _serverStore;
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return Transformation.IsEmptyScript || Transformation.TimeSeries.CollectionToLoadBehaviorFunction != null;
         }
 
-        protected override EtlTransformer<RavenEtlItem, ICommandData> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<RavenEtlItem, ICommandData, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
         {
             return new RavenEtlDocumentTransformer(Transformation, Database, context, _script);
         }
@@ -184,6 +184,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     throw;
                 }
             }
+        }
+
+        protected override EtlStatsScope CreateScope(EtlRunStats stats)
+        {
+            return new EtlStatsScope(stats);
         }
 
         protected override bool ShouldFilterOutHiLoDocument()

@@ -15,7 +15,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    internal class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords>
+    internal class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
     {
         private static readonly JsValue DefaultVarCharSize = 50;
         
