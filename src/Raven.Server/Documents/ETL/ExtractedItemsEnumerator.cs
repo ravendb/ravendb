@@ -5,13 +5,16 @@ using Raven.Server.Documents.ETL.Stats;
 
 namespace Raven.Server.Documents.ETL
 {
-    public class ExtractedItemsEnumerator<T> : IEnumerator<T>, IEnumerable<T> where T : ExtractedItem
+    public class ExtractedItemsEnumerator<T, TStatsScope, TEtlPerformanceOperation> : IEnumerator<T>, IEnumerable<T> 
+        where T : ExtractedItem
+        where TStatsScope : AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation>
+        where TEtlPerformanceOperation : EtlPerformanceOperation
     {
         private readonly List<IEnumerator<T>> _workEnumerators = new List<IEnumerator<T>>();
         private T _item;
-        private readonly EtlStatsScope _extractionStats;
+        private readonly TStatsScope _extractionStats;
 
-        public ExtractedItemsEnumerator(EtlStatsScope stats)
+        public ExtractedItemsEnumerator(AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation> stats)
         {
             _extractionStats = stats.For(EtlOperations.Extract, start: false);
         }

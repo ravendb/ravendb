@@ -6,19 +6,34 @@ using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
-    public class EtlStatsAggregator : StatsAggregator<EtlRunStats, EtlStatsScope>
+    public interface IEtlStatsAggregator : IStatsAggregator
     {
+        EtlPerformanceStats ToPerformanceStats();
+
+        EtlPerformanceStats ToPerformanceLiveStatsWithDetails();
+
+        EtlPerformanceStats ToPerformanceLiveStats();
+
+        bool Completed { get; }
+    }
+
+    public class EtlStatsAggregator<TStatsScope, TEtlPerformanceOperation> : StatsAggregator<EtlRunStats, TStatsScope>, IEtlStatsAggregator
+        where TStatsScope : AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation>
+        where TEtlPerformanceOperation : EtlPerformanceOperation
+    {
+        private readonly Func<EtlRunStats, TStatsScope> _factory;
         private volatile EtlPerformanceStats _performanceStats;
 
-        public EtlStatsAggregator(int id, EtlStatsAggregator lastStats) : base(id, lastStats)
+        public EtlStatsAggregator(int id, Func<EtlRunStats, TStatsScope> factory, IEtlStatsAggregator lastStats) : base(id, lastStats)
         {
+            _factory = factory;
         }
 
-        public override EtlStatsScope CreateScope()
+        public override TStatsScope CreateScope()
         {
             Debug.Assert(Scope == null);
 
-            return Scope = new EtlStatsScope(Stats);
+            return Scope = _factory(Stats);
         }
 
         public EtlPerformanceStats ToPerformanceStats()
@@ -96,5 +111,7 @@ namespace Raven.Server.Documents.ETL.Stats
                 BatchCompleteReason = Stats.BatchCompleteReason
             };
         }
+
+        public IStatsScope EtlScope => Scope;
     }
 }

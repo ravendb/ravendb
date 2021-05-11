@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
-        public abstract EtlStatsAggregator GetLatestPerformanceStats();
+        public abstract IEtlStatsAggregator GetLatestPerformanceStats();
 
         public abstract OngoingTaskConnectionStatus GetConnectionStatus();
 
@@ -100,9 +100,11 @@ namespace Raven.Server.Documents.ETL
         }
     }
 
-    public abstract class EtlProcess<TExtracted, TTransformed, TConfiguration, TConnectionString> : EtlProcess, ILowMemoryHandler where TExtracted : ExtractedItem
+    public abstract class EtlProcess<TExtracted, TTransformed, TConfiguration, TConnectionString, TStatsScope, TEtlPerformanceOperation> : EtlProcess, ILowMemoryHandler where TExtracted : ExtractedItem
         where TConfiguration : EtlConfiguration<TConnectionString>
         where TConnectionString : ConnectionString
+        where TStatsScope : AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation>
+        where TEtlPerformanceOperation : EtlPerformanceOperation
     {
         private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
         internal const int MinBatchSize = 64;
@@ -111,14 +113,14 @@ namespace Raven.Server.Documents.ETL
         private CancellationTokenSource _cts;
         private readonly HashSet<string> _collections;
 
-        private readonly ConcurrentQueue<EtlStatsAggregator> _lastEtlStats =
-            new ConcurrentQueue<EtlStatsAggregator>();
+        private readonly ConcurrentQueue<IEtlStatsAggregator> _lastEtlStats =
+            new ConcurrentQueue<IEtlStatsAggregator>();
 
         private Size _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
         private NativeMemory.ThreadStats _threadAllocations;
         private PoolOfThreads.LongRunningWork _longRunningWork;
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
-        private EtlStatsAggregator _lastStats;
+        private IEtlStatsAggregator _lastStats;
         private int _statsId;
 
         private TestMode _testMode;
@@ -170,7 +172,7 @@ namespace Raven.Server.Documents.ETL
 
         public override long TaskId => Configuration.TaskId;
 
-        private void Extract(DocumentsOperationContext context, ExtractedItemsEnumerator<TExtracted> merged, long fromEtag, EtlItemType type, EtlStatsScope stats, DisposableScope scope)
+        private void Extract(DocumentsOperationContext context, ExtractedItemsEnumerator<TExtracted, TStatsScope, TEtlPerformanceOperation> merged, long fromEtag, EtlItemType type, AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation> stats, DisposableScope scope)
         {
             switch (type)
             {
@@ -190,9 +192,9 @@ namespace Raven.Server.Documents.ETL
         
         private void ExtractDocuments(
             DocumentsOperationContext context, 
-            ExtractedItemsEnumerator<TExtracted> merged, 
+            ExtractedItemsEnumerator<TExtracted, TStatsScope, TEtlPerformanceOperation> merged, 
             long fromEtag, 
-            EtlStatsScope stats,
+            AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation> stats,
             DisposableScope scope)
         {
 
@@ -232,9 +234,9 @@ namespace Raven.Server.Documents.ETL
         }
                 
         private void ExtractCounters(DocumentsOperationContext context,
-            ExtractedItemsEnumerator<TExtracted> merged,
+            ExtractedItemsEnumerator<TExtracted, TStatsScope, TEtlPerformanceOperation> merged,
             long fromEtag,
-            EtlStatsScope stats,
+            AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation> stats,
             DisposableScope scope)
         {
             if (Transformation.ApplyToAllDocuments)
@@ -255,9 +257,9 @@ namespace Raven.Server.Documents.ETL
         }
         
         private void ExtractTimeSeries(DocumentsOperationContext context,
-            ExtractedItemsEnumerator<TExtracted> merged,
+            ExtractedItemsEnumerator<TExtracted, TStatsScope, TEtlPerformanceOperation> merged,
             long fromEtag,
-            EtlStatsScope stats,
+            AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation> stats,
             DisposableScope scope)
         {
             if (Transformation.ApplyToAllDocuments)
@@ -285,9 +287,9 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        protected abstract EtlTransformer<TExtracted, TTransformed> GetTransformer(DocumentsOperationContext context);
+        protected abstract EtlTransformer<TExtracted, TTransformed, TStatsScope, TEtlPerformanceOperation> GetTransformer(DocumentsOperationContext context);
 
-        public IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context, EtlStatsScope stats, EtlProcessState state)
+        public IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context, TStatsScope stats, EtlProcessState state)
         {
             using (var transformer = GetTransformer(context))
             {
@@ -397,7 +399,7 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        public bool Load(IEnumerable<TTransformed> items, DocumentsOperationContext context, EtlStatsScope stats)
+        public bool Load(IEnumerable<TTransformed> items, DocumentsOperationContext context, TStatsScope stats)
         {
             using (var loadScope = stats.For(EtlOperations.Load))
             {
@@ -445,9 +447,9 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        protected abstract int LoadInternal(IEnumerable<TTransformed> items, DocumentsOperationContext context, EtlStatsScope scope);
+        protected abstract int LoadInternal(IEnumerable<TTransformed> items, DocumentsOperationContext context, TStatsScope scope);
     
-        private bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, int batchSize, DocumentsOperationContext ctx)
+        private bool CanContinueBatch(TStatsScope stats, TExtracted currentItem, int batchSize, DocumentsOperationContext ctx)
         {
             if (_serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
             {
@@ -561,7 +563,7 @@ namespace Raven.Server.Documents.ETL
 
             return true;
         }
-        protected void UpdateMetrics(DateTime startTime, EtlStatsScope stats)
+        protected void UpdateMetrics(DateTime startTime, TStatsScope stats)
         {
             var batchSize = stats.NumberOfExtractedItems.Sum(x => x.Value);
 
@@ -642,6 +644,8 @@ namespace Raven.Server.Documents.ETL
                 longRunningWork.Join(int.MaxValue);
         }
 
+        protected abstract TStatsScope CreateScope(EtlRunStats stats);
+
         public void Run()
         {
             var runStart = Database.Time.GetUtcNow();
@@ -673,7 +677,9 @@ namespace Raven.Server.Documents.ETL
                     using (Statistics.NewBatch())
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        var statsAggregator = _lastStats = new EtlStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
+                        var statsAggregator = new EtlStatsAggregator<TStatsScope, TEtlPerformanceOperation>(Interlocked.Increment(ref _statsId), CreateScope, _lastStats);
+                        _lastStats = statsAggregator;
+
                         AddPerformanceStats(statsAggregator);
 
                         using (var stats = statsAggregator.CreateScope())
@@ -684,7 +690,7 @@ namespace Raven.Server.Documents.ETL
 
                                 using (context.OpenReadTransaction())
                                 using (var scope = new DisposableScope())
-                                using (var merged = new ExtractedItemsEnumerator<TExtracted>(stats))
+                                using (var merged = new ExtractedItemsEnumerator<TExtracted, TStatsScope, TEtlPerformanceOperation>(stats))
                                 {
                                     var nextEtag = loadLastProcessedEtag + 1;
 
@@ -865,7 +871,7 @@ namespace Raven.Server.Documents.ETL
             _threadAllocations = NativeMemory.CurrentThreadStats;
         }
 
-        private void AddPerformanceStats(EtlStatsAggregator stats)
+        private void AddPerformanceStats(IEtlStatsAggregator stats)
         {
             _lastEtlStats.Enqueue(stats);
 
@@ -882,12 +888,12 @@ namespace Raven.Server.Documents.ETL
                 .ToArray();
         }
 
-        public override EtlStatsAggregator GetLatestPerformanceStats()
+        public override IEtlStatsAggregator GetLatestPerformanceStats()
         {
             return _lastStats;
         }
 
-        private void LogSuccessfulBatchInfo(EtlStatsScope stats)
+        private void LogSuccessfulBatchInfo(AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation> stats)
         {
             var message = new StringBuilder();
 

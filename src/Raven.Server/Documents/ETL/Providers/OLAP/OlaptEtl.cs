@@ -26,7 +26,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
-    public class OlapEtl : EtlProcess<ToOlapItem, OlapTransformedItems, OlapEtlConfiguration, OlapConnectionString>
+    public class OlapEtl : EtlProcess<ToOlapItem, OlapTransformedItems, OlapEtlConfiguration, OlapConnectionString, OlapEtlStatsScope, OlapEtlPerformanceOperation>
     {
         public const string OlaptEtlTag = "OLAP ETL";
 
@@ -76,6 +76,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             // _waitForChanges is being set by the timer
         }
 
+        protected override OlapEtlStatsScope CreateScope(EtlRunStats stats)
+        {
+            return new OlapEtlStatsScope(stats);
+        }
+
         protected override bool ShouldTrackAttachmentTombstones()
         {
             return false;
@@ -117,12 +122,12 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             throw new NotSupportedException("Time series deletes aren't supported by OLAP ETL");
         }
 
-        protected override EtlTransformer<ToOlapItem, OlapTransformedItems> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<ToOlapItem, OlapTransformedItems, OlapEtlStatsScope, OlapEtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
         {
             return new OlapDocumentTransformer(Transformation, Database, context, Configuration, _fileNamePrefix, Logger);
         }
 
-        protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context, EtlStatsScope scope)
+        protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context, OlapEtlStatsScope scope)
         {
             var count = 0;
 
@@ -250,11 +255,25 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 AzureBackup = new UploadToAzure
                 {
                     Skipped = true
+                },
+                GoogleCloudBackup = new UploadToGoogleCloud
+                {
+                    Skipped = true
+                },
+                GlacierBackup = new UploadToGlacier
+                {
+                    Skipped = true
+                },
+                FtpBackup = new UploadToFtp
+                {
+                    Skipped = true
                 }
             };
         }
 
-        private void UploadToServer(string localPath, string folderName, string fileName, EtlStatsScope scope)
+        private OlapEtlStatsScope _uploadScope;
+
+        private void UploadToServer(string localPath, string folderName, string fileName, OlapEtlStatsScope scope)
         {
             CancellationToken.ThrowIfCancellationRequested();
 
@@ -271,14 +290,28 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             var backupUploader = new BackupUploader(uploaderSettings, new RetentionPolicyBaseParameters(), Logger, _uploadResult, onProgress: ProgressNotification, _operationCancelToken);
 
-            EtlStatsScope uploadScope = null;
-            if (backupUploader.AnyUploads)
-                uploadScope = scope.For(EtlOperations.LoadUpload, start: true);
+            try
+            {
+                OlapEtlStatsScope outerScope = null;
+                if (backupUploader.AnyUploads)
+                {
+                    outerScope = scope.For(EtlOperations.LoadUpload, start: true);
+                    outerScope.NumberOfFiles++;
 
-            using (uploadScope)
-                backupUploader.Execute();
+                    _uploadScope = outerScope.For($"{EtlOperations.LoadFile}/{outerScope.NumberOfFiles}", start: true);
+                    _uploadScope.FileName = fileName;
+                    _uploadScope.NumberOfFiles = 1;
+                }
+
+                using (outerScope)
+                using (_uploadScope)
+                    backupUploader.Execute();
+            }
+            finally
+            {
+                _uploadScope = null;
+            }
         }
-
 
         private string EnsureSafeName(string str, bool isFolderPath = true)
         {
@@ -306,10 +339,29 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return val;
         }
 
-        private static void ProgressNotification(IOperationProgress progress)
+        private void ProgressNotification(IOperationProgress progress)
         {
-            // RavenDB-16341
-        }
+            var uploadScope = _uploadScope;
+            if (uploadScope == null)
+                return;
 
+            var backupProgress = progress as BackupProgress;
+            if (backupProgress == null)
+                return;
+
+            uploadScope.AzureUpload = GetUploadProgress(backupProgress.AzureBackup);
+            uploadScope.FtpUpload = GetUploadProgress(backupProgress.FtpBackup);
+            uploadScope.GlacierUpload = GetUploadProgress(backupProgress.GlacierBackup);
+            uploadScope.GoogleCloudUpload = GetUploadProgress(backupProgress.GoogleCloudBackup);
+            uploadScope.S3Upload = GetUploadProgress(backupProgress.S3Backup);
+
+            static UploadProgress GetUploadProgress(CloudUploadStatus current)
+            {
+                if (current == null || current.Skipped)
+                    return null;
+
+                return current.UploadProgress;
+            }
+        }
     }
 }

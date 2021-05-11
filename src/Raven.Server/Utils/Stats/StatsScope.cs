@@ -4,7 +4,13 @@ using System.Diagnostics;
 
 namespace Raven.Server.Utils.Stats
 {
-    public abstract class StatsScope<T, TStatsScope> : IDisposable where TStatsScope : StatsScope<T, TStatsScope>
+    public interface IStatsScope
+    {
+        TimeSpan Duration { get; }
+    }
+
+    public abstract class StatsScope<T, TStatsScope> : IStatsScope, IDisposable 
+        where TStatsScope : StatsScope<T, TStatsScope>
     {
         private readonly Stopwatch _sw;
         private readonly T _stats;

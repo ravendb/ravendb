@@ -16,7 +16,10 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL
 {
-    public abstract class EtlTransformer<TExtracted, TTransformed> : IDisposable where TExtracted : ExtractedItem
+    public abstract class EtlTransformer<TExtracted, TTransformed, TStatsScope, TEtlPerformanceOperation> : IDisposable 
+        where TExtracted : ExtractedItem
+        where TStatsScope : AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation>
+        where TEtlPerformanceOperation : EtlPerformanceOperation
     {
         public DocumentDatabase Database { get; }
         protected readonly DocumentsOperationContext Context;
@@ -380,7 +383,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract IEnumerable<TTransformed> GetTransformedResults();
 
-        public abstract void Transform(TExtracted item, EtlStatsScope stats, EtlProcessState state);
+        public abstract void Transform(TExtracted item, TStatsScope stats, EtlProcessState state);
 
         public static void ThrowLoadParameterIsMandatory(string parameterName)
         {
