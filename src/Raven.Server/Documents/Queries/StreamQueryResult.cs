@@ -69,6 +69,11 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
+        public override Dictionary<string, Document>  GetRevisionIncludes()
+        {
+            throw new NotSupportedException();
+        }
+        
         public override Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> GetTimeSeriesIncludes()
         {
             throw new NotSupportedException();
@@ -82,6 +87,11 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
+        public override void AddRevisionIncludes(IncludeRevisionsCommand includeRevisionsCommand)
+        {
+            throw new NotSupportedException();
+        }
+        
         public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes()
         {
             throw new NotSupportedException();

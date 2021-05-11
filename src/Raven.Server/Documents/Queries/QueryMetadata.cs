@@ -8,6 +8,7 @@ using System.Text;
 using Esprima;
 using Esprima.Ast;
 using Raven.Client;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -23,6 +24,7 @@ using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Highlightings;
 using Raven.Server.Documents.Queries.Parser;
+using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Extensions;
@@ -163,6 +165,8 @@ namespace Raven.Server.Documents.Queries
         public ExplanationField Explanation;
 
         public CounterIncludesField CounterIncludes;
+        
+        public RevisionIncludeField RevisionIncludes;
 
         public TimeSeriesIncludesField TimeSeriesIncludes;
 
@@ -547,15 +551,15 @@ namespace Raven.Server.Documents.Queries
                                 AddInclude(include, fieldName.Value, ref compareExchangeValueIncludes);
                                 break;
                             
-                            case MethodType.Revisions: //TODO: Change validateIncludeCounter
-                                QueryValidator.ValidateIncludeCounter(me.Arguments, QueryText, parameters);
-
-                                if (CounterIncludes == null)
-                                {
-                                    CounterIncludes = new CounterIncludesField();
-                                }
-
-                                AddToCounterIncludes(CounterIncludes, me, parameters);
+                            case MethodType.Revisions: 
+                                QueryValidator.ValidateRevisions(me.Arguments, QueryText, parameters);
+                                
+                                RevisionIncludes ??= new RevisionIncludeField();
+                                
+                                HasIncludeOrLoad = true;
+                                
+                                AddToRevisionsInclude(RevisionIncludes, me, parameters);
+                                
                                 break;
 
                             default:
@@ -578,8 +582,67 @@ namespace Raven.Server.Documents.Queries
                 CompareExchangeValueIncludes = compareExchangeValueIncludes?.ToArray();
         }
 
-        private static ExplanationField CreateExplanationField(MethodExpression expression)
+        private void AddToRevisionsInclude(RevisionIncludeField revisionIncludes, MethodExpression me, BlittableJsonReaderObject parameters)
         {
+            string sourcePath = null;
+            var start = 0;
+            if (me.Arguments.Count > 0 &&
+                me.Arguments[0] is FieldExpression fe)
+            {
+                start = 1;
+
+                if (Query.From.Alias?.Value != fe.FieldValue)
+                {
+                    if (RootAliasPaths.TryGetValue(fe.FieldValue, out var value))
+                    {
+                        sourcePath = value.PropertyPath;
+                    }
+                    else if (fe.FieldValue != null)
+                    {
+                        if (Query.From.Alias?.Value == null)
+                        {
+                            sourcePath = fe.FieldValue;
+                        }
+                        else
+                        {
+                            var split = fe.FieldValue.Split('.');
+                            if (split.Length >= 2 &&
+                                split[0] == Query.From.Alias.Value)
+                            {
+                                sourcePath = fe.FieldValue.Substring(split[0].Length + 1);
+                            }
+                        }
+                    }
+                }
+            }
+            if (start == me.Arguments.Count)
+            {
+                revisionIncludes.Revisions[sourcePath ?? string.Empty] = new HashSet<string>();
+                return;
+            }
+
+            for (var index = start; index < me.Arguments.Count; index++)
+            {
+                if (!(me.Arguments[index] is ValueExpression vt))
+                    continue;
+
+                if (vt.Value == ValueTokenType.Parameter)
+                {
+                    foreach (var v in QueryBuilder.GetValues(Query, this, parameters, vt))
+                    {
+                        AddRevisionToInclude(revisionIncludes, parameters, v, sourcePath);
+                    }
+
+                    continue;
+                }
+
+                var value = QueryBuilder.GetValue(Query, this, parameters, vt);
+
+                AddRevisionToInclude(revisionIncludes, parameters, value, sourcePath);
+            }
+        }
+        private static ExplanationField CreateExplanationField(MethodExpression expression)
+            {
             var result = new ExplanationField();
 
             if (expression.Arguments.Count == 1)
@@ -751,7 +814,7 @@ namespace Raven.Server.Documents.Queries
                 AddCounterToInclude(counterIncludes, parameters, value, sourcePath);
             }
         }
-
+        
         private void AddCounterToInclude(CounterIncludesField counterIncludes, BlittableJsonReaderObject parameters,
             (object Value, ValueTokenType Type) parameterValue, string sourcePath)
         {
@@ -762,6 +825,17 @@ namespace Raven.Server.Documents.Queries
             counterIncludes.AddCounter(parameterValue.Value.ToString(), sourcePath);
         }
 
+        private void AddRevisionToInclude(RevisionIncludeField revisionIncludeField, BlittableJsonReaderObject parameters,
+            (object Value, ValueTokenType Type) parameterValue, string sourcePath)
+        {
+            if (parameterValue.Type != ValueTokenType.String)
+                throw new InvalidQueryException("Parameters of method `revisions` must be of type `string` or `string[]`, " +
+                                                $"but got `{parameterValue.Value}` of type `{parameterValue.Type}`", QueryText, parameters);
+
+            revisionIncludeField.AddRevision(parameterValue.Value.ToString(), sourcePath);
+        }
+
+        
         private void AddToTimeSeriesIncludes(TimeSeriesIncludesField timeSeriesIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
         {
             string alias = null;
