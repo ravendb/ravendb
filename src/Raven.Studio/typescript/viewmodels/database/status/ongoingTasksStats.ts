@@ -1533,6 +1533,8 @@ class ongoingTasksStats extends viewModelBase {
                 return "Raven ETL";
             case "Sql":
                 return "SQL ETL";
+            case "Olap":
+                return "OLAP ETL";
             case "SubscriptionConnection":
                 return "Subscription";
             case "SubscriptionBatch":
@@ -1796,7 +1798,7 @@ class ongoingTasksStats extends viewModelBase {
         if (currentDatum !== context.item) {
             const type = context.rootStats.Type;
             const isReplication = type === "OutgoingPull" || type === "OutgoingPush" || type === "IncomingPull" || type === "IncomingPush";
-            const isEtl = type === "Raven" || type === "Sql";
+            const isEtl = type === "Raven" || type === "Sql" || type === "Olap";
             const isSubscription = type === "SubscriptionConnection" || type === "SubscriptionBatch" || type === "AggregatedBatchesInfo";
             const isRootItem = context.rootStats.Details === context.item;
             
@@ -1829,7 +1831,8 @@ class ongoingTasksStats extends viewModelBase {
                     }
                         break;
                     case "Raven":
-                    case "Sql": {
+                    case "Sql":
+                    case "Olap": {
                         const elementWithData = context.rootStats as EtlPerformanceBaseWithCache;
                         if (elementWithData.BatchCompleteReason) {
                             tooltipHtml += `<div class="tooltip-li">Batch complete reason: <div class="value">${elementWithData.BatchCompleteReason} </div></div>`;
