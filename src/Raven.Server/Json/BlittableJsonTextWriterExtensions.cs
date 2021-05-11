@@ -565,7 +565,17 @@ namespace Raven.Server.Json
 
                 writer.WriteEndObject();
             }
+            //
+            var revision = result.GetRevisionIncludes();
+            if (revision != null)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(result.RevisionIncludes));
+                await writer.WriteIncludesAsync(context:context, includes:revision.Values, token: token);
 
+
+            }
+            
             var counters = result.GetCounterIncludes();
             if (counters != null)
             {
@@ -1440,7 +1450,7 @@ namespace Raven.Server.Json
             }
         }
 
-        public static async Task WriteIncludesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, List<Document> includes, CancellationToken token = default)
+        public static async Task WriteIncludesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> includes, CancellationToken token = default)
         {
             writer.WriteStartObject();
 
@@ -1542,7 +1552,7 @@ namespace Raven.Server.Json
 
             writer.WriteEndObject();
         }
-
+        
         public static async Task WriteCountersAsync(this AsyncBlittableJsonTextWriter writer, Dictionary<string, List<CounterDetail>> counters, CancellationToken token)
         {
             writer.WriteStartObject();

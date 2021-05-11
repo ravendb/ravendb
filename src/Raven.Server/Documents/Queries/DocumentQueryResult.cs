@@ -24,10 +24,13 @@ namespace Raven.Server.Documents.Queries
         public override bool SupportsExceptionHandling => false;
 
         private Dictionary<string, List<CounterDetail>> _counterIncludes;
+        
+        private Dictionary<string, Document> _revisions;
 
         private Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> _timeSeriesIncludes;
 
         private Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> _compareExchangeValueIncludes;
+        
 
         public override void AddCounterIncludes(IncludeCountersCommand includeCountersCommand)
         {
@@ -41,6 +44,7 @@ namespace Raven.Server.Documents.Queries
         {
             _timeSeriesIncludes = includeTimeSeriesCommand.Results;
         }
+        
 
         public override Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> GetTimeSeriesIncludes() => _timeSeriesIncludes;
 
@@ -50,6 +54,13 @@ namespace Raven.Server.Documents.Queries
         }
 
         public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes() => _compareExchangeValueIncludes;
+        
+        public override void AddRevisionIncludes(IncludeRevisionsCommand includeRevisionsCommand)
+        {
+            _revisions  = includeRevisionsCommand.Results;
+        }
+
+        public override Dictionary<string, Document>  GetRevisionIncludes() => _revisions;
 
         public override ValueTask AddResultAsync(Document result, CancellationToken token)
         {

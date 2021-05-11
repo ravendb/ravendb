@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Includes;
@@ -165,9 +166,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         });
                 }
 
-                IncludeCountersCommand includeCountersCommand = null;
+                IncludeCountersCommand   includeCountersCommand   = null;
                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
-
+                IncludeRevisionsCommand  includeRevisionsCommand  = null;
+                
+                if (query.Metadata.RevisionIncludes != null)
+                {
+                    includeRevisionsCommand = new IncludeRevisionsCommand(
+                        Database,
+                        context.Documents,
+                        query.Metadata.RevisionIncludes.Revisions);
+                }
+                
                 if (query.Metadata.CounterIncludes != null)
                 {
                     includeCountersCommand = new IncludeCountersCommand(
@@ -204,6 +214,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             includeCountersCommand?.Fill(document);
 
                             includeTimeSeriesCommand?.Fill(document);
+                            
+                            includeRevisionsCommand?.Fill(document);
+                            
                         }
                     }
                 }
@@ -230,6 +243,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (includeTimeSeriesCommand != null)
                     resultToFill.AddTimeSeriesIncludes(includeTimeSeriesCommand);
+                
+                if (includeRevisionsCommand != null)
+                    resultToFill.AddRevisionIncludes(includeRevisionsCommand);
 
                 resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
 

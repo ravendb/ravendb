@@ -108,6 +108,9 @@ namespace Raven.Server.Documents.Queries
 
             if (string.Equals(methodName, "last", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Last;
+            
+            if (string.Equals(methodName, "revisions", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Revisions;
 
             if (throwIfNoMatch == false)
                 return MethodType.Unknown;

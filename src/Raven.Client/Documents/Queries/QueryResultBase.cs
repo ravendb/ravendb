@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Documents.Indexes.Spatial;
+
 using Raven.Client.Documents.Queries.Timings;
 using Sparrow.Json;
 
@@ -22,6 +22,11 @@ namespace Raven.Client.Documents.Queries
         /// Gets or sets the Counters included in the result.
         /// </summary>
         public BlittableJsonReaderObject CounterIncludes { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the Counters included in the result.
+        /// </summary>
+        public BlittableJsonReaderObject RevisionIncludes { get; set; }
 
         /// <summary>
         /// The names of all the counters that the server
