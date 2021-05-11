@@ -94,11 +94,10 @@
                         <input type="checkbox" data-bind="checked: includeSqlConnectionStrings, attr: { id: 'includeSqlConnectionStrings_' + instanceCounter }">
                         <label data-bind="attr: { for: 'includeSqlConnectionStrings_' + instanceCounter }" class="margin-right margin-right-sm">SQL Connection Strings</label>
                     </div>
-<!--                    TODO: return this once issue RavenDB-16434 is done-->
-<!--                    <div class="toggle">-->
-<!--                        <input type="checkbox" data-bind="checked: includeOlapConnectionStrings, attr: { id: 'includeOlapConnectionStrings_' + instanceCounter }">-->
-<!--                        <label data-bind="attr: { for: 'includeOlapConnectionStrings_' + instanceCounter }" class="margin-right margin-right-sm">OLAP Connection Strings</label>-->
-<!--                    </div>-->
+                    <div class="toggle">
+                        <input type="checkbox" data-bind="checked: includeOlapConnectionStrings, attr: { id: 'includeOlapConnectionStrings_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeOlapConnectionStrings_' + instanceCounter }" class="margin-right margin-right-sm">OLAP Connection Strings</label>
+                    </div>
                 </div>
             </div>
         </div>
