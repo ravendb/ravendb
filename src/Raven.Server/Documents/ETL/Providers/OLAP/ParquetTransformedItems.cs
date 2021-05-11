@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using Parquet;
 using Parquet.Data;
@@ -30,8 +31,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private readonly RowGroup _group;
         private readonly Dictionary<string, DataType> _dataTypes;
         private Dictionary<string, DataField> _fields;
-        private readonly string _tableName, _key;
-        private string _documentIdColumn, _localPath, _fileName;
+        private readonly string _tableName, _key, _tmpFilePath, _fileNameSuffix;
+        private string _documentIdColumn;
         private int _count;
         private readonly Logger _logger;
         private readonly OlapEtlConfiguration _configuration;
@@ -51,19 +52,26 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private DateTimeOffset[] _dtoArr;
         private TimeSpan[] _tsArr;
 
-        public ParquetTransformedItems(string name, string key, string tmpPath, string fileNamePrefix, OlapEtlConfiguration configuration, Logger logger) : base(OlapEtlFileFormat.Parquet)
+        private const string DateTimeFormat = "yyyy-MM-dd-HH-mm-ss.ffffff";
+        private const string Extension = "parquet";
+
+
+        public ParquetTransformedItems(string name, string key, string tmpPath, string fileNameSuffix, OlapEtlConfiguration configuration, Logger logger) 
+            : base(OlapEtlFileFormat.Parquet)
         {
             _tableName = name;
             _key = key;
             _logger = logger;
             _configuration = configuration;
+            _fileNameSuffix = fileNameSuffix;
+            _tmpFilePath = tmpPath;
             _dataTypes = new Dictionary<string, DataType>();
             _group = new RowGroup();
 
-            SetPath(tmpPath, fileNamePrefix);
+            SetIdColumn();
         }
 
-        private void SetPath(string tmpFilePath, string fileNamePrefix)
+        private void SetIdColumn()
         {
             if (_configuration.OlapTables != null)
             {
@@ -78,17 +86,18 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
 
             _documentIdColumn ??= DefaultIdColumn;
-
-            _fileName = $"{fileNamePrefix}_{Guid.NewGuid()}.{Format}";
-            _localPath = Path.Combine(tmpFilePath, _fileName);
         }
 
         public override string GenerateFileFromItems(out string folderName, out string fileName)
         {
-            fileName = _fileName;
+            var nowAsString = DateTime.UtcNow.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
+
+            fileName = $"{nowAsString}-{_fileNameSuffix}.{Extension}";
             folderName = _key;
 
-            using (Stream fileStream = File.Open(_localPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
+            var localPath = Path.Combine(_tmpFilePath, fileName);
+
+            using (Stream fileStream = File.Open(localPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
             using (var parquetWriter = new ParquetWriter(new Schema(Fields.Values), fileStream))
             {
                 WriteGroup(parquetWriter);
@@ -97,7 +106,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             _count = _group.Count;
             _group.Clear();
-            return _localPath;
+
+            return localPath;
         }
 
         private Dictionary<string, DataField> GenerateDataFields()

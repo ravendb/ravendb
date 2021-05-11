@@ -39,17 +39,12 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private readonly OperationCancelToken _operationCancelToken;
         private static readonly IEnumerator<ToOlapItem> EmptyEnumerator = Enumerable.Empty<ToOlapItem>().GetEnumerator();
         private static readonly HashSet<char> SpecialChars = new HashSet<char> { '&', '@', ':', ',', '$', '=', '+', '?', ';', ' ', '"', '^', '`', '>', '<', '{', '}', '[', ']', '#', '\'', '~', '|' };
-        private StringBuilder _builder;
         private const string Format = "%{0:X2}";
-        private readonly string _fileNamePrefix;
 
         public OlapEtl(Transformation transformation, OlapEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, OlaptEtlTag)
         {
             Metrics = OlapMetrics;
-            Name = $"{Configuration.Name}_{Transformation.Name}";
-
-            _fileNamePrefix = EnsureSafeName(Name, isFolderPath: false);
 
             _s3Settings = BackupTask.GetBackupConfigurationFromScript(configuration.Connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
                     Database, updateServerWideSettingsFunc: null, serverWide: false);
@@ -124,7 +119,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         protected override EtlTransformer<ToOlapItem, OlapTransformedItems, OlapEtlStatsScope, OlapEtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
         {
-            return new OlapDocumentTransformer(Transformation, Database, context, Configuration, _fileNamePrefix, Logger);
+            return new OlapDocumentTransformer(Transformation, Database, context, Configuration, Logger);
         }
 
         protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context, OlapEtlStatsScope scope)
@@ -320,30 +315,27 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
         }
 
-        private string EnsureSafeName(string str, bool isFolderPath = true)
+        internal static string EnsureSafeName(string str, bool isFolderPath = true)
         {
-            _builder ??= new StringBuilder();
+            var builder = new StringBuilder(str.Length);
             foreach (char @char in str)
             {
                 if (SpecialChars.Contains(@char) || @char <= 31 || @char == 127)
                 {
-                    _builder.AppendFormat(Format, (int)@char);
+                    builder.AppendFormat(Format, (int)@char);
                     continue;
                 }
 
                 if (isFolderPath == false && @char == '/')
                 {
-                    _builder.Append('_');
+                    builder.Append('_');
                     continue;
                 }
 
-                _builder.Append(@char);
+                builder.Append(@char);
             }
 
-            var val = _builder.ToString();
-            _builder.Clear();
-
-            return val;
+            return builder.ToString();
         }
 
         private void ProgressNotification(IOperationProgress progress)

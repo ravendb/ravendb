@@ -415,9 +415,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private static string GetFormattedDate(DateTime dataTime)
+        private static string GetFormattedDate(DateTime dateTime)
         {
-            return dataTime.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
+            return dateTime.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
         }
 
         private BackupResult GenerateBackupResult()

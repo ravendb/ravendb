@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private const string DateFormat = "yyyy-MM-dd-HH-mm";
         private readonly OlapEtlConfiguration _config;
         private readonly Dictionary<string, OlapTransformedItems> _tables;
-        private readonly string _fileNamePrefix, _tmpFilePath;
+        private readonly string _fileNameSuffix, _tmpFilePath;
         private OlapEtlStatsScope _stats;
         private readonly Logger _logger;
 
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private const string DefaultPartitionColumnName = "_partition";
         private const string CustomFieldName = "$custom_field";
 
-        public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config, string fileNamePrefix, Logger logger)
+        public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config, Logger logger)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.OlapEtl), null)
         {
             _config = config;
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _tmpFilePath = localSettings?.FolderPath ??
                            (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).FullPath;
 
-            _fileNamePrefix = fileNamePrefix;
+            _fileNameSuffix = OlapEtl.EnsureSafeName($"{database.Name}-{_config.Name}-{transformation.Name}", isFolderPath: false);
 
             LoadToDestinations = transformation.GetCollectionsFromScript();
         }
@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             {
                 _tables[name] = _config.Format switch
                 {
-                    OlapEtlFileFormat.Parquet => (table = new ParquetTransformedItems(tableName, key, _tmpFilePath, _fileNamePrefix, _config, _logger)),
+                    OlapEtlFileFormat.Parquet => (table = new ParquetTransformedItems(tableName, key, _tmpFilePath, _fileNameSuffix, _config, _logger)),
                     _ => throw new ArgumentOutOfRangeException(nameof(OlapEtlConfiguration.Format))
                 };
             }

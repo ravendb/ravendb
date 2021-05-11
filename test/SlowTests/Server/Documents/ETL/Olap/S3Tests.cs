@@ -840,7 +840,7 @@ loadToOrders(noPartition(), {
 
                         Assert.Equal(1, cloudObjects.FileInfoDetails.Count);
                         Assert.Contains("script#1=$'_orders'", cloudObjects.FileInfoDetails[0].FullPath);
-                        Assert.Contains(".Parquet", cloudObjects.FileInfoDetails[0].FullPath);
+                        Assert.Contains(".parquet", cloudObjects.FileInfoDetails[0].FullPath);
                     }
                 }
             }
