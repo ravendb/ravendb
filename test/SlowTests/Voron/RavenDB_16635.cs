@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using FastTests.Voron;
+using Sparrow.LowMemory;
 using Voron;
 using Voron.Impl;
 using Xunit;
@@ -24,7 +25,7 @@ namespace SlowTests.Voron
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void MustNotThrowObjectDisposedWhenCreatingNewTransaction(bool startWriteTransaction)
+        public void MustNotThrowObjectDisposedOnScratchPagerWhenCreatingNewTransaction(bool startWriteTransaction)
         {
             RequireFileBasedPager();
 
@@ -68,7 +69,7 @@ namespace SlowTests.Voron
 
             var startTransactionWasCalled = false;
 
-            using (Env.ScratchBufferPool.ForTestingPurposesOnly().CallDuringCleanupRightAfterRemovingInactiveJournals(() =>
+            using (Env.ScratchBufferPool.ForTestingPurposesOnly().CallDuringCleanupRightAfterRemovingInactiveScratches(() =>
             {
                 startTransactionWasCalled = true;
 
@@ -102,6 +103,56 @@ namespace SlowTests.Voron
             {
                 Assert.Throws<ObjectDisposedException>(() => tempPager.AcquirePagePointer(tx.LowLevelTransaction, 0, state));
             }
+        }
+
+
+        [Fact]
+        public void MustNotThrowObjectDisposedOnScratchPagerWhenCreatingNewReadTransaction()
+        {
+            RequireFileBasedPager();
+
+            for (int i = 0; i < 100; i++)
+            {
+                using (var tx = Env.WriteTransaction())
+                {
+                    var tree = tx.CreateTree("items");
+
+                    tree.Add("items/" + i, new byte[] { 1, 2, 3 });
+
+                    tx.Commit();
+                }
+            }
+
+            Env.ScratchBufferPool.LowMemory(LowMemorySeverity.Low); // we're simulating low memory so then the scratches aren't recycled - in that case we won't move then to recycle area so RemoveInactiveScratches disposes them immediately 
+
+            Env.FlushLogToDataFile();
+
+            var testActionCalled = false;
+
+            using (Env.ScratchBufferPool.ForTestingPurposesOnly().CallDuringRemovalsOfInactiveScratchesRightAfterDisposingScratch(() =>
+            {
+                testActionCalled = true;
+
+                using (Env.ReadTransaction())
+                {
+
+                }
+            }))
+            {
+                for (int i = 0; i < 100; i++)
+                {
+                    using (var tx = Env.WriteTransaction())
+                    {
+                        var tree = tx.CreateTree("items");
+
+                        tree.Add("items/" + i, new byte[] { 1, 2, 3 });
+
+                        tx.Commit();
+                    }
+                }
+            }
+
+            Assert.True(testActionCalled, "testActionCalled");
         }
     }
 }
