@@ -174,16 +174,16 @@ namespace Raven.Server.Documents.Indexes
         public bool IsRolling => Definition.Rolling ?? DocumentDatabase.Configuration.Indexing.Rolling;
         public string NormalizedName => Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty);
 
-        private string _lastPendingReason;
+        private string _lastPendingStatus;
 
         public bool IsPending
         {
             get
             {
                 if (State == IndexState.Normal)
-                    return DocumentDatabase.IndexStore.ShouldSkipThisNodeWhenRolling(this, out _lastPendingReason);
+                    return DocumentDatabase.IndexStore.ShouldSkipThisNodeWhenRolling(this, out _lastPendingStatus);
 
-                _lastPendingReason = $"Not pending due to state: {State}";
+                _lastPendingStatus = $"Not pending due to state: {State}";
                 return false;
             }
         }
@@ -1588,30 +1588,7 @@ namespace Raven.Server.Documents.Indexes
             internal Action<RawDatabaseRecord> OnRollingIndexNodeFinished;
         }
 
-        public bool IsStale()
-        {
-            using (var queryOperationContext = QueryOperationContext.Allocate(DocumentDatabase, this))
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-            {
-                using (indexContext.OpenReadTransaction())
-                using (queryOperationContext.OpenReadTransaction())
-                {
-                    indexContext.IgnoreStalenessDueToReduceOutputsToDelete = true;
-
-                    try
-                    {
-                        if (IsStale(queryOperationContext, indexContext))
-                            return true;
-                    }
-                    finally
-                    {
-                        indexContext.IgnoreStalenessDueToReduceOutputsToDelete = false;
-                    }
-                }
-            }
-
-            return false;
-        }
+        public bool IsStale() => IsStaleInternal();
 
         private void PauseIfCpuCreditsBalanceIsTooLow()
         {

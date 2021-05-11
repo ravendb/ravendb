@@ -33,13 +33,13 @@ namespace Raven.Server.Documents.Queries
             Database = database;
         }
 
-        public Index GetIndex(string indexName)
+        public Index GetIndex(string indexName, bool throwIfNotExists = true)
         {
             var index = Database.IndexStore.GetIndex(indexName);
-            if (index == null)
+            if (index == null && throwIfNotExists)
                 IndexDoesNotExistException.ThrowFor(indexName);
             
-            if (index.IsPending)
+            if (index?.IsPending == true)
                 throw new PendingRollingIndexException($"Cannot use index `{indexName}` on node {Database.ServerStore.NodeTag} because a rolling index deployment is still pending on this node.");
 
             return index;

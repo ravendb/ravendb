@@ -963,7 +963,7 @@ namespace Raven.Server.Documents.Indexes
             long index = 0;
             try
             {
-                index = (await _serverStore.SendToLeaderAsync(command)).Index;
+                index = (await _serverStore.SendToLeaderAsync(command).ConfigureAwait(false)).Index;
             }
             catch (Exception e)
             {

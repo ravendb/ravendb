@@ -45,9 +45,11 @@ namespace Raven.Server.ServerWide.Commands
 
             foreach (var rollingIndex in record.RollingIndexes)
             {
-                if (rollingIndex.Value.ActiveDeployments.TryGetValue(NodeTag, out var deployment))
+                if (rollingIndex.Value.ActiveDeployments.ContainsKey(NodeTag))
                 {
-                    var dummy = new PutRollingIndexCommand(DatabaseName, rollingIndex.Key, NodeTag, DateTime.Now, "dummy update");
+                    // we use a dummy command to update the record as if the indexing on the removed node was completed
+                    // note: we don't care here that the 'DateTime.UtcNow' will be different on each server
+                    var dummy = new PutRollingIndexCommand(DatabaseName, rollingIndex.Key, NodeTag, DateTime.UtcNow, "dummy update");
                     dummy.UpdateDatabaseRecord(record, etag);
                     rollingIndex.Value.ActiveDeployments.Remove(NodeTag);
                 }
