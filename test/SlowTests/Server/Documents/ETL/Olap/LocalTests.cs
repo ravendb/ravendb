@@ -1932,12 +1932,6 @@ loadToUsers(noPartition(), {
             AddEtl(store, configuration, connectionString);
         }
 
-        private static void AssertLockMode(IDocumentStore store, string databaseName, DatabaseLockMode mode)
-        {
-            var databaseRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(databaseName));
-            Assert.Equal(mode, databaseRecord.LockMode);
-            Console.WriteLine("unlocked");
-        }
         private class User
         {
             public decimal Decimal { get; set; }
