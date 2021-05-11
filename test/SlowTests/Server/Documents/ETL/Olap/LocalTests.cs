@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Server.Basic.Entities;
@@ -14,7 +15,10 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Sparrow.Platform;
 using Tests.Infrastructure;
@@ -932,7 +936,9 @@ loadToOrders(partitionBy(key), o);
                 Assert.True(result.Success);
                 Assert.False(result.Disabled);
 
-                etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                Assert.True(WaitForDatabaseToUnlock(store, timeout: TimeSpan.FromMilliseconds(100), out var database));
+                
+                etlDone = WaitForEtl(database, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 baseline = new DateTime(2021, 1, 1);
 
@@ -968,6 +974,45 @@ loadToOrders(partitionBy(key), o);
                 files = Directory.GetFiles(path);
                 Assert.Equal(2, files.Length);
             }
+        }
+
+
+        private static ManualResetEventSlim WaitForEtl(DocumentDatabase database, Func<string, EtlProcessStatistics, bool> predicate)
+        {
+            var mre = new ManualResetEventSlim();
+
+            database.EtlLoader.BatchCompleted += x =>
+            {
+                if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
+                    mre.Set();
+            };
+
+            return mre;
+        }
+
+        private bool WaitForDatabaseToUnlock(IDocumentStore store, TimeSpan timeout, out DocumentDatabase database)
+        {
+            database = null;
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            while (stopwatch.Elapsed < timeout)
+            {
+                try
+                {
+                    database = GetDocumentDatabaseInstanceFor(store).Result;
+                    return true;
+                }
+                catch (AggregateException e)
+                {
+                    if (e.Message.Contains($"The database '{store.Database}' has been unloaded and locked"))
+                        continue;
+                    
+                    throw;
+                }
+            }
+
+            return false;
         }
 
         [Fact]
@@ -1887,6 +1932,12 @@ loadToUsers(noPartition(), {
             AddEtl(store, configuration, connectionString);
         }
 
+        private static void AssertLockMode(IDocumentStore store, string databaseName, DatabaseLockMode mode)
+        {
+            var databaseRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(databaseName));
+            Assert.Equal(mode, databaseRecord.LockMode);
+            Console.WriteLine("unlocked");
+        }
         private class User
         {
             public decimal Decimal { get; set; }
