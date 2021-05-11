@@ -292,7 +292,7 @@ class shell extends viewModelBase {
                 dbAccessArray.map(x => `<div>
                                             <strong>${genUtils.escapeHtml(x.dbName)}</strong>
                                             <span class="${this.accessManager.getAccessColor(x.accessLevel)} margin-left">
-                                                         ${accessManager.getAccessLevelText(x.accessLevel)}
+                                                         ${accessManager.default.getAccessLevelText(x.accessLevel)}
                                             </span>
                                         </div>`).join("")
                 : "No access granted";

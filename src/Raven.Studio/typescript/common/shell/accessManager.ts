@@ -39,11 +39,11 @@ class accessManager {
 
     getDatabaseAccessLevelTextByDbName(dbName: string): string {
         const accessLevel = this.getEffectiveDatabaseAccessLevel(dbName);
-        return accessLevel ? accessManager.getAccessLevelText(accessLevel) : null;
+        return accessLevel ? accessManager.default.getAccessLevelText(accessLevel) : null;
     }
     
-    static getAccessLevelText(accessLevel: accessLevel): string {
-        if (this.unsecureServer) {
+    getAccessLevelText(accessLevel: accessLevel): string {
+        if (this.unsecureServer()) {
             return "";
         }
         
@@ -154,7 +154,7 @@ class accessManager {
         const securityClearance = accessManager.isSecurityClearanceLevel(requiredAccess);
         const title = securityClearance ? "Insufficient security clearance" : "Insufficient database access";
 
-        const requiredText = accessManager.getAccessLevelText(requiredAccess);
+        const requiredText = accessManager.default.getAccessLevelText(requiredAccess);
 
         return `<div class="text-left">
                     <h4>${title}</h4>

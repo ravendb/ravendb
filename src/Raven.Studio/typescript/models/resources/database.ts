@@ -74,7 +74,7 @@ class database {
 
         const dbAccessLevel = accessManager.default.getEffectiveDatabaseAccessLevel(incomingCopy.Name);
         this.databaseAccess(dbAccessLevel);
-        this.databaseAccessText(accessManager.getAccessLevelText(dbAccessLevel));
+        this.databaseAccessText(accessManager.default.getAccessLevelText(dbAccessLevel));
         this.databaseAccessColor(accessManager.default.getAccessColor(dbAccessLevel));
     }
 
