@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         private async Task CommitOutputReduceToCollection()
         {
             foreach (var command in _outputReduceToCollectionCommandBatcher.CreateCommands())
-                await DocumentDatabase.TxMerger.Enqueue(command);
+                await DocumentDatabase.TxMerger.Enqueue(command).ConfigureAwait(false);
         }
 
         public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)

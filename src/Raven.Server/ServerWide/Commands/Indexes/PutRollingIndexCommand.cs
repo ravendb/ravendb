@@ -80,9 +80,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         private static void MaybeAddNewNodesToRollingDeployment(DatabaseRecord record, Dictionary<string, RollingIndexDeployment> rollingIndex)
         {
-            var allNodes = record.Topology.Members.Select(m => m)
-                .Concat(record.Topology.Promotables.Select(p => p))
-                .Concat(record.Topology.Rehabs.Select(r => r));
+            var allNodes = record.Topology.AllNodes;
 
             foreach (var node in allNodes)
             {
