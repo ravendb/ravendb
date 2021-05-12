@@ -141,6 +141,8 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, IndexErrors> IndexErrors = GenerateJsonDeserializationRoutine<IndexErrors>();
 
         public static readonly Func<BlittableJsonReaderObject, PatchResult> PatchResult = GenerateJsonDeserializationRoutine<PatchResult>();
+        
+        public static readonly Func<BlittableJsonReaderObject, JsonPatchResult> JsonPatchResult = GenerateJsonDeserializationRoutine<JsonPatchResult>();
 
         public static readonly Func<BlittableJsonReaderObject, GetCertificatesResponse> GetCertificatesResponse = GenerateJsonDeserializationRoutine<GetCertificatesResponse>();
         
