@@ -146,6 +146,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     localPath = transformed.GenerateFileFromItems(out folderName, out fileName);
 
                     loadScope.FileName = fileName;
+                    loadScope.NumberOfFiles = 1;
+
                     count += transformed.Count;
                 }
 
