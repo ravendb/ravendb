@@ -936,7 +936,7 @@ loadToOrders(partitionBy(key), o);
                 Assert.True(result.Success);
                 Assert.False(result.Disabled);
 
-                Assert.True(WaitForDatabaseToUnlock(store, timeout: TimeSpan.FromMilliseconds(100), out var database));
+                Assert.True(WaitForDatabaseToUnlock(store, timeout: TimeSpan.FromMilliseconds(1000), out var database));
                 
                 etlDone = WaitForEtl(database, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -1006,8 +1006,11 @@ loadToOrders(partitionBy(key), o);
                 catch (AggregateException e)
                 {
                     if (e.Message.Contains($"The database '{store.Database}' has been unloaded and locked"))
+                    {
+                        Thread.Sleep(10);
                         continue;
-                    
+                    }
+
                     throw;
                 }
             }
