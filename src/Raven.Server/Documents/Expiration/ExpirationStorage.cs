@@ -76,43 +76,54 @@ namespace Raven.Server.Documents.Expiration
                 $"The expiration date format for document '{lowerId}' is not valid: '{expirationDate}'. Use the following format: {_database.Time.GetUtcNow():O}");
         }
 
-        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetExpiredDocuments(DocumentsOperationContext context,
-            DateTime currentTime, bool applyToExistingDocuments, long take, out Stopwatch duration, CancellationToken cancellationToken)
+        public class ExpiredDocumentsOptions
         {
-            return GetDocuments(context, currentTime, applyToExistingDocuments, DocumentsByExpiration, Constants.Documents.Metadata.Expires, take, out duration, cancellationToken);
+            public DocumentsOperationContext Context;
+            public DateTime CurrentTime;
+            public bool IsFirstInTopology; 
+            public long AmountToTake;
+            public Stopwatch Duration;
+            public string TreeName;
+            public string MetadataPropertyToCheck;
         }
 
-        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsToRefresh(DocumentsOperationContext context,
-            DateTime currentTime, bool applyToExistingDocuments, long take, out Stopwatch duration, CancellationToken cancellationToken)
+        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetExpiredDocuments(ExpiredDocumentsOptions options, CancellationToken cancellationToken)
         {
-            return GetDocuments(context, currentTime, applyToExistingDocuments, DocumentsByRefresh, Constants.Documents.Metadata.Refresh, take, out duration, cancellationToken);
+            options.TreeName = DocumentsByExpiration;
+            options.MetadataPropertyToCheck = Constants.Documents.Metadata.Expires;
+            return GetDocuments(options, cancellationToken);
         }
 
-        private Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(DocumentsOperationContext context,
-            DateTime currentTime, bool applyToExistingDocuments, string treeName, string metadataPropertyToCheck, long take, out Stopwatch duration, CancellationToken cancellationToken)
+        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsToRefresh(ExpiredDocumentsOptions options, CancellationToken cancellationToken)
+        {
+            options.TreeName = DocumentsByRefresh;
+            options.MetadataPropertyToCheck = Constants.Documents.Metadata.Refresh;
+            return GetDocuments(options, cancellationToken);
+        }
+
+        private Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(ExpiredDocumentsOptions options, CancellationToken cancellationToken)
         {
             var count = 0;
-            var currentTicks = currentTime.Ticks;
+            var currentTicks = options.CurrentTime.Ticks;
 
-            var expirationTree = context.Transaction.InnerTransaction.ReadTree(treeName);
+            var expirationTree = options.Context.Transaction.InnerTransaction.ReadTree(options.TreeName);
             using (var it = expirationTree.Iterate(false))
             {
                 if (it.Seek(Slices.BeforeAllKeys) == false)
                 {
-                    duration = null;
                     return null;
                 }
 
                 var expired = new Dictionary<Slice, List<(Slice LowerId, string Id)>>();
-                duration = Stopwatch.StartNew();
-
+                options.Duration = Stopwatch.StartNew();
+                
                 do
                 {
                     var entryTicks = it.CurrentKey.CreateReader().ReadBigEndianInt64();
                     if (entryTicks > currentTicks)
                         break;
 
-                    var ticksAsSlice = it.CurrentKey.Clone(context.Transaction.InnerTransaction.Allocator);
+                    var ticksAsSlice = it.CurrentKey.Clone(options.Context.Transaction.InnerTransaction.Allocator);
 
                     var expiredDocs = new List<(Slice LowerId, string Id)>();
 
@@ -125,21 +136,21 @@ namespace Raven.Server.Documents.Expiration
                                 if (cancellationToken.IsCancellationRequested)
                                     return expired;
 
-                                var clonedId = multiIt.CurrentKey.Clone(context.Transaction.InnerTransaction.Allocator);
+                                var clonedId = multiIt.CurrentKey.Clone(options.Context.Transaction.InnerTransaction.Allocator);
 
                                 try
                                 {
-                                    using (var document = _database.DocumentsStorage.Get(context, clonedId, DocumentFields.Id | DocumentFields.Data))
+                                    using (var document = _database.DocumentsStorage.Get(options.Context, clonedId, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector))
                                     {
                                         if (document == null ||
                                             document.TryGetMetadata(out var metadata) == false ||
-                                            HasPassed(metadata, metadataPropertyToCheck, currentTime) == false)
+                                            HasPassed(metadata, options.MetadataPropertyToCheck, options.CurrentTime) == false)
                                         {
                                             expiredDocs.Add((clonedId, null));
                                             continue;
                                         }
 
-                                        if (applyToExistingDocuments == false)
+                                        if (options.IsFirstInTopology == false)
                                         {
                                             // this can happen when we are running the expiration on a node that isn't 
                                             // the primary node for the database. In this case, we still run the cleanup
@@ -156,17 +167,17 @@ namespace Raven.Server.Documents.Expiration
                                 }
                                 catch (DocumentConflictException)
                                 {
-                                    if (applyToExistingDocuments == false)
+                                    if (options.IsFirstInTopology == false)
                                         break;
 
-                                    var (allExpired, id) = GetConflictedExpiration(context, currentTime, clonedId);
+                                    var (allExpired, id) = GetConflictedExpiration(options.Context, options.CurrentTime, clonedId);
 
                                     if (allExpired)
                                     {
                                         expiredDocs.Add((clonedId, id));
                                     }
                                 }
-                            } while (multiIt.MoveNext() && expiredDocs.Count + count < take);
+                            } while (multiIt.MoveNext() && expiredDocs.Count + count < options.AmountToTake);
                         }
                     }
 
@@ -174,7 +185,7 @@ namespace Raven.Server.Documents.Expiration
                     if (expiredDocs.Count > 0)
                         expired.Add(ticksAsSlice, expiredDocs);
 
-                } while (it.MoveNext() && count < take);
+                } while (it.MoveNext() && count < options.AmountToTake);
 
                 return expired;
             }

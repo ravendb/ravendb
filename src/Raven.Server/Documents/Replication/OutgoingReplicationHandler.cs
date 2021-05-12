@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
@@ -90,6 +91,9 @@ namespace Raven.Server.Documents.Replication
         // In case this is an outgoing pull replication from the hub
         // we need to associate this instance to the replication definition.
         public string PullReplicationDefinitionName;
+
+        [CanBeNull]
+        public ReplicationLoader.PullReplicationParams _outgoingPullReplicationParams;
 
         public OutgoingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external, TcpConnectionInfo connectionInfo)
         {
@@ -227,7 +231,7 @@ namespace Raven.Server.Documents.Replication
                             return;
                         }
                     }
-
+                    
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
                     if (_log.IsInfoEnabled)
                         _log.Info($"Will replicate to {Destination.FromString()} via {url}");
@@ -540,6 +544,15 @@ namespace Raven.Server.Documents.Replication
                         // this is used when the other side lets us know what paths it is going to accept from us
                         // it supplements (but does not extend) what we are willing to send out 
                         _destinationAcceptablePaths = response.Reply.AcceptablePaths;
+                        if (Destination is PullReplicationAsSink)
+                        {
+                            _outgoingPullReplicationParams = new ReplicationLoader.PullReplicationParams
+                            {
+                                PreventDeletionsMode = response.Reply.PreventDeletionsMode,
+                                Type = ReplicationLoader.PullReplicationParams.ConnectionType.Outgoing
+                            };
+                        }
+                        
                         break;
 
                     case ReplicationMessageReply.ReplyType.Error:
@@ -895,6 +908,7 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
             }
+
             _lastDestinationEtag = replicationBatchReply.CurrentEtag;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (documentsContext.OpenReadTransaction())
@@ -1003,7 +1017,7 @@ namespace Raven.Server.Documents.Replication
                     var replicationBatchReply = HandleServerResponse(replicationBatchReplyMessage.Document, allowNotify: false);
                     if (replicationBatchReply == null)
                         continue;
-
+                    
                     LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
 
                     var sendFullReply = replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error ||

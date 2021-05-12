@@ -22,6 +22,7 @@ namespace Raven.Client.Documents.Operations.Replication
         public long TaskId;
 
         public bool WithFiltering;
+        public PreventDeletionsMode PreventDeletionsMode { get; set; }
 
         public PullReplicationDefinition()
         {
@@ -47,7 +48,8 @@ namespace Raven.Client.Documents.Operations.Replication
                 [nameof(MentorNode)] = MentorNode,
                 [nameof(DelayReplicationFor)] = DelayReplicationFor,
                 [nameof(Mode)] = Mode,
-                [nameof(WithFiltering)] = WithFiltering
+                [nameof(WithFiltering)] = WithFiltering,
+                [nameof(PreventDeletionsMode)] = PreventDeletionsMode
             };
         }
 
@@ -79,5 +81,13 @@ namespace Raven.Client.Documents.Operations.Replication
                 TaskId = taskId
             };
         }
+    }
+
+    [Flags]
+    public enum PreventDeletionsMode
+    {
+        Disabled,
+        PreventSinkToHubDeletions,
+        PreventDocumentExpirationFromSink
     }
 }

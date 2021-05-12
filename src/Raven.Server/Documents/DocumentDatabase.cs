@@ -1740,10 +1740,12 @@ namespace Raven.Server.Documents
             internal Action ActionToCallDuringDocumentDatabaseInternalDispose;
 
             internal Action CollectionRunnerBeforeOpenReadTransaction;
-
+            
             internal bool SkipDrainAllRequests = false;
 
             internal Action<string, string> DisposeLog;
+
+            internal bool ForceSendTombstones = false;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {
