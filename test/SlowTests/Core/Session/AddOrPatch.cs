@@ -2,9 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using FastTests.Client;
-using NuGet.ContentModel;
-using Raven.Client.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 

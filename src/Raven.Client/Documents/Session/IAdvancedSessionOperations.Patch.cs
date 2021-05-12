@@ -32,11 +32,14 @@ namespace Raven.Client.Documents.Session
         void Patch<T, TKey, TValue>(T entity, Expression<Func<T, IDictionary<TKey, TValue>>> path,
             Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder);
         
-        void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, TU>> patch, TU value);
+        void Patch<T, TKey, TValue>(string id, Expression<Func<T, IDictionary<TKey, TValue>>> path,
+            Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder);
         
-        void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, List<TU>>> patch, Expression<Func<JavaScriptArray<TU>,object>> arrayAdder);
+        void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU value);
         
-        void AddOrIncrement<T, TU>(string id, T entity, Expression<Func<T, TU>> patch, TU valToAdd);
+        void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, List<TU>>> path, Expression<Func<JavaScriptArray<TU>,object>> arrayAdder);
+        
+        void AddOrIncrement<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU valToAdd);
     }
 
     public class JavascriptMethodNameAttribute : Attribute

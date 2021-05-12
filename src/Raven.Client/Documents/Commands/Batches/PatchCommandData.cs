@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
@@ -10,18 +9,18 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public class PatchCommandData : ICommandData
     {
-        public PatchCommandData()
-        {
-            
-        }
-
-        public PatchCommandData(string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing = null)
+        public PatchCommandData(string id, string changeVector, PatchRequest patch)
         {
             Id = id ?? throw new ArgumentNullException(nameof(id));
             ChangeVector = changeVector;
             Patch = patch ?? throw new ArgumentNullException(nameof(patch));
+        }
+        
+        public PatchCommandData(string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing) : this(id, changeVector, patch)
+        {
             PatchIfMissing = patchIfMissing;
         }
+        
         public string Id { get; }
         public string Name { get; } = null;
         public BlittableJsonReaderObject CreateIfMissing { get; set; }
