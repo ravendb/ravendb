@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
@@ -358,8 +359,8 @@ namespace Raven.Server
                 exception is NodeIsPassiveException ||
                 exception is ClientVersionMismatchException ||
                 exception is DatabaseSchemaErrorException || 
-                exception is DatabaseIdleException ||
-                exception is PendingRollingIndexException)
+                exception is DatabaseIdleException
+                )
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                 return;
@@ -375,6 +376,13 @@ namespace Raven.Server
             if (exception is AuthorizationException)
             {
                 response.StatusCode = (int)HttpStatusCode.Forbidden;
+                return;
+            }
+
+            if (exception is PendingRollingIndexException)
+            {
+                response.StatusCode = (int)HttpStatusCode.Gone;
+                response.Headers["Rolling-Index"] = "true";
                 return;
             }
 

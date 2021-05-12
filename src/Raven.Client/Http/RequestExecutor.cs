@@ -1416,6 +1416,11 @@ namespace Raven.Client.Http
                     }
 
                     await ExecuteAsync(node, index, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
+                    if (response.Headers.Contains("Rolling-Index") && nodeIndex.HasValue)
+                    {
+                        _nodeSelector.RestoreNodeIndex(nodeIndex.Value);
+                    }
+
                     return true;
 
                 case HttpStatusCode.GatewayTimeout:
