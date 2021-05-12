@@ -23,6 +23,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         public Dictionary<string, DataField> Fields => _fields ??= GenerateDataFields();
 
+        public RowGroup RowGroup => _group;
+
+        public string Key => _key;
+
         private readonly RowGroup _group;
         private readonly Dictionary<string, DataType> _dataTypes;
         private Dictionary<string, DataField> _fields;
@@ -204,7 +208,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _decimalArr = null;
         }
 
-        private void AddMandatoryFields()
+        internal void AddMandatoryFields()
         {
             _group.Data[_documentIdColumn] = _group.Ids;
             _group.Data[LastModifiedColumn] = _group.LastModified;

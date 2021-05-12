@@ -9,6 +9,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Documents.Patching;
@@ -17,6 +18,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.OLAP;
+using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL;
@@ -1070,8 +1072,70 @@ namespace Raven.Server.Documents.ETL
                             };
                         }
                     case EtlType.Olap:
-                        // todo RavenDB-16311
-                        goto default;
+                        var olapTestScriptConfiguration = testScript.Configuration as OlapEtlConfiguration;
+
+                        if (olapTestScriptConfiguration == null)
+                            throw new InvalidOperationException(
+                                $"Configuration must be of type '{nameof(OlapEtlConfiguration)}' while it got {testScript.Configuration?.GetType()}");
+
+                        olapTestScriptConfiguration.Connection = new OlapConnectionString();
+
+                        using (var olapElt = new OlapEtl(testScript.Configuration.Transforms[0], olapTestScriptConfiguration, database, database.ServerStore))
+                        using (olapElt.EnterTestMode(out debugOutput))
+                        {
+                            olapElt.EnsureThreadAllocationStats();
+
+                            if (testScript.IsDelete)
+                                throw new InvalidOperationException("OLAP ETL doesn't deal with deletions. It's append only process");
+
+                            var olapEtlItem = new ToOlapItem(document, docCollection);
+
+                            var results = olapElt.Transform(new[] { olapEtlItem }, context, new OlapEtlStatsScope(new EtlRunStats()),
+                                new EtlProcessState { SkippedTimeSeriesDocs = new HashSet<string> { testScript.DocumentId } });
+
+                            var itemsByPartition = new List<OlapEtlTestScriptResult.PartitionItems>();
+
+                            foreach (OlapTransformedItems olapItem in results)
+                            {
+                                switch (olapItem)
+                                {
+                                    case ParquetTransformedItems parquetItem:
+
+                                        parquetItem.AddMandatoryFields();
+
+                                        var partitionItems = new OlapEtlTestScriptResult.PartitionItems();
+
+                                        partitionItems.Key = parquetItem.Key;
+
+                                        foreach (var columnData in parquetItem.RowGroup.Data)
+                                        {
+                                            if (parquetItem.Fields.TryGetValue(columnData.Key, out var field) == false)
+                                                continue;
+
+                                            partitionItems.Columns.Add(new OlapEtlTestScriptResult.PartitionColumn
+                                            {
+                                                Name = field.Name,
+                                                Type = field.DataType.ToString(),
+                                                Values = columnData.Value
+                                            });
+                                        }
+
+                                        itemsByPartition.Add(partitionItems);
+
+                                        break;
+                                    default:
+                                        throw new NotSupportedException("Unknown transform type: " + olapItem.GetType());
+                                }
+                            }
+
+                            return new OlapEtlTestScriptResult
+                            {
+                                TransformationErrors = olapElt.Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
+                                ItemsByPartition = itemsByPartition,
+                                DebugOutput = debugOutput
+                            };
+
+                        }
                     default:
                         throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
                 }
