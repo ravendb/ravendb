@@ -131,16 +131,21 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             var count = 0;
 
-            var file = scope.For(EtlOperations.LoadFile, start: false);
+            var outerScope = scope.For(EtlOperations.LoadFile, start: false);
 
             foreach (var transformed in records)
             {
+                outerScope.NumberOfFiles++;
+
                 string localPath;
                 string folderName;
                 string fileName;
-                using (file.Start())
+                using (outerScope.Start())
+                using (var loadScope = outerScope.For($"{EtlOperations.LoadFile}/{outerScope.NumberOfFiles}"))
                 {
                     localPath = transformed.GenerateFileFromItems(out folderName, out fileName);
+
+                    loadScope.FileName = fileName;
                     count += transformed.Count;
                 }
 
@@ -298,7 +303,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     outerScope = scope.For(EtlOperations.LoadUpload, start: true);
                     outerScope.NumberOfFiles++;
 
-                    _uploadScope = outerScope.For($"{EtlOperations.LoadFile}/{outerScope.NumberOfFiles}", start: true);
+                    _uploadScope = outerScope.For($"{EtlOperations.LoadUpload}/{outerScope.NumberOfFiles}", start: true);
                     _uploadScope.FileName = fileName;
                     _uploadScope.NumberOfFiles = 1;
                 }
