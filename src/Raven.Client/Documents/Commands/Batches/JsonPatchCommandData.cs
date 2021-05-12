@@ -9,7 +9,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    class JsonPatchCommandData : ICommandData
+    public class JsonPatchCommandData : ICommandData
     {
         public string Id { get; }
         public JsonPatchDocument JsonPatch { get; }

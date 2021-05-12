@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Operations
         NotModified
     }
 
-    public class PatchResult : IDisposable
+    public abstract class PatchResultBase : IDisposable
     {
         /// <summary>
         /// Result of patch operation:
@@ -46,6 +46,7 @@ namespace Raven.Client.Documents.Operations
         /// <para>- Skipped - document was not patched, because skipPatchIfChangeVectorMismatch was set and the etag did not match,</para>
         /// <para>- NotModified - neither document body not metadata was changed during patch operation</para>
         /// </summary>
+        /// 
         public PatchStatus Status { get; set; }
 
         /// <summary>
@@ -53,6 +54,20 @@ namespace Raven.Client.Documents.Operations
         /// </summary>
         public BlittableJsonReaderObject ModifiedDocument { get; set; }
 
+        public DateTime LastModified;
+
+        public string ChangeVector;
+
+        public string Collection;
+
+        public virtual void Dispose()
+        {
+            ModifiedDocument?.Dispose();
+        }
+    }
+
+    public class PatchResult : PatchResultBase
+    {
         public BlittableJsonReaderObject OriginalDocument { get; set; }
 
         /// <summary>
@@ -60,16 +75,15 @@ namespace Raven.Client.Documents.Operations
         /// </summary>
         public BlittableJsonReaderObject Debug { get; set; }
 
-        public DateTime LastModified;
-
-        public string ChangeVector;
-
-        public string Collection;
-
-        public void Dispose()
+        public override void Dispose()
         {
-            ModifiedDocument?.Dispose();
+            base.Dispose();
             OriginalDocument?.Dispose();
         }
+    }
+
+    public class JsonPatchResult : PatchResultBase
+    {
+
     }
 }

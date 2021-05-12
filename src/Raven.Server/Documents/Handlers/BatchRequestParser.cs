@@ -934,11 +934,12 @@ namespace Raven.Server.Documents.Handlers
 
             #endregion RavenData
 
-            FromEtl
+            FromEtl,
+
+            JsonPatch
 
             // other properties are ignore (for legacy support)
-            ,
-            JsonPatch
+
         }
 
         private static unsafe CommandPropertyName GetPropertyType(JsonParserState state)
