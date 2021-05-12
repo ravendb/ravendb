@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System.Collections.Generic;
+using System.Net.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -9,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class JsonPatchOperation : IOperation
+    public class JsonPatchOperation : IOperation<JsonPatchResult>
     {
         public string Id;
         public JsonPatchDocument JsonPatchDocument;
@@ -20,12 +21,12 @@ namespace Raven.Client.Documents.Operations
             JsonPatchDocument = jsonPatchDocument;
         }
 
-        public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<JsonPatchResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new JsonPatchCommand(Id, JsonPatchDocument);
         }
 
-        public class JsonPatchCommand : RavenCommand
+        private class JsonPatchCommand : RavenCommand<JsonPatchResult>
         {
             private readonly string _id;
             private readonly JsonPatchDocument _jsonPatchDocument;
@@ -39,7 +40,7 @@ namespace Raven.Client.Documents.Operations
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/json-patch?id={_id}";
+                url = $"{node.Url}/databases/{node.Database}/json-patch?id={UrlEncode(_id)}";
 
                 var request = new HttpRequestMessage
                 {
@@ -49,25 +50,34 @@ namespace Raven.Client.Documents.Operations
                     {
                         await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                         {
-                            writer.WriteStartObject();
-                            writer.WritePropertyName("Operations");
-
-                            writer.WriteStartArray();
-
                             var serializer = DocumentConventions.Default.Serialization.CreateSerializer(new CreateSerializerOptions { TypeNameHandling = TypeNameHandling.None });
-                            foreach (var operation in _jsonPatchDocument.Operations)
-                            {
-                                writer.WriteValue(BlittableJsonToken.EmbeddedBlittable, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(operation, ctx, serializer));
-                            }
-
-                            writer.WriteEndArray();
-                            writer.WriteEndObject();
+                            
+                            ctx.Write(writer, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(
+                                new JsonOperation
+                                {
+                                    Operations = _jsonPatchDocument.Operations
+                                }, ctx, serializer));
                         }
                     })
                 };
 
                 return request;
             }
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    return;
+                if (fromCache) 
+                {
+                    response = response.Clone(context);
+                }
+                Result = JsonDeserializationClient.JsonPatchResult(response);
+            }
         }
+    }
+
+    internal class JsonOperation
+    {
+        public List<Microsoft.AspNetCore.JsonPatch.Operations.Operation> Operations { get; set; }
     }
 }

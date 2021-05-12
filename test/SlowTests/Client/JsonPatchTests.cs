@@ -11,6 +11,7 @@ using Orders;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using SlowTests.Core.ScriptedPatching;
 using Xunit;
 using Xunit.Abstractions;
@@ -679,7 +680,7 @@ namespace SlowTests.Client
                 var json = JsonConvert.SerializeObject(originalObject);
                 dynamic obj = JsonConvert.DeserializeObject<ExpandoObject>(json, converter);
 
-                store.Operations.Send(new JsonPatchOperation(documentId, jpd));
+                var res = store.Operations.Send(new JsonPatchOperation(documentId, jpd));
 
                 using (var session = store.OpenSession())
                 {
@@ -699,7 +700,7 @@ namespace SlowTests.Client
             using (var store = GetDocumentStore())
             {
                 string documentId = null;
-                var originalCompany = new Company { Name = "The Wall" };
+                var originalCompany = new Company {Name = "The Wall"};
                 using (var session = store.OpenSession())
                 {
                     session.Store(originalCompany);
@@ -713,6 +714,65 @@ namespace SlowTests.Client
 
                 var error = Assert.ThrowsAny<RavenException>(() => store.Operations.Send(new JsonPatchOperation(documentId, jpd)));
                 Assert.Contains("System.InvalidOperationException: The current value 'The Wall' is not equal to the test value 'The Wal'", error.Message);
+            }
+        }
+
+        [Fact]
+        public void PatchingWithTestMultipleTests()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = documentStore =>
+                {
+                    documentStore.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer => serializer.TypeNameHandling = TypeNameHandling.None
+                    };
+                }
+            }))
+            {
+                var list = new Dictionary<string, object>
+                {
+                    {"Id", null },
+                    {"Float", (float)13},
+                    {"Double", (double)13},
+                    {"Decimal", 13M},
+                    {"Long", (long)13},
+                    {"String", "The Wall"}, 
+                    {"Boolean1", false}, 
+                    {"Boolean2", true},
+                    {"Contact", new { Name = "Stav" }},
+                };
+
+                string documentId = null;
+                var originalObject = new ExpandoObject() as IDictionary<string, object>;
+
+                foreach (var obj in list)
+                {
+                    originalObject.Add(obj.Key, obj.Value);
+                }
+                originalObject.Add("List", list);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(originalObject);
+                    documentId = (string)originalObject["Id"];
+                    session.SaveChanges();
+                }
+
+                var jpd = new JsonPatchDocument();
+
+                jpd.Test("/List", list);
+
+                foreach (var obj in list)
+                {
+                    if (obj.Key != "Id")
+                    {
+                        jpd.Test("/" + obj.Key, obj.Value);
+                    }
+                }
+
+                store.Operations.Send(new JsonPatchOperation(documentId, jpd));
             }
         }
 

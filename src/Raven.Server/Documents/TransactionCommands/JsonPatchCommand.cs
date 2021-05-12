@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.TransactionCommands
     {
         private readonly string _id;
         private readonly List<Command> _commands;
-        private PatchResult _patchResult;
+        public PatchResult _patchResult;
         protected readonly bool _returnDocument;
         private readonly JsonOperationContext _externalContext;
 
@@ -35,7 +35,6 @@ namespace Raven.Server.Documents.TransactionCommands
             
             if (document == null)
             {
-                //TODO: Return patchResult with PatchStatus.DocumentDoesNotExist instead of error?
                 throw new InvalidOperationException($"Cannot apply json patch because the document {_id} does not exist");
             }
             
@@ -122,15 +121,14 @@ namespace Raven.Server.Documents.TransactionCommands
                 [nameof(BatchRequestParser.CommandData.ChangeVector)] = _patchResult.ChangeVector,
                 [nameof(Constants.Documents.Metadata.LastModified)] = _patchResult.LastModified,
                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.JsonPatch),
-                [nameof(PatchStatus)] = _patchResult.Status,
-                [nameof(PatchResult.Debug)] = _patchResult.Debug //TODO: needed?
+                [nameof(PatchStatus)] = _patchResult.Status
             };
 
             if (_returnDocument)
                 patchReply[nameof(PatchResult.ModifiedDocument)] = _patchResult.ModifiedDocument;
 
             reply.Add(patchReply);
-
+            
             return _patchResult.ChangeVector;
         }
         
@@ -192,7 +190,7 @@ namespace Raven.Server.Documents.TransactionCommands
 
             public void Test(object objectAtPath, object value)
             {
-                //No need to check type of objectAtPath because all JsonReader objects implement Equals
+                //All Raven internal structures implement Equals
                 if (objectAtPath.Equals(value) == false)
                 {
                     throw new InvalidOperationException($"The current value '{objectAtPath}' is not equal to the test value '{value}'");
@@ -246,8 +244,9 @@ namespace Raven.Server.Documents.TransactionCommands
                         }
                         if (int.TryParse(prop, out var index) == false)
                             throw new ArgumentException($"Expected an index but got a '{prop}' at path {OriginalPath}");
+                        if (index >= arr.Length || index < 0)
+                            throw new ArgumentOutOfRangeException($"Position {index} is out of array bounds at array {OriginalPath}");
                         
-                        //TODO: check and throw our own error for out of bounds argument?
                         arr.Modifications.Items.Insert(index, value);
                         break;
 
