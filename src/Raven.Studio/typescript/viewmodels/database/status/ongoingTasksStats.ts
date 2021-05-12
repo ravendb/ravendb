@@ -299,6 +299,12 @@ class ongoingTasksStats extends viewModelBase {
         + ongoingTasksStats.trackHeight * 2
         + ongoingTasksStats.openedTrackPadding * 2;
 
+    private static readonly olapLoadLocalPrefix = "Load/Local/";
+    private static readonly olapLoadLocalChild = "Load/Local/Child";
+    
+    private static readonly olapUploadPrefix = "Load/Upload/";
+    private static readonly olapUploadChild = "Load/Upload/Child";
+    
     /* observables */
 
     hasAnyData = ko.observable<boolean>(false);
@@ -400,8 +406,10 @@ class ongoingTasksStats extends viewModelBase {
             "Extract": undefined as string,
             "Transform": undefined as string,
             "Load" : undefined as string,
-            "Load/File" : undefined as string,
+            "Load/Local" : undefined as string,
+            "Load/Local/Child" : undefined as string,
             "Load/Upload" : undefined as string,
+            "Load/Upload/Child" : undefined as string,
             "ConnectionPending": undefined as string,
             "ConnectionActive": undefined as string,
             "Batch": undefined as string,
@@ -1507,6 +1515,13 @@ class ongoingTasksStats extends viewModelBase {
 
     private getColorForOperation(operationName: string): string {
         const { tracks } = this.colors;
+        
+        if (operationName.startsWith(ongoingTasksStats.olapLoadLocalPrefix)) {
+            operationName = ongoingTasksStats.olapLoadLocalChild;
+        }
+        if (operationName.startsWith(ongoingTasksStats.olapUploadPrefix)) {
+            operationName = ongoingTasksStats.olapUploadChild;
+        }
 
         if (operationName in tracks) {
             return (tracks as dictionary<string>)[operationName];
