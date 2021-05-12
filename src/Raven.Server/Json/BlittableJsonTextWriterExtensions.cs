@@ -247,7 +247,7 @@ namespace Raven.Server.Json
             return numberOfResults;
         }
 
-        public static Task<int> WriteFacetedQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, FacetedQueryResult result, CancellationToken token)
+        public static async Task<int> WriteFacetedQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, FacetedQueryResult result, CancellationToken token)
         {
             writer.WriteStartObject();
 
@@ -266,7 +266,7 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
 
-            var numberOfResults = writer.WriteQueryResultAsync(context, result, metadataOnly: false, partial: true, token);
+            var numberOfResults = await writer.WriteQueryResultAsync(context, result, metadataOnly: false, partial: true, token);
 
             writer.WriteEndObject();
 
