@@ -934,7 +934,14 @@ class editDocument extends viewModelBase {
                 // if revisions is enabled try to load revisions bin entry
                 if (xhr.status === 404 && db.hasRevisionsConfiguration()) {
                     this.loadRevisionsBinEntry(id)
-                        .done(doc => loadTask.resolve(doc))
+                        .done(doc => {
+                            if (doc) {
+                                loadTask.resolve(doc);
+                            } else {
+                                messagePublisher.reportWarning("Could not find document: " + id);
+                                loadTask.reject();
+                            }
+                        })
                         .fail(() => loadTask.reject());
                 } else {
                     this.dirtyFlag().reset();
