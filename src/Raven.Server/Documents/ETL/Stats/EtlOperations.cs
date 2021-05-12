@@ -8,7 +8,7 @@
 
         public const string Load = "Load";
 
-        public const string LoadFile = "Load/File";
+        public const string LoadLocal = "Load/Local";
 
         public const string LoadUpload = "Load/Upload";
     }

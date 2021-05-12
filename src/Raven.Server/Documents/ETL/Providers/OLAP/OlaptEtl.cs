@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             var count = 0;
 
-            var outerScope = scope.For(EtlOperations.LoadFile, start: false);
+            var outerScope = scope.For(EtlOperations.LoadLocal, start: false);
 
             foreach (var transformed in records)
             {
@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 string folderName;
                 string fileName;
                 using (outerScope.Start())
-                using (var loadScope = outerScope.For($"{EtlOperations.LoadFile}/{outerScope.NumberOfFiles}"))
+                using (var loadScope = outerScope.For($"{EtlOperations.LoadLocal}/{outerScope.NumberOfFiles}"))
                 {
                     localPath = transformed.GenerateFileFromItems(out folderName, out fileName);
 
