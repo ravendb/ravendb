@@ -1245,6 +1245,9 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         _indexingInProgress.Wait(_indexingProcessCancellationTokenSource.Token);
 
+                                        try
+                                        {
+
                                         TimeSpentIndexing.Start();
 
                                         didWork = DoIndexingWork(scope, _indexingProcessCancellationTokenSource.Token);
@@ -1263,8 +1266,6 @@ namespace Raven.Server.Documents.Indexes
                                     }
                                     finally
                                     {
-                                        DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock?.Release();
-
                                         _indexingInProgress.Release();
 
                                         if (_batchStopped)
@@ -1277,6 +1278,11 @@ namespace Raven.Server.Documents.Indexes
                                         _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
                                         TimeSpentIndexing.Stop();
+                                    }
+                                    }
+                                    finally
+                                    {
+                                        DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock?.Release();
                                     }
 
                                     _indexingBatchCompleted.SetAndResetAtomically();

@@ -28,7 +28,8 @@ class statistics extends viewModelBase {
         this.bindToCurrentInstance("showStaleReasons");
 
         this.rawJsonUrl = ko.pureComputed(() => {
-            return appUrl.forStatsRawData(this.activeDatabase());
+            const activeDatabase = this.activeDatabase();
+            return activeDatabase ? appUrl.forStatsRawData(activeDatabase) : null;
         });
     }
 

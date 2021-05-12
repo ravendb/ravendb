@@ -29,9 +29,9 @@ outputDir="$OUTPUT_DIR"
 
 echo "Build DEB of RavenDB $ravenVersion for distro $distName $distVer $distVerName $DEB_ARCHITECTURE"
 
-if [ "$DEB_ARCHITECTURE" -eq "amd64" ]; then
+if [ "$DEB_ARCHITECTURE" == "amd64" ]; then
     DOCKER_FILE="./ubuntu_amd64.Dockerfile"
-} else {
+else
     DOCKER_FILE="./ubuntu_multiarch.Dockerfile"
 fi
 
@@ -53,7 +53,7 @@ fi
 
 mkdir -p -v "$TEMP_DIR" "$OUTPUT_DIR/$DISTRO_VERSION"
 
-docker run --rm -it \
+docker run --rm \
     --platform $DOCKER_BUILDPLATFORM \
     -v "$OUTPUT_DIR:/dist" \
     -v "$TEMP_DIR:/cache" \
@@ -61,6 +61,7 @@ docker run --rm -it \
     -e "DOTNET_RUNTIME_VERSION=$DOTNET_RUNTIME_VERSION" \
     -e "DOTNET_DEPS_VERSION=$DOTNET_DEPS_VERSION" \
     -e "DISTRO_VERSION_NAME=$DISTRO_VERSION_NAME" \
+    -e "DISTRO_VERSION=$DISTRO_VERSION" \
     -e "RAVEN_PLATFORM=$RAVEN_PLATFORM" \
     -e "QEMU_ARCH=$QEMU_ARCH" \
     $DEB_BUILD_ENV_IMAGE 
