@@ -61,10 +61,10 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        public void AddOrIncrement<T, TU>(string id, T entity, Expression<Func<T, TU>> patch, TU valToAdd)
+        public void AddOrIncrement<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU valueToAdd)
         {
             
-            var pathScript = patch.CompileToJavascript(_javascriptCompilationOptions);
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
             
             var variable = $"this.{pathScript}";
             var value = $"args.val_{_valsCount}";
@@ -74,7 +74,7 @@ namespace Raven.Client.Documents.Session
                 Script = $"{variable} = {variable} ? {variable} + {value} : {value};",
                 Values =
                 {
-                    [$"val_{_valsCount}"] = valToAdd
+                    [$"val_{_valsCount}"] = valueToAdd
                 }
             };
             
@@ -98,15 +98,15 @@ namespace Raven.Client.Documents.Session
             Defer(new PatchCommandData(id,
                 null,
                 patchRequest)
-                  {
+                {
                 CreateIfMissing = newInstance
             });
         }
 
-        public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, List<TU>>> patch, Expression<Func<JavaScriptArray<TU>, object>> arrayAdder)
+        public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, List<TU>>> path, Expression<Func<JavaScriptArray<TU>, object>> arrayAdder)
         {
             var extension = new JavascriptConversionExtensions.CustomMethods {Suffix = _customCount++};
-            var pathScript = patch.CompileToJavascript(_javascriptCompilationOptions);
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
                     JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
@@ -135,10 +135,10 @@ namespace Raven.Client.Documents.Session
             Defer(new PatchCommandData(id, null, patchRequest) {CreateIfMissing = newInstance});
         }
 
-        public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, TU>> patch, TU value)
+        public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU value)
         {
-            var patchScript = patch.CompileToJavascript(_javascriptCompilationOptions);
-            var valueToUse = AddTypeNameToValueIfNeeded(patch.Body.Type, value);
+            var patchScript = path.CompileToJavascript(_javascriptCompilationOptions);
+            var valueToUse = AddTypeNameToValueIfNeeded(path.Body.Type, value);
             var patchRequest = new PatchRequest
             {
                 Script = $"this.{patchScript} = args.val_{_valsCount};",
