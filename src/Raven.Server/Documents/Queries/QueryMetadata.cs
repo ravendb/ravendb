@@ -617,7 +617,7 @@ namespace Raven.Server.Documents.Queries
             }
             if (start == me.Arguments.Count)
             {
-                revisionIncludes.Revisions[sourcePath ?? string.Empty] = new HashSet<string>();
+                revisionIncludes.Revisions = new HashSet<string> {sourcePath};
                 return;
             }
 

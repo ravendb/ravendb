@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Blittable;
 using FastTests.Utils;
 using Raven.Client;
 using Xunit;
@@ -46,17 +45,18 @@ namespace SlowTests.Tests.Linq
                     session.Advanced.Patch<User, string>(id, x => x.ContractRevision, changeVector);
                     await session.SaveChangesAsync();
                 }
-                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenAsyncSession())
                 {
+                    
                     var users = await session.Advanced
-                                            .AsyncRawQuery<User>(@"from Users as u include revisions(  )")
+                                            .AsyncRawQuery<User>(@"from Users as u include revisions(u.ContractRevision)")
                                             .ToListAsync();
 
                     var revision = await session.Advanced.Revisions.GetAsync<User>(changeVector);
-                    
+
                     Assert.NotNull(revision);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    
                 }   
             }
         }
@@ -65,11 +65,6 @@ namespace SlowTests.Tests.Linq
         {
             public string Name { get; set; }
             public string ContractRevision { get; set; }
-        }
-        
-        private class Company
-        {
-            public string Name { get; set; }
         }
     }
 }

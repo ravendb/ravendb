@@ -565,15 +565,14 @@ namespace Raven.Server.Json
 
                 writer.WriteEndObject();
             }
-            //
+           
             var revision = result.GetRevisionIncludes();
             if (revision != null)
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.RevisionIncludes));
                 await writer.WriteIncludesAsync(context:context, includes:revision.Values, token: token);
-
-
+                
             }
             
             var counters = result.GetCounterIncludes();

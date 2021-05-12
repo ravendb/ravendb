@@ -82,6 +82,7 @@ namespace Raven.Client.Documents.Queries
                 ResultEtag = ResultEtag,
                 NodeTag = NodeTag,
                 CounterIncludes = CounterIncludes,
+                RevisionIncludes = RevisionIncludes,
                 IncludedCounterNames = IncludedCounterNames,
                 TimeSeriesIncludes = TimeSeriesIncludes,
                 CompareExchangeValueIncludes = CompareExchangeValueIncludes
