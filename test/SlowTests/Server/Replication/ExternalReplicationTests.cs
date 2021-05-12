@@ -39,21 +39,19 @@ namespace SlowTests.Server.Replication
             {
                 ModifyDatabaseName = s => $"{s}_FooBar-2"
             }))
-            using (var store3 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_FooBar-3"
-            }))
-            {
-                await SetupReplicationAsync(store1, store2, store3);
+                await SetupReplicationAsync(store1, store2);
 
                 using (var s1 = store1.OpenSession())
                 {
                     s1.Store(new User(), "foo/bar");
                     s1.SaveChanges();
                 }
+
+                WaitForUserToContinueTheTest(store1);
+
                 // SlowTests uses the regular old value of 3000mSec. But if called from StressTests - needs more timeout
                 Assert.True(WaitForDocument(store2, "foo/bar", timeout), store2.Identifier);
-                Assert.True(WaitForDocument(store3, "foo/bar", timeout), store3.Identifier);
             }
         }
 

@@ -44,6 +44,10 @@ namespace Raven.Server.Documents.Replication
                 _destinationAcceptablePaths = new AllowedPathsValidator(destinationAcceptablePaths);
             _stream = stream;
             _parent = parent;
+            
+            _shouldSkipSendingTombstones = _parent.Destination is PullReplicationAsSink sink && sink.Mode == PullReplicationMode.SinkToHub &&
+                                           parent._outgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
+                                           _parent._database.ForTestingPurposes?.ForceSendTombstones == false;
         }
 
         public class MergedReplicationBatchEnumerator : IEnumerator<ReplicationBatchItem>
@@ -585,6 +589,18 @@ namespace Raven.Server.Documents.Replication
             if (ValidatorSaysToSkip(_pathsToSend) || ValidatorSaysToSkip(_destinationAcceptablePaths))
                 return true;
 
+            if (_shouldSkipSendingTombstones)
+            {
+                switch (item.Type)
+                {
+                    case ReplicationBatchItem.ReplicationItemType.RevisionTombstone:
+                    case ReplicationBatchItem.ReplicationItemType.AttachmentTombstone:
+                    case ReplicationBatchItem.ReplicationItemType.DocumentTombstone:
+                    case ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange:
+                        return true;
+                }
+            }
+
             switch (item)
             {
                 case DocumentReplicationItem doc:
@@ -594,7 +610,7 @@ namespace Raven.Server.Documents.Replication
                         skippedReplicationItemsInfo.Update(item, isArtificial: true);
                         return true;
                     }
-
+                    
                     if (doc.Flags.Contain(DocumentFlags.Revision) || doc.Flags.Contain(DocumentFlags.DeleteRevision))
                     {
                         // we let pass all the conflicted/resolved revisions, since we keep them with their original change vector which might be `AlreadyMerged` at the destination.
@@ -648,6 +664,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private readonly AllowedPathsValidator _pathsToSend, _destinationAcceptablePaths;
+        private readonly bool _shouldSkipSendingTombstones;
 
         private void SendDocumentsBatch(DocumentsOperationContext documentsContext, OutgoingReplicationStatsScope stats)
         {

@@ -303,7 +303,7 @@ namespace Raven.Server.Documents.Replication
 
                 foreach (var (_, repl) in _incoming)
                 {
-                    if (string.Equals(repl.PullReplicationName, hub, StringComparison.OrdinalIgnoreCase) == false)
+                    if (string.Equals(repl._incomingPullReplicationParams.Name, hub, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
 
                     if (certThumbprint != null && repl.CertificateThumbprint != certThumbprint)
@@ -376,11 +376,12 @@ namespace Raven.Server.Documents.Replication
                     BlittableJsonDocumentBuilder.UsageMode.None, buffer))
                 {
                     initialRequest = JsonDeserializationServer.ReplicationInitialRequest(readerObject);
-                    }
                 }
+            }
 
             string[] allowedPaths = default;
             string pullDefinitionName = null;
+            PreventDeletionsMode preventDeletionsMode = PreventDeletionsMode.Disabled;
             switch (header.AuthorizeInfo?.AuthorizeAs)
             {
                 case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
@@ -391,15 +392,15 @@ namespace Raven.Server.Documents.Replication
                     if (header.AuthorizeInfo.AuthorizationFor == null)
                         throw new InvalidOperationException("Pull replication requires that the AuthorizationFor field will be set, but it wasn't provided");
 
-            PullReplicationDefinition pullReplicationDefinition;
-            using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
+                    PullReplicationDefinition pullReplicationDefinition;
+                    using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
                         pullReplicationDefinition = _server.Cluster.ReadPullReplicationDefinition(Database.Name, header.AuthorizeInfo.AuthorizationFor, ctx);
 
                         if (pullReplicationDefinition.Disabled)
                             throw new InvalidOperationException("The replication hub " + pullReplicationDefinition.Name + " is disabled and cannot be used currently");
-            }
+                    }
 
                     pullDefinitionName = header.AuthorizeInfo.AuthorizationFor;
 
@@ -422,8 +423,9 @@ namespace Raven.Server.Documents.Replication
                                 throw new InvalidOperationException(
                                     "Incoming filtered replication is not supported on legacy replication hub. Make sure that there are no inline certificates on the replication hub: " +
                                     pullReplicationDefinition.Name);
-
+                            
                             allowedPaths = DetailedReplicationHubAccess.Preferred(header.ReplicationHubAccess.AllowedSinkToHubPaths, header.ReplicationHubAccess.AllowedHubToSinkPaths);
+                            preventDeletionsMode = pullReplicationDefinition.PreventDeletionsMode;
 
                             // same as normal incoming replication, just using the filtering
                             break;
@@ -440,7 +442,20 @@ namespace Raven.Server.Documents.Replication
                     throw new InvalidOperationException("Unknown AuthroizeAs value" + header.AuthorizeInfo?.AuthorizeAs);
             }
 
-            CreateIncomingInstance(tcpConnectionOptions, allowedPaths, pullDefinitionName, buffer);
+            PullReplicationParams pullReplicationParams = null;
+            if (pullDefinitionName != null)
+            {
+                pullReplicationParams = new PullReplicationParams()
+                {
+                    Name = pullDefinitionName,
+                    AllowedPaths = allowedPaths,
+                    Mode = PullReplicationMode.SinkToHub,
+                    PreventDeletionsMode = preventDeletionsMode,
+                    Type = PullReplicationParams.ConnectionType.Incoming
+                };
+            }
+
+            CreateIncomingInstance(tcpConnectionOptions, buffer, pullReplicationParams);
         }
 
         private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, ReplicationInitialRequest initialRequest,
@@ -453,13 +468,20 @@ namespace Raven.Server.Documents.Replication
 
             var taskId = pullReplicationDefinition.TaskId; // every connection to this pull replication on the hub will have the same task id.
             var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest, taskId);
-
+            
             var outgoingReplication = new OutgoingReplicationHandler(null, this, Database, externalReplication, external: true, initialRequest.Info)
             {
+                _outgoingPullReplicationParams = new PullReplicationParams { 
+                    Name = initialRequest.PullReplicationDefinitionName,
+                    PreventDeletionsMode = pullReplicationDefinition.PreventDeletionsMode,
+                    Mode = pullReplicationDefinition.Mode,
+                    Type = PullReplicationParams.ConnectionType.Outgoing
+                },
+                
                 PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName,
                 CertificateThumbprint = tcpConnectionOptions.Certificate?.Thumbprint
             };
-
+            
             if (header.ReplicationHubAccess != null)
             {
                 // Note that if the certificate isn't registered *specifically* in the pull replication, we don't do
@@ -479,13 +501,15 @@ namespace Raven.Server.Documents.Replication
         public void RunPullReplicationAsSink(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, PullReplicationAsSink destination)
         {
             string[] allowedPaths = DetailedReplicationHubAccess.Preferred(destination.AllowedHubToSinkPaths, destination.AllowedSinkToHubPaths);
-            var pullParams = new IncomingPullReplicationParams
+            var incomingPullParams = new PullReplicationParams
             {
                 Name = destination.HubName,
                 AllowedPaths = allowedPaths,
-                Mode = PullReplicationMode.HubToSink
+                Mode = PullReplicationMode.HubToSink,
+                PreventDeletionsMode = null, // Not yet configured because this is before getting a reply from hub
+                Type = PullReplicationParams.ConnectionType.Incoming
             };
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, pullParams);
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, incomingPullParams);
             newIncoming.Failed += RetryPullReplication;
 
             PoolOfThreads.PooledThread.ResetCurrentThreadName();
@@ -513,21 +537,9 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, string[] allowedPaths, string pullReplicationName,
-                        JsonOperationContext.MemoryBuffer buffer)
+        private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, PullReplicationParams pullReplicationParams)
         {
-            IncomingPullReplicationParams pullParams = null;
-            if (pullReplicationName != null)
-            {
-                pullParams = new IncomingPullReplicationParams
-                {
-                    Name = pullReplicationName,
-                    AllowedPaths = allowedPaths,
-                    Mode = PullReplicationMode.SinkToHub
-                };
-            }
-
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, pullParams);
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, pullReplicationParams);
             newIncoming.Failed += OnIncomingReceiveFailed;
 
             // need to safeguard against two concurrent connection attempts
@@ -550,19 +562,28 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public class IncomingPullReplicationParams
+        public class PullReplicationParams
         {
             public string Name;
             public string[] AllowedPaths;
             public PullReplicationMode Mode;
+            public PreventDeletionsMode? PreventDeletionsMode;
+            public ConnectionType Type;
+
+            public enum ConnectionType
+            {
+                None,
+                Incoming,
+                Outgoing
+            }
         }
 
         private IncomingReplicationHandler CreateIncomingReplicationHandler(
             TcpConnectionOptions tcpConnectionOptions,
             JsonOperationContext.MemoryBuffer buffer,
-            IncomingPullReplicationParams incomingPullParams)
+            PullReplicationParams incomingPullParams)
         {
-            var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, incomingPullParams?.AllowedPaths, buffer);
+            var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, incomingPullParams, buffer);
 
             var newIncoming = new IncomingReplicationHandler(
                 tcpConnectionOptions,
@@ -575,7 +596,7 @@ namespace Raven.Server.Documents.Replication
             return newIncoming;
         }
 
-        private ReplicationLatestEtagRequest IncomingInitialHandshake(TcpConnectionOptions tcpConnectionOptions, string[] incomingPaths, JsonOperationContext.MemoryBuffer buffer)
+        private ReplicationLatestEtagRequest IncomingInitialHandshake(TcpConnectionOptions tcpConnectionOptions, PullReplicationParams replParams, JsonOperationContext.MemoryBuffer buffer)
         {
             ReplicationLatestEtagRequest getLatestEtagMessage;
 
@@ -636,7 +657,8 @@ namespace Raven.Server.Documents.Replication
                         [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
                         [nameof(ReplicationMessageReply.NodeTag)] = _server.NodeTag,
                         [nameof(ReplicationMessageReply.DatabaseChangeVector)] = changeVector,
-                        [nameof(ReplicationMessageReply.AcceptablePaths)] = incomingPaths,
+                        [nameof(ReplicationMessageReply.AcceptablePaths)] = replParams?.AllowedPaths,
+                        [nameof(ReplicationMessageReply.PreventDeletionsMode)] = replParams?.PreventDeletionsMode
                     };
 
                     documentsContext.Write(writer, response);
@@ -893,7 +915,7 @@ namespace Raven.Server.Documents.Replication
                 if (pullReplication != null && pullReplication.Disabled == false)
                 {
                     // update the destination
-                    var current = instance.Destination as ExternalReplication;
+                    var current = (ExternalReplication)instance.Destination;
                     if (current.DelayReplicationFor != pullReplication.DelayReplicationFor)
                     {
                         current.DelayReplicationFor = pullReplication.DelayReplicationFor;
@@ -1352,6 +1374,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     outgoingReplication.PathsToSend = DetailedReplicationHubAccess.Preferred(sink.AllowedSinkToHubPaths, sink.AllowedHubToSinkPaths);
                 }
+
                 outgoingReplication.Failed += OnOutgoingSendingFailed;
                 outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
                 outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
