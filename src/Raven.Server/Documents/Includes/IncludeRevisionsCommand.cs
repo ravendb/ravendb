@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Linq;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Includes
@@ -9,7 +10,7 @@ namespace Raven.Server.Documents.Includes
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;
-        private readonly Dictionary<string, string[]> _revisionsBySourcePath;
+        private readonly HashSet<string> _revisionsBySourcePath;
 
         public Dictionary<string, Document> Results { get;  }
 
@@ -17,36 +18,32 @@ namespace Raven.Server.Documents.Includes
         {
             _database = database;
             _context = context;
-
+            
             Results = new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
         }
         
-        public IncludeRevisionsCommand(DocumentDatabase database, DocumentsOperationContext context, Dictionary<string, HashSet<string>> revisionsBySourcePath)
+        public IncludeRevisionsCommand(DocumentDatabase database, DocumentsOperationContext context, HashSet<string> revisionsBySourcePath)
             : this(database, context)
         {
-            _revisionsBySourcePath = revisionsBySourcePath.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToArray());
+            _revisionsBySourcePath = revisionsBySourcePath;
         }
 
         public void Fill(Document document)
         {
             if (document == null)
                 return;
-
-            var revisionChangeVectorField = string.Empty;
             
-            foreach (var kvp in _revisionsBySourcePath)
+            foreach (var cv in _revisionsBySourcePath)
             {
-                if (kvp.Key != string.Empty && document.Data.TryGet(kvp.Key, out revisionChangeVectorField) == false)
+                if (string.IsNullOrEmpty(cv))
                 {
-                    throw new InvalidOperationException($"Cannot include revisions for related document '{kvp.Key}', " + 
-                                                        $"document {document.Id} doesn't have a field named '{kvp.Key}'. ");
+                    throw new InvalidOperationException($"Cannot include revisions for related document '{document.Id}', " + 
+                                                        $"document {document.Id} doesn't have a field named '{cv}'. ");
                 }
 
-                // if (Results.ContainsKey(docId))
-                //     continue;
-                var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector: revisionChangeVectorField);
+                var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector: cv);
                 
-                Results.Add(revisionChangeVectorField,getRevisionsByCv);
+                Results.Add(cv,getRevisionsByCv);
 
             }
         }
