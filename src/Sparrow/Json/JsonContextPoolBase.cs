@@ -153,22 +153,25 @@ namespace Sparrow.Json
 
             public void Dispose()
             {
-                if (Parent == null)
+                var parent = Parent;
+                if (parent == null)
                     return; // disposed already
 
+                Parent = null;
+                 
                 if (Context.DoNotReuse)
                 {
                     Context.Dispose();
                     return;
                 }
 
-                if (Context.AllocatedMemory > Parent._maxContextSizeToKeepInBytes)
+                if (Context.AllocatedMemory > parent._maxContextSizeToKeepInBytes)
                 {
                     Context.Dispose();
                     return;
                 }
 
-                if (Parent.LowMemoryFlag.IsRaised() && Context.PoolGeneration < Parent._generation)
+                if (parent.LowMemoryFlag.IsRaised() && Context.PoolGeneration < parent._generation)
                 {
                     // releasing all the contexts which were created before we got the low memory event
                     Context.Dispose();
@@ -180,9 +183,8 @@ namespace Sparrow.Json
                 Context.InUse.Lower();
                 Context.InPoolSince = DateTime.UtcNow;
 
-                Parent.Push(Context);
+                parent.Push(Context);
 
-                Parent = null;
                 Context = null;
             }
         }
