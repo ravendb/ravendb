@@ -16,7 +16,6 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Synchronization.Multipart
@@ -73,7 +72,7 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
                 request.AddHeader("Content-Type", "multipart/form-data; boundary=" + syncingBoundary);
                 request.AddHeader("If-None-Match", "\"" + sourceMetadata.Value<string>(Constants.MetadataEtagField) + "\"");
 
-                request.AddHeader(SyncingMultipartConstants.FileName, fileName);
+                request.AddHeader(SyncingMultipartConstants.FileName, Uri.EscapeDataString(fileName));
                 request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, fileSystemInfo.AsJson());
 
                 try
