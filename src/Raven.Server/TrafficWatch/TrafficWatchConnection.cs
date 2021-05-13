@@ -13,7 +13,8 @@ using Sparrow.Server;
 
 namespace Raven.Server.TrafficWatch
 {
-    internal class TrafficWatchConnection : IDisposable
+
+    internal class TrafficWatchConnection
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<TrafficWatchConnection>("Server");
 
@@ -27,7 +28,7 @@ namespace Raven.Server.TrafficWatch
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly Task<WebSocketReceiveResult> _receive;
 
-        private readonly ConcurrentQueue<TrafficWatchChange> _messages = new ConcurrentQueue<TrafficWatchChange>();
+        private readonly ConcurrentQueue<TrafficWatchChangeBase> _messages = new ConcurrentQueue<TrafficWatchChangeBase>();
         private readonly MemoryStream _bufferStream = new MemoryStream();
 
         private bool _disposed;
@@ -73,7 +74,7 @@ namespace Raven.Server.TrafficWatch
                         if (IsAlive == false)
                             return;
 
-                        await SendMessage(ToByteArraySegment(message)).ConfigureAwait(false);
+                        await SendMessage(await ToByteArraySegmentAsync(message)).ConfigureAwait(false);
                     }
                 }
             }
@@ -98,21 +99,9 @@ namespace Raven.Server.TrafficWatch
             }
         }
 
-        private ArraySegment<byte> ToByteArraySegment(TrafficWatchChange change)
+        private async Task<ArraySegment<byte>> ToByteArraySegmentAsync(TrafficWatchChangeBase change)
         {
-            var json = new DynamicJsonValue
-            {
-                [nameof(change.TimeStamp)] = change.TimeStamp,
-                [nameof(change.RequestId)] = change.RequestId,
-                [nameof(change.HttpMethod)] = change.HttpMethod,
-                [nameof(change.ElapsedMilliseconds)] = change.ElapsedMilliseconds,
-                [nameof(change.ResponseStatusCode)] = change.ResponseStatusCode,
-                [nameof(change.RequestUri)] = change.RequestUri,
-                [nameof(change.AbsoluteUri)] = change.AbsoluteUri,
-                [nameof(change.DatabaseName)] = change.DatabaseName,
-                [nameof(change.CustomInfo)] = change.CustomInfo,
-                [nameof(change.Type)] = change.Type
-            };
+            var json = change.ToJson();
 
             _bufferStream.SetLength(0);
             using (var writer = new BlittableJsonTextWriter(_context, _bufferStream))
@@ -130,7 +119,7 @@ namespace Raven.Server.TrafficWatch
             await _webSocket.SendAsync(message, WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
         }
 
-        public void EnqueueMsg(TrafficWatchChange msg)
+        public void EnqueueMsg(TrafficWatchChangeBase msg)
         {
             _messages.Enqueue(msg);
             _manualResetEvent.Set();
