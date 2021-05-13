@@ -86,8 +86,12 @@ namespace Raven.Client.Documents.Smuggler
             if (_requestExecutor == null)
                 throw new InvalidOperationException("Cannot use Smuggler without a database defined, did you forget to call ForDatabase?");
 
-            using (_requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            IDisposable returnContext = null;
+            Task requestTask = null;
+
+            try
             {
+                returnContext = _requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
                 var getOperationIdCommand = new GetNextOperationIdCommand();
                 await _requestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 var operationId = getOperationIdCommand.Result;
@@ -96,10 +100,12 @@ namespace Raven.Client.Documents.Smuggler
                 var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
                 var command = new ExportCommand(_requestExecutor.Conventions, context, options, handleStreamResponse, operationId, tcs, getOperationIdCommand.NodeTag);
-                var requestTask = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token)
+
+                requestTask = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token)
                     .ContinueWith(t =>
                     {
                         cancellationTokenRegistration.Dispose();
+                        returnContext?.Dispose();
                         if (t.IsFaulted)
                         {
                             tcs.TrySetException(t.Exception);
@@ -126,6 +132,13 @@ namespace Raven.Client.Documents.Smuggler
                     operationId,
                     getOperationIdCommand.NodeTag,
                     additionalTask);
+            }
+            catch (Exception e)
+            {
+                if (requestTask == null)
+                    returnContext?.Dispose();
+
+                throw e.ExtractSingleInnerException();
             }
         }
 
