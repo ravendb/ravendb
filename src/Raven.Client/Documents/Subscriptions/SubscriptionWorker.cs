@@ -510,44 +510,53 @@ namespace Raven.Client.Documents.Subscriptions
             var incomingBatch = new List<SubscriptionConnectionServerMessage>();
             var includes = new List<BlittableJsonReaderObject>();
             IDisposable returnContext = contextPool.AllocateOperationContext(out JsonOperationContext context);
-            bool endOfBatch = false;
-            while (endOfBatch == false && _processingCts.IsCancellationRequested == false)
+            try
             {
-                SubscriptionConnectionServerMessage receivedMessage = await ReadNextObject(context, tcpStream, buffer).ConfigureAwait(false);
-                if (receivedMessage == null || _processingCts.IsCancellationRequested)
+                bool endOfBatch = false;
+                while (endOfBatch == false && _processingCts.IsCancellationRequested == false)
                 {
-                    break;
-                }
+                    SubscriptionConnectionServerMessage receivedMessage = await ReadNextObject(context, tcpStream, buffer).ConfigureAwait(false);
+                    if (receivedMessage == null || _processingCts.IsCancellationRequested)
+                    {
+                        break;
+                    }
 
-                switch (receivedMessage.Type)
-                {
-                    case SubscriptionConnectionServerMessage.MessageType.Data:
-                        incomingBatch.Add(receivedMessage);
-                        break;
-                    case SubscriptionConnectionServerMessage.MessageType.Includes:
-                        includes.Add(receivedMessage.Includes);
-                        break;
-                    case SubscriptionConnectionServerMessage.MessageType.EndOfBatch:
-                        endOfBatch = true;
-                        break;
-                    case SubscriptionConnectionServerMessage.MessageType.Confirm:
-                        var onAfterAcknowledgment = AfterAcknowledgment;
-                        if (onAfterAcknowledgment != null)
-                            await onAfterAcknowledgment(batch).ConfigureAwait(false);
-                        incomingBatch.Clear();
-                        batch.Items.Clear();
-                        break;
-                    case SubscriptionConnectionServerMessage.MessageType.ConnectionStatus:
-                        AssertConnectionState(receivedMessage);
-                        break;
-                    case SubscriptionConnectionServerMessage.MessageType.Error:
-                        ThrowSubscriptionError(receivedMessage);
-                        break;
-                    default:
-                        ThrowInvalidServerResponse(receivedMessage);
-                        break;
+                    switch (receivedMessage.Type)
+                    {
+                        case SubscriptionConnectionServerMessage.MessageType.Data:
+                            incomingBatch.Add(receivedMessage);
+                            break;
+                        case SubscriptionConnectionServerMessage.MessageType.Includes:
+                            includes.Add(receivedMessage.Includes);
+                            break;
+                        case SubscriptionConnectionServerMessage.MessageType.EndOfBatch:
+                            endOfBatch = true;
+                            break;
+                        case SubscriptionConnectionServerMessage.MessageType.Confirm:
+                            var onAfterAcknowledgment = AfterAcknowledgment;
+                            if (onAfterAcknowledgment != null)
+                                await onAfterAcknowledgment(batch).ConfigureAwait(false);
+                            incomingBatch.Clear();
+                            batch.Items.Clear();
+                            break;
+                        case SubscriptionConnectionServerMessage.MessageType.ConnectionStatus:
+                            AssertConnectionState(receivedMessage);
+                            break;
+                        case SubscriptionConnectionServerMessage.MessageType.Error:
+                            ThrowSubscriptionError(receivedMessage);
+                            break;
+                        default:
+                            ThrowInvalidServerResponse(receivedMessage);
+                            break;
+                    }
                 }
             }
+            catch (Exception)
+            {
+                returnContext?.Dispose();
+                throw;
+            }
+
             return new BatchFromServer
             {
                 Messages = incomingBatch,
