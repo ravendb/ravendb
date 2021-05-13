@@ -215,6 +215,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             var disposeStream = leaveOpen ? null : new DisposeStreamOnce(stream);
             IDisposable returnContext = null;
+            Task requestTask = null;
 
             try
             {
@@ -236,7 +237,7 @@ namespace Raven.Client.Documents.Smuggler
                 var command = new ImportCommand(_requestExecutor.Conventions, context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
 
                 var task = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
-                var requestTask = task
+                requestTask = task
                     .ContinueWith(t =>
                     {
                         returnContext?.Dispose();
@@ -269,7 +270,12 @@ namespace Raven.Client.Documents.Smuggler
             }
             catch (Exception e)
             {
-                returnContext?.Dispose();
+                if (requestTask == null)
+                {
+                    // handle the possible double dispose of return context
+                    returnContext?.Dispose();
+                }
+
                 disposeStream?.Dispose();
                 throw e.ExtractSingleInnerException();
             }
