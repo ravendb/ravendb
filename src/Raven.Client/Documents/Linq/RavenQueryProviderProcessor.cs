@@ -1458,10 +1458,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
             LinqPathProvider.GetValueFromExpressionWithoutConversion(arguments[1], out var distanceFieldName);
             LinqPathProvider.GetValueFromExpressionWithoutConversion(arguments[2], out var sndArgObj);
 
-            if (sndArgObj is double) // can only be lat here
+            if (sndArgObj is double distanceLatitude) // can only be lat here
             {
                 // lat / lng
-                var distanceLatitude = (double)sndArgObj;
                 LinqPathProvider.GetValueFromExpressionWithoutConversion(arguments[3], out var distanceLongitude);
 
                 if (distanceFieldName is string fieldName)
