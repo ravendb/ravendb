@@ -93,10 +93,8 @@ namespace Raven.Client.Documents.Session
                     ExecuteInternal(i, addition, loadId);
                 }
             }
-            else if (token is string)
+            else if (token is string value)
             {
-                var value = (string)token;
-
                 // we need to check on both of them, with id & without id
                 // because people will do products/1 and details/products/1 and want to be able
                 // to include on that
@@ -117,10 +115,8 @@ namespace Raven.Client.Documents.Session
                 if (addition != null)
                     loadId(value, null);
             }
-            else if (token is long)
+            else if (token is long value)
             {
-                var value = (long)token;
-
                 try
                 {
                     loadId(value.ToString(CultureInfo.InvariantCulture), addition);

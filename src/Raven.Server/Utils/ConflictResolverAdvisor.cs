@@ -210,9 +210,8 @@ namespace Raven.Server.Utils
         private static void WriteToken(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, string propertyName, object propertyValue)
         {
             writer.WritePropertyName(propertyName);
-            if (propertyValue is BlittableJsonReaderObject.PropertyDetails)
+            if (propertyValue is BlittableJsonReaderObject.PropertyDetails prop)
             {
-                var prop = (BlittableJsonReaderObject.PropertyDetails)propertyValue;
                 writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                 return;
             }
