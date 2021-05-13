@@ -42,22 +42,26 @@
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
                                     <ul class="dropdown-menu">
-                                        <li class="margin-left margin-top margin-top-sm" data-bind="visible: isCluster">
-                                            <label><strong>Cluster Wide</strong></label>
-                                        </li>
-                                        <li data-bind="click: _.partial(enableSelectedIndexes, true), visible: isCluster">
-                                            <a href="#" title="Enable indexing on ALL cluster nodes">
-                                                <i class="icon-play"></i>
-                                                <span>Enable</span>
-                                            </a>
-                                        </li>
-                                        <li data-bind="click: _.partial(disableSelectedIndexes, true), visible: isCluster">
-                                            <a href="#" title="Disable indexing on All cluster nodes">
-                                                <i class="icon-cancel"></i>
-                                                <span>Disable</span>
-                                            </a>
-                                        </li>
-                                        <li class="divider" data-bind="visible: isCluster"></li>
+
+
+<!-- TODO return when issue RavenDB-16345 is done -->
+<!--                                        <li class="margin-left margin-top margin-top-sm" data-bind="visible: isCluster">-->
+<!--                                            <label><strong>Cluster Wide</strong></label>-->
+<!--                                        </li>-->
+<!--                                        <li data-bind="click: _.partial(enableSelectedIndexes, true), visible: isCluster">-->
+<!--                                            <a href="#" title="Enable indexing on ALL cluster nodes">-->
+<!--                                                <i class="icon-play"></i>-->
+<!--                                                <span>Enable</span>-->
+<!--                                            </a>-->
+<!--                                        </li>-->
+<!--                                        <li data-bind="click: _.partial(disableSelectedIndexes, true), visible: isCluster">-->
+<!--                                            <a href="#" title="Disable indexing on All cluster nodes">-->
+<!--                                                <i class="icon-cancel"></i>-->
+<!--                                                <span>Disable</span>-->
+<!--                                            </a>-->
+<!--                                        </li>-->
+<!--                                        <li class="divider" data-bind="visible: isCluster"></li>-->
+                                        
                                         <li class="margin-left margin-top margin-top-sm" data-bind="visible: isCluster">
                                             <label><strong>Local Node</strong></label>
                                         </li>
@@ -241,24 +245,30 @@
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu">
-                            <li data-bind="visible: canBeEnabled() && $root.isCluster()">
-                                <a href="#" data-bind="click: _.partial($root.enableIndex, $data, true)" title="Enable indexing on ALL cluster nodes">
-                                    <i class="icon-play"></i>
-                                    <span>Enable indexing - Cluster wide</span>
-                                </a>
-                            </li>
+                            
+<!-- TODO return when issue RavenDB-16345 is done -->                          
+<!--                            <li data-bind="visible: canBeEnabled() && $root.isCluster()">-->
+<!--                                <a href="#" data-bind="click: _.partial($root.enableIndex, $data, true)" title="Enable indexing on ALL cluster nodes">-->
+<!--                                    <i class="icon-play"></i>-->
+<!--                                    <span>Enable indexing - Cluster wide</span>-->
+<!--                                </a>-->
+<!--                            </li>-->
+                            
                             <li data-bind="visible: canBeEnabled()">
                                 <a href="#" data-bind="click: _.partial($root.enableIndex, $data, false), attr: { title: 'Enable indexing on node ' + $root.localNodeTag() }">
                                     <i class="icon-play"></i>
                                     <span data-bind="text: $root.isCluster() ? 'Enable indexing - Local node' : 'Enable indexing'"></span>
                                 </a>
                             </li>
-                            <li data-bind="visible: canBeDisabled() && $root.isCluster()">
-                                <a href="#" data-bind="click: _.partial($root.disableIndex, $data, true)" title="Disable indexing on ALL cluster nodes">
-                                    <i class="icon-cancel"></i>
-                                    <span>Disable indexing - Cluster wide</span>
-                                </a>
-                            </li>
+                            
+<!-- TODO return when issue RavenDB-16345 is done -->
+<!--                            <li data-bind="visible: canBeDisabled() && $root.isCluster()">-->
+<!--                                <a href="#" data-bind="click: _.partial($root.disableIndex, $data, true)" title="Disable indexing on ALL cluster nodes">-->
+<!--                                    <i class="icon-cancel"></i>-->
+<!--                                    <span>Disable indexing - Cluster wide</span>-->
+<!--                                </a>-->
+<!--                            </li>-->
+                            
                             <li data-bind="visible: canBeDisabled()">
                                 <a href="#" data-bind="click: _.partial($root.disableIndex, $data, false), attr: { title: 'Disable indexing on node ' + $root.localNodeTag() }">
                                     <i class="icon-cancel"></i>
