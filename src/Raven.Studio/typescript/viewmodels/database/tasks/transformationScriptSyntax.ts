@@ -28,7 +28,20 @@ class transformationScriptSyntax extends dialogViewModelBase {
                 sampleText = transformationScriptSyntax.sqlEtlSampleText;
                 break;
             case "Olap":
-                sampleText = transformationScriptSyntax.olapEtlSampleText;
+                switch (sampleTitle) {
+                    case "olapEtlSamplePartition":
+                        sampleText = transformationScriptSyntax.olapEtlSamplePartitionText;
+                        break;
+                    case "olapEtlSampleNoPartition":
+                        sampleText = transformationScriptSyntax.olapEtlSampleNoPartitionText;
+                        break;
+                    case "olapEtlSampleKey":
+                        sampleText = transformationScriptSyntax.olapEtlSampleKeyText;
+                        break;
+                    case "olapEtlSampleCustomField":
+                        sampleText = transformationScriptSyntax.olapEtlSampleCustomFieldText;
+                        break;
+                }
                 break;
         }
         
@@ -117,22 +130,56 @@ loadToOrders(orderData);`;
         return Prism.highlight(transformationScriptSyntax.sqlEtlSampleText, (Prism.languages as any).javascript);
     });
 
-    static readonly olapEtlSampleText =
+    static readonly olapEtlSamplePartitionText =
 `var orderDate = new Date(this.OrderedAt);
 var year = orderDate.getFullYear();
 var month = orderDate.getMonth() + 1;
 
-// The order of the following array values determines the partitions order in parquet file path
-loadToOrders(partitionBy([['year', year], ['month', month], ['source', $custom_field]]),
-{
+// The order of params in the partitionBy method determines the partitions order in parquet file path
+loadToOrders(partitionBy(['year', year], ['month', month]), {
     Company : this.Company,
     ShipVia : this.ShipVia
+    // Note: 2 more field are always created per table by default:
+    //       * _id: The ID column - can be overriden in the task definition
+    //       * _lastModifiedTicks: The document's last modification time column - cannot be overriden
 });`;
 
-    olapEtlSampleHtml = ko.pureComputed(() => {
-        return Prism.highlight(transformationScriptSyntax.olapEtlSampleText, (Prism.languages as any).javascript);
+    olapEtlSamplePartitionHtml = ko.pureComputed(() => {
+        return Prism.highlight(transformationScriptSyntax.olapEtlSamplePartitionText, (Prism.languages as any).javascript);
     });
-    
+
+    static readonly olapEtlSampleNoPartitionText =
+`// Data will Not be partitioned
+loadToOrders(noPartition(), {
+    Company : this.Company
+});`;
+
+    olapEtlSampleNoPartitionHtml = ko.pureComputed(() => {
+        return Prism.highlight(transformationScriptSyntax.olapEtlSampleNoPartitionText, (Prism.languages as any).javascript);
+    });
+
+    static readonly olapEtlSampleKeyText = 
+`var key = new Date(this.OrderedAt);
+loadToOrders(partitionBy(key), {
+    Company : this.Company
+});`;
+
+    olapEtlSampleKeyHtml = ko.pureComputed(() => {
+        return Prism.highlight(transformationScriptSyntax.olapEtlSampleKeyText, (Prism.languages as any).javascript);
+    });
+
+    static readonly olapEtlSampleCustomFieldText =
+`var orderDate = new Date(this.OrderedAt);
+var year = orderDate.getFullYear();
+
+// The 'customFieldValue' is set in the OLAP task definition
+loadToOrders(partitionBy(['year', year], ['customFieldName', customFieldValue]), {
+    Company : this.Company
+});`;
+
+    olapEtlSampleCustomFieldHtml = ko.pureComputed(() => {
+        return Prism.highlight(transformationScriptSyntax.olapEtlSampleCustomFieldText, (Prism.languages as any).javascript);
+    });
 }
 
 export = transformationScriptSyntax;

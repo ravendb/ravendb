@@ -3,27 +3,40 @@
        <div class="modal-body">
            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
            <div data-bind="if: etlType() === 'Raven'">
-               <h3 class="margin-bottom margin-bottom-lg margin-top">RavenDB ETL Script Reference</h3>
+               <h3 class="margin-bottom margin-bottom-lg margin-top">Sample RavenDB ETL Transformation Scripts</h3>
                <div data-bind="foreach: $data.constructor.ravenEtlSamples">
                    <div class="margin-top" data-bind="text: title"></div>
                    <pre class="margin-bottom copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
                </div>
             </div>
            <div data-bind="if: etlType() === 'Sql'" class="copy-area">
-               <h3 class="margin-bottom margin-bottom-lg margin-top">Simple SQL ETL Transformation Script</h3>
+               <h3 class="margin-bottom margin-bottom-lg margin-top">Sample SQL ETL Transformation Script</h3>
                <div class="margin-bottom">
                    <pre class="copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: copySample"><i class="icon-copy"></i></a><span data-bind="html: sqlEtlSampleHtml"></span></pre>
                </div>
            </div>
            <div data-bind="if: etlType() === 'Olap'" class="copy-area">
-               <h3 class="margin-bottom margin-bottom-lg margin-top">Simple OLAP ETL Transformation Script</h3>
+               <h3 class="margin-bottom margin-bottom-lg margin-top">Sample OLAP ETL Transformation Scripts</h3>
+               <div>Transform with Partitions</div>
                <div class="margin-bottom">
-                   <pre class="copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: copySample"><i class="icon-copy"></i></a><span data-bind="html: olapEtlSampleHtml"></span></pre>
+                   <pre class="copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, 'olapEtlSamplePartition')"><i class="icon-copy"></i></a><span data-bind="html: olapEtlSamplePartitionHtml"></span></pre>
+               </div>
+               <div>Transfrom without Partitions</div>
+               <div class="margin-bottom">
+                   <pre class="copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, 'olapEtlSampleNoPartition')"><i class="icon-copy"></i></a><span data-bind="html: olapEtlSampleNoPartitionHtml"></span></pre>
+               </div>
+               <div>Partition with Key</div>
+               <div class="margin-bottom">
+                   <pre class="copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, 'olapEtlSampleKey')"><i class="icon-copy"></i></a><span data-bind="html: olapEtlSampleKeyHtml"></span></pre>
+               </div>
+               <div>Partition with Custom Field</div>
+               <div class="margin-bottom">
+                   <pre class="copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, 'olapEtlSampleCustomField')"><i class="icon-copy"></i></a><span data-bind="html: olapEtlSampleCustomFieldHtml"></span></pre>
                </div>
            </div>
        </div>
        <div class="modal-footer margin-bottom">
-           <div class="text-left bg-info text-info">
+           <div class="text-left bg-info text-info padding padding-sm">
                <span class="padding"><strong>Note</strong>: The destination <span data-bind="text: etlType() === 'Raven' ? 'collection' : 'table'"></span> name must be concatenated to the <strong>'loadTo'</strong> keyword</span>
            </div>
        </div>
