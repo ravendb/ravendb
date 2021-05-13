@@ -1,9 +1,11 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Formatting;
+using Microsoft.Extensions.Primitives;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
@@ -82,10 +84,25 @@ namespace Raven.Server.Web.Studio
         }
 
         [RavenAction("/admin/studio-tasks/folder-path-options", "POST", AuthorizationStatus.Operator)]
-        public async Task GetFolderPathOptions()
+        public Task GetFolderPathOptionsForOperator()
+        {
+            var type = GetStringValuesQueryString("type", required: false);
+            var isBackupFolder = GetBoolValueQueryString("backupFolder", required: false) ?? false;
+            var path = GetStringQueryString("path", required: false);
+
+            return GetFolderPathOptionsInternal(ServerStore, type, isBackupFolder, path, RequestBodyStream, ResponseBodyStream);
+        }
+
+        internal static async Task GetFolderPathOptionsInternal(
+            ServerStore serverStore,
+            StringValues types,
+            bool isBackupFolder, 
+            string path,
+            Func<Stream> requestBodyStream,
+            Func<Stream> responseBodyStream)
         {
             PeriodicBackupConnectionType connectionType;
-            var type = GetStringValuesQueryString("type", false).FirstOrDefault();
+            var type = types.FirstOrDefault();
             if (type == null)
             {
                 //Backward compatibility
@@ -96,20 +113,19 @@ namespace Raven.Server.Web.Studio
                 throw new ArgumentException($"Query string '{type}' was not recognized as valid type");
             }
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var folderPathOptions = new FolderPathOptions();
                 ;
                 switch (connectionType)
                 {
                     case PeriodicBackupConnectionType.Local:
-                        var isBackupFolder = GetBoolValueQueryString("backupFolder", required: false) ?? false;
-                        var path = GetStringQueryString("path", required: false);
-                        folderPathOptions = FolderPath.GetOptions(path, isBackupFolder, ServerStore.Configuration);
+                        
+                        folderPathOptions = FolderPath.GetOptions(path, isBackupFolder, serverStore.Configuration);
                         break;
 
                     case PeriodicBackupConnectionType.S3:
-                        var json = await context.ReadForMemoryAsync(RequestBodyStream(), "studio-tasks/format");
+                        var json = await context.ReadForMemoryAsync(requestBodyStream(), "studio-tasks/format");
                         if (connectionType != PeriodicBackupConnectionType.Local && json == null)
                             throw new BadRequestException("No JSON was posted.");
 
@@ -139,10 +155,11 @@ namespace Raven.Server.Web.Studio
                                 }
                             }
                         }
+
                         break;
 
                     case PeriodicBackupConnectionType.Azure:
-                        var azureJson = await context.ReadForMemoryAsync(RequestBodyStream(), "studio-tasks/format");
+                        var azureJson = await context.ReadForMemoryAsync(requestBodyStream(), "studio-tasks/format");
 
                         if (connectionType != PeriodicBackupConnectionType.Local && azureJson == null)
                             throw new BadRequestException("No JSON was posted.");
@@ -169,10 +186,11 @@ namespace Raven.Server.Web.Studio
                                 folderPathOptions.List.Add(fullPath);
                             }
                         }
+
                         break;
 
                     case PeriodicBackupConnectionType.GoogleCloud:
-                        var googleCloudJson = await context.ReadForMemoryAsync(RequestBodyStream(), "studio-tasks/format");
+                        var googleCloudJson = await context.ReadForMemoryAsync(requestBodyStream(), "studio-tasks/format");
 
                         if (connectionType != PeriodicBackupConnectionType.Local && googleCloudJson == null)
                             throw new BadRequestException("No JSON was posted.");
@@ -202,6 +220,7 @@ namespace Raven.Server.Web.Studio
                                 folderPathOptions.List.Add(result);
                             }
                         }
+
                         break;
 
                     case PeriodicBackupConnectionType.FTP:
@@ -211,12 +230,9 @@ namespace Raven.Server.Web.Studio
                         throw new ArgumentOutOfRangeException();
                 }
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, responseBodyStream()))
                 {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(FolderPathOptions.List)] = TypeConverter.ToBlittableSupportedType(folderPathOptions.List)
-                    });
+                    context.Write(writer, new DynamicJsonValue { [nameof(FolderPathOptions.List)] = TypeConverter.ToBlittableSupportedType(folderPathOptions.List) });
                 }
             }
         }
