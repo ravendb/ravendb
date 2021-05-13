@@ -122,57 +122,7 @@
                     </div>
                 </div>
             </form>
-            <div class="flex-horizontal flex-header margin-top margin-top-xs">
-                <div class="flex-grow"><h3>OLAP Tables</h3></div>
-                <div><button type="button" class="btn btn-info" data-bind="click: addNewOlapTable, disable: showEditOlapTableArea()"><i class="icon-plus"></i><span>Add Table</span></button></div>
-            </div>
-            <div class="olap-tables-list margin-bottom">
-                <!-- OLAP table edit area -->
-                <div class="panel" data-bind="visible: showEditOlapTableArea()">
-                    <form autocomplete="off">
-                        <div class="padding padding-sm flex-horizontal item" data-bind="with: editedOlapTableSandbox()">
-                            <div class="flex-grow" data-bind="validationElement: tableName">
-                                <input type="text" class="form-control input-sm" placeholder="Table name"
-                                       data-bind="textInput: tableName" />
-                            </div>
-                            <div class="flex-grow" data-bind="validationElement: documentIdColumn">
-                                <input type="text" class="form-control input-sm" placeholder="Document Id Column Name"
-                                       data-bind="textInput: documentIdColumn" />
-                            </div>
-                            <div class="flex-noshrink">
-                                <button type="button" class="btn btn-success btn-sm" title="Add this OLAP table" data-bind="click: $root.saveEditedOlapTable"><i class="icon-tick"></i></button>
-                                <button type="button" class="btn btn-default btn-sm" title="Cancel" data-bind="click: $root.cancelEditedOlapTable"><i class="icon-cancel"></i></button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <!-- The olap tables list -->
-                <div class="text-center text-muted" data-bind="if: editedOlapEtl().olapTables().length === 0 && !showEditOlapTableArea()">
-                    <i class="icon-lg icon-empty-set"></i>
-                    <div data-bind="with: editedOlapEtl()">
-                        <h3 class="margin-top margin-top-sm">No Olap Tables have been defined</h3>
-                    </div>
-                </div>
-                <div data-bind="foreach: editedOlapEtl().olapTables">
-                    <div class="panel panel-hover">
-                        <div class="padding padding-sm flex-horizontal item">
-                            <div class="row flex-grow">
-                                <div class="col-sm-4">
-                                    <div class="widthlabel"><label class="superscript">Table</label><strong data-bind="text: tableName"></strong><span class="text-warning" data-bind="visible: dirtyFlag().isDirty">&nbsp;*</span></div>
-                                </div>
-                                <div class="col-sm-4">
-                                    <div class="widthlabel"><label class="superscript">Document Id Column</label><strong data-bind="text: documentIdColumn"></strong></div>
-                                </div>
-                            </div>
-                            <div class="flex-noshrink">
-                                <button type="button" class="btn btn-default btn-sm" title="Edit this OLAP table" data-bind="click: $root.editOlapTable.bind($data)"><i class="icon-edit"></i></button>
-                                <button type="button" class="btn btn-danger btn-sm" title="Remove this OLAP table" data-bind="click: $root.deleteOlapTable.bind($data)"><i class="icon-trash"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="flex-horizontal flex-header">
+            <div class="flex-horizontal flex-header margin-top">
                 <div class="flex-grow"><h3>Transform Scripts</h3></div>
                 <div>
                     <button type="button" class="btn btn-info" data-bind="click: addNewTransformation"><i class="icon-plus"></i><span>Add Transformation Script</span></button>
@@ -180,7 +130,7 @@
             </div>
             <!-- The transformation scripts -->
             <div class="etl-list" data-bind="with: editedOlapEtl">
-                <div class="text-center text-muted" data-bind="visible: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
+                <div class="text-center text-muted" data-bind="visible: transformationScripts().length === 0">
                     <i class="icon-lg icon-empty-set"></i>
                     <h3 class="margin-top margin-top-sm"
                         data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No Transformation Scripts have been defined
@@ -214,6 +164,55 @@
                                             class="btn btn-danger"><i class="icon-trash" title="Delete script"></i>
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-horizontal flex-header margin-top">
+                <div class="flex-grow"><h3>Override ID Column</h3></div>
+                <div><button type="button" class="btn btn-info" data-bind="click: addNewOlapTable, disable: showEditOlapTableArea()"><i class="icon-plus"></i><span>Add Settings</span></button></div>
+            </div>
+            <div class="olap-tables-list margin-bottom">
+                <!-- OLAP table edit area -->
+                <div class="panel" data-bind="visible: showEditOlapTableArea()">
+                    <form autocomplete="off">
+                        <div class="padding padding-sm flex-horizontal item" data-bind="with: editedOlapTableSandbox()">
+                            <div class="flex-grow" data-bind="validationElement: tableName">
+                                <input type="text" class="form-control input-sm" placeholder="Table name"
+                                       data-bind="textInput: tableName" />
+                            </div>
+                            <div class="flex-grow" data-bind="validationElement: documentIdColumn">
+                                <input type="text" class="form-control input-sm" placeholder="Enter ID column name (override the default '_id')"
+                                       data-bind="textInput: documentIdColumn" />
+                            </div>
+                            <div class="flex-noshrink">
+                                <button type="button" class="btn btn-success btn-sm" title="Add this ID column name" data-bind="click: $root.saveEditedOlapTable"><i class="icon-tick"></i></button>
+                                <button type="button" class="btn btn-default btn-sm" title="Cancel" data-bind="click: $root.cancelEditedOlapTable"><i class="icon-cancel"></i></button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <!-- The olap tables list -->
+                <div class="text-center text-muted" data-bind="if: editedOlapEtl().olapTables().length === 0 && !showEditOlapTableArea()">
+                    <i class="icon-lg icon-empty-set"></i>
+                    <h3 class="margin-top margin-top-sm">No settings have been defined.</h3>
+                    <h3 class="margin-top margin-top-sm">The default ID column name is <code>_id</code>. Click Add Settings to override this name per table.</h3>
+                </div>
+                <div data-bind="foreach: editedOlapEtl().olapTables">
+                    <div class="panel panel-hover">
+                        <div class="padding padding-sm flex-horizontal item">
+                            <div class="row flex-grow">
+                                <div class="col-sm-4">
+                                    <div class="widthlabel"><label class="superscript">Table</label><strong data-bind="text: tableName"></strong><span class="text-warning" data-bind="visible: dirtyFlag().isDirty">&nbsp;*</span></div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <div class="widthlabel"><label class="superscript">Id Column Name</label><strong data-bind="text: documentIdColumn"></strong></div>
+                                </div>
+                            </div>
+                            <div class="flex-noshrink">
+                                <button type="button" class="btn btn-default btn-sm" title="Edit this ID column name" data-bind="click: $root.editOlapTable.bind($data)"><i class="icon-edit"></i></button>
+                                <button type="button" class="btn btn-danger btn-sm" title="Remove this ID column name" data-bind="click: $root.deleteOlapTable.bind($data)"><i class="icon-trash"></i></button>
                             </div>
                         </div>
                     </div>

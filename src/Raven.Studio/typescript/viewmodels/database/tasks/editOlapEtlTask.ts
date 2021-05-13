@@ -100,7 +100,6 @@ class editOlapEtlTask extends viewModelBase {
             this.editedOlapEtl(ongoingTaskOlapEtlEditModel.empty());
             
             this.editedTransformationScriptSandbox(ongoingTaskOlapEtlTransformationModel.empty());
-            this.editedOlapTableSandbox(ongoingTaskOlapEtlTableModel.empty());
             
             deferred.resolve();
         }
