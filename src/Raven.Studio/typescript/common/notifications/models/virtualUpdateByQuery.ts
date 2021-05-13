@@ -1,9 +1,9 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
-import abstractNotification = require("common/notifications/models/abstractNotification");
+import virtualNotification = require("common/notifications/models/virtualNotification");
 import database = require("models/resources/database");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 
-class virtualUpdateByQuery extends abstractNotification {
+class virtualUpdateByQuery extends virtualNotification {
 
     static readonly Id = "virtual$$updateByQuery";
 

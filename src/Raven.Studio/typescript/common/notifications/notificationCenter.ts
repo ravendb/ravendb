@@ -400,13 +400,7 @@ class notificationCenter {
             return;
         }
         
-        if (notification instanceof recentError) {
-            // local dismiss
-            this.globalNotifications.remove(notification);
-        } else if (notification instanceof attachmentUpload) {
-            // local dismiss
-            this.databaseNotifications.remove(notification);
-        } else { // remote dismiss
+        if (notification.requiresRemoteDismiss()) {
             const notificationId = notification.id;
 
             const shouldDismissForever = notification instanceof performanceHint && notification.dontShowAgain();
@@ -417,6 +411,8 @@ class notificationCenter {
                 .execute()
                 .always(() => this.spinners.dismiss.remove(notificationId))
                 .done(() => this.removeNotificationFromNotificationCenter(notification));
+        } else {
+            this.removeNotificationFromNotificationCenter(notification);
         }
     }
 

@@ -1,22 +1,26 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 import database = require("models/resources/database");
 import generalUtils = require("common/generalUtils");
+import accessManager = require("common/shell/accessManager");
 
 abstract class abstractNotification {
 
     database: database;
 
     id: string;
+    readOnly: boolean;
     createdAt = ko.observable<moment.Moment>();
     isPersistent = ko.observable<boolean>();
     message = ko.observable<string>();
     title = ko.observable<string>();
     severity = ko.observable<Raven.Server.NotificationCenter.Notifications.NotificationSeverity>();
     type: Raven.Server.NotificationCenter.Notifications.NotificationType | virtualNotificationType;
-
+    
     hasDetails: KnockoutComputed<boolean>;
+    
     canBePostponed: KnockoutComputed<boolean>;
-    canBeDismissed = ko.observable<boolean>(true);
+    canBeDismissed = ko.pureComputed(() => !(this.readOnly && this.isPersistent()));
+    requiresRemoteDismiss = ko.observable(true);
     
     customControl = ko.observable<any>();
 
@@ -26,10 +30,11 @@ abstract class abstractNotification {
     headerIconClass: KnockoutComputed<string>;
     cssClass: KnockoutComputed<string>;
 
-    constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.Notification) {
+    protected constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.Notification) {
         this.database = db;
         this.id = dto.Id;
         this.type = dto.Type;
+        this.readOnly = !accessManager.canHandleOperation(db ? "DatabaseReadWrite" : "Operator", db?.name);
 
         this.headerClass = ko.pureComputed(() => {
             const severity = this.severity();
@@ -67,7 +72,7 @@ abstract class abstractNotification {
             }
         });
 
-        this.canBePostponed = ko.pureComputed(() => this.isPersistent());
+        this.canBePostponed = ko.pureComputed(() => this.isPersistent() && !this.readOnly);
 
         this.displayDate = ko.pureComputed(() => moment(this.createdAt()).local());
     }

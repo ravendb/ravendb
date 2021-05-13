@@ -1,12 +1,12 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
-import abstractNotification = require("common/notifications/models/abstractNotification");
+import virtualNotification = require("common/notifications/models/virtualNotification");
 import database = require("models/resources/database");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 
-class virtualBulkInsert extends abstractNotification {
+class virtualBulkInsert extends virtualNotification {
     
     static readonly Id = "virtual$$bulkInsert";
-    
+
     operations = ko.observableArray<virtualBulkOperationItem>([]);
     
     constructor(db: database) {
