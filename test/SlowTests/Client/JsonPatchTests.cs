@@ -12,7 +12,6 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
-using SlowTests.Core.ScriptedPatching;
 using Xunit;
 using Xunit.Abstractions;
 

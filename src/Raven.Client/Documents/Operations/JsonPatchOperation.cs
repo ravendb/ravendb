@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations
             return new JsonPatchCommand(Id, JsonPatchDocument);
         }
 
-        private class JsonPatchCommand : RavenCommand<JsonPatchResult>
+        internal class JsonPatchCommand : RavenCommand<JsonPatchResult>
         {
             private readonly string _id;
             private readonly JsonPatchDocument _jsonPatchDocument;
@@ -69,6 +69,8 @@ namespace Raven.Client.Documents.Operations
                     return;
                 if (fromCache) 
                 {
+                    // we have to clone the response here because  otherwise the cached item might be freed while
+                    // we are still looking at this result, so we clone it to the side
                     response = response.Clone(context);
                 }
                 Result = JsonDeserializationClient.JsonPatchResult(response);
