@@ -19,9 +19,9 @@ class viewModelBase {
 
     protected activeDatabase = activeDatabaseTracker.default.database;
     
-    protected isReadOnlyAccess = accessManager.default.isReadOnlyAccess;
-    protected isReadWriteAccessOrAbove = accessManager.default.isReadWriteAccessOrAbove;
-    protected isAdminAccessOrAbove = accessManager.default.isAdminAccessOrAbove;
+    protected isReadOnlyAccess =  ko.pureComputed(() => accessManager.default.readOnlyOrAboveForDatabase(this.activeDatabase()));
+    protected isReadWriteAccessOrAbove = ko.pureComputed(() => accessManager.default.readWriteAccessOrAboveForDatabase(this.activeDatabase()));
+    protected isAdminAccessOrAbove = ko.pureComputed(() => accessManager.default.adminAccessOrAboveForDatabase(this.activeDatabase()));
     
     protected isOperatorOrAbove = accessManager.default.isOperatorOrAbove;
     protected isClusterAdminOrClusterNode = accessManager.default.isClusterAdminOrClusterNode;

@@ -1,5 +1,5 @@
 ﻿/// <reference path="../../../typings/tsd.d.ts"/>
-import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import database = require("models/resources/database");
 
 class accessManager {
 
@@ -94,25 +94,29 @@ class accessManager {
         }
     }
     
-    activeDatabaseEffectiveAccessLevel = ko.pureComputed<databaseAccessLevel>(() => {
-        const activeDatabase = activeDatabaseTracker.default.database();
-        if (activeDatabase) {
-            return this.getEffectiveDatabaseAccessLevel(activeDatabase.name);
+    readOnlyOrAboveForDatabase(db: database) {
+        if (db) {
+            const accessLevel = this.getEffectiveDatabaseAccessLevel(db.name);
+            return accessLevel === "DatabaseRead";
         }
         return null;
-    });
+    }
     
-    isReadOnlyAccess = ko.pureComputed(() => this.activeDatabaseEffectiveAccessLevel() === "DatabaseRead");
+    readWriteAccessOrAboveForDatabase(db: database) {
+        if (db) {
+            const accessLevel = this.getEffectiveDatabaseAccessLevel(db.name);
+            return accessLevel === "DatabaseReadWrite" || accessLevel === "DatabaseAdmin";
+        } 
+        return null;
+    }
     
-    isReadWriteAccessOrAbove = ko.pureComputed(() => {
-        const accessLevel = this.activeDatabaseEffectiveAccessLevel();
-        return accessLevel === "DatabaseReadWrite" || accessLevel === "DatabaseAdmin";
-    });
-    
-    isAdminAccessOrAbove = ko.pureComputed(() => {
-        const accessLevel = this.activeDatabaseEffectiveAccessLevel();
-        return accessLevel === "DatabaseAdmin";
-    });
+    adminAccessOrAboveForDatabase(db: database) {
+        if (db) {
+            const accessLevel = this.getEffectiveDatabaseAccessLevel(db.name);
+            return accessLevel === "DatabaseAdmin";
+        }
+        return null;
+    }
     
     static isSecurityClearanceLevel(access: accessLevel): access is securityClearance {
         return access === "ClusterAdmin" || access === "ClusterNode" || access === "Operator" || access === "ValidUser";
@@ -164,8 +168,6 @@ class accessManager {
                 </div>`;
     }
 
-    static activeDatabaseTracker = activeDatabaseTracker.default;
-    
     dashboardView = {
         showCertificatesLink: this.isOperatorOrAbove
     };

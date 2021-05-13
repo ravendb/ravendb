@@ -15,6 +15,8 @@ class recentError extends abstractNotification {
 
     constructor(dto: recentErrorDto) {
         super(null, dto);
+        
+        this.requiresRemoteDismiss(false);
 
         this.initObservables();
         this.updateWith(dto);

@@ -9,7 +9,7 @@ class attachmentUpload extends abstractNotification {
     fileName: string;
     documentId: string;
     abort: () => void;
-    
+
     loaded = ko.observable<number>(0);
     total = ko.observable<number>(1);
 
@@ -25,6 +25,8 @@ class attachmentUpload extends abstractNotification {
 
     constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.Notification, documentId: string, fileName: string) {
         super(db, dto);
+        
+        this.requiresRemoteDismiss(false);
 
         this.documentId = documentId;
         this.fileName = fileName;
