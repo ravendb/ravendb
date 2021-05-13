@@ -22,6 +22,35 @@ namespace Raven.Tests.FileSystem.Synchronization
 {
     public class SynchronizationTests : RavenFilesTestWithLogs
     {
+        [Fact]
+        public async Task File_Name_Should_Be_Encoded()
+        {
+            const string fileName = "Grisha–Kotler-PC.txt";
+            const string metadataKey = "SomeTest-metadata";
+            const string metadataValue = "SomeTest-metadata";
+
+            var sourceMetadata = new RavenJObject
+            {
+                {metadataKey, metadataValue}
+            };
+
+            var destinationClient = NewAsyncClient(0);
+            var sourceClient = NewAsyncClient(1);
+
+            await sourceClient.UploadAsync(fileName, new RandomStream(10), sourceMetadata);
+            await sourceClient.Synchronization.StartAsync(fileName, destinationClient);
+
+            var metadata = await destinationClient.GetMetadataForAsync(fileName);
+            Assert.NotNull(metadata);
+            RavenJToken ravenJToken;
+            metadata.TryGetValue(metadataKey, out ravenJToken);
+            Assert.Equal(metadataValue, ravenJToken.Value<string>());
+
+            var lastSourceETag = sourceClient.GetMetadataForAsync(fileName).Result.Value<string>(Constants.MetadataEtagField);
+            var lastSynchronization = await destinationClient.Synchronization.GetLastSynchronizationFromAsync(await sourceClient.GetServerIdAsync());
+            Assert.Equal(lastSourceETag, lastSynchronization.LastSourceFileEtag.ToString());
+        }
+
         [Theory]
         [InlineData(1)]
         [InlineData(5000)]
