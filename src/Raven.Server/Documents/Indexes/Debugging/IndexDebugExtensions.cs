@@ -324,10 +324,10 @@ namespace Raven.Server.Documents.Indexes.Debugging
         {
             Dictionary<string, CompiledIndexField> groupByFields;
 
-            if (indexDefinition is MapReduceIndexDefinition)
-                groupByFields = ((MapReduceIndexDefinition)indexDefinition).GroupByFields;
-            else if (indexDefinition is AutoMapReduceIndexDefinition)
-                groupByFields = ((AutoMapReduceIndexDefinition)indexDefinition).GroupByFields
+            if (indexDefinition is MapReduceIndexDefinition mapReduceIndexDefinition)
+                groupByFields = mapReduceIndexDefinition.GroupByFields;
+            else if (indexDefinition is AutoMapReduceIndexDefinition autoMapReduceIndexDefinition)
+                groupByFields = autoMapReduceIndexDefinition.GroupByFields
                     .ToDictionary(x => x.Key, x => (CompiledIndexField)new SimpleField(x.Key));
             else
                 throw new InvalidOperationException("Invalid map reduce index definition: " + indexDefinition.GetType());

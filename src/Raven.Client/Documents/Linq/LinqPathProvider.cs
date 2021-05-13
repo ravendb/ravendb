@@ -462,9 +462,8 @@ namespace Raven.Client.Documents.Linq
             }
             // Get value
             var memberInfo = memberExpression.Member;
-            if (memberInfo is PropertyInfo)
+            if (memberInfo is PropertyInfo property)
             {
-                var property = (PropertyInfo)memberInfo;
                 return property.GetValue(obj, null);
             }
             if (memberInfo is FieldInfo)
