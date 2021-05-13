@@ -74,9 +74,8 @@ namespace FastTests.Voron.Tables
                     continue;
                 }
 
-                if (o is Slice)
+                if (o is Slice slice)
                 {
-                    var slice = (Slice)o;
                     builder.Add(slice.Content.Ptr, slice.Content.Length);
 
                     continue;
