@@ -289,7 +289,7 @@ namespace Raven.Server
             (string CustomInfo, TrafficWatchChangeType Type) twTuple =
                 ((string, TrafficWatchChangeType)?)contextItem ?? ("N/A", TrafficWatchChangeType.None);
 
-            var twn = new TrafficWatchChange
+            var twn = new TrafficWatchHttpChange
             {
                 TimeStamp = DateTime.UtcNow,
                 RequestId = requestId, // counted only for traffic watch
@@ -300,7 +300,8 @@ namespace Raven.Server
                 AbsoluteUri = $"{context.Request.Scheme}://{context.Request.Host}",
                 DatabaseName = database ?? "N/A",
                 CustomInfo = twTuple.CustomInfo,
-                Type = twTuple.Type
+                Type = twTuple.Type,
+                ClientIP = context.Connection.RemoteIpAddress?.ToString()
             };
 
             TrafficWatchManager.DispatchMessage(twn);
