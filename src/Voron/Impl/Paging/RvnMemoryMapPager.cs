@@ -97,9 +97,9 @@ namespace Voron.Impl.Paging
         {
             var state = pagerState ?? _pagerState;
 
-            if (CanPrefetch.Value && _pagerState != null)
+            if (CanPrefetch.Value && state != null)
             {
-                if (_pagerState.ShouldPrefetchSegment(pageNumber, out var virtualAddress, out var bytes))
+                if (state.ShouldPrefetchSegment(pageNumber, out var virtualAddress, out var bytes))
                     rvn_prefetch_virtual_memory(virtualAddress, bytes, out _); // ignore if unsuccessful
             }
 
