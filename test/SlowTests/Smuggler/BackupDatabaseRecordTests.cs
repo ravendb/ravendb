@@ -40,7 +40,7 @@ namespace SlowTests.Smuggler
         public async Task CanExportAndImportDatabaseRecord()
         {
             var file = Path.GetTempFileName();
-            var dummy = GenerateAndSaveSelfSignedCertificate(true);
+            var dummy = GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
                 new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
@@ -242,7 +242,7 @@ namespace SlowTests.Smuggler
         public async Task CanMigrateDatabaseRecord()
         {
             var file = Path.GetTempFileName();
-            var dummy = GenerateAndSaveSelfSignedCertificate(true);
+            var dummy = GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
                 new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
@@ -1026,7 +1026,7 @@ namespace SlowTests.Smuggler
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var file = Path.GetTempFileName();
-            var dummy = GenerateAndSaveSelfSignedCertificate(true);
+            var dummy = GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
                 new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
