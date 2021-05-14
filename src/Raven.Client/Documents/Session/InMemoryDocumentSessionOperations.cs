@@ -58,6 +58,8 @@ namespace Raven.Client.Documents.Session
 
         private BatchOptions _saveChangesOptions;
 
+        public bool DisableAtomicDocumentWritesInClusterWideTransaction;
+
         public TransactionMode TransactionMode;
 
         private bool _isDisposed;
@@ -233,6 +235,7 @@ namespace Raven.Client.Documents.Session
             JsonConverter = _requestExecutor.Conventions.Serialization.CreateConverter(this);
             _sessionInfo = new SessionInfo(this, options, _documentStore, asyncCommandRunning: false);
             TransactionMode = options.TransactionMode;
+            DisableAtomicDocumentWritesInClusterWideTransaction = options.DisableAtomicDocumentWritesInClusterWideTransaction;
 
             _javascriptCompilationOptions = new JavascriptCompilationOptions(
                 flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
@@ -245,6 +248,7 @@ namespace Raven.Client.Documents.Session
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions)
             };
         }
+
 
         /// <summary>
         /// Gets the metadata for the specified entity.

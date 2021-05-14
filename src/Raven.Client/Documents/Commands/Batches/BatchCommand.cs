@@ -15,10 +15,20 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     internal class ClusterWideBatchCommand : SingleNodeBatchCommand, IRaftCommand
     {
+        public bool DisableAtomicDocumentWrites;
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
 
         public ClusterWideBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null) : base(conventions, context, commands, options, TransactionMode.ClusterWide)
         {
+        }
+
+        protected override void AppendOptions(StringBuilder sb)
+        {
+            base.AppendOptions(sb);
+            if (DisableAtomicDocumentWrites)
+            {
+                sb.Append("&disableAtomicDocumentWrites=true");
+            }
         }
     }
 
@@ -126,7 +136,7 @@ namespace Raven.Client.Documents.Commands.Batches
             Result = JsonDeserializationClient.BatchCommandResult(response);
         }
 
-        private void AppendOptions(StringBuilder sb)
+        protected virtual void AppendOptions(StringBuilder sb)
         {
             if (_options == null)
                 return;
