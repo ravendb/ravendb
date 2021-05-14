@@ -38,7 +38,7 @@ namespace StressTests.Server.Replication
             var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = hubSettings, RegisterForDisposal = true });
             var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = sinkSettings, RegisterForDisposal = true });
 
-            var dummy = GenerateAndSaveSelfSignedCertificate(true);
+            var dummy = GenerateAndSaveSelfSignedCertificate(createNew: true);
             var pullReplicationCertificate = new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
             Assert.True(pullReplicationCertificate.HasPrivateKey);
 
