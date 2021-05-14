@@ -90,8 +90,8 @@ namespace Raven.Client.Documents.Subscriptions
 
         public async ValueTask DisposeAsync(bool waitForSubscriptionTask)
         {
-                if (_disposed)
-                    return;
+            if (_disposed)
+                return;
 
             try
             {
@@ -516,58 +516,67 @@ namespace Raven.Client.Documents.Subscriptions
             var counterIncludes = new List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)>();
             var timeSeriesIncludes = new List<BlittableJsonReaderObject>();
             IDisposable returnContext = contextPool.AllocateOperationContext(out JsonOperationContext context);
-            bool endOfBatch = false;
-            while (endOfBatch == false && _processingCts.IsCancellationRequested == false)
+            try
             {
-                SubscriptionConnectionServerMessage receivedMessage = await ReadNextObject(context, tcpStream, buffer).ConfigureAwait(false);
-                if (receivedMessage == null || _processingCts.IsCancellationRequested)
+                bool endOfBatch = false;
+                while (endOfBatch == false && _processingCts.IsCancellationRequested == false)
                 {
-                    break;
-                }
-
-                switch (receivedMessage.Type)
-                {
-                    case SubscriptionConnectionServerMessage.MessageType.Data:
-                        incomingBatch.Add(receivedMessage);
+                    SubscriptionConnectionServerMessage receivedMessage = await ReadNextObject(context, tcpStream, buffer).ConfigureAwait(false);
+                    if (receivedMessage == null || _processingCts.IsCancellationRequested)
+                    {
                         break;
+                    }
 
-                    case SubscriptionConnectionServerMessage.MessageType.Includes:
-                        includes.Add(receivedMessage.Includes);
-                        break;
+                    switch (receivedMessage.Type)
+                    {
+                        case SubscriptionConnectionServerMessage.MessageType.Data:
+                            incomingBatch.Add(receivedMessage);
+                            break;
 
-                    case SubscriptionConnectionServerMessage.MessageType.CounterIncludes:
-                        counterIncludes.Add((receivedMessage.CounterIncludes, receivedMessage.IncludedCounterNames));
-                        break;
+                        case SubscriptionConnectionServerMessage.MessageType.Includes:
+                            includes.Add(receivedMessage.Includes);
+                            break;
 
-                    case SubscriptionConnectionServerMessage.MessageType.TimeSeriesIncludes:
-                        timeSeriesIncludes.Add(receivedMessage.TimeSeriesIncludes);
-                        break;
+                        case SubscriptionConnectionServerMessage.MessageType.CounterIncludes:
+                            counterIncludes.Add((receivedMessage.CounterIncludes, receivedMessage.IncludedCounterNames));
+                            break;
 
-                    case SubscriptionConnectionServerMessage.MessageType.EndOfBatch:
-                        endOfBatch = true;
-                        break;
+                        case SubscriptionConnectionServerMessage.MessageType.TimeSeriesIncludes:
+                            timeSeriesIncludes.Add(receivedMessage.TimeSeriesIncludes);
+                            break;
 
-                    case SubscriptionConnectionServerMessage.MessageType.Confirm:
-                        var onAfterAcknowledgment = AfterAcknowledgment;
-                        if (onAfterAcknowledgment != null)
-                            await onAfterAcknowledgment(batch).ConfigureAwait(false);
-                        incomingBatch.Clear();
-                        batch.Items.Clear();
-                        break;
+                        case SubscriptionConnectionServerMessage.MessageType.EndOfBatch:
+                            endOfBatch = true;
+                            break;
 
-                    case SubscriptionConnectionServerMessage.MessageType.ConnectionStatus:
-                        AssertConnectionState(receivedMessage);
-                        break;
+                        case SubscriptionConnectionServerMessage.MessageType.Confirm:
+                            var onAfterAcknowledgment = AfterAcknowledgment;
+                            if (onAfterAcknowledgment != null)
+                                await onAfterAcknowledgment(batch).ConfigureAwait(false);
+                            incomingBatch.Clear();
+                            batch.Items.Clear();
+                            break;
 
-                    case SubscriptionConnectionServerMessage.MessageType.Error:
-                        ThrowSubscriptionError(receivedMessage);
-                        break;
+                        case SubscriptionConnectionServerMessage.MessageType.ConnectionStatus:
+                            AssertConnectionState(receivedMessage);
+                            break;
 
-                    default:
-                        ThrowInvalidServerResponse(receivedMessage);
-                        break;
+                        case SubscriptionConnectionServerMessage.MessageType.Error:
+                            ThrowSubscriptionError(receivedMessage);
+                            break;
+
+                        default:
+                            ThrowInvalidServerResponse(receivedMessage);
+                            break;
+                    }
                 }
             }
+            catch (Exception)
+            {
+                returnContext?.Dispose();
+                throw;
+            }
+
             return new BatchFromServer
             {
                 Messages = incomingBatch,
@@ -824,11 +833,11 @@ namespace Raven.Client.Documents.Subscriptions
                 return _forTestingPurposes;
 
             return _forTestingPurposes = new TestingStuff();
-    }
+        }
 
         internal class TestingStuff
         {
             internal bool SimulateUnexpectedException;
-}
+        }
     }
 }
