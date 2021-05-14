@@ -49,6 +49,25 @@ namespace BenchmarkTests.Indexing
         }
 
         [Fact]
+        public async Task Simple_Map_FullText_Search()
+        {
+            using (var store = GetSimpleDocumentStore(IndexDatabaseName, deleteDatabaseOnDispose: false))
+            {
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.Equal(NumberOfCompanies + 1, stats.CountOfDocuments); // + hilo
+
+                new Simple_Map_FullText_Search_Index().Execute(store);
+
+                await WaitForIndexAsync(store, store.Database, new Simple_Map_FullText_Search_Index().IndexName, TimeSpan.FromMinutes(60));
+
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                var indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(new Simple_Map_FullText_Search_Index().IndexName));
+                Assert.Equal(NumberOfCompanies, indexStats.EntriesCount);
+            }
+        }
+
+        [Fact]
         public async Task Simple_Map_ReIndex()
         {
             using (var store = GetSimpleDocumentStore(ReIndexDatabaseName, deleteDatabaseOnDispose: false))
@@ -149,6 +168,24 @@ namespace BenchmarkTests.Indexing
                                        Name = c.Name,
                                        Email = c.Email
                                    };
+            }
+        }
+
+        private class Simple_Map_FullText_Search_Index : AbstractIndexCreationTask<Company>
+        {
+            public Simple_Map_FullText_Search_Index()
+            {
+                Map = companies => from c in companies
+                    select new
+                    {
+                        Query = new[]
+                        {
+                            c.Name,
+                            c.Email
+                        }
+                    };
+
+                Index("Query", FieldIndexing.Search);
             }
         }
 

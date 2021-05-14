@@ -88,7 +88,7 @@ namespace Voron
         private NativeMemory.ThreadStats _currentWriteTransactionHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
         internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
-        private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim _txCreation = new ReaderWriterLockSlim();
         private readonly CountdownEvent _envDispose = new CountdownEvent(1);
 
         private long _transactionsCounter;
@@ -577,7 +577,7 @@ namespace Voron
 
                 LowLevelTransaction tx;
 
-                _txCommit.EnterReadLock();
+                _txCreation.EnterReadLock();
                 try
                 {
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -588,7 +588,7 @@ namespace Voron
                 }
                 finally
                 {
-                    _txCommit.ExitReadLock();
+                    _txCreation.ExitReadLock();
                 }
 
                 var state = _dataPager.PagerState;
@@ -672,7 +672,7 @@ namespace Voron
 
                 LowLevelTransaction tx;
 
-                _txCommit.EnterReadLock();
+                _txCreation.EnterReadLock();
                 try
                 {
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -696,7 +696,7 @@ namespace Voron
                 }
                 finally
                 {
-                    _txCommit.ExitReadLock();
+                    _txCreation.ExitReadLock();
                 }
 
                 var state = _dataPager.PagerState;
@@ -811,19 +811,19 @@ namespace Voron
             return result;
         }
 
-        internal ExitWriteLock PreventNewReadTransactions()
+        internal ExitWriteLock PreventNewTransactions()
         {
-            _txCommit.EnterWriteLock();
-            return new ExitWriteLock(_txCommit);
+            _txCreation.EnterWriteLock();
+            return new ExitWriteLock(_txCreation);
         }
 
-        internal bool IsInPreventNewReadTransactionsMode => _txCommit.IsWriteLockHeld;
+        internal bool IsInPreventNewTransactionsMode => _txCreation.IsWriteLockHeld;
 
         internal bool TryPreventNewReadTransactions(TimeSpan timeout, out IDisposable exitWriteLock)
         {
-            if (_txCommit.TryEnterWriteLock(timeout))
+            if (_txCreation.TryEnterWriteLock(timeout))
             {
-                exitWriteLock = new ExitWriteLock(_txCommit);
+                exitWriteLock = new ExitWriteLock(_txCreation);
                 return true;
             }
 
@@ -853,7 +853,7 @@ namespace Voron
             if (ActiveTransactions.Contains(tx) == false)
                 return;
 
-            using (PreventNewReadTransactions())
+            using (PreventNewTransactions())
             {
                 Journal.Applicator.OnTransactionCommitted(tx);
                 ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
