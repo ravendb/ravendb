@@ -436,21 +436,17 @@
         </div>
         <div data-bind="with: progress, visible: !isErrorState() && !isFaulty()">
             <hr class="small" />
-            <div data-bind="foreach: rollingProgress">
-                <div class="flex-horizontal">
-                    <div data-bind="text: 'Node ' + nodeTag"></div>
-                    <div>
-                        <i class="icon-check text-success" data-bind="visible: state() === 'Done'"></i>
-                        <i class="icon-waiting" data-bind="visible: state() === 'Pending'"></i>
-                        <span class="global-spinner spinner-sm" data-bind="visible: state() === 'Running'"></span>
-                        <span data-bind="text: state"></span>
-                    </div>
+            <div class="staggered-index" data-bind="foreach: rollingProgress">
+                <div class="flex-horizontal" data-bind="css: { 'indexing-running': state() === 'Running', 'indexing-pending': state() === 'Pending', 'indexing-done': state() === 'Done'}">
+                    <div class="node-label" data-bind="attr: { title: state }"></div>
+                    <div class="node-name" data-bind="text: nodeTag"></div>
+                    
                     <div data-bind="visible: state() === 'Done' && $root.localNodeTag() !== nodeTag">
-                        Indexing duration: <span data-bind="text: elapsedText"></span>. Completed: <span data-bind="text: finishedText"></span> ago
+                        <span class="margin-right">Indexing duration: <strong data-bind="text: elapsedText"></strong></span> Completed: <strong data-bind="text: finishedText"></strong> ago
                     </div>
                     <div data-bind="visible: state() === 'Running' && $root.localNodeTag() !== nodeTag">
-                        Indexing duration: <span data-bind="text: elapsedText"></span> 
-                        <a target="_blank" data-bind="attr: { href: $root.createIndexesUrlObservableForNode(nodeTag)}">
+                        Indexing duration: <strong data-bind="text: elapsedText"></strong> 
+                        <a target="_blank" class="margin-left" data-bind="attr: { href: $root.createIndexesUrlObservableForNode(nodeTag)}">
                             show details <i class="icon-newtab"></i>
                         </a>
                     </div>
@@ -473,7 +469,7 @@
     <div class="progress-container">
         <div class="progress-overall">
             <div class="flex-horizontal" data-bind="with: globalProgress">
-                <h3 class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></h3>
+                <div class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></div>
                 <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
             </div>
             <div class="progress" data-bind="with: globalProgress">
