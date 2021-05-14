@@ -512,6 +512,8 @@ namespace Raven.Client.Documents.Subscriptions
             var includes = new List<BlittableJsonReaderObject>();
             var counterIncludes = new List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)>();
             IDisposable returnContext = contextPool.AllocateOperationContext(out JsonOperationContext context);
+            try
+            {
             bool endOfBatch = false;
             while (endOfBatch == false && _processingCts.IsCancellationRequested == false)
             {
@@ -560,6 +562,13 @@ namespace Raven.Client.Documents.Subscriptions
                         break;
                 }
             }
+            }
+            catch (Exception)
+            {
+                returnContext?.Dispose();
+                throw;
+            }
+
             return new BatchFromServer
             {
                 Messages = incomingBatch,
