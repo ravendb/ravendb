@@ -85,8 +85,12 @@ namespace Raven.Client.Documents.Smuggler
             if (_requestExecutor == null)
                 throw new InvalidOperationException("Cannot use Smuggler without a database defined, did you forget to call ForDatabase?");
 
-            using (_requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            IDisposable returnContext = null;
+            Task requestTask = null;
+
+            try
             {
+                returnContext = _requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
                 var getOperationIdCommand = new GetNextOperationIdCommand();
                 await _requestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 var operationId = getOperationIdCommand.Result;
@@ -95,10 +99,12 @@ namespace Raven.Client.Documents.Smuggler
                 var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
                 var command = new ExportCommand(context, options, handleStreamResponse, operationId, tcs, getOperationIdCommand.NodeTag);
-                var requestTask = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token)
+
+                requestTask = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token)
                     .ContinueWith(t =>
                     {
                         cancellationTokenRegistration.Dispose();
+                        returnContext?.Dispose();
                         if (t.IsFaulted)
                         {
                             tcs.TrySetException(t.Exception);
@@ -125,6 +131,13 @@ namespace Raven.Client.Documents.Smuggler
                     operationId,
                     getOperationIdCommand.NodeTag,
                     additionalTask);
+            }
+            catch (Exception e)
+            {
+                if (requestTask == null)
+                    returnContext?.Dispose();
+
+                throw e.ExtractSingleInnerException();
             }
         }
 
@@ -214,6 +227,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             var disposeStream = leaveOpen ? null : new DisposeStreamOnce(stream);
             IDisposable returnContext = null;
+            Task requestTask = null;
 
             try
             {
@@ -225,20 +239,20 @@ namespace Raven.Client.Documents.Smuggler
                     throw new InvalidOperationException("Cannot use Smuggler without a database defined, did you forget to call ForDatabase?");
 
                 returnContext = _requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
-                    var getOperationIdCommand = new GetNextOperationIdCommand();
-                    await _requestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
-                    var operationId = getOperationIdCommand.Result;
+                var getOperationIdCommand = new GetNextOperationIdCommand();
+                await _requestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
+                var operationId = getOperationIdCommand.Result;
 
-                    var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
+                var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
-                    var command = new ImportCommand(context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
+                var command = new ImportCommand(context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
 
-                    var task = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
-                    var requestTask = task
+                var task = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
+                requestTask = task
                         .ContinueWith(t =>
                         {
-                        returnContext?.Dispose();
+                            returnContext?.Dispose();
                             cancellationTokenRegistration.Dispose();
                             using (disposeStream)
                             {
@@ -252,23 +266,28 @@ namespace Raven.Client.Documents.Smuggler
                             }
                         }, token);
 
-                    try
-                    {
-                        await tcs.Task.ConfigureAwait(false);
-                    }
-                    catch (Exception)
-                    {
-                        await requestTask.ConfigureAwait(false);
-                        await tcs.Task.ConfigureAwait(false);
-                    }
-
-                    return new Operation(_requestExecutor, () => _store.Changes(_databaseName, getOperationIdCommand.NodeTag), _requestExecutor.Conventions, operationId,
-                        nodeTag: getOperationIdCommand.NodeTag, additionalTask: task);
-
+                try
+                {
+                    await tcs.Task.ConfigureAwait(false);
                 }
+                catch (Exception)
+                {
+                    await requestTask.ConfigureAwait(false);
+                    await tcs.Task.ConfigureAwait(false);
+                }
+
+                return new Operation(_requestExecutor, () => _store.Changes(_databaseName, getOperationIdCommand.NodeTag), _requestExecutor.Conventions, operationId,
+                    nodeTag: getOperationIdCommand.NodeTag, additionalTask: task);
+
+            }
             catch (Exception e)
             {
-                returnContext?.Dispose();
+                if (requestTask == null)
+                {
+                    // handle the possible double dispose of return context
+                    returnContext?.Dispose();
+                }
+
                 disposeStream?.Dispose();
                 throw e.ExtractSingleInnerException();
             }
