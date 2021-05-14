@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -30,7 +31,7 @@ namespace Raven.Client.Documents.Session
         /// property to avoid cluttering the API
         /// </remarks>
         public IAdvancedSessionOperations Advanced => this;
-
+        
         /// <summary>
         /// Access the eager operations
         /// </summary>

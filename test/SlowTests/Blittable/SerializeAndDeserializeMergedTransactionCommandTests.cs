@@ -239,6 +239,7 @@ namespace SlowTests.Blittable
                     false,
                     (patchRequest, arg),
                     (null, null),
+                    null,
                     database,
                     false, false, false, false);
 

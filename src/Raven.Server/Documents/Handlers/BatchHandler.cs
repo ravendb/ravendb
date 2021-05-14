@@ -1237,10 +1237,12 @@ namespace Raven.Server.Documents.Handlers
                     patch: (ParsedCommands[i].Patch, ParsedCommands[i].PatchArgs),
                     patchIfMissing: (ParsedCommands[i].PatchIfMissing, ParsedCommands[i].PatchIfMissingArgs),
                     database: database,
+                    createIfMissing:ParsedCommands[i].CreateIfMissing,
                     isTest: false,
                     debugMode: false,
                     collectResultsNeeded: true,
                     returnDocument: ParsedCommands[i].ReturnDocument
+                    
                 );
             }
 
