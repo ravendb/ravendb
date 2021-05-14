@@ -141,9 +141,9 @@ namespace Voron.Platform.Win32
             // We need to decide what pager we are going to use right now or risk inconsistencies when performing prefetches from disk.
             var state = pagerState ?? _pagerState;
 
-            if (this.CanPrefetch.Value && _pagerState != null)
+            if (CanPrefetch.Value && state != null)
             {
-                if (this._pagerState.ShouldPrefetchSegment(pageNumber, out void* virtualAddress, out long bytes))
+                if (state.ShouldPrefetchSegment(pageNumber, out void* virtualAddress, out long bytes))
                 {
                     var command = new PalDefinitions.PrefetchRanges(virtualAddress, bytes);
                     GlobalPrefetchingBehavior.GlobalPrefetcher.Value.CommandQueue.TryAdd(command, 0);
