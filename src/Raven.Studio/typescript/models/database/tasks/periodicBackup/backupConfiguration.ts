@@ -50,7 +50,7 @@ abstract class backupConfiguration {
 
     dirtyFlag: () => DirtyFlag;
 
-    constructor(private databaseName: KnockoutObservable<string>,
+    protected constructor(private databaseName: KnockoutObservable<string>,
                 dto: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration |
                      Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration,
                 serverLimits: periodicBackupServerLimitsResponse,
@@ -139,7 +139,7 @@ abstract class backupConfiguration {
     }
 
     private updateFolderPathOptions(path: string) {
-        getFolderPathOptionsCommand.forServerLocal(path, true)
+        getFolderPathOptionsCommand.forServerLocal(path, true, this.databaseName() ? activeDatabaseTracker.default.database() : null)
             .execute()
             .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
                 if (this.localSettings().folderPath() !== path) {
