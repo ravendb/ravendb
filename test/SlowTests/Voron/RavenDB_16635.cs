@@ -103,6 +103,13 @@ namespace SlowTests.Voron
             {
                 Assert.Throws<ObjectDisposedException>(() => tempPager.AcquirePagePointer(tx.LowLevelTransaction, 0, state));
             }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                Env.Options.DataPager.Dispose();
+
+                Assert.Throws<ObjectDisposedException>(() => Env.Options.DataPager.AcquirePagePointer(tx.LowLevelTransaction, 0));
+            }
         }
 
 
