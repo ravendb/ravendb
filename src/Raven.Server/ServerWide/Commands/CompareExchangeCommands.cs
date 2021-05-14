@@ -141,8 +141,6 @@ namespace Raven.Server.ServerWide.Commands
         public unsafe bool Validate(ClusterOperationContext context, Table items, long index, out long currentIndex)
         {
             currentIndex = -1;
-            if (index == -1)
-                return true; // explicitly ignoring the check
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
                 if (items.ReadByKey(keySlice, out var reader))

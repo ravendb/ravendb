@@ -150,7 +150,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (DisableAtomicDocumentWrites == false)
             {
-                EnsureAtomicDocumentWrites(context, index);
+                EnsureAtomicDocumentWrites(context, items, index);
             }
             if (ClusterCommands == null || ClusterCommands.Count == 0)
                 return null;
@@ -201,7 +201,7 @@ namespace Raven.Server.ServerWide.Commands
             return null;
         }
 
-        private void EnsureAtomicDocumentWrites(ClusterOperationContext context, long index)
+        private unsafe void EnsureAtomicDocumentWrites(ClusterOperationContext context, Table items, long index)
         {
             if (SerializedDatabaseCommands.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray commands))
             {
@@ -237,13 +237,24 @@ namespace Raven.Server.ServerWide.Commands
 
                             break;
                         case nameof(CommandType.DELETE):
-                            if (document.TryGetWithoutThrowingOnError(Constants.Documents.Metadata.ClusterTransactionIndex,
-                                out long deleteIndex))
+                            long deleteIndex;
+                            if (document == null ||
+                                document.TryGetWithoutThrowingOnError(Constants.Documents.Metadata.ClusterTransactionIndex,
+                                out deleteIndex) == false)
                             {
                                 // this can happen if the user tried to delete without first loading the document
                                 // we can safely assume that such a blind write doesn't care about the state of the document
-                                // and just proceed normally
-                                deleteIndex = -1;
+                                // and just use the current value
+                                var cmpXngKey = CompareExchangeKey.GetStorageKey(DatabaseName, atomicGuardKey);
+                                using var _ = Slice.From(context.Allocator, cmpXngKey, out var guardKeySlice);
+                                if(items.ReadByKey(guardKeySlice, out var reader))
+                                {
+                                    deleteIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
+                                }
+                                else
+                                {
+                                    deleteIndex = 0;
+                                }
                             }
 
                             ClusterCommands.Add(new ClusterTransactionDataCommand
