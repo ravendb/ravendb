@@ -485,9 +485,9 @@ namespace Raven.Client.Documents.Indexes
         public string PatternReferencesCollectionName { get; set; }
 
         /// <summary>
-        /// Enable index rolling deployment
+        /// Define index deployment mode
         /// </summary>
-        public bool? Rolling { get; set; } = true;
+        public IndexDeploymentMode? DeploymentMode { get; set; }
 
         public override string ToString()
         {
@@ -533,7 +533,7 @@ namespace Raven.Client.Documents.Indexes
             definition.ReduceOutputIndex = ReduceOutputIndex;
             definition.PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences;
             definition.PatternReferencesCollectionName = PatternReferencesCollectionName;
-            definition.Rolling = Rolling;
+            definition.DeploymentMode = DeploymentMode;
 
             foreach (var kvp in _configuration)
                 definition.Configuration[kvp.Key] = kvp.Value;
@@ -550,6 +550,20 @@ namespace Raven.Client.Documents.Indexes
                     definition.AdditionalAssemblies.Add(additionalAssembly.Clone());
             }
         }
+
+        internal static readonly IndexDefinitionCompareDifferences ReIndexRequiredMask =
+            IndexDefinitionCompareDifferences.Maps | 
+            IndexDefinitionCompareDifferences.Reduce | 
+            IndexDefinitionCompareDifferences.Fields | 
+            IndexDefinitionCompareDifferences.Configuration | 
+            IndexDefinitionCompareDifferences.AdditionalSources | 
+            IndexDefinitionCompareDifferences.AdditionalAssemblies;
+    }
+
+    public enum IndexDeploymentMode
+    {
+        Parallel,
+        Rolling
     }
 
     [Flags]
@@ -567,6 +581,5 @@ namespace Raven.Client.Documents.Indexes
         AdditionalAssemblies = 1 << 11,
 
         All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies,
-        ReIndexRequiredMask = Maps | Reduce | Fields | Configuration | AdditionalSources | AdditionalAssemblies
     }
 }

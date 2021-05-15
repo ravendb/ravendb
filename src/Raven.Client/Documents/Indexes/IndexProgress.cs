@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Raven.Client.ServerWide;
 
 namespace Raven.Client.Documents.Indexes
 {

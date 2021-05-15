@@ -3,14 +3,13 @@ using System.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
-using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
     public abstract class AutoIndexDefinitionBase : IndexDefinitionBase<AutoIndexField>
     {
-        protected AutoIndexDefinitionBase(string indexName, string collection, AutoIndexField[] fields, long? indexVersion = null)
-            : base(indexName, new [] { collection }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, fields, indexVersion ?? IndexVersion.CurrentVersion, rolling: true)
+        protected AutoIndexDefinitionBase(string indexName, string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode, long? indexVersion = null)
+            : base(indexName, new [] { collection }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, fields, indexVersion ?? IndexVersion.CurrentVersion, deploymentMode)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));

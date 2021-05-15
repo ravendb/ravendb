@@ -28,6 +28,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             var definition = AutoMapIndexDefinition.Load(environment);
             var instance = new AutoMapIndex(definition);
             instance.Initialize(environment, documentDatabase, documentDatabase.Configuration.Indexing, documentDatabase.Configuration.PerformanceHints);
+            definition.DeploymentMode = documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode;
 
             return instance;
         }

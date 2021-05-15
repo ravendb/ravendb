@@ -381,8 +381,7 @@ namespace Raven.Server
 
             if (exception is PendingRollingIndexException)
             {
-                response.StatusCode = (int)HttpStatusCode.Gone;
-                response.Headers["Rolling-Index"] = "true";
+                response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
                 return;
             }
 

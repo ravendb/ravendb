@@ -114,7 +114,7 @@ class collectionProgress {
 
 class rollingProgress {
     nodeTag: string;
-    state = ko.observable<Raven.Client.ServerWide.RollingIndexState>();
+    state = ko.observable<Raven.Client.Documents.Indexes.RollingIndexState>();
     created = ko.observable<Date>();
     started = ko.observable<Date>();
     finished = ko.observable<Date>();
@@ -122,7 +122,7 @@ class rollingProgress {
     elapsedText: KnockoutComputed<string>;
     finishedText: KnockoutComputed<string>;
     
-    constructor(nodeTag: string, deployment: Raven.Client.ServerWide.RollingIndexDeployment) {
+    constructor(nodeTag: string, deployment: Raven.Client.Documents.Indexes.RollingIndexDeployment) {
         this.nodeTag = nodeTag;
         this.state(deployment.State);
         this.created(moment.utc(deployment.CreatedAt).toDate());

@@ -52,9 +52,9 @@ namespace Raven.Server.Json.Sync
                 writer.WriteNull();
             writer.WriteComma();
             
-            writer.WritePropertyName(nameof(indexDefinition.Rolling));
-            if (indexDefinition.Rolling.HasValue)
-                writer.WriteBool(indexDefinition.Rolling.Value);
+            writer.WritePropertyName(nameof(indexDefinition.DeploymentMode));
+            if (indexDefinition.DeploymentMode.HasValue)
+                writer.WriteString(indexDefinition.DeploymentMode.Value.ToString());
             else 
                 writer.WriteNull();
             writer.WriteComma();

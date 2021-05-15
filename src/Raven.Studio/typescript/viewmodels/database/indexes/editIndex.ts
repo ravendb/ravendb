@@ -86,7 +86,7 @@ class editIndex extends viewModelBase {
 
     effectiveRolling = ko.pureComputed(() => {
         const index = this.editedIndex();
-        const rolling = index.rolling();
+        const rolling = index.mode() === "Rolling";
         return this.formatRollingValue(rolling);
     });
 
@@ -228,7 +228,7 @@ class editIndex extends viewModelBase {
                 const analyzersList = [...analyzers.map(x => x.Name), ...serverWideAnalyzers.map(x => x.Name)];
                 this.editedIndex().registerCustomAnalyzers(analyzersList);
                 
-                this.defaultRolling(indexDefaults.Rolling);
+                this.defaultRolling(indexDefaults.StaticIndexDeploymentMode === "Rolling"); // TODO: fix that
         });
     }
 
@@ -446,7 +446,7 @@ class editIndex extends viewModelBase {
         
         this.dirtyFlag = new ko.DirtyFlag([
             indexDef.name, 
-            indexDef.rolling,
+            indexDef.mode,
             indexDef.maps, 
             indexDef.reduce, 
             indexDef.numberOfFields,

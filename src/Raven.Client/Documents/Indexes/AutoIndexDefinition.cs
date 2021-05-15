@@ -22,8 +22,6 @@ namespace Raven.Client.Documents.Indexes
 
         public string Collection { get; set; }
 
-        public bool? Rolling { get; set; } = true;
-
         public Dictionary<string, AutoIndexFieldOptions> MapFields { get; set; }
 
         public Dictionary<string, AutoIndexFieldOptions> GroupByFields { get; set; }
