@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.ServerWide
+namespace Raven.Client.Documents.Indexes
 {
     public class RollingIndex : IDynamicJson
     {
-        public Dictionary<string, RollingIndexDeployment> ActiveDeployments = new Dictionary<string, RollingIndexDeployment>();
+        public Dictionary<string, RollingIndexDeployment> ActiveDeployments = new Dictionary<string, RollingIndexDeployment>(StringComparer.OrdinalIgnoreCase);
 
         public long RaftIndexChange { get; internal set; }
 

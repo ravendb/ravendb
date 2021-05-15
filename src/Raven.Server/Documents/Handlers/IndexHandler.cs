@@ -42,6 +42,8 @@ namespace Raven.Server.Documents.Handlers
         public async Task Replace()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var endDeployment = GetBoolValueQueryString("end-deployment", required: false) ?? false;
+
             var replacementName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
 
             var oldIndex = Database.IndexStore.GetIndex(name);
@@ -55,11 +57,28 @@ namespace Raven.Server.Documents.Handlers
                 Database.IndexStore.ReplaceIndexes(name, newIndex.Name, token.Token);
             }
 
-            if (newIndex.IsRolling)
+            if (endDeployment && newIndex.IsRolling)
             {
                 var command = new PutRollingIndexCommand(Database.Name, name, ServerStore.NodeTag, DateTime.UtcNow, RaftIdGenerator.NewId());
                 await ServerStore.SendToLeaderAsync(command);
             }
+        }
+
+        [RavenAction("/databases/*/indexes/finish-rolling", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        public async Task FinishRolling()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            var index = Database.IndexStore.GetIndex(name);
+
+            if (index == null)
+                throw new IndexDoesNotExistException($"Could not find '{name}' index.");
+
+            if (index.IsRolling == false)
+                throw new InvalidOperationException($"'{name}' isn't a rolling index");
+
+            var command = new PutRollingIndexCommand(Database.Name, name, ServerStore.NodeTag, DateTime.UtcNow, RaftIdGenerator.NewId());
+            await ServerStore.SendToLeaderAsync(command);
         }
 
         [RavenAction("/databases/*/indexes/source", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]

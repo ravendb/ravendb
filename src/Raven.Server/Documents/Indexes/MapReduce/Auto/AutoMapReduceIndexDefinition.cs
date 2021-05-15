@@ -18,8 +18,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public readonly AutoIndexField[] OrderedGroupByFields;
 
-        public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, long? indexVersion = null)
-            : base(AutoIndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), collection, mapFields, indexVersion)
+        public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, IndexDeploymentMode? deploymentMode, long? indexVersion = null)
+            : base(AutoIndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), collection, mapFields, deploymentMode, indexVersion)
         {
             OrderedGroupByFields = groupByFields.OrderBy(x => x.Name, StringComparer.Ordinal).ToArray();
 
@@ -41,6 +41,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                     IndexFields.Add(indexField.Name, indexField);
                 }
             }
+        }
+
+        // For Legacy test
+        public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, long? indexVersion = null)
+            : this(collection, mapFields, groupByFields, deploymentMode: null, indexVersion)
+        {
+
         }
 
         public override bool TryGetField(string field, out AutoIndexField value)
@@ -228,7 +235,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 groupByFields[i] = field;
             }
 
-            return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields, version)
+            return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields, deploymentMode: null, version)
             {
                 LockMode = lockMode,
                 Priority = priority,

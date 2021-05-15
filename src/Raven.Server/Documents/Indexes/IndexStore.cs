@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -212,6 +213,8 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleChangesForAutoIndexes(DatabaseRecord record, long index, List<Index> indexesToStart)
         {
+            var mode = _documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode;
+
             foreach (var kvp in record.AutoIndexes)
             {
                 _documentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
@@ -219,7 +222,7 @@ namespace Raven.Server.Documents.Indexes
                 var name = kvp.Key;
                 try
                 {
-                    var definition = CreateAutoDefinition(kvp.Value);
+                    var definition = CreateAutoDefinition(kvp.Value, mode);
                     
                     var indexToStart = HandleAutoIndexChange(name, definition);
                     if (indexToStart != null)
@@ -294,7 +297,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        internal static AutoIndexDefinitionBase CreateAutoDefinition(AutoIndexDefinition definition)
+        internal static AutoIndexDefinitionBase CreateAutoDefinition(AutoIndexDefinition definition, IndexDeploymentMode indexDeployment)
         {
             var mapFields = definition
                 .MapFields
@@ -310,7 +313,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (definition.Type == IndexType.AutoMap)
             {
-                var result = new AutoMapIndexDefinition(definition.Collection, mapFields, IndexDefinitionBase.IndexVersion.CurrentVersion);
+                var result = new AutoMapIndexDefinition(definition.Collection, mapFields, indexDeployment, IndexDefinitionBase.IndexVersion.CurrentVersion);
 
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;
@@ -333,7 +336,7 @@ namespace Raven.Server.Documents.Indexes
                     })
                     .ToArray();
 
-                var result = new AutoMapReduceIndexDefinition(definition.Collection, mapFields, groupByFields, IndexDefinitionBase.IndexVersion.CurrentVersion);
+                var result = new AutoMapReduceIndexDefinition(definition.Collection, mapFields, groupByFields, indexDeployment, IndexDefinitionBase.IndexVersion.CurrentVersion);
 
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;
@@ -419,8 +422,9 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public bool ShouldSkipThisNodeWhenRolling(Index index, out string reason)
+        public bool ShouldSkipThisNodeWhenRolling(Index index, out string reason,out bool replace)
         {
+            replace = false;
             if (index.IsRolling == false)
             {
                 reason = "I'm not a rolling index";
@@ -431,13 +435,15 @@ namespace Raven.Server.Documents.Indexes
             using (ctx.OpenReadTransaction())
             using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(ctx, _documentDatabase.Name))
             {
-                return ShouldSkipThisNode(rawRecord, index, out reason);
+                return ShouldSkipThisNode(rawRecord, index, out reason, out replace);
             }
         }
 
-        private bool ShouldSkipThisNode(RawDatabaseRecord record, Index index, out string reason)
+        private bool ShouldSkipThisNode(RawDatabaseRecord record, Index index, out string reason, out bool replace)
         {
             reason = null;
+            replace = false;
+
             if (record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out var deletion))
             {
                 if (deletion != DeletionInProgressStatus.No)
@@ -454,7 +460,9 @@ namespace Raven.Server.Documents.Indexes
                 return false;
             }
 
-            if (record.RollingIndexes.TryGetValue(index.NormalizedName, out var rollingIndex) == false)
+            var originalName = index.NormalizedName;
+
+            if (record.RollingIndexes.TryGetValue(originalName, out var rollingIndex) == false)
             {
                 reason = "I'm not a rolling index";
                 return false;
@@ -468,40 +476,53 @@ namespace Raven.Server.Documents.Indexes
                 return true;
             }
 
-            // Only nodes which are marked 'Running' can proceed to execute the index.
             if (nodeDeployment.State != RollingIndexState.Pending)
             {
                 reason = $"My state is {nodeDeployment.State}";
                 return false;
             }
 
-            if (index.Name == index.NormalizedName)
+            var didWork = DidWork(originalName);
+
+            if (index.Definition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix))
             {
-                var latestDef = GetDefinitionFromRecord(record, index.NormalizedName);
-
-                if (index.Definition.Compare(latestDef) == IndexDefinitionCompareDifferences.None)
+                reason = "I'm a pending side-by-side";
+                if (didWork == false)
                 {
-                    reason = "It isn't my turn to be deployed";
-                    return true;
+                    replace = true;
                 }
-
-                reason = "I'm the original index and already deployed";
-                return false;
+                return true;
             }
 
-            reason = $"I'm side-by-side with a '{nodeDeployment.State}' state";
-            return true;
+            if (HasReplacement(index.Definition.Name) == false)
+            {
+                reason = "It isn't my turn to be deployed";
+                return true;
+            }
+
+            if (didWork == false)
+            {
+                reason = "I have a side-by-side that will replace me";
+                return true;
+            }
+
+            reason = "I'm the original index";
+            return false;
         }
-        
-        public static bool GetGlobalRollingSetting(DatabaseRecord record)
+
+        private bool DidWork(string name)
         {
-            if (record.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Rolling), out var value) == false)
-                return false;
+            bool didWork;
+            if (_indexes.TryGetByName(name, out var originalIndex) == false)
+                return true; // we can't tell, assume we did
 
-            if (bool.TryParse(value, out var result) == false)
-                return false;
+            using (var context = QueryOperationContext.Allocate(_documentDatabase, originalIndex))
+            using (context.OpenReadTransaction())
+            {
+                didWork = originalIndex.GetIndexingState(context).LastProcessedEtag != 0;
+            }
 
-            return result;
+            return didWork;
         }
 
         private Index HandleStaticIndexChange(string name, IndexDefinition definition)
@@ -762,12 +783,16 @@ namespace Raven.Server.Documents.Indexes
             return index;
         }
 
+        public bool HasReplacement(string name)
+        {
+            var replacementName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
+            return _indexes.TryGetByName(replacementName, out _);
+        }
+
         public void MaybeFinishRollingDeployment(Index index)
         {
             var definition = index.Definition;
             var nodeTag = _serverStore.NodeTag;
-
-            IndexDefinition latestDef;
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -787,17 +812,9 @@ namespace Raven.Server.Documents.Indexes
                 if (currentDeployment.State != RollingIndexState.Running)
                     return;
 
-                var replacementName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
-
-                if (_indexes.TryGetByName(replacementName, out _))
+                if (HasReplacement(definition.Name))
                     return; // if exists, the replacement index should finish the rolling deployment 
-
-                latestDef = GetDefinitionFromRecord(rawRecord, index.Name);
             }
-
-            // we need to identify a running side-by-side rolling index which hasn't started yet.
-            if (index.Definition.Compare(latestDef) != IndexDefinitionCompareDifferences.None)
-                return; 
 
             if (index.IsStale())
                 return;
@@ -831,7 +848,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private static IndexDefinition GetDefinitionFromRecord(RawDatabaseRecord record, string name)
+        /*private static IndexDefinition GetDefinitionFromRecord(RawDatabaseRecord record, string name)
         {
             if (record.Indexes.TryGetValue(name, out var definition))
             {
@@ -840,26 +857,11 @@ namespace Raven.Server.Documents.Indexes
 
             if (record.AutoIndexes.TryGetValue(name, out var autoDef))
             {
-                return CreateAutoDefinition(autoDef).GetOrCreateIndexDefinitionInternal();
+                return CreateAutoDefinition(autoDef, GetGlobalDeploymentModeForAutoIndexes(record)).GetOrCreateIndexDefinitionInternal();
             }
 
             return null;
-        }
-
-        private static IndexDefinition GetDefinitionFromRecord(DatabaseRecord record, string name)
-        {
-            if (record.Indexes.TryGetValue(name, out var definition))
-            {
-                return definition;
-            }
-
-            if (record.AutoIndexes.TryGetValue(name, out var autoDef))
-            {
-                return CreateAutoDefinition(autoDef).GetOrCreateIndexDefinitionInternal();
-            }
-
-            return null;
-        }
+        }*/
 
         public async Task<long> CreateIndexInternal(IndexDefinition definition, string raftRequestId, string source = null)
         {
@@ -868,7 +870,15 @@ namespace Raven.Server.Documents.Indexes
 
             ValidateStaticIndex(definition);
 
-            var command = new PutIndexCommand(definition, _documentDatabase.Name, source, _documentDatabase.Time.GetUtcNow(), raftRequestId, _documentDatabase.Configuration.Indexing.HistoryRevisionsNumber);
+            var command = new PutIndexCommand(
+                definition, 
+                _documentDatabase.Name, 
+                source, 
+                _documentDatabase.Time.GetUtcNow(), 
+                raftRequestId, 
+                _documentDatabase.Configuration.Indexing.HistoryRevisionsNumber, 
+                _documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode
+                );
 
             long index = 0;
             try
@@ -957,8 +967,9 @@ namespace Raven.Server.Documents.Indexes
                 return await CreateIndex(mapIndexDefinition.IndexDefinition, raftRequestId);
 
             ValidateAutoIndex(definition);
+            definition.DeploymentMode = _documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode;
 
-            var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name, raftRequestId);
+            var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name, raftRequestId, _documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode);
 
             long index = 0;
             try
@@ -1861,7 +1872,7 @@ namespace Raven.Server.Documents.Indexes
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
 
                 var fakeIndex = autoIndexDefinition != null
-                    ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition(autoIndexDefinition))
+                    ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition(autoIndexDefinition, IndexDeploymentMode.Parallel))
                     : new FaultyInMemoryIndex(e, name, configuration, staticIndexDefinition);
 
                 var message = $"Could not open index at '{indexPath}'. Created in-memory, fake instance: {fakeIndex.Name}";
@@ -2357,17 +2368,21 @@ namespace Raven.Server.Documents.Indexes
             private readonly int _numberOfUtilizedCores;
 
             private PutIndexesCommand _command;
+            private readonly IndexDeploymentMode _defaultAutoDeploymentMode;
+            private readonly IndexDeploymentMode _defaultStaticDeploymentMode;
 
             public IndexBatchScope(IndexStore store, int numberOfUtilizedCores)
             {
                 _store = store;
                 _numberOfUtilizedCores = numberOfUtilizedCores;
+                _defaultAutoDeploymentMode = store._documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode;
+                _defaultStaticDeploymentMode = store._documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode;
             }
 
             public void AddIndex(IndexDefinitionBase definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
             {
                 if (_command == null)
-                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, revisionsToKeep);
+                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, revisionsToKeep, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
 
                 if (definition == null)
                     throw new ArgumentNullException(nameof(definition));
@@ -2389,7 +2404,7 @@ namespace Raven.Server.Documents.Indexes
             public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
             {
                 if (_command == null)
-                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, revisionsToKeep);
+                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, revisionsToKeep, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
 
                 _store.ValidateStaticIndex(definition);
 

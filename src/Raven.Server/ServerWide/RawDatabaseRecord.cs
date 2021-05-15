@@ -32,6 +32,11 @@ namespace Raven.Server.ServerWide
             _record = record ?? throw new ArgumentNullException(nameof(record));
         }
 
+        private RawDatabaseRecord(DatabaseRecord record)
+        {
+            _materializedRecord = record;
+        }
+
         public BlittableJsonReaderObject Raw
         {
             get
@@ -872,6 +877,8 @@ namespace Raven.Server.ServerWide
                 return _materializedRecord;
             }
         }
-
+        
+        public static implicit operator DatabaseRecord(RawDatabaseRecord raw) => raw.MaterializedRecord;
+        public static implicit operator RawDatabaseRecord(DatabaseRecord record) => new RawDatabaseRecord(record);
     }
 }

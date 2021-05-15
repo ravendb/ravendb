@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Analysis;
@@ -72,10 +73,15 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Disable", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public virtual bool Disabled { get; protected set; }
 
-        [DefaultValue(false)]
+        [DefaultValue(IndexDeploymentMode.Rolling)]
         [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Indexing.Rolling", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public bool Rolling { get; protected set; }
+        [ConfigurationEntry("Indexing.StaticIndexDeploymentMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public IndexDeploymentMode StaticIndexDeploymentMode { get; protected set; }
+
+        [DefaultValue(IndexDeploymentMode.Rolling)] // TODO: for testing
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.AutoIndexDeploymentMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public IndexDeploymentMode AutoIndexDeploymentMode { get; protected set; }
 
         [DefaultValue(true)]
         [IndexUpdateType(IndexUpdateType.Refresh)]

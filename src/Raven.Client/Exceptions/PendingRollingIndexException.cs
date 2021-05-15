@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.Server.Exceptions
+namespace Raven.Client.Exceptions
 {
     public class PendingRollingIndexException : Exception
     {

@@ -171,22 +171,11 @@ namespace Raven.Server.Documents.Indexes
 
         private bool _didWork;
         private bool _isReplacing;
-        public bool IsRolling => Definition.Rolling ?? DocumentDatabase.Configuration.Indexing.Rolling;
+        public bool IsRolling => Definition.DeploymentMode == IndexDeploymentMode.Rolling;
         public string NormalizedName => Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty);
 
         private string _lastPendingStatus;
-
-        public bool IsPending
-        {
-            get
-            {
-                if (State == IndexState.Normal)
-                    return DocumentDatabase.IndexStore.ShouldSkipThisNodeWhenRolling(this, out _lastPendingStatus);
-
-                _lastPendingStatus = $"Not pending due to state: {State}";
-                return false;
-            }
-        }
+        public MultipleUseFlag ForceReplace = new MultipleUseFlag();
 
         protected readonly bool HandleAllDocs;
 
@@ -443,7 +432,7 @@ namespace Raven.Server.Documents.Indexes
                         }
                         else
                         {
-                            var definition = IndexStore.CreateAutoDefinition(autoDef);
+                            var definition = IndexStore.CreateAutoDefinition(autoDef, documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode);
 
                             if (definition is AutoMapIndexDefinition autoMapDef)
                                 return AutoMapIndex.CreateNew(autoMapDef, documentDatabase);
@@ -825,12 +814,6 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly ManualResetEventSlim _rollingEvent = new ManualResetEventSlim();
 
-        public void RollIfNeeded()
-        {
-            if (IsPending == false)
-                _rollingEvent.Set();
-        }
-
         private void StartIndexingThread()
         {
             if (_indexingThread != null &&
@@ -875,6 +858,45 @@ namespace Raven.Server.Documents.Indexes
             }, null, IndexingThreadName);
 
             RollIfNeeded();
+        }
+
+        public void RollIfNeeded()
+        {
+            GetPendingAndReplaceStatus(out var pending, out var shouldReplace);
+
+            if (shouldReplace)
+            {
+                if (ForceReplace.Raise() == false)
+                    return; // need to wait for the replace to occur
+            }
+
+            if (shouldReplace || pending == false)
+            {
+                _rollingEvent.Set();
+            }
+        }
+
+        public bool IsPending
+        {
+            get
+            {
+                GetPendingAndReplaceStatus(out var pending, out _);
+                return pending;
+            }
+        }
+
+        private void GetPendingAndReplaceStatus(out bool pending, out bool replace)
+        {
+            pending = false;
+            replace = false;
+
+            if (IsRolling == false)
+                return;
+
+            if (State == IndexState.Normal)
+            {
+                pending = DocumentDatabase.IndexStore.ShouldSkipThisNodeWhenRolling(this, out _lastPendingStatus, out replace);
+            }
         }
 
         private void ReportUnexpectedIndexingError(Exception e)
@@ -1217,7 +1239,14 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    _rollingEvent.Wait(_indexingProcessCancellationTokenSource.Token);
+                    if (IsRolling)
+                    {
+                        _rollingEvent.Wait(_indexingProcessCancellationTokenSource.Token);
+                        _rollingEvent.Reset();
+
+                        if (ReplaceIfNeeded(batchCompleted: false, didWork: false))
+                            return;
+                    }
 
                     storageEnvironment.OnLogsApplied += HandleLogsApplied;
 
@@ -1266,11 +1295,13 @@ namespace Raven.Server.Documents.Indexes
 
                                     if (DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock != null)
                                     {
-                                        if (DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock.TryAcquire(TimeSpan.Zero, _indexingProcessCancellationTokenSource.Token) == false)
+                                        if (DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock.TryAcquire(TimeSpan.Zero,
+                                            _indexingProcessCancellationTokenSource.Token) == false)
                                         {
                                             using (scope.For(IndexingOperation.Wait.AcquireConcurrentlyRunningIndexesLock))
                                             {
-                                                DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock.Acquire(_indexingProcessCancellationTokenSource.Token);
+                                                DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock.Acquire(_indexingProcessCancellationTokenSource
+                                                    .Token);
                                             }
                                         }
                                     }
@@ -1282,37 +1313,37 @@ namespace Raven.Server.Documents.Indexes
                                         try
                                         {
 
-                                        TimeSpentIndexing.Start();
+                                            TimeSpentIndexing.Start();
 
-                                        didWork = DoIndexingWork(scope, _indexingProcessCancellationTokenSource.Token);
+                                            didWork = DoIndexingWork(scope, _indexingProcessCancellationTokenSource.Token);
 
-                                        if (_lowMemoryPressure > 0)
-                                            LowMemoryOver();
+                                            if (_lowMemoryPressure > 0)
+                                                LowMemoryOver();
 
-                                        batchCompleted = true;
-                                    }
-                                    catch
-                                    {
-                                        // need to call it here to the let the index continue running
-                                        // we'll stop when we reach the index error threshold
-                                        _mre.Set(ignoreThrottling: true);
-                                        throw;
-                                    }
-                                    finally
-                                    {
-                                        _indexingInProgress.Release();
-
-                                        if (_batchStopped)
-                                        {
-                                            _batchStopped = false;
-                                            DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Release();
+                                            batchCompleted = true;
                                         }
+                                        catch
+                                        {
+                                            // need to call it here to the let the index continue running
+                                            // we'll stop when we reach the index error threshold
+                                            _mre.Set(ignoreThrottling: true);
+                                            throw;
+                                        }
+                                        finally
+                                        {
+                                            _indexingInProgress.Release();
 
-                                        _threadAllocations.CurrentlyAllocatedForProcessing = 0;
-                                        _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
+                                            if (_batchStopped)
+                                            {
+                                                _batchStopped = false;
+                                                DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Release();
+                                            }
 
-                                        TimeSpentIndexing.Stop();
-                                    }
+                                            _threadAllocations.CurrentlyAllocatedForProcessing = 0;
+                                            _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
+
+                                            TimeSpentIndexing.Stop();
+                                        }
                                     }
                                     finally
                                     {
@@ -1369,7 +1400,8 @@ namespace Raven.Server.Documents.Indexes
                                 }
                                 catch (OperationCanceledException)
                                 {
-                                    Debug.Assert(_indexingProcessCancellationTokenSource.IsCancellationRequested, $"Got {nameof(OperationCanceledException)} while the index was not canceled");
+                                    Debug.Assert(_indexingProcessCancellationTokenSource.IsCancellationRequested,
+                                        $"Got {nameof(OperationCanceledException)} while the index was not canceled");
 
                                     // We are here only in the case of indexing process cancellation.
                                     scope.RecordMapCompletedReason("Operation canceled.");
@@ -1402,48 +1434,8 @@ namespace Raven.Server.Documents.Indexes
                                         _logger.Info($"Could not update stats for '{Name}'.", e);
                                 }
 
-                                try
-                                {
-                                    if (ShouldReplace())
-                                    {
-                                        var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.OrdinalIgnoreCase);
-                                        _isReplacing = true;
-
-                                        if (batchCompleted)
-                                        {
-                                            // this side-by-side index will be replaced in a second, notify about indexing success
-                                            // so we know that indexing batch is no longer in progress
-                                            NotifyAboutCompletedBatch(didWork);
-                                        }
-
-                                        try
-                                        {
-                                            try
-                                            {
-                                                DocumentDatabase.IndexStore.ReplaceIndexes(originalName, Definition.Name, _indexingProcessCancellationTokenSource.Token);
-                                                StartIndexingThread();
-                                                return;
-                                            }
-                                            catch (OperationCanceledException)
-                                            {
-                                                // this can fail if the indexes lock is currently held, so we'll retry
-                                                // however, we might be requested to shutdown, so we want to skip replacing
-                                                // in this case, worst case scenario we'll handle this in the next batch
-                                            }
-                                        }
-                                        finally
-                                        {
-                                            _isReplacing = false;
-                                        }
-                                    }
-                                }
-                                catch (Exception e)
-                                {
-                                    _mre.Set(ignoreThrottling: true); // try again
-
-                                    if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Could not replace index '{Name}'.", e);
-                                }
+                                if (ReplaceIfNeeded(batchCompleted, didWork))
+                                    return;
                             }
                         }
                         finally
@@ -1572,7 +1564,55 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
         }
-        
+
+        public bool ReplaceIfNeeded(bool batchCompleted, bool didWork)
+        {
+            try
+            {
+                if (ShouldReplace())
+                {
+                    var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.OrdinalIgnoreCase);
+                    _isReplacing = true;
+
+                    if (batchCompleted)
+                    {
+                        // this side-by-side index will be replaced in a second, notify about indexing success
+                        // so we know that indexing batch is no longer in progress
+                        NotifyAboutCompletedBatch(didWork);
+                    }
+
+                    try
+                    {
+                        try
+                        {
+                            DocumentDatabase.IndexStore.ReplaceIndexes(originalName, Definition.Name, _indexingProcessCancellationTokenSource.Token);
+                            StartIndexingThread();
+                            return true;
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // this can fail if the indexes lock is currently held, so we'll retry
+                            // however, we might be requested to shutdown, so we want to skip replacing
+                            // in this case, worst case scenario we'll handle this in the next batch
+                        }
+                    }
+                    finally
+                    {
+                        _isReplacing = false;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                _mre.Set(ignoreThrottling: true); // try again
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Could not replace index '{Name}'.", e);
+            }
+
+            return false;
+        }
+
         internal TestingStuff ForTestingPurposesOnly()
         {
             if (ForTestingPurposes != null)

@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server;
-using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -107,7 +107,7 @@ namespace SlowTests.Rolling
 
         private static async Task<string> CreateIndex((List<RavenServer> Nodes, RavenServer Leader) cluster, string dbName)
         {
-            var indexDefinition = new IndexDefinition {Name = "order_companies", Maps = {"from order in docs.Orders select new { company = order.Company }"}, Rolling = true};
+            var indexDefinition = new IndexDefinition {Name = "order_companies", Maps = {"from order in docs.Orders select new { company = order.Company }"}, DeploymentMode = IndexDeploymentMode.Rolling};
 
             var db = await cluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
 

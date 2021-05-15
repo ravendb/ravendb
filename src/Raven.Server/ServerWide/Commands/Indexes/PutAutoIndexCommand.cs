@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
+using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
@@ -15,26 +17,26 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 {
     public class PutAutoIndexCommand : UpdateDatabaseCommand
     {
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt;
         public AutoIndexDefinition Definition;
-
+        public IndexDeploymentMode? DefaultStaticDeploymentMode;
         public PutAutoIndexCommand()
         {
         }
 
-        public PutAutoIndexCommand(AutoIndexDefinition definition, string databaseName, string uniqueRequestId, DateTime? createdAt = null)
+        public PutAutoIndexCommand(AutoIndexDefinition definition, string databaseName, string uniqueRequestId, IndexDeploymentMode mode, DateTime? createdAt = null)
             : base(databaseName, uniqueRequestId)
         {
             Definition = definition;
             CreatedAt = createdAt ?? DateTime.MinValue;
+            DefaultStaticDeploymentMode = mode;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             try
             {
-                var setting = IndexStore.GetGlobalRollingSetting(record);
-                record.AddIndex(Definition, CreatedAt, etag, setting);
+                record.AddIndex(Definition, CreatedAt, etag, DefaultStaticDeploymentMode ?? IndexDeploymentMode.Parallel);
             }
             catch (Exception e)
             {
@@ -47,13 +49,14 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         {
             json[nameof(Definition)] = TypeConverter.ToBlittableSupportedType(Definition);
             json[nameof(CreatedAt)] = TypeConverter.ToBlittableSupportedType(CreatedAt);
+            json[nameof(DefaultStaticDeploymentMode)] = TypeConverter.ToBlittableSupportedType(DefaultStaticDeploymentMode);
         }
 
-        public static PutAutoIndexCommand Create(AutoIndexDefinitionBase definition, string databaseName, string raftRequestId)
+        public static PutAutoIndexCommand Create(AutoIndexDefinitionBase definition, string databaseName, string raftRequestId, IndexDeploymentMode mode)
         {
             var indexType = GetAutoIndexType(definition);
 
-            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName, raftRequestId, DateTime.UtcNow);
+            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName, raftRequestId, mode, DateTime.UtcNow);
         }
 
         public static IndexType GetAutoIndexType(AutoIndexDefinitionBase definition)
@@ -83,7 +86,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 Priority = definition.Priority,
                 Name = definition.Name,
                 Type = indexType,
-                Rolling = definition.Rolling
             };
         }
 

@@ -1416,11 +1416,6 @@ namespace Raven.Client.Http
                     }
 
                     await ExecuteAsync(node, index, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
-                    if (response.Headers.Contains("Rolling-Index") && nodeIndex.HasValue)
-                    {
-                        _nodeSelector.RestoreNodeIndex(nodeIndex.Value);
-                    }
-
                     return true;
 
                 case HttpStatusCode.GatewayTimeout:
@@ -1431,6 +1426,29 @@ namespace Raven.Client.Http
 
                 case HttpStatusCode.Conflict:
                     await HandleConflict(context, response).ConfigureAwait(false);
+                    break;
+
+                case HttpStatusCode.TemporaryRedirect:
+
+                    if (shouldRetry == false)
+                        return false;
+
+                    if (nodeIndex != null)
+                        _nodeSelector.OnFailedRequest(nodeIndex.Value);
+
+                    if (command.FailedNodes == null)
+                        command.FailedNodes = new Dictionary<ServerNode, Exception>();
+
+                    if (command.IsFailedWithNode(chosenNode) == false)
+                        command.FailedNodes[chosenNode] = new UnsuccessfulRequestException($"Request to '{request.RequestUri}' ({request.Method}) is processing and not yet available on that node.");
+
+                    var nextNode = ChooseNodeForRequest(command, sessionInfo);
+
+                    await ExecuteAsync(nextNode.CurrentNode, nextNode.CurrentIndex, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
+                    
+                    if (nodeIndex.HasValue)
+                        _nodeSelector.RestoreNodeIndex(nodeIndex.Value);
+
                     break;
 
                 default:

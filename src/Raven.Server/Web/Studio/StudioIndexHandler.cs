@@ -20,13 +20,17 @@ namespace Raven.Server.Web.Studio
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                bool rolling = Database.Configuration.Indexing.Rolling;
+                var autoIndexesDeploymentMode = Database.Configuration.Indexing.AutoIndexDeploymentMode;
+                var staticIndexesDeploymentMode = Database.Configuration.Indexing.StaticIndexDeploymentMode;
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName(nameof(IndexDefaults.Rolling));
-                    writer.WriteBool(rolling);
+                    writer.WritePropertyName(nameof(IndexDefaults.AutoIndexDeploymentMode));
+                    writer.WriteString(autoIndexesDeploymentMode.ToString());
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(IndexDefaults.StaticIndexDeploymentMode));
+                    writer.WriteString(staticIndexesDeploymentMode.ToString());
                     writer.WriteEndObject();
                 }
             }
@@ -34,7 +38,8 @@ namespace Raven.Server.Web.Studio
 
         public class IndexDefaults
         {
-            public bool? Rolling { get; set; }
+            public IndexDeploymentMode AutoIndexDeploymentMode { get; set; }
+            public IndexDeploymentMode StaticIndexDeploymentMode { get; set; }
         }
         
         [RavenAction("/databases/*/studio/index-type", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]

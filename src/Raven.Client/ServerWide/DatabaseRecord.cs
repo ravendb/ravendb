@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
@@ -17,6 +18,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide
@@ -139,7 +141,7 @@ namespace Raven.Client.ServerWide
             Analyzers?.Remove(sorterName);
         }
 
-        public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex, int revisionsToKeep, bool globalRollingSetting)
+        public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex, int revisionsToKeep, IndexDeploymentMode globalDeploymentMode)
         {
             var lockMode = IndexLockMode.Unlock;
 
@@ -211,19 +213,19 @@ namespace Raven.Client.ServerWide
                 history.RemoveRange(revisionsToKeep, history.Count - revisionsToKeep);
             }
 
-            if (IsRolling(definition.Rolling, globalRollingSetting))
+            if (IsRolling(definition.DeploymentMode, globalDeploymentMode))
             {
-                if (differences == null || (differences.Value & IndexDefinitionCompareDifferences.ReIndexRequiredMask) != 0)
+                if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
                     InitializeRollingDeployment(definition.Name, createdAt, raftIndex);
             }
         }
 
         public void AddIndex(AutoIndexDefinition definition)
         {
-            AddIndex(definition, DateTime.UtcNow, 0, false);
+            AddIndex(definition, SystemTime.UtcNow, 0, globalDeploymentMode: IndexDeploymentMode.Parallel);
         }
 
-        internal void AddIndex(AutoIndexDefinition definition, DateTime createdAt, long raftIndex, bool globalRollingSetting)
+        internal void AddIndex(AutoIndexDefinition definition, DateTime createdAt, long raftIndex, IndexDeploymentMode globalDeploymentMode)
         {
             IndexDefinitionCompareDifferences? differences = null;
 
@@ -243,27 +245,23 @@ namespace Raven.Client.ServerWide
 
             AutoIndexes[definition.Name] = definition;
             
-            if (IsRolling(definition.Rolling, globalRollingSetting))
+            if (globalDeploymentMode == IndexDeploymentMode.Rolling)
             {
-                if (differences == null || (differences.Value & IndexDefinitionCompareDifferences.ReIndexRequiredMask) != 0)
+                if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
                     InitializeRollingDeployment(definition.Name, createdAt, raftIndex);
             }
         }
 
-        internal static bool IsRolling(bool? fromDefinition, bool fromSetting)
+        internal static bool IsRolling(IndexDeploymentMode? fromDefinition, IndexDeploymentMode fromSetting)
         {
-            if (fromDefinition == false)
-                return false;
+            if (fromDefinition.HasValue == false)
+                return fromSetting == IndexDeploymentMode.Rolling;
 
-            return fromSetting || fromDefinition == true;
+            return fromDefinition == IndexDeploymentMode.Rolling;
         }
 
         private void InitializeRollingDeployment(string indexName, DateTime createdAt, long raftIndex)
         {
-            // todo 
-            // check cluster command versions
-            // what happens if the definition changed but this node didn't start yet? Now we'll process this index but still need to do the replacement. ==> We can think about this later as an optimization
-
             RollingIndexes ??= new Dictionary<string, RollingIndex>();
             if (RollingIndexes.TryGetValue(indexName, out var rollingIndex) == false)
             {

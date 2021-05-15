@@ -14,6 +14,10 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public List<AutoIndexDefinition> Auto = new List<AutoIndexDefinition>();
 
+        public IndexDeploymentMode? DefaultStaticDeploymentMode;
+
+        public IndexDeploymentMode? DefaultAutoDeploymentMode;
+
         public DateTime CreatedAt { get; set; }
 
         public string Source { get; set; }
@@ -25,28 +29,29 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             // for deserialization
         }
 
-        public PutIndexesCommand(string databaseName, string source, DateTime createdAt, string uniqueRequestId, int revisionsToKeep)
+        public PutIndexesCommand(string databaseName, string source, DateTime createdAt, string uniqueRequestId, int revisionsToKeep, IndexDeploymentMode autoDeploymentMode, IndexDeploymentMode staticDeploymentMode)
             : base(databaseName, uniqueRequestId)
         {
             Source = source;
             CreatedAt = createdAt;
             RevisionsToKeep = revisionsToKeep;
+            DefaultAutoDeploymentMode = autoDeploymentMode;
+            DefaultStaticDeploymentMode = staticDeploymentMode;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            var setting = IndexStore.GetGlobalRollingSetting(record);
 
             if (Static != null)
             {
                 foreach (var definition in Static)
-                    record.AddIndex(definition, Source, CreatedAt, etag, RevisionsToKeep, setting);
+                    record.AddIndex(definition, Source, CreatedAt, etag, RevisionsToKeep, DefaultStaticDeploymentMode ?? IndexDeploymentMode.Parallel);
             }
 
             if (Auto != null)
             {
                 foreach (var definition in Auto)
-                    record.AddIndex(definition, CreatedAt, etag, setting);
+                    record.AddIndex(definition, CreatedAt, etag, DefaultAutoDeploymentMode ?? IndexDeploymentMode.Parallel);
             }
 
         }
@@ -58,6 +63,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(Source)] = Source;
             json[nameof(CreatedAt)] = CreatedAt;
             json[nameof(RevisionsToKeep)] = RevisionsToKeep;
+            json[nameof(DefaultStaticDeploymentMode)] = DefaultStaticDeploymentMode;
+            json[nameof(DefaultAutoDeploymentMode)] = DefaultAutoDeploymentMode;
         }
     }
 }
