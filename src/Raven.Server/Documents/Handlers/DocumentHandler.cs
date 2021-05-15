@@ -510,6 +510,8 @@ namespace Raven.Server.Documents.Handlers
                 if (request.TryGet("PatchIfMissing", out BlittableJsonReaderObject patchIfMissingCmd) && patchIfMissingCmd != null)
                     patchIfMissing = PatchRequest.Parse(patchIfMissingCmd, out patchIfMissingArgs);
 
+                request.TryGet("CreateIfMissing", out BlittableJsonReaderObject createIfMissing);
+
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
                 var command = new PatchDocumentCommand(context,
@@ -518,6 +520,7 @@ namespace Raven.Server.Documents.Handlers
                     skipPatchIfChangeVectorMismatch,
                     (patch, patchArgs),
                     (patchIfMissing, patchIfMissingArgs),
+                    createIfMissing,
                     Database,
                     isTest,
                     debugMode,

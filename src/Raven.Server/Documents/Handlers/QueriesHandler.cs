@@ -390,11 +390,14 @@ namespace Raven.Server.Documents.Handlers
                     skipPatchIfChangeVectorMismatch: false,
                     patch: (patch, query.QueryParameters),
                     patchIfMissing: (null, null),
+                    createIfMissing: null,
                     database: context.DocumentDatabase,
                     debugMode: true,
                     isTest: true,
                     collectResultsNeeded: true,
-                    returnDocument: false);
+                    returnDocument: false
+                  
+                );
 
                 using (context.OpenWriteTransaction())
                 {

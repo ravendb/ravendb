@@ -37,16 +37,14 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
             foreach (var kvp in value)
             {
                 object key = kvp.Key;
-                if (key is DateTime)
+                if (key is DateTime dateTime)
                 {
-                    var dateTime = (DateTime)key;
                     if (dateTime.Kind == DateTimeKind.Unspecified)
                         dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
                     writer.WritePropertyName(dateTime.GetDefaultRavenFormat());
                 }
-                else if (key is DateTimeOffset)
+                else if (key is DateTimeOffset dateTimeOffset)
                 {
-                    var dateTimeOffset = (DateTimeOffset)key;
                     writer.WritePropertyName(dateTimeOffset.Offset == TimeSpan.Zero
                         ? dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(true)
                         : dateTimeOffset.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));

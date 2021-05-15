@@ -721,8 +721,8 @@ namespace Raven.Server.Documents.Indexes
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            if (definition is MapIndexDefinition)
-                return await CreateIndex(((MapIndexDefinition)definition).IndexDefinition, raftRequestId);
+            if (definition is MapIndexDefinition mapIndexDefinition)
+                return await CreateIndex(mapIndexDefinition.IndexDefinition, raftRequestId);
 
             ValidateAutoIndex(definition);
 

@@ -132,9 +132,9 @@ namespace Voron.Util
                     nToAdd = ((T[])items).Length;
                     copier = CopyArray;
                 }
-                else if (items is ICollection)
+                else if (items is ICollection iCollection)
                 {
-                    nToAdd = ((ICollection) items).Count;
+                    nToAdd = iCollection.Count;
                     if (items is List<T>)
                         copier = CopyList;
                 }
