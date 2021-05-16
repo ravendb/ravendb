@@ -823,7 +823,20 @@ namespace Raven.Server.Documents.Indexes
             {
                 // We may send the command multiple times so we need a new Id every time.
                 var command = new PutRollingIndexCommand(_documentDatabase.Name, definition.Name, nodeTag, DateTime.UtcNow, RaftIdGenerator.NewId());
-                _serverStore.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
+                _serverStore.SendToLeaderAsync(command).ContinueWith(t =>
+                {
+                    if (Logger.IsOperationsEnabled)
+                    {
+                        try
+                        {
+                            t.GetAwaiter().GetResult();
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{definition.Name}' in node {nodeTag}.", e);
+                        }
+                    }
+                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.NotOnRanToCompletion);
             }
             catch (Exception e)
             {

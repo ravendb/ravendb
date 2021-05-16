@@ -14,14 +14,14 @@ namespace Raven.Server.ServerWide.Commands.Indexes
     {
         public string IndexName { get; set; }
         public string FinishedNodeTag { get; set; }
-        public DateTime FinishedAt { get; set; }
+        public DateTime? FinishedAt { get; set; }
 
         public PutRollingIndexCommand()
         {
             // for deserialization
         }
 
-        public PutRollingIndexCommand(string databaseName, string indexName, string finishedNodeTag, DateTime finishedAt, string uniqueRequestId) 
+        public PutRollingIndexCommand(string databaseName, string indexName, string finishedNodeTag, DateTime? finishedAt, string uniqueRequestId) 
             : base(databaseName, uniqueRequestId)
         {
             IndexName = indexName;
