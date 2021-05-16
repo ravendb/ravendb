@@ -15,11 +15,12 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     internal class ClusterWideBatchCommand : SingleNodeBatchCommand, IRaftCommand
     {
-        public bool DisableAtomicDocumentWrites;
+        public bool DisableAtomicDocumentWrites { get; }
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
 
-        public ClusterWideBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null) : base(conventions, context, commands, options, TransactionMode.ClusterWide)
+        public ClusterWideBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null, bool disableAtomicDocumentsWrites = false) : base(conventions, context, commands, options, TransactionMode.ClusterWide)
         {
+            DisableAtomicDocumentWrites = disableAtomicDocumentsWrites;
         }
 
         protected override void AppendOptions(StringBuilder sb)
