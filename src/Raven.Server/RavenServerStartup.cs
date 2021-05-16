@@ -381,7 +381,7 @@ namespace Raven.Server
 
             if (exception is PendingRollingIndexException)
             {
-                response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
+                response.StatusCode = 425; // TooEarly
                 return;
             }
 

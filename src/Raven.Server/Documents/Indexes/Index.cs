@@ -1569,7 +1569,7 @@ namespace Raven.Server.Documents.Indexes
         {
             try
             {
-                if (ShouldReplace())
+                if (ForceReplace.Lower() || ShouldReplace())
                 {
                     var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.OrdinalIgnoreCase);
                     _isReplacing = true;

@@ -1428,7 +1428,7 @@ namespace Raven.Client.Http
                     await HandleConflict(context, response).ConfigureAwait(false);
                     break;
 
-                case HttpStatusCode.TemporaryRedirect:
+                case (HttpStatusCode)425: // TooEarly
 
                     if (shouldRetry == false)
                         return false;

@@ -331,12 +331,6 @@ namespace Raven.Server.Documents.Indexes
             if (isSideBySide == false)
                 return false;
 
-            if (index.ForceReplace.Lower())
-            {
-                isSideBySide = null;
-                return true;
-            }
-
             using (var context = QueryOperationContext.Allocate(index.DocumentDatabase, index))
             using (index._contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             {

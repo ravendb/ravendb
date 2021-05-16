@@ -1184,7 +1184,7 @@ namespace Raven.Server.ServerWide
                             {
                                 if (rollingIndex.Value.ActiveDeployments.TryGetValue(removed, out var deployment))
                                 {
-                                    var dummy = new PutRollingIndexCommand(record.DatabaseName, rollingIndex.Key, removed, DateTime.Now, "dummy update");
+                                    var dummy = new PutRollingIndexCommand(record.DatabaseName, rollingIndex.Key, removed, finishedAt: null, "dummy update");
                                     dummy.UpdateDatabaseRecord(record, index);
                                     rollingIndex.Value.ActiveDeployments.Remove(removed);
                                 }

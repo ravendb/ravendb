@@ -52,6 +52,9 @@ namespace Raven.Server.Documents.Handlers
             if (oldIndex == null && newIndex == null)
                 throw new IndexDoesNotExistException($"Could not find '{name}' and '{replacementName}' indexes.");
 
+            if (newIndex == null)
+                throw new IndexDoesNotExistException($"Could not find side-by-side index for '{name}'.");
+
             using (var token = CreateOperationToken(TimeSpan.FromMinutes(15)))
             {
                 Database.IndexStore.ReplaceIndexes(name, newIndex.Name, token.Token);
@@ -78,7 +81,9 @@ namespace Raven.Server.Documents.Handlers
                 throw new InvalidOperationException($"'{name}' isn't a rolling index");
 
             var command = new PutRollingIndexCommand(Database.Name, name, ServerStore.NodeTag, DateTime.UtcNow, RaftIdGenerator.NewId());
-            await ServerStore.SendToLeaderAsync(command);
+            var result = await ServerStore.SendToLeaderAsync(command);
+            
+            await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, HttpContext.RequestAborted);
         }
 
         [RavenAction("/databases/*/indexes/source", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
