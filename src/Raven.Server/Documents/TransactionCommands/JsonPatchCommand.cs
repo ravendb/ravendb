@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.TransactionCommands
     {
         private readonly string _id;
         private readonly List<Command> _commands;
-        public PatchResult _patchResult;
+        public JsonPatchResult _patchResult;
         protected readonly bool _returnDocument;
         private readonly JsonOperationContext _externalContext;
 
@@ -37,71 +37,75 @@ namespace Raven.Server.Documents.TransactionCommands
             {
                 throw new InvalidOperationException($"Cannot apply json patch because the document {_id} does not exist");
             }
-            
-            var isModified = false;
-            foreach (Command command in _commands)
-            {
-                var pathBlittable = command.GetActionableObject(document, command.Paths, command.OriginalPath);
-                string prop = command.Paths[^1];
 
-                switch (command.Type)
+            try
+            {
+                var isModified = false;
+                foreach (Command command in _commands)
                 {
-                    case CommandTypes.Add:
-                        command.Add(pathBlittable, prop, command.Value);
-                        break;
-                    case CommandTypes.Remove:
-                        command.Remove(pathBlittable, prop);
-                        break;
-                    case CommandTypes.Replace:
-                        command.Replace(pathBlittable, prop, command.Value);
-                        break;
-                    case CommandTypes.Move:
-                        command.Move(pathBlittable, prop, command.GetActionableObject(document, command.FromPaths, command.OriginalFrom), command.FromPaths[^1]);
-                        break;
-                    case CommandTypes.Copy:
-                        command.Copy(pathBlittable, prop, command.GetNonActionableObject(document, command.FromPaths, command.OriginalFrom));
-                        break;
-                    case CommandTypes.Test:
-                        command.Test(command.GetNonActionableObject(document, command.Paths, command.OriginalPath), command.Value);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException($"Unsupported command type '{command.Type}'.");
+                    var pathBlittable = command.GetActionableObject(document, command.Paths, command.OriginalPath);
+                    string prop = command.Paths[^1];
+
+                    switch (command.Type)
+                    {
+                        case CommandTypes.Add:
+                            command.Add(pathBlittable, prop, command.Value);
+                            break;
+                        case CommandTypes.Remove:
+                            command.Remove(pathBlittable, prop);
+                            break;
+                        case CommandTypes.Replace:
+                            command.Replace(pathBlittable, prop, command.Value);
+                            break;
+                        case CommandTypes.Move:
+                            command.Move(pathBlittable, prop, command.GetActionableObject(document, command.FromPaths, command.OriginalFrom), command.FromPaths[^1]);
+                            break;
+                        case CommandTypes.Copy:
+                            command.Copy(pathBlittable, prop, command.GetNonActionableObject(document, command.FromPaths, command.OriginalFrom));
+                            break;
+                        case CommandTypes.Test:
+                            command.Test(command.GetNonActionableObject(document, command.Paths, command.OriginalPath), command.Value);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException($"Unsupported command type '{command.Type}'.");
+                    }
+
+                    if (command.Type == CommandTypes.Test)
+                        continue;
+
+                    using (document.Data)
+                    {
+                        isModified = true;
+                        // ReadObject has to be called after every command so changes between each command are applied for the next operation's use.
+                        // For example: executing an Add at /a/b which would result in 'b' being created, then executing a Replace at /a/b
+                        // Without ReadObject after every command, TryGet will not find 'b' for the Replace operation.
+                        document.Data = context.ReadObject(document.Data, _id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    }
                 }
 
-                if (command.Type == CommandTypes.Test)
-                    continue;
+                DocumentsStorage.PutOperationResults? putResult = null;
+                if (isModified)
+                    putResult = context.DocumentDatabase.DocumentsStorage.Put(context, _id, document.ChangeVector, document.Data);
 
-                using (document.Data)
+                if (putResult == null)
                 {
-                    isModified = true;
-                    // ReadObject has to be called after every command so changes between each command are applied for the next operation's use.
-                    // For example: executing an Add at /a/b which would result in 'b' being created, then executing a Replace at /a/b
-                    // Without ReadObject after every command, TryGet will not find 'b' for the Replace operation.
-                    document.Data = context.ReadObject(document.Data, _id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    _patchResult = new JsonPatchResult {Status = PatchStatus.NotModified,};
+                }
+                else
+                {
+                    _patchResult = new JsonPatchResult
+                    {
+                        Status = PatchStatus.Patched,
+                        ModifiedDocument = document.Data?.Clone(_externalContext),
+                        ChangeVector = putResult.Value.ChangeVector,
+                        Collection = putResult.Value.Collection.Name,
+                        LastModified = putResult.Value.LastModified
+                    };
                 }
             }
-
-            DocumentsStorage.PutOperationResults? putResult = null;
-            if (isModified)
-                putResult  = context.DocumentDatabase.DocumentsStorage.Put(context, _id, document.ChangeVector, document.Data);
-
-            if (putResult == null)
+            catch (Exception ex)
             {
-                _patchResult = new PatchResult
-                {
-                    Status = PatchStatus.NotModified,
-                };
-            }
-            else
-            {
-                _patchResult = new PatchResult
-                {
-                    Status = PatchStatus.Patched,
-                    ModifiedDocument = document.Data?.Clone(_externalContext),
-                    ChangeVector = putResult.Value.ChangeVector,
-                    Collection = putResult.Value.Collection.Name,
-                    LastModified = putResult.Value.LastModified
-                };
+                throw new InvalidOperationException($"An error occurred while trying to apply json patch operation to document {_id}.", ex);
             }
 
             return 1;
