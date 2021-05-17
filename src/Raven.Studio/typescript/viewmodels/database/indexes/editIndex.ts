@@ -79,15 +79,15 @@ class editIndex extends viewModelBase {
     previewItem = ko.observable<Raven.Client.ServerWide.IndexHistoryEntry>();
     previewDefinition = ko.observable<string>();
     
-    defaultRolling = ko.observable<boolean>(false);
-    defaultRollingFormatted = ko.pureComputed(() => {
-        return this.defaultRolling() ? "Server default (rolling - one node at the time)" : "Server default (parallel - all nodes concurrently)";
+    defaultDeploymentMode = ko.observable<Raven.Client.Documents.Indexes.IndexDeploymentMode>();
+    defaultDeploymentModeFormatted = ko.pureComputed(() => {
+        return this.defaultDeploymentMode() ? "Server default (rolling - one node at the time)" : "Server default (parallel - all nodes concurrently)";
     });
 
-    effectiveRolling = ko.pureComputed(() => {
+    effectiveDeploymentMode = ko.pureComputed(() => {
         const index = this.editedIndex();
-        const rolling = index.mode() === "Rolling";
-        return this.formatRollingValue(rolling);
+        const deploymentMode = index.deploymentMode();
+        return this.formatDeploymentMode(deploymentMode);
     });
 
     constructor() {
@@ -117,14 +117,15 @@ class editIndex extends viewModelBase {
         this.initializeObservables();
     }
     
-    formatRollingValue(rolling: boolean | null) {
-        if (rolling) {
-            return "Rolling (one node at the time)";
+    formatDeploymentMode(mode: Raven.Client.Documents.Indexes.IndexDeploymentMode) {
+        switch (mode) {
+            case "Rolling":
+                return "Rolling (one node at the time)";
+            case "Parallel":
+                return "Parallel (all nodes concurrently)";
+            default:
+                return this.defaultDeploymentModeFormatted();
         }
-        if (rolling === false) {
-            return "Parallel (all nodes concurrently)";
-        }
-        return this.defaultRollingFormatted();
     }
 
     private initializeObservables() {
@@ -228,7 +229,7 @@ class editIndex extends viewModelBase {
                 const analyzersList = [...analyzers.map(x => x.Name), ...serverWideAnalyzers.map(x => x.Name)];
                 this.editedIndex().registerCustomAnalyzers(analyzersList);
                 
-                this.defaultRolling(indexDefaults.StaticIndexDeploymentMode === "Rolling"); // TODO: fix that
+                this.defaultDeploymentMode(indexDefaults.StaticIndexDeploymentMode);
         });
     }
 
@@ -446,7 +447,7 @@ class editIndex extends viewModelBase {
         
         this.dirtyFlag = new ko.DirtyFlag([
             indexDef.name, 
-            indexDef.mode,
+            indexDef.deploymentMode,
             indexDef.maps, 
             indexDef.reduce, 
             indexDef.numberOfFields,
