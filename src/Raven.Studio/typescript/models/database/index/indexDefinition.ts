@@ -60,8 +60,7 @@ class indexDefinition {
     lockMode: Raven.Client.Documents.Indexes.IndexLockMode;
 
     priority = ko.observable<Raven.Client.Documents.Indexes.IndexPriority>();
-    mode = ko.observable<Raven.Client.Documents.Indexes.IndexDeploymentMode>();
-    rolling = ko.observable<boolean>();
+    deploymentMode = ko.observable<Raven.Client.Documents.Indexes.IndexDeploymentMode>();
 
     customAnalyzers = ko.observableArray<string>();
 
@@ -74,8 +73,7 @@ class indexDefinition {
         this.maps(dto.Maps.map(x => new mapItem(x)));
         this.reduce(dto.Reduce);
         this.hasReduce(!!dto.Reduce);
-        this.mode(dto.DeploymentMode);
-        this.rolling(dto.DeploymentMode === "Rolling"); // T
+        this.deploymentMode(dto.DeploymentMode);
         //this.isTestIndex(dto.IsTestIndex);
         
         this.outputReduceToCollection(!!dto.OutputReduceToCollection);
@@ -288,7 +286,7 @@ class indexDefinition {
             SourceType: "None",
             LockMode: this.lockMode,
             Priority: this.priority(),
-            DeploymentMode: this.mode(),
+            DeploymentMode: this.deploymentMode(),
             Configuration: this.configurationToDto(),
             Fields: this.fieldToDto(),
             OutputReduceToCollection: this.hasReduce() &&
