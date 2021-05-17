@@ -127,8 +127,8 @@ namespace Raven.Server.Documents.Queries
 
             switch (arguments[0])
             {
-                case ValueExpression _:
-                case FieldExpression _:
+                case ValueExpression :
+                case FieldExpression :
                     break;
                 default:
                     throw new InvalidQueryException("Method 'counters()' expects value token (counter name) or field token (source alias) " +

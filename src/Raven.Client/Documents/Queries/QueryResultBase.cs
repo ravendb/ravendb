@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Queries
         public BlittableJsonReaderObject CounterIncludes { get; set; }
         
         /// <summary>
-        /// Gets or sets the Counters included in the result.
+        /// Gets or sets the Revisions included in the result.
         /// </summary>
         public BlittableJsonReaderObject RevisionIncludes { get; set; }
 
