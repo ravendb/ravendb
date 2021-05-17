@@ -60,7 +60,7 @@ class attachmentUpload extends abstractNotification {
             Type: "AttachmentUpload",
             CreatedAt: null, // will be assigned later
             Database: db.name,
-            Message: "Uploading '" + generalUtils.escapeHtml(fileName) + "' for document '" + generalUtils.escapeHtml(documentId) + "'",
+            Message: "Uploading '" + fileName + "' for document '" + documentId + "'",
             Title: "Attachment upload",
             Severity: "None",
             IsPersistent: false,
