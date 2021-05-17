@@ -30,14 +30,14 @@ class columnPreviewPlugin<T> {
             const duration = generalUtils.formatDuration(moment.duration(diff), true, 2);
             
             const fullDuration = diff < 0 ? "in " + duration : duration + "ago";
-            return `<div class="dateContainer">
+            return `<div class="dataContainer">
                         <div>
-                            <div class="dateLabel">UTC: </div>
-                            <div class="dateValue">${dateAsMoment.format()}</div>
+                            <div class="dataLabel">UTC: </div>
+                            <div class="dataValue">${dateAsMoment.format()}</div>
                         </div>
                         <div>
-                            <div class="dateLabel">Relative: </div>
-                            <div class="dateValue">${fullDuration}</div>
+                            <div class="dataLabel">Relative: </div>
+                            <div class="dataValue">${fullDuration}</div>
                         </div>
                 </div>` + copySyntax;
         } else {
