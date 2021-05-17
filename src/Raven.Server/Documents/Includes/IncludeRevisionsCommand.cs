@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using Raven.Client.Documents.Linq;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Includes
@@ -33,17 +31,19 @@ namespace Raven.Server.Documents.Includes
             if (document == null)
                 return;
             
-            foreach (var cv in _revisionsBySourcePath)
+            var revisionCV = string.Empty;
+
+            foreach (var fieldName in _revisionsBySourcePath)
             {
-                if (string.IsNullOrEmpty(cv))
+                if ( (fieldName != string.Empty && document.Data.TryGet(fieldName, out revisionCV)) == false)
                 {
                     throw new InvalidOperationException($"Cannot include revisions for related document '{document.Id}', " + 
-                                                        $"document {document.Id} doesn't have a field named '{cv}'. ");
+                                                        $"document {document.Id} doesn't have a field named '{fieldName}'. ");
                 }
 
-                var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector: cv);
-                
-                Results.Add(cv,getRevisionsByCv);
+                var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector: revisionCV);
+                 
+                 Results.Add(revisionCV,getRevisionsByCv);
 
             }
         }

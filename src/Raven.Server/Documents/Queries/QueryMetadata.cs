@@ -552,7 +552,7 @@ namespace Raven.Server.Documents.Queries
                                 break;
                             
                             case MethodType.Revisions: 
-                                QueryValidator.ValidateRevisions(me.Arguments, QueryText, parameters);
+                                 QueryValidator.ValidateRevisions(me.Arguments, QueryText, parameters);
                                 
                                 RevisionIncludes ??= new RevisionIncludeField();
                                 
@@ -617,7 +617,7 @@ namespace Raven.Server.Documents.Queries
             }
             if (start == me.Arguments.Count)
             {
-                revisionIncludes.Revisions = new HashSet<string> {sourcePath};
+                revisionIncludes.Revisions.Add(sourcePath);
                 return;
             }
 
