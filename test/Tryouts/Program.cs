@@ -26,9 +26,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new FirstClassPatch(testOutputHelper))
+                    using (var test = new EncryptedDatabaseGroup(testOutputHelper))
                     {
-                         test.PatchNullField_ExpectFieldSetToNull();
+                         await test.AddingNodeToEncryptedDatabaseGroupShouldThrow();
                     }
                 }
                 catch (Exception e)

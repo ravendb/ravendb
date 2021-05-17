@@ -28,12 +28,14 @@ namespace SlowTests.Issues
             var options = new Options
             {
                 Server = leader,
-                ReplicationFactor = 2,
+                ReplicationFactor = 1,
                 Encrypted = true
             };
 
             using (var store = GetDocumentStore(options))
             {
+                WaitForUserToContinueTheTest(store, debug: false, clientCert: options.ClientCertificate);
+
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var notInDbGroupServer = Servers.Single(s => record.Topology.AllNodes.Contains(s.ServerStore.NodeTag) == false);
                 await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database)));

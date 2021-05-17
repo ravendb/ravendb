@@ -550,7 +550,7 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 nonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
-                flags = flags.Strip(DocumentFlags.Revision | DocumentFlags.HasCounters | DocumentFlags.HasTimeSeries) | DocumentFlags.HasRevisions;
+                flags = flags.Strip(DocumentFlags.Revision | DocumentFlags.DeleteRevision | DocumentFlags.HasCounters | DocumentFlags.HasTimeSeries) | DocumentFlags.HasRevisions;
 
                 if (document == null)
                 {

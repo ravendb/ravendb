@@ -978,7 +978,7 @@ namespace Raven.Server.Documents.Replication
                     return operationsCount;
 
                 operationsCount++;
-                
+
                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(current, _changeVector);
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
                 {
@@ -1050,12 +1050,12 @@ namespace Raven.Server.Documents.Replication
 
                         operationsCount++;
 
-                        if (_isSink) 
+                        if (_isSink)
                             ReplaceKnownSinkEntries(context, ref item.ChangeVector);
 
                         var changeVectorToMerge = item.ChangeVector;
 
-                        if (_isHub) 
+                        if (_isHub)
                             changeVectorToMerge = ReplaceUnknownEntriesWithSinkTag(context, ref item.ChangeVector);
 
                         var rcvdChangeVector = item.ChangeVector;
@@ -1075,9 +1075,9 @@ namespace Raven.Server.Documents.Replication
                                 {
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
                                     {
-                                            Debug.Assert(localAttachment == null || AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) != AttachmentType.Revision,
-                                                "the stream should have been written when the revision was added by the document");
-                                            database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
+                                        Debug.Assert(localAttachment == null || AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) != AttachmentType.Revision,
+                                            "the stream should have been written when the revision was added by the document");
+                                        database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
                                     }
 
                                     handledAttachmentStreams.Add(attachment.Base64Hash);
@@ -1090,7 +1090,7 @@ namespace Raven.Server.Documents.Replication
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
                                         contentType, attachment.Base64Hash, attachment.ChangeVector);
-                                    }
+                                }
                                 break;
 
                             case AttachmentTombstoneReplicationItem attachmentTombstone:
@@ -1374,8 +1374,8 @@ namespace Raven.Server.Documents.Replication
 
                 changeVector = newIncoming.SerializeVector();
 
-                return knownEntries.Count > 0 ? 
-                    knownEntries.SerializeVector() : 
+                return knownEntries.Count > 0 ?
+                    knownEntries.SerializeVector() :
                     null;
             }
 
