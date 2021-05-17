@@ -14,6 +14,7 @@ namespace Raven.Server.Documents.Queries.Revisions
 
         public void AddRevision(string revision, string sourcePath = null)
         {
+            
             Revisions.Add(revision);
         }
     }
