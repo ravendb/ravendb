@@ -243,21 +243,28 @@ body {
         }
     }
 
-    .dateContainer {
+    .dataContainer {
+        white-space: normal;
         border-color: @gray-darker;
         background-color: @gray-dark;
         color: @gray-light;
         padding: 13px;
         font-size: 11px;
 
-        .dateValue {
+        .dataValue {
             color: @gray-lighter;
             display: inline-block;
         }
 
-        .dateLabel {
+        .dataLabel {
             display: inline-block;
             width: 50px;
+        }
+        
+        &.dataContainer-lg {
+            .dataLabel {
+                width: 80px;
+            }
         }
     }
 }
