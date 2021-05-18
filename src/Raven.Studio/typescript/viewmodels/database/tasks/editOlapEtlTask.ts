@@ -134,9 +134,9 @@ class editOlapEtlTask extends viewModelBase {
         popoverUtils.longWithHover($(".custom-field"),
             {
                 content: `<ul class="margin-top margin-top-xs margin-right">
-                              <li><small>A <strong>value</strong> that is given to the <strong>custom partition field</strong> in the target parquet file path</small></li>
-                              <li><small>The custom partition field itself is defined inside the script</small></li>
-                              <li><small>Example path: <code>{RemoteFolderName}/{CollectionName}/{customPartitionField=customFieldValue} </code></small></li>
+                              <li><small>Set the <strong>value</strong> for the <strong>custom partition</strong> in the target parquet file path</small></li>
+                              <li><small>The custom partition itself must be defined inside the script</small></li>
+                              <li><small>Example parquet file path: <code>{RemoteFolderName}/{CollectionName}/{customPartitionName=$customPartitionValue} </code></small></li>
                               <li><small>Useful to differentiate file locations when using the same connection string</small></li>
                               <li><small>Queries can be made on the custom partition as well</small></li>
                           </ul>`

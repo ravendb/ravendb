@@ -126,60 +126,55 @@ orderData.TotalCost = Math.round(orderData.TotalCost * 100) / 100;
 // Load to SQL table 'Orders'
 loadToOrders(orderData);`;
 
-    sqlEtlSampleHtml = ko.pureComputed(() => {
-        return Prism.highlight(transformationScriptSyntax.sqlEtlSampleText, (Prism.languages as any).javascript);
-    });
+    sqlEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.sqlEtlSampleText);
 
     static readonly olapEtlSamplePartitionText =
 `var orderDate = new Date(this.OrderedAt);
 var year = orderDate.getFullYear();
 var month = orderDate.getMonth() + 1;
 
-// The order of params in the partitionBy method determines the partitions order in parquet file path
 loadToOrders(partitionBy(['year', year], ['month', month]), {
+    // The order of params in the partitionBy method determines the parquet file path
     Company : this.Company,
     ShipVia : this.ShipVia
     // Note: 2 more field are always created per table by default:
     //       * _id: The ID column - can be overriden in the task definition
     //       * _lastModifiedTicks: The document's last modification time column - cannot be overriden
 });`;
-
-    olapEtlSamplePartitionHtml = ko.pureComputed(() => {
-        return Prism.highlight(transformationScriptSyntax.olapEtlSamplePartitionText, (Prism.languages as any).javascript);
-    });
+    
+    olapEtlSamplePartitionHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSamplePartitionText);
 
     static readonly olapEtlSampleNoPartitionText =
-`// Data will Not be partitioned
-loadToOrders(noPartition(), {
+`loadToOrders(noPartition(), {
+    // Data will Not be partitioned
     Company : this.Company
 });`;
-
-    olapEtlSampleNoPartitionHtml = ko.pureComputed(() => {
-        return Prism.highlight(transformationScriptSyntax.olapEtlSampleNoPartitionText, (Prism.languages as any).javascript);
-    });
+    
+    olapEtlSampleNoPartitionHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSampleNoPartitionText);
 
     static readonly olapEtlSampleKeyText = 
 `var key = new Date(this.OrderedAt);
 loadToOrders(partitionBy(key), {
+    // The partition that will be created will be: "_partition={key}"
     Company : this.Company
 });`;
-
-    olapEtlSampleKeyHtml = ko.pureComputed(() => {
-        return Prism.highlight(transformationScriptSyntax.olapEtlSampleKeyText, (Prism.languages as any).javascript);
-    });
+    
+    olapEtlSampleKeyHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSampleKeyText);
 
     static readonly olapEtlSampleCustomFieldText =
 `var orderDate = new Date(this.OrderedAt);
 var year = orderDate.getFullYear();
 
-// The 'customFieldValue' is set in the OLAP task definition
-loadToOrders(partitionBy(['year', year], ['customFieldName', customFieldValue]), {
+loadToOrders(partitionBy(['year', year], ['customPartitionName', $customPartitionValue]), {
+    // The 'customFieldValue' is set in the OLAP task definition
     Company : this.Company
 });`;
 
-    olapEtlSampleCustomFieldHtml = ko.pureComputed(() => {
-        return Prism.highlight(transformationScriptSyntax.olapEtlSampleCustomFieldText, (Prism.languages as any).javascript);
-    });
+    olapEtlSampleCustomFieldHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSampleCustomFieldText);
+
+    static highlightJavascript(source: string) {
+        return Prism.highlight(source, (Prism.languages as any).javascript);
+    }
 }
 
 export = transformationScriptSyntax;
