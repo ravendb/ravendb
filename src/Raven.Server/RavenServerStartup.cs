@@ -301,7 +301,8 @@ namespace Raven.Server
                 DatabaseName = database ?? "N/A",
                 CustomInfo = twTuple.CustomInfo,
                 Type = twTuple.Type,
-                ClientIP = context.Connection.RemoteIpAddress?.ToString()
+                ClientIP = context.Connection.RemoteIpAddress?.ToString(),
+                Thumbprint = context.Connection.ClientCertificate?.Thumbprint
             };
 
             TrafficWatchManager.DispatchMessage(twn);
