@@ -39,6 +39,7 @@ class manageDatabaseGroup extends viewModelBase {
     private sortable: any;
 
     private graph = new databaseGroupGraph();
+    backupsOnly = false;
 
     nodeTag = clusterTopologyManager.default.localNodeTag;
     addNodeEnabled: KnockoutComputed<boolean>;
