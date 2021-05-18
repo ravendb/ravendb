@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide
             _cts = CancellationTokenSource.CreateLinkedTokenSource(shutdown, requestAborted);
             _cancelAfter = cancelAfter;
             Token = _cts.Token;
-
+            
             _cts.CancelAfter(cancelAfter);
         }
 

@@ -582,64 +582,38 @@ namespace Raven.Server.Documents.Queries
                 CompareExchangeValueIncludes = compareExchangeValueIncludes?.ToArray();
         }
 
-        private void AddToRevisionsInclude(RevisionIncludeField revisionIncludes, MethodExpression me, BlittableJsonReaderObject parameters)
+        private void AddToRevisionsInclude(RevisionIncludeField revisionIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
         {
             string sourcePath = null;
-            var start = 0;
-            if (me.Arguments.Count > 0 &&
-                me.Arguments[0] is FieldExpression fe)
+            
+            foreach (var queryExpression in expression.Arguments)
             {
-                start = 1;
-
-                if (Query.From.Alias?.Value != fe.FieldValue)
+                switch (queryExpression)
                 {
-                    if (RootAliasPaths.TryGetValue(fe.FieldValue, out var value))
+                    case FieldExpression fe:
+                        revisionIncludes.AddRevision(fe.FieldValueWithoutAlias);
+                        break;
+
+                    case ValueExpression {Value: ValueTokenType.Parameter} ve:
                     {
-                        sourcePath = value.PropertyPath;
-                    }
-                    else if (fe.FieldValue != null)
-                    {
-                        if (Query.From.Alias?.Value == null)
+                        var vt = QueryBuilder.GetValue(Query, this, parameters, ve);
+                        
+                        var split = vt.Value.ToString()?.Split('.');
+                        if (split.Length >= 2 && 
+                            split[0] == Query.From.Alias.Value)
                         {
-                            sourcePath = fe.FieldValue;
+                            sourcePath = vt.Value.ToString()?.Substring(split[0].Length + 1);
+                            AddRevisionToInclude(revisionIncludes, parameters, vt, sourcePath);
+                            break;
+
                         }
-                        else
-                        {
-                            var split = fe.FieldValue.Split('.');
-                            if (split.Length >= 2 &&
-                                split[0] == Query.From.Alias.Value)
-                            {
-                                sourcePath = fe.FieldValue.Substring(split[0].Length + 1);
-                            }
-                        }
+                        throw new InvalidOperationException($"Cannot include revisions for related Expression '{vt}', " + 
+                                                            $"Parent alias is different than include alias '{Query.From.Alias.Value}' compare to '{split[0]}';. ");
+                        
                     }
+                   
                 }
-            }
-            if (start == me.Arguments.Count)
-            {
-                revisionIncludes.Revisions.Add(sourcePath);
-                return;
-            }
-
-            for (var index = start; index < me.Arguments.Count; index++)
-            {
-                if (!(me.Arguments[index] is ValueExpression vt))
-                    continue;
-
-                if (vt.Value == ValueTokenType.Parameter)
-                {
-                    foreach (var v in QueryBuilder.GetValues(Query, this, parameters, vt))
-                    {
-                        AddRevisionToInclude(revisionIncludes, parameters, v, sourcePath);
-                    }
-
-                    continue;
-                }
-
-                var value = QueryBuilder.GetValue(Query, this, parameters, vt);
-
-                AddRevisionToInclude(revisionIncludes, parameters, value, sourcePath);
-            }
+            } 
         }
         private static ExplanationField CreateExplanationField(MethodExpression expression)
             {
@@ -822,6 +796,7 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidQueryException("Parameters of method `counters` must be of type `string` or `string[]`, " +
                                                 $"but got `{parameterValue.Value}` of type `{parameterValue.Type}`", QueryText, parameters);
 
+            counterIncludes.AddCounter(parameterValue.Value.ToString(), sourcePath);
             counterIncludes.AddCounter(parameterValue.Value.ToString(), sourcePath);
         }
 
