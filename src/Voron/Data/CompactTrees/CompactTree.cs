@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Sparrow.Server;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
@@ -15,7 +17,11 @@ namespace Voron.Data.CompactTrees
         private LowLevelTransaction _llt;
         private CompactTreeState _state;
         private CursorState[] _stk = new CursorState[8];
-        private int _pos = -1, _len = 0;
+        private int _pos = -1, _len;
+        private ByteString _tempBuffer;
+        
+        private readonly Dictionary<long, PersistentHopeDictionary> _dictionaries = new Dictionary<long, PersistentHopeDictionary>(); 
+        
         internal CompactTreeState State => _state;
         internal LowLevelTransaction Llt => _llt;
 
@@ -134,12 +140,14 @@ namespace Voron.Data.CompactTrees
             var existing = llt.RootObjects.Read(name);
             if (existing == null)
             {
+                var dictionaryId = PersistentHopeDictionary.CreateEmpty(llt);
                 var newPage = llt.AllocatePage(1);
                 var compactPageHeader = (CompactPageHeader*)newPage.Pointer;
                 compactPageHeader->PageFlags = CompactPageFlags.Leaf;
                 compactPageHeader->Lower = PageHeader.SizeOf + DictionarySize;
                 compactPageHeader->Upper = Constants.Storage.PageSize;
                 compactPageHeader->FreeSpace = Constants.Storage.PageSize - (PageHeader.SizeOf + DictionarySize);
+                compactPageHeader->DictionaryId = dictionaryId;
                 using var _ = llt.RootObjects.DirectAdd(name, sizeof(CompactTreeState), out var p);
                 header = (CompactTreeState*)p;
                 *header = new CompactTreeState
@@ -426,14 +434,15 @@ namespace Voron.Data.CompactTrees
                 throw new ArgumentOutOfRangeException(nameof(value), "Only positive values are allowed");
             if (key.Length > 1024 || key.Length == 0)
                 throw new ArgumentOutOfRangeException(nameof(key), "key must be between 1 and 1024 bytes in size");
-
-            FindPageFor(key);
-            AddToPage(key, value);
+            
+            var encodedKey = FindPageFor(key);
+            AddToPage(encodedKey, value);
         }
 
-        private void AddToPage(ReadOnlySpan<byte> key, long value)
+        private void AddToPage(ReadOnlySpan<byte> encodedKey, long value)
         {
             ref var state = ref _stk[_pos];
+            
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
 
             var valueEncoder = new Encoder();
@@ -455,21 +464,23 @@ namespace Voron.Data.CompactTrees
                     (byte*)(entriesOffsets + state.LastSearchPosition),
                     (state.Header->NumberOfEntries - state.LastSearchPosition) * sizeof(ushort));
                 state.Header->Lower -= sizeof(short);
+                state.Header->FreeSpace += sizeof(short);
             }
             else
             {
                 state.LastSearchPosition = ~state.LastSearchPosition;
             }
             var keySizeEncoder = new Encoder();
-            keySizeEncoder.Encode7Bits((ulong)key.Length);
-            var requiredSize = key.Length + keySizeEncoder.Length + valueEncoder.Length;
+            keySizeEncoder.Encode7Bits((ulong)encodedKey.Length);
+            var requiredSize = encodedKey.Length + keySizeEncoder.Length + valueEncoder.Length;
+            Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
             if (state.Header->Upper - state.Header->Lower < requiredSize + sizeof(short))
             {
                 if (state.Header->FreeSpace >= requiredSize + sizeof(short))
                     DefragPage(); // has enough free space, but not available try to defrag?
                 if (state.Header->Upper - state.Header->Lower < requiredSize + sizeof(short))
                 {
-                    SplitPage(key, value); // still can't do that, need to split the page
+                    SplitPage(encodedKey, value); // still can't do that, need to split the page
                     return;
                 }
             }
@@ -485,8 +496,8 @@ namespace Voron.Data.CompactTrees
             byte* writePos = state.Page.Pointer + state.Header->Upper;
             Memory.Copy(writePos, keySizeEncoder.Buffer, keySizeEncoder.Length);
             writePos += keySizeEncoder.Length;
-            key.CopyTo(new Span<byte>(writePos, key.Length));
-            writePos += key.Length;
+            encodedKey.CopyTo(new Span<byte>(writePos, encodedKey.Length));
+            writePos += encodedKey.Length;
             Memory.Copy(writePos, valueEncoder.Buffer, valueEncoder.Length);
             entriesOffsets[state.LastSearchPosition] = state.Header->Upper;
         }
@@ -504,6 +515,7 @@ namespace Voron.Data.CompactTrees
             header->Lower = PageHeader.SizeOf + DictionarySize;
             header->Upper = Constants.Storage.PageSize;
             header->FreeSpace = Constants.Storage.PageSize - (PageHeader.SizeOf + DictionarySize);
+            header->DictionaryId = state.Header->DictionaryId;
             if (header->PageFlags.HasFlag(CompactPageFlags.Branch))
             {
                 _state.BranchPages++;
@@ -629,28 +641,46 @@ namespace Voron.Data.CompactTrees
             }
         }
 
-        private void FindPageFor(ReadOnlySpan<byte> key)
+        private Span<Byte> FindPageFor(ReadOnlySpan<byte> key)
         {
             _pos = -1;
             _len = 0;
             PushPage(_state.RootPage);
             ref var state = ref _stk[_pos];
+            var currentDictionary = state.Header->DictionaryId;
+            var hopeDictionary = _dictionaries[state.Header->DictionaryId];
+
+            if (_tempBuffer.HasValue == false)
+            {
+                //TODO: Is there a better way? Is a max of twice the size enough?
+                _llt.Allocator.Allocate(2048, out _tempBuffer);
+            }
+            
+            var encodedKey = _tempBuffer.ToSpan();
+            hopeDictionary.Encode(key, ref encodedKey);
             while (state.Header->PageFlags.HasFlag(CompactPageFlags.Branch))
             {
-                SearchPageAndPushNext(key);
+                SearchPageAndPushNext(encodedKey);
                 state = ref _stk[_pos];
+                if (currentDictionary != state.Header->DictionaryId)
+                {
+                    hopeDictionary = _dictionaries[state.Header->DictionaryId];
+                    encodedKey =  _tempBuffer.ToSpan();
+                    hopeDictionary.Encode(key, ref encodedKey);
+                }
             }
 
-            SearchInPage(key);
+            SearchInPage(encodedKey);
+            return encodedKey;
         }
 
-        private void SearchPageAndPushNext(ReadOnlySpan<byte> key)
+        private void SearchPageAndPushNext(ReadOnlySpan<byte> encodedKey)
         {
-            SearchInPage(key);
+            SearchInPage(encodedKey);
             ref var state = ref _stk[_pos];
             if (state.LastSearchPosition < 0)
                 state.LastSearchPosition = ~state.LastSearchPosition;
-            if (state.LastMatch != 0)
+            if (state.LastMatch != 0 && state.LastSearchPosition > 0)
                 state.LastSearchPosition--; // went too far
 
             int actualPos = Math.Min(state.Header->NumberOfEntries - 1, state.LastSearchPosition);
@@ -671,8 +701,21 @@ namespace Voron.Data.CompactTrees
         {
             if (_pos + 1 >= _stk.Length) //  should never actually happen
                 Array.Resize(ref _stk, _stk.Length * 2); // but let's be safe
-            _stk[++_pos] = new CursorState { Page = _llt.GetPage(nextPage), };
+            Page page = _llt.GetPage(nextPage);
+            _stk[++_pos] = new CursorState { Page = page, };
             _len++;
+            CompactPageHeader* pageHeader = (CompactPageHeader*)page.Pointer;
+            if (_dictionaries.ContainsKey(pageHeader->DictionaryId) == false)
+            {
+                _dictionaries[pageHeader->DictionaryId] = CreateDictionary(pageHeader->DictionaryId);
+            }
+        }
+
+        private PersistentHopeDictionary CreateDictionary(long pageId)
+        {
+            Page page = _llt.GetPage(pageId);
+            Debug.Assert(page.IsOverflow && page.OverflowSize == PersistentHopeDictionary.UsableDictionarySize);
+            return new PersistentHopeDictionary(page);
         }
 
         private ReadOnlySpan<byte> GetKey(Page page, int pos)
@@ -736,9 +779,10 @@ namespace Voron.Data.CompactTrees
                 throw new ArgumentOutOfRangeException();
         }
 
-        private void SearchInPage(ReadOnlySpan<byte> key)
+        private void SearchInPage(ReadOnlySpan<byte> encodedKey)
         {
             ref var state = ref _stk[_pos];
+
             int high = state.Header->NumberOfEntries - 1, low = 0;
             int match = -1;
             int mid = 0;
@@ -746,7 +790,7 @@ namespace Voron.Data.CompactTrees
             {
                 mid = (high + low) / 2;
                 var cur = GetKey(state.Page, mid);
-                match = key.SequenceCompareTo(cur);
+                match = encodedKey.SequenceCompareTo(cur);
 
                 if (match == 0)
                 {

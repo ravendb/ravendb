@@ -88,6 +88,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Corax\Corax.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
+    <ProjectReference Include="..\FastTests\FastTests.csproj" />
+    <ProjectReference Include="..\Tests.Infrastructure\Tests.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.13.0" />

@@ -3,7 +3,7 @@
 namespace Voron.Data.CompactTrees
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1, Size = PageHeader.SizeOf)]
-    public unsafe struct CompactPageHeader
+    public struct CompactPageHeader
     {
         public const int SizeOf = PageHeader.SizeOf;
 
@@ -11,7 +11,10 @@ namespace Voron.Data.CompactTrees
         public long PageNumber;
 
         [FieldOffset(8)]
-        public int Reserved1;
+        public ushort Lower;
+
+        [FieldOffset(10)]
+        public ushort Upper;
 
         [FieldOffset(12)]
         public PageFlags Flags;
@@ -20,13 +23,10 @@ namespace Voron.Data.CompactTrees
         public CompactPageFlags PageFlags;
 
         [FieldOffset(14)]
-        public ushort Lower;
+        public ushort FreeSpace;
 
         [FieldOffset(16)]
-        public ushort Upper;
-
-        [FieldOffset(18)]
-        public ushort FreeSpace;
+        public long DictionaryId;
 
         public int NumberOfEntries
         {
