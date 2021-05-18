@@ -123,6 +123,21 @@ namespace Sparrow.Collections
             AddUnlikely(item, (int)_size + 1);
         }
 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddByRef(in T item)
+        {
+            if (_size == _items.Length)
+                goto Unlikely;
+
+            _items[_size++] = item;
+            _version++;
+            return;
+
+            Unlikely:
+            AddUnlikely(item, (int)_size + 1);
+        }
+
         public void CopyTo(FastList<T> dest)
         {
             int size = (int)_size;
