@@ -5,12 +5,13 @@ using System.Data;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Text;
 using Parquet;
 using Parquet.Data;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Sparrow.Json;
-using Sparrow.Logging;
 using DataColumn = Parquet.Data.DataColumn;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
@@ -32,9 +33,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private readonly Dictionary<string, DataType> _dataTypes;
         private Dictionary<string, DataField> _fields;
         private readonly string _tableName, _key, _tmpFilePath, _fileNameSuffix;
-        private string _documentIdColumn;
+        private string _documentIdColumn, _remoteFolderName, _localFolderName;
         private int _count;
-        private readonly Logger _logger;
         private readonly OlapEtlConfiguration _configuration;
         private bool[] _boolArr;
         private string[] _strArr;
@@ -55,13 +55,16 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private const string DateTimeFormat = "yyyy-MM-dd-HH-mm-ss.ffffff";
         private const string Extension = "parquet";
 
+        private static readonly HashSet<char> SpecialChars = new HashSet<char> { '&', '@', ':', ',', '$', '=', '+', '?', ';', ' ', '"', '^', '`', '>', '<', '{', '}', '[', ']', '#', '\'', '~', '|' };
+        private const string EncodingFormat = "%{0:X2}";
 
-        public ParquetTransformedItems(string name, string key, string tmpPath, string fileNameSuffix, OlapEtlConfiguration configuration, Logger logger) 
+        private static readonly HashSet<char> InvalidFileNameChars = Path.GetInvalidFileNameChars().ToHashSet();
+
+        public ParquetTransformedItems(string name, string key, string tmpPath, string fileNameSuffix, List<string> partitions, OlapEtlConfiguration configuration) 
             : base(OlapEtlFileFormat.Parquet)
         {
             _tableName = name;
             _key = key;
-            _logger = logger;
             _configuration = configuration;
             _fileNameSuffix = fileNameSuffix;
             _tmpFilePath = tmpPath;
@@ -69,6 +72,41 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _group = new RowGroup();
 
             SetIdColumn();
+            GetSafeFolderName(name, partitions);
+        }
+
+        private void GetSafeFolderName(string name, List<string> partitions)
+        {
+            if (partitions == null)
+            {
+                _remoteFolderName = name;
+                if (_configuration.Connection.LocalSettings != null)
+                    _localFolderName = name;
+
+                return;
+            }
+
+            StringBuilder remoteFolderBuilder = new StringBuilder(_key.Length);
+            StringBuilder localFolderBuilder = _configuration.Connection.LocalSettings != null
+                ? new StringBuilder(_key.Length)
+                : null;
+
+            remoteFolderBuilder.Append(name);
+            localFolderBuilder?.Append(name);
+
+            foreach (var partition in partitions)
+            {
+                remoteFolderBuilder.Append('/');
+                localFolderBuilder?.Append(Path.DirectorySeparatorChar);
+
+                var safeRemoteName = GetSafeNameForRemoteDestination(partition);
+                remoteFolderBuilder.Append(safeRemoteName);
+
+                localFolderBuilder?.Append(GetSafeNameForFileSystem(partition));
+            }
+
+            _remoteFolderName = remoteFolderBuilder.ToString();
+            _localFolderName = localFolderBuilder?.ToString();
         }
 
         private void SetIdColumn()
@@ -93,15 +131,16 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             var nowAsString = DateTime.UtcNow.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
 
             fileName = $"{nowAsString}-{_fileNameSuffix}.{Extension}";
-            folderName = _key;
+            folderName = _remoteFolderName;
 
-            var localPath = Path.Combine(_tmpFilePath, fileName);
-
+            var localPath = Path.Combine(_tmpFilePath, _localFolderName ?? string.Empty, fileName);
+            if (_localFolderName != null)
+                Directory.CreateDirectory(Path.Combine(_tmpFilePath, _localFolderName));
+            
             using (Stream fileStream = File.Open(localPath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
             using (var parquetWriter = new ParquetWriter(new Schema(Fields.Values), fileStream))
             {
                 WriteGroup(parquetWriter);
-                LogStats();
             }
 
             _count = _group.Count;
@@ -685,14 +724,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
         }
 
-        private void LogStats()
-        {
-            if (_logger?.IsInfoEnabled ?? false)
-            {
-                _logger.Info($"Inserted {_group.Count} records to '{_tableName}/{_key}' table");
-            }
-        }
-
         private static unsafe bool TryParseDate(string str, out DateTimeOffset dto)
         {
             fixed (char* c = str)
@@ -721,6 +752,46 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             {
                 return LazyStringParser.TryParseTimeSpan(c, str.Length, out ts);
             }
+        }
+
+        internal static string GetSafeNameForFileSystem(string name)
+        {
+            var sb = new StringBuilder(name.Length);
+            foreach (var @char in name)
+            {
+                if (InvalidFileNameChars.Contains(@char))
+                {
+                    sb.Append('_');
+                    continue;
+                }
+
+                sb.Append(@char);
+            }
+
+            return sb.ToString();
+        }
+
+        internal static string GetSafeNameForRemoteDestination(string str)
+        {
+            var builder = new StringBuilder(str.Length);
+            foreach (char @char in str)
+            {
+                if (@char == '/')
+                {
+                    builder.Append('_');
+                    continue;
+                }
+
+                if (SpecialChars.Contains(@char) || @char <= 31 || @char == 127)
+                {
+                    builder.AppendFormat(EncodingFormat, (int)@char);
+                    continue;
+                }
+
+                builder.Append(@char);
+            }
+
+            return builder.ToString();
         }
     }
 }

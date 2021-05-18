@@ -1,16 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Client;
-using Orders;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
-using Raven.Server.Documents.ETL.Providers.Raven;
-using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 using Xunit.Abstractions;
