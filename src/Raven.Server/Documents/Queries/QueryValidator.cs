@@ -124,22 +124,13 @@ namespace Raven.Server.Documents.Queries
         {
             if (arguments.Count == 0)
                 return;
-
-            switch (arguments[0])
-            {
-                case ValueExpression :
-                case FieldExpression :
-                    break;
-                default:
-                    throw new InvalidQueryException("Method 'counters()' expects value token (counter name) or field token (source alias) " +
-                                                    $"as an argument at index 0, got {arguments[0]} type", queryText, parameters);
-            }
-
-            for (var i = 1; i < arguments.Count; i++)
+            
+            for (var i = 0; i < arguments.Count; i++)
             {
                 switch (arguments[i])
                 {
-                    case ValueExpression _:
+                    case FieldExpression :
+                    case ValueExpression :
                         break;
                     default:
                         throw new InvalidQueryException($"Method 'revisions()' expects value token as an argument at index {i}, got {arguments[0]} type", queryText, parameters);

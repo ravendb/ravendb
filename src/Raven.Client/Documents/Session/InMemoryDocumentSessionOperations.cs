@@ -116,6 +116,11 @@ namespace Raven.Client.Documents.Session
         internal readonly Dictionary<string, DocumentInfo> IncludedDocumentsById = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
         
         /// <summary>
+        /// Translate between an CV and its associated entity
+        /// </summary>
+        internal readonly Dictionary<string, DocumentInfo> IncludedRevisionByChangeVectors = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
+        
+        /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
         /// </summary>
         internal readonly DocumentsByEntityHolder DocumentsByEntity = new DocumentsByEntityHolder();
@@ -1459,7 +1464,35 @@ more responsive application.
                 IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
             }
         }
+        
+        internal void RegisterRevisionIncludes(BlittableJsonReaderObject includes)
+        {
+            if (NoTracking)
+                return;
 
+            if (includes == null)
+                return;
+
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            for (int i = 0; i < includes.Count; i++)
+            {
+                includes.GetPropertyByIndex(i, ref propertyDetails);
+
+                if (propertyDetails.Value == null)
+                    continue;
+
+                var json = (BlittableJsonReaderObject)propertyDetails.Value;
+
+                var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(json);
+                if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
+                    continue;
+                
+                if (newDocumentInfo.Metadata.TryGet(Constants.Documents.Metadata.ChangeVector,out string cv))
+                    
+                IncludedRevisionByChangeVectors[cv] = newDocumentInfo;
+            }
+        }
+        
         public void RegisterMissingIncludes(BlittableJsonReaderArray results, BlittableJsonReaderObject includes, ICollection<string> includePaths)
         {
             if (NoTracking)

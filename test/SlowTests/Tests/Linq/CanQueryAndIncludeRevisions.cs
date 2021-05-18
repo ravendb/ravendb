@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
@@ -75,6 +76,8 @@ namespace SlowTests.Tests.Linq
         {
             using (var store = GetDocumentStore())
             {
+                var cvList = new List<string>();
+                
                 const string id = "users/omer";
                 
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
@@ -102,43 +105,65 @@ namespace SlowTests.Tests.Linq
                     
                     await session.SaveChangesAsync(); 
                     
+                    cvList.Add(changeVector);
+                    
                     metadatas = await session.Advanced.Revisions.GetMetadataForAsync(id);
                     
                     changeVector =  metadatas[0].GetString(Constants.Documents.Metadata.ChangeVector);
-
+                    
+                    cvList.Add(changeVector);
+                    
                     session.Advanced.Patch<User, string>(id, x => x.SecondRevision, changeVector);
                     
-                    metadatas = await session.Advanced.Revisions.GetMetadataForAsync(id);
-
                     await session.SaveChangesAsync(); 
                     
                     metadatas = await session.Advanced.Revisions.GetMetadataForAsync(id);
 
                     changeVector = metadatas[0].GetString(Constants.Documents.Metadata.ChangeVector);
                     
-                    session.Advanced.Patch<User, string>(id, x => x.ThridRevision, changeVector);
+                    cvList.Add(changeVector);
+                    
+                    session.Advanced.Patch<User, string>(id, x => x.ThirdRevision, changeVector);
                     
                     await session.SaveChangesAsync();
-                }
-                using (var session = store.OpenAsyncSession())
-                {
-                    var query =  session.Advanced
-                        .AsyncRawQuery<User>("from Users as u include revisions(u.FirstRevision, u.SecondRevision, u.ThridRevision)")
-                        .ToListAsync();
                     
-                    var revision = await session.Advanced.Revisions.GetAsync<User>(changeVector);
-
-                    Assert.NotNull(revision);
-                    Assert.Equal(1, session.Advanced.NumberOfRequests);
-                }   
+                }
+                
+                // using (var session = store.OpenAsyncSession())
+                // {
+                //      var query = await session.Advanced
+                //         .AsyncRawQuery<User>("from Users as u include revisions(u.FirstRevision, u.SecondRevision, u.ThirdRevision)")
+                //         .ToListAsync();
+                //
+                //     var revision1 = await session.Advanced.Revisions.GetAsync<User>(cvList[0]);
+                //     var revision2 = await session.Advanced.Revisions.GetAsync<User>(cvList[1]);
+                //     var revision3 = await session.Advanced.Revisions.GetAsync<User>(cvList[2]);
+                //
+                //     Assert.NotNull(revision1);
+                //     Assert.NotNull(revision2);
+                //     Assert.NotNull(revision3);
+                //     Assert.Equal(1, session.Advanced.NumberOfRequests);
+                // }
                 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var revision = await session.Advanced.Revisions.GetAsync<User>(changeVector);
-
-                    Assert.NotNull(revision);
-                    Assert.Equal(0, session.Advanced.NumberOfRequests);
-                }   
+                    var query = await session.Advanced
+                        .AsyncRawQuery<User>("from Users as u include revisions($p0, $p1, $p2)")
+                        .AddParameter("p0","u.FirstRevision")
+                        .AddParameter("p1","u.SecondRevision")
+                        .AddParameter("p2","u.ThirdRevision")
+                        .ToListAsync();
+                    
+                    var revision1 = await session.Advanced.Revisions.GetAsync<User>(cvList[0]);
+                    var revision2 = await session.Advanced.Revisions.GetAsync<User>(cvList[1]);
+                    var revision3 = await session.Advanced.Revisions.GetAsync<User>(cvList[2]);
+                
+                    Assert.NotNull(revision1);
+                    Assert.NotNull(revision2);
+                    Assert.NotNull(revision3);
+                    
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
             }
         }
         private class User
@@ -149,7 +174,7 @@ namespace SlowTests.Tests.Linq
             
             public string SecondRevision { get; set; }
             
-            public string ThridRevision { get; set; }
+            public string ThirdRevision { get; set; }
         }
     }
 }

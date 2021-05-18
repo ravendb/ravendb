@@ -571,7 +571,7 @@ namespace Raven.Server.Json
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.RevisionIncludes));
-                await writer.WriteIncludesAsync(context:context, includes:revision.Values, token: token);
+                await writer.WriterRevisionIncludesAsync(context:context, includes:revision, token: token);
                 
             }
             
@@ -1476,6 +1476,25 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
+        private static async Task WriterRevisionIncludesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string,Document> includes, CancellationToken token = default)
+        {
+            writer.WriteStartObject();
+
+            var first = true;
+            foreach (var kvp in includes)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+                
+                writer.WritePropertyName(kvp.Key);
+                WriteDocument(writer, context, metadataOnly: false, document: kvp.Value);
+                await writer.MaybeFlushAsync(token);
+            }
+
+            writer.WriteEndObject();
+        }
+        
         private static void WriteConflict(AbstractBlittableJsonTextWriter writer, IncludeDocumentsCommand.ConflictDocument conflict)
         {
             writer.WriteStartObject();
