@@ -49,15 +49,15 @@
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle custom-field">
                                     <input id="setCustomField" type="checkbox" data-bind="checked: customFieldEnabled" />
-                                    <label for="setCustomField">Set custom partition field value</label>
+                                    <label for="setCustomField">Set custom partition value</label>
                                 </div>
                             </div>
                             <div data-bind="validationElement: customField, collapse: customFieldEnabled">
                                 <div class="form-group" data-bind="validationElement: customField">
-                                    <label for="taskName" class="control-label">Custom Field Value</label>
+                                    <label for="taskName" class="control-label">Custom Partition</label>
                                     <div class="flex-grow">
                                         <input type="text" class="form-control" id="customField"
-                                               placeholder="Enter a value for the custom partition field" data-bind="textInput: customField" />
+                                               placeholder="Enter a value for the custom partition" data-bind="textInput: customField" />
                                     </div>
                                 </div>
                             </div>
@@ -207,7 +207,7 @@
                                     <div class="widthlabel"><label class="superscript">Table</label><strong data-bind="text: tableName"></strong><span class="text-warning" data-bind="visible: dirtyFlag().isDirty">&nbsp;*</span></div>
                                 </div>
                                 <div class="col-sm-4">
-                                    <div class="widthlabel"><label class="superscript">Id Column Name</label><strong data-bind="text: documentIdColumn"></strong></div>
+                                    <div class="widthlabel"><label class="superscript">ID Column Name</label><strong data-bind="text: documentIdColumn"></strong></div>
                                 </div>
                             </div>
                             <div class="flex-noshrink">
