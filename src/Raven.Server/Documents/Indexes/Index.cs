@@ -972,7 +972,7 @@ namespace Raven.Server.Documents.Indexes
 
             configuration.InitializeAnalyzers(DocumentDatabase.Name);
             InitializeMetrics(configuration);
-
+            
             using (DrainRunningQueries())
             {
                 var status = Status;
@@ -1246,6 +1246,8 @@ namespace Raven.Server.Documents.Indexes
 
                         if (ReplaceIfNeeded(batchCompleted: false, didWork: false))
                             return;
+
+                        DocumentDatabase.IndexStore.ForTestingPurposes?.OnRollingIndexStart?.Invoke(this);
                     }
 
                     storageEnvironment.OnLogsApplied += HandleLogsApplied;
@@ -1612,22 +1614,7 @@ namespace Raven.Server.Documents.Indexes
 
             return false;
         }
-
-        internal TestingStuff ForTestingPurposesOnly()
-        {
-            if (ForTestingPurposes != null)
-                return ForTestingPurposes;
-
-            return ForTestingPurposes = new TestingStuff();
-        }
-
-        internal TestingStuff ForTestingPurposes { get; set; }
-
-        internal class TestingStuff
-        {
-            internal Action<RawDatabaseRecord> OnRollingIndexNodeFinished;
-        }
-
+        
         public bool IsStale() => IsStaleInternal();
 
         private void PauseIfCpuCreditsBalanceIsTooLow()

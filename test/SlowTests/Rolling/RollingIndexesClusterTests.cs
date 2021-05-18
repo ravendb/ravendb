@@ -60,7 +60,33 @@ namespace SlowTests.Rolling
         [Fact]
         public async Task AddNewNodeWhileRollingIndexDeployed()
         {
-            
+            DebuggerAttachedTimeout.DisableLongTimespan = false;
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            using (var leaderStore = GetDocumentStore(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = 2,
+            }))
+            {
+                var dbName = leaderStore.Database;
+
+                await GenerateTestData(leaderStore);
+
+                var index = await CreateIndex(cluster, dbName);
+
+                WaitForIndexingInTheCluster(leaderStore, dbName);
+
+                using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, dbName);
+                    var history = record.IndexesHistory;
+                    var deployment = history[index][0].RollingDeployment;
+                    
+                    Assert.Equal(3, deployment.Count);
+                    Assert.True(deployment.All(x => x.Value.State == RollingIndexState.Done));
+                }
+            } 
         }
 
         [Fact]
@@ -103,6 +129,17 @@ namespace SlowTests.Rolling
         public async Task ForceIndexDeployed()
         {
             
+        }
+
+        public static Dictionary<string, RollingIndexDeployment> ReadDeployment(RavenServer server, string database, string index)
+        {
+            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var record = server.ServerStore.Cluster.ReadDatabase(ctx, database);
+                var history = record.IndexesHistory;
+                return history[index][0].RollingDeployment;
+            }
         }
 
         private static async Task<string> CreateIndex((List<RavenServer> Nodes, RavenServer Leader) cluster, string dbName)

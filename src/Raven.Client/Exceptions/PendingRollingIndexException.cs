@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Exceptions
 {
-    public class PendingRollingIndexException : Exception
+    public class PendingRollingIndexException : RavenException
     {
         public PendingRollingIndexException()
         {
