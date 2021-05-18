@@ -36,7 +36,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 return; // was already removed
             }
 
-            rollingIndex.RaftIndexChange = etag;
+            rollingIndex.LastRaftIndexChange = etag;
 
             MaybeAddNewNodesToRollingDeployment(record, rollingIndex.ActiveDeployments);
 

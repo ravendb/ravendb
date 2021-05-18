@@ -216,7 +216,10 @@ namespace Raven.Client.ServerWide
             if (IsRolling(definition.DeploymentMode, globalDeploymentMode))
             {
                 if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
+                {
                     InitializeRollingDeployment(definition.Name, createdAt, raftIndex);
+                    definition.DeploymentMode = IndexDeploymentMode.Rolling;
+                }
             }
         }
 
@@ -269,7 +272,7 @@ namespace Raven.Client.ServerWide
                 RollingIndexes[indexName] = rollingIndex;
             }
 
-            rollingIndex.RaftIndexChange = raftIndex;
+            rollingIndex.LastRaftIndexChange = raftIndex;
 
             var chosenNode = ChooseFirstNode();
 

@@ -63,7 +63,9 @@ namespace Raven.Server.Documents.Handlers
             if (endDeployment && newIndex.IsRolling)
             {
                 var command = new PutRollingIndexCommand(Database.Name, name, ServerStore.NodeTag, DateTime.UtcNow, RaftIdGenerator.NewId());
-                await ServerStore.SendToLeaderAsync(command);
+                var result = await ServerStore.SendToLeaderAsync(command);
+
+                await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, HttpContext.RequestAborted);
             }
         }
 

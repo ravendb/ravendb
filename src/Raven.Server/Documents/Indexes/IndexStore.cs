@@ -412,7 +412,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void RaiseRollingChangeNotificationIfNeeded(DatabaseRecord record, long index, string name)
         {
-            if (record.RollingIndexes.TryGetValue(name, out var rollingIndex) && rollingIndex.RaftIndexChange == index)
+            if (record.RollingIndexes.TryGetValue(name, out var rollingIndex) && rollingIndex.LastRaftIndexChange == index)
             {
                 _documentDatabase.Changes.RaiseNotifications(
                     new IndexChange {
@@ -837,6 +837,8 @@ namespace Raven.Server.Documents.Indexes
                         }
                     }
                 }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.NotOnRanToCompletion);
+
+                ForTestingPurposes?.OnRollingIndexFinished?.Invoke(index);
             }
             catch (Exception e)
             {
@@ -860,21 +862,6 @@ namespace Raven.Server.Documents.Indexes
                 return progress;
             }
         }
-
-        /*private static IndexDefinition GetDefinitionFromRecord(RawDatabaseRecord record, string name)
-        {
-            if (record.Indexes.TryGetValue(name, out var definition))
-            {
-                return definition;
-            }
-
-            if (record.AutoIndexes.TryGetValue(name, out var autoDef))
-            {
-                return CreateAutoDefinition(autoDef, GetGlobalDeploymentModeForAutoIndexes(record)).GetOrCreateIndexDefinitionInternal();
-            }
-
-            return null;
-        }*/
 
         public async Task<long> CreateIndexInternal(IndexDefinition definition, string raftRequestId, string source = null)
         {
@@ -1003,7 +990,7 @@ namespace Raven.Server.Documents.Indexes
                 ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {_serverStore.Engine.OperationTimeout}.");
             }
 
-            _forTestingPurposes?.AfterIndexCreation?.Invoke(definition.Name);
+            ForTestingPurposes?.AfterIndexCreation?.Invoke(definition.Name);
 
             return await WaitForRollingIndex(definition.Name);
         }
@@ -2132,7 +2119,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     try
                     {
-                        _forTestingPurposes?.DuringIndexReplacement_AfterUpdatingCollectionOfIndexes?.Invoke();
+                        ForTestingPurposes?.DuringIndexReplacement_AfterUpdatingCollectionOfIndexes?.Invoke();
 
                         using (newIndex.DrainRunningQueries()) // to ensure nobody will start index meanwhile if we stop it here
                         {
@@ -2180,7 +2167,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         try
                         {
-                            _forTestingPurposes?.DuringIndexReplacement_OnOldIndexDeletion?.Invoke();
+                            ForTestingPurposes?.DuringIndexReplacement_OnOldIndexDeletion?.Invoke();
 
                             using (oldIndex.DrainRunningQueries())
                                 DeleteIndexInternal(oldIndex, raiseNotification: false);
@@ -2478,14 +2465,14 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private TestingStuff _forTestingPurposes;
+        internal TestingStuff ForTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
         {
-            if (_forTestingPurposes != null)
-                return _forTestingPurposes;
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
 
-            return _forTestingPurposes = new TestingStuff(this);
+            return ForTestingPurposes = new TestingStuff(this);
         }
 
         internal class TestingStuff
@@ -2495,6 +2482,8 @@ namespace Raven.Server.Documents.Indexes
             internal Action DuringIndexReplacement_OnOldIndexDeletion;
             internal Action<string> AfterIndexCreation;
 
+            internal Action<Index> OnRollingIndexFinished;
+            internal Action<Index> OnRollingIndexStart;
             public TestingStuff(IndexStore parent)
             {
                 _parent = parent;
