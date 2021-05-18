@@ -38,8 +38,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private readonly BackupResult _uploadResult;
         private readonly OperationCancelToken _operationCancelToken;
         private static readonly IEnumerator<ToOlapItem> EmptyEnumerator = Enumerable.Empty<ToOlapItem>().GetEnumerator();
-        private static readonly HashSet<char> SpecialChars = new HashSet<char> { '&', '@', ':', ',', '$', '=', '+', '?', ';', ' ', '"', '^', '`', '>', '<', '{', '}', '[', ']', '#', '\'', '~', '|' };
-        private const string Format = "%{0:X2}";
 
         public OlapEtl(Transformation transformation, OlapEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, OlaptEtlTag)
@@ -119,7 +117,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         protected override EtlTransformer<ToOlapItem, OlapTransformedItems, OlapEtlStatsScope, OlapEtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
         {
-            return new OlapDocumentTransformer(Transformation, Database, context, Configuration, Logger);
+            return new OlapDocumentTransformer(Transformation, Database, context, Configuration);
         }
 
         protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context, OlapEtlStatsScope scope)
@@ -284,7 +282,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 S3Settings = _s3Settings,
                 AzureSettings = _azureSettings,
                 FilePath = localPath,
-                FolderName = EnsureSafeName(folderName),
+                FolderName = folderName,
                 FileName = fileName,
                 DatabaseName = Database.Name,
                 TaskName = Name
@@ -313,29 +311,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             {
                 _uploadScope = null;
             }
-        }
-
-        internal static string EnsureSafeName(string str, bool isFolderPath = true)
-        {
-            var builder = new StringBuilder(str.Length);
-            foreach (char @char in str)
-            {
-                if (SpecialChars.Contains(@char) || @char <= 31 || @char == 127)
-                {
-                    builder.AppendFormat(Format, (int)@char);
-                    continue;
-                }
-
-                if (isFolderPath == false && @char == '/')
-                {
-                    builder.Append('_');
-                    continue;
-                }
-
-                builder.Append(@char);
-            }
-
-            return builder.ToString();
         }
 
         private void ProgressNotification(IOperationProgress progress)

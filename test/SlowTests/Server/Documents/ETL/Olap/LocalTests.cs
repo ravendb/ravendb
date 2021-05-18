@@ -15,11 +15,11 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.OLAP;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
@@ -30,6 +30,8 @@ namespace SlowTests.Server.Documents.ETL.Olap
     public class LocalTests : EtlTestBase
     {
         internal const string DefaultFrequency = "* * * * *"; // every minute
+        private const string AllFilesPattern = "*.*";
+
 
         public LocalTests(ITestOutputHelper output) : base(output)
         {
@@ -976,7 +978,6 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-
         private static ManualResetEventSlim WaitForEtl(DocumentDatabase database, Func<string, EtlProcessStatistics, bool> predicate)
         {
             var mre = new ManualResetEventSlim();
@@ -1868,6 +1869,129 @@ loadToUsers(noPartition(), {
                 }
             }
 
+        }
+
+        [Fact]
+        public async Task LocalOlapShouldCreateSubFoldersAccordingToPartition()
+        {
+            var countries = new[] {"Argentina", "Brazil", "Israel", "Poland", "United States"};
+
+            using (var store = GetDocumentStore())
+            {
+                var dt = new DateTime(2020, 1, 1);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 1; i <= 10; i++)
+                    {
+                        var o = new Query.Order
+                        {
+                            Id = $"orders/{i}",
+                            Company = $"companies/{i}",
+                            Employee = $"employees/{i}",
+                            OrderedAt = dt,
+                            ShipTo = new Address
+                            {
+                                Country = countries[i % 5]
+                            }
+                        };
+
+                        await session.StoreAsync(o);
+
+                        dt = dt.AddDays(15);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                var script = @"
+var orderDate = new Date(this.OrderedAt);
+
+loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['month', orderDate.getMonth() + 1], ['country', this.ShipTo.Country]), 
+{
+    company: this.Company,
+    employee: this.Employee
+}
+);
+";
+
+                var path = NewDataPath(forceCreateDir: true);
+                SetupLocalOlapEtl(store, script, path);
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+
+                Assert.Equal(10, files.Length);
+
+                var dirs = Directory.EnumerateDirectories(path).ToList();
+                Assert.Equal(1, dirs.Count);
+                var di = new DirectoryInfo(dirs[0]);
+                Assert.Equal("Orders", di.Name);
+
+                var subDirs = Directory.EnumerateDirectories(dirs[0]).ToList();
+                Assert.Equal(1, subDirs.Count);
+                di = new DirectoryInfo(subDirs[0]);
+                Assert.Equal("year=2020", di.Name);
+
+                var monthSubDirs = Directory.EnumerateDirectories(subDirs[0]).ToList();
+                Assert.Equal(5, monthSubDirs.Count);
+
+                for (var index = 0; index < monthSubDirs.Count; index++)
+                {
+                    var month = index + 1;
+                    var monthSubDir = monthSubDirs[index];
+                    di = new DirectoryInfo(monthSubDir);
+                    Assert.Equal($"month={month}", di.Name);
+
+                    List<string> countryDirs;
+
+                    switch (month)
+                    {
+                        case 1:
+                            countryDirs = Directory.EnumerateDirectories(monthSubDir).ToList();
+                            Assert.Equal(3, countryDirs.Count);
+                            Assert.Contains("country=Brazil", countryDirs[0]);
+                            Assert.Contains("country=Israel", countryDirs[1]);
+                            Assert.Contains("country=Poland", countryDirs[2]);
+                            break;
+                        case 2:
+                            countryDirs = Directory.EnumerateDirectories(monthSubDir).ToList();
+                            Assert.Equal(1, countryDirs.Count);
+                            Assert.Contains("country=United States", countryDirs[0]);
+                            break;
+                        case 3:
+                            countryDirs = Directory.EnumerateDirectories(monthSubDir).ToList();
+                            Assert.Equal(3, countryDirs.Count);
+                            Assert.Contains("country=Argentina", countryDirs[0]);
+                            Assert.Contains("country=Brazil", countryDirs[1]);
+                            Assert.Contains("country=Israel", countryDirs[2]);
+                            break;
+                        case 4:
+                            countryDirs = Directory.EnumerateDirectories(monthSubDir).ToList();
+                            Assert.Equal(2, countryDirs.Count);
+                            Assert.Contains("country=Poland", countryDirs[0]);
+                            Assert.Contains("country=United States", countryDirs[1]);
+                            break;
+                        case 5:
+                            countryDirs = Directory.EnumerateDirectories(monthSubDir).ToList();
+                            Assert.Equal(1, countryDirs.Count);
+                            Assert.Contains("country=Argentina", countryDirs[0]);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    foreach (var dir in countryDirs)
+                    {
+                        var parquets = Directory.GetFiles(dir);
+                        Assert.Equal(1, parquets.Length);
+                        Assert.EndsWith(".parquet", parquets[0]);
+                    }
+                }
+            }
         }
 
         private static string GenerateConfigurationScript(string path, out string command)

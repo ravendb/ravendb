@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Server.Basic.Entities;
@@ -958,6 +959,61 @@ for (var i = 0; i < this.Lines.length; i++){
             finally
             {
                 await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}", delimiter: string.Empty, replaceSpecialChars: true);
+            }
+        }
+
+        [AmazonS3Fact]
+        public async Task CanHandleSlashInPartitionValue()
+        {
+            var settings = GetS3Settings();
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var baseline = new DateTime(2020, 1, 1);
+                        for (int i = 0; i < 10; i++)
+                        {
+                            await session.StoreAsync(new Order
+                            {
+                                OrderedAt = baseline.AddDays(i),
+                                Company = $"companies/{i % 5}"
+                            });
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    var script = @"
+    loadToOrders(partitionBy(['Company', this.Company]), {
+        OrderDate : new Date(this.OrderedAt)
+    })
+";
+                    SetupS3OlapEtl(store, script, settings);
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    using (var s3Client = new RavenAwsS3Client(settings))
+                    {
+                        var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
+
+                        Assert.Equal(5, cloudObjects.FileInfoDetails.Count);
+
+                        Assert.Contains("/Company=companies_0", cloudObjects.FileInfoDetails[0].FullPath);
+                        Assert.Contains("/Company=companies_1", cloudObjects.FileInfoDetails[1].FullPath);
+                        Assert.Contains("/Company=companies_2", cloudObjects.FileInfoDetails[2].FullPath);
+                        Assert.Contains("/Company=companies_3", cloudObjects.FileInfoDetails[3].FullPath);
+                        Assert.Contains("/Company=companies_4", cloudObjects.FileInfoDetails[4].FullPath);
+                    }
+                }
+            }
+            finally
+            {
+                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}", delimiter: string.Empty);
             }
         }
 

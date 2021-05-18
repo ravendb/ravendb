@@ -15,7 +15,6 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Logging;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
@@ -24,29 +23,28 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private const string DateFormat = "yyyy-MM-dd-HH-mm";
         private readonly OlapEtlConfiguration _config;
         private readonly Dictionary<string, OlapTransformedItems> _tables;
-        private readonly string _fileNameSuffix, _tmpFilePath;
+        private readonly string _fileNameSuffix, _localFilePath;
         private OlapEtlStatsScope _stats;
-        private readonly Logger _logger;
 
         private ObjectInstance _noPartition;
         private const string PartitionKeys = "$partition_keys";
         private const string DefaultPartitionColumnName = "_partition";
         private const string CustomFieldName = "$custom_field";
 
-        public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config, Logger logger)
+
+        public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.OlapEtl), null)
         {
             _config = config;
             _tables = new Dictionary<string, OlapTransformedItems>();
-            _logger = logger;
 
             var localSettings = BackupTask.GetBackupConfigurationFromScript(_config.Connection.LocalSettings, x => JsonDeserializationServer.LocalSettings(x),
                 database, updateServerWideSettingsFunc: null, serverWide: false);
 
-            _tmpFilePath = localSettings?.FolderPath ??
+            _localFilePath = localSettings?.FolderPath ??
                            (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).FullPath;
 
-            _fileNameSuffix = OlapEtl.EnsureSafeName($"{database.Name}-{_config.Name}-{transformation.Name}", isFolderPath: false);
+            _fileNameSuffix = ParquetTransformedItems.GetSafeNameForRemoteDestination($"{database.Name}-{_config.Name}-{transformation.Name}");
 
             LoadToDestinations = transformation.GetCollectionsFromScript();
         }
@@ -79,7 +77,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
         }
 
-        private void LoadToFunction(string tableName, string key, ScriptRunnerResult runnerResult)
+        private void LoadToFunction(string tableName, string key, ScriptRunnerResult runnerResult, List<string> partitions = null)
         {
             if (key == null)
                 ThrowLoadParameterIsMandatory(nameof(key));
@@ -104,7 +102,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 Properties = props
             };
 
-            var transformed = GetOrAdd(tableName, key);
+            var transformed = GetOrAdd(tableName, key, partitions);
             transformed.AddItem(olapItem);
 
             _stats.IncrementBatchSize(result.Size);
@@ -125,7 +123,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             throw new NotSupportedException("Time series aren't supported by OLAP ETL");
         }
 
-        private OlapTransformedItems GetOrAdd(string tableName, string key)
+        private OlapTransformedItems GetOrAdd(string tableName, string key, List<string> partitions)
         {
             var name = key;
 
@@ -133,7 +131,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             {
                 _tables[name] = _config.Format switch
                 {
-                    OlapEtlFileFormat.Parquet => (table = new ParquetTransformedItems(tableName, key, _tmpFilePath, _fileNameSuffix, _config, _logger)),
+                    OlapEtlFileFormat.Parquet => (table = new ParquetTransformedItems(tableName, key, _localFilePath, _fileNameSuffix, partitions, _config)),
                     _ => throw new ArgumentOutOfRangeException(nameof(OlapEtlConfiguration.Format))
                 };
             }
@@ -196,8 +194,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             if (partitionBy.IsArray() == false)
                 ThrowInvalidScriptMethodCall($"{methodSignature} property {PartitionKeys} of argument 'key' must be an array instance");
 
-            StringBuilder sb = new StringBuilder(name);
+            var sb = new StringBuilder(name);
             var arr = partitionBy.AsArray();
+            var partitions = new List<string>((int)arr.Length);
+
             foreach (var item in arr)
             {
                 if (item.IsArray() == false)
@@ -208,15 +208,17 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     ThrowInvalidScriptMethodCall(
                         $"{methodSignature} items in array {PartitionKeys} of argument 'key' must be array instances of size 2, but got '{tuple.Length}'");
 
-                sb.Append('/').Append(tuple[0]).Append('=');
-                var val = tuple[1].IsDate()
-                    ? tuple[1].AsDate().ToDateTime().ToString(DateFormat)
-                    : tuple[1];
+                sb.Append('/');
+                string val = tuple[1].IsDate() 
+                    ? tuple[1].AsDate().ToDateTime().ToString(DateFormat) 
+                    : tuple[1].ToString();
 
-                sb.Append(val);
+                var partition = $"{tuple[0]}={val}";
+                sb.Append(partition);
+                partitions.Add(partition);
             }
 
-            LoadToFunction(name, sb.ToString(), result);
+            LoadToFunction(name, sb.ToString(), result, partitions);
             return result.Instance;
         }
 
