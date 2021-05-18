@@ -136,7 +136,7 @@ loadTo(""Orders"", partitionBy(key),
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(2, files.Length);
 
                 var expectedFields = new[] { "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
@@ -244,7 +244,7 @@ loadToOrders(partitionBy(key), o);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
                 var expectedFields = new[] { "RequireAt", "Total", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
@@ -354,7 +354,7 @@ loadToOrders(partitionBy(key), o);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(7, files.Length);
 
                 var expectedFields = new[] { "RequireAt", "Total", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
@@ -440,14 +440,14 @@ loadToOrders(partitionBy(key), o);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(24, files.Length);
 
                 var expectedFields = new[] { "RequireAt", "Total", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
 
                 foreach (var file in files)
                 {
-                    using (var fs = File.OpenRead(files[0]))
+                    using (var fs = File.OpenRead(file))
                     using (var parquetReader = new ParquetReader(fs))
                     {
                         Assert.Equal(1, parquetReader.RowGroupCount);
@@ -516,7 +516,7 @@ loadToOrders(partitionBy(key), o);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
                 var expectedFields = new[] { "Company", "Freight", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
@@ -610,7 +610,7 @@ loadToOrders(partitionBy(key), o);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
                 var expectedFields = new[] { "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
@@ -704,7 +704,7 @@ loadToOrders(partitionBy(key), o);
                 var sw = new Stopwatch();
                 sw.Start();
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
                 var expectedFields = new[] { "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
@@ -773,7 +773,7 @@ loadToOrders(partitionBy(key), o);
 
                 Assert.True(timeWaited > TimeSpan.FromSeconds(60).TotalMilliseconds);
 
-                files = Directory.GetFiles(path);
+                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(2, files.Length);
             }
         }
@@ -870,7 +870,7 @@ loadToOrders(partitionBy(key), o);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
             }
         }
@@ -925,7 +925,7 @@ loadToOrders(partitionBy(key), o);
 
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
                 // disable and re enable the database
@@ -963,7 +963,7 @@ loadToOrders(partitionBy(key), o);
                 }
 
                 Assert.False(etlDone.Wait(TimeSpan.FromSeconds(50)));
-                files = Directory.GetFiles(path);
+                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
                 Assert.True(etlDone.Wait(TimeSpan.FromSeconds(120)));
@@ -973,50 +973,9 @@ loadToOrders(partitionBy(key), o);
 
                 Assert.True(timeWaited > TimeSpan.FromSeconds(60).TotalMilliseconds);
 
-                files = Directory.GetFiles(path);
+                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(2, files.Length);
             }
-        }
-
-        private static ManualResetEventSlim WaitForEtl(DocumentDatabase database, Func<string, EtlProcessStatistics, bool> predicate)
-        {
-            var mre = new ManualResetEventSlim();
-
-            database.EtlLoader.BatchCompleted += x =>
-            {
-                if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
-                    mre.Set();
-            };
-
-            return mre;
-        }
-
-        private bool WaitForDatabaseToUnlock(IDocumentStore store, TimeSpan timeout, out DocumentDatabase database)
-        {
-            database = null;
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
-
-            while (stopwatch.Elapsed < timeout)
-            {
-                try
-                {
-                    database = GetDocumentDatabaseInstanceFor(store).Result;
-                    return true;
-                }
-                catch (AggregateException e)
-                {
-                    if (e.Message.Contains($"The database '{store.Database}' has been unloaded and locked"))
-                    {
-                        Thread.Sleep(10);
-                        continue;
-                    }
-
-                    throw;
-                }
-            }
-
-            return false;
         }
 
         [Fact]
@@ -1077,7 +1036,7 @@ loadToOrders(partitionBy(key), o);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
                 var expectedFields = new[] { "RequireAt", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
@@ -1221,7 +1180,7 @@ loadToOrders(partitionBy(key), o);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
                 var expectedFields = new[] { "RequireAt", "Total", idColumn, ParquetTransformedItems.LastModifiedColumn };
@@ -1307,7 +1266,7 @@ loadToOrders(noPartition(),
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
                 var expectedFields = new[] { "OrderDate", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
@@ -1427,7 +1386,7 @@ loadToOrders(partitionBy(
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(4, files.Length);
 
                 var expectedFields = new[] { "RequireAt", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
@@ -1543,7 +1502,7 @@ loadToOrders(partitionBy(
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
                 var expectedFields = new[] { "double", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
@@ -1628,7 +1587,7 @@ for (var i = 0; i < this.Lines.length; i++) {
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(expectedCount, files.Length);
             }
         }
@@ -1689,7 +1648,7 @@ for (var i = 0; i < this.Lines.length; i++) {
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
                 var expectedFields = new[] { "Quantity", "Product", "Cost", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
@@ -1793,7 +1752,7 @@ loadToUsers(noPartition(), {
                 SetupLocalOlapEtl(store, configuration, path, connectionStringName);
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
                 using (var fs = File.OpenRead(files[0]))
@@ -2057,6 +2016,47 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['month', orderDate.
             };
 
             AddEtl(store, configuration, connectionString);
+        }
+
+        private static ManualResetEventSlim WaitForEtl(DocumentDatabase database, Func<string, EtlProcessStatistics, bool> predicate)
+        {
+            var mre = new ManualResetEventSlim();
+
+            database.EtlLoader.BatchCompleted += x =>
+            {
+                if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
+                    mre.Set();
+            };
+
+            return mre;
+        }
+
+        private bool WaitForDatabaseToUnlock(IDocumentStore store, TimeSpan timeout, out DocumentDatabase database)
+        {
+            database = null;
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            while (stopwatch.Elapsed < timeout)
+            {
+                try
+                {
+                    database = GetDocumentDatabaseInstanceFor(store).Result;
+                    return true;
+                }
+                catch (AggregateException e)
+                {
+                    if (e.Message.Contains($"The database '{store.Database}' has been unloaded and locked"))
+                    {
+                        Thread.Sleep(10);
+                        continue;
+                    }
+
+                    throw;
+                }
+            }
+
+            return false;
         }
 
         private class User
