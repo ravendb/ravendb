@@ -7,8 +7,8 @@ import cronEditor = require("viewmodels/common/cronEditor");
 class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
     connectionStringName = ko.observable<string>();
     
-    customField = ko.observable<string>();
-    customFieldEnabled = ko.observable<boolean>(false);
+    customPartition = ko.observable<string>();
+    customPartitionEnabled = ko.observable<boolean>(false);
         
     runFrequency = ko.observable<string>();
     runFrequencyCronEditor = ko.observable<cronEditor>();
@@ -37,8 +37,8 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             this.connectionStringName,
             this.mentorNode,
             this.manualChooseMentor,
-            this.customField,
-            this.customFieldEnabled,
+            this.customPartition,
+            this.customPartitionEnabled,
             this.runFrequency
         ])
     }
@@ -59,9 +59,9 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             ]
         });
 
-        this.customField.extend({
+        this.customPartition.extend({
             required: {
-                onlyIf: () => this.customFieldEnabled()
+                onlyIf: () => this.customPartitionEnabled()
             }
         });
 
@@ -70,7 +70,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             olapTables: this.olapTables,
             transformationScripts: this.transformationScripts,
             mentorNode: this.mentorNode,
-            customField: this.customField,
+            customPartition: this.customPartition,
             runFrequency: this.runFrequency
         });
     }
@@ -83,8 +83,8 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             this.connectionStringName(configuration.ConnectionStringName);
             this.manualChooseMentor(!!configuration.MentorNode);
             
-            this.customField(configuration.CustomField);
-            this.customFieldEnabled(!!configuration.CustomField);
+            this.customPartition(configuration.CustomPartitionValue);
+            this.customPartitionEnabled(!!configuration.CustomPartitionValue);
                        
             this.runFrequency(configuration.RunFrequency || ongoingTaskOlapEtlEditModel.defaultRunFrequency);
             this.runFrequencyCronEditor(new cronEditor(this.runFrequency));
@@ -112,7 +112,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             Disabled: false,
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             Transforms: this.transformationScripts().map(x => x.toDto()),
-            CustomField: this.customFieldEnabled() ? this.customField() : null,
+            CustomPartitionValue: this.customPartitionEnabled() ? this.customPartition() : null,
             RunFrequency: this.runFrequency(),
             OlapTables: this.olapTables().map(x => x.toDto())
         } as Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration;
@@ -127,7 +127,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
                 TaskState: "Enabled",
                 TaskConnectionStatus: "Active",
                 Configuration: {
-                    CustomField: "",
+                    CustomPartitionValue: "",
                     RunFrequency: this.defaultRunFrequency,
                     Transforms: [],
                     OlapTables: []
