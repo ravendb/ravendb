@@ -181,7 +181,7 @@ class indexProgress {
         this.isStale = dto.IsStale;
         this.name = dto.Name.toLowerCase();
         this.collections(_.map(dto.Collections, (value, key) => new collectionProgress(key, value, dto.IndexRunningStatus)));
-        const rolling: rollingProgress[] = dto.RollingProgress ? _.map(dto.RollingProgress.ActiveDeployments, (value, key) => new rollingProgress(key, value)) : [];
+        const rolling: rollingProgress[] = dto.IndexRollingStatus ? _.map(dto.IndexRollingStatus.ActiveDeployments, (value, key) => new rollingProgress(key, value)) : [];
         this.rollingProgress(rolling.reverse());
         
         const total = _.reduce(this.collections(), (p, c) => {

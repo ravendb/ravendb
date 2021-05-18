@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Indexes
 
         public double ProcessedPerSecond { get; set; }
 
-        public RollingIndex RollingProgress { get; set; }
+        public RollingIndex IndexRollingStatus { get; set; }
 
         public class CollectionStats
         {

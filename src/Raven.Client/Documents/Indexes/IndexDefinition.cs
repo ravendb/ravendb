@@ -199,6 +199,18 @@ namespace Raven.Client.Documents.Indexes
                 }
             }
 
+            if (DeploymentMode != other.DeploymentMode)
+            {
+                if (other.DeploymentMode == null)
+                {
+                    // same
+                }
+                else
+                {
+                    result |= IndexDefinitionCompareDifferences.DeploymentMode;
+                }
+            }
+
             if (DictionaryExtensions.ContentEquals(AdditionalSources, other.AdditionalSources) == false)
             {
                 var additionalSources = new Dictionary<string, string>();
@@ -579,7 +591,8 @@ namespace Raven.Client.Documents.Indexes
         State = 1 << 9,
         AdditionalSources = 1 << 10,
         AdditionalAssemblies = 1 << 11,
+        DeploymentMode = 1 << 12,
 
-        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies,
+        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies | DeploymentMode,
     }
 }

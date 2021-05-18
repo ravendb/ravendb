@@ -172,6 +172,21 @@ namespace Raven.Server.Documents.Indexes
         private bool _didWork;
         private bool _isReplacing;
         public bool IsRolling => Definition.DeploymentMode == IndexDeploymentMode.Rolling;
+        public bool DeployedOnAllNodes
+        {
+            get
+            {
+                if (IsRolling == false)
+                    return true;
+
+                // if we have no replacement - we are deploying, otherwise the replacement is deploying
+                if (DocumentDatabase.IndexStore.HasReplacement(Name))
+                    return true;
+
+                return GetNumberOfDeployedNodes() == -1;
+            }
+        }
+
         public string NormalizedName => Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty);
 
         private string _lastPendingStatus;
@@ -746,7 +761,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private bool IsStaleInternal()
+        private bool IsStaleInternal(List<string> stalenessReasons = null)
         {
             if (_indexingProcessCancellationTokenSource.IsCancellationRequested)
                 return true;
@@ -754,7 +769,7 @@ namespace Raven.Server.Documents.Indexes
             using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
             using (context.OpenReadTransaction())
             {
-                return IsStale(context);
+                return IsStale(context, stalenessReasons: stalenessReasons);
             }
         }
 
@@ -777,6 +792,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected virtual void OnInitialization()
         {
+            _numberOfDeployedNodes = GetNumberOfDeployedNodes();
             _indexWorkers = CreateIndexWorkExecutors();
         }
 
@@ -860,8 +876,12 @@ namespace Raven.Server.Documents.Indexes
             RollIfNeeded();
         }
 
+        private int _numberOfDeployedNodes;
+
         public void RollIfNeeded()
         {
+            RaiseNotificationIfNeeded();
+
             GetPendingAndReplaceStatus(out var pending, out var shouldReplace);
 
             if (shouldReplace)
@@ -870,9 +890,34 @@ namespace Raven.Server.Documents.Indexes
                     return; // need to wait for the replace to occur
             }
 
-            if (shouldReplace || pending == false)
+            if (shouldReplace || pending == false || IsStaleInternal() == false)
             {
                 _rollingEvent.Set();
+                _mre?.Set(ignoreThrottling: true);
+            }
+        }
+
+        private int GetNumberOfDeployedNodes()
+        {
+            return DocumentDatabase.IndexStore.GetRollingProgress(NormalizedName)?.ActiveDeployments.Values.Count(x => x.State == RollingIndexState.Done) ?? -1;
+        }
+
+        private void RaiseNotificationIfNeeded()
+        {
+            if (IsRolling && DocumentDatabase.IndexStore.HasReplacement(Name) == false)
+            {
+                var numberOfDeployedNodes = _numberOfDeployedNodes;
+                var currentDeployedNodes = GetNumberOfDeployedNodes();
+
+                if (Interlocked.CompareExchange(ref _numberOfDeployedNodes, currentDeployedNodes, numberOfDeployedNodes) != numberOfDeployedNodes) 
+                    return;
+
+                // only one can replace it
+                if (numberOfDeployedNodes != currentDeployedNodes)
+                {
+                    DocumentDatabase.Changes.RaiseNotifications(
+                        new IndexChange {Name = Name, Type = IndexChangeTypes.RollingIndexChanged});
+                }
             }
         }
 
@@ -2482,9 +2527,9 @@ namespace Raven.Server.Documents.Indexes
 
         private void UpdateIndexProgress(QueryOperationContext queryContext, IndexProgress progress, IndexStats stats)
         {
-            if (IsRolling)
+            if (DeployedOnAllNodes == false)
             {
-                progress.RollingProgress = DocumentDatabase.IndexStore.GetRollingProgress(NormalizedName);
+                progress.IndexRollingStatus = DocumentDatabase.IndexStore.GetRollingProgress(NormalizedName);
             }
 
             if (progress.IndexRunningStatus == IndexRunningStatus.Running)

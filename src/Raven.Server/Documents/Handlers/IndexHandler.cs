@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers
 
             if (endDeployment && newIndex.IsRolling)
             {
-                var command = new PutRollingIndexCommand(Database.Name, name, ServerStore.NodeTag, DateTime.UtcNow, RaftIdGenerator.NewId());
+                var command = new PutRollingIndexCommand(Database.Name, name, ServerStore.NodeTag, Database.Time.GetUtcNow(), RaftIdGenerator.NewId());
                 var result = await ServerStore.SendToLeaderAsync(command);
 
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, HttpContext.RequestAborted);
@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Handlers
             if (index.IsRolling == false)
                 throw new InvalidOperationException($"'{name}' isn't a rolling index");
 
-            var command = new PutRollingIndexCommand(Database.Name, name, ServerStore.NodeTag, DateTime.UtcNow, RaftIdGenerator.NewId());
+            var command = new PutRollingIndexCommand(Database.Name, name, ServerStore.NodeTag, Database.Time.GetUtcNow(), RaftIdGenerator.NewId());
             var result = await ServerStore.SendToLeaderAsync(command);
             
             await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, HttpContext.RequestAborted);
@@ -470,7 +470,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     try
                     {
-                        if (index.IsRolling == false && index.IsStale(context) == false)
+                        if (index.DeployedOnAllNodes && index.IsStale(context) == false)
                             continue;
 
                         var progress = index.GetProgress(context);

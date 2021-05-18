@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -56,7 +57,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         {
             var indexType = GetAutoIndexType(definition);
 
-            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName, raftRequestId, mode, DateTime.UtcNow);
+            return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName, raftRequestId, mode, SystemTime.UtcNow);
         }
 
         public static IndexType GetAutoIndexType(AutoIndexDefinitionBase definition)

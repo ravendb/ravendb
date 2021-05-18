@@ -78,7 +78,7 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateSnmpDatabasesMappingCommand)] = Base40CommandsVersion,
             [nameof(DeleteIndexCommand)] = Base40CommandsVersion,
             [nameof(PutAutoIndexCommand)] = Base40CommandsVersion,
-            [nameof(PutIndexCommand)] = Base40CommandsVersion, //todo
+            [nameof(PutIndexCommand)] = Base40CommandsVersion,
             [nameof(SetIndexLockCommand)] = Base40CommandsVersion,
             [nameof(SetIndexPriorityCommand)] = Base40CommandsVersion,
             [nameof(AddRavenEtlCommand)] = Base40CommandsVersion,

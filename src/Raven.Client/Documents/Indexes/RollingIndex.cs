@@ -8,14 +8,11 @@ namespace Raven.Client.Documents.Indexes
     {
         public Dictionary<string, RollingIndexDeployment> ActiveDeployments = new Dictionary<string, RollingIndexDeployment>(StringComparer.OrdinalIgnoreCase);
 
-        public long LastRaftIndexChange { get; internal set; }
-
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(ActiveDeployments)] = DynamicJsonValue.Convert(ActiveDeployments), 
-                [nameof(LastRaftIndexChange)] = LastRaftIndexChange
             };
         }
     }

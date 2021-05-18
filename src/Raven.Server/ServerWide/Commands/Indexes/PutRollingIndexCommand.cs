@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow;
@@ -35,8 +36,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             {
                 return; // was already removed
             }
-
-            rollingIndex.LastRaftIndexChange = etag;
 
             MaybeAddNewNodesToRollingDeployment(record, rollingIndex.ActiveDeployments);
 
@@ -87,7 +86,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 rollingIndex.TryAdd(node, new RollingIndexDeployment
                 {
                     State = RollingIndexState.Pending, 
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = SystemTime.UtcNow
                 });
             }
         }
