@@ -20,11 +20,9 @@ namespace Corax
 
         public static readonly Slice IndexEntriesSlice;
         private static readonly Slice IndexEntriesByNameSlice;
+        private static readonly Slice TagsByNameSlice;
 
-        public static readonly TableSchema IndexEntriesSchema = new TableSchema
-        {
-            TableType = (byte)IndexingTableType.IndexEntries
-        };
+        public static readonly TableSchema IndexEntriesSchema;
 
         private readonly Table _entries;
 
@@ -41,13 +39,27 @@ namespace Corax
             {
                 Slice.From(ctx, "IndexEntries", ByteStringType.Immutable, out IndexEntriesSlice);
                 Slice.From(ctx, "IndexEntriesByName", ByteStringType.Immutable, out IndexEntriesByNameSlice);
+                Slice.From(ctx, "Tags", ByteStringType.Immutable, out TagsByNameSlice);
+
+                IndexEntriesSchema = new()
+                {
+                    TableType = (byte)IndexingTableType.IndexEntries,
+                    Compressed = true,
+                    CompressedEtagSourceIndex = new TableSchema.FixedSizeSchemaIndexDef
+                    {
+                        Name = TagsByNameSlice,
+                        IsGlobal = true,
+                        StartIndex = 1,
+                    }
+                };
+
                 IndexEntriesSchema.DefineIndex(new TableSchema.SchemaIndexDef
                 {
                     StartIndex = (int)IndexEntriesTable.DocumentId,
                     Count = 1,
                     Name = IndexEntriesByNameSlice,
                     Type = TableIndexType.BTree,
-                    IsGlobal = false
+                    IsGlobal = false,
                 });
             }
         }

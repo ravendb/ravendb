@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -13,6 +14,21 @@ namespace Tryouts
     class CoraxEnron
     {
         public const string DirectoryEnron = "enron-corax";
+        private static char[] trimChars = {' ', ',', '\t', '\n'};
+
+        private static IEnumerable<string> NormalizeEmails(IEnumerable<string> emails)
+        {
+            foreach (var email in emails)
+            {
+                if (email.Contains(','))
+                {
+                    foreach (var nEmail in email.Split(','))
+                        yield return nEmail.Trim(trimChars);
+                }
+                else
+                    yield return email.Trim(trimChars);
+            }
+        }
 
         public static void Index(bool recreateDatabase = true, string outputDirectory = ".")
         {
@@ -47,12 +63,12 @@ namespace Tryouts
 
                 var value = new DynamicJsonValue
                 {
-                    ["Bcc"] = (msg.Bcc ?? Enumerable.Empty<InternetAddress>()).Select(x => x.ToString()).ToArray(),
-                    ["Cc"] = (msg.Cc ?? Enumerable.Empty<InternetAddress>()).Select(x => x.ToString()).ToArray(),
-                    ["To"] = (msg.To ?? Enumerable.Empty<InternetAddress>()).Select(x => x.ToString()).ToArray(),
+                    ["Bcc"] = NormalizeEmails((msg.Bcc ?? Enumerable.Empty<InternetAddress>()).Select(x => x.ToString())),
+                    ["Cc"] = NormalizeEmails((msg.Cc ?? Enumerable.Empty<InternetAddress>()).Select(x => x.ToString())),
+                    ["To"] = NormalizeEmails((msg.To ?? Enumerable.Empty<InternetAddress>()).Select(x => x.ToString())),
                     ["From"] = msg.From?.FirstOrDefault()?.ToString(),
                     ["ReplyTo"] = msg.ReplyTo?.FirstOrDefault()?.ToString(),
-                    ["Body"] = msg.GetTextBody(MimeKit.Text.TextFormat.Plain).Split(' '),
+                    ["Body"] = msg.GetTextBody(MimeKit.Text.TextFormat.Plain).Split(trimChars),
                     ["References"] = (msg.References ?? Enumerable.Empty<string>()).ToArray(),
                     ["Subject"] = msg.Subject.Split(' '),
                     ["MessageId"] = msg.MessageId,
@@ -61,15 +77,15 @@ namespace Tryouts
                     ["Priority"] = msg.Priority.ToString(),
                 };
 
-                foreach (var item in msg.Headers ?? new HeaderList())
-                {
-                    if (item.Value.Length > 512)
-                        continue;
+                //foreach (var item in msg.Headers ?? new HeaderList())
+                //{
+                //    if (item.Value.Length > 512)
+                //        continue;
 
-                    string headerName = item.Id.ToHeaderName();
-                    if (headerName.Length < 128)
-                        value[headerName] = item.Value;
-                }
+                //    string headerName = item.Id.ToHeaderName();
+                //    if (headerName.Length < 128)
+                //        value[$"Header[{headerName}]"] = item.Value;
+                //}
 
                 if (msg.Sender != null)
                     value["Sender"] = msg.Sender.ToString();
