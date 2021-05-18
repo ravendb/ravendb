@@ -51,6 +51,16 @@
         }
     }
 
+    .passive-node-info {
+        width: 100%;
+        padding: @gutter;
+        margin-bottom: @gutter !important;
+        background-image: url(../img/pages/about/passive-state-bg.svg);
+        background-position: right center;
+        background-repeat: no-repeat;
+        background-size: auto 100%;
+    }
+
     .about-info {
         display: flex;
         flex-direction: column;
@@ -84,8 +94,6 @@
         flex-wrap: wrap;
 
         &.no-license {
-            align-items: start;
-
             .support-properties {
                 display: none;
             }
@@ -96,7 +104,7 @@
         }
     }
 
-    .about-info, .license-info, .support-info {
+    .about-info, .license-info, .support-info, .passive-node-info {
         margin: @grid-gutter-width/2;
     }
 

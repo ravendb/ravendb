@@ -235,12 +235,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
 
             long? ticks = null;
-            if (value is DateTime)
-                ticks = ((DateTime)value).Ticks;
-            if (value is DateTimeOffset)
-                ticks = ((DateTimeOffset)value).Ticks;
-            if (value is TimeSpan)
-                ticks = ((TimeSpan)value).Ticks;
+            if (value is DateTime dateTime)
+                ticks = dateTime.Ticks;
+            if (value is DateTimeOffset dateTimeOffset)
+                ticks = dateTimeOffset.Ticks;
+            if (value is TimeSpan timeSpan)
+                ticks = timeSpan.Ticks;
 
             if (ticks.HasValue)
             {

@@ -177,17 +177,20 @@ namespace FastTests
 
         protected TestCertificatesHolder GenerateAndSaveSelfSignedCertificate(bool createNew = false)
         {
-            var selfSignedCertificatePaths = _selfSignedCertificates;
-            if (selfSignedCertificatePaths != null && createNew == false)
-                return ReturnCertificatesHolder(selfSignedCertificatePaths);
+            if (createNew)
+                return ReturnCertificatesHolder(Generate());
+
+            var selfSignedCertificates = _selfSignedCertificates;
+            if (selfSignedCertificates != null)
+                return ReturnCertificatesHolder(selfSignedCertificates);
 
             lock (typeof(TestBase))
             {
-                selfSignedCertificatePaths = _selfSignedCertificates;
-                if (selfSignedCertificatePaths == null || createNew)
-                    _selfSignedCertificates = selfSignedCertificatePaths = Generate();
+                selfSignedCertificates = _selfSignedCertificates;
+                if (selfSignedCertificates == null)
+                    _selfSignedCertificates = selfSignedCertificates = Generate();
 
-                return ReturnCertificatesHolder(selfSignedCertificatePaths);
+                return ReturnCertificatesHolder(selfSignedCertificates);
             }
 
             TestCertificatesHolder ReturnCertificatesHolder(TestCertificatesHolder certificates)

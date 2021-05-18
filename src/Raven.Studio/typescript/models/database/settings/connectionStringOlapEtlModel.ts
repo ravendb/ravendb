@@ -139,7 +139,7 @@ class connectionStringOlapEtlModel extends connectionStringModel {
     }
 
     private updateFolderPathOptions(path: string) {
-        getFolderPathOptionsCommand.forServerLocal(path, true)
+        getFolderPathOptionsCommand.forServerLocal(path, true, activeDatabaseTracker.default.database())
             .execute()
             .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
                 if (this.localSettings().folderPath() !== path) {
