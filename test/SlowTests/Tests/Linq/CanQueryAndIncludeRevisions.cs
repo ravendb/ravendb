@@ -101,34 +101,31 @@ namespace SlowTests.Tests.Linq
                     session.Advanced.Patch<User, string>(id, x => x.FirstRevision, changeVector);
                     
                     await session.SaveChangesAsync(); 
-         
-                    WaitForUserToContinueTheTest(store);
                     
                     metadatas = await session.Advanced.Revisions.GetMetadataForAsync(id);
                     
-                    changeVector =  metadatas[1].GetString(Constants.Documents.Metadata.ChangeVector);
-                    
+                    changeVector =  metadatas[0].GetString(Constants.Documents.Metadata.ChangeVector);
+
                     session.Advanced.Patch<User, string>(id, x => x.SecondRevision, changeVector);
                     
                     metadatas = await session.Advanced.Revisions.GetMetadataForAsync(id);
 
-                   
+                    await session.SaveChangesAsync(); 
+                    
+                    metadatas = await session.Advanced.Revisions.GetMetadataForAsync(id);
 
-                    changeVector = metadatas[2].GetString(Constants.Documents.Metadata.ChangeVector);
+                    changeVector = metadatas[0].GetString(Constants.Documents.Metadata.ChangeVector);
                     
                     session.Advanced.Patch<User, string>(id, x => x.ThridRevision, changeVector);
                     
-                    await session.SaveChangesAsync(); 
-                    
-                    WaitForUserToContinueTheTest(store);
+                    await session.SaveChangesAsync();
                 }
                 using (var session = store.OpenAsyncSession())
                 {
                     var query =  session.Advanced
-                        .AsyncRawQuery<User>("from Users as u include revisions(u.FirstRevision, u.SecondRevision, u.ThridRevision)");
-
-
-
+                        .AsyncRawQuery<User>("from Users as u include revisions(u.FirstRevision, u.SecondRevision, u.ThridRevision)")
+                        .ToListAsync();
+                    
                     var revision = await session.Advanced.Revisions.GetAsync<User>(changeVector);
 
                     Assert.NotNull(revision);
