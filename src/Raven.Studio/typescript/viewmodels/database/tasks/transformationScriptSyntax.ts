@@ -135,8 +135,8 @@ var month = orderDate.getMonth() + 1;
 
 loadToOrders(partitionBy(['year', year], ['month', month]), {
     // The order of params in the partitionBy method determines the parquet file path
-    Company : this.Company,
-    ShipVia : this.ShipVia
+    Company: this.Company,
+    ShipVia: this.ShipVia
     // Note: 2 more field are always created per table by default:
     //       * _id: The ID column - can be overriden in the task definition
     //       * _lastModifiedTicks: The document's last modification time column - cannot be overriden
@@ -147,7 +147,7 @@ loadToOrders(partitionBy(['year', year], ['month', month]), {
     static readonly olapEtlSampleNoPartitionText =
 `loadToOrders(noPartition(), {
     // Data will Not be partitioned
-    Company : this.Company
+    Company: this.Company
 });`;
     
     olapEtlSampleNoPartitionHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSampleNoPartitionText);
@@ -156,7 +156,7 @@ loadToOrders(partitionBy(['year', year], ['month', month]), {
 `var key = new Date(this.OrderedAt);
 loadToOrders(partitionBy(key), {
     // The partition that will be created will be: "_partition={key}"
-    Company : this.Company
+    Company: this.Company
 });`;
     
     olapEtlSampleKeyHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSampleKeyText);
@@ -167,7 +167,7 @@ var year = orderDate.getFullYear();
 
 loadToOrders(partitionBy(['year', year], ['customPartitionName', $customPartitionValue]), {
     // The 'customFieldValue' is set in the OLAP task definition
-    Company : this.Company
+    Company: this.Company
 });`;
 
     olapEtlSampleCustomFieldHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSampleCustomFieldText);
