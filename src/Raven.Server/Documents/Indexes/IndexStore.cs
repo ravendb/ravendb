@@ -372,8 +372,6 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    RaiseRollingChangeNotificationIfNeeded(record, index, name);
-
                     var indexToStart = HandleStaticIndexChange(name, definition);
                     if (indexToStart != null)
                     {
@@ -410,19 +408,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void RaiseRollingChangeNotificationIfNeeded(DatabaseRecord record, long index, string name)
-        {
-            if (record.RollingIndexes.TryGetValue(name, out var rollingIndex) && rollingIndex.LastRaftIndexChange == index)
-            {
-                _documentDatabase.Changes.RaiseNotifications(
-                    new IndexChange {
-                        Name = name, 
-                        Type = IndexChangeTypes.RollingIndexChanged
-                    });
-            }
-        }
-
-        public bool ShouldSkipThisNodeWhenRolling(Index index, out string reason,out bool replace)
+        public bool ShouldSkipThisNodeWhenRolling(Index index, out string reason, out bool replace)
         {
             replace = false;
             if (index.IsRolling == false)
@@ -561,6 +547,7 @@ namespace Raven.Server.Documents.Indexes
                                 });
                             }
                         }
+
 
                         DeleteIndexInternal(replacementIndex);
                     }
@@ -822,7 +809,7 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 // We may send the command multiple times so we need a new Id every time.
-                var command = new PutRollingIndexCommand(_documentDatabase.Name, definition.Name, nodeTag, DateTime.UtcNow, RaftIdGenerator.NewId());
+                var command = new PutRollingIndexCommand(_documentDatabase.Name, definition.Name, nodeTag, _documentDatabase.Time.GetUtcNow(), RaftIdGenerator.NewId());
                 _serverStore.SendToLeaderAsync(command).ContinueWith(t =>
                 {
                     if (Logger.IsOperationsEnabled)
@@ -1241,6 +1228,9 @@ namespace Raven.Server.Documents.Indexes
                 return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
 
             if ((differences & IndexDefinitionCompareDifferences.State) == IndexDefinitionCompareDifferences.State)
+                return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
+            
+            if ((differences & IndexDefinitionCompareDifferences.DeploymentMode) == IndexDefinitionCompareDifferences.DeploymentMode)
                 return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
 
             return IndexCreationOptions.Update;

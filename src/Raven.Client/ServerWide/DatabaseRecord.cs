@@ -217,7 +217,7 @@ namespace Raven.Client.ServerWide
             {
                 if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
                 {
-                    InitializeRollingDeployment(definition.Name, createdAt, raftIndex);
+                    InitializeRollingDeployment(definition.Name, createdAt);
                     definition.DeploymentMode = IndexDeploymentMode.Rolling;
                 }
             }
@@ -251,7 +251,7 @@ namespace Raven.Client.ServerWide
             if (globalDeploymentMode == IndexDeploymentMode.Rolling)
             {
                 if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
-                    InitializeRollingDeployment(definition.Name, createdAt, raftIndex);
+                    InitializeRollingDeployment(definition.Name, createdAt);
             }
         }
 
@@ -263,16 +263,12 @@ namespace Raven.Client.ServerWide
             return fromDefinition == IndexDeploymentMode.Rolling;
         }
 
-        private void InitializeRollingDeployment(string indexName, DateTime createdAt, long raftIndex)
+        private void InitializeRollingDeployment(string indexName, DateTime createdAt)
         {
             RollingIndexes ??= new Dictionary<string, RollingIndex>();
-            if (RollingIndexes.TryGetValue(indexName, out var rollingIndex) == false)
-            {
-                rollingIndex = new RollingIndex();
-                RollingIndexes[indexName] = rollingIndex;
-            }
-
-            rollingIndex.LastRaftIndexChange = raftIndex;
+            
+            var rollingIndex = new RollingIndex();
+            RollingIndexes[indexName] = rollingIndex;
 
             var chosenNode = ChooseFirstNode();
 

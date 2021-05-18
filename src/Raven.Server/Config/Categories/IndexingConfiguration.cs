@@ -74,13 +74,13 @@ namespace Raven.Server.Config.Categories
         public virtual bool Disabled { get; protected set; }
 
         [DefaultValue(IndexDeploymentMode.Rolling)]
-        [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Indexing.StaticIndexDeploymentMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Static.DeploymentMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public IndexDeploymentMode StaticIndexDeploymentMode { get; protected set; }
 
         [DefaultValue(IndexDeploymentMode.Rolling)] // TODO: for testing
-        [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Indexing.AutoIndexDeploymentMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Auto.DeploymentMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public IndexDeploymentMode AutoIndexDeploymentMode { get; protected set; }
 
         [DefaultValue(true)]

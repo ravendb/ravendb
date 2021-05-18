@@ -1274,11 +1274,11 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(progress.SourceType));
             writer.WriteString(progress.SourceType.ToString());
 
-            if (progress.RollingProgress != null)
+            if (progress.IndexRollingStatus != null)
             {
                 writer.WriteComma();
-                writer.WritePropertyName(nameof(progress.RollingProgress));
-                writer.WriteObject(context.ReadObject(progress.RollingProgress.ToJson(), "rollingProgress"));
+                writer.WritePropertyName(nameof(progress.IndexRollingStatus));
+                writer.WriteObject(context.ReadObject(progress.IndexRollingStatus.ToJson(), "rollingProgress"));
             }
 
             writer.WriteEndObject();
