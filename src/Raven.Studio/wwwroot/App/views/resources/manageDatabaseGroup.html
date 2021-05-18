@@ -187,18 +187,15 @@
             <div class="control-label flex-grow">Allow dynamic database distribution</div>
             <div class="flex-noshrink">
                 <div class="toggle">
-                    <input type="checkbox" class="styled" 
-                           data-bind="checked: dynamicDatabaseDistribution, enable:!showDynamicDatabaseDistributionWarning() && !isEncrypted(),
+                    <input type="checkbox" class="styled"
+                           data-bind="checked: dynamicDatabaseDistribution, enable: enableDynamicDatabaseDistribution,
                                       requiredAccess: 'Operator', requiredAccessOptions: { strategy: 'disable' }">
                     <label></label>
                 </div>
             </div>
         </div>
-        <div class="help-block text-warning bg-warning" data-bind="visible: showDynamicDatabaseDistributionWarning">
-            Your current license doesn't include the dynamic nodes distribution feature.
-        </div>
-        <div class="help-block text-warning bg-warning" data-bind="visible: isEncrypted">
-            Dynamic database distribution is not available when database is encrypted.
+        <div class="help-block text-warning bg-warning" data-bind="visible: dynamicDatabaseDistributionWarning">
+            <span data-bind="text: dynamicDatabaseDistributionWarning"></span>
         </div>
     </div>
 </script>

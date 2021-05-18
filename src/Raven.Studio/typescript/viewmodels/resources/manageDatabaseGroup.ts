@@ -43,7 +43,9 @@ class manageDatabaseGroup extends viewModelBase {
 
     nodeTag = clusterTopologyManager.default.localNodeTag;
     addNodeEnabled: KnockoutComputed<boolean>;
-    showDynamicDatabaseDistributionWarning: KnockoutComputed<boolean>;
+    
+    enableDynamicDatabaseDistribution: KnockoutComputed<boolean>;
+    dynamicDatabaseDistributionWarning: KnockoutComputed<string>;
     
     anyNodeHasError: KnockoutComputed<boolean>;
 
@@ -93,8 +95,24 @@ class manageDatabaseGroup extends viewModelBase {
             return _.without(tags, ...existingTags).length > 0;
         });
 
-        this.showDynamicDatabaseDistributionWarning = ko.pureComputed(() => {
-            return !license.licenseStatus().HasDynamicNodesDistribution;
+        this.enableDynamicDatabaseDistribution = ko.pureComputed(() => {
+            return license.licenseStatus().HasDynamicNodesDistribution && !this.isEncrypted() && this.nodes().length > 1;
+        });
+
+        this.dynamicDatabaseDistributionWarning = ko.pureComputed(() => {
+            if (!license.licenseStatus().HasDynamicNodesDistribution) {
+                return "Your current license doesn't include the dynamic nodes distribution feature."
+            }
+            
+            if (this.isEncrypted()) {
+                return "Dynamic database distribution is not available when database is encrypted.";
+            }
+            
+            if (this.nodes().length === 1) {
+                return "There is only one node in the group.";
+            }
+            
+            return null;
         });
         
         this.registerDisposable(
