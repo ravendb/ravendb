@@ -1953,6 +1953,70 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['month', orderDate.
             }
         }
 
+        [Fact]
+        public async Task ShouldCreateLocalFolderIfNotExists()
+        {
+            // RavenDB-16663
+
+            using (var store = GetDocumentStore())
+            {
+                var dt = new DateTime(2020, 1, 1);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 1; i <= 5; i++)
+                    {
+                        var o = new Query.Order
+                        {
+                            Id = $"orders/{i}",
+                            Company = $"companies/{i}",
+                            Employee = $"employees/{i}",
+                            OrderedAt = dt,
+                        };
+
+                        await session.StoreAsync(o);
+
+                        dt = dt.AddYears(1);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                var script = @"
+var orderDate = new Date(this.OrderedAt);
+
+loadToOrders(partitionBy(['year', orderDate.getFullYear()]), 
+{
+    company: this.Company,
+    employee: this.Employee
+}
+);
+";
+
+                var path = NewDataPath(forceCreateDir: false);
+                path = Path.Combine(path, "Aviv");
+
+                Assert.False(Directory.Exists(path));
+
+                SetupLocalOlapEtl(store, script, path);
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+
+                Assert.Equal(5, files.Length);
+
+                Assert.Contains("year=2020", files[0]);
+                Assert.Contains("year=2021", files[1]);
+                Assert.Contains("year=2022", files[2]);
+                Assert.Contains("year=2023", files[3]);
+                Assert.Contains("year=2024", files[4]);
+
+            }
+        }
+
         private static string GenerateConfigurationScript(string path, out string command)
         {
             var scriptPath = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
