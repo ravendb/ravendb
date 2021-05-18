@@ -257,6 +257,36 @@ namespace Raven.Client.Documents.Changes
         /// </summary>
         public string OldIndexName { get; set; }
     }
+    internal abstract class TrafficWatchChangeBase : DatabaseChange, IDynamicJson
+    {
+        public abstract TrafficWatchType TrafficWatchType { get; }
+        public DateTime TimeStamp { get; set; }
+        public string DatabaseName { get; set; }
+        public string CustomInfo { get; set; }
+        public string ClientIP { get; set; }
+        public string Thumbprint { get; set; }
+
+        public virtual DynamicJsonValue ToJson()
+        {
+            var json = new DynamicJsonValue
+            {
+                [nameof(TrafficWatchType)] = TrafficWatchType,
+                [nameof(TimeStamp)] = TimeStamp,
+                [nameof(DatabaseName)] = DatabaseName,
+                [nameof(CustomInfo)] = CustomInfo,
+                [nameof(ClientIP)] = ClientIP,
+                [nameof(Thumbprint)] = Thumbprint
+            };
+
+            return json;
+        }
+    }
+
+    public enum TrafficWatchType
+    {
+        Http,
+        Tcp
+    }
 
     internal class TrafficWatchHttpChange : TrafficWatchChangeBase
     {
@@ -287,7 +317,6 @@ namespace Raven.Client.Documents.Changes
     {
         public override TrafficWatchType TrafficWatchType => TrafficWatchType.Tcp;
         public string Source { get; set; }
-        public string Certificate { get; set; }
         public TcpConnectionHeaderMessage.OperationTypes Operation { get; set; }
         public int OperationVersion { get; set; }
 
@@ -295,40 +324,10 @@ namespace Raven.Client.Documents.Changes
         {
             var json = base.ToJson();
             json[nameof(Source)] = Source;
-            json[nameof(Certificate)] = Certificate;
             json[nameof(Operation)] = Operation;
             json[nameof(OperationVersion)] = OperationVersion;
             return json;
         }
-    }
-
-    internal abstract class TrafficWatchChangeBase : DatabaseChange, IDynamicJson
-    {
-        public abstract TrafficWatchType TrafficWatchType { get; }
-        public DateTime TimeStamp { get; set; }
-        public string DatabaseName { get; set; }
-        public string CustomInfo { get; set; }
-        public string ClientIP { get; set; }
-
-        public virtual DynamicJsonValue ToJson()
-        {
-            var json = new DynamicJsonValue
-            {
-                [nameof(TrafficWatchType)] = TrafficWatchType,
-                [nameof(TimeStamp)] = TimeStamp,
-                [nameof(DatabaseName)] = DatabaseName,
-                [nameof(CustomInfo)] = CustomInfo,
-                [nameof(ClientIP)] = ClientIP
-            };
-
-            return json;
-        }
-    }
-
-    public enum TrafficWatchType
-    {
-        Http,
-        Tcp
     }
 
     public enum TrafficWatchChangeType
