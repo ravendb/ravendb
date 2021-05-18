@@ -535,11 +535,7 @@ namespace Raven.Server.ServerWide
             StorageEnvironmentOptions options;
             if (Configuration.Core.RunInMemory)
             {
-                options = StorageEnvironmentOptions.CreateMemoryOnly(                    
-                    path.FullPath,
-                    null,
-                    IoChanges,
-                    null);
+                options = StorageEnvironmentOptions.CreateMemoryOnly();
             }
             else
             {

@@ -237,19 +237,8 @@ namespace FastTests
                     var hardDelete = true;
                     var runInMemory = options.RunInMemory;
 
-                    var doc = new DatabaseRecord(name)
-                    {
-                        Settings =
-                        {
-                            [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
-                            [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString(),
-                        }
-                    };
-
                     var pathToUse = options.Path;
-                    var useExternalServer = IsGlobalOrLocalServer(serverToUse) == false;
-
-                    if (options.ReplicationFactor > 1)
+                    if (runInMemory == false && options.ReplicationFactor > 1)
                     {
                         if (pathToUse == null)
                         {
@@ -260,27 +249,30 @@ namespace FastTests
                             throw new InvalidOperationException($"You cannot set {nameof(Options)}.{nameof(Options.Path)} when, {nameof(Options)}.{nameof(Options.ReplicationFactor)} > 1 and {nameof(Options)}.{nameof(Options.RunInMemory)} == false.");
                         }
                     }
+                    else if (pathToUse == null)
+                    {
+                        pathToUse = NewDataPath(name);
+                    }
                     else
                     {
-                        if (useExternalServer)
-                        {
-                            // your responsibility to do it right
-                        }
-                        else if (pathToUse == null)
-                        {
-                            pathToUse = NewDatabasePath(serverToUse.Configuration.Core.DataDirectory.FullPath, name);
-                        }
-                        else
-                        {
-                            hardDelete = false;
-                            runInMemory = false;
-                        }
+                        hardDelete = false;
+                        runInMemory = false;
                     }
-                    
-                    if (pathToUse != null)
-                        doc.Settings.Add(RavenConfiguration.GetKey(x => x.Core.DataDirectory), pathToUse);
 
-                    doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
+                    var doc = new DatabaseRecord(name)
+                    {
+                        Settings =
+                        {
+                            [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString(),
+                            [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
+                            [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString(),
+                        }
+                    };
+
+                    if (pathToUse != null)
+                    {
+                        doc.Settings.Add(RavenConfiguration.GetKey(x => x.Core.DataDirectory), pathToUse);
+                    }
 
                     if (options.Encrypted)
                     {
