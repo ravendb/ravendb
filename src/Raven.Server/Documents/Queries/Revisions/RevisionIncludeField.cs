@@ -5,7 +5,7 @@ namespace Raven.Server.Documents.Queries.Revisions
 {
     public class RevisionIncludeField
     {
-        public HashSet<string>  Revisions;
+        public readonly HashSet<string> Revisions;
 
         public RevisionIncludeField()
         {
@@ -14,8 +14,7 @@ namespace Raven.Server.Documents.Queries.Revisions
 
         public void AddRevision(string revision, string sourcePath = null)
         {
-            
-            Revisions.Add(revision);
+            Revisions.Add(string.IsNullOrEmpty(sourcePath) == false ? sourcePath : revision);
         }
     }
 }
