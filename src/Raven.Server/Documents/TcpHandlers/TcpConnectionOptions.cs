@@ -114,9 +114,10 @@ namespace Raven.Server.Documents.TcpHandlers
         }
 
 #if !RELEASE
+        private string ss = Environment.StackTrace;
         ~TcpConnectionOptions()
         {
-            throw new LowMemoryException($"Detected a leak on TcpConnectionOptions ('{ToString()}') when running the finalizer.");
+            throw new LowMemoryException($"Detected a leak on TcpConnectionOptions ('{ToString()}') when running the finalizer @ " + ss);
         }
 #endif
 
