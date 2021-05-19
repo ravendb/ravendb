@@ -73,6 +73,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task FinishRolling()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var node = GetStringQueryString("node", required: false);
 
             var index = Database.IndexStore.GetIndex(name);
 
@@ -82,7 +83,10 @@ namespace Raven.Server.Documents.Handlers
             if (index.IsRolling == false)
                 throw new InvalidOperationException($"'{name}' isn't a rolling index");
 
-            var command = new PutRollingIndexCommand(Database.Name, name, ServerStore.NodeTag, Database.Time.GetUtcNow(), RaftIdGenerator.NewId());
+            var command = node == null ? 
+                new PutRollingIndexCommand(Database.Name, name, Database.Time.GetUtcNow(), RaftIdGenerator.NewId()) : 
+                new PutRollingIndexCommand(Database.Name, name, node, Database.Time.GetUtcNow(), RaftIdGenerator.NewId());
+
             var result = await ServerStore.SendToLeaderAsync(command);
             
             await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, HttpContext.RequestAborted);

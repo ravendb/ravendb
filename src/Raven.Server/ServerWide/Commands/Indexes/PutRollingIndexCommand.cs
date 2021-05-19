@@ -16,6 +16,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         public string IndexName { get; set; }
         public string FinishedNodeTag { get; set; }
         public DateTime? FinishedAt { get; set; }
+        public bool CompleteAll { get; set; }
 
         public PutRollingIndexCommand()
         {
@@ -30,8 +31,21 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             FinishedAt = finishedAt;
         }
 
+        public PutRollingIndexCommand(string databaseName, string indexName, DateTime? finishedAt, string uniqueRequestId) 
+            : base(databaseName, uniqueRequestId)
+        {
+            IndexName = indexName;
+            CompleteAll = true;
+            FinishedAt = finishedAt;
+        }
+
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            if (record.RollingIndexes == null)
+            {
+                return;
+            }
+
             if (record.RollingIndexes.TryGetValue(IndexName, out var rollingIndex ) == false)
             {
                 return; // was already removed
@@ -42,7 +56,21 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             if (string.IsNullOrEmpty(FinishedNodeTag))
                 return;
 
-            if (rollingIndex.ActiveDeployments.TryGetValue(FinishedNodeTag, out var rollingDeployment) == false)
+            if (CompleteAll)
+            {
+                foreach (var nodeTag in record.Topology.AllNodes)
+                {
+                    FinishOneNode(record, nodeTag, rollingIndex);
+                }
+                return;
+            }
+         
+            FinishOneNode(record, FinishedNodeTag, rollingIndex);
+        }
+
+        private void FinishOneNode(DatabaseRecord record, string finishedNodeTag, RollingIndex rollingIndex)
+        {
+            if (rollingIndex.ActiveDeployments.TryGetValue(finishedNodeTag, out var rollingDeployment) == false)
                 return;
 
             if (rollingDeployment.State == RollingIndexState.Done)
@@ -50,7 +78,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
             rollingDeployment.State = RollingIndexState.Done;
             rollingDeployment.FinishedAt = FinishedAt;
-            
+
             // If we are done and there is already a running node, there is nothing to do. That running node will continue from here.
             if (rollingIndex.ActiveDeployments.Any(node => node.Value.State == RollingIndexState.Running))
             {
@@ -70,9 +98,10 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
                     record.RollingIndexes.Remove(IndexName);
                 }
+
                 return;
             }
-            
+
             rollingIndex.ActiveDeployments[chosenNode].State = RollingIndexState.Running;
             rollingIndex.ActiveDeployments[chosenNode].StartedAt = FinishedAt;
         }
@@ -130,6 +159,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(IndexName)] = IndexName;
             json[nameof(FinishedNodeTag)] = FinishedNodeTag;
             json[nameof(FinishedAt)] = FinishedAt;
+            json[nameof(CompleteAll)] = CompleteAll;
         }
     }
 }
