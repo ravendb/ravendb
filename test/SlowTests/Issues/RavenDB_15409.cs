@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -81,6 +82,24 @@ namespace SlowTests.Issues
                 expected.Add(GetRaftCommands(server, nameof(UpdateLicenseLimitsCommand)).Count());
             }
 
+            if (expected.Count != 1)
+            {
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var massageBuilder = new StringBuilder();
+                    foreach (var server in servers)
+                    {
+                        var serverRaftCommands = GetRaftCommands(server).Select(c => ctx.ReadObject(c, "raftCommand").ToString());
+
+                        massageBuilder
+                            .AppendFormat("**** Node {0} ****", server.ServerStore.NodeTag).AppendLine()
+                            .AppendLine(string.Join('\n', serverRaftCommands));
+                    }
+
+                    massageBuilder.Append(await socket.CloseAndGetLogsAsync());
+                    Assert.False(true, massageBuilder.ToString());
+                }
+            }
             Assert.Single(expected);
 
             for (int i = 0; i < 10; i++)
