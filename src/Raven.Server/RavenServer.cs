@@ -2484,7 +2484,7 @@ namespace Raven.Server
             {
                 TimeStamp = DateTime.UtcNow,
                 DatabaseName = header?.DatabaseName ?? "N/A",
-                Thumbprint = certificate?.Thumbprint,
+                CertificateThumbprint = certificate?.Thumbprint,
                 CustomInfo = header?.Info ?? exception?.ToString(),
                 ClientIP = clientIP,
                 Source = header?.SourceNodeTag,
