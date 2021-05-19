@@ -28,7 +28,7 @@ type rTreeLeaf = {
     arg: any;
 }
 
-type taskOperation = Raven.Client.Documents.Replication.ReplicationPerformanceOperation | 
+type taskOperation = Raven.Client.Documents.Replication.ReplicationPerformanceOperation |
                      Raven.Server.Documents.ETL.Stats.EtlPerformanceOperation |
                      Raven.Server.Documents.Subscriptions.Stats.SubscriptionConnectionPerformanceOperation |
                      Raven.Server.Documents.Subscriptions.Stats.SubscriptionBatchPerformanceOperation;
@@ -1945,12 +1945,28 @@ class ongoingTasksStats extends viewModelBase {
                             }
                             break;
                     }
+                    
+                    if (type === "Olap") {
+                        const olapItem = context.item as unknown as Raven.Server.Documents.ETL.Providers.OLAP.OlapEtlPerformanceOperation;
+                        if (olapItem.FileName) {
+                                tooltipHtml += `<div class="tooltip-li">File Name: <div class="value">${olapItem.FileName} </div></div>`;
+                            }
+                        if (olapItem.S3Upload) {
+                            tooltipHtml += `<div class="tooltip-li">Upload State: <div class="value">${olapItem.S3Upload.UploadState}</div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Upload Type: <div class="value">${olapItem.S3Upload.UploadType}</div></div>`;
+                            // TODO ... maybe refactor the below items to show progress 
+                            tooltipHtml += `<div class="tooltip-li">File Size: <div class="value">${generalUtils.formatBytesToSize(olapItem.S3Upload.TotalInBytes)}</div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Bytes per Sec: <div class="value">${generalUtils.formatBytesToSize(olapItem.S3Upload.BytesPutsPerSec)}</div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Total Bytes Uploaded: <div class="value">${generalUtils.formatBytesToSize(olapItem.S3Upload.UploadedInBytes)}</div></div>`;
+                        }
+                    }
+                    
                 } else if (isSubscription) {
                     // used for batches stripes only 
                     const title = context.item.Name === "BatchWaitForAcknowledge" ? "Waiting for ACK" : "Sending Documents";
                     
                     tooltipHtml = `<div class="tooltip-header"> ${title} </div>`;
-                    tooltipHtml += '<div class="tooltip-li">Duration:  <div class="value">' + generalUtils.formatMillis(context.item.DurationInMs) + ' </div></div>';
+                    tooltipHtml += '<div class="tooltip-li">Duration: <div class="value">' + generalUtils.formatMillis(context.item.DurationInMs) + ' </div></div>';
                 }
             }
             

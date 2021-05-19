@@ -53,6 +53,7 @@ using Raven.Server.Dashboard;
 using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
@@ -448,6 +449,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OngoingTaskOlapEtlListView));
             scripter.AddType(typeof(OlapEtlConfiguration));
             scripter.AddType(typeof(OlapEtlTable));
+            scripter.AddType(typeof(EtlPerformanceOperation));
+            scripter.AddType(typeof(OlapEtlPerformanceOperation));
             scripter.AddType(typeof(OlapEtlTestScriptResult));
             scripter.AddType(typeof(TestOlapEtlScript));
             
