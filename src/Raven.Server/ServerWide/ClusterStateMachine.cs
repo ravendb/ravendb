@@ -879,10 +879,10 @@ namespace Raven.Server.ServerWide
             try
             {
                 clusterTransaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
-                UpdateDatabaseRecordId(context, index, clusterTransaction);
+                var dbTopologyId = UpdateDatabaseRecordId(context, index, clusterTransaction);
 
                 var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-                var error = clusterTransaction.ExecuteCompareExchangeCommands(context, index, compareExchangeItems);
+                var error = clusterTransaction.ExecuteCompareExchangeCommands(dbTopologyId, context, index, compareExchangeItems);
                 if (error == null)
                 {
                     clusterTransaction.SaveCommandsBatch(context, index);
@@ -909,7 +909,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void UpdateDatabaseRecordId(ClusterOperationContext context, long index, ClusterTransactionCommand clusterTransaction)
+        private string UpdateDatabaseRecordId(ClusterOperationContext context, long index, ClusterTransactionCommand clusterTransaction)
         {
             var rawRecord = ReadRawDatabaseRecord(context, clusterTransaction.DatabaseName);
 
@@ -939,6 +939,7 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, databaseRecordJson);
                 }
             }
+            return topology.DatabaseTopologyIdBase64;
         }
 
         private void ConfirmReceiptServerCertificate(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)

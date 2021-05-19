@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Commands.Batches
             base.AppendOptions(sb);
             if (DisableAtomicDocumentWrites)
             {
-                sb.Append("&disableAtomicDocumentWrites=true");
+                sb.Append("?disableAtomicDocumentWrites=true");
             }
         }
     }

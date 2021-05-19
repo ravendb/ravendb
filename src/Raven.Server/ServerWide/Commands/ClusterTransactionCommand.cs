@@ -33,6 +33,7 @@ namespace Raven.Server.ServerWide.Commands
             public BlittableJsonReaderObject Document;
             public string ChangeVector;
             public long Index;
+            public string Error;
 
             public static ClusterTransactionDataCommand FromCommandData(BatchRequestParser.CommandData command)
             {
@@ -59,7 +60,8 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(Id)] = Id,
                     [nameof(Index)] = Index,
                     [nameof(ChangeVector)] = ChangeVector,
-                    [nameof(Document)] = Document?.Clone(context)
+                    [nameof(Document)] = Document?.Clone(context),
+                    [nameof(Error)] = Error
                 };
             }
         }
@@ -146,11 +148,11 @@ namespace Raven.Server.ServerWide.Commands
                 throw new RachisApplyException($"Document id {command.Id} cannot end with '|' or '{identityPartsSeparator}' as part of cluster transaction");
         }
 
-        public List<string> ExecuteCompareExchangeCommands(ClusterOperationContext context, long index, Table items)
+        public List<string> ExecuteCompareExchangeCommands(string dbTopologyId, ClusterOperationContext context, long index, Table items)
         {
             if (DisableAtomicDocumentWrites == false)
             {
-                EnsureAtomicDocumentWrites(context, items, index);
+                EnsureAtomicDocumentWrites(dbTopologyId, context, items, index);
             }
             if (ClusterCommands == null || ClusterCommands.Count == 0)
                 return null;
@@ -166,6 +168,10 @@ namespace Raven.Server.ServerWide.Commands
                         var put = new AddOrUpdateCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Document, clusterCommand.Index, context, null);
                         if (put.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
+                            if(clusterCommand.Error != null)
+                            {
+                                errors.Add(clusterCommand.Error);
+                            }
                             errors.Add(
                                 $"Concurrency check failed for putting the key '{clusterCommand.Id}'. Requested index: {clusterCommand.Index}, actual index: {current}");
                             continue;
@@ -176,6 +182,10 @@ namespace Raven.Server.ServerWide.Commands
                         var delete = new RemoveCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Index, context, null);
                         if (delete.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
+                            if (clusterCommand.Error != null)
+                            {
+                                errors.Add(clusterCommand.Error);
+                            }
                             errors.Add($"Concurrency check failed for deleting the key '{clusterCommand.Id}'. Requested index: {clusterCommand.Index}, actual index: {current}");
                             continue;
                         }
@@ -201,27 +211,30 @@ namespace Raven.Server.ServerWide.Commands
             return null;
         }
 
-        private unsafe void EnsureAtomicDocumentWrites(ClusterOperationContext context, Table items, long index)
+        private unsafe void EnsureAtomicDocumentWrites(string dbTopologyId, ClusterOperationContext context, Table items, long index)
         {
             if (SerializedDatabaseCommands == null)
                 return;
             if(SerializedDatabaseCommands.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray commands) == false)
                 return;
-            
+
+
             ClusterCommands ??= new List<ClusterTransactionDataCommand>();
             foreach (BlittableJsonReaderObject dbCmd in commands)
             {
                 var cmdType = dbCmd[nameof(ClusterTransactionDataCommand.Type)].ToString();
                 var docId = dbCmd[nameof(ClusterTransactionDataCommand.Id)].ToString();
-                var atomicGuardKey = "rvn-atomic-guard-" + docId;
+                var atomicGuardKey = GetAtomicGuardKey(docId);
                 var document = (BlittableJsonReaderObject)dbCmd[nameof(ClusterTransactionDataCommand.Document)];
                 switch (cmdType)
                 {
                     case nameof(CommandType.PUT):
+                        BlittableJsonReaderObject clusterTransactionIndex = null;
                         if (document.TryGetWithoutThrowingOnError(Constants.Documents.Metadata.Key,
                                 out BlittableJsonReaderObject metadata) == false ||
                             metadata.TryGetWithoutThrowingOnError(Constants.Documents.Metadata.ClusterTransactionIndex,
-                                out long putIndex) == false)
+                                out clusterTransactionIndex) == false ||
+                            clusterTransactionIndex.TryGet(dbTopologyId, out long putIndex) == false)
                         {
                             putIndex = 0; // new cmp xchg entry, so no need to take an action 
                         }
@@ -231,25 +244,44 @@ namespace Raven.Server.ServerWide.Commands
                             Type = CommandType.CompareExchangePUT,
                             Id = atomicGuardKey,
                             Index = putIndex,
-                            Document = context.ReadObject(new DynamicJsonValue {["Id"] = docId}, "cmp-xchg-content")
+                            Document = context.ReadObject(new DynamicJsonValue { ["Id"] = docId }, "cmp-xchg-content"),
+                            Error = $"Guard compare exchange value '{atomicGuardKey}' index does not match '{Constants.Documents.Metadata.Key}'.'{Constants.Documents.Metadata.ClusterTransactionIndex}'.'{dbTopologyId}' on {docId}"
                         });
                         if (metadata != null) // just to be on the safe side, should never happen
                         {
-                            metadata.Modifications = new DynamicJsonValue(metadata) {[Constants.Documents.Metadata.ClusterTransactionIndex] = index};
+                            if(clusterTransactionIndex != null)
+                            {
+                                clusterTransactionIndex.Modifications = new DynamicJsonValue(clusterTransactionIndex)
+                                {
+                                    [dbTopologyId] = index
+                                };
+                            }
+                            else
+                            {
+                                metadata.Modifications = new DynamicJsonValue(metadata)
+                                {
+                                    [Constants.Documents.Metadata.ClusterTransactionIndex] = new DynamicJsonValue
+                                    {
+                                        [dbTopologyId] = index
+                                    }
+                                };
+                            }
+                            
                         }
 
                         break;
                     case nameof(CommandType.DELETE):
                         if (document == null ||
                             document.TryGetWithoutThrowingOnError(Constants.Documents.Metadata.ClusterTransactionIndex,
-                                out long deleteIndex) == false)
+                                out BlittableJsonReaderObject clusterTransactionIndexDel) == false || 
+                            clusterTransactionIndexDel.TryGet(dbTopologyId, out long deleteIndex) == false)
                         {
                             // this can happen if the user tried to delete without first loading the document
                             // we can safely assume that such a blind write doesn't care about the state of the document
                             // and just use the current value
                             var cmpXngKey = CompareExchangeKey.GetStorageKey(DatabaseName, atomicGuardKey);
                             using var _ = Slice.From(context.Allocator, cmpXngKey, out var guardKeySlice);
-                            if(items.ReadByKey(guardKeySlice, out var reader))
+                            if (items.ReadByKey(guardKeySlice, out var reader))
                             {
                                 deleteIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
                             }
@@ -264,11 +296,17 @@ namespace Raven.Server.ServerWide.Commands
                             Type = CommandType.CompareExchangeDELETE,
                             Id = atomicGuardKey,
                             Index = deleteIndex,
-                            Document = context.ReadObject(new DynamicJsonValue {["Id"] = docId}, "cmp-xchg-content")
+                            Document = context.ReadObject(new DynamicJsonValue { ["Id"] = docId }, "cmp-xchg-content"),
+                            Error = $"Guard compare exchange value '{atomicGuardKey}' index does not match '{Constants.Documents.Metadata.Key}'.'{Constants.Documents.Metadata.ClusterTransactionIndex}'.'{dbTopologyId}' on {docId}"
                         });
                         break;
                 }
             }
+        }
+
+        public static unsafe string GetAtomicGuardKey(string docId)
+        {
+            return "rvn-atomic-guard/" + docId;
         }
 
         public unsafe void SaveCommandsBatch(ClusterOperationContext context, long index)
@@ -489,6 +527,7 @@ namespace Raven.Server.ServerWide.Commands
             var djv = base.ToJson(context);
             djv[nameof(ClusterCommands)] = new DynamicJsonArray(ClusterCommands.Select(x => x.ToJson(context)));
             djv[nameof(SerializedDatabaseCommands)] = SerializedDatabaseCommands?.Clone(context);
+            djv[nameof(DisableAtomicDocumentWrites)] = DisableAtomicDocumentWrites;
             if (SerializedDatabaseCommands == null && DatabaseCommands.Count > 0)
             {
                 var databaseCommands = new DynamicJsonValue

@@ -58,7 +58,7 @@ namespace Raven.Client.Documents.Session
 
         private BatchOptions _saveChangesOptions;
 
-        public bool DisableAtomicDocumentWritesInClusterWideTransaction;
+        internal readonly bool DisableAtomicDocumentWritesInClusterWideTransaction;
 
         public TransactionMode TransactionMode;
 
@@ -929,11 +929,32 @@ more responsive application.
             {
                 foreach (var prop in documentInfo.MetadataInstance.Keys)
                 {
-                    documentInfo.Metadata.Modifications[prop] = documentInfo.MetadataInstance[prop];
+                    var result = documentInfo.MetadataInstance[prop];
+                    if(result is IMetadataDictionary md)
+                    {
+                        result = HandleDictionaryObject(md);
+                    }
+                    documentInfo.Metadata.Modifications[prop] =  result;
                 }
             }
 
             return true;
+        }
+
+        private static object HandleDictionaryObject(IMetadataDictionary md)
+        {
+            var djv = new DynamicJsonValue();
+            foreach (var item in md)
+            {
+                var v = item.Value;
+                if(v is IMetadataDictionary nested)
+                {
+                    RuntimeHelpers.EnsureSufficientExecutionStack();
+                    v = HandleDictionaryObject(nested);
+                }
+                djv[item.Key] = v;
+            }
+            return djv;
         }
 
         private void PrepareForCreatingRevisionsFromIds(SaveChangesData result)

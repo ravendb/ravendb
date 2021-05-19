@@ -62,6 +62,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                         if (prop.Name != Constants.Documents.Metadata.Collection &&
                             prop.Name != Constants.Documents.Metadata.Expires &&
                             prop.Name != Constants.Documents.Metadata.Refresh &&
+                            prop.Name != Constants.Documents.Metadata.ClusterTransactionIndex &&
                             prop.Name != Constants.Documents.Metadata.Edges)
                             continue; // system property, ignoring it
                     }
@@ -277,10 +278,13 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                     WriteDictionary(iDictionary);
                     break;
                 case DynamicJsonValue val:
+                    _manualBlittableJsonDocumentBuilder.StartWriteObject();
                     foreach (var prop in val.Properties)
                     {
+                        _manualBlittableJsonDocumentBuilder.WritePropertyName(prop.Name);
                         WritePropertyValue(prop.Name, prop.Value);
                     }
+                    _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
                     break;
                 case IEnumerable enumerable:
                     _manualBlittableJsonDocumentBuilder.StartWriteArray();

@@ -19,6 +19,8 @@ using Raven.Server.Documents.Replication;
 using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Documents
 {
@@ -51,6 +53,57 @@ namespace Raven.Server.Documents
             using (doc.Data)
             {
                 PutDocument(context, docId, expectedChangeVector: null, document: doc.Data, nonPersistentFlags: type.ResolveConflictFlag);
+            }
+        }
+
+        private struct CompareClusterTransactionId
+        {
+            private readonly ServerStore _serverStore;
+            private readonly DocumentPutAction _parent;
+            private readonly string _id;
+            private long? _expectedClusterIndex;
+            bool _validated;
+
+            public CompareClusterTransactionId(DocumentPutAction parent, string id)
+            {
+                _serverStore = parent._documentDatabase.ServerStore;
+                _parent = parent;
+                _id = id;
+                _expectedClusterIndex = null;
+                _validated = false;
+            }
+
+            public void ValidateDocument(BlittableJsonReaderObject doc)
+            {
+                if (_validated) 
+                    return; // already validated the new document
+
+                if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                   metadata.TryGet(Constants.Documents.Metadata.ClusterTransactionIndex, out BlittableJsonReaderObject clustIndex) &&
+                   clustIndex.TryGet(_parent._documentDatabase.DatabaseGroupId, out long clusterTransactionIndex))
+                {
+                    _validated = true;
+                    long index;
+                    if (_expectedClusterIndex == null)
+                    {
+                        using var _ = _serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext clusterContext);
+                        clusterContext.OpenReadTransaction();
+                        var guardId = CompareExchangeKey.GetStorageKey(_parent._documentDatabase.Name, ClusterTransactionCommand.GetAtomicGuardKey(_id));
+                        BlittableJsonReaderObject val;
+                        (index, val) = _serverStore.Cluster.GetCompareExchangeValue(clusterContext, guardId);
+                        _expectedClusterIndex = index;
+                    }
+                    else
+                    {
+                        index = _expectedClusterIndex.Value;
+                    }
+
+                    if(index != clusterTransactionIndex)
+                    {
+                        throw new ConcurrencyException($"Cannot PUT document '{_id}' because its '{Constants.Documents.Metadata.Key}'.'{Constants.Documents.Metadata.ClusterTransactionIndex}'.'{_parent._documentDatabase.DatabaseGroupId}' is set to {clusterTransactionIndex} but the compare exchange guard ('{ClusterTransactionCommand.GetAtomicGuardKey(_id)}') is set to {_expectedClusterIndex}");
+                    }
+                }
+                
             }
         }
 
@@ -88,6 +141,8 @@ namespace Raven.Server.Documents
 
                     table.ReadByKey(lowerId, out oldValue);
                 }
+                var compareClusterTransaction = new CompareClusterTransactionId(this, id);
+                compareClusterTransaction.ValidateDocument(document);
 
                 BlittableJsonReaderObject oldDoc = null;
                 string oldChangeVector = "";
@@ -116,6 +171,8 @@ namespace Raven.Server.Documents
                     var oldCollectionName = _documentsStorage.ExtractCollectionName(context, oldDoc);
                     if (oldCollectionName != collectionName)
                         ThrowInvalidCollectionNameChange(id, oldCollectionName, collectionName);
+
+                    compareClusterTransaction.ValidateDocument(oldDoc);
 
                     var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
 

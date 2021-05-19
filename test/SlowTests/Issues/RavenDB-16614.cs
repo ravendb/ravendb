@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FastTests;
@@ -56,8 +57,9 @@ namespace SlowTests.Issues
             {
                 var arava = await session.LoadAsync<User>("users/arava");
                 var metadata = session.Advanced.GetMetadataFor(arava);
-                var txid = (long)metadata[Constants.Documents.Metadata.ClusterTransactionIndex];
-                var guard = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<object>("rvn-atomic-guard-users/arava");
+                var cti = (IMetadataDictionary)metadata[Constants.Documents.Metadata.ClusterTransactionIndex];
+                var txid = cti[cti.Keys.Single()];
+                var guard = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<object>("rvn-atomic-guard/users/arava");
                 Assert.Equal(txid, guard.Index);
             }
         }
@@ -78,13 +80,43 @@ namespace SlowTests.Issues
             {
                 var arava = await session.LoadAsync<User>("users/arava");
                 var metadata = session.Advanced.GetMetadataFor(arava);
-                var txid = (long)metadata[Constants.Documents.Metadata.ClusterTransactionIndex];
-                metadata[Constants.Documents.Metadata.ClusterTransactionIndex] = txid + 2;
+                var cti = (IMetadataDictionary)metadata[Constants.Documents.Metadata.ClusterTransactionIndex];
+                var key = cti.Keys.Single();
+                cti[key] = (long)(cti[key]) + 2;
                 arava.Name += "-modified";
                 var err = await Assert.ThrowsAsync<ConcurrencyException>(() => session.SaveChangesAsync());
                 Assert.Contains("Failed to execute cluster transaction due to the following issues: " +
-                    "Guard compare exchange value 'rvn-atomic-guard-users/arava' index does not match " +
-                    "'@metadata'.'@cluster-transaction-index' on users/arava", err.Message);
+                    "Guard compare exchange value 'rvn-atomic-guard/users/arava' index does not match " +
+                    "'@metadata'.'@cluster-transaction-index'", err.Message);
+            }
+        }
+
+        [Fact]
+        public async Task WillFailNormalTransactionThatDoesNotMatchAtomicGuardIndex()
+        {
+            var leader = await CreateRaftClusterAndGetLeader(3);
+            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                await session.StoreAsync(new User { Name = "arava" }, "users/arava");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { 
+                TransactionMode = TransactionMode.SingleNode // important, NOT a cluster wide transaction
+            }))
+            {
+                var arava = await session.LoadAsync<User>("users/arava");
+                var metadata = session.Advanced.GetMetadataFor(arava);
+                var cti = (IMetadataDictionary)metadata[Constants.Documents.Metadata.ClusterTransactionIndex];
+                var key = cti.Keys.Single();
+                cti[key] = (long)(cti[key]) + 2;
+                arava.Name += "-modified";
+                
+                var err = await Assert.ThrowsAsync<ConcurrencyException>(() => session.SaveChangesAsync());
+                Assert.Contains("Cannot PUT document 'users/arava' because its '@metadata'.'@cluster-transaction-index'", err.Message);
+                Assert.Contains("but the compare exchange guard ('rvn-atomic-guard/users/arava') is set to", err.Message);
             }
         }
 
@@ -99,7 +131,7 @@ namespace SlowTests.Issues
                 await session.StoreAsync(new User { Name = "arava" }, "users/arava");
                 await session.SaveChangesAsync();
             }
-
+            WaitForUserToContinueTheTest(store);
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 session.Delete("users/arava");
@@ -110,7 +142,7 @@ namespace SlowTests.Issues
             {
                 var arava = await session.LoadAsync<User>("users/arava");
                 Assert.Null(arava);
-                var guard = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<object>("rvn-atomic-guard-users/arava");
+                var guard = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<object>("rvn-atomic-guard/users/arava");
                 Assert.Null(guard);
             }
         }
