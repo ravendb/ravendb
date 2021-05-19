@@ -30,7 +30,7 @@ namespace FastTests.Server
             var threadsInfo = threadsUsage.Calculate();
             var threadNames = threadsInfo.List.Select(ti => ti.Name).OrderBy(n => n).ToArray();
 
-            RavenTestHelper.AssertAll(() => string.Join('\n', $"\"{threadNames}\""),
+            RavenTestHelper.AssertAll(() => string.Join('\n', threadNames.Select(s => $"\"{s}\"")),
                 () => AssertContains(index1._indexingThread.Name),
                 () => AssertContains(index2._indexingThread.Name),
                 () => AssertContains(index3._indexingThread.Name));
