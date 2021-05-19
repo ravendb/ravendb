@@ -1,9 +1,11 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import copyToClipboard = require("common/copyToClipboard");
+import viewModelBase = require("viewmodels/viewModelBase");
 
 class patchSyntax extends dialogViewModelBase {
 
     dialogContainer: Element;
+    clientVersion = viewModelBase.clientVersion;
 
     compositionComplete() {
         super.compositionComplete();
