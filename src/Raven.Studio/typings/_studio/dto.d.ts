@@ -599,17 +599,23 @@ interface adminLogsConfiguration extends Raven.Client.ServerWide.Operations.Logs
     CurrentMode: Sparrow.Logging.LogMode;
 }
 
+interface testEtlScriptResult {
+    DebugOutput: Array<string>;
+    TransformationErrors: Array<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>;
+}
+
 declare module Raven.Server.Documents.ETL.Providers.SQL.Test {
-    interface SqlEtlTestScriptResult {
-        DebugOutput: Array<string>;
-        TransformationErrors: Array<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>;
+    interface SqlEtlTestScriptResult extends testEtlScriptResult {
     }
 }
 
 declare module Raven.Server.Documents.ETL.Providers.Raven.Test {
-    interface RavenEtlTestScriptResult extends Raven.Server.Documents.ETL.Test.TestEtlScriptResult {
-        DebugOutput: Array<string>;
-        TransformationErrors: Array<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>;
+    interface RavenEtlTestScriptResult extends testEtlScriptResult {
+    }
+}
+
+declare module Raven.Server.Documents.ETL.Providers.OLAP.Test {
+    interface OlapEtlTestScriptResult extends testEtlScriptResult {
     }
 }
 

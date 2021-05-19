@@ -21,10 +21,203 @@ import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testPeriodicBackupCredentialsCommand");
 import getPeriodicBackupConfigCommand = require("commands/database/tasks/getPeriodicBackupConfigCommand");
+import database = require("models/resources/database");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
+import viewHelpers = require("common/helpers/view/viewHelpers");
+import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
+import documentMetadata = require("models/database/documents/documentMetadata");
+import document = require("models/database/documents/document");
+import testOlapEtlCommand = require("commands/database/tasks/testOlapEtlCommand");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import virtualGrid = require("widgets/virtualGrid/virtualGrid");
+
+class partitionTable {
+    key: string;
+    private dto: Raven.Server.Documents.ETL.Providers.OLAP.Test.OlapEtlTestScriptResult.PartitionItems;
+
+    height: number;
+    data: pagedResult<any>;
+    
+    gridController = ko.observable<virtualGridController<any>>();
+    
+    constructor(dto: Raven.Server.Documents.ETL.Providers.OLAP.Test.OlapEtlTestScriptResult.PartitionItems) {
+        this.key = dto.Key;
+        this.dto = dto;
+        
+        this.data = this.initData();
+        this.height = Math.max(200, Math.min(500, (this.data.totalResultCount + 2) * virtualGrid.rowHeightRegular));
+        
+        _.bindAll(this, "init");
+    }
+    
+    private generateColumns(): virtualColumn[] {
+        const columns = this.dto.Columns;
+        const width = Math.floor(Math.max(20, 100 / columns.length));
+        return columns.map(c => new textColumn<any>(this.gridController(), x => x[c.Name], c.Name + " (" + c.Type + ")", width + "%"));
+    }
+    
+    init() {
+        const grid = this.gridController();
+        grid.headerVisible(true);
+        grid.init(() => this.fetchData(), () => this.generateColumns());
+    }
+    
+    initData(): pagedResult<any> {
+        const itemsCount = this.dto.Columns[0].Values.length;
+
+        const items: any[] = [];
+
+        for (let i = 0; i < itemsCount; i++) {
+            const item: any = {};
+            this.dto.Columns.forEach(column => {
+                item[column.Name] = column.Values[i];
+            })
+            items.push(item);
+        }
+        
+        return {
+            totalResultCount: itemsCount,
+            items
+        }
+    }
+    
+    fetchData(): JQueryPromise<pagedResult<any>> {
+        return $.when(this.data);
+    }
+}
+
+class olapTaskTestMode {
+
+    documentId = ko.observable<string>();
+    docsIdsAutocompleteResults = ko.observableArray<string>([]);
+    db: KnockoutObservable<database>;
+    configurationProvider: () => Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration;
+
+    validationGroup: KnockoutValidationGroup;
+    validateParent: () => boolean;
+
+    testAlreadyExecuted = ko.observable<boolean>(false);
+
+    spinners = {
+        preview: ko.observable<boolean>(false),
+        test: ko.observable<boolean>(false)
+    };
+
+    loadedDocument = ko.observable<string>();
+    loadedDocumentId = ko.observable<string>();
+
+    testResults = ko.observableArray<partitionTable>([]);
+    debugOutput = ko.observableArray<string>([]);
+    transformationErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);
+
+    warningsCount = ko.pureComputed(() => this.transformationErrors().length);
+
+    constructor(db: KnockoutObservable<database>, validateParent: () => boolean,
+                configurationProvider: () => Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration) {
+        this.db = db;
+        this.validateParent = validateParent;
+        this.configurationProvider = configurationProvider;
+
+        _.bindAll(this, "onAutocompleteOptionSelected");
+    }
+
+    initObservables() {
+        this.documentId.extend({
+            required: true
+        });
+
+        this.documentId.throttle(250).subscribe(item => {
+            if (!item) {
+                return;
+            }
+
+            new getDocumentsMetadataByIDPrefixCommand(item, 10, this.db())
+                .execute()
+                .done(results => {
+                    this.docsIdsAutocompleteResults(results.map(x => x["@metadata"]["@id"]));
+                });
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            documentId: this.documentId
+        });
+    }
+
+    onAutocompleteOptionSelected(option: string) {
+        this.documentId(option);
+        this.previewDocument();
+    }
+
+    previewDocument() {
+        const spinner = this.spinners.preview;
+        const documentId: KnockoutObservable<string> = this.documentId;
+
+        spinner(true);
+
+        viewHelpers.asyncValidationCompleted(this.validationGroup)
+            .then(() => {
+                if (viewHelpers.isValid(this.validationGroup)) {
+                    new getDocumentWithMetadataCommand(documentId(), this.db())
+                        .execute()
+                        .done((doc: document) => {
+                            const docDto = doc.toDto(true);
+                            const metaDto = docDto["@metadata"];
+                            documentMetadata.filterMetadata(metaDto);
+                            const text = JSON.stringify(docDto, null, 4);
+                            this.loadedDocument(Prism.highlight(text, (Prism.languages as any).javascript));
+                            this.loadedDocumentId(doc.getId());
+
+                            $('.test-container a[href="#documentPreview"]').tab('show');
+                        }).always(() => spinner(false));
+                } else {
+                    spinner(false);
+                }
+            });
+    }
+
+    runTest() {
+        const testValid = viewHelpers.isValid(this.validationGroup, true);
+        const parentValid = this.validateParent();
+
+        if (testValid && parentValid) {
+            this.spinners.test(true);
+
+            const dto: Raven.Server.Documents.ETL.Providers.OLAP.Test.TestOlapEtlScript = {
+                DocumentId: this.documentId(),
+                Configuration: this.configurationProvider(),
+            };
+
+            eventsCollector.default.reportEvent("olap-etl", "test-replication");
+
+            new testOlapEtlCommand(this.db(), dto)
+                .execute()
+                .done((testResult: Raven.Server.Documents.ETL.Providers.OLAP.Test.OlapEtlTestScriptResult) => {
+                    this.testResults(testResult.ItemsByPartition.map(x => new partitionTable(x)));
+                    this.debugOutput(testResult.DebugOutput);
+                    this.transformationErrors(testResult.TransformationErrors);
+
+                    if (this.warningsCount()) {
+                        $('.test-container a[href="#warnings"]').tab('show');
+                    } else {
+                        $('.test-container a[href="#testResults"]').tab('show');
+                    }
+
+                    this.testAlreadyExecuted(true);
+                })
+                .always(() => this.spinners.test(false));
+        }
+    }
+}
 
 class editOlapEtlTask extends viewModelBase {
 
     static readonly scriptNamePrefix = "Script_";
+    enableTestArea = ko.observable<boolean>(false);
+
+    test: olapTaskTestMode;
+    
     static isApplyToAll = ongoingTaskOlapEtlTransformationModel.isApplyToAll;
     
     editedOlapEtl = ko.observable<ongoingTaskOlapEtlEditModel>();
@@ -64,6 +257,7 @@ class editOlapEtlTask extends viewModelBase {
         super();
         this.bindToCurrentInstance("useConnectionString",
                                    "testCredentials",
+                                   "toggleTestArea",
                                    "removeTransformationScript",
                                    "cancelEditedTransformation",
                                    "cancelEditedOlapTable",
@@ -217,15 +411,11 @@ class editOlapEtlTask extends viewModelBase {
             return dto;
         };
         
-        const connectionStringProvider = () => {
-            if (this.createNewConnectionString()) {
-                return this.newConnectionString().toDto();
-            } else {
-                return null;
-            }
-        };
+        this.test = new olapTaskTestMode(this.activeDatabase, () => this.isValid(this.editedTransformationScriptSandbox().validationGroup), dtoProvider);
 
         this.initDirtyFlag();
+        
+        this.test.initObservables();
     }
     
     private initDirtyFlag() {
@@ -388,6 +578,23 @@ class editOlapEtlTask extends viewModelBase {
         const viewmodel = new transformationScriptSyntax("Olap");
         app.showBootstrapDialog(viewmodel);
     }
+    
+    toggleTestArea() {
+        if (!this.enableTestArea()) {
+            let hasErrors = false;
+
+            // validate global form - but only 'enterTestModeValidationGroup'
+            if (!this.isValid(this.editedOlapEtl().enterTestModeValidationGroup)) {
+                hasErrors = true;
+            }
+            
+            if (!hasErrors) {
+                this.enableTestArea(true);
+            }
+        } else {
+            this.enableTestArea(false);
+        }
+    }
 
     /********************************************/
     /*** Transformation Script Actions Region ***/
@@ -401,9 +608,11 @@ class editOlapEtlTask extends viewModelBase {
     cancelEditedTransformation() {
         this.editedTransformationScriptSandbox(null);
         this.transformationScriptSelectedForEdit(null);
+        this.enableTestArea(false);
     }
     
     saveEditedTransformation() {
+        this.enableTestArea(false);
         const transformation = this.editedTransformationScriptSandbox();
         
         if (!this.isValid(transformation.validationGroup)) {

@@ -13,6 +13,10 @@ import virtualGridSelection = require("widgets/virtualGrid/virtualGridSelection"
 import shiftSelectionPreview = require("widgets/virtualGrid/shiftSelectionPreview");
 
 class virtualGrid<T> {
+    
+    static readonly rowHeightRegular = 36;
+    static readonly rowHeightCondensed = 24;
+    
 
     private items = new Map<number, T>(); // The items loaded asynchronously.
     private totalItemCount: number | null = null;
@@ -53,6 +57,7 @@ class virtualGrid<T> {
     private disableStripes: boolean;
     private rowHeight: number;
     private customRowClassProvider: (item: T) => string[] = null;
+    private readonly afterRenderCallback: () => void;
 
     private static readonly minItemFetchCount = 100;
     private static readonly viewportSelector = ".viewport";
@@ -60,7 +65,7 @@ class virtualGrid<T> {
     private static readonly viewportScrollerSelector = ".viewport-scroller";
     private static readonly minColumnWidth = 20;
 
-    constructor(params: { controller: KnockoutObservable<virtualGridController<T>>, emptyTemplate: string , condensed: boolean, disableStripes: boolean }) {
+    constructor(params: { controller: KnockoutObservable<virtualGridController<T>>, emptyTemplate: string , condensed: boolean, disableStripes: boolean, afterRender?: () => void }) {
         this.gridId = _.uniqueId("vg_");
 
         this.refreshSelection();
@@ -77,10 +82,12 @@ class virtualGrid<T> {
         
         if (params.condensed) {
             this.condensed = true;
-            this.rowHeight = 24;
+            this.rowHeight = virtualGrid.rowHeightCondensed;
         } else {
-            this.rowHeight = 36;
+            this.rowHeight = virtualGrid.rowHeightRegular;
         }
+        
+        this.afterRenderCallback = params.afterRender;
         
         this.disableStripes = params ? params.disableStripes : false;
     }
@@ -118,6 +125,7 @@ class virtualGrid<T> {
     // Called by Knockout once the grid has been rendered.
     afterRender() {
         this.initializeUIElements();
+        this.afterRenderCallback?.();
     }
 
     private initializeUIElements() {

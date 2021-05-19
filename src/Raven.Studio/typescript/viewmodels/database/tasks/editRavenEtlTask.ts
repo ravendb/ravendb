@@ -88,7 +88,7 @@ class ravenTaskTestMode {
         });
 
         this.validationGroup = ko.validatedObservable({
-            documentId : this.documentId
+            documentId: this.documentId
         });
     }
 
@@ -100,8 +100,6 @@ class ravenTaskTestMode {
     previewDocument() {
         const spinner = this.spinners.preview;
         const documentId: KnockoutObservable<string> = this.documentId;
-        const documentIdValidationGroup = this.validationGroup;
-        const db = this.db;
 
         spinner(true);
 

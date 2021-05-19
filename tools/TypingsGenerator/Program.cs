@@ -53,6 +53,7 @@ using Raven.Server.Dashboard;
 using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
@@ -141,6 +142,7 @@ namespace TypingsGenerator
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(BlittableJsonReaderArray))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(DynamicJsonArray))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(IEnumerable))
+                .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(IList))
                 .WithTypeMapping(TsPrimitive.Any, typeof(TaskCompletionSource<object>))
                 .WithTypeMapping(TsPrimitive.Any, typeof(BlittableJsonReaderObject));
 
@@ -445,6 +447,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OngoingTaskOlapEtlListView));
             scripter.AddType(typeof(OlapEtlConfiguration));
             scripter.AddType(typeof(OlapEtlTable));
+            scripter.AddType(typeof(OlapEtlTestScriptResult));
+            scripter.AddType(typeof(TestOlapEtlScript));
             
             // connection strings
             scripter.AddType(typeof(ConnectionString));
