@@ -63,6 +63,32 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public async Task WillGetGoodErrorOnMismatchClusterTxId()
+        {
+            var leader = await CreateRaftClusterAndGetLeader(3);
+            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                await session.StoreAsync(new User { Name = "arava" }, "users/arava");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var arava = await session.LoadAsync<User>("users/arava");
+                var metadata = session.Advanced.GetMetadataFor(arava);
+                var txid = (long)metadata[Constants.Documents.Metadata.ClusterTransactionIndex];
+                metadata[Constants.Documents.Metadata.ClusterTransactionIndex] = txid + 2;
+                arava.Name += "-modified";
+                var err = await Assert.ThrowsAsync<ConcurrencyException>(() => session.SaveChangesAsync());
+                Assert.Contains("Failed to execute cluster transaction due to the following issues: " +
+                    "Guard compare exchange value 'rvn-atomic-guard-users/arava' index does not match " +
+                    "'@metadata'.'@cluster-transaction-index' on users/arava", err.Message);
+            }
+        }
+
+        [Fact]
         public async Task CanDeleteCmpXchgValue()
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
