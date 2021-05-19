@@ -2,17 +2,17 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using Sparrow.Server;
+using Sparrow.Platform;
 
-namespace Voron.Data.Tables
+namespace Sparrow.Utils
 {
-    public static unsafe class ZstdLib
+    internal static unsafe class ZstdLib
     {
         private const string LIBZSTD = @"libzstd";
 
         static ZstdLib()
         {
-            DynamicNativeLibraryResolver.Register(typeof(ZstdLib).Assembly,LIBZSTD);
+            DynamicNativeLibraryResolver.Register(typeof(ZstdLib).Assembly, LIBZSTD);
         }
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
@@ -21,10 +21,10 @@ namespace Voron.Data.Tables
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern ulong ZSTD_getFrameContentSize(void* src, UIntPtr srcSize);
-        
+
         const ulong ZSTD_CONTENTSIZE_UNKNOWN = unchecked(0UL - 1);
         const ulong ZSTD_CONTENTSIZE_ERROR = unchecked(0UL - 2);
-        
+
         public static int GetDecompressedSize(ReadOnlySpan<byte> compressed)
         {
             fixed (byte* srcPtr = compressed)
@@ -55,6 +55,10 @@ namespace Voron.Data.Tables
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern void* ZSTD_createDCtx();
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        private static extern void* ZSTD_createDStream();
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        private static extern UIntPtr ZSTD_freeDStream(void* dctx);
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern UIntPtr ZSTD_freeDCtx(void* dctx);
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
@@ -70,25 +74,60 @@ namespace Voron.Data.Tables
         public static extern UIntPtr ZSTD_compress_usingCDict(void* ctx, byte* dst, UIntPtr dstCapacity, byte* src, UIntPtr srcSize, void* cdict);
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
-        public static extern UIntPtr ZSTD_decompress_usingDDict(void* ctx, byte* dst, UIntPtr dstCapacity, byte* src, UIntPtr srcSize, void * ddict);
-        
+        public static extern UIntPtr ZSTD_decompress_usingDDict(void* ctx, byte* dst, UIntPtr dstCapacity, byte* src, UIntPtr srcSize, void* ddict);
+
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern void* ZSTD_createCDict(byte* dictBuffer, UIntPtr dictSize, int compressionLevel);
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern UIntPtr ZSTD_freeCDict(void* CDict);
-        
-        
+
+
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern void* ZSTD_createDDict(void* dictBuffer, UIntPtr dictSize);
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
-        public static extern UIntPtr   ZSTD_freeDDict(void* ddict);
+        public static extern UIntPtr ZSTD_freeDDict(void* ddict);
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
-        public static extern UIntPtr  ZDICT_trainFromBuffer(byte* dictBuffer, UIntPtr dictBufferCapacity, byte* samplesBuffer, UIntPtr* samplesSizes, uint nbSamples);
-        
+        public static extern UIntPtr ZDICT_trainFromBuffer(byte* dictBuffer, UIntPtr dictBufferCapacity, byte* samplesBuffer, UIntPtr* samplesSizes, uint nbSamples);
+
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        public static extern UIntPtr ZSTD_compressStream2(void* ctx, ZSTD_outBuffer* output, ZSTD_inBuffer* input, ZSTD_EndDirective directive);
+
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        public static extern UIntPtr ZSTD_decompressStream(void* ctx, ZSTD_outBuffer* output, ZSTD_inBuffer* input);
+
+        public struct ZSTD_inBuffer
+        {
+            public void* Source;
+            public UIntPtr Size;
+            public UIntPtr Position;
+        }
+
+        public struct ZSTD_outBuffer
+        {
+            public void* Source;
+            public UIntPtr Size;
+            public UIntPtr Position;
+        }
+
+        public enum ZSTD_EndDirective
+        {
+            ZSTD_e_continue = 0,
+            ZSTD_e_flush = 1,
+            ZSTD_e_end = 2
+        }
+
+        public static void AssertZstdSuccess(UIntPtr v)
+        {
+            if (ZSTD_isError(v) == 0)
+                return;
+
+            throw new InvalidOperationException(Marshal.PtrToStringAnsi(ZSTD_getErrorName(v)));
+        }
+
         private static void AssertSuccess(UIntPtr v, CompressionDictionary dictionary)
         {
-            if (ZSTD_isError(v) == 0) 
+            if (ZSTD_isError(v) == 0)
                 return;
 
             string ptrToStringAnsi = Marshal.PtrToStringAnsi(ZSTD_getErrorName(v));
@@ -99,68 +138,92 @@ namespace Voron.Data.Tables
             throw new InvalidOperationException(ptrToStringAnsi);
         }
 
-        private class CompressContext
+        public class CompressContext : IDisposable
         {
-            public void* Compression;
-            public void* Decompression;
+            private void* _sdtx;
+            public void* Streaming => _sdtx != null ? _sdtx : (_sdtx = CreateStreaming());
+            private void* _cctx;
+            public void* Compression => _cctx != null ? _cctx : (_cctx = CreateCompression());
+            private void* _dctx;
+            public void* Decompression => _dctx != null ? _dctx : (_dctx = CreateDecompression());
 
-            public CompressContext()
+            private void* CreateStreaming()
             {
-                Compression = ZSTD_createCCtx();
-                if (Compression == null)
+                var sdtx = ZSTD_createDStream();
+                if (sdtx == null)
                 {
-                    GC.SuppressFinalize(this);
                     throw new OutOfMemoryException("Unable to create compression context");
                 }
-                Decompression = ZSTD_createDCtx();
-                if (Decompression == null)
+                return sdtx;
+            }
+
+            private void* CreateCompression()
+            {
+                var cctx = ZSTD_createCCtx();
+                if (cctx == null)
                 {
-                    ZSTD_freeCCtx(Compression);
-                    GC.SuppressFinalize(this);
-                    Compression = null;
                     throw new OutOfMemoryException("Unable to create compression context");
+                }
+                return cctx;
+            }
+
+            private void* CreateDecompression()
+            {
+                var dctx = ZSTD_createDCtx();
+                if (dctx == null)
+                {
+                    throw new OutOfMemoryException("Unable to create compression context");
+                }
+                return dctx;
+            }
+
+            public void Dispose()
+            {
+                if (_cctx != null)
+                {
+                    ZSTD_freeCCtx(_cctx);
+                    _cctx = null;
                 }
 
+                if (_sdtx != null)
+                {
+                    ZSTD_freeDStream(_sdtx);
+                    _sdtx = null;
+                }
+
+                if (_dctx != null)
+                {
+                    ZSTD_freeDCtx(_dctx);
+                    _dctx = null;
+                }
+                GC.SuppressFinalize(this);
             }
 
             ~CompressContext()
             {
-                if (Compression != null)
-                {
-                    ZSTD_freeCCtx(Compression);
-                    Compression = null;
-                }
-
-                if (Decompression != null)
-                {
-                    ZSTD_freeDCtx(Decompression);
-                    Decompression = null;
-                }
+                Dispose();
             }
         }
 
         [ThreadStatic]
         private static CompressContext _threadCompressContext;
 
-        public static int Compress(ReadOnlySpan<byte> src, Span<byte> dst, CompressionDictionary dictionary)
+        public static int Compress(byte * src, int srcLen, byte* dst, int dstLen, CompressionDictionary dictionary)
         {
-            if(_threadCompressContext == null)
-                _threadCompressContext = new CompressContext();
+            _threadCompressContext ??= new CompressContext();
 
-            fixed (byte* srcPtr = src)
-            fixed (byte* dstPtr = dst)
             {
                 UIntPtr result;
 
                 if (dictionary == null || dictionary.Compression == null)
                 {
-                    result = ZSTD_compressCCtx(_threadCompressContext.Compression, dstPtr, (UIntPtr)dst.Length, 
-                        srcPtr, (UIntPtr)src.Length, 3);
+                    result = ZSTD_compressCCtx(_threadCompressContext.Compression, dst, (UIntPtr)dstLen,
+                        src, (UIntPtr)srcLen, 3);
                 }
                 else
                 {
-                    result = ZSTD_compress_usingCDict(_threadCompressContext.Compression, dstPtr,
-                        (UIntPtr)dst.Length, srcPtr, (UIntPtr)src.Length, dictionary.Compression);
+                    result = ZSTD_compress_usingCDict(_threadCompressContext.Compression, dst,
+                        (UIntPtr)dstLen, src, (UIntPtr)srcLen, dictionary.Compression);
                 }
 
                 AssertSuccess(result, dictionary);
@@ -170,14 +233,13 @@ namespace Voron.Data.Tables
 
         public static int Decompress(ReadOnlySpan<byte> src, Span<byte> dst, CompressionDictionary dictionary)
         {
-            if (_threadCompressContext == null)
-                _threadCompressContext = new CompressContext();
+            _threadCompressContext ??= new CompressContext();
 
             fixed (byte* srcPtr = src)
             fixed (byte* dstPtr = dst)
             {
                 UIntPtr result;
-                if(dictionary == null || dictionary.Compression == null)
+                if (dictionary == null || dictionary.Compression == null)
                 {
                     result = ZSTD_decompressDCtx(_threadCompressContext.Decompression, dstPtr, (UIntPtr)dst.Length, srcPtr, (UIntPtr)src.Length);
                 }
@@ -213,9 +275,12 @@ namespace Voron.Data.Tables
                 }
 
 #if DEBUG
-                var hash = stackalloc byte[32];
-                Sodium.crypto_generichash(hash, (UIntPtr)32, buffer, (ulong)size, null, UIntPtr.Zero);
-                DictionaryHash = Convert.ToBase64String(new ReadOnlySpan<byte>(hash, 32));
+                var hash = new byte[32];
+                fixed (byte* pHash = hash)
+                {
+                    Sodium.crypto_generichash(pHash, (UIntPtr)32, buffer, (ulong)size, null, UIntPtr.Zero);
+                }
+                DictionaryHash = Convert.ToBase64String(hash);
 #endif
 
                 Compression = ZSTD_createCDict(buffer, (UIntPtr)size, compressionLevel);
@@ -229,9 +294,9 @@ namespace Voron.Data.Tables
 
             public override string ToString()
             {
-                return "Dic #" + Id 
+                return "Dic #" + Id
 #if DEBUG
-					 + " - " + DictionaryHash
+                     + " - " + DictionaryHash
 #endif
 
 ;
@@ -265,8 +330,8 @@ namespace Voron.Data.Tables
         public static void Train(ReadOnlySpan<byte> plainTextBuffer, ReadOnlySpan<UIntPtr> sizes, ref Span<byte> output)
         {
             fixed (byte* textPtr = plainTextBuffer)
-            fixed(byte* outputPtr = output)
-            fixed(UIntPtr* sizesPtr = sizes )
+            fixed (byte* outputPtr = output)
+            fixed (UIntPtr* sizesPtr = sizes)
             {
                 var len = ZDICT_trainFromBuffer(outputPtr, (UIntPtr)output.Length, textPtr, sizesPtr, (uint)sizes.Length);
                 if (ZSTD_isError(len) != 0)

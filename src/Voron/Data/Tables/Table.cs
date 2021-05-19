@@ -7,6 +7,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.RawData;

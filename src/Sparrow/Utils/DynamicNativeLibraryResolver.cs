@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace Sparrow.Server
+namespace Sparrow.Utils
 {
-    public static class DynamicNativeLibraryResolver
+    internal static class DynamicNativeLibraryResolver
     {
         private static Dictionary<string, Func<string, string>> _registered = new Dictionary<string, Func<string, string>>();
         private static readonly HashSet<Assembly> _registeredAssemblies = new HashSet<Assembly>();

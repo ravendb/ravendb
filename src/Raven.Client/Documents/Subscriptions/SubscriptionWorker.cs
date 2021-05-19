@@ -243,6 +243,9 @@ namespace Raven.Client.Documents.Subscriptions
                         $"{_options.SubscriptionName}: TCP negotiation resulted with an invalid protocol version:{_supportedFeatures.ProtocolVersion}");
                 }
 
+                if (_supportedFeatures.DataCompression)
+                    _stream = new ReadWriteCompressedStream(_stream);
+                
                 using (var optionsJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, context))
                 {
                     await optionsJson.WriteJsonToAsync(_stream, token).ConfigureAwait(false);

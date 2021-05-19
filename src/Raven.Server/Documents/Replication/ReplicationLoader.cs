@@ -2,10 +2,15 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
@@ -32,6 +37,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
+using Sparrow.Compression;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -39,6 +45,7 @@ using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using static Raven.Server.Documents.Replication.ReplicationLoader;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -374,8 +381,8 @@ namespace Raven.Server.Documents.Replication
                     BlittableJsonDocumentBuilder.UsageMode.None, buffer))
                 {
                     initialRequest = JsonDeserializationServer.ReplicationInitialRequest(readerObject);
-                    }
                 }
+            }
 
             string[] allowedPaths = default;
             string pullDefinitionName = null;
@@ -389,15 +396,15 @@ namespace Raven.Server.Documents.Replication
                     if (header.AuthorizeInfo.AuthorizationFor == null)
                         throw new InvalidOperationException("Pull replication requires that the AuthorizationFor field will be set, but it wasn't provided");
 
-            PullReplicationDefinition pullReplicationDefinition;
-            using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
+                    PullReplicationDefinition pullReplicationDefinition;
+                    using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
                         pullReplicationDefinition = _server.Cluster.ReadPullReplicationDefinition(Database.Name, header.AuthorizeInfo.AuthorizationFor, ctx);
 
                         if (pullReplicationDefinition.Disabled)
                             throw new InvalidOperationException("The replication hub " + pullReplicationDefinition.Name + " is disabled and cannot be used currently");
-            }
+                    }
 
                     pullDefinitionName = header.AuthorizeInfo.AuthorizationFor;
 
@@ -1010,7 +1017,7 @@ namespace Raven.Server.Documents.Replication
                             ex.DelayReplicationFor = newDestinationEx.DelayReplicationFor;
                         }
                     }
-                    
+
                     continue;
                 }
 
@@ -1095,8 +1102,8 @@ namespace Raven.Server.Documents.Replication
 
                     i += 1;
                     externalReplications.Insert(i, other);
+                }
             }
-        }
         }
 
         private List<ExternalReplicationBase> GetMyNewDestinations(DatabaseRecord newRecord, List<ExternalReplicationBase> added)
@@ -1181,7 +1188,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 if (_log.IsOperationsEnabled)
                                 {
-                                    _log.Operations("Unexpected error during database deletion from replication loader",e);
+                                    _log.Operations("Unexpected error during database deletion from replication loader", e);
                                 }
                             }
                         }
@@ -1381,29 +1388,29 @@ namespace Raven.Server.Documents.Replication
                 {
                     case ExternalReplicationBase exNode:
                         {
-                    var database = exNode.ConnectionString.Database;
-                    if (node is PullReplicationAsSink sink)
-                    {
-                        return GetPullReplicationTcpInfo(sink, certificate, database);
-                    }
+                            var database = exNode.ConnectionString.Database;
+                            if (node is PullReplicationAsSink sink)
+                            {
+                                return GetPullReplicationTcpInfo(sink, certificate, database);
+                            }
 
-                    // normal external replication
-                    return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
-                }
+                            // normal external replication
+                            return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
+                        }
                     case InternalReplication internalNode:
-                {
-                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown))
-                    {
-                        cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
+                        {
+                            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown))
+                            {
+                                cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
                                 return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
                                     "Replication",
                             certificate, cts.Token);
-                    }
-                }
+                            }
+                        }
                     default:
-                throw new InvalidOperationException(
-                    $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
-            }
+                        throw new InvalidOperationException(
+                            $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
+                }
             }
             catch (Exception e)
             {
@@ -1433,7 +1440,7 @@ namespace Raven.Server.Documents.Replication
                         AlertType.Replication,
                         NotificationSeverity.Error);
 
-                        _server.NotificationCenter.Add(alert);
+                    _server.NotificationCenter.Add(alert);
                 }
 
                 var replicationPulse = new LiveReplicationPulsesCollector.ReplicationPulse
@@ -1937,6 +1944,7 @@ namespace Raven.Server.Documents.Replication
         {
             return Interlocked.Increment(ref _replicationStatsId);
         }
+
     }
 
     public class OutgoingReplicationFailureToConnectReporter : IReportOutgoingReplicationPerformance

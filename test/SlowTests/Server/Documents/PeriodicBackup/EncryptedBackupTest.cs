@@ -12,6 +12,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;

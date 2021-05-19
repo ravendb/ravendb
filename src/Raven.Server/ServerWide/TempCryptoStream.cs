@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using Sparrow.Server;
+using Sparrow.Platform;
 
 namespace Raven.Server.ServerWide
 {
@@ -301,6 +301,6 @@ namespace Raven.Server.ServerWide
 
         protected override void Dispose(bool disposing)
         {
+            }
         }
     }
-}

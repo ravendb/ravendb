@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Sparrow.Compression;
-using Sparrow.Server;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
 using Voron.Data;
@@ -12,6 +11,7 @@ using Voron.Exceptions;
 using Voron.Impl.Paging;
 using Constants = Voron.Global.Constants;
 using System.Linq;
+using Sparrow.Platform;
 using Voron.Impl.FileHeaders;
 
 namespace Voron.Impl.Journal
