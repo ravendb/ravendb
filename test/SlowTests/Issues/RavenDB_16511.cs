@@ -82,7 +82,7 @@ namespace SlowTests.Issues
 
                         Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)), "Index wasn't replaced");
 
-                        Assert.True(newIndex.Status == IndexRunningStatus.Running);
+                        Assert.True(SpinWait.SpinUntil(() => newIndex.Status == IndexRunningStatus.Running, TimeSpan.FromSeconds(10)), "newIndex.Status == IndexRunningStatus.Running");
                     }
 
                 }
