@@ -20,9 +20,10 @@ properties {
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
     $v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-    $msbuild = "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe"
     $nowarn = "1591 1573 1591 1701 1702 1705"
     
+	$global:msbuild = ""
+	
     $nuget = "$base_dir\.nuget\NuGet.exe"
     
     $global:is_pull_request = $FALSE
@@ -58,6 +59,11 @@ task Init -depends Verify40, Clean, NuGet {
     }
     New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
     New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
+	
+	$global:msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe"
+    if (!(Test-Path -Path $global:msbuild)) {
+        $global:msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe"
+    }
 }
 
 task Compile -depends Init, CompileHtml5 {
@@ -66,7 +72,7 @@ task Compile -depends Init, CompileHtml5 {
 
     Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 
-    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /p:VisualStudioVersion=12.0 /maxcpucount /verbosity:minimal
+    &"$global:msbuild" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /maxcpucount /verbosity:minimal
     
     Write-Host "msbuild exit code: $LastExitCode"
 
@@ -87,7 +93,7 @@ task CompileHtml5 {
     
     Write-Host "Compiling HTML5" -ForegroundColor Yellow
 
-    &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /p:VisualStudioVersion=12.0 /maxcpucount /verbosity:minimal
+    &"$global:msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /maxcpucount /verbosity:minimal
     
     Remove-Item $build_dir\Html5 -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
     Remove-Item $build_dir\Raven.Studio.Html5.zip -Force -ErrorAction SilentlyContinue | Out-Null
