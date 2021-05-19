@@ -840,6 +840,9 @@ namespace Raven.Server.Documents.Indexes
             using (context.OpenReadTransaction())
             using (var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name, out _ ))
             {
+                if (record == null)
+                    return null;
+
                 if (record.RollingIndexes == null)
                     return null;
 

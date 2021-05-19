@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -82,7 +83,17 @@ namespace SlowTests.Issues
 
                         Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)), "Index wasn't replaced");
 
-                        Assert.True(newIndex.Status == IndexRunningStatus.Running);
+                        var sp = Stopwatch.StartNew();
+                        while (sp.Elapsed < TimeSpan.FromSeconds(15))
+                        {
+                            if (newIndex.Status == IndexRunningStatus.Running)
+                                break;
+
+                            await Task.Delay(150);
+                        }
+
+
+                        Assert.True(newIndex.Status == IndexRunningStatus.Running,$"{newIndex.Status}");
                     }
 
                 }

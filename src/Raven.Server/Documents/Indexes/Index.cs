@@ -1284,6 +1284,11 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
+                    
+                    storageEnvironment.OnLogsApplied += HandleLogsApplied;
+
+                    SubscribeToChanges(DocumentDatabase);
+
                     if (IsRolling)
                     {
                         _rollingEvent.Wait(_indexingProcessCancellationTokenSource.Token);
@@ -1294,10 +1299,6 @@ namespace Raven.Server.Documents.Indexes
 
                         DocumentDatabase.IndexStore.ForTestingPurposes?.OnRollingIndexStart?.Invoke(this);
                     }
-
-                    storageEnvironment.OnLogsApplied += HandleLogsApplied;
-
-                    SubscribeToChanges(DocumentDatabase);
 
                     while (true)
                     {
