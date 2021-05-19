@@ -87,7 +87,7 @@ namespace SlowTests.Issues
                 var err = await Assert.ThrowsAsync<ConcurrencyException>(() => session.SaveChangesAsync());
                 Assert.Contains("Failed to execute cluster transaction due to the following issues: " +
                     "Guard compare exchange value 'rvn-atomic-guard/users/arava' index does not match " +
-                    "'@metadata'.'@cluster-transaction-index'", err.Message);
+                    "'@metadata'.'Cluster-Transaction-Index'", err.Message);
             }
         }
 
@@ -115,7 +115,7 @@ namespace SlowTests.Issues
                 arava.Name += "-modified";
                 
                 var err = await Assert.ThrowsAsync<ConcurrencyException>(() => session.SaveChangesAsync());
-                Assert.Contains("Cannot PUT document 'users/arava' because its '@metadata'.'@cluster-transaction-index'", err.Message);
+                Assert.Contains("Cannot PUT document 'users/arava' because its '@metadata'.'Cluster-Transaction-Index'", err.Message);
                 Assert.Contains("but the compare exchange guard ('rvn-atomic-guard/users/arava') is set to", err.Message);
             }
         }

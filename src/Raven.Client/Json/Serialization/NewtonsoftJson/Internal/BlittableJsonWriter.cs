@@ -62,7 +62,6 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                         if (prop.Name != Constants.Documents.Metadata.Collection &&
                             prop.Name != Constants.Documents.Metadata.Expires &&
                             prop.Name != Constants.Documents.Metadata.Refresh &&
-                            prop.Name != Constants.Documents.Metadata.ClusterTransactionIndex &&
                             prop.Name != Constants.Documents.Metadata.Edges)
                             continue; // system property, ignoring it
                     }
