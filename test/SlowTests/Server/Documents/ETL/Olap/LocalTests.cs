@@ -939,7 +939,7 @@ loadToOrders(partitionBy(key), o);
                 Assert.False(result.Disabled);
 
                 Assert.True(WaitForDatabaseToUnlock(store, timeout: TimeSpan.FromMilliseconds(1000), out var database));
-                
+
                 etlDone = WaitForEtl(database, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 baseline = new DateTime(2021, 1, 1);
@@ -1833,7 +1833,7 @@ loadToUsers(noPartition(), {
         [Fact]
         public async Task LocalOlapShouldCreateSubFoldersAccordingToPartition()
         {
-            var countries = new[] {"Argentina", "Brazil", "Israel", "Poland", "United States"};
+            var countries = new[] { "Argentina", "Brazil", "Israel", "Poland", "United States" };
 
             using (var store = GetDocumentStore())
             {
@@ -1881,7 +1881,9 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['month', orderDate.
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories)
+                    .OrderBy(x => x)
+                    .ToArray();
 
                 Assert.Equal(10, files.Length);
 
@@ -1895,7 +1897,10 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['month', orderDate.
                 di = new DirectoryInfo(subDirs[0]);
                 Assert.Equal("year=2020", di.Name);
 
-                var monthSubDirs = Directory.EnumerateDirectories(subDirs[0]).ToList();
+                var monthSubDirs = Directory.EnumerateDirectories(subDirs[0])
+                    .OrderBy(x => x)
+                    .ToList();
+
                 Assert.Equal(5, monthSubDirs.Count);
 
                 for (var index = 0; index < monthSubDirs.Count; index++)
@@ -1910,32 +1915,47 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['month', orderDate.
                     switch (month)
                     {
                         case 1:
-                            countryDirs = Directory.EnumerateDirectories(monthSubDir).ToList();
+                            countryDirs = Directory.EnumerateDirectories(monthSubDir)
+                                .OrderBy(x => x)
+                                .ToList();
+
                             Assert.Equal(3, countryDirs.Count);
                             Assert.Contains("country=Brazil", countryDirs[0]);
                             Assert.Contains("country=Israel", countryDirs[1]);
                             Assert.Contains("country=Poland", countryDirs[2]);
                             break;
                         case 2:
-                            countryDirs = Directory.EnumerateDirectories(monthSubDir).ToList();
+                            countryDirs = Directory.EnumerateDirectories(monthSubDir)
+                                .OrderBy(x => x)
+                                .ToList();
+
                             Assert.Equal(1, countryDirs.Count);
                             Assert.Contains("country=United States", countryDirs[0]);
                             break;
                         case 3:
-                            countryDirs = Directory.EnumerateDirectories(monthSubDir).ToList();
+                            countryDirs = Directory.EnumerateDirectories(monthSubDir)
+                                .OrderBy(x => x)
+                                .ToList();
+
                             Assert.Equal(3, countryDirs.Count);
                             Assert.Contains("country=Argentina", countryDirs[0]);
                             Assert.Contains("country=Brazil", countryDirs[1]);
                             Assert.Contains("country=Israel", countryDirs[2]);
                             break;
                         case 4:
-                            countryDirs = Directory.EnumerateDirectories(monthSubDir).ToList();
+                            countryDirs = Directory.EnumerateDirectories(monthSubDir)
+                                .OrderBy(x => x)
+                                .ToList();
+
                             Assert.Equal(2, countryDirs.Count);
                             Assert.Contains("country=Poland", countryDirs[0]);
                             Assert.Contains("country=United States", countryDirs[1]);
                             break;
                         case 5:
-                            countryDirs = Directory.EnumerateDirectories(monthSubDir).ToList();
+                            countryDirs = Directory.EnumerateDirectories(monthSubDir)
+                                .OrderBy(x => x)
+                                .ToList();
+
                             Assert.Equal(1, countryDirs.Count);
                             Assert.Contains("country=Argentina", countryDirs[0]);
                             break;
@@ -2004,7 +2024,9 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories)
+                    .OrderBy(x => x)
+                    .ToArray();
 
                 Assert.Equal(5, files.Length);
 
