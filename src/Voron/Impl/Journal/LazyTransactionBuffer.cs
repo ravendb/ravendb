@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow.Logging;
-using Sparrow.Server;
+using Sparrow.Platform;
 using Voron.Impl.Paging;
 using Constants = Voron.Global.Constants;
 

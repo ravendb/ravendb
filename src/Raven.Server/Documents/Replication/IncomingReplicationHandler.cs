@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Replication
         {
             if (pullReplicationParams?.AllowedPaths != null && pullReplicationParams.AllowedPaths.Length > 0)
                 _allowedPathsValidator = new AllowedPathsValidator(pullReplicationParams.AllowedPaths);
-            
+
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
             _connectionOptions = options;
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Replication
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(options.Operation, options.ProtocolVersion);
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString();
             _parent = parent;
-            
+
             _incomingPullReplicationParams = new ReplicationLoader.PullReplicationParams
             {
                 AllowedPaths = pullReplicationParams?.AllowedPaths,
@@ -383,7 +383,7 @@ namespace Raven.Server.Documents.Replication
                                 }
                             }
                         }
-                        
+
                         break;
 
                     default:
@@ -561,7 +561,7 @@ namespace Raven.Server.Documents.Replication
                         task = _database.TxMerger.Enqueue(replicationCommand);
                         //We need a new context here
                         using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext msgContext))
-                        using (var writer = new BlittableJsonTextWriter(msgContext, _connectionOptions.Stream))
+                        using (var writer = new BlittableJsonTextWriter(msgContext, _stream))
                         using (var msg = msgContext.ReadObject(new DynamicJsonValue
                         {
                             [nameof(ReplicationMessageReply.MessageType)] = "Processing"
@@ -627,20 +627,20 @@ namespace Raven.Server.Documents.Replication
             {
                 if (_allowedPathsValidator != null)
                 {
-                    if (_allowedPathsValidator.ShouldAllow(item) == false)
-                    {
-                        throw new InvalidOperationException("Attempted to replicate " + _allowedPathsValidator.GetItemInformation(item) +
-                                                            ", which is not allowed, according to the allowed paths policy. Replication aborted");
-                    }
-
-                    switch (item)
-                    {
-                        case AttachmentReplicationItem a:
-                            expectedAttachmentStreams ??= new HashSet<Slice>(SliceComparer.Instance);
-                            expectedAttachmentStreams.Add(a.Key);
-                            break;
-                    }
+                if (_allowedPathsValidator.ShouldAllow(item) == false)
+                {
+                    throw new InvalidOperationException("Attempted to replicate " + _allowedPathsValidator.GetItemInformation(item) +
+                                                        ", which is not allowed, according to the allowed paths policy. Replication aborted");
                 }
+
+                switch (item)
+                {
+                    case AttachmentReplicationItem a:
+                        expectedAttachmentStreams ??= new HashSet<Slice>(SliceComparer.Instance);
+                        expectedAttachmentStreams.Add(a.Key);
+                        break;
+                }
+            }
 
                 if (_preventIncomingSinkDeletions)
                 {

@@ -1,12 +1,10 @@
 ﻿using System;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Sparrow.Utils;
 using System.Threading;
-using Sparrow.Server.Platform;
-using Sparrow.Server.Utils;
 
-namespace Sparrow.Server
+namespace Sparrow.Platform
 {
     public static unsafe partial class Sodium
     {
@@ -235,7 +233,7 @@ namespace Sparrow.Server
 
             Interlocked.Add(ref _lockedBytes, (long)len);
             return 0;
-        }
+    }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Unlock(byte* addr, UIntPtr len)
@@ -246,6 +244,6 @@ namespace Sparrow.Server
 
             Interlocked.Add(ref _lockedBytes, -(long)len);
             return 0;
-        }
+}
     }
 }
