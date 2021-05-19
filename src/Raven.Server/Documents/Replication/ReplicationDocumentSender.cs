@@ -200,16 +200,15 @@ namespace Raven.Server.Documents.Replication
                         Context = documentsContext,
                         LastTransactionMarker = -1,
                         NumberOfItemsSent = 0,
-                        Size = 0L,
-                        MissingTxMarkers = new HashSet<short>()
+                        Size = 0L
                     };
 
                     using (_stats.Storage.Start())
-                    {                        
+                    {
                         foreach (var item in GetReplicationItems(_parent._database, documentsContext, _lastEtag, _stats))
                         {
                             _parent.CancellationToken.ThrowIfCancellationRequested();
-                            
+
                             if (replicationState.LastTransactionMarker != item.TransactionMarker)
                             {
                                 replicationState.Item = item;
@@ -226,32 +225,33 @@ namespace Raven.Server.Documents.Replication
                             _stats.Storage.RecordInputAttempt();
 
                             // here we add missing attachments in the same batch as the document that contains them without modifying the last etag or transaction boundary
-                            if (MissingAttachmentsInLastBatch && 
+                            if (MissingAttachmentsInLastBatch &&
                                 item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
                                 (item.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                             {
-                                var type = (item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision: AttachmentType.Document;
+                                var missingAttachmentBase64Hashes = replicationState.MissingAttachmentBase64Hashes ??= new HashSet<Slice>(SliceStructComparer.Instance);
+                                var type = (item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;
                                 foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, item.Id, item.ChangeVector))
                                 {
                                     // we need to filter attachments that are been sent in the same batch as the document
                                     if (attachment.Etag >= prevLastEtag)
                                     {
-                                        if (attachment.TransactionMarker != item.TransactionMarker)
-                                            replicationState.MissingTxMarkers.Add(attachment.TransactionMarker);
+                                        if (_replicaAttachmentStreams.ContainsKey(attachment.Base64Hash) == false)
+                                            missingAttachmentBase64Hashes.Add(attachment.Base64Hash);
 
                                         continue;
                                     }
 
                                     var stream = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(documentsContext, attachment.Base64Hash);
                                     attachment.Stream = stream;
-                                    AddReplicationItemToBatch(ReplicationBatchItem.From(attachment), _stats.Storage, skippedReplicationItemsInfo);
+                                    AddReplicationItemToBatch(ReplicationBatchItem.From(attachment), _stats.Storage, replicationState, skippedReplicationItemsInfo);
                                     replicationState.Size += attachment.Stream.Length;
                                 }
                             }
 
                             _lastEtag = item.Etag;
 
-                            if (AddReplicationItemToBatch(item, _stats.Storage, skippedReplicationItemsInfo) == false)
+                            if (AddReplicationItemToBatch(item, _stats.Storage, replicationState, skippedReplicationItemsInfo) == false)
                             {
                                 // this item won't be needed anymore
                                 DisposeReplicationItem(item);
@@ -276,7 +276,7 @@ namespace Raven.Server.Documents.Replication
                             replicationState.NumberOfItemsSent++;
                         }
                     }
-                    
+
                     if (_log.IsInfoEnabled)
                     {
                         if (skippedReplicationItemsInfo.SkippedItems > 0)
@@ -288,7 +288,7 @@ namespace Raven.Server.Documents.Replication
                         var msg = $"Found {_orderedReplicaItems.Count:#,#;;0} documents " +
                                   $"and {_replicaAttachmentStreams.Count} attachment's streams " +
                                   $"to replicate to {_parent.Node.FromString()}, ";
-                                 
+
                         var encryptionSize = documentsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
                         if (encryptionSize > 0)
                         {
@@ -340,7 +340,7 @@ namespace Raven.Server.Documents.Replication
                     }
 
                     MissingAttachmentsInLastBatch = false;
-                    
+
 
                     return true;
                 }
@@ -360,12 +360,13 @@ namespace Raven.Server.Documents.Replication
         {
             if (MissingAttachmentsInLastBatch)
             {
-                state.MissingTxMarkers.Remove(state.LastTransactionMarker);
-
-                if (state.MissingTxMarkers.Count != 0)
-                {
+                // we do have missing attachments but we haven't gathered yet any of the missing hashes
+                if (state.MissingAttachmentBase64Hashes == null)
                     return true;
-                }
+
+                // we do have missing attachments but we haven't included all of them in the batch yet
+                if (state.MissingAttachmentBase64Hashes.Count > 0)
+                    return true;
             }
 
             if (state.Delay.Ticks > 0)
@@ -394,8 +395,8 @@ namespace Raven.Server.Documents.Replication
             var totalSize =
                 state.Size + state.Context.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
 
-            if (state.MaxSizeToSend.HasValue && totalSize > state.MaxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
-                state.BatchSize.HasValue && state.NumberOfItemsSent > state.BatchSize.Value)
+            if (state.MaxSizeToSend.HasValue && totalSize >= state.MaxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
+                state.BatchSize.HasValue && state.NumberOfItemsSent >= state.BatchSize.Value)
             {
                 return false;
             }
@@ -458,7 +459,7 @@ namespace Raven.Server.Documents.Replication
         {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
                 item.Flags.HasFlag(DocumentFlags.FromClusterTransaction))
-            {                
+            {
                 // the other side doesn't support cluster transactions, stopping replication
                 var message = $"{_parent.Node.FromString()} found a document {item.Id} with flag `FromClusterTransaction` to replicate to {_parent.Destination.FromString()}, " +
                               "while we are in legacy mode (downgraded our replication version to match the destination). " +
@@ -536,7 +537,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private bool AddReplicationItemToBatch(ReplicationBatchItem item, OutgoingReplicationStatsScope stats,
+        private bool AddReplicationItemToBatch(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, ReplicationState state,
             SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Document ||
@@ -553,7 +554,7 @@ namespace Raven.Server.Documents.Replication
             if (item.Flags.Contain(DocumentFlags.Revision) || item.Flags.Contain(DocumentFlags.DeleteRevision))
             {
                 // we let pass all the conflicted/resolved revisions, since we keep them with their original change vector which might be `AlreadyMerged` at the destination.
-                if (item.Flags.Contain(DocumentFlags.Conflicted) || 
+                if (item.Flags.Contain(DocumentFlags.Conflicted) ||
                     item.Flags.Contain(DocumentFlags.Resolved) ||
                     (item.Flags.Contain(DocumentFlags.FromClusterTransaction)))
                 {
@@ -563,8 +564,8 @@ namespace Raven.Server.Documents.Replication
             }
 
             // destination already has it
-            if ( (MissingAttachmentsInLastBatch == false || item.Type != ReplicationBatchItem.ReplicationItemType.Attachment) && 
-                 _parent._database.DocumentsStorage.GetConflictStatus( item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
+            if ((MissingAttachmentsInLastBatch == false || item.Type != ReplicationBatchItem.ReplicationItemType.Attachment) &&
+                 _parent._database.DocumentsStorage.GetConflictStatus(item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
             {
                 stats.RecordChangeVectorSkip();
                 skippedReplicationItemsInfo.Update(item);
@@ -583,7 +584,12 @@ namespace Raven.Server.Documents.Replication
             }
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
+            {
                 _replicaAttachmentStreams[item.Base64Hash] = item;
+
+                if (MissingAttachmentsInLastBatch)
+                    state.MissingAttachmentBase64Hashes?.Remove(item.Base64Hash);
+            }
 
             Debug.Assert(item.Flags.Contain(DocumentFlags.Artificial) == false);
             _orderedReplicaItems.Add(item.Etag, item);
@@ -1042,7 +1048,7 @@ namespace Raven.Server.Documents.Replication
 
         private class ReplicationState
         {
-            public HashSet<short> MissingTxMarkers;
+            public HashSet<Slice> MissingAttachmentBase64Hashes;
             public TimeSpan Delay;
             public ReplicationBatchItem Item;
             public long CurrentNext;

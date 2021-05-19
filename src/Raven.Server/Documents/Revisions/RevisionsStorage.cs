@@ -378,7 +378,7 @@ namespace Raven.Server.Documents.Revisions
             if (configuration == null)
                 configuration = GetRevisionsConfiguration(collectionName.Name);
 
-            if (configuration.Disabled && 
+            if (configuration.Disabled &&
                 nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
                 return false;
 
@@ -406,7 +406,7 @@ namespace Raven.Server.Documents.Revisions
                 PutFromRevisionIfChangeVectorIsGreater(context, document, id, changeVector, lastModifiedTicks, flags, nonPersistentFlags);
 
                 if (table.VerifyKeyExists(changeVectorSlice)) // we might create
-                    return true; 
+                    return true;
 
                 flags |= DocumentFlags.Revision;
                 var etag = _database.DocumentsStorage.GenerateNextEtag();
@@ -504,7 +504,7 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 nonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
-                flags = flags.Strip(DocumentFlags.Revision);
+                flags = flags.Strip(DocumentFlags.Revision | DocumentFlags.DeleteRevision);
 
                 if (document == null)
                 {
