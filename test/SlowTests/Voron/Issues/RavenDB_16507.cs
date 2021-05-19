@@ -1,4 +1,7 @@
-﻿using FastTests.Voron;
+﻿using System;
+using System.Collections.Generic;
+using FastTests.Voron;
+using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -33,6 +36,48 @@ namespace SlowTests.Voron.Issues
 
                     tx.LowLevelTransaction.DataPager.AcquirePagePointer(tx.LowLevelTransaction, 0);
                 }
+            }
+        }
+
+        [Fact]
+        public void MustReleaseAllReferencesToPagerState()
+        {
+            var tempPager = Env.Options.CreateTemporaryBufferPager($"temp-{Guid.NewGuid()}", 16 * 1024);
+
+            var pagerStates = new HashSet<PagerState>();
+
+            try
+            {
+                using (var readTx = Env.ReadTransaction())
+                {
+                    var state1 = tempPager.PagerState;
+
+                    pagerStates.Add(state1);
+
+                    tempPager.EnsureContinuous(1000, 1);
+
+                    var state2 = tempPager.PagerState;
+
+                    pagerStates.Add(state2);
+
+                    tempPager.EnsureContinuous(3000, 1);
+
+                    readTx.LowLevelTransaction.EnsurePagerStateReference(ref state1);
+                    readTx.LowLevelTransaction.EnsurePagerStateReference(ref state2);
+                }
+            }
+            finally
+            {
+                pagerStates.Add(tempPager.PagerState);
+
+                tempPager.Dispose();
+            }
+
+            Assert.Equal(3, pagerStates.Count);
+
+            foreach (var state in pagerStates)
+            {
+                Assert.True(state._released);
             }
         }
     }
