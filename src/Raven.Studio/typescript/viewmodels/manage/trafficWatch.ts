@@ -273,7 +273,7 @@ class trafficWatch extends viewModelBase {
     }
     
     private formatSource(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, asHtml: boolean) {
-        const thumbprint = item.Thumbprint;
+        const thumbprint = item.CertificateThumbprint;
         const cert = thumbprint ? this.certificatesCache.get(thumbprint) : null;
         const certName = cert?.name;
         
