@@ -1449,7 +1449,7 @@ namespace Raven.Client.Http
                     if (nodeIndex.HasValue)
                         _nodeSelector.RestoreNodeIndex(nodeIndex.Value);
 
-                    break;
+                    return true;
 
                 default:
                     command.OnResponseFailure(response);

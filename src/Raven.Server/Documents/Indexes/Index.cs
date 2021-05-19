@@ -880,6 +880,12 @@ namespace Raven.Server.Documents.Indexes
 
         public void RollIfNeeded()
         {
+            if (_initialized == false)
+                return;
+
+            if (_indexingThread == null)
+                return;
+
             RaiseNotificationIfNeeded();
 
             GetPendingAndReplaceStatus(out var pending, out var shouldReplace);
@@ -890,10 +896,14 @@ namespace Raven.Server.Documents.Indexes
                     return; // need to wait for the replace to occur
             }
 
-            if (shouldReplace || pending == false || IsStaleInternal() == false)
+            if (shouldReplace || pending == false)
             {
                 _rollingEvent.Set();
-                _mre?.Set(ignoreThrottling: true);
+
+                if (GetNumberOfDeployedNodes() != -1 && IsStaleInternal() == false)
+                    // this for the case when we removed a rolling side-by-side, we need the original node to complete the deployment
+                    // if the original has no work to do, we need to force it.
+                    _mre?.Set(ignoreThrottling: true);
             }
         }
 
