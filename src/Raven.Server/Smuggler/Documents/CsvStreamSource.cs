@@ -398,7 +398,7 @@ namespace Raven.Server.Smuggler.Documents
             return Enumerable.Empty<(string Prefix, long Value, long Index)>();
         }
 
-        public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues()
+        public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues(INewCompareExchangeActions actions)
         {
             return Enumerable.Empty<(string key, long index, BlittableJsonReaderObject value)>();
         }
