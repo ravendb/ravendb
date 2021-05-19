@@ -408,9 +408,9 @@ namespace Raven.Server.Smuggler.Documents
             return databaseRecord;
         }
 
-        public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues()
+        public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues(INewCompareExchangeActions actions)
         {
-            return InternalGetCompareExchangeValues();
+            return InternalGetCompareExchangeValues(actions);
         }
 
         public IEnumerable<string> GetCompareExchangeTombstones()
@@ -493,11 +493,11 @@ namespace Raven.Server.Smuggler.Documents
             parser.SetBuffer(value.Buffer, value.Size);
         }
 
-        private IEnumerable<(string key, long index, BlittableJsonReaderObject value)> InternalGetCompareExchangeValues()
+        private IEnumerable<(string key, long index, BlittableJsonReaderObject value)> InternalGetCompareExchangeValues(INewCompareExchangeActions actions)
         {
             var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(_context, state, "Import/CompareExchange"))
-            using (var builder = new BlittableJsonDocumentBuilder(_context,
+            using (var builder = new BlittableJsonDocumentBuilder(actions.GetContextForNewCompareExchangeValue(), 
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk, "Import/CompareExchange", parser, state))
             {
                 foreach (var reader in ReadArray())
@@ -513,14 +513,17 @@ namespace Raven.Server.Smuggler.Documents
                             continue;
                         }
 
-                        builder.ReadNestedObject();
-                        SetBuffer(parser, value);
-                        parser.Read();
-                        builder.Read();
-                        builder.FinalizeDocument();
-                        yield return (key, 0, builder.CreateReader());
+                        using (value)
+                        {
+                            builder.ReadNestedObject();
+                            SetBuffer(parser, value);
+                            parser.Read();
+                            builder.Read();
+                            builder.FinalizeDocument();
+                            yield return (key, 0, builder.CreateReader());
 
-                        builder.Renew("import/cmpxchg", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            builder.Renew("import/cmpxchg", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        }
                     }
                 }
             }

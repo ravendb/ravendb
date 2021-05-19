@@ -386,7 +386,7 @@ namespace Raven.Server.Smuggler.Documents
             return _database.ServerStore.Cluster.GetIdentitiesFromPrefix(_serverContext, _database.Name, _startRaftIndex, long.MaxValue);
         }
 
-        public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues()
+        public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues(INewCompareExchangeActions actions)
         {
             Debug.Assert(_serverContext != null);
 
