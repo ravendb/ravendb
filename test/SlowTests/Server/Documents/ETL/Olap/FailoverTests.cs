@@ -114,7 +114,7 @@ loadToOrders(partitionBy(key),
 
             Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
-            var files = Directory.GetFiles(path);
+            var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
             Assert.Equal(1, files.Length);
 
             DisposeServerAndWaitForFinishOfDisposal(server);
@@ -138,7 +138,8 @@ loadToOrders(partitionBy(key),
 
             etlDone.Reset();
             etlDone.Wait(TimeSpan.FromMinutes(1));
-            files = Directory.GetFiles(path);
+            files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
+
             Assert.Equal(2, files.Length);
 
         }
