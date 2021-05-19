@@ -1,16 +1,27 @@
-## RavenDB Docker Support
 
-The files here support building and running RavenDB 5.2 in a docker container on either Linux or Windows (nanoserver).
+ Official Docker images are available on our [Docker Hub](https://hub.docker.com/r/ravendb/ravendb/). 
+ 
+ We provide images in two flavors: 
+    
+    - based on Ubuntu Linux (run on Linux containers) 
 
-### Official images
+    - based on Windows Nanoserver image (run using Windows containers). 
 
- Official Docker images are available on our [Docker Hub](https://hub.docker.com/r/ravendb/ravendb/). We provide images in two flavors: ubuntu-based (to be run on Linux containers) and nanoserver-based (to be run using Windows containers). The following tags are available:
+### Image tags
 
-- `5.2-ubuntu-latest` - contains the latest version of RavenDB 5.2 running on Ubuntu 18.04 container
+The following tags are available:
 
-- `5.2-windows-nanoserver-latest` - contains the latest version of RavenDB 5.2 running running on Windows nanoserver
+#### Latest stable
 
-- every 5.2 release is going to have its own image set for both Ubuntu and Windows containers
+- `latest` / `ubuntu-latest` - contains the latest version of RavenDB running on Ubuntu container
+
+- `windows-latest` - contains the latest version of RavenDB running running on Windows nanoserver
+
+#### Latest LTS
+
+- `latest-lts` / `ubuntu-latest-lts` - contains the latest version of RavenDB running on Ubuntu container
+
+- `windows-latest-lts` - contains the latest version of RavenDB running on Windows nanoserver
 
 ### Running
 
@@ -19,22 +30,22 @@ Simplest way to run and try RavenDB out is:
 Linux image:
 
 ```
-$ docker run -p 8080:8080 ravendb/ravendb:5.2-ubuntu-latest
+$ docker run -p 8080:8080 ravendb/ravendb:ubuntu-latest
 ```
 
 Ubuntu ARM image:
 
 ```
-$ docker run -p 8080:8080 ravendb/ravendb:5.2-ubuntu-arm-latest
+$ docker run -p 8080:8080 ravendb/ravendb:ubuntu-arm32v7-latest
 ```
 
 Windows image:
 
 ```
-$ docker run -p 8080:8080 ravendb/ravendb:5.2-windows-nanoserver-latest
+$ docker run -p 8080:8080 ravendb/ravendb:windows-latest
 ```
 
-Optionally nightly images can be used from [ravendb/ravendb-nightly](https://hub.docker.com/r/ravendb/ravendb-nightly/)
+Optionally *nightly* images can be found at [ravendb/ravendb-nightly](https://hub.docker.com/r/ravendb/ravendb-nightly/)
 
 You can run RavenDB docker container manually by invoking `docker run`, yet if you don't feel that docker-savvy we recommend using our scripts:
 
@@ -62,7 +73,7 @@ Once run RavenDB server should be exposed on port 8080 by default.
 
 ### Docker volumes
 
-Each of images above makes use of 2 volumes:
+Each of the images above makes use of 2 volumes:
 
 - settings volume - holding RavenDB configuration,
 
@@ -95,6 +106,14 @@ RAVEN_Setup_Mode='None'
 ```
 
 to disable RavenDB Setup Wizard.
+
+### Dockerfiles
+
+Dockerfiles that are used to build the images and their assets can be found at the following locations:
+
+- [Ubuntu image](https://github.com/ravendb/ravendb/tree/v5.2/docker/ravendb-ubuntu)
+
+- [Windows image](https://github.com/ravendb/ravendb/tree/v5.2/docker/ravendb-nanoserver)
 
 #### FAQ
 
@@ -130,13 +149,3 @@ RAVEN_ARGS='--log-to-console'
 ##### How to set a custom config file?
 
 Mount it as a docker volume and use `--config-path PATH_TO_CONFIG` command line argument in order to use settings file from outside of server directory.
-
-#### Dockerfiles
-
-These images were built using the following Dockerfiles:
-
-- [Windows Nanoserver image Dockerfile](https://github.com/ravendb/ravendb/blob/v5.2/docker/ravendb-nanoserver/Dockerfile)
-
--   [Ubuntu 18.04 image Dockerfile](https://github.com/ravendb/ravendb/blob/v5.2/docker/ravendb-ubuntu/Dockerfile.x64)
-
--   [Ubuntu 18.04 ARM image Dockerfile](https://github.com/ravendb/ravendb/blob/v5.2/docker/ravendb-ubuntu/Dockerfile.arm32v7)
