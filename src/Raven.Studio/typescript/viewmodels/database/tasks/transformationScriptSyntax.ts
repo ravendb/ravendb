@@ -38,8 +38,8 @@ class transformationScriptSyntax extends dialogViewModelBase {
                     case "olapEtlSampleKey":
                         sampleText = transformationScriptSyntax.olapEtlSampleKeyText;
                         break;
-                    case "olapEtlSampleCustomField":
-                        sampleText = transformationScriptSyntax.olapEtlSampleCustomFieldText;
+                    case "olapEtlSampleCustomPartition":
+                        sampleText = transformationScriptSyntax.olapEtlSampleCustomPartitionText;
                         break;
                 }
                 break;
@@ -161,16 +161,16 @@ loadToOrders(partitionBy(key), {
     
     olapEtlSampleKeyHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSampleKeyText);
 
-    static readonly olapEtlSampleCustomFieldText =
+    static readonly olapEtlSampleCustomPartitionText =
 `var orderDate = new Date(this.OrderedAt);
 var year = orderDate.getFullYear();
 
 loadToOrders(partitionBy(['year', year], ['customPartitionName', $customPartitionValue]), {
-    // The 'customFieldValue' is set in the OLAP task definition
+    // The 'customPartitionValue' is set in the OLAP task definition
     Company: this.Company
 });`;
 
-    olapEtlSampleCustomFieldHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSampleCustomFieldText);
+    olapEtlSampleCustomPartitionHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSampleCustomPartitionText);
 
     static highlightJavascript(source: string) {
         return Prism.highlight(source, (Prism.languages as any).javascript);
