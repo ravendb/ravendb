@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP.Test
         {
             public string Key { get; set; }
 
-            public List<PartitionColumn> Columns = new List<PartitionColumn>();
+            public List<PartitionColumn> Columns { get; set; } = new List<PartitionColumn>();
         }
 
         public class PartitionColumn

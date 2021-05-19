@@ -1,4 +1,4 @@
-<div class="content-margin edit-raven-olap-task" data-bind="css: { 'test-mode': false }">
+<div class="content-margin edit-raven-olap-task" data-bind="css: { 'test-mode': enableTestArea }">
     <div class="row flex-row absolute-fill">
         <div class="col-xs-12 col-lg-6 flex-vertical">
             <form class="flex-form" data-bind="submit: saveOlapEtl" autocomplete="off" novalidate>
@@ -285,14 +285,106 @@
                                 </button>
                                 <button type="button" title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
                             </div>
-                            <!-- todo - add test script in the future -->
-                            <!--                            <div class="flex-separator"></div>-->
-                            <!--                            <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()">-->
-                            <!--                                <i class="icon-rocket"></i> <span>Test script</span>-->
-                            <!--                            </button>-->
+                            <div class="flex-separator"></div>
+                            <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()">
+                                <i class="icon-rocket"></i> <span>Test script</span>
+                            </button>
                         </div>
                     </div>
                 </div>
+                <div class="js-test-area" data-bind="collapse: $root.enableTestArea()">
+                    <div class="panel">
+                        <div class="panel-body flex-form" data-bind="with: $root.test">
+                            <div class="form-group flex-horizontal">
+                                <label class="control-label">Document ID</label>
+                                <div class="flex-grow" data-bind="validationElement: documentId">
+                                    <input type="text" id="documentId" data-bind="textInput: documentId" class="form-control" placeholder="Document ID" autocomplete="off"
+                                           title="This field is required." data-orig-title=""/><span class="help-block" style="display: none;"></span>
+                                    <ul class="documentIdAutocomplete dropdown-menu autocomplete-list" role="menu"
+                                        data-bind="autoComplete: '#documentId', foreach: docsIdsAutocompleteResults">
+                                        <li role="presentation" data-bind="click: _.partial($parent.onAutocompleteOptionSelected, $data)">
+                                            <a role="menuitem" tabindex="-1" href="#">
+                                                <span data-bind="text: $data"></span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <button class="btn btn-default" type="button"
+                                        data-bind="click: previewDocument, css: { 'btn-spinner': spinners.preview }, disable: spinners.preview() || !documentId()" title="Show document preview">
+                                    <i class="icon-import"></i> <span>Load document</span>
+                                </button>
+                            </div>
+                            <div class="flex-horizontal">
+                                <div class="flex-separator"></div>
+                                <button type="button" class="btn btn-primary margin-right margin-right-sm" data-bind="click: runTest, css: { 'btn-spinner': spinners.test }, disable: spinners.test()">
+                                    <i class="icon-rocket"></i>
+                                    <span>Test</span>
+                                </button>
+                                <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea">
+                                    <i class="icon-cancel"></i> <span>Close Test Area</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="test-container flex-grow flex-vertical" data-bind="with: test">
+        <div class="absolute-center text-center" data-bind="visible: !testAlreadyExecuted() && !loadedDocument()">
+            <i class="icon-info icon-xl"></i>
+            Choose <strong>Document ID</strong> used for test and click <strong>Test</strong> button.
+        </div>
+        <div class="tabs">
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" data-bind="visible: loadedDocument">
+                    <a href="#documentPreview" role="tab" data-toggle="tab">
+                        <i class="icon-preview"></i><span>Document Preview</span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: testAlreadyExecuted">
+                    <a href="#testResults" role="tab" data-toggle="tab">
+                        <i class="icon-admin-logs"></i><span>Test Results</span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: warningsCount">
+                    <a href="#warnings" role="tab" data-toggle="tab">
+                        <i class="icon-exclamation"></i><span>Warnings</span><span class="label label-warning margin-left margin-left-sm" data-bind="text: warningsCount || ''"></span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: debugOutput().length">
+                    <a href="#debugOutput" role="tab" data-toggle="tab">
+                        <i class="icon-administrator-js-console"></i><span>Debug output</span><span class="label label-info margin-left margin-left-sm" data-bind="text: debugOutput().length || ''"></span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="tab-content flex-grow">
+            <div role="tabpanel" class="tab-pane fade" id="documentPreview">
+                <div class="margin-bottom margin-bottom-sm">Document ID: <strong data-bind="text: loadedDocumentId"></strong></div>
+                <pre data-bind="html: loadedDocument"></pre>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="warnings">
+                <div class="transformation-errors" data-bind="visible: transformationErrors().length">
+                    <h3>Transformation Script Errors:</h3>
+                    <div data-bind="foreach: transformationErrors">
+                        <pre class="margin-left margin-bottom margin-bottom-sm" data-bind="text: Error"></pre>
+                    </div>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="testResults">
+                
+                <div data-bind="foreach: testResults">
+                    <div>
+                        Partition key: <code class="force-text-wrap"><strong data-bind="text: key"></strong></code>
+                    </div>
+                    <div style="position: relative" data-bind="style: { height: height + 'px' }">
+                        <virtual-grid class="resizable virtual-grid" params="controller: gridController, afterRender: init"></virtual-grid>    
+                    </div>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="debugOutput">
+                <pre class="absolute-fill" data-bind="text: debugOutput().join('\r\n')"></pre>
             </div>
         </div>
     </div>

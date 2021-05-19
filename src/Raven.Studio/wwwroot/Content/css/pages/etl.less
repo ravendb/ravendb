@@ -540,6 +540,48 @@
         }
     }
 }
+
+.edit-raven-olap-task {
+
+    overflow-x: hidden;
+
+    .result-item {
+        .header {
+            padding: @grid-gutter-width / 2;
+            background-color: @gray-dark;
+        }
+        pre {
+            background-color: @gray-darker;
+        }
+    }
+
+    .flex-row {
+        transition: transform 0.5s;
+    }
+
+    .test-container {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 50%;
+        transform: translateX(100%);
+        transition: transform 0.5s;
+
+        .tab-content {
+            overflow: auto;
+        }
+    }
+    &.test-mode {
+        .flex-row {
+            transform: translateX(-50%);
+        }
+        .test-container {
+            transform: translateX(0%);
+        }
+    }
+}
+
 .js-test-sql-tooltip {
     z-index: @zindex-modal + 1;
 }

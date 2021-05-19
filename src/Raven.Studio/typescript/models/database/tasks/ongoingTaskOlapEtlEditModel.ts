@@ -17,6 +17,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
     olapTables = ko.observableArray<ongoingTaskOlapEtlTableModel>([]);
     
     validationGroup: KnockoutValidationGroup;
+    enterTestModeValidationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
 
     static readonly defaultRunFrequency = "0 * * * *"; // every hour
@@ -72,6 +73,12 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             mentorNode: this.mentorNode,
             customPartition: this.customPartition,
             runFrequency: this.runFrequency
+        });
+        
+        this.enterTestModeValidationGroup = ko.validatedObservable({
+            olapTables: this.olapTables,
+            transformationScripts: this.transformationScripts,
+            customField: this.customField,
         });
     }
 
