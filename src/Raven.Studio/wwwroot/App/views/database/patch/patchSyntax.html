@@ -2,31 +2,37 @@
     <div class="modal-content">
         <div class="modal-body">
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
-            <div data-bind="foreach: $data.constructor.samples">
-                <div class="margin-top" data-bind="text: title"></div>
-                <pre class="margin-bottom copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <div class="text-left">
-                <div>The following functions can be used under <code>update</code> in the patch script:</div>
-                <small>See RavenDB online documentation for the full list.</small>
-                <ul class="margin-top margin-top-sm">
-                    Documents:
-                    <li><code>load(documentIdToLoad)</code> - loads document by ID</li>
-                    <li><code>put(documentId, document)</code> - puts document with given name and data</li>
-                    <li><code>del(documentIdToRemove)</code> - deletes document by ID</li>
-                    Counters:
-                    <li><code>counter(document/documentId, name)</code> - get the counter value by document/document ID</li>
-                    <li><code>incrementCounter(document/documentId, name, value = 1)</code> - increment a counter by document/document ID</li>
-                    <li><code>deleteCounter(document/documentId, name)</code> - delete a counter by document/document ID</li>
-                    Time Series:
-                    <li><code>timeseries(document/documentId, name).get(from, to)</code> - get timeseries entries</li>
-                    <li><code>timeseries(document/documentId, name).append(timestamp, values, tag = null)</code> - add a new entry to a timeseries</li>
-                    <li><code>timeseries(document/documentId, name).delete(from, to)</code> - delete entries from a timeseries</li>
-                    General:
-                    <li><code>output(message)</code> - output debug info when testing a patch</li>
-                </ul>
+            <div class="row margin-top margin-top-lg">
+                <div class="col-xs-12 col-lg-6">
+                    <h3>Sample scripts</h3>
+                    <div data-bind="foreach: $data.constructor.samples">
+                        <div class="margin-top" data-bind="text: title"></div>
+                        <pre class="margin-bottom copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
+                    </div>
+                </div>
+                <div class="col-xs-12 col-lg-6">
+                    <h3>Methods signature</h3>
+                    <div class="text-left margin-top margin-top-lg">
+                        <div>The following functions can be used under <code>update</code> in the patch script:</div>
+                        <small>See RavenDB online documentation for the full list.</small>
+                        <ul class="margin-top margin-top-sm">
+                            Documents:
+                            <li><code>load(documentIdToLoad)</code> - loads document by ID</li>
+                            <li><code>put(documentId, document)</code> - puts document with given name and data</li>
+                            <li><code>del(documentIdToRemove)</code> - deletes document by ID</li>
+                            Counters:
+                            <li><code>counter(document/documentId, name)</code> - get the counter value by document/document ID</li>
+                            <li><code>incrementCounter(document/documentId, name, value = 1)</code> - increment a counter by document/document ID</li>
+                            <li><code>deleteCounter(document/documentId, name)</code> - delete a counter by document/document ID</li>
+                            Time Series:
+                            <li><code>timeseries(document/documentId, name).get(from, to)</code> - get timeseries entries</li>
+                            <li><code>timeseries(document/documentId, name).append(timestamp, values, tag = null)</code> - add a new entry to a timeseries</li>
+                            <li><code>timeseries(document/documentId, name).delete(from, to)</code> - delete entries from a timeseries</li>
+                            General:
+                            <li><code>output(message)</code> - output debug info when testing a patch</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
