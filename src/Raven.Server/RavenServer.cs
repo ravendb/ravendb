@@ -61,6 +61,7 @@ using Sparrow.Logging;
 using Sparrow.Server.Debugging;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using Voron;
 using DateTime = System.DateTime;
 
@@ -1928,7 +1929,10 @@ namespace Raven.Server
                                 throw new Exception("Simulated TCP failure.");
 
                             header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
-
+                            var supportedVersions = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(header.Operation, header.OperationVersion);
+                            if (supportedVersions.DataCompression)
+                                tcp.Stream = new ReadWriteCompressedStream(stream, buffer);
+                            
                             await DispatchTcpConnection(header, tcp, buffer, cert);
 
                             if (TrafficWatchManager.HasRegisteredClients)

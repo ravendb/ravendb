@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -8,6 +10,8 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.Tcp;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -79,6 +83,56 @@ namespace InterversionTests
             }
 
             return await store.Maintenance.SendAsync(op);
+        }
+
+        [Fact]
+        public async Task ReplicationShouldWorkWithoutTcpStreamCompressionV42ToV53()
+        {
+            var version = "4.2.101"; 
+            var getOldStore = GetDocumentStoreAsync(version);
+            await Task.WhenAll(getOldStore);
+
+            using var oldStore = await getOldStore;
+            using var store = GetDocumentStore();
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "John Dow" }, "user/322");
+                await session.SaveChangesAsync();
+            }
+
+            var externalTask = new ExternalReplication(oldStore.Database.ToLowerInvariant(), "MyConnectionString")
+            {
+                Name = "MyExternalReplication",
+                Url = oldStore.Urls.First()
+            };
+
+            await SetupReplication(store, externalTask);
+            Assert.True(WaitForDocument(oldStore, "user/322", 15000));
+        }
+
+        [Fact]
+        public async Task ReplicationShouldWorkWithoutTcpStreamCompressionV53ToV42()
+        {
+            var version = "4.2.101";
+            var getOldStore = GetDocumentStoreAsync(version);
+            await Task.WhenAll(getOldStore);
+
+            using var oldStore = await getOldStore;
+            using var store = GetDocumentStore();
+            using (var session = oldStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "John Dow" }, "user/322");
+                await session.SaveChangesAsync();
+            }
+
+            var externalTask = new ExternalReplication(store.Database.ToLowerInvariant(), "MyConnectionString")
+            {
+                Name = "MyExternalReplication",
+                Url = store.Urls.First()
+            };
+
+            await SetupReplication(oldStore, externalTask);
+            Assert.True(WaitForDocument(store, "user/322", 15000));
         }
     }
 }

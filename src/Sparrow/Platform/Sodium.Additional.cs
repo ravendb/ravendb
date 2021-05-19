@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Sparrow.Server
+namespace Sparrow.Platform
 {
     public static unsafe partial class Sodium
     {
