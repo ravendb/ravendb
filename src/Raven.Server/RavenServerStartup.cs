@@ -302,7 +302,7 @@ namespace Raven.Server
                 CustomInfo = twTuple.CustomInfo,
                 Type = twTuple.Type,
                 ClientIP = context.Connection.RemoteIpAddress?.ToString(),
-                Thumbprint = context.Connection.ClientCertificate?.Thumbprint
+                CertificateThumbprint = context.Connection.ClientCertificate?.Thumbprint
             };
 
             TrafficWatchManager.DispatchMessage(twn);
