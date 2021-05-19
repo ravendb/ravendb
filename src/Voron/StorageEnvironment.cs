@@ -1074,8 +1074,37 @@ namespace Voron
                 ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction(tx.LowLevelTransaction)),
                 TempPath = Options.TempPath,
                 JournalPath = (Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)?.JournalPath,
-                TotalEncryptionBufferSize = totalCryptoBufferSize
+                TotalEncryptionBufferSize = totalCryptoBufferSize,
+                InMemoryStorageState = GetInMemoryStorageState(tx.LowLevelTransaction)
             });
+        }
+
+        public InMemoryStorageState GetInMemoryStorageState(LowLevelTransaction tx)
+        {
+            var state = new InMemoryStorageState
+            {
+                CurrentReadTransactionId = CurrentReadTransactionId,
+                NextWriteTransactionId = NextWriteTransactionId,
+                PossibleOldestReadTransaction = PossibleOldestReadTransaction(tx),
+                ActiveTransactions = ActiveTransactions.AllTransactions,
+                FlushState = new InMemoryStorageState.FlushStateDetails
+                {
+                    LastFlushTime = Journal.Applicator.LastFlushTime,
+                    ShouldFlush = Journal.Applicator.ShouldFlush,
+                    LastFlushedTransactionId = Journal.Applicator.LastFlushedJournalId,
+                    LastFlushedJournalId = Journal.Applicator.LastFlushedJournalId,
+                    LastTransactionIdUsedToReleaseScratches = Journal.Applicator.LastTransactionIdUsedToReleaseScratches,
+                    JournalsToDelete = Journal.Applicator.JournalsToDelete.Select(x => x.Number).ToList()
+                },
+                SyncState = new InMemoryStorageState.SyncStateDetails
+                {
+                    LastSyncTime = Journal.Applicator.LastSyncTime,
+                    ShouldSync = Journal.Applicator.ShouldSync,
+                    TotalWrittenButUnsyncedBytes = Journal.Applicator.TotalWrittenButUnsyncedBytes
+                }
+            };
+
+            return state;
         }
 
         private Size GetTotalCryptoBufferSize()
@@ -1104,7 +1133,6 @@ namespace Voron
                     UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Constants.Storage.PageSize,
                     AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Constants.Storage.PageSize,
                     NextWriteTransactionId = NextWriteTransactionId,
-                    ActiveTransactions = ActiveTransactions.AllTransactions
                 };
             }
         }
