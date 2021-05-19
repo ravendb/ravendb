@@ -1286,7 +1286,12 @@ namespace Voron.Impl
 
             _lastState = state;
 
-            _pagerStates.Add(state);
+            if (_pagerStates.Add(state) == false)
+            {
+                // the state is already on the list but we already added a reference to it so now we need to release it
+
+                state.Release();
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

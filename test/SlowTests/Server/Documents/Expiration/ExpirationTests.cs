@@ -15,6 +15,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
@@ -209,6 +210,37 @@ namespace SlowTests.Server.Documents.Expiration
 
                     var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(context, SystemTime.UtcNow.AddMinutes(10), true, 10, out _, CancellationToken.None);
                     Assert.Equal(1, toRefresh.Count);
+                }
+            }
+        }
+        
+        [Fact]
+        public async Task CanRefreshFromClusterTransaction()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var database = await GetDatabase(store.Database);
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode =  TransactionMode.ClusterWide
+                }))
+                {
+                    var expires = database.Time.GetUtcNow().AddMinutes(5);
+                    var company = new Company { Name = "Company Name" };
+                    await session.StoreAsync(company);
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    metadata[Constants.Documents.Metadata.Refresh] = expires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                    await session.SaveChangesAsync();
+                }
+
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenWriteTransaction())
+                {
+                    DateTime time = SystemTime.UtcNow.AddMinutes(10);
+                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(context, time, true, 10, out _, CancellationToken.None);
+                    database.DocumentsStorage.ExpirationStorage.RefreshDocuments(context, toRefresh, time);
                 }
             }
         }
