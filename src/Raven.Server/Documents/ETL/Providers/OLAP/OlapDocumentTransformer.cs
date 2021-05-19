@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private ObjectInstance _noPartition;
         private const string PartitionKeys = "$partition_keys";
         private const string DefaultPartitionColumnName = "_partition";
-        private const string CustomFieldName = "$custom_field";
+        private const string CustomPartition = "$customPartitionValue";
 
 
         public OlapDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, OlapEtlConfiguration config)
@@ -65,9 +65,9 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             DocumentScript.ScriptEngine.SetValue("partitionBy", new ClrFunctionInstance(DocumentScript.ScriptEngine, "partitionBy", PartitionBy));
             DocumentScript.ScriptEngine.SetValue("noPartition", new ClrFunctionInstance(DocumentScript.ScriptEngine, "noPartition", NoPartition));
 
-            if (_config.CustomField != null)
+            if (_config.CustomPartitionValue != null)
             {
-                DocumentScript.ScriptEngine.SetValue(CustomFieldName, new JsString(_config.CustomField));
+                DocumentScript.ScriptEngine.SetValue(CustomPartition, new JsString(_config.CustomPartitionValue));
             }
         }
 

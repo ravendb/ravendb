@@ -776,15 +776,15 @@ var orderDate = new Date(this.OrderedAt);
 var year = orderDate.getFullYear();
 var month = orderDate.getMonth() + 1;
 
-loadToOrders(partitionBy(['year', year], ['month', month], ['source', $custom_field]),
+loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPartitionValue]),
 {
     Company : this.Company,
     ShipVia : this.ShipVia
 });
 ";
-                    const string customField = "shop-16";
+                    const string customPartition = "shop-16";
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-                    SetupAzureEtl(store, script, settings, customField);
+                    SetupAzureEtl(store, script, settings, customPartition);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -795,8 +795,8 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $custom_fi
                         var list = cloudObjects.List.ToList();
 
                         Assert.Equal(2, list.Count);
-                        Assert.Contains($"/Orders/year=2020/month=1/source={customField}/", list[0].Name);
-                        Assert.Contains($"/Orders/year=2020/month=2/source={customField}/", list[1].Name);
+                        Assert.Contains($"/Orders/year=2020/month=1/source={customPartition}/", list[0].Name);
+                        Assert.Contains($"/Orders/year=2020/month=2/source={customPartition}/", list[1].Name);
                     }
                 }
             }
@@ -807,7 +807,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $custom_fi
             }
         }
 
-        private void SetupAzureEtl(DocumentStore store, string script, AzureSettings settings, string customPrefix = null)
+        private void SetupAzureEtl(DocumentStore store, string script, AzureSettings settings, string customPartition = null)
         {
             var connectionStringName = $"{store.Database} to Azure";
 
@@ -816,7 +816,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $custom_fi
                 Name = "olap-azure-test",
                 ConnectionStringName = connectionStringName,
                 RunFrequency = LocalTests.DefaultFrequency,
-                CustomField = customPrefix,
+                CustomPartitionValue = customPartition,
                 Transforms =
                 {
                     new Transformation

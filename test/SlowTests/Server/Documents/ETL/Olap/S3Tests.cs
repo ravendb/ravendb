@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Server.Basic.Entities;
@@ -779,15 +778,15 @@ var year = orderDate.getFullYear();
 var month = orderDate.getMonth() + 1;
 
 // The order of the following array values determines the partitions order in parquet file path
-loadToOrders(partitionBy(['year', year], ['month', month], ['customPartitionName', $customPartitionValue]),
+loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPartitionValue]),
 {
     Company : this.Company,
     ShipVia : this.ShipVia
 });
 ";
 
-                    const string customField = "shop-16";
-                    SetupS3OlapEtl(store, script, settings, customPrefix: customField);
+                    const string customPartition = "shop-16";
+                    SetupS3OlapEtl(store, script, settings, customPartitionValue: customPartition);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -799,8 +798,8 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['customPartitionName
                         
                         var files = await ListAllFilesInFolders(s3Client, cloudObjects);
                         Assert.Equal(2, files.Count);
-                        Assert.Contains($"/Orders/year=2020/month=1/source={customField}/", files[0]);
-                        Assert.Contains($"/Orders/year=2020/month=2/source={customField}/", files[1]);
+                        Assert.Contains($"/Orders/year=2020/month=1/source={customPartition}/", files[0]);
+                        Assert.Contains($"/Orders/year=2020/month=2/source={customPartition}/", files[1]);
                     }
                 }
             }
@@ -1017,7 +1016,7 @@ for (var i = 0; i < this.Lines.length; i++){
             }
         }
 
-        private void SetupS3OlapEtl(DocumentStore store, string script, S3Settings settings, string customPrefix = null, string transformationName = null)
+        private void SetupS3OlapEtl(DocumentStore store, string script, S3Settings settings, string customPartitionValue = null, string transformationName = null)
         {
             var connectionStringName = $"{store.Database} to S3";
 
@@ -1026,7 +1025,7 @@ for (var i = 0; i < this.Lines.length; i++){
                 Name = "olap-s3-test",
                 ConnectionStringName = connectionStringName,
                 RunFrequency = LocalTests.DefaultFrequency,
-                CustomField = customPrefix,
+                CustomPartitionValue = customPartitionValue,
                 Transforms =
                 {
                     new Transformation
