@@ -198,7 +198,8 @@ namespace SlowTests.Cluster
         public async Task Round_robin_load_balancing_should_work()
         {
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            var leader = cluster.Leader;
             var followers = Servers.Where(x => x.ServerStore.IsLeader() == false).ToArray();
             var conventionsForLoadBalancing = new DocumentConventions
             {
@@ -277,7 +278,8 @@ namespace SlowTests.Cluster
                     using (var session = leaderStore.OpenSession())
                     {
                         // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-                        session.Query<User>().Where(u => u.Name.StartsWith("Ja")).ToList();
+                        var res = session.Query<User>().Where(u => u.Name.StartsWith("Ja")).ToList();
+                        Assert.Equal(2, res.Count);
                         usedUrls.Add((await session.Advanced.GetCurrentSessionNode()).Url.ToLower());
                     }
                 }
