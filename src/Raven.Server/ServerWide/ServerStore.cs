@@ -1982,11 +1982,11 @@ namespace Raven.Server.ServerWide
                         break;
                     case EtlType.Olap:
                         var olapEtl = JsonDeserializationCluster.OlapEtlConfiguration(etlConfiguration);
-                        olapEtl.Validate(out var s3EtlErr, validateName: false, validateConnection: false);
+                        olapEtl.Validate(out var olapEtlErr, validateName: false, validateConnection: false);
                         if (ValidateConnectionString(rawRecord, olapEtl.ConnectionStringName, olapEtl.EtlType) == false)
-                            s3EtlErr.Add($"Could not find connection string named '{olapEtl.ConnectionStringName}'. Please supply an existing connection string.");
+                            olapEtlErr.Add($"Could not find connection string named '{olapEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
-                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, s3EtlErr);
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, olapEtlErr);
 
                         command = new UpdateOlapEtlCommand(id, olapEtl, databaseName, raftRequestId);
                         break;

@@ -13,6 +13,7 @@ using Parquet.Data;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.ServerWide.Operations;
@@ -2036,6 +2037,543 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 Assert.Contains("year=2023", files[3]);
                 Assert.Contains("year=2024", files[4]);
 
+            }
+        }
+
+        [Fact]
+        public async Task CanUpdateDocIdColumnName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var dt = new DateTime(2020, 1, 1);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 1; i <= 5; i++)
+                    {
+                        var o = new Query.Order
+                        {
+                            Id = $"orders/{i}",
+                            Company = $"companies/{i}",
+                            Employee = $"employees/{i}",
+                            OrderedAt = dt,
+                        };
+
+                        await session.StoreAsync(o);
+
+                        dt = dt.AddYears(1);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                var script = @"
+var orderDate = new Date(this.OrderedAt);
+
+loadToOrders(partitionBy(['year', orderDate.getFullYear()]), 
+{
+    company: this.Company,
+    employee: this.Employee
+}
+);
+";
+
+                var path = NewDataPath(forceCreateDir: true);
+
+                var connectionStringName = $"{store.Database} to local";
+                var configuration = new OlapEtlConfiguration
+                {
+                    Name = "olap-test",
+                    ConnectionStringName = connectionStringName,
+                    RunFrequency = DefaultFrequency,
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = "MonthlyOrders",
+                            Collections = new List<string> {"Orders"},
+                            Script = script
+                        }
+                    }
+                };
+                var connectionString = new OlapConnectionString
+                {
+                    Name = connectionStringName,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = path
+                    }
+                };
+
+                var result = AddEtl(store, configuration, connectionString);
+                var taskId = result.TaskId;
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+
+                Assert.Equal(5, files.Length);
+
+                Assert.Contains("year=2020", files[0]);
+                Assert.Contains("year=2021", files[1]);
+                Assert.Contains("year=2022", files[2]);
+                Assert.Contains("year=2023", files[3]);
+                Assert.Contains("year=2024", files[4]);
+
+                // update 
+
+                const string documentIdColumn = "order_id";
+
+                configuration.OlapTables = new List<OlapEtlTable>
+                {
+                    new OlapEtlTable
+                    {
+                        TableName = "Orders",
+                        DocumentIdColumn = documentIdColumn
+                    }
+                };
+
+                store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+
+                // add more data
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 6; i <= 10; i++)
+                    {
+                        var o = new Query.Order
+                        {
+                            Id = $"orders/{i}",
+                            Company = $"companies/{i}",
+                            Employee = $"employees/{i}",
+                            OrderedAt = dt,
+                        };
+
+                        await session.StoreAsync(o);
+
+                        dt = dt.AddYears(1);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+                Assert.Equal(10, files.Length);
+
+                Assert.Contains("year=2025", files[5]);
+                Assert.Contains("year=2026", files[6]);
+                Assert.Contains("year=2027", files[7]);
+                Assert.Contains("year=2028", files[8]);
+                Assert.Contains("year=2029", files[9]);
+
+                var expectedFields = new[] { "company", "employee", documentIdColumn, ParquetTransformedItems.LastModifiedColumn };
+                var newFile = files[5];
+                using (var fs = File.OpenRead(newFile))
+                using (var parquetReader = new ParquetReader(fs))
+                {
+                    Assert.Equal(1, parquetReader.RowGroupCount);
+                    Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
+
+                    foreach (var field in parquetReader.Schema.Fields)
+                    {
+                        Assert.True(field.Name.In(expectedFields));
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanUpdateRunFrequency()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var dt = new DateTime(2020, 1, 1);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 1; i <= 5; i++)
+                    {
+                        var o = new Query.Order
+                        {
+                            Id = $"orders/{i}",
+                            Company = $"companies/{i}",
+                            Employee = $"employees/{i}",
+                            OrderedAt = dt,
+                        };
+
+                        await session.StoreAsync(o);
+
+                        dt = dt.AddYears(1);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                var script = @"
+var orderDate = new Date(this.OrderedAt);
+
+loadToOrders(partitionBy(['year', orderDate.getFullYear()]), 
+{
+    company: this.Company,
+    employee: this.Employee
+}
+);
+";
+
+                var path = NewDataPath(forceCreateDir: true);
+
+                var connectionStringName = $"{store.Database} to local";
+                var configuration = new OlapEtlConfiguration
+                {
+                    Name = "olap-test",
+                    ConnectionStringName = connectionStringName,
+                    RunFrequency = "0 0 * * 0", // once a week
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = "MonthlyOrders",
+                            Collections = new List<string> {"Orders"},
+                            Script = script
+                        }
+                    }
+                };
+                var connectionString = new OlapConnectionString
+                {
+                    Name = connectionStringName,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = path
+                    }
+                };
+
+                var result = AddEtl(store, configuration, connectionString);
+                var taskId = result.TaskId;
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+
+                Assert.Equal(5, files.Length);
+
+                Assert.Contains("year=2020", files[0]);
+                Assert.Contains("year=2021", files[1]);
+                Assert.Contains("year=2022", files[2]);
+                Assert.Contains("year=2023", files[3]);
+                Assert.Contains("year=2024", files[4]);
+
+                // update 
+
+                configuration.RunFrequency = DefaultFrequency; // every minute
+                store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+
+                // add more data
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 6; i <= 10; i++)
+                    {
+                        var o = new Query.Order
+                        {
+                            Id = $"orders/{i}",
+                            Company = $"companies/{i}",
+                            Employee = $"employees/{i}",
+                            OrderedAt = dt,
+                        };
+
+                        await session.StoreAsync(o);
+
+                        dt = dt.AddYears(1);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+
+                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+                Assert.Equal(10, files.Length);
+
+                Assert.Contains("year=2025", files[5]);
+                Assert.Contains("year=2026", files[6]);
+                Assert.Contains("year=2027", files[7]);
+                Assert.Contains("year=2028", files[8]);
+                Assert.Contains("year=2029", files[9]);
+            }
+        }
+
+        [Fact]
+        public async Task CanUpdateCustomPartitionValue()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var dt = new DateTime(2020, 1, 1);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 1; i <= 5; i++)
+                    {
+                        var o = new Query.Order
+                        {
+                            Id = $"orders/{i}",
+                            Company = $"companies/{i}",
+                            Employee = $"employees/{i}",
+                            OrderedAt = dt,
+                        };
+
+                        await session.StoreAsync(o);
+
+                        dt = dt.AddYears(1);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                var script = @"
+var orderDate = new Date(this.OrderedAt);
+
+loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $customPartitionValue]), 
+{
+    company: this.Company,
+    employee: this.Employee
+}
+);
+";
+
+                var path = NewDataPath(forceCreateDir: true);
+
+                var connectionStringName = $"{store.Database} to local";
+                const string customPartition = "shop12";
+
+                var configuration = new OlapEtlConfiguration
+                {
+                    Name = "olap-test",
+                    ConnectionStringName = connectionStringName,
+                    RunFrequency = DefaultFrequency,
+                    CustomPartitionValue = customPartition,
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = "MonthlyOrders",
+                            Collections = new List<string> {"Orders"},
+                            Script = script
+                        }
+                    }
+                };
+                var connectionString = new OlapConnectionString
+                {
+                    Name = connectionStringName,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = path
+                    }
+                };
+
+                var result = AddEtl(store, configuration, connectionString);
+                var taskId = result.TaskId;
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+
+                Assert.Equal(5, files.Length);
+
+                foreach (var file in files)
+                {
+                    Assert.Contains(customPartition, file);
+                }
+
+                // update 
+                const string newCustomPartition = "shop125";
+                configuration.CustomPartitionValue = newCustomPartition;
+                store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+
+                // add more data
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 6; i <= 10; i++)
+                    {
+                        var o = new Query.Order
+                        {
+                            Id = $"orders/{i}",
+                            Company = $"companies/{i}",
+                            Employee = $"employees/{i}",
+                            OrderedAt = dt,
+                        };
+
+                        await session.StoreAsync(o);
+
+                        dt = dt.AddYears(1);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+
+                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+                Assert.Equal(10, files.Length);
+
+                foreach (var file in new[] { files[5], files[6], files[7], files[8], files[9] })
+                {
+                    Assert.Contains(newCustomPartition, file);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanUpdateLocalSettings()
+        {
+            using (var store = GetDocumentStore())
+            {
+
+                var dt = new DateTime(2020, 1, 1);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 1; i <= 5; i++)
+                    {
+                        var o = new Query.Order
+                        {
+                            Id = $"orders/{i}",
+                            Company = $"companies/{i}",
+                            Employee = $"employees/{i}",
+                            OrderedAt = dt,
+                        };
+
+                        await session.StoreAsync(o);
+
+                        dt = dt.AddYears(1);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                var script = @"
+var orderDate = new Date(this.OrderedAt);
+
+loadToOrders(partitionBy(['year', orderDate.getFullYear()]), 
+{
+    company: this.Company,
+    employee: this.Employee
+}
+);
+";
+
+                var rootPath = NewDataPath();
+                var path = Path.Combine(rootPath, "test_1");
+
+                var connectionStringName = $"{store.Database} to local";
+
+                var configuration = new OlapEtlConfiguration
+                {
+                    Name = "olap-test",
+                    ConnectionStringName = connectionStringName,
+                    RunFrequency = DefaultFrequency,
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = "MonthlyOrders",
+                            Collections = new List<string> {"Orders"},
+                            Script = script
+                        }
+                    }
+                };
+                var connectionString = new OlapConnectionString
+                {
+                    Name = connectionStringName,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = path
+                    }
+                };
+                var result = AddEtl(store, configuration, connectionString);
+                var taskId = result.TaskId;
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+
+                Assert.Equal(5, files.Length);
+
+                Assert.Contains("year=2020", files[0]);
+                Assert.Contains("year=2021", files[1]);
+                Assert.Contains("year=2022", files[2]);
+                Assert.Contains("year=2023", files[3]);
+                Assert.Contains("year=2024", files[4]);
+
+                // disable task 
+
+                configuration.Disabled = true;
+                var update = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                taskId = update.TaskId;
+                Assert.NotNull(update.RaftCommandIndex);
+
+                // update connection string
+                var newPath = Path.Combine(rootPath, "test_2");
+                connectionString.LocalSettings = new LocalSettings
+                {
+                    FolderPath = newPath
+                };
+
+                var putResult = store.Maintenance.Send(new PutConnectionStringOperation<OlapConnectionString>(connectionString));
+                Assert.NotNull(putResult.RaftCommandIndex);
+
+                // re enable task
+
+                configuration.Disabled = false;
+                update = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                Assert.NotNull(update.RaftCommandIndex);
+
+                // add more data
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 6; i <= 10; i++)
+                    {
+                        var o = new Query.Order
+                        {
+                            Id = $"orders/{i}",
+                            Company = $"companies/{i}",
+                            Employee = $"employees/{i}",
+                            OrderedAt = dt,
+                        };
+
+                        await session.StoreAsync(o);
+
+                        dt = dt.AddYears(1);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+
+                files = Directory.GetFiles(newPath, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+                Assert.Equal(5, files.Length);
+
+                Assert.Contains("year=2025", files[0]);
+                Assert.Contains("year=2026", files[1]);
+                Assert.Contains("year=2027", files[2]);
+                Assert.Contains("year=2028", files[3]);
+                Assert.Contains("year=2029", files[4]);
             }
         }
 

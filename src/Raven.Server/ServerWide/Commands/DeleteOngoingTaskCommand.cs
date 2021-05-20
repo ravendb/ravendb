@@ -116,10 +116,10 @@ namespace Raven.Server.ServerWide.Commands
                     break;
 
                 case OngoingTaskType.OlapEtl:
-                    var parquetEtl = record.OlapEtls?.Find(x => x.TaskId == TaskId);
-                    if (parquetEtl != null)
+                    var olapEtl = record.OlapEtls?.Find(x => x.TaskId == TaskId);
+                    if (olapEtl != null)
                     {
-                        record.OlapEtls.Remove(parquetEtl);
+                        record.OlapEtls.Remove(olapEtl);
                     }
                     break;
             }
