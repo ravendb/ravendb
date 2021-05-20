@@ -609,7 +609,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cache this for the duration of the query
 
-            _loadedDocuments[document.Id ?? string.Empty] = document;
+            _loadedDocuments[document.Id ?? string.Empty] = document.Clone(_context);
             if (fieldToFetch.QueryField.SourceAlias != null)
             {
                 if (fieldToFetch.QueryField.IsQuoted)
@@ -688,7 +688,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (fieldToFetch.QueryField.Alias != null)
                 {
-                    _loadedDocumentsByAliasName[fieldToFetch.QueryField.Alias] = doc;
+                    _loadedDocumentsByAliasName[fieldToFetch.QueryField.Alias] = doc.Clone(_context);
                 }
 
                 if (string.IsNullOrEmpty(fieldToFetch.Name.Value)) // we need the whole document here
