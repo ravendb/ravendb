@@ -875,6 +875,12 @@ namespace Raven.Server.Web.System
             {
                 foreach (var olapEtl in databaseRecord.OlapEtls)
                 {
+                    string destination = default;
+                    if (databaseRecord.OlapConnectionStrings.TryGetValue(olapEtl.ConnectionStringName, out var olapConnection))
+                    {
+                        destination = olapConnection.GetDestination();
+                    }
+
                     var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, olapEtl, out var tag, out var error);
 
                     var taskState = GetEtlTaskState(olapEtl);
@@ -892,8 +898,7 @@ namespace Raven.Server.Web.System
                             NodeUrl = clusterTopology.GetUrlFromTag(tag)
                         },
                         ConnectionStringName = olapEtl.ConnectionStringName,
-                        //Destination = olapEtl.GetDestination(), // todo ... waiting for RavenDB-16435  
-                        Destination = "todo...",
+                        Destination = destination,
                         Error = error
                     };
                 }

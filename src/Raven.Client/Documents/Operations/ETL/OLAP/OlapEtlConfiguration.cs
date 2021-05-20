@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public override string GetDestination()
         {
-            return _name ??= Connection.GetDestination();
+            return _name ??= Connection?.GetDestination();
         }
 
         public override EtlType EtlType => EtlType.Olap;
