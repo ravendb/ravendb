@@ -23,6 +23,8 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public FtpSettings FtpSettings { get; set; }
 
+        private const string DestinationFormat = "{0}-destination@{1}";
+
         protected override void ValidateImpl(ref List<string> errors)
         {
             if (S3Settings != null)
@@ -59,16 +61,16 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         internal string GetDestination()
         {
-            const string format = "{0}destination@{1}";
             StringBuilder sb = new StringBuilder();
             string type, destination;
+
             if (S3Settings != null)
             {
                 type = nameof(BackupDestination.AmazonS3);
                 destination = S3Settings.BucketName;
                 if (string.IsNullOrEmpty(S3Settings.RemoteFolderName) == false)
                     destination = $"{destination}/{S3Settings.RemoteFolderName}";
-                sb.AppendFormat(format, type, destination);
+                sb.AppendFormat(DestinationFormat, type, destination);
             }
             if (AzureSettings != null)
             {
@@ -79,7 +81,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
                 destination = AzureSettings.StorageContainer;
                 if (string.IsNullOrEmpty(AzureSettings.RemoteFolderName) == false)
                     destination = $"{destination}/{AzureSettings.RemoteFolderName}";
-                sb.AppendFormat(format, type, destination);
+                sb.AppendFormat(DestinationFormat, type, destination);
 
             }
             if (GlacierSettings != null)
@@ -91,7 +93,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
                 destination = GlacierSettings.VaultName;
                 if (string.IsNullOrEmpty(GlacierSettings.RemoteFolderName) == false)
                     destination = $"{destination}/{GlacierSettings.RemoteFolderName}";
-                sb.AppendFormat(format, type, destination);
+                sb.AppendFormat(DestinationFormat, type, destination);
             }
             if (GoogleCloudSettings != null)
             {
@@ -102,7 +104,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
                 destination = GoogleCloudSettings.BucketName;
                 if (string.IsNullOrEmpty(GoogleCloudSettings.RemoteFolderName) == false)
                     destination = $"{destination}/{GoogleCloudSettings.RemoteFolderName}";
-                sb.AppendFormat(format, type, destination);
+                sb.AppendFormat(DestinationFormat, type, destination);
             }
             if (FtpSettings != null)
             {
@@ -111,13 +113,15 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
                 type = nameof(BackupDestination.FTP);
                 destination = FtpSettings.Url;
-                sb.AppendFormat(format, type, destination);
+                sb.AppendFormat(DestinationFormat, type, destination);
             }
             if (LocalSettings != null)
             {
+                if (sb.Length > 0)
+                    sb.Append(',');
                 type = nameof(BackupDestination.Local);
                 destination = $"{LocalSettings?.FolderPath ?? "CoreDirectory"}";
-                sb.AppendFormat(format, type, destination);
+                sb.AppendFormat(DestinationFormat, type, destination);
             }
 
             return sb.ToString();

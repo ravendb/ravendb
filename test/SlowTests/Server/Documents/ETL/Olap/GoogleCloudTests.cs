@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
         {
         }
 
-        private const string GoogleCloudTestsPrefix = "tests";
+        private const string GoogleCloudTestsPrefix = "olap-tests";
         private const string CollectionName = "Orders";
 
         [GoogleCloudFact]
@@ -442,11 +442,11 @@ loadToOrders(partitionBy(['order_date', key]),
         ShipVia : this.ShipVia
     })
 ";
-                    var connectionStringName = $"{store.Database} to S3";
+                    var connectionStringName = $"{store.Database} to GCP";
 
                     var configuration = new OlapEtlConfiguration
                     {
-                        Name = "olap-s3-test",
+                        Name = "olap-gcp-test",
                         ConnectionStringName = connectionStringName,
                         RunFrequency = LocalTests.DefaultFrequency,
                         Transforms =
@@ -659,7 +659,7 @@ loadToOrders(partitionBy(
                     using (var client = new RavenGoogleCloudClient(settings))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
-                        var cloudObjects = await client.ListObjectsAsync(prefix/*, delimiter: "/", listFolders: true*/);
+                        var cloudObjects = await client.ListObjectsAsync(prefix);
 
                         Assert.Equal(4, cloudObjects.Count);
                         Assert.Contains("Orders/year=2020/month=1", cloudObjects[0].Name);
@@ -744,7 +744,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
             }
             finally
             {
-                await DeleteObjects(settings/*, prefix: $"{settings.RemoteFolderName}/{CollectionName}/", delimiter: "/", listFolder: true*/);
+                await DeleteObjects(settings);
             }
         }
 
@@ -860,11 +860,11 @@ for (var i = 0; i < this.Lines.length; i++){
 
         private void SetupGoogleCloudOlapEtl(DocumentStore store, string script, GoogleCloudSettings settings, string customPartition = null, string transformationName = null)
         {
-            var connectionStringName = $"{store.Database} to S3";
+            var connectionStringName = $"{store.Database} to GoogleCloud";
 
             var configuration = new OlapEtlConfiguration
             {
-                Name = "olap-s3-test",
+                Name = "olap-gcp-test",
                 ConnectionStringName = connectionStringName,
                 RunFrequency = LocalTests.DefaultFrequency,
                 CustomPartitionValue = customPartition,
@@ -887,7 +887,7 @@ for (var i = 0; i < this.Lines.length; i++){
 
         private void SetupGoogleCloudOlapEtl(DocumentStore store, GoogleCloudSettings settings, OlapEtlConfiguration configuration)
         {
-            var connectionStringName = $"{store.Database} to S3";
+            var connectionStringName = $"{store.Database} to GCP";
             AddEtl(store, configuration, new OlapConnectionString
             {
                 Name = connectionStringName,
