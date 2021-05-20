@@ -1,39 +1,62 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 23.0.6, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 viewBox="0 0 100 100" style="enable-background:new 0 0 100 100;" xml:space="preserve">
-<style type="text/css">
-	.st0{fill:#262A30;}
-	.st1{fill:none;stroke:#3B4654;stroke-width:2;stroke-miterlimit:10;}
-	.st2{fill:none;stroke:#2F9EF3;stroke-width:2;stroke-linecap:round;stroke-miterlimit:10;}
-	.st3{fill:none;stroke:#9457B5;stroke-width:2;stroke-linecap:round;stroke-miterlimit:10;}
-	.st4{fill:none;stroke:#6972EE;stroke-width:2;stroke-linecap:round;stroke-miterlimit:10;}
-</style>
-<g>
-	<rect x="0" class="st0" width="100" height="100.1"/>
-</g>
-<g>
-	<line class="st1" x1="84.9" y1="100" x2="84.9" y2="0"/>
-	<g>
-		<line class="st1" x1="67.5" y1="100" x2="67.5" y2="0"/>
-	</g>
-	<g>
-		<line class="st1" x1="50" y1="100" x2="50" y2="0"/>
-	</g>
-	<g>
-		<line class="st1" x1="15.1" y1="100" x2="15.1" y2="0"/>
-	</g>
-	<g>
-		<line class="st1" x1="32.5" y1="100" x2="32.5" y2="0"/>
-	</g>
-</g>
-<title>Artboard 6</title>
-<g>
-	<polyline class="st2" points="3,45.2 5.1,45.2 10,39.6 18.3,39.6 18.3,29.5 26.8,29.5 33.6,21.7 47.8,21.7 51.7,17.3 63.6,30.8 
-		67.6,26.2 74.8,26.2 80.4,32.6 80.4,45.7 89.9,45.7 97,38.2 	"/>
-	<polyline class="st3" points="3,81.7 5.5,79.3 10.7,79.3 17.1,76.8 25.2,76.8 31,79.1 44.1,73.7 53.4,77.5 65.6,77.5 69.1,76.1 
-		73.5,77.9 84.6,73.2 93,76.8 97,74.8 	"/>
-	<polyline class="st4" points="3,61.3 15.1,61.3 20.3,59.2 28.7,62.7 39.8,58.1 44.1,59.9 47.4,58.6 60.2,58.6 69.1,62.3 82.3,56.8 
-		88.3,59.4 97,59.4 	"/>
-</g>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 123 123">
+  <defs>
+    <style>
+      .a {
+        fill: #262a30;
+      }
+
+      .b, .d, .f {
+        fill: none;
+        stroke-miterlimit: 10;
+      }
+
+      .b {
+        stroke: #333d48;
+        stroke-width: 2px;
+      }
+
+      .c {
+        fill: url(#a);
+      }
+
+      .d {
+        stroke: #2f9ef3;
+      }
+
+      .d, .f {
+        stroke-linecap: round;
+        stroke-width: 3px;
+      }
+
+      .e {
+        fill: url(#b);
+      }
+
+      .f {
+        stroke: #ba50a1;
+      }
+    </style>
+    <linearGradient id="a" x1="61.287" y1="-0.212" x2="61.287" y2="121.845" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f9ef3" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#2f9ef3" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="b" x1="61.478" y1="50.205" x2="61.478" y2="127.215" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ba50a1" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ba50a1" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <title>Artboard 4</title>
+  <rect class="a" x="-0.5" width="124" height="123"/>
+  <line class="b" x1="32.458" y1="14.536" x2="32.458" y2="110.147"/>
+  <line class="b" x1="52" y1="14.536" x2="52" y2="110.147"/>
+  <line class="b" x1="71.542" y1="14.536" x2="71.542" y2="110.147"/>
+  <line class="b" x1="91.084" y1="14.536" x2="91.084" y2="110.147"/>
+  <g>
+    <g>
+      <polygon class="c" points="11.948 48.391 21.815 44.944 31.676 16.822 41.541 46.299 51.406 37.752 61.27 40.972 71.137 35.624 81.009 57.355 90.876 55.272 100.751 60.09 110.625 37.152 110.625 110.146 110.624 110.147 11.948 110.147 11.948 48.391"/>
+      <polyline class="d" points="11.734 47.777 21.307 44.432 31.691 14.822 41.849 45.174 51.258 37.02 61.206 40.269 71.442 34.72 81.384 56.613 90.961 54.592 100.424 59.207 110.029 36.894"/>
+    </g>
+    <polygon class="e" points="12.139 86.767 22.007 83.32 31.867 55.201 41.732 84.677 51.597 76.131 61.461 79.35 71.328 74.002 81.2 95.733 91.067 93.65 100.943 98.469 110.817 75.529 110.817 110.146 110.815 110.147 12.139 110.147 12.139 86.767"/>
+    <polyline class="f" points="12.139 86.767 22.007 83.32 31.867 55.201 41.732 84.677 51.597 76.131 61.461 79.35 71.328 74.002 81.2 95.733 91.067 93.65 100.943 98.469 110.817 75.529"/>
+  </g>
 </svg>

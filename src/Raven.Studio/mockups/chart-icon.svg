@@ -1,28 +1,49 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 23.0.6, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 viewBox="0 0 100 100" style="enable-background:new 0 0 100 100;" xml:space="preserve">
-<style type="text/css">
-	.st0{fill:#262A30;}
-	.st1{fill:#CF1F5D;}
-	.st2{fill:#4F5B6D;}
-</style>
-<title>Artboard 6</title>
-<g>
-	<rect x="0" y="0" class="st0" width="100" height="100.1"/>
-</g>
-<g>
-	<g>
-		<rect x="13.1" y="15.4" class="st1" width="39.9" height="13.2"/>
-		<rect x="53.1" y="15.4" class="st2" width="23.7" height="13.2"/>
-	</g>
-	<g>
-		<rect x="13.1" y="43.4" class="st1" width="53.4" height="13.2"/>
-		<rect x="66.6" y="43.4" class="st2" width="16.5" height="13.2"/>
-	</g>
-	<g>
-		<rect x="13.1" y="71.4" class="st1" width="14.4" height="13.2"/>
-		<rect x="27.5" y="71.4" class="st2" width="29.1" height="13.2"/>
-	</g>
-</g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 123 123">
+  <defs>
+    <style>
+      .a {
+        fill: #262a30;
+      }
+
+      .b {
+        fill: #cf1f5d;
+      }
+
+      .c {
+        fill: #f0ae5e;
+      }
+
+      .d {
+        fill: #2f9ef3;
+      }
+
+      .e {
+        fill: #ba50a1;
+      }
+
+      .f {
+        fill: #333d48;
+      }
+    </style>
+  </defs>
+  <title>Artboard 6</title>
+  <rect class="a" x="-0.5" width="124" height="123"/>
+  <g>
+    <rect class="b" x="41.366" y="29.338" width="19.78" height="5.468"/>
+    <rect class="c" x="67.26" y="29.338" width="19.78" height="5.468"/>
+    <rect class="d" x="11.166" y="36.88" width="19.8" height="19.8" rx="9.9"/>
+    <rect class="e" x="11.166" y="85.247" width="19.8" height="19.8" rx="9.9"/>
+    <g>
+      <path class="f" d="M108.934,45.683v6.355H43.366V45.683h65.568m2-2H41.366V54.038h69.568V43.683Z"/>
+      <rect class="c" x="41.366" y="43.683" width="35.784" height="10.355"/>
+      <rect class="b" x="43.577" y="45.748" width="10.144" height="6.224" transform="translate(97.299 97.721) rotate(180)"/>
+    </g>
+    <g>
+      <path class="f" d="M108.934,93.938v6.355H43.366V93.938h65.568m2-2H41.366v10.355h69.568V91.938Z"/>
+      <rect class="c" x="41.366" y="91.938" width="51.613" height="10.355"/>
+      <rect class="b" x="43.577" y="94.004" width="10.144" height="6.224" transform="translate(97.299 194.232) rotate(180)"/>
+    </g>
+    <rect class="b" x="41.366" y="77.706" width="19.78" height="5.468"/>
+    <rect class="c" x="67.26" y="77.706" width="19.78" height="5.468"/>
+  </g>
 </svg>
