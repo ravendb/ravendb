@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
     public class ParquetTransformedItems : OlapTransformedItems
     {
         public const string DefaultIdColumn = "_id";
-        public const string LastModifiedColumn = "_lastModifiedTicks";
+        public const string LastModifiedColumn = "_lastModifiedTime";
 
         public override int Count => _count;
 
@@ -59,6 +59,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private const string EncodingFormat = "%{0:X2}";
 
         private static readonly HashSet<char> InvalidFileNameChars = Path.GetInvalidFileNameChars().ToHashSet();
+
+        private static readonly long UnixEpochTicks = new DateTime(1970, 1, 1).Ticks;
 
         public ParquetTransformedItems(string name, string key, string tmpPath, string fileNameSuffix, List<string> partitions, OlapEtlConfiguration configuration) 
             : base(OlapEtlFileFormat.Parquet)
@@ -268,7 +270,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             _group.Ids.Add(item.DocumentId);
-            _group.LastModified.Add(item.Document.LastModified.Ticks);
+            _group.LastModified.Add(UnixTimestampFromDateTime(item.Document.LastModified));
             
             foreach (var prop in item.Properties)
             {
@@ -792,6 +794,13 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
 
             return builder.ToString();
+        }
+
+        internal static long UnixTimestampFromDateTime(DateTime date)
+        {
+            long unixTimestamp = date.Ticks - UnixEpochTicks;
+            unixTimestamp /= TimeSpan.TicksPerSecond;
+            return unixTimestamp;
         }
     }
 }

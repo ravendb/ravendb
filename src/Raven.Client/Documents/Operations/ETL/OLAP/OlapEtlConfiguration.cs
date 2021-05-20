@@ -60,18 +60,16 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             if (OlapTables.Count != other.OlapTables.Count)
                 return false;
 
-            bool equalTables = true;
             for (var index = 0; index < other.OlapTables.Count; index++)
             {
                 var table = other.OlapTables[index];
                 if (OlapTables[index].Equals(table))
                     continue;
 
-                equalTables = false;
-                break;
+                return false;
             }
 
-            return equalTables;
+            return true;
         }
     }
 

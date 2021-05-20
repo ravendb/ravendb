@@ -1084,8 +1084,11 @@ loadToOrders(partitionBy(key), o);
                         var id = idFieldData[index];
                         Assert.True(docs.TryGetValue(id, out var doc));
 
-                        var expectedTicks = session.Advanced.GetLastModifiedFor(doc)?.Ticks;
-                        Assert.Equal(expectedTicks, lsatModifiedFieldData[index]);
+                        var lastModifiedDateTime = session.Advanced.GetLastModifiedFor(doc);
+                        Assert.True(lastModifiedDateTime.HasValue);
+
+                        var expected = ParquetTransformedItems.UnixTimestampFromDateTime(lastModifiedDateTime.Value);
+                        Assert.Equal(expected, lsatModifiedFieldData[index]);
                     }
                 }
 
@@ -2576,6 +2579,87 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 Assert.Contains("year=2029", files[4]);
             }
         }
+
+
+
+        [Fact]
+        public async Task LastModifiedShouldBeMillisecondsSinceUnixEpoch()
+        {
+            using (var store = GetDocumentStore())
+            {
+
+                var dt = new DateTime(2020, 1, 1);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Query.Order
+                    {
+                        Id = "orders/1",
+                        Company = "companies/1",
+                        OrderedAt = dt,
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                var script = @"
+var orderDate = new Date(this.OrderedAt);
+
+loadToOrders(partitionBy(['year', orderDate.getFullYear()]), 
+{
+    company: this.Company
+}
+);
+";
+                var path = NewDataPath();
+
+                SetupLocalOlapEtl(store, script, path);
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+
+                Assert.Equal(1, files.Length);
+
+                DateTime? lastModifiedDateTime;
+                using (var session = store.OpenSession())
+                {
+                    var doc = session.Load<Order>("orders/1");
+                    lastModifiedDateTime = session.Advanced.GetLastModifiedFor(doc);
+                    Assert.True(lastModifiedDateTime.HasValue);
+                }
+
+                var expectedFields = new[] { "company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
+
+                using (var fs = File.OpenRead(files[0]))
+                using (var parquetReader = new ParquetReader(fs))
+                {
+                    Assert.Equal(1, parquetReader.RowGroupCount);
+                    Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
+
+                    using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
+                    foreach (var field in parquetReader.Schema.Fields)
+                    {
+                        Assert.True(field.Name.In(expectedFields));
+                        if (field.Name != ParquetTransformedItems.LastModifiedColumn)
+                            continue;
+                        
+                        var expected = ParquetTransformedItems.UnixTimestampFromDateTime(lastModifiedDateTime.Value);
+                        var data = rowGroupReader.ReadColumn((DataField)field).Data;
+                        Assert.True(data.Length == 1);
+
+                        foreach (var val in data)
+                        {
+                            var l = (long)val;
+                            Assert.Equal(expected, l);
+                        }
+                    }
+                }
+            }
+        }
+
 
         private static string GenerateConfigurationScript(string path, out string command)
         {
