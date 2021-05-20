@@ -103,10 +103,10 @@ namespace SlowTests.Server.Documents.ETL.Olap
                     var shipViaColumn = result.ItemsByPartition[0].Columns.First(x => x.Name == "ShipVia");
                     Assert.Equal("shippers/1", shipViaColumn.Values[0]);
 
-                    var idColumn = result.ItemsByPartition[0].Columns.First(x => x.Name == "_id");
+                    var idColumn = result.ItemsByPartition[0].Columns.First(x => x.Name == ParquetTransformedItems.DefaultIdColumn);
                     Assert.Equal("orders/1", idColumn.Values[0]);
 
-                    var lastModifiedColumn = result.ItemsByPartition[0].Columns.First(x => x.Name == "_lastModifiedTicks");
+                    var lastModifiedColumn = result.ItemsByPartition[0].Columns.First(x => x.Name == ParquetTransformedItems.LastModifiedColumn);
                     Assert.NotNull(lastModifiedColumn.Values[0]);
 
                     Assert.Equal("Orders/order_date=2020-01-01-00-00", result.ItemsByPartition[0].Key);
