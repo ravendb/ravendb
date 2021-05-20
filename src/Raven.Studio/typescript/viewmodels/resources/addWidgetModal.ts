@@ -2,7 +2,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 interface widgetToAdd {
     name: string;
-    icon: "text-icon" | "graph-icon" | "list-icon" | "chart-icon";
+    icon: "welcome-icon" | "text-icon" | "graph-icon" | "list-icon" | "chart-icon";
     type: widgetType;
 }
 
@@ -15,7 +15,7 @@ class addWidgetModal extends dialogViewModelBase {
         {
             name: "Welcome Screen",
             type: "Welcome",
-            icon: "text-icon"
+            icon: "welcome-icon"
         },
         {
             name: "License info",

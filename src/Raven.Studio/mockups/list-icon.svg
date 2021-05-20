@@ -1,24 +1,43 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 23.0.6, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 viewBox="0 0 100 100" style="enable-background:new 0 0 100 100;" xml:space="preserve">
-<style type="text/css">
-	.st0{fill:#262A30;}
-	.st1{fill:#4F5B6D;}
-	.st2{fill:#CF1F5D;}
-	.st3{fill:#98A7B7;}
-</style>
-<g>
-	<rect x="0" y="0" class="st0" width="100" height="100.1"/>
-</g>
-<title>Artboard 5</title>
-<g>
-	<rect x="0" y="0" class="st1" width="100" height="24"/>
-</g>
-<rect x="15.7" y="37.6" class="st2" width="40.1" height="9.1"/>
-<rect x="67.3" y="37.6" class="st3" width="14" height="9.1"/>
-<rect x="67.3" y="57.2" class="st3" width="14" height="9.1"/>
-<rect x="67.3" y="74.1" class="st3" width="9.1" height="9.1"/>
-<rect x="15.7" y="74.1" class="st2" width="40.1" height="9.1"/>
-<rect x="15.7" y="57.2" class="st2" width="32.6" height="9.1"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 124 123">
+  <defs>
+    <style>
+      .a {
+        fill: #262a30;
+      }
+
+      .b {
+        fill: none;
+        stroke: #333d48;
+        stroke-miterlimit: 10;
+        stroke-width: 2px;
+      }
+
+      .c {
+        fill: #99b3d1;
+      }
+
+      .d {
+        fill: #ba50a1;
+      }
+
+      .e {
+        fill: #2f9ef3;
+      }
+    </style>
+  </defs>
+  <title>Artboard 5</title>
+  <rect class="a" width="124" height="123"/>
+  <g>
+    <line class="b" x1="13.512" y1="105.319" x2="109.124" y2="105.319"/>
+    <line class="b" x1="13.512" y1="76.106" x2="109.124" y2="76.106"/>
+    <line class="b" x1="13.512" y1="46.894" x2="109.124" y2="46.894"/>
+    <line class="b" x1="13.512" y1="17.681" x2="109.124" y2="17.681"/>
+    <rect class="c" x="13.512" y="27.836" width="40.23" height="8.903"/>
+    <rect class="c" x="13.512" y="57.048" width="52.501" height="8.903"/>
+    <rect class="c" x="13.512" y="86.261" width="64.771" height="8.903"/>
+    <rect class="d" x="94.824" y="25.988" width="12.6" height="12.6" rx="6.3"/>
+    <rect class="e" x="73.983" y="25.988" width="12.6" height="12.6" rx="6.3"/>
+    <rect class="e" x="94.824" y="55.2" width="12.6" height="12.6" rx="6.3"/>
+    <rect class="d" x="94.824" y="84.412" width="12.6" height="12.6" rx="6.3"/>
+  </g>
 </svg>
