@@ -158,6 +158,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         var result = retriever.Get(document, scoreDoc, _state);
                         if (scope.TryIncludeInResults(result) == false)
                         {
+                            result.Dispose();
                             skippedResults.Value++;
                             continue;
                         }

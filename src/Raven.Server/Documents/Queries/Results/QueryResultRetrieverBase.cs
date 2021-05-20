@@ -250,32 +250,36 @@ namespace Raven.Server.Documents.Queries.Results
 
         private Document GetProjectionFromDocumentInternal(Document doc, Lucene.Net.Documents.Document luceneDoc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
         {
-            var result = new DynamicJsonValue();
-
-            foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
+            using (doc)
             {
-                if (TryGetValue(fieldToFetch, doc, luceneDoc, state, fieldsToFetch.IndexFields, fieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal) == false)
+                var result = new DynamicJsonValue();
+
+                foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
                 {
-                    if (FieldsToFetch.Projection.MustExtractFromDocument)
+                    if (TryGetValue(fieldToFetch, doc, luceneDoc, state, fieldsToFetch.IndexFields, fieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal) == false)
                     {
-                        if (FieldsToFetch.Projection.MustExtractOrThrow)
-                            throw new InvalidQueryException($"Could not extract field '{fieldToFetch.Name.Value}' from document, because document does not contain such a field.");
+                        if (FieldsToFetch.Projection.MustExtractFromDocument)
+                        {
+                            if (FieldsToFetch.Projection.MustExtractOrThrow)
+                                throw new InvalidQueryException($"Could not extract field '{fieldToFetch.Name.Value}' from document, because document does not contain such a field.");
+                        }
+
+                        if (fieldToFetch.QueryField != null && fieldToFetch.QueryField.HasSourceAlias)
+                            continue;
                     }
 
-                    if (fieldToFetch.QueryField != null && fieldToFetch.QueryField.HasSourceAlias)
-                        continue;
+                    var immediateResult = AddProjectionToResult(doc, scoreDoc, fieldsToFetch, result, key, fieldVal);
+
+                    if (immediateResult != null)
+                        return immediateResult;
                 }
 
-                var immediateResult = AddProjectionToResult(doc, scoreDoc, fieldsToFetch, result, key, fieldVal);
-
-                if (immediateResult != null)
-                    return immediateResult;
+                return ReturnProjection(result, doc.Clone(context), scoreDoc, context);
             }
-
-            return ReturnProjection(result, doc, scoreDoc, context);
         }
 
-        protected Document AddProjectionToResult(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
+        protected Document AddProjectionToResult(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch,
+            DynamicJsonValue result, string key, object fieldVal)
         {
             if (_query.IsStream &&
                 key.StartsWith(Constants.TimeSeries.QueryFunction))
@@ -306,41 +310,36 @@ namespace Raven.Server.Documents.Queries.Results
                 case BlittableJsonReaderObject nested:
                     return new Document
                     {
-                        Id = doc.Id,
+                        Id = _context.GetLazyString(doc.Id),
                         ChangeVector = doc.ChangeVector,
                         Data = nested,
                         Etag = doc.Etag,
                         Flags = doc.Flags,
                         LastModified = doc.LastModified,
-                        LowerId = doc.LowerId,
+                        LowerId = _context.GetLazyString(doc.LowerId),
                         NonPersistentFlags = doc.NonPersistentFlags,
                         StorageId = doc.StorageId,
                         TransactionMarker = doc.TransactionMarker
                     };
 
                 case Document d:
-                    return d;
+                    return d.Clone(_context);
 
                 case TimeSeriesRetriever.TimeSeriesRetrieverResult ts:
                     return new Document
                     {
-                        Id = doc.Id,
+                        Id = _context.GetLazyString(doc.Id),
                         ChangeVector = doc.ChangeVector,
                         Data = _context.ReadObject(ts.Metadata, "time-series-metadata"),
                         Etag = doc.Etag,
                         Flags = doc.Flags,
                         LastModified = doc.LastModified,
-                        LowerId = doc.LowerId,
+                        LowerId = _context.GetLazyString(doc.LowerId),
                         NonPersistentFlags = doc.NonPersistentFlags,
                         StorageId = doc.StorageId,
                         TransactionMarker = doc.TransactionMarker,
-                        TimeSeriesStream = new TimeSeriesStream
-                        {
-                            TimeSeries = ts.Stream,
-                            Key = key
-                        }
+                        TimeSeriesStream = new TimeSeriesStream { TimeSeries = ts.Stream, Key = key }
                     };
-
                 default:
                     ThrowInvalidQueryBodyResponse(fieldVal);
                     break;

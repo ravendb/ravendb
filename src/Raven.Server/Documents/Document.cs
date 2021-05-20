@@ -96,7 +96,7 @@ namespace Raven.Server.Documents
             Data.Modifications = null;
         }
 
-        public Document Clone(DocumentsOperationContext context)
+        public Document Clone(JsonOperationContext context)
         {
             return new Document
             {
