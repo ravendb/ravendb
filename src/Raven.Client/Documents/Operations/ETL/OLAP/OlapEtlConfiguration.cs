@@ -45,6 +45,34 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
             return json;
         }
+
+        internal bool Equals(OlapEtlConfiguration other)
+        {
+            if (other == null || RunFrequency != other.RunFrequency ||
+                CustomPartitionValue != other.CustomPartitionValue )
+                return false;
+
+            return EqualTables(other);
+        }
+
+        private bool EqualTables(OlapEtlConfiguration other)
+        {
+            if (OlapTables.Count != other.OlapTables.Count)
+                return false;
+
+            bool equalTables = true;
+            for (var index = 0; index < other.OlapTables.Count; index++)
+            {
+                var table = other.OlapTables[index];
+                if (OlapTables[index].Equals(table))
+                    continue;
+
+                equalTables = false;
+                break;
+            }
+
+            return equalTables;
+        }
     }
 
     public class OlapEtlTable
@@ -55,7 +83,8 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         protected bool Equals(OlapEtlTable other)
         {
-            return string.Equals(TableName, other.TableName) && string.Equals(DocumentIdColumn, other.DocumentIdColumn, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(TableName, other.TableName) && 
+                   string.Equals(DocumentIdColumn, other.DocumentIdColumn, StringComparison.OrdinalIgnoreCase);
         }
 
         public DynamicJsonValue ToJson()

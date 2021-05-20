@@ -12,6 +12,7 @@ using Parquet.Data;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP;
@@ -1013,6 +1014,184 @@ for (var i = 0; i < this.Lines.length; i++){
             finally
             {
                 await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}", delimiter: string.Empty);
+            }
+        }
+
+
+        [AmazonS3Fact]
+        public async Task CanUpdateS3Settings()
+        {
+            var settings = GetS3Settings();
+            S3Settings settings1 = default, settings2 = default;
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    var dt = new DateTime(2020, 1, 1);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 1; i <= 5; i++)
+                        {
+                            var o = new Query.Order
+                            {
+                                Id = $"orders/{i}",
+                                Company = $"companies/{i}",
+                                Employee = $"employees/{i}",
+                                OrderedAt = dt,
+                            };
+
+                            await session.StoreAsync(o);
+
+                            dt = dt.AddYears(1);
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    var script = @"
+var orderDate = new Date(this.OrderedAt);
+
+loadToOrders(partitionBy(['year', orderDate.getFullYear()]), 
+{
+    company: this.Company,
+    employee: this.Employee
+}
+);
+";
+                    var connectionStringName = $"{store.Database} to s3";
+
+                    var configuration = new OlapEtlConfiguration
+                    {
+                        Name = "olap-test",
+                        ConnectionStringName = connectionStringName,
+                        RunFrequency = LocalTests.DefaultFrequency,
+                        Transforms =
+                        {
+                            new Transformation
+                            {
+                                Name = "MonthlyOrders",
+                                Collections = new List<string> {"Orders"},
+                                Script = script
+                            }
+                        }
+                    };
+
+                    var originalRemoteFolder = settings.RemoteFolderName;
+                    var remoteFolderName = $"{originalRemoteFolder}/test_1";
+
+                    settings1 = new S3Settings
+                    {
+                        AwsAccessKey = settings.AwsAccessKey,
+                        AwsSecretKey = settings.AwsSecretKey,
+                        AwsRegionName = settings.AwsRegionName,
+                        BucketName = settings.BucketName,
+                        RemoteFolderName = remoteFolderName
+                    };
+
+                    var connectionString = new OlapConnectionString
+                    {
+                        Name = connectionStringName,
+                        S3Settings = settings1
+                    };
+
+                    var result = AddEtl(store, configuration, connectionString);
+                    var taskId = result.TaskId;
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+
+                    using (var s3Client = new RavenAwsS3Client(settings1))
+                    {
+                        var prefix = $"{settings1.RemoteFolderName}/{CollectionName}";
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
+
+                        Assert.Equal(5, cloudObjects.FileInfoDetails.Count);
+
+                        Assert.Contains("/year=2020", cloudObjects.FileInfoDetails[0].FullPath);
+                        Assert.Contains("/year=2021", cloudObjects.FileInfoDetails[1].FullPath);
+                        Assert.Contains("/year=2022", cloudObjects.FileInfoDetails[2].FullPath);
+                        Assert.Contains("/year=2023", cloudObjects.FileInfoDetails[3].FullPath);
+                        Assert.Contains("/year=2024", cloudObjects.FileInfoDetails[4].FullPath);
+                    }
+
+                    // disable task 
+
+                    configuration.Disabled = true;
+                    var update = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                    taskId = update.TaskId;
+                    Assert.NotNull(update.RaftCommandIndex);
+
+                    // update connection string
+
+                    remoteFolderName = $"{originalRemoteFolder}/test_2";
+                    settings2 = new S3Settings
+                    {
+                        AwsAccessKey = settings.AwsAccessKey,
+                        AwsSecretKey = settings.AwsSecretKey,
+                        AwsRegionName = settings.AwsRegionName,
+                        BucketName = settings.BucketName,
+                        RemoteFolderName = remoteFolderName
+                    };
+
+                    connectionString.S3Settings = settings2;
+
+                    var putResult = store.Maintenance.Send(new PutConnectionStringOperation<OlapConnectionString>(connectionString));
+                    Assert.NotNull(putResult.RaftCommandIndex);
+
+                    // re enable task
+
+                    configuration.Disabled = false;
+                    update = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                    Assert.NotNull(update.RaftCommandIndex);
+
+                    // add more data
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 6; i <= 10; i++)
+                        {
+                            var o = new Query.Order
+                            {
+                                Id = $"orders/{i}",
+                                Company = $"companies/{i}",
+                                Employee = $"employees/{i}",
+                                OrderedAt = dt,
+                            };
+
+                            await session.StoreAsync(o);
+
+                            dt = dt.AddYears(1);
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+
+                    using (var s3Client = new RavenAwsS3Client(settings2))
+                    {
+                        var prefix = $"{settings2.RemoteFolderName}/{CollectionName}";
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
+
+                        Assert.Equal(5, cloudObjects.FileInfoDetails.Count);
+
+                        Assert.Contains("/year=2025", cloudObjects.FileInfoDetails[0].FullPath);
+                        Assert.Contains("/year=2026", cloudObjects.FileInfoDetails[1].FullPath);
+                        Assert.Contains("/year=2027", cloudObjects.FileInfoDetails[2].FullPath);
+                        Assert.Contains("/year=2028", cloudObjects.FileInfoDetails[3].FullPath);
+                        Assert.Contains("/year=2029", cloudObjects.FileInfoDetails[4].FullPath);
+                    }
+                }
+
+            }
+            finally
+            {
+                await DeleteObjects(settings1, prefix: $"{settings1?.RemoteFolderName}/{CollectionName}", delimiter: string.Empty);
+                await DeleteObjects(settings2, prefix: $"{settings2?.RemoteFolderName}/{CollectionName}", delimiter: string.Empty);
             }
         }
 
