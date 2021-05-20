@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -290,7 +291,21 @@ namespace Raven.Server.Documents.Expiration
 
                                     using (var updated = context.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                                     {
-                                        _database.DocumentsStorage.Put(context, doc.Id, doc.ChangeVector, updated, flags: doc.Flags);
+                                        try
+                                        {
+                                            _database.DocumentsStorage.Put(context, doc.Id, doc.ChangeVector, updated, flags: doc.Flags);
+                                        }
+                                        catch (ConcurrencyException)
+                                        {
+                                            // This is expected and safe to ignore
+                                            // It can happen if there is a mismatch with the Cluster-Transaction-Index, which will
+                                            // sort itself out when the cluster & database will be in sync again
+                                        }
+                                        catch (DocumentConflictException)
+                                        {
+                                            // no good way to handle this, we'll wait to resolve
+                                            // the issue when the conflict is resolved
+                                        }
                                     }
                                 }
                             }

@@ -73,10 +73,11 @@ namespace Raven.Server.Documents
                 _validated = false;
             }
 
-            public void ValidateDocument(BlittableJsonReaderObject doc)
+            public void ValidateDocument(BlittableJsonReaderObject doc, NonPersistentDocumentFlags nonPersistentDocumentFlags)
             {
-                if (_validated) 
-                    return; // already validated the new document
+                if (_validated || // already validated the new document
+                    nonPersistentDocumentFlags.Contain(NonPersistentDocumentFlags.FromReplication)) // we assume it was alright on the other side 
+                    return;
 
                 if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
                    metadata.TryGet(Constants.Documents.Metadata.ClusterTransactionIndex, out BlittableJsonReaderObject clustIndex) &&
@@ -142,7 +143,7 @@ namespace Raven.Server.Documents
                     table.ReadByKey(lowerId, out oldValue);
                 }
                 var compareClusterTransaction = new CompareClusterTransactionId(this, id);
-                compareClusterTransaction.ValidateDocument(document);
+                compareClusterTransaction.ValidateDocument(document, nonPersistentFlags);
 
                 BlittableJsonReaderObject oldDoc = null;
                 string oldChangeVector = "";
@@ -172,7 +173,7 @@ namespace Raven.Server.Documents
                     if (oldCollectionName != collectionName)
                         ThrowInvalidCollectionNameChange(id, oldCollectionName, collectionName);
 
-                    compareClusterTransaction.ValidateDocument(oldDoc);
+                    compareClusterTransaction.ValidateDocument(oldDoc, nonPersistentFlags);
 
                     var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
 
