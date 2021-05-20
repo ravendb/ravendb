@@ -27,8 +27,8 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public override bool UsingEncryptedCommunicationChannel()
         {
-            //RavenDB - 16627
-            throw new NotImplementedException();
+            return Connection.FtpSettings == null || 
+                   Connection.FtpSettings.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase) == false;
         }
 
         public override string GetDefaultTaskName()
