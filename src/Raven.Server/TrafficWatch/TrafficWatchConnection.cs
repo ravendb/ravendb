@@ -8,7 +8,6 @@ using Raven.Client.Documents.Changes;
 using Sparrow.Logging;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Server;
 
 namespace Raven.Server.TrafficWatch
@@ -74,7 +73,7 @@ namespace Raven.Server.TrafficWatch
                         if (IsAlive == false)
                             return;
 
-                        await SendMessage(await ToByteArraySegmentAsync(message)).ConfigureAwait(false);
+                        await SendMessage(ToByteArraySegment(message)).ConfigureAwait(false);
                     }
                 }
             }
@@ -99,7 +98,7 @@ namespace Raven.Server.TrafficWatch
             }
         }
 
-        private async Task<ArraySegment<byte>> ToByteArraySegmentAsync(TrafficWatchChangeBase change)
+        private ArraySegment<byte> ToByteArraySegment(TrafficWatchChangeBase change)
         {
             var json = change.ToJson();
 
