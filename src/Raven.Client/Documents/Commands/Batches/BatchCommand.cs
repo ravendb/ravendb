@@ -15,10 +15,10 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     internal class ClusterWideBatchCommand : SingleNodeBatchCommand, IRaftCommand
     {
-        public bool DisableAtomicDocumentWrites { get; }
+        public bool? DisableAtomicDocumentWrites { get; }
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
 
-        public ClusterWideBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null, bool disableAtomicDocumentsWrites = false) : base(conventions, context, commands, options, TransactionMode.ClusterWide)
+        public ClusterWideBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null, bool? disableAtomicDocumentsWrites = null) : base(conventions, context, commands, options, TransactionMode.ClusterWide)
         {
             DisableAtomicDocumentWrites = disableAtomicDocumentsWrites;
         }
@@ -26,10 +26,10 @@ namespace Raven.Client.Documents.Commands.Batches
         protected override void AppendOptions(StringBuilder sb)
         {
             base.AppendOptions(sb);
-            if (DisableAtomicDocumentWrites)
-            {
-                sb.Append("?disableAtomicDocumentWrites=true");
-            }
+            if (DisableAtomicDocumentWrites == null)
+                return;
+            sb.Append("&disableAtomicDocumentWrites=")
+                .Append(DisableAtomicDocumentWrites.Value ? "true" : "false");
         }
     }
 
@@ -114,7 +114,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 request.Content = multipartContent;
             }
 
-            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/bulk_docs");
+            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/bulk_docs?");
 
             AppendOptions(sb);
 
@@ -141,8 +141,6 @@ namespace Raven.Client.Documents.Commands.Batches
         {
             if (_options == null)
                 return;
-
-            sb.Append("?");
 
             var replicationOptions = _options.ReplicationOptions;
             if (replicationOptions != null)

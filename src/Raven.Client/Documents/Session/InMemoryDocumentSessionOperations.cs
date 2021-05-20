@@ -58,7 +58,7 @@ namespace Raven.Client.Documents.Session
 
         private BatchOptions _saveChangesOptions;
 
-        internal readonly bool DisableAtomicDocumentWritesInClusterWideTransaction;
+        internal readonly bool? DisableAtomicDocumentWritesInClusterWideTransaction;
 
         public TransactionMode TransactionMode;
 

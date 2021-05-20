@@ -28,6 +28,6 @@ namespace Raven.Client.Documents.Session
         /// EXPERT: When the TransactionMode is 'ClusterWide', will disable atomic document writes and validate only compare exchange
         /// values that are manually added to the user.
         /// </summary>
-        public bool DisableAtomicDocumentWritesInClusterWideTransaction { get; set; }
+        public bool? DisableAtomicDocumentWritesInClusterWideTransaction { get; set; }
     }
 }
