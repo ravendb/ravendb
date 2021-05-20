@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.OLAP
@@ -48,28 +49,12 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         internal bool Equals(OlapEtlConfiguration other)
         {
-            if (other == null || RunFrequency != other.RunFrequency ||
-                CustomPartitionValue != other.CustomPartitionValue )
+            if (other == null || 
+                RunFrequency != other.RunFrequency ||
+                CustomPartitionValue != other.CustomPartitionValue)
                 return false;
 
-            return EqualTables(other);
-        }
-
-        private bool EqualTables(OlapEtlConfiguration other)
-        {
-            if (OlapTables.Count != other.OlapTables.Count)
-                return false;
-
-            for (var index = 0; index < other.OlapTables.Count; index++)
-            {
-                var table = other.OlapTables[index];
-                if (OlapTables[index].Equals(table))
-                    continue;
-
-                return false;
-            }
-
-            return true;
+            return EnumerableExtension.ContentEquals(OlapTables, other.OlapTables);
         }
     }
 
