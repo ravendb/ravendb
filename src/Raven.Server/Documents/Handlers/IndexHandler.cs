@@ -39,10 +39,9 @@ namespace Raven.Server.Documents.Handlers
     public class IndexHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/indexes/replace", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public async Task Replace()
+        public Task Replace()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var endDeployment = GetBoolValueQueryString("end-deployment", required: false) ?? false;
 
             var replacementName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
 
@@ -60,13 +59,9 @@ namespace Raven.Server.Documents.Handlers
                 Database.IndexStore.ReplaceIndexes(name, newIndex.Name, token.Token);
             }
 
-            if (endDeployment && newIndex.IsRolling)
-            {
-                var command = new PutRollingIndexCommand(Database.Name, name, ServerStore.NodeTag, Database.Time.GetUtcNow(), RaftIdGenerator.NewId());
-                var result = await ServerStore.SendToLeaderAsync(command);
+            NoContentStatus();
 
-                await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, HttpContext.RequestAborted);
-            }
+            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/indexes/finish-rolling", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
@@ -84,12 +79,14 @@ namespace Raven.Server.Documents.Handlers
                 throw new InvalidOperationException($"'{name}' isn't a rolling index");
 
             var command = node == null ? 
-                new PutRollingIndexCommand(Database.Name, name, Database.Time.GetUtcNow(), RaftIdGenerator.NewId()) : 
-                new PutRollingIndexCommand(Database.Name, name, node, Database.Time.GetUtcNow(), RaftIdGenerator.NewId());
+                new PutRollingIndexCommand(Database.Name, index.NormalizedName, Database.Time.GetUtcNow(), RaftIdGenerator.NewId()) : 
+                new PutRollingIndexCommand(Database.Name, index.NormalizedName, node, Database.Time.GetUtcNow(), RaftIdGenerator.NewId());
 
             var result = await ServerStore.SendToLeaderAsync(command);
             
             await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, HttpContext.RequestAborted);
+
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/indexes/source", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
