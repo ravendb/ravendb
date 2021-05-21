@@ -95,7 +95,7 @@ class trafficWatch extends viewModelBase {
 
         if (trafficWatch.usingHttps) {
             return this.loadCertificates();
-    }
+        }
     }
 
     private loadCertificates() {
@@ -155,22 +155,22 @@ class trafficWatch extends viewModelBase {
 
     private matchesFilters(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase) {
         if (trafficWatch.isHttpItem(item)) {
-        const textFilterLower = this.filter() ? this.filter().trim().toLowerCase() : "";
-        const uri = item.RequestUri.toLocaleLowerCase();
-        const customInfo = item.CustomInfo;
+            const textFilterLower = this.filter() ? this.filter().trim().toLowerCase() : "";
+            const uri = item.RequestUri.toLocaleLowerCase();
+            const customInfo = item.CustomInfo;
 
-        const textFilterMatch = textFilterLower ? item.ResponseStatusCode.toString().includes(textFilterLower)  ||
-                                                  item.DatabaseName.includes(textFilterLower)                   ||
-                                                  item.HttpMethod.toLocaleLowerCase().includes(textFilterLower) ||
-                                                  item.ClientIP.includes(textFilterLower)                       ||
-                                                  (customInfo && customInfo.toLocaleLowerCase().includes(textFilterLower)) ||
-                                                  uri.includes(textFilterLower): true;
-        
-        const typeMatch = _.includes(this.selectedTypeNames(), item.Type);
-        const statusMatch = !this.onlyErrors() || item.ResponseStatusCode >= 400;
-        
-        return textFilterMatch && typeMatch && statusMatch;
-    }
+            const textFilterMatch = textFilterLower ? item.ResponseStatusCode.toString().includes(textFilterLower)  ||
+                item.DatabaseName.includes(textFilterLower)                   ||
+                item.HttpMethod.toLocaleLowerCase().includes(textFilterLower) ||
+                item.ClientIP.includes(textFilterLower)                       ||
+                (customInfo && customInfo.toLocaleLowerCase().includes(textFilterLower)) ||
+                uri.includes(textFilterLower): true;
+
+            const typeMatch = _.includes(this.selectedTypeNames(), item.Type);
+            const statusMatch = !this.onlyErrors() || item.ResponseStatusCode >= 400;
+
+            return textFilterMatch && typeMatch && statusMatch;
+        }
         if (trafficWatch.isTcpItem(item)) {
             const textFilterLower = this.filter() ? this.filter().trim().toLowerCase() : "";
             const details = trafficWatch.formatDetails(item).toLocaleLowerCase();
@@ -198,7 +198,7 @@ class trafficWatch extends viewModelBase {
         const firstHttpItem = this.filteredData.find(x => trafficWatch.isHttpItem(x)) as Raven.Client.Documents.Changes.TrafficWatchHttpChange;
         
         if (!firstHttpItem) {
-           this.statsNotAvailable();
+            this.statsNotAvailable();
         } else {
             let sum = 0;
             let min = firstHttpItem.ElapsedMilliseconds;
@@ -334,12 +334,12 @@ class trafficWatch extends viewModelBase {
 
         const rowHighlightRules = (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase) => {
             if (trafficWatch.isHttpItem(item)) {
-            const responseCode = item.ResponseStatusCode.toString();
-            if (responseCode.startsWith("4")) {
-                return "bg-warning";
-            } else if (responseCode.startsWith("5")) {
-                return "bg-danger";
-            }
+                const responseCode = item.ResponseStatusCode.toString();
+                if (responseCode.startsWith("4")) {
+                    return "bg-warning";
+                } else if (responseCode.startsWith("5")) {
+                    return "bg-danger";
+                }
             }
             
             if (trafficWatch.isTcpItem(item) && item.CustomInfo) {
@@ -353,7 +353,7 @@ class trafficWatch extends viewModelBase {
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchTraffic(s, t), () =>
             [
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, x => generalUtils.formatUtcDateAsLocal(x.TimeStamp, trafficWatch.dateTimeFormat), "Timestamp", "20%", {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, x => generalUtils.formatUtcDateAsLocal(x.TimeStamp, trafficWatch.dateTimeFormat), "Timestamp", "12%", {
                     extraClass: rowHighlightRules,
                     sortable: "string"
                 }),
@@ -368,40 +368,40 @@ class trafficWatch extends viewModelBase {
                     "8%", 
                     {
                         extraClass: rowHighlightRules,
-                    sortable: "number"
-                }),
+                        sortable: "number"
+                    }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, x => x.DatabaseName, "Database Name", "8%", {
                     extraClass: rowHighlightRules,
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(
-                    grid, 
-                    x => trafficWatch.isHttpItem(x) ? x.ElapsedMilliseconds : "n/a", 
-                    "Duration", 
-                    "8%", 
+                    grid,
+                    x => trafficWatch.isHttpItem(x) ? x.ElapsedMilliseconds : "n/a",
+                    "Duration",
+                    "8%",
                     {
-                    extraClass: rowHighlightRules,
-                    sortable: "number"
-                }),
+                        extraClass: rowHighlightRules,
+                        sortable: "number"
+                    }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(
-                    grid, 
-                    x => trafficWatch.isHttpItem(x) ? x.HttpMethod : "TCP", 
-                    "Method", 
-                    "6%", 
+                    grid,
+                    x => trafficWatch.isHttpItem(x) ? x.HttpMethod : "TCP",
+                    "Method",
+                    "6%",
                     {
-                    extraClass: rowHighlightRules,
-                    sortable: "string"
-                }),
+                        extraClass: rowHighlightRules,
+                        sortable: "string"
+                    }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(
-                    grid, 
+                    grid,
                     x => trafficWatch.isHttpItem(x) ? x.Type : (trafficWatch.isTcpItem(x) ? x.Operation : "n/a"),
-                    "Type", 
-                    "6%", 
+                    "Type",
+                    "6%",
                     {
-                    extraClass: rowHighlightRules,
-                    sortable: "string"
-                }),
+                        extraClass: rowHighlightRules,
+                        sortable: "string"
+                    }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, x => x.CustomInfo, "Custom Info", "8%", {
                     extraClass: rowHighlightRules,
                     sortable: "string"
@@ -409,34 +409,30 @@ class trafficWatch extends viewModelBase {
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(
                     grid,
                     x => trafficWatch.formatDetails(x),
-                    "Details", 
-                    "35%", 
+                    "Details",
+                    "35%",
                     {
-                    extraClass: rowHighlightRules,
-                    sortable: "string"
-                }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.RequestUri, "URI", "30%", {
-                    extraClass: rowHighlightRules,
-                    sortable: "string"
-                })
+                        extraClass: rowHighlightRules,
+                        sortable: "string"
+                    })
             ]
         );
 
-        this.columnPreview.install("virtual-grid", ".js-traffic-watch-tooltip", 
-            (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, column: textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>, 
+        this.columnPreview.install("virtual-grid", ".js-traffic-watch-tooltip",
+            (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, column: textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>,
              e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
-            if (column.header === "Details") {
-                onValue(trafficWatch.formatDetails(item));
-            } else if (column.header === "Timestamp") {
-                onValue(moment.utc(item.TimeStamp), item.TimeStamp); 
-            } else if (column.header === "Custom Info") {
-                onValue(generalUtils.escapeHtml(item.CustomInfo), item.CustomInfo);
-            } else if (column.header === "Src") {
-                onValue(this.formatSource(item, true), this.formatSource(item, false));
-            } else if (column.header === "Client IP") {
-                onValue(item.ClientIP);
-            }
-        });
+                if (column.header === "Details") {
+                    onValue(trafficWatch.formatDetails(item));
+                } else if (column.header === "Timestamp") {
+                    onValue(moment.utc(item.TimeStamp), item.TimeStamp);
+                } else if (column.header === "Custom Info") {
+                    onValue(generalUtils.escapeHtml(item.CustomInfo), item.CustomInfo);
+                } else if (column.header === "Src") {
+                    onValue(this.formatSource(item, true), this.formatSource(item, false));
+                } else if (column.header === "Client IP") {
+                    onValue(item.ClientIP);
+                }
+            });
 
         $(".traffic-watch .viewport").on("scroll", () => {
             if (!this.duringManualScrollEvent && this.tailEnabled()) {

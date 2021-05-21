@@ -30,8 +30,8 @@ class columnPreviewPlugin<T> {
             
             return `<div class="dataContainer">
                         <div>
-                            <div class="dateLabel">${isUtc ? "UTC" : "Local"}: </div>
-                            <div class="dateValue">${dateFormatted}</div>
+                            <div class="dataLabel">${isUtc ? "UTC" : "Local"}: </div>
+                            <div class="dataValue">${dateFormatted}</div>
                         </div>
                         <div>
                             <div class="dataLabel">Relative: </div>
