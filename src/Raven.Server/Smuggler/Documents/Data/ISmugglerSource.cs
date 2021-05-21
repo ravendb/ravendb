@@ -40,7 +40,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         IAsyncEnumerable<(string Prefix, long Value, long Index)> GetIdentitiesAsync();
 
-        IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync();
+        IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync(INewCompareExchangeActions actions);
 
         IAsyncEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesAsync();
 

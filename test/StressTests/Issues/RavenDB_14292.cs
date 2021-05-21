@@ -18,7 +18,7 @@ using Voron.Util;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues
+namespace StressTests.Issues
 {
     public class RavenDB_14292 : RavenTestBase
     {
@@ -159,7 +159,7 @@ namespace SlowTests.Issues
             return sb.ToString();
         }
 
-        public class RepeatableAsyncAction : IAsyncDisposable
+        private class RepeatableAsyncAction : IAsyncDisposable
         {
             private readonly Func<CancellationToken, Task> _action;
             private readonly CancellationTokenSource _source = new CancellationTokenSource();

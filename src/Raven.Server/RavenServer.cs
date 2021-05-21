@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Pkcs;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
@@ -49,6 +50,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
 using Raven.Server.Web.ResponseCompression;
@@ -1867,8 +1869,14 @@ namespace Raven.Server
                 if (ServerStore.Initialized == false)
                     await ServerStore.InitializationCompleted.WaitAsync();
 
+                EndPoint remoteEndPoint = null;
+                X509Certificate2 cert = null;
+                TcpConnectionHeaderMessage header = null;
+
                 try
                 {
+                    remoteEndPoint = tcpClient.Client.RemoteEndPoint;
+
                     tcpClient.NoDelay = true;
                     tcpClient.ReceiveBufferSize = (int)Configuration.Cluster.TcpReceiveBufferSize.GetValue(SizeUnit.Bytes);
                     tcpClient.SendBufferSize = (int)Configuration.Cluster.TcpSendBufferSize.GetValue(SizeUnit.Bytes);
@@ -1880,8 +1888,6 @@ namespace Raven.Server
                     tcpClient.ReceiveTimeout = tcpClient.SendTimeout = sendTimeout;
 
                     Stream stream = tcpClient.GetStream();
-                    X509Certificate2 cert;
-
                     (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream);
 
                     if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInListenToNewTcpConnection)
@@ -1898,30 +1904,23 @@ namespace Raven.Server
                             Certificate = cert
                         };
 
-                        var remoteEndPoint = tcpClient.Client.RemoteEndPoint;
-
                         try
                         {
-                            var header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
+                            if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInTrafficWatchTcp)
+                                throw new Exception("Simulated TCP failure.");
 
-                            if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.TestConnection ||
-                                header.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
-                            {
-                                tcp.Dispose();
-                                tcp = null;
-                                return;
-                            }
+                            header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
 
-                            if (await DispatchServerWideTcpConnection(tcp, header, buffer))
-                            {
-                                tcp = null; //do not keep reference -> tcp will be disposed by server-wide connection handlers
-                                return;
-                            }
+                            await DispatchTcpConnection(header, tcp, buffer, cert);
 
-                            await DispatchDatabaseTcpConnection(tcp, header, buffer, cert);
+                            if (TrafficWatchManager.HasRegisteredClients)
+                                DispatchTcpMessageToTrafficWatch(remoteEndPoint, header, cert);
                         }
                         catch (Exception e)
                         {
+                            if (TrafficWatchManager.HasRegisteredClients)
+                                DispatchTcpMessageToTrafficWatch(remoteEndPoint, header, cert, e);
+
                             if (_tcpLogger.IsInfoEnabled)
                                 _tcpLogger.Info("Failed to process TCP connection run", e);
 
@@ -1944,6 +1943,9 @@ namespace Raven.Server
                 }
                 catch (Exception e)
                 {
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        DispatchTcpMessageToTrafficWatch(remoteEndPoint, header, cert, e);
+
                     try
                     {
                         tcpClient.Dispose();
@@ -1959,6 +1961,25 @@ namespace Raven.Server
                     }
                 }
             });
+        }
+
+        private async Task DispatchTcpConnection(TcpConnectionHeaderMessage header, TcpConnectionOptions tcp, JsonOperationContext.MemoryBuffer buffer, X509Certificate2 certificate)
+        {
+            if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.TestConnection ||
+                header.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
+            {
+                tcp.Dispose();
+                tcp = null;
+                return;
+            }
+
+            if (await DispatchServerWideTcpConnection(tcp, header, buffer))
+            {
+                tcp = null; //do not keep reference -> tcp will be disposed by server-wide connection handlers
+                return;
+            }
+
+            await DispatchDatabaseTcpConnection(tcp, header, buffer, certificate);
         }
 
         private async Task<TcpConnectionHeaderMessage> NegotiateOperationVersion(
@@ -2528,6 +2549,24 @@ namespace Raven.Server
             throw new DatabaseLoadTimeoutException($"Timeout when loading database {header.DatabaseName}, try again later");
         }
 
+        private static void DispatchTcpMessageToTrafficWatch(EndPoint remoteEndPoint, TcpConnectionHeaderMessage header, X509Certificate2 certificate, Exception exception = null)
+        {
+            var clientIP = remoteEndPoint == null ? "N/A" : ((IPEndPoint)remoteEndPoint).Address.ToString();
+
+            var twn = new TrafficWatchTcpChange
+            {
+                TimeStamp = DateTime.UtcNow,
+                DatabaseName = header?.DatabaseName ?? "N/A",
+                CertificateThumbprint = certificate?.Thumbprint,
+                CustomInfo = header?.Info ?? exception?.ToString(),
+                ClientIP = clientIP,
+                Source = header?.SourceNodeTag,
+                Operation = header?.Operation ?? TcpConnectionHeaderMessage.OperationTypes.None,
+                OperationVersion = header?.OperationVersion ?? -1
+            };
+            TrafficWatchManager.DispatchMessage(twn);
+        }
+
         public RequestRouter Router { get; private set; }
         public MetricCounters Metrics { get; }
 
@@ -2635,6 +2674,7 @@ namespace Raven.Server
         internal class TestingStuff
         {
             internal bool ThrowExceptionInListenToNewTcpConnection = false;
+            internal bool ThrowExceptionInTrafficWatchTcp = false;
         }
     }
 }

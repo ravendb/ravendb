@@ -8,12 +8,15 @@ import trafficWatchWebSocketClient = require("common/trafficWatchWebSocketClient
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import generalUtils = require("common/generalUtils");
 import awesomeMultiselect = require("common/awesomeMultiselect");
+import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
+
+type trafficChangeType = Raven.Client.Documents.Changes.TrafficWatchChangeType | Raven.Client.ServerWide.Tcp.TcpConnectionHeaderMessage.OperationTypes; 
 
 class typeData {
     count = ko.observable<number>(0);
-    propertyName: Raven.Client.Documents.Changes.TrafficWatchChangeType;
+    propertyName: trafficChangeType;
 
-    constructor(propertyName: Raven.Client.Documents.Changes.TrafficWatchChangeType) {
+    constructor(propertyName: trafficChangeType) {
         this.propertyName = propertyName;
     }
     
@@ -22,21 +25,30 @@ class typeData {
     }
 }
 
+type certificateInfo = {
+    name: string;
+    clearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
+}
+
 class trafficWatch extends viewModelBase {
+    
+    static readonly usingHttps = location.protocol === "https:";
     
     static maxBufferSize = 200000;
     
     static dateTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     
     private liveClient = ko.observable<trafficWatchWebSocketClient>();
-    private allData = [] as Raven.Client.Documents.Changes.TrafficWatchChange[];
-    private filteredData = [] as Raven.Client.Documents.Changes.TrafficWatchChange[];
+    private allData = [] as Raven.Client.Documents.Changes.TrafficWatchChangeBase[];
+    private filteredData = [] as Raven.Client.Documents.Changes.TrafficWatchChangeBase[];
 
-    private gridController = ko.observable<virtualGridController<Raven.Client.Documents.Changes.TrafficWatchChange>>();
-    private columnPreview = new columnPreviewPlugin<Raven.Client.Documents.Changes.TrafficWatchChange>();
+    certificatesCache = new Map<string, certificateInfo>();
 
-    private readonly allTypeData: Raven.Client.Documents.Changes.TrafficWatchChangeType[] =
-        ["BulkDocs", "Counters", "Documents", "Hilo", "Index", "MultiGet", "None", "Operations", "Queries", "Streams", "Subscriptions"];
+    private gridController = ko.observable<virtualGridController<Raven.Client.Documents.Changes.TrafficWatchChangeBase>>();
+    private columnPreview = new columnPreviewPlugin<Raven.Client.Documents.Changes.TrafficWatchChangeBase>();
+
+    private readonly allTypeData: trafficChangeType[] =
+        ["BulkDocs", "Cluster", "Counters", "Documents", "Drop", "Heartbeats", "Hilo", "Index", "MultiGet", "None", "Operations", "Queries", "Ping", "Replication", "Streams", "Subscription", "Subscriptions", "TestConnection"];
     private filteredTypeData = this.allTypeData.map(x => new typeData(x));
     private selectedTypeNames = ko.observableArray<string>(this.allTypeData.splice(0));
     onlyErrors = ko.observable<boolean>(false);
@@ -59,7 +71,7 @@ class trafficWatch extends viewModelBase {
     tailEnabled = ko.observable<boolean>(true);
     private duringManualScrollEvent = false;
 
-    private typesMultiSelectRefreshThrottle = _.throttle(() => this.syncMultiSelect(), 1000);
+    private typesMultiSelectRefreshThrottle = _.throttle(() => trafficWatch.syncMultiSelect(), 1000);
 
     isPauseLogs = ko.observable<boolean>(false);
     
@@ -80,6 +92,34 @@ class trafficWatch extends viewModelBase {
             this.filter(args.filter);
         }
         this.updateHelpLink('EVEP6I');
+
+        if (trafficWatch.usingHttps) {
+            return this.loadCertificates();
+        }
+    }
+
+    private loadCertificates() {
+        return new getCertificatesCommand()
+            .execute()
+            .done(certificatesInfo => {
+                if (certificatesInfo.Certificates) {
+                    certificatesInfo.Certificates.forEach(cert => {
+                        this.certificatesCache.set(cert.Thumbprint, {
+                            name: cert.Name,
+                            clearance: cert.SecurityClearance
+                        });
+                    })
+                }
+                
+                if (certificatesInfo.WellKnownAdminCerts) {
+                    certificatesInfo.WellKnownAdminCerts.forEach(wellKnownCert => {
+                        this.certificatesCache.set(wellKnownCert, {
+                            name: "Well known admin certificate",
+                            clearance: "ClusterAdmin"
+                        });
+                    });
+                }
+            });
     }
 
     deactivate() {
@@ -105,7 +145,7 @@ class trafficWatch extends viewModelBase {
         });
     }
 
-    private syncMultiSelect() {
+    private static syncMultiSelect() {
         awesomeMultiselect.rebuild($("#visibleTypesSelector"));
     }
 
@@ -113,34 +153,62 @@ class trafficWatch extends viewModelBase {
         this.gridController().reset(false);
     }
 
-    private matchesFilters(item: Raven.Client.Documents.Changes.TrafficWatchChange) {
-        const textFilterLower = this.filter() ? this.filter().trim().toLowerCase() : "";
-        const uri = item.RequestUri.toLocaleLowerCase();
-        const customInfo = item.CustomInfo;
+    private matchesFilters(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase) {
+        if (trafficWatch.isHttpItem(item)) {
+            const textFilterLower = this.filter() ? this.filter().trim().toLowerCase() : "";
+            const uri = item.RequestUri.toLocaleLowerCase();
+            const customInfo = item.CustomInfo;
 
-        const textFilterMatch = textFilterLower ? item.ResponseStatusCode.toString().includes(textFilterLower)  ||
-                                                  item.DatabaseName.includes(textFilterLower)                   ||
-                                                  item.HttpMethod.toLocaleLowerCase().includes(textFilterLower) ||
-                                                  item.ClientIP.includes(textFilterLower)                       ||
-                                                  (customInfo && customInfo.toLocaleLowerCase().includes(textFilterLower)) ||
-                                                  uri.includes(textFilterLower): true;
+            const textFilterMatch = textFilterLower ? item.ResponseStatusCode.toString().includes(textFilterLower)  ||
+                item.DatabaseName.includes(textFilterLower)                   ||
+                item.HttpMethod.toLocaleLowerCase().includes(textFilterLower) ||
+                item.ClientIP.includes(textFilterLower)                       ||
+                (customInfo && customInfo.toLocaleLowerCase().includes(textFilterLower)) ||
+                uri.includes(textFilterLower): true;
+
+            const typeMatch = _.includes(this.selectedTypeNames(), item.Type);
+            const statusMatch = !this.onlyErrors() || item.ResponseStatusCode >= 400;
+
+            return textFilterMatch && typeMatch && statusMatch;
+        }
+        if (trafficWatch.isTcpItem(item)) {
+            const textFilterLower = this.filter() ? this.filter().trim().toLowerCase() : "";
+            const details = trafficWatch.formatDetails(item).toLocaleLowerCase();
+            const customInfo = item.CustomInfo;
+
+            const textFilterMatch = textFilterLower ? details.includes(textFilterLower) || (customInfo && customInfo.toLocaleLowerCase().includes(textFilterLower)) : true;
+            const operationMatch = _.includes(this.selectedTypeNames(), item.Operation);
+            const statusMatch = !this.onlyErrors() || item.CustomInfo;
+
+            return textFilterMatch && operationMatch && statusMatch;
+        }
         
-        const typeMatch = _.includes(this.selectedTypeNames(), item.Type);
-        const statusMatch = !this.onlyErrors() || item.ResponseStatusCode >= 400;
-        
-        return textFilterMatch && typeMatch && statusMatch;
+        return false;
+    }
+    
+    private static isHttpItem(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase): item is Raven.Client.Documents.Changes.TrafficWatchHttpChange {
+        return item.TrafficWatchType === "Http";
+    }
+
+    private static isTcpItem(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase): item is Raven.Client.Documents.Changes.TrafficWatchTcpChange {
+        return item.TrafficWatchType === "Tcp";
     }
 
     private updateStats() {
-        if (!this.filteredData.length) {
-           this.statsNotAvailable();
+        const firstHttpItem = this.filteredData.find(x => trafficWatch.isHttpItem(x)) as Raven.Client.Documents.Changes.TrafficWatchHttpChange;
+        
+        if (!firstHttpItem) {
+            this.statsNotAvailable();
         } else {
             let sum = 0;
-            let min = this.filteredData[0].ElapsedMilliseconds;
-            let max = this.filteredData[0].ElapsedMilliseconds;
+            let min = firstHttpItem.ElapsedMilliseconds;
+            let max = firstHttpItem.ElapsedMilliseconds;
             
             for (let i = 0; i < this.filteredData.length; i++) {
                 const item = this.filteredData[i];
+                if (!trafficWatch.isHttpItem(item)) {
+                    continue;
+                }
                 
                 if (item.ResponseStatusCode === 101) {
                     // it is websocket - don't include in stats
@@ -186,6 +254,9 @@ class trafficWatch extends viewModelBase {
 
         for (let i = this.filteredData.length - 1; i >= 0; i--) {
             const item = this.filteredData[i];
+            if (!trafficWatch.isHttpItem(item)) {
+                continue;
+            }
 
             if (item.ResponseStatusCode === 101) {
                 // it is websocket - don't include in stats
@@ -207,18 +278,74 @@ class trafficWatch extends viewModelBase {
         this.stats.percentile_99_9(generalUtils.formatTimeSpan(timings[Math.ceil(99.9 / 100 * timings.length) - 1]));
     }
 
+    private formatSource(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, asHtml: boolean) {
+        const thumbprint = item.CertificateThumbprint;
+        const cert = thumbprint ? this.certificatesCache.get(thumbprint) : null;
+        const certName = cert?.name;
+        
+        if (asHtml) {
+            if (cert) {
+                return (
+                    `<div class="dataContainer dataContainer-lg">
+                        <div>
+                            <div class="dataLabel">Source: </div>
+                            <div class="dataValue">${generalUtils.escapeHtml(item.ClientIP)}</div>
+                        </div>
+                        <div>
+                            <div class="dataLabel">Certificate: </div>
+                            <div class="dataValue">${generalUtils.escapeHtml(cert.name)}</div>
+                        </div>
+                        <div>
+                            <div class="dataLabel">Thumbprint: </div>
+                            <div class="dataValue">${generalUtils.escapeHtml(thumbprint)}</div>
+                        </div>
+                    </div>`);
+            }
+            return (
+                `<div class="dataContainer">
+                        <div>
+                            <div class="dataLabel">Source: </div>
+                            <div class="dataValue">${generalUtils.escapeHtml(item.ClientIP)}</div>
+                        </div>
+                    </div>`);
+        } else {
+            if (cert) {
+                return "Source: " + item.ClientIP + ", Certificate Name = " + certName + ", Certificate Thumbprint =  " + thumbprint;
+            }
+            return "Source: " + item.ClientIP;
+        }
+    }
+
+    private static formatDetails(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase) {
+        if (trafficWatch.isHttpItem(item)) {
+            return item.RequestUri;
+        }
+        if (trafficWatch.isTcpItem(item)) {
+            return item.Operation + (item.Source ? " from node " + item.Source : "") + (item.OperationVersion ? " (version " + item.OperationVersion + ")" : "");
+        }
+
+        return "n/a";
+    }
+
     compositionComplete() {
         super.compositionComplete();
 
         $('.traffic-watch [data-toggle="tooltip"]').tooltip();
 
-        const rowHighlightRules = (item: Raven.Client.Documents.Changes.TrafficWatchChange) => {
-            const responseCode = item.ResponseStatusCode.toString();
-            if (responseCode.startsWith("4")) {
-                return "bg-warning";
-            } else if (responseCode.startsWith("5")) {
-                return "bg-danger";
+        const rowHighlightRules = (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase) => {
+            if (trafficWatch.isHttpItem(item)) {
+                const responseCode = item.ResponseStatusCode.toString();
+                if (responseCode.startsWith("4")) {
+                    return "bg-warning";
+                } else if (responseCode.startsWith("5")) {
+                    return "bg-danger";
+                }
             }
+            
+            if (trafficWatch.isTcpItem(item) && item.CustomInfo) {
+                return "bg-warning";
+            }
+           
             return "";
         };
         
@@ -226,59 +353,86 @@ class trafficWatch extends viewModelBase {
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchTraffic(s, t), () =>
             [
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => generalUtils.formatUtcDateAsLocal(x.TimeStamp, trafficWatch.dateTimeFormat), "Timestamp", "12%", {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, x => generalUtils.formatUtcDateAsLocal(x.TimeStamp, trafficWatch.dateTimeFormat), "Timestamp", "12%", {
                     extraClass: rowHighlightRules,
                     sortable: "string"
                 }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ResponseStatusCode, "Status", "6%", {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, x => `<span class="icon-info text-default"></span>`, "Src", "50px", {
                     extraClass: rowHighlightRules,
-                    sortable: "number"
+                    useRawValue: () => true
                 }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.DatabaseName, "Database Name", "10%", {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(
+                     grid, 
+                    x => trafficWatch.isHttpItem(x) ? x.ResponseStatusCode : "n/a", 
+                    "HTTP Status", 
+                    "8%", 
+                    {
+                        extraClass: rowHighlightRules,
+                        sortable: "number"
+                    }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, x => x.DatabaseName, "Database Name", "8%", {
                     extraClass: rowHighlightRules,
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric
                 }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ElapsedMilliseconds, "Duration", "8%", {
-                    extraClass: rowHighlightRules,
-                    sortable: "number"
-                }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.HttpMethod, "Method", "6%", {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(
+                    grid,
+                    x => trafficWatch.isHttpItem(x) ? x.ElapsedMilliseconds : "n/a",
+                    "Duration",
+                    "8%",
+                    {
+                        extraClass: rowHighlightRules,
+                        sortable: "number"
+                    }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(
+                    grid,
+                    x => trafficWatch.isHttpItem(x) ? x.HttpMethod : "TCP",
+                    "Method",
+                    "6%",
+                    {
+                        extraClass: rowHighlightRules,
+                        sortable: "string"
+                    }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(
+                    grid,
+                    x => trafficWatch.isHttpItem(x) ? x.Type : (trafficWatch.isTcpItem(x) ? x.Operation : "n/a"),
+                    "Type",
+                    "6%",
+                    {
+                        extraClass: rowHighlightRules,
+                        sortable: "string"
+                    }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, x => x.CustomInfo, "Custom Info", "8%", {
                     extraClass: rowHighlightRules,
                     sortable: "string"
                 }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.Type, "Type", "6%", {
-                    extraClass: rowHighlightRules,
-                    sortable: "string"
-                }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ClientIP, "Client IP", "8%", {
-                    extraClass: rowHighlightRules,
-                    sortable: "string"
-                }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "Custom Info", "10%", {
-                    extraClass: rowHighlightRules,
-                    sortable: "string"
-                }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.RequestUri, "URI", "30%", {
-                    extraClass: rowHighlightRules,
-                    sortable: "string"
-                })
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(
+                    grid,
+                    x => trafficWatch.formatDetails(x),
+                    "Details",
+                    "35%",
+                    {
+                        extraClass: rowHighlightRules,
+                        sortable: "string"
+                    })
             ]
         );
 
-        this.columnPreview.install("virtual-grid", ".js-traffic-watch-tooltip", 
-            (item: Raven.Client.Documents.Changes.TrafficWatchChange, column: textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>, 
+        this.columnPreview.install("virtual-grid", ".js-traffic-watch-tooltip",
+            (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, column: textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>,
              e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
-            if (column.header === "URI") {
-                onValue(item.RequestUri);
-            } else if (column.header === "Timestamp") {
-                onValue(moment.utc(item.TimeStamp), item.TimeStamp); 
-            } else if (column.header === "Custom Info") {
-                onValue(generalUtils.escapeHtml(item.CustomInfo), item.CustomInfo);
-            } else if (column.header === "Client IP") {
-                onValue(item.ClientIP);
-            }
-        });
+                if (column.header === "Details") {
+                    onValue(trafficWatch.formatDetails(item));
+                } else if (column.header === "Timestamp") {
+                    onValue(moment.utc(item.TimeStamp), item.TimeStamp);
+                } else if (column.header === "Custom Info") {
+                    onValue(generalUtils.escapeHtml(item.CustomInfo), item.CustomInfo);
+                } else if (column.header === "Src") {
+                    onValue(this.formatSource(item, true), this.formatSource(item, false));
+                } else if (column.header === "Client IP") {
+                    onValue(item.ClientIP);
+                }
+            });
 
         $(".traffic-watch .viewport").on("scroll", () => {
             if (!this.duringManualScrollEvent && this.tailEnabled()) {
@@ -290,7 +444,7 @@ class trafficWatch extends viewModelBase {
         this.connectWebSocket();
     }
 
-    private fetchTraffic(skip: number, take: number): JQueryPromise<pagedResult<Raven.Client.Documents.Changes.TrafficWatchChange>> {
+    private fetchTraffic(skip: number, take: number): JQueryPromise<pagedResult<Raven.Client.Documents.Changes.TrafficWatchChangeBase>> {
         const textFilterDefined = this.filter();
         const filterUsingType = this.selectedTypeNames().length !== this.filteredTypeData.length;
         const filterUsingStatus = this.onlyErrors();
@@ -319,7 +473,7 @@ class trafficWatch extends viewModelBase {
         return this.liveClient() && this.liveClient().isConnected();
     }
 
-    private onData(data: Raven.Client.Documents.Changes.TrafficWatchChange) {
+    private onData(data: Raven.Client.Documents.Changes.TrafficWatchChangeBase) {
         if (this.allData.length === trafficWatch.maxBufferSize) {
             this.isBufferFull(true);
             this.pause();
@@ -328,7 +482,8 @@ class trafficWatch extends viewModelBase {
         
         this.allData.push(data);
         
-        this.filteredTypeData.find(x => x.propertyName === data.Type).inc();
+        const type = trafficWatch.isHttpItem(data) ? data.Type : (trafficWatch.isTcpItem(data) ? data.Operation : "n/a");
+        this.filteredTypeData.find(x => x.propertyName === type).inc();
         this.typesMultiSelectRefreshThrottle();
 
         if (!this.appendElementsTask) {
@@ -338,7 +493,7 @@ class trafficWatch extends viewModelBase {
 
     clearTypeCounter(): void {
         this.filteredTypeData.forEach(x => x.count(0));
-        this.syncMultiSelect();
+        trafficWatch.syncMultiSelect();
     }
 
     private onAppendPendingEntries() {
