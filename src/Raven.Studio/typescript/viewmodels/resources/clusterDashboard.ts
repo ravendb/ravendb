@@ -232,16 +232,16 @@ class clusterDashboard extends viewModelBase {
                     }
                 });
         } else {
-            this.addWidget(new welcomeWidget(this));
             this.addWidget(new cpuUsageWidget(this));
-            this.addWidget(new memoryUsageWidget(this));
-            this.addWidget(new licenseWidget(this));
-            this.addWidget(new storageWidget(this));
             this.addWidget(new trafficWidget(this));
-            this.addWidget(new indexingWidget(this));
-            this.addWidget(new databaseIndexingWidget(this));
             this.addWidget(new databaseTrafficWidget(this));
+            this.addWidget(new databaseIndexingWidget(this));
+            this.addWidget(new memoryUsageWidget(this));
+            this.addWidget(new indexingWidget(this));
+            this.addWidget(new storageWidget(this));
+            this.addWidget(new licenseWidget(this));
             this.addWidget(new databaseStorageWidget(this));
+            this.addWidget(new welcomeWidget(this));
             
             const initialWidgets = this.widgets();
             
