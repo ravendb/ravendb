@@ -1,5 +1,7 @@
 using System;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
@@ -31,6 +33,15 @@ namespace SlowTests.Issues
                             Name = "Hibernating",
                         },
                         id);
+
+                    byte[] byteArray = Encoding.UTF8.GetBytes("Rhinos");
+                    
+                    await session.SaveChangesAsync();
+                     
+                    session.Advanced.Attachments.Store("users/Hibernating",
+                        "invoice.pdf",
+                        new MemoryStream(byteArray),
+                        "application/pdf");
                     
                     await session.SaveChangesAsync();
                 }
@@ -39,14 +50,19 @@ namespace SlowTests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
                     var metadatas = await session.Advanced.Revisions.GetMetadataForAsync(id);
-                    Assert.Equal(1, metadatas.Count);
+                    Assert.Equal(2, metadatas.Count);
                     
                     changeVector = metadatas.First().GetString(Constants.Documents.Metadata.ChangeVector);
                     await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenAsyncSession())
-                {
+                { 
+                    session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
+
+                    var attachment = await session.Advanced.Attachments.GetAsync("users/Hibernating",
+                        "invoice.pdf");
+
                     var revision1 = await session.Advanced.Revisions.GetAsync<User>(id,DateTime.Now);
                     var revision2 = await session.Advanced.Revisions.GetAsync<User>(changeVector:changeVector);
                     var revision3 = await session.Advanced.Revisions.GetAsync<User>(new[]{changeVector});
@@ -54,8 +70,9 @@ namespace SlowTests.Issues
                     Assert.NotNull(revision1);
                     Assert.NotNull(revision2);
                     Assert.NotNull(revision3);
+                    Assert.NotNull(attachment);
 
-                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+                    Assert.Equal(4, session.Advanced.NumberOfRequests);
                 }   
                 
                 using (var session = store.OpenSession())
@@ -67,7 +84,9 @@ namespace SlowTests.Issues
                     Assert.NotNull(revision1);
                     Assert.NotNull(revision2);
                     Assert.NotNull(revision3);
-
+                    
+                    session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
+                    
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
                 }   
             }
@@ -75,6 +94,26 @@ namespace SlowTests.Issues
         private class User
         {
             public string Name { get; set; }
+        }
+        
+        public class AttachmentResult
+        {
+            public Stream Stream;
+            public AttachmentDetails Details;
+        }
+
+        public class AttachmentDetails : AttachmentName
+        {
+            public string ChangeVector;
+            public string DocumentId;
+        }
+
+        public class AttachmentName
+        {
+            public string Name;
+            public string Hash;
+            public string ContentType;
+            public long Size;
         }
     }
 }
