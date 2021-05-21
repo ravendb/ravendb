@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
-using Raven.Client.ServerWide;
 using Raven.Server;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
@@ -50,7 +47,7 @@ namespace SlowTests.Rolling
                     var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, dbName);
                     var history = record.IndexesHistory;
                     var deployment = history[index][0].RollingDeployment;
-                    
+
                     Assert.Equal(3, deployment.Count);
                     Assert.True(deployment.All(x => x.Value.State == RollingIndexState.Done));
                 }
@@ -58,8 +55,10 @@ namespace SlowTests.Rolling
         }
 
         [Fact]
-        public async Task AddNewNodeWhileRollingIndexDeployed()
+        public Task AddNewNodeWhileRollingIndexDeployed()
         {
+            return Task.CompletedTask;
+
             /*DebuggerAttachedTimeout.DisableLongTimespan = false;
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var leaderStore = GetDocumentStore(new Options
@@ -90,51 +89,51 @@ namespace SlowTests.Rolling
         }
 
         [Fact]
-        public async Task RollingIndexReplcemantRetry()
+        public Task RollingIndexReplcemantRetry()
         {
-
+            return Task.CompletedTask;
         }
 
         [Fact]
-        public async Task RollingIndexDeployedWithError()
+        public Task RollingIndexDeployedWithError()
         {
-
+            return Task.CompletedTask;
         }
 
         [Fact]
-        public async Task RollingIndexDeployedSwapNow()
+        public Task RollingIndexDeployedSwapNow()
         {
-
+            return Task.CompletedTask;
         }
 
         [Fact]
-        public async Task EditRollingIndexDeployedWhileOldDeploymentInProgress()
+        public Task EditRollingIndexDeployedWhileOldDeploymentInProgress()
         {
-
+            return Task.CompletedTask;
         }
 
         [Fact]
-        public async Task RollingIndexDeployedWhileNodeIsDown()
+        public Task RollingIndexDeployedWhileNodeIsDown()
         {
-           
+            return Task.CompletedTask;
         }
 
         [Fact]
-        public async Task RemoveNodeFromClusterWhileRollingDeployment()
+        public Task RemoveNodeFromClusterWhileRollingDeployment()
         {
-           
+            return Task.CompletedTask;
         }
 
         [Fact]
-        public async Task RemoveNodeFromDatabaseGroupWhileRollingDeployment()
+        public Task RemoveNodeFromDatabaseGroupWhileRollingDeployment()
         {
-           
+            return Task.CompletedTask;
         }
 
         [Fact]
-        public async Task ForceIndexDeployed()
+        public Task ForceIndexDeployed()
         {
-            
+            return Task.CompletedTask;
         }
 
         public static Dictionary<string, RollingIndexDeployment> ReadDeployment(RavenServer server, string database, string index)
@@ -150,7 +149,7 @@ namespace SlowTests.Rolling
 
         private static async Task<string> CreateIndex((List<RavenServer> Nodes, RavenServer Leader) cluster, string dbName)
         {
-            var indexDefinition = new IndexDefinition {Name = "order_companies", Maps = {"from order in docs.Orders select new { company = order.Company }"}, DeploymentMode = IndexDeploymentMode.Rolling};
+            var indexDefinition = new IndexDefinition { Name = "order_companies", Maps = { "from order in docs.Orders select new { company = order.Company }" }, DeploymentMode = IndexDeploymentMode.Rolling };
 
             var db = await cluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
 
@@ -175,7 +174,7 @@ namespace SlowTests.Rolling
                 try
                 {
                     var index = db.IndexStore.GetIndex(name);
-                    if(index == null)
+                    if (index == null)
                         continue;
                     return index;
                 }

@@ -713,7 +713,8 @@ loadToOrders(partitionBy(
                                         31 => 0,
                                         28 => 31,
                                         27 => 365 + 33,
-                                        10 => 365 + 33 + 27
+                                        10 => 365 + 33 + 27,
+                                        _ => throw new ArgumentOutOfRangeException()
                                     };
 
                                     foreach (var val in data)
