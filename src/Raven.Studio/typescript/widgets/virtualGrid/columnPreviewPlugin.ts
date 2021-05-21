@@ -28,14 +28,14 @@ class columnPreviewPlugin<T> {
             const isUtc = dateAsMoment.isUtc();
             const dateFormatted = isUtc ? dateAsMoment.format() : dateAsMoment.format(columnPreviewPlugin.localDateFormat);
             
-            return `<div class="dateContainer">
+            return `<div class="dataContainer">
                         <div>
                             <div class="dateLabel">${isUtc ? "UTC" : "Local"}: </div>
                             <div class="dateValue">${dateFormatted}</div>
                         </div>
                         <div>
-                            <div class="dateLabel">Relative: </div>
-                            <div class="dateValue">${fullDuration}</div>
+                            <div class="dataLabel">Relative: </div>
+                            <div class="dataValue">${fullDuration}</div>
                         </div>
                 </div>` + copySyntax;
         } else {

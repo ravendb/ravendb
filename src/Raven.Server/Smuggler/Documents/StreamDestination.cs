@@ -1033,6 +1033,11 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteString(key);
                 Writer.WriteEndObject();
             }
+
+            public JsonOperationContext GetContextForNewCompareExchangeValue()
+            {
+                throw new NotSupportedException();
+            }
         }
 
         private abstract class StreamActionsBase : IDisposable

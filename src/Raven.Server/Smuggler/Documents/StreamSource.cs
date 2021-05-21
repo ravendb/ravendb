@@ -435,9 +435,9 @@ namespace Raven.Server.Smuggler.Documents
             return databaseRecord;
         }
 
-        public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValues()
+        public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValues(INewCompareExchangeActions actions)
         {
-            return InternalGetCompareExchangeValues();
+            return InternalGetCompareExchangeValues(actions);
         }
 
         public IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstones()
@@ -582,11 +582,11 @@ namespace Raven.Server.Smuggler.Documents
             parser.SetBuffer(value.Buffer, value.Size);
         }
 
-        private IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> InternalGetCompareExchangeValues()
+        private IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> InternalGetCompareExchangeValues(INewCompareExchangeActions actions)
         {
             var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(_context, state, "Import/CompareExchange"))
-            using (var builder = new BlittableJsonDocumentBuilder(_context,
+            using (var builder = new BlittableJsonDocumentBuilder(actions.GetContextForNewCompareExchangeValue(), 
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk, "Import/CompareExchange", parser, state))
             {
                 foreach (var reader in ReadArray())
@@ -602,6 +602,8 @@ namespace Raven.Server.Smuggler.Documents
                             continue;
                         }
 
+                        using (value)
+                        {
                         builder.ReadNestedObject();
                         SetBuffer(parser, value);
                         parser.Read();
@@ -613,6 +615,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
             }
+        }
         }
 
         private IEnumerable<(CompareExchangeKey Key, long Index)> InternalGetCompareExchangeTombstones()

@@ -16,7 +16,7 @@ namespace SlowTests.Utils
         [Fact]
         public async Task CanPropagateException()
         {
-            var ae = await Assert.ThrowsAsync<AggregateException>(async () =>
+            var ioe = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             {
                 var cluster = await CreateRaftCluster(2, leaderIndex: 0);
                 using (var store = GetDocumentStore(new Options { Server = cluster.Leader }))
@@ -35,8 +35,7 @@ namespace SlowTests.Utils
                 }
             });
 
-            Assert.IsType(typeof(InvalidOperationException), ae.InnerExceptions[0]);
-            Assert.IsType(typeof(AllTopologyNodesDownException), ae.InnerExceptions[1]);
+            Assert.Equal("Cows can fly!", ioe.Message);
         }
 
         [Fact]

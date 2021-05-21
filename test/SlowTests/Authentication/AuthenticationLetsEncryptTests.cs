@@ -187,7 +187,7 @@ namespace SlowTests.Authentication
 
                 Assert.True(command.Result.Success, "ForceRenewCertCommand returned false");
 
-                var result = mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2));
+                var result = mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(4));
 
                 if (result == false && Server.RefreshTask.IsCompleted)
                 {
