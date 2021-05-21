@@ -797,10 +797,12 @@ namespace Raven.Server.Smuggler.Documents
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var actions = _destination.CompareExchange(context))
             {
-                foreach (var kvp in _source.GetCompareExchangeValues())
+                foreach (var kvp in _source.GetCompareExchangeValues(actions))
                 {
                     _token.ThrowIfCancellationRequested();
                     result.CompareExchange.ReadCount++;
+                    if (result.CompareExchange.ReadCount != 0 && result.CompareExchange.ReadCount % 1000 == 0)
+                        AddInfoToSmugglerResult(result, $"Read {result.CompareExchange.ReadCount:#,#;;0} compare exchange values.");
 
                     if (kvp.Equals(default))
                     {

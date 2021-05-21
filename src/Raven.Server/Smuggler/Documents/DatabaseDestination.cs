@@ -580,7 +580,12 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (_compareExchangeAddOrUpdateCommands.Count > 0)
                 {
+                    var compareExchangeAddOrUpdateCommands = _compareExchangeAddOrUpdateCommands;
                     AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context, RaftIdGenerator.DontCareId)));
+                    foreach (var command in compareExchangeAddOrUpdateCommands)
+                    {
+                        command.Value.Dispose();
+                    }
                     _compareExchangeAddOrUpdateCommands.Clear();
                 }
 
@@ -589,6 +594,11 @@ namespace Raven.Server.Smuggler.Documents
                     AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context, RaftIdGenerator.DontCareId)));
                     _compareExchangeRemoveCommands.Clear();
                 }
+            }
+
+            public JsonOperationContext GetContextForNewCompareExchangeValue()
+            {
+                return _context;
             }
         }
 
