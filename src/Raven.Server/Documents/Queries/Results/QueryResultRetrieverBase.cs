@@ -611,6 +611,9 @@ namespace Raven.Server.Documents.Queries.Results
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cache this for the duration of the query
 
             _loadedDocuments[document.Id ?? string.Empty] = document;
+
+            document.IgnoreDispose = true; // so we can do multiple projections of the same value
+
             if (fieldToFetch.QueryField.SourceAlias != null)
             {
                 if (fieldToFetch.QueryField.IsQuoted)
@@ -681,7 +684,7 @@ namespace Raven.Server.Documents.Queries.Results
                     {
                         _loadedDocuments[docId] = doc = LoadDocument(docId);
                         if (doc != null)
-                            doc.IgnoreDispose = true;
+                            doc.IgnoreDispose = true; // so we can do multiple projections of the same value
                     }
                 }
                 if (doc == null)
