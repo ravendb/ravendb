@@ -437,7 +437,8 @@ namespace TypingsGenerator
             // adminJs console
             scripter.AddType(typeof(AdminJsScript));
 
-            scripter.AddType(typeof(TrafficWatchChange));
+            scripter.AddType(typeof(TrafficWatchHttpChange));
+            scripter.AddType(typeof(TrafficWatchTcpChange));
 
             scripter.AddType(typeof(NodeConnectionTestResult));
             scripter.AddType(typeof(ClientCertificateGenerationResult));

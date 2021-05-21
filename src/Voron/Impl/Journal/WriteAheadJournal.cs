@@ -363,7 +363,7 @@ namespace Voron.Impl.Journal
                 {
                     // last flushed journal might not exist because it could be already deleted and the only journal we have is empty
 
-                    _journalApplicator.SetLastFlushed(new JournalApplicator.LastFlushState(lastFlushedTxId, lastFlushedJournal,
+                    _journalApplicator.SetLastFlushed(new JournalApplicator.LastFlushState(lastFlushedTxId, lastFlushedJournal, -1,
                             instanceOfLastFlushedJournal, toDelete));
                 }
 #if DEBUG
@@ -536,14 +536,16 @@ namespace Voron.Impl.Journal
             {
                 public readonly long TransactionId;
                 public readonly long JournalId;
+                public readonly long TransactionIdUsedToReleaseScratches;
                 public readonly JournalFile Journal;
                 public readonly List<JournalFile> JournalsToDelete;
                 public readonly SingleUseFlag DoneFlag = new SingleUseFlag();
 
-                public LastFlushState(long transactionId, long journalId, JournalFile journal, List<JournalFile> journalsToDelete)
+                public LastFlushState(long transactionId, long journalId, long transactionIdUsedToReleaseScratches, JournalFile journal, List<JournalFile> journalsToDelete)
                 {
                     TransactionId = transactionId;
                     JournalId = journalId;
+                    TransactionIdUsedToReleaseScratches = transactionIdUsedToReleaseScratches;
                     Journal = journal;
                     JournalsToDelete = journalsToDelete;
                 }
@@ -551,14 +553,18 @@ namespace Voron.Impl.Journal
                 public bool IsValid => Journal != null && JournalsToDelete != null;
             }
 
-            private LastFlushState _lastFlushed = new LastFlushState(0, 0, null, null);
+            private LastFlushState _lastFlushed = new LastFlushState(0, 0, 0, null, null);
             private long _totalWrittenButUnsyncedBytes;
             private bool _ignoreLockAlreadyTaken;
             private Action<LowLevelTransaction> _updateJournalStateAfterFlush;
+            private DateTime _lastFlushTime;
+            private DateTime _lastSyncTime;
 
             public void SetLastFlushed(LastFlushState state)
             {
                 Interlocked.Exchange(ref _lastFlushed, state);
+
+                _lastFlushTime = DateTime.UtcNow;
             }
 
             public void AddJournalToDelete(JournalFile journal)
@@ -573,6 +579,7 @@ namespace Voron.Impl.Journal
             }
 
             public long LastFlushedTransactionId => _lastFlushed.TransactionId;
+            public long LastTransactionIdUsedToReleaseScratches => _lastFlushed.TransactionIdUsedToReleaseScratches;
             public long LastFlushedJournalId => _lastFlushed.JournalId;
             public long TotalWrittenButUnsyncedBytes => Interlocked.Read(ref _totalWrittenButUnsyncedBytes);
 
@@ -582,6 +589,10 @@ namespace Voron.Impl.Journal
             public bool ShouldSync => TotalWrittenButUnsyncedBytes != 0;
             public int JournalsToDeleteCount => _journalsToDelete.Count;
             public JournalFile[] JournalsToDelete => _journalsToDelete.Values.ToArray();
+
+            public DateTime LastFlushTime => _lastFlushTime;
+            public DateTime LastSyncTime => _lastSyncTime;
+
 
             public JournalApplicator(WriteAheadJournal waj)
             {
@@ -884,6 +895,7 @@ namespace Voron.Impl.Journal
                     SetLastFlushed(new LastFlushState(
                         lastFlushedTransactionId,
                         lastProcessedJournal,
+                        lastFlushedTransactionIdThatWontReadFromJournal,
                         _waj._files.First(x => x.Number == lastProcessedJournal),
                         _journalsToDelete.Values.ToList()));
 
@@ -1092,6 +1104,8 @@ namespace Voron.Impl.Journal
                         _parent._journalsToDelete.TryRemove(toDelete.Number, out _);
                         toDelete.Release();
                     }
+
+                    _parent._lastSyncTime = DateTime.UtcNow;
 
                     return true;
                 }

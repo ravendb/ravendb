@@ -59,6 +59,11 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<DocumentItem> GetDocumentsWithDuplicateCollection();
     }
 
+    public interface INewCompareExchangeActions
+    {
+        JsonOperationContext GetContextForNewCompareExchangeValue();
+    }
+
     public interface INewDocumentActions
     {
         DocumentsOperationContext GetContextForNewDocument();
@@ -97,7 +102,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         ValueTask WriteKeyValueAsync(string key, T value);
     }
 
-    public interface ICompareExchangeActions : IAsyncDisposable
+    public interface ICompareExchangeActions : INewCompareExchangeActions, IAsyncDisposable
     {
         ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value);
 

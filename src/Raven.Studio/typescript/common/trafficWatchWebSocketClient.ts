@@ -2,11 +2,11 @@
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
 
-class trafficWatchWebSocketClient extends abstractWebSocketClient<Raven.Client.Documents.Changes.TrafficWatchChange> {
+class trafficWatchWebSocketClient extends abstractWebSocketClient<Raven.Client.Documents.Changes.TrafficWatchChangeBase> {
 
-    private readonly onData: (data: Raven.Client.Documents.Changes.TrafficWatchChange) => void;
+    private readonly onData: (data: Raven.Client.Documents.Changes.TrafficWatchChangeBase) => void;
 
-    constructor(onData: (data: Raven.Client.Documents.Changes.TrafficWatchChange) => void) {
+    constructor(onData: (data: Raven.Client.Documents.Changes.TrafficWatchChangeBase) => void) {
         super(null);
         this.onData = onData;
     }
@@ -23,7 +23,7 @@ class trafficWatchWebSocketClient extends abstractWebSocketClient<Raven.Client.D
         return true;
     }
     
-    protected onMessage(e: Raven.Client.Documents.Changes.TrafficWatchChange) {
+    protected onMessage(e: Raven.Client.Documents.Changes.TrafficWatchChangeBase) {
         this.onData(e);
     }
 }
