@@ -262,9 +262,7 @@ namespace Raven.Server.Web.System
                     auditLog.Info($"Database {databaseRecord.DatabaseName} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
                 }
 
-                if (ServerStore.LicenseManager.LicenseStatus.HasDocumentsCompression &&
-                   Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Experimental &&
-                   databaseRecord.DocumentsCompression == null)
+                if (ServerStore.LicenseManager.LicenseStatus.HasDocumentsCompression && databaseRecord.DocumentsCompression == null)
                 {
                     databaseRecord.DocumentsCompression = new DocumentsCompressionConfiguration(
                         Server.Configuration.Databases.CompressRevisionsDefault);
