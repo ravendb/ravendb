@@ -34,7 +34,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private PeriodicBackup.PeriodicBackup.BackupTimer _timer;
         private readonly S3Settings _s3Settings;
         private readonly AzureSettings _azureSettings;
-        private readonly BackupResult _uploadResult;
         private readonly OperationCancelToken _operationCancelToken;
         private static readonly IEnumerator<ToOlapItem> EmptyEnumerator = Enumerable.Empty<ToOlapItem>().GetEnumerator();
 
@@ -48,8 +47,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             _azureSettings = BackupTask.GetBackupConfigurationFromScript(configuration.Connection.AzureSettings, x => JsonDeserializationServer.AzureSettings(x),
                 Database, updateServerWideSettingsFunc: null, serverWide: false);
-
-            _uploadResult = GenerateUploadResult();
 
             _operationCancelToken = new OperationCancelToken(Database.DatabaseShutdown, CancellationToken);
 
@@ -287,7 +284,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 TaskName = Name
             };
 
-            var backupUploader = new BackupUploader(uploaderSettings, new RetentionPolicyBaseParameters(), Logger, _uploadResult, onProgress: ProgressNotification, _operationCancelToken);
+            var backupUploader = new BackupUploader(uploaderSettings, new RetentionPolicyBaseParameters(), Logger, GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
 
             try
             {

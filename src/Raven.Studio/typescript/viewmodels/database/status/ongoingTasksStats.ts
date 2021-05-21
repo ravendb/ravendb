@@ -1949,15 +1949,27 @@ class ongoingTasksStats extends viewModelBase {
                     if (type === "Olap") {
                         const olapItem = context.item as unknown as Raven.Server.Documents.ETL.Providers.OLAP.OlapEtlPerformanceOperation;
                         if (olapItem.FileName) {
-                                tooltipHtml += `<div class="tooltip-li">File Name: <div class="value">${olapItem.FileName} </div></div>`;
-                            }
+                            tooltipHtml += `<div class="tooltip-li">File Name: <div class="value">${olapItem.FileName} </div></div>`;
+                        }
                         if (olapItem.S3Upload) {
-                            tooltipHtml += `<div class="tooltip-li">Upload State: <div class="value">${olapItem.S3Upload.UploadState}</div></div>`;
-                            tooltipHtml += `<div class="tooltip-li">Upload Type: <div class="value">${olapItem.S3Upload.UploadType}</div></div>`;
-                            // TODO ... maybe refactor the below items to show progress 
-                            tooltipHtml += `<div class="tooltip-li">File Size: <div class="value">${generalUtils.formatBytesToSize(olapItem.S3Upload.TotalInBytes)}</div></div>`;
-                            tooltipHtml += `<div class="tooltip-li">Bytes per Sec: <div class="value">${generalUtils.formatBytesToSize(olapItem.S3Upload.BytesPutsPerSec)}</div></div>`;
-                            tooltipHtml += `<div class="tooltip-li">Total Bytes Uploaded: <div class="value">${generalUtils.formatBytesToSize(olapItem.S3Upload.UploadedInBytes)}</div></div>`;
+                            tooltipHtml += `<hr />`;
+                            tooltipHtml += ongoingTasksStats.uploadProgressTooltip("S3", olapItem.S3Upload, context.item.DurationInMs);
+                        }
+                        if (olapItem.AzureUpload) {
+                            tooltipHtml += `<hr />`;
+                            tooltipHtml += ongoingTasksStats.uploadProgressTooltip("Azure", olapItem.AzureUpload, context.item.DurationInMs);
+                        }
+                        if (olapItem.FtpUpload) {
+                            tooltipHtml += `<hr />`;
+                            tooltipHtml += ongoingTasksStats.uploadProgressTooltip("FTP", olapItem.FtpUpload, context.item.DurationInMs);
+                        }
+                        if (olapItem.GlacierUpload) {
+                            tooltipHtml += `<hr />`;
+                            tooltipHtml += ongoingTasksStats.uploadProgressTooltip("Glacier", olapItem.GlacierUpload, context.item.DurationInMs);
+                        }
+                        if (olapItem.GoogleCloudUpload) {
+                            tooltipHtml += `<hr />`;
+                            tooltipHtml += ongoingTasksStats.uploadProgressTooltip("Google Cloud", olapItem.GoogleCloudUpload, context.item.DurationInMs);
                         }
                     }
                     
@@ -1972,6 +1984,23 @@ class ongoingTasksStats extends viewModelBase {
             
             this.handleTooltip(context.item, x, y, tooltipHtml);
         }
+    }
+    
+    static uploadProgressTooltip(header: string, progress: Raven.Client.Documents.Operations.Backups.UploadProgress, duration: number) {
+        let tooltipHtml = `<div class="tooltip-header">Upload to S3</div>`;
+        tooltipHtml += `<div class="tooltip-li">Upload State: <div class="value">${progress.UploadState}</div></div>`;
+        tooltipHtml += `<div class="tooltip-li">Upload Type: <div class="value">${progress.UploadType}</div></div>`;
+        if (progress.UploadState === "Done") {
+            tooltipHtml += `<div class="tooltip-li">File Size: <div class="value">${generalUtils.formatBytesToSize(progress.TotalInBytes)}</div></div>`;
+            if (duration > 0) {
+                tooltipHtml += `<div class="tooltip-li">Upload speed: <div class="value">${generalUtils.formatBytesToSize(progress.TotalInBytes * 1000 / duration)}/s</div></div>`;
+            }
+        } else {
+            tooltipHtml += `<div class="tooltip-li">Progress: <div class="value">${generalUtils.formatBytesToSize(progress.UploadedInBytes)}/${generalUtils.formatBytesToSize(progress.TotalInBytes)}</div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Upload speed: <div class="value">${generalUtils.formatBytesToSize(progress.BytesPutsPerSec)}/s</div></div>`;
+        }
+        
+        return tooltipHtml;
     }
     
     static etlItemTypeToUi(value: Raven.Server.Documents.ETL.EtlItemType) {
