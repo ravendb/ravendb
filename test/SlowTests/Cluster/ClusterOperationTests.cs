@@ -23,6 +23,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 using Raven.Client.Documents.Operations.Identities;
+using Raven.Client.Extensions;
 using Raven.Server.Utils;
 using Sparrow.Server;
 using Xunit.Abstractions;
@@ -141,7 +142,7 @@ namespace SlowTests.Cluster
                 result = store.Maintenance.ForDatabase(database).Send(new NextIdentityForOperation("person|"));
                 Assert.True(sp.Elapsed < TimeSpan.FromSeconds(10));
                 var newPreferred = await re.GetPreferredNode();
-                
+
                 Assert.NotEqual(tag, newPreferred.Item2.ClusterTag);
                 Assert.Equal(2, result);
             }
@@ -253,81 +254,76 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task ChangesApiFailOver()
         {
-            var db = "Test";
-            var topology = new DatabaseTopology
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3)))
             {
-                DynamicNodesDistribution = true
-            };
-            var leader = await CreateRaftClusterAndGetLeader(3, customSettings: new Dictionary<string, string>()
-            {
-                [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
-                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "0",
-                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-                [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "50"
-            });
+                var db = "ChangesApiFailOver_Test";
+                var topology = new DatabaseTopology { DynamicNodesDistribution = true };
+                var leader = await CreateRaftClusterAndGetLeader(3,
+                    customSettings: new Dictionary<string, string>()
+                    {
+                        [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
+                        [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "0",
+                        [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+                        [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "50"
+                    });
 
-            await CreateDatabaseInCluster(new DatabaseRecord
-            {
-                DatabaseName = db,
-                Topology = topology
-            }, 2, leader.WebUrl);
+                await CreateDatabaseInCluster(new DatabaseRecord { DatabaseName = db, Topology = topology }, 2, leader.WebUrl);
 
-            using (var store = new DocumentStore
-            {
-                Database = db,
-                Urls = new[] { leader.WebUrl }
-            }.Initialize())
-            {
-                var list = new BlockingCollection<DocumentChange>();
-                var taskObservable = store.Changes();
-                await taskObservable.EnsureConnectedNow();
-                var observableWithTask = taskObservable.ForDocument("users/1");
-                observableWithTask.Subscribe(list.Add);
-                await observableWithTask.EnsureSubscribedNow();
-
-                using (var session = store.OpenSession())
+                using (var store = new DocumentStore { Database = db, Urls = new[] { leader.WebUrl } }.Initialize())
                 {
-                    session.Store(new User(), "users/1");
-                    session.SaveChanges();
+                    var list = new BlockingCollection<DocumentChange>();
+                    var taskObservable = store.Changes();
+                    await taskObservable.EnsureConnectedNow().WithCancellation(cts.Token);
+                    var observableWithTask = taskObservable.ForDocument("users/1");
+                    observableWithTask.Subscribe(list.Add);
+                    await observableWithTask.EnsureSubscribedNow().WithCancellation(cts.Token);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User(), "users/1", cts.Token);
+                        await session.SaveChangesAsync(cts.Token);
+                    }
+
+                    WaitForDocument(store, "users/1");
+
+                    var value = await WaitForValueAsync(() => list.Count, 1);
+                    Assert.Equal(1, value);
+
+                    var currentUrl = store.GetRequestExecutor().Url;
+                    RavenServer toDispose = null;
+                    RavenServer workingServer = null;
+
+                    DisposeCurrentServer(currentUrl, ref toDispose, ref workingServer);
+
+                    await taskObservable.EnsureConnectedNow().WithCancellation(cts.Token);
+
+                    await WaitForTopologyStabilizationAsync(db, workingServer, 1, 2).WithCancellation(cts.Token);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User(), "users/1", cts.Token);
+                        await session.SaveChangesAsync(cts.Token);
+                    }
+
+                    value = await WaitForValueAsync(() => list.Count, 2);
+                    Assert.Equal(2, value);
+
+                    currentUrl = store.GetRequestExecutor().Url;
+                    DisposeCurrentServer(currentUrl, ref toDispose, ref workingServer);
+
+                    await taskObservable.EnsureConnectedNow().WithCancellation(cts.Token);
+
+                    await WaitForTopologyStabilizationAsync(db, workingServer, 2, 1).WithCancellation(cts.Token);
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User(), "users/1");
+                        session.SaveChanges();
+                    }
+
+                    value = await WaitForValueAsync(() => list.Count, 3);
+                    Assert.Equal(3, value);
                 }
-
-                WaitForDocument(store, "users/1");
-
-                var value = WaitForValue(() => list.Count, 1);
-                Assert.Equal(1, value);
-
-                var currentUrl = store.GetRequestExecutor().Url;
-                RavenServer toDispose = null;
-                RavenServer workingServer = null;
-
-                DisposeCurrentServer(currentUrl, ref toDispose, ref workingServer);
-
-                await taskObservable.EnsureConnectedNow();
-
-                WaitForTopologyStabilization(db, workingServer, 1, 2);
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User(), "users/1");
-                    await session.SaveChangesAsync();
-                }
-                value = WaitForValue(() => list.Count, 2);
-                Assert.Equal(2, value);
-
-                currentUrl = store.GetRequestExecutor().Url;
-                DisposeCurrentServer(currentUrl, ref toDispose, ref workingServer);
-
-                await taskObservable.EnsureConnectedNow();
-
-                WaitForTopologyStabilization(db, workingServer, 2, 1);
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User(), "users/1");
-                    session.SaveChanges();
-                }
-                value = WaitForValue(() => list.Count, 3);
-                Assert.Equal(3, value);
             }
         }
 
@@ -371,8 +367,8 @@ namespace SlowTests.Cluster
 
                 using (var session = store.OpenSession())
                 {
-                     session.Store(new User(), "users/1");
-                     session.SaveChanges();
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
                 }
                 value = WaitForValue(() => list.Count, 2);
                 Assert.Equal(2, value);
@@ -394,20 +390,20 @@ namespace SlowTests.Cluster
             DisposeServerAndWaitForFinishOfDisposal(toDispose);
         }
 
-        public void WaitForTopologyStabilization(string s, RavenServer workingServer, int rehabCount, int memberCount)
+        private async Task WaitForTopologyStabilizationAsync(string s, RavenServer workingServer, int rehabCount, int memberCount)
         {
             using (var tempStore = new DocumentStore
             {
                 Database = s,
                 Urls = new[] { workingServer.WebUrl },
                 Conventions = new DocumentConventions
-                    { DisableTopologyUpdates = true }
+                { DisableTopologyUpdates = true }
             }.Initialize())
             {
                 Topology topo;
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var value = WaitForValue(() =>
+                    var value = await WaitForValueAsync(() =>
                     {
                         var topologyGetCommand = new GetDatabaseTopologyCommand();
                         tempStore.GetRequestExecutor().Execute(topologyGetCommand, context);
