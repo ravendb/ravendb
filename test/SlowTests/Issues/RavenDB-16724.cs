@@ -95,25 +95,5 @@ namespace SlowTests.Issues
         {
             public string Name { get; set; }
         }
-        
-        public class AttachmentResult
-        {
-            public Stream Stream;
-            public AttachmentDetails Details;
-        }
-
-        public class AttachmentDetails : AttachmentName
-        {
-            public string ChangeVector;
-            public string DocumentId;
-        }
-
-        public class AttachmentName
-        {
-            public string Name;
-            public string Hash;
-            public string ContentType;
-            public long Size;
-        }
-    }
+    }    
 }
