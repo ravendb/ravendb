@@ -1418,7 +1418,8 @@ loadToOrders(partitionBy(
                                 31 => 0,
                                 28 => 31,
                                 27 => 365 + 33,
-                                10 => 365 + 33 + 27
+                                10 => 365 + 33 + 27,
+                                _ => throw new ArgumentOutOfRangeException()
                             };
 
                             foreach (var val in data)
@@ -2645,7 +2646,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                         Assert.True(field.Name.In(expectedFields));
                         if (field.Name != ParquetTransformedItems.LastModifiedColumn)
                             continue;
-                        
+
                         var expected = ParquetTransformedItems.UnixTimestampFromDateTime(lastModifiedDateTime.Value);
                         var data = rowGroupReader.ReadColumn((DataField)field).Data;
                         Assert.True(data.Length == 1);
