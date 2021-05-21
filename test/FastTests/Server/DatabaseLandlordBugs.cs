@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
@@ -32,7 +31,7 @@ namespace FastTests.Server
 
 
         [Fact]
-        public async Task CannotDeleteEntireDbFolder()
+        public void CannotDeleteEntireDbFolder()
         {
             DoNotReuseServer();
 
@@ -57,7 +56,7 @@ namespace FastTests.Server
         }
 
         [Fact]
-        public async Task CannotDeleteEntireDbFolder2()
+        public void CannotDeleteEntireDbFolder2()
         {
             DoNotReuseServer();
 
