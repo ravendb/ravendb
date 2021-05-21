@@ -424,7 +424,7 @@ namespace FastTests
                 if (options.AdminCertificate != null)
                 {
                     using (var adminStore =
-                        new DocumentStore { Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate }.Initialize())
+                        new DocumentStore {Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate}.Initialize())
                     {
                         return adminStore.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
                     }
@@ -445,6 +445,10 @@ namespace FastTests
             }
             catch (NoLeaderException)
             {
+            }
+            catch (AllTopologyNodesDownException)
+            {
+
             }
             catch (Exception e)
             {

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -21,9 +20,9 @@ namespace SlowTests.Issues
         {
             using (var database = CreateDocumentDatabase(runInMemory: false))
             {
-                var testingStuff = database.IndexStore.ForTestingPurposesOnly(); 
+                var testingStuff = database.IndexStore.ForTestingPurposesOnly();
 
-                using (var index = MapIndex.CreateNew(new IndexDefinition() {Name = "Users_ByName", Maps = {"from user in docs.Users select new { user.Name }"},},
+                using (var index = MapIndex.CreateNew(new IndexDefinition() { Name = "Users_ByName", Maps = { "from user in docs.Users select new { user.Name }" }, },
                     database))
                 {
 
@@ -37,7 +36,8 @@ namespace SlowTests.Issues
                             using (var doc = CreateDocument(context, "users/1",
                                 new DynamicJsonValue
                                 {
-                                    ["Name"] = "John", [Constants.Documents.Metadata.Key] = new DynamicJsonValue {[Constants.Documents.Metadata.Collection] = "Users"}
+                                    ["Name"] = "John",
+                                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue { [Constants.Documents.Metadata.Collection] = "Users" }
                                 }))
                             {
                                 database.DocumentsStorage.Put(context, "users/1", null, doc);
@@ -47,7 +47,7 @@ namespace SlowTests.Issues
                                 new DynamicJsonValue
                                 {
                                     ["Name"] = "Edward",
-                                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue {[Constants.Documents.Metadata.Collection] = "Users"}
+                                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue { [Constants.Documents.Metadata.Collection] = "Users" }
                                 }))
                             {
                                 database.DocumentsStorage.Put(context, "users/2", null, doc);
@@ -74,7 +74,7 @@ namespace SlowTests.Issues
                         new IndexDefinition()
                         {
                             Name = $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Users_ByName",
-                            Maps = {" from user in docs.Users select new { user.Name }"},
+                            Maps = { " from user in docs.Users select new { user.Name }" },
                         },
                         database))
                     {
@@ -83,20 +83,11 @@ namespace SlowTests.Issues
 
                         Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)), "Index wasn't replaced");
 
-                        var sp = Stopwatch.StartNew();
-                        while (sp.Elapsed < TimeSpan.FromSeconds(15))
-                        {
-                            if (newIndex.Status == IndexRunningStatus.Running)
-                                break;
-
-                            await Task.Delay(150);
-                        }
-
-
-                        Assert.True(newIndex.Status == IndexRunningStatus.Running,$"{newIndex.Status}");
+                        Assert.True(SpinWait.SpinUntil(() => newIndex.Status == IndexRunningStatus.Running, TimeSpan.FromSeconds(10)),
+                            "newIndex.Status == IndexRunningStatus.Running");
                     }
-
                 }
+
             }
         }
 

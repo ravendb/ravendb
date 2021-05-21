@@ -528,9 +528,9 @@ namespace Raven.Server.Smuggler.Documents
             return databaseRecord;
         }
 
-        public IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync()
+        public IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync(INewCompareExchangeActions actions)
         {
-            return InternalGetCompareExchangeValuesAsync();
+            return InternalGetCompareExchangeValuesAsync(actions);
         }
 
         public IAsyncEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesAsync()
@@ -704,11 +704,11 @@ namespace Raven.Server.Smuggler.Documents
             parser.SetBuffer(value.Buffer, value.Size);
         }
 
-        private async IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> InternalGetCompareExchangeValuesAsync()
+        private async IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> InternalGetCompareExchangeValuesAsync(INewCompareExchangeActions actions)
         {
             var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(_context, state, "Import/CompareExchange"))
-            using (var builder = new BlittableJsonDocumentBuilder(_context,
+            using (var builder = new BlittableJsonDocumentBuilder(actions.GetContextForNewCompareExchangeValue(),
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk, "Import/CompareExchange", parser, state))
             {
                 await foreach (var reader in ReadArrayAsync())
@@ -724,14 +724,17 @@ namespace Raven.Server.Smuggler.Documents
                             continue;
                         }
 
-                        builder.ReadNestedObject();
-                        SetBuffer(parser, value);
-                        parser.Read();
-                        builder.Read();
-                        builder.FinalizeDocument();
-                        yield return (new CompareExchangeKey(key), 0, builder.CreateReader());
+                        using (value)
+                        {
+                            builder.ReadNestedObject();
+                            SetBuffer(parser, value);
+                            parser.Read();
+                            builder.Read();
+                            builder.FinalizeDocument();
+                            yield return (new CompareExchangeKey(key), 0, builder.CreateReader());
 
-                        builder.Renew("import/cmpxchg", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            builder.Renew("import/cmpxchg", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        }
                     }
                 }
             }

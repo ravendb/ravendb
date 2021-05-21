@@ -55,6 +55,7 @@ namespace Voron.Debugging
         public long LastFlushedJournalId { get; set; }
         public long TotalWrittenButUnsyncedBytes { get; set; }
         public Size TotalEncryptionBufferSize { get; set; }
+        public InMemoryStorageState InMemoryStorageState { get; set; }
     }
 
     public unsafe class StorageReportGenerator
@@ -123,6 +124,7 @@ namespace Voron.Debugging
 
             return new DetailedStorageReport
             {
+                InMemoryState =  input.InMemoryStorageState,
                 DataFile = dataFile,
                 Trees = trees,
                 Tables = tables,
