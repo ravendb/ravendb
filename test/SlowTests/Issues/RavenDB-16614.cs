@@ -1,14 +1,18 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.ServerWide.Commands;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -39,6 +43,57 @@ namespace SlowTests.Issues
         private class User
         {
             public string Name;
+        }
+        
+        [Fact]
+        public async Task WillDeleteOrphanedAtomicGuards_AfterRestoreFromBackup()
+        {
+            var leader = await CreateRaftClusterAndGetLeader(3);
+            using var store = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 3});
+
+            using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+            {
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue(
+                    ClusterTransactionCommand.GetAtomicGuardKey("users/phoebe"),
+                    "users/pheobe"
+                );// this forces us to create an orphan!
+                await session.StoreAsync(new User {Name = "arava"}, "users/arava");
+                await session.SaveChangesAsync();
+            }
+           
+            string tempFileName = GetTempFileName();
+
+            var op = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), tempFileName, CancellationToken.None);
+            await op.WaitForCompletionAsync();
+
+            // we are simulating a scenario where we took a backup midway through removing an atomic guard
+
+            using var store2 = GetDocumentStore(caller: store.Database + "_Restored");
+
+            op = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), tempFileName, CancellationToken.None);
+            await op.WaitForCompletionAsync();
+            
+            using (var session = store2.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                var val = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(
+                    ClusterTransactionCommand.GetAtomicGuardKey("users/phoebe")
+                );
+                Assert.Null(val);
+
+                val = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(
+                    ClusterTransactionCommand.GetAtomicGuardKey("users/arava")
+                );
+                var arava = await session.LoadAsync<User>("users/arava");
+                var metadata = session.Advanced.GetMetadataFor(arava);
+                var cti = (IMetadataDictionary)metadata[Constants.Documents.Metadata.ClusterTransactionIndex];
+                var record = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store2.Database));
+                Assert.Equal(2, cti.Count);
+                var txid = cti[record.Topology.DatabaseTopologyIdBase64];
+                Assert.Equal(val.Index, txid);
+            }
         }
 
         [Fact]

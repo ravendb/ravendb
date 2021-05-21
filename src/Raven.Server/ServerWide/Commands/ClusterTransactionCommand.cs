@@ -304,9 +304,22 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public static unsafe string GetAtomicGuardKey(string docId)
+        const string RvnAtomicPrefix = "rvn-atomic/";
+        public static bool IsAtomicGuardKey(string id, out string docId)
         {
-            return "rvn-atomic-guard/" + docId;
+            if (id.StartsWith(RvnAtomicPrefix) == false)
+            {
+                docId = null;
+                return false;
+            }
+
+            docId = id.Substring(RvnAtomicPrefix.Length);
+            return true;
+        }
+
+        public static string GetAtomicGuardKey(string docId)
+        {
+            return RvnAtomicPrefix + docId;
         }
 
         public unsafe void SaveCommandsBatch(ClusterOperationContext context, long index)

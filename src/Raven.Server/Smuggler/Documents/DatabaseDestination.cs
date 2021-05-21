@@ -23,6 +23,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -583,12 +584,90 @@ namespace Raven.Server.Smuggler.Documents
                 await SendCommandsAsync(_context);
             }
 
+            private class UpdateClusterTransactionIndex : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IReplayableCommandDto<UpdateClusterTransactionIndex>
+            {
+                public long Index;
+                public readonly List<string> DocumentIds = new List<string>();
+                public readonly List<string> CompareExchangeToRemove = new List<string>();
+
+                protected override long ExecuteCmd(DocumentsOperationContext context)
+                {
+                    long count = 0;
+                    foreach (var docId in DocumentIds)
+                    {
+                        using var document = context.DocumentDatabase.DocumentsStorage.Get(context, docId);
+                        if (document == null)
+                        {
+                            CompareExchangeToRemove.Add(docId);
+                            continue;
+                        }
+
+                        count++;
+                        if(document.TryGetMetadata(out var metadata) == false)
+                            throw new InvalidOperationException($"Document {docId} doesn't have '@metadata' element?!");
+
+                        if (metadata.TryGet(Client.Constants.Documents.Metadata.ClusterTransactionIndex, out BlittableJsonReaderObject cti) == false)
+                        {
+                            metadata.Modifications = new DynamicJsonValue(metadata)
+                            {
+                                [Client.Constants.Documents.Metadata.ClusterTransactionIndex] = new DynamicJsonValue
+                                {
+                                    [context.DocumentDatabase.DatabaseGroupId] = Index
+                                }
+                            };
+                        }
+                        else
+                        {
+                            cti.Modifications = new DynamicJsonValue(cti) {[context.DocumentDatabase.DatabaseGroupId] = Index};
+                        }
+
+                        var newDoc = context.ReadObject(document.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        context.DocumentDatabase.DocumentsStorage.Put(context, docId, document.ChangeVector, newDoc, document.LastModified.Ticks,
+                            flags: document.Flags);
+                    }
+
+                    return count;
+                }
+
+                public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+                {
+                    return this;
+                }
+
+                public UpdateClusterTransactionIndex ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+                {
+                    return this;
+                }
+            }
+
+
             private async ValueTask SendCommandsAsync(JsonOperationContext context)
             {
                 if (_compareExchangeAddOrUpdateCommands.Count > 0)
                 {
-                    await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context, RaftIdGenerator.DontCareId));
+                    var (index, _) = await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context, RaftIdGenerator.DontCareId));
+                    var updateClusterTransactionIndex = new UpdateClusterTransactionIndex
+                    {
+                        Index = index
+                    };
+                    foreach (AddOrUpdateCompareExchangeCommand cmd in _compareExchangeAddOrUpdateCommands)
+                    {
+                        if(ClusterTransactionCommand.IsAtomicGuardKey(cmd.Key, out var docId) == false)
+                            continue;
+                        
+                        updateClusterTransactionIndex.DocumentIds.Add(docId);
+                    }
                     _compareExchangeAddOrUpdateCommands.Clear();
+
+                    if (updateClusterTransactionIndex.DocumentIds.Count > 0)
+                    {
+                        await _database.TxMerger.Enqueue(updateClusterTransactionIndex);
+                        foreach (var docId in updateClusterTransactionIndex.CompareExchangeToRemove)
+                        {
+                            _compareExchangeRemoveCommands.Add(new RemoveCompareExchangeCommand(_database.Name,
+                                ClusterTransactionCommand.GetAtomicGuardKey(docId),0, context, RaftIdGenerator.DontCareId, fromBackup: true));
+                        }    
+                    }
                 }
 
                 if (_compareExchangeRemoveCommands.Count > 0)
