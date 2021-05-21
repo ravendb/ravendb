@@ -81,7 +81,7 @@ class editIndex extends viewModelBase {
     
     defaultDeploymentMode = ko.observable<Raven.Client.Documents.Indexes.IndexDeploymentMode>();
     defaultDeploymentModeFormatted = ko.pureComputed(() => {
-        return this.defaultDeploymentMode() ? "Server default (rolling - one node at the time)" : "Server default (parallel - all nodes concurrently)";
+        return this.defaultDeploymentMode() === "Rolling" ? "Server default (rolling - one node at the time)" : "Server default (parallel - all nodes concurrently)";
     });
 
     effectiveDeploymentMode = ko.pureComputed(() => {
@@ -225,7 +225,7 @@ class editIndex extends viewModelBase {
         return $.when<any>(this.fetchCustomAnalyzers(), this.fetchServerWideCustomAnalyzers(), this.fetchIndexDefaults())
             .done(([analyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
                    [serverWideAnalyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
-                   [indexDefaults]: [Raven.Server.Web.Studio.StudioIndexHandler.IndexDefaults]) => {
+                   [indexDefaults]: [Raven.Server.Web.Studio.StudioDatabaseTasksHandler.IndexDefaults]) => {
                 const analyzersList = [...analyzers.map(x => x.Name), ...serverWideAnalyzers.map(x => x.Name)];
                 this.editedIndex().registerCustomAnalyzers(analyzersList);
                 
@@ -312,7 +312,7 @@ class editIndex extends viewModelBase {
             .execute();
     }
     
-    private fetchIndexDefaults(): JQueryPromise<Raven.Server.Web.Studio.StudioIndexHandler.IndexDefaults> {
+    private fetchIndexDefaults(): JQueryPromise<Raven.Server.Web.Studio.StudioDatabaseTasksHandler.IndexDefaults> {
         return new getIndexDefaultsCommand(this.activeDatabase())
             .execute();
     }

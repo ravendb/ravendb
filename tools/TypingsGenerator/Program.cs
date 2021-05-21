@@ -256,7 +256,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(StudioTasksHandler.FormattedExpression));
             scripter.AddType(typeof(StudioIndexHandler.IndexTypeInfo));
             scripter.AddType(typeof(AdminIndexHandler.DumpIndexResult));
-            scripter.AddType(typeof(StudioIndexHandler.IndexDefaults));
+            scripter.AddType(typeof(StudioDatabaseTasksHandler.IndexDefaults));
 
             // cluster
             scripter.AddType(typeof(ClusterTopology));

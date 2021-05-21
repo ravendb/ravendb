@@ -453,7 +453,7 @@
                     <div data-bind="visible: state() === 'Pending'">
                         Waiting for indexing to complete on other nodes 
                     </div>
-                    <div class="flex-grow" data-bind="with: $root.localNodeTag() === nodeTag ? $parent : null">
+                    <div class="flex-grow" data-bind="with: $root.localNodeTag() === nodeTag && state() !== 'Pending' ? $parent : null">
                         <div data-bind="template: { name: 'indexes-progress-template' }"></div>
                     </div>
                 </div>
