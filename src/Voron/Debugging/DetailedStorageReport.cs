@@ -29,6 +29,7 @@ namespace Voron.Debugging
 
     public class DetailedStorageReport
     {
+        public InMemoryStorageState InMemoryState { get; set; }
         public DataFileReport DataFile { get; set; }
         public JournalsReport Journals { get; set; }
         public List<TempBufferReport> TempBuffers { get; set; }

@@ -1095,6 +1095,11 @@ namespace Raven.Server.Smuggler.Documents
 
                 await Writer.MaybeFlushAsync();
             }
+
+            public JsonOperationContext GetContextForNewCompareExchangeValue()
+            {
+                throw new NotSupportedException();
+            }
         }
 
         private abstract class StreamActionsBase : IAsyncDisposable
