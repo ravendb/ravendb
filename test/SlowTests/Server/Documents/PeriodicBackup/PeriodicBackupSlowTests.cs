@@ -1737,42 +1737,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
-        public async Task FirstBackupWithClusterDownStatusShouldRearrangeTheTimer()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
-            {
-                var documentDatabase = await GetDatabase(store.Database);
-                documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateClusterDownStatus = true;
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var operation = new UpdatePeriodicBackupOperation(config);
-                var result = await store.Maintenance.SendAsync(operation);
-                var periodicBackupTaskId = result.TaskId;
-                var val = WaitForValue(() => documentDatabase.PeriodicBackupRunner._forTestingPurposes.ClusterDownStatusSimulated, true, timeout: 66666, interval: 333);
-                Assert.True(val, "Failed to simulate ClusterDown Status");
-                documentDatabase.PeriodicBackupRunner._forTestingPurposes = null;
-                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
-                val = WaitForValue(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, true, timeout: 66666, interval: 333);
-                Assert.True(val, "Failed to complete the backup in time");
-            }
-        }
-
-        [Fact]
         public async Task can_create_local_snapshot_and_restore_using_restore_point()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1953,58 +1917,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Null(status.LocalBackup.LastIncrementalBackup);
                 Assert.NotNull(status.NodeTag);
                 Assert.True(status.DurationInMs > 0, "status.DurationInMs > 0");
-            }
-        }
-
-        [Fact]
-        public async Task ShouldRearrangeTheTimeIfBackupAfterTimerCallbackGotActiveByOtherNode()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var server = GetNewServer())
-            using (var store = GetDocumentStore(new Options
-            {
-                Server = server
-            }))
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                while (DateTime.Now.Second > 55)
-                    await Task.Delay(1000);
-
-                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
-                {
-                    FullBackupFrequency = "*/1 * * * *",
-                    LocalSettings = new LocalSettings { FolderPath = backupPath },
-                }));
-
-                var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var backups1 = record1.PeriodicBackups;
-                Assert.Equal(1, backups1.Count);
-
-                var taskId = backups1.First().TaskId;
-                var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                Assert.NotNull(responsibleDatabase);
-                var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
-                Assert.Equal(server.ServerStore.NodeTag, tag);
-
-                responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus = true;
-                var pb = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.First();
-                Assert.NotNull(pb);
-
-                var val = WaitForValue(() => pb.HasScheduledBackup(), false, timeout: 66666, interval: 444);
-                Assert.False(val, "PeriodicBackup should cancel the ScheduledBackup if the task status is ActiveByOtherNode, " +
-                                  "so when the task status is back to be ActiveByCurrentNode, UpdateConfigurations will be able to reassign the backup timer");
-
-                responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;
-                responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1);
-                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(taskId);
-
-                val = WaitForValue(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, true, timeout: 66666, interval: 444);
-                Assert.True(val, "Failed to complete the backup in time");
             }
         }
 
@@ -2819,7 +2731,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation(documentId, "test_attachment", profileStream, "image/png"));
                     Assert.Equal("test_attachment", result.Name);
