@@ -98,8 +98,8 @@
                     </div>
                 </div>
                 <div class="search-container" data-bind="visible: $root.activeDatabase">
-                    <input type="search" class="form-control omnisearch on-base-background" placeholder="go to document" data-bind="textInput: $root.searchBox.searchQuery" />
-                    <div class="icon-search"></div>
+                    <input type="search" class="form-control omnisearch on-base-background" autocomplete="off" placeholder="go to document" id="search-box-input" data-bind="textInput: $root.searchBox.searchQuery, hasFocus: $root.searchBox.searchQueryHasFocus" />
+                    <label for="search-box-input" class="icon-search"></label>
                     <div class="autocomplete-list box-container" data-bind="with: $root.searchBox, visible: $root.searchBox.showMatchedDocumentsSection() || $root.searchBox.recentDocumentsList().length">
                         <div class="scroller">
                             <section data-bind="visible: showMatchedDocumentsSection">
