@@ -298,7 +298,7 @@ class databaseSettings extends viewModelBase {
                         if (column.header.includes("Effective Value") && !details.hasAccess()) {
                             value = "Unauthorized to access value!";
                         }
-                        onValue(genUtils.escapeHtml(value));
+                        onValue(genUtils.escapeHtml(value), value);
                     }
                 }
             });
