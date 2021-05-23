@@ -595,43 +595,87 @@ namespace Raven.Server.Commercial
 
         private async Task<License> GetUpdatedLicenseForActivation(License currentLicense)
         {
-            var response = await GetUpdatedLicenseResponseMessage(currentLicense).ConfigureAwait(false);
-
-            if (response.IsSuccessStatusCode == false)
+            try
             {
-                var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                AddLeaseLicenseError($"status code: {response.StatusCode}, response: {responseString}");
+                var response = await GetUpdatedLicenseResponseMessage(currentLicense).ConfigureAwait(false);
+
+                if (response.IsSuccessStatusCode == false)
+                {
+                    // we failed to get an update license from api.ravendb.net
+                    // we'll try to get it from the json string or path
+                    var license = TryGetUpdatedLicenseFromStringOrPath(currentLicense);
+                    if (license != null)
+                        return license;
+
+                    var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    AddLeaseLicenseError($"status code: {response.StatusCode}, response: {responseString}");
+                    return null;
+                }
+
+                var leasedLicense = await ConvertResponseToLeasedLicense(response).ConfigureAwait(false);
+                var newLicense = leasedLicense.License;
+                var licenseChanged = newLicense.Equals(currentLicense) == false;
+
+                if (string.IsNullOrWhiteSpace(leasedLicense.Message) == false)
+                {
+                    var severity =
+                        leasedLicense.NotificationSeverity == NotificationSeverity.None
+                            ? NotificationSeverity.Info : leasedLicense.NotificationSeverity;
+                    var alert = AlertRaised.Create(
+                        null,
+                        leasedLicense.Title,
+                        leasedLicense.Message,
+                        AlertType.LicenseManager_LicenseUpdateMessage,
+                        severity);
+
+                    _serverStore.NotificationCenter.Add(alert);
+                }
+
+                if (string.IsNullOrWhiteSpace(leasedLicense.ErrorMessage) == false)
+                {
+                    LicenseStatus.ErrorMessage = leasedLicense.ErrorMessage;
+                }
+
+                return licenseChanged ? leasedLicense.License : null;
+            }
+            catch (Exception e)
+            {
+                if (e is HttpRequestException)
+                {
+                    var license = TryGetUpdatedLicenseFromStringOrPath(currentLicense);
+                    if (license != null)
+                        return license;
+                }
+
+                throw;
+            }
+        }
+
+        private License TryGetUpdatedLicenseFromStringOrPath(License currentLicense)
+        {
+            var license = _licenseHelper.TryGetLicenseFromString(throwOnFailure: false) ??
+                          _licenseHelper.TryGetLicenseFromPath(throwOnFailure: false);
+
+            // since we are updating NOT from api.ravendb.net, we are enforcing:
+            // - the same license id (can cause issues when updating the let's encrypt certificate)
+            // - higher expiration date
+
+            if (license == null || license.Id != currentLicense.Id)
                 return null;
-            }
 
-            var leasedLicense = await ConvertResponseToLeasedLicense(response).ConfigureAwait(false);
-            var newLicense = leasedLicense.License;
-            var licenseChanged =
-                newLicense.Name != currentLicense.Name ||
-                newLicense.Id != currentLicense.Id ||
-                newLicense.Keys.All(currentLicense.Keys.Contains) == false;
+            var licenseStatus = GetLicenseStatus(license);
+            ThrowIfCannotActivateLicense(licenseStatus);
 
-            if (string.IsNullOrWhiteSpace(leasedLicense.Message) == false)
-            {
-                var severity =
-                    leasedLicense.NotificationSeverity == NotificationSeverity.None
-                        ? NotificationSeverity.Info : leasedLicense.NotificationSeverity;
-                var alert = AlertRaised.Create(
-                    null,
-                    leasedLicense.Title,
-                    leasedLicense.Message,
-                    AlertType.LicenseManager_LicenseUpdateMessage,
-                    severity);
+            if (licenseStatus.Expired)
+                return null;
 
-                _serverStore.NotificationCenter.Add(alert);
-            }
+            if (licenseStatus.Expiration < GetLicenseStatus(currentLicense).Expiration)
+                return null;
 
-            if (string.IsNullOrWhiteSpace(leasedLicense.ErrorMessage) == false)
-            {
-                LicenseStatus.ErrorMessage = leasedLicense.ErrorMessage;
-            }
+            if (license.Equals(currentLicense))
+                return null;
 
-            return licenseChanged ? leasedLicense.License : null;
+            return license;
         }
 
         private async Task ExecuteTasks()
