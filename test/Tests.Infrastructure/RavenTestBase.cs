@@ -44,8 +44,10 @@ using Xunit.Abstractions;
 
 namespace FastTests
 {
-    public abstract class RavenTestBase : TestBase
+    public abstract partial class RavenTestBase : TestBase
     {
+        public static BackupTestBase Backup => BackupTestBase.Instance.Value;
+
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
 
         protected RavenTestBase(ITestOutputHelper output) : base(output)
@@ -684,7 +686,7 @@ namespace FastTests
         protected async Task<T> WaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class =>
             await WaitForPredicateAsync(a => a != null, act, timeout, interval);
 
-        protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
+        protected static async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
         {
             return await WaitForPredicateAsync(t => t.Equals(expectedVal), act, timeout, interval);
         }
@@ -931,27 +933,7 @@ namespace FastTests
             return clientCertificate;
         }
 
-        protected IDisposable RestoreDatabase(IDocumentStore store, RestoreBackupConfiguration config, TimeSpan? timeout = null)
-        {
-            var restoreOperation = new RestoreBackupOperation(config);
-
-            var operation = store.Maintenance.Server.Send(restoreOperation);
-            operation.WaitForCompletion(timeout ?? TimeSpan.FromSeconds(30));
-
-            return EnsureDatabaseDeletion(config.DatabaseName, store);
-        }
-
-        protected IDisposable RestoreDatabaseFromCloud(IDocumentStore store, RestoreBackupConfigurationBase config, TimeSpan? timeout = null)
-        {
-            var restoreOperation = new RestoreBackupOperation(config);
-
-            var operation = store.Maintenance.Server.Send(restoreOperation);
-            operation.WaitForCompletion(timeout ?? TimeSpan.FromSeconds(30));
-
-            return EnsureDatabaseDeletion(config.DatabaseName, store);
-        }
-
-        protected IDisposable EnsureDatabaseDeletion(string databaseToDelete, IDocumentStore store)
+        protected static IDisposable EnsureDatabaseDeletion(string databaseToDelete, IDocumentStore store)
         {
             return new DisposableAction(() =>
             {
