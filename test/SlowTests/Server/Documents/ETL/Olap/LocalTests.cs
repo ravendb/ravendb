@@ -1886,9 +1886,9 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
 
-                Assert.Equal(5, files.Length);
+                Assert.Equal(5, files.Count);
 
                 Assert.Contains("year=2020", files[0]);
                 Assert.Contains("year=2021", files[1]);
@@ -1936,8 +1936,8 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
-                Assert.Equal(10, files.Length);
+                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
+                Assert.Equal(10, files.Count);
 
                 Assert.Contains("year=2025", files[5]);
                 Assert.Contains("year=2026", files[6]);
@@ -2033,9 +2033,9 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
 
-                Assert.Equal(5, files.Length);
+                Assert.Equal(5, files.Count);
 
                 Assert.Contains("year=2020", files[0]);
                 Assert.Contains("year=2021", files[1]);
@@ -2073,8 +2073,8 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
-                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
-                Assert.Equal(10, files.Length);
+                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
+                Assert.Equal(10, files.Count);
 
                 Assert.Contains("year=2025", files[5]);
                 Assert.Contains("year=2026", files[6]);
@@ -2159,9 +2159,9 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).ToList();
 
-                Assert.Equal(5, files.Length);
+                Assert.Equal(5, files.Count);
 
                 foreach (var file in files)
                 {
@@ -2169,7 +2169,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                 }
 
                 // update 
-                const string newCustomPartition = "shop125";
+                const string newCustomPartition = "shop35";
                 configuration.CustomPartitionValue = newCustomPartition;
                 store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
 
@@ -2198,8 +2198,8 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                 etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
-                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
-                Assert.Equal(10, files.Length);
+                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
+                Assert.Equal(10, files.Count);
 
                 foreach (var file in new[] { files[5], files[6], files[7], files[8], files[9] })
                 {
@@ -2282,9 +2282,9 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                string[] files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
 
-                Assert.Equal(5, files.Length);
+                Assert.Equal(5, files.Count);
 
                 Assert.Contains("year=2020", files[0]);
                 Assert.Contains("year=2021", files[1]);
@@ -2340,8 +2340,8 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
-                files = Directory.GetFiles(newPath, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
-                Assert.Equal(5, files.Length);
+                files = Directory.GetFiles(newPath, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
+                Assert.Equal(5, files.Count);
 
                 Assert.Contains("year=2025", files[0]);
                 Assert.Contains("year=2026", files[1]);
@@ -2350,8 +2350,6 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 Assert.Contains("year=2029", files[4]);
             }
         }
-
-
 
         [Fact]
         public async Task LastModifiedShouldBeMillisecondsSinceUnixEpoch()
@@ -2430,7 +2428,6 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 }
             }
         }
-
 
         private static string GenerateConfigurationScript(string path, out string command)
         {
