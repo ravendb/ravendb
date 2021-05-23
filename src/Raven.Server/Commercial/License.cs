@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Commercial
@@ -20,6 +21,14 @@ namespace Raven.Server.Commercial
                 [nameof(Name)] = Name,
                 [nameof(Keys)] = new DynamicJsonArray(Keys)
             };
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is License otherLicense &&
+                   Id == otherLicense.Id &&
+                   Name == otherLicense.Name &&
+                   Keys.All(otherLicense.Keys.Contains);
         }
 
         public override string ToString()
