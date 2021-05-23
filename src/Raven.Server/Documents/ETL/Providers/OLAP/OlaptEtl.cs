@@ -35,21 +35,20 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private static readonly IEnumerator<ToOlapItem> EmptyEnumerator = Enumerable.Empty<ToOlapItem>().GetEnumerator();
 
         private OlapEtlStatsScope _uploadScope;
-        private UploaderSettings _uploaderSettings;
+        private readonly UploaderSettings _uploaderSettings;
 
         public OlapEtl(Transformation transformation, OlapEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, OlaptEtlTag)
         {
             Metrics = OlapMetrics;
-
-            GenerateUploaderSetting();
-
             _operationCancelToken = new OperationCancelToken(Database.DatabaseShutdown, CancellationToken);
+            
+            _uploaderSettings = GenerateUploaderSetting();
 
             UpdateTimer(LastProcessState.LastBatchTime);
         }
 
-        private void GenerateUploaderSetting()
+        private UploaderSettings GenerateUploaderSetting()
         {
             var s3Settings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
                 Database, updateServerWideSettingsFunc: null, serverWide: false);
@@ -63,12 +62,16 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             var googleCloudSettings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x),
                 Database, updateServerWideSettingsFunc: null, serverWide: false);
 
-            _uploaderSettings = new UploaderSettings
+            var ftpSettings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.FtpSettings, x => JsonDeserializationServer.FtpSettings(x),
+                Database, updateServerWideSettingsFunc: null, serverWide: false);
+
+            return new UploaderSettings
             {
                 S3Settings = s3Settings, 
                 AzureSettings = azureSettings, 
                 GlacierSettings = glacierSettings,
                 GoogleCloudSettings = googleCloudSettings,
+                FtpSettings = ftpSettings,
                 DatabaseName = Database.Name, 
                 TaskName = Name
             };
