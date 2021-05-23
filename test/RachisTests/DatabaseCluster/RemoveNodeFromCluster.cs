@@ -268,7 +268,7 @@ namespace RachisTests.DatabaseCluster
                 Database = dbName,
             }.Initialize())
             {
-                await cluster.Leader.ServerStore.RemoveFromClusterAsync(memberNode);
+                await ActionWithLeader((l) => l.ServerStore.RemoveFromClusterAsync(memberNode));
                 var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Leader);
                 cluster.Leader = GetNewServer(new ServerCreationOptions
                 {
