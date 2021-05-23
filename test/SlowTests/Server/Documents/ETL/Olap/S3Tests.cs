@@ -1195,6 +1195,71 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             }
         }
 
+        [AmazonS3Fact]
+        public async Task ShouldTrimRedundantSlashInRemoteFolderName()
+        {
+            var settings = GetS3Settings();
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var baseline = new DateTime(2020, 1, 1);
+                        for (int i = 0; i < 10; i++)
+                        {
+                            await session.StoreAsync(new Order
+                            {
+                                OrderedAt = baseline.AddDays(i),
+                                Company = $"companies/{i % 5}"
+                            });
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    var script = @"
+    loadToOrders(partitionBy(['Company', this.Company]), {
+        OrderDate : new Date(this.OrderedAt)
+    })
+";
+
+                    if (settings.RemoteFolderName.EndsWith('/') == false)
+                        settings.RemoteFolderName += '/';
+
+                    SetupS3OlapEtl(store, script, settings);
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    using (var s3Client = new RavenAwsS3Client(settings))
+                    {
+                        var prefix = $"{settings.RemoteFolderName}{CollectionName}";
+                        Assert.False(prefix.EndsWith('/'));
+
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
+
+                        Assert.Equal(5, cloudObjects.FileInfoDetails.Count);
+
+                        Assert.Contains($"{prefix}/Company=companies_0", cloudObjects.FileInfoDetails[0].FullPath);
+                        Assert.Contains($"{prefix}/Company=companies_1", cloudObjects.FileInfoDetails[1].FullPath);
+                        Assert.Contains($"{prefix}/Company=companies_2", cloudObjects.FileInfoDetails[2].FullPath);
+                        Assert.Contains($"{prefix}/Company=companies_3", cloudObjects.FileInfoDetails[3].FullPath);
+                        Assert.Contains($"{prefix}/Company=companies_4", cloudObjects.FileInfoDetails[4].FullPath);
+
+                        foreach (var file in cloudObjects.FileInfoDetails)
+                        {
+                            Assert.DoesNotContain("//", file.FullPath);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}{CollectionName}", delimiter: string.Empty);
+            }
+        }
         private void SetupS3OlapEtl(DocumentStore store, string script, S3Settings settings, string customPartitionValue = null, string transformationName = null)
         {
             var connectionStringName = $"{store.Database} to S3";
