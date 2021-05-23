@@ -777,9 +777,8 @@ namespace Raven.Server.Documents.Indexes
             return _indexes.TryGetByName(replacementName, out _);
         }
 
-        public void MaybeFinishRollingDeployment(Index index)
+        public bool MaybeFinishRollingDeployment(string index)
         {
-            var definition = index.Definition;
             var nodeTag = _serverStore.NodeTag;
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -789,50 +788,22 @@ namespace Raven.Server.Documents.Indexes
                 var rollingIndexes = rawRecord.RollingIndexes;
 
                 if (rollingIndexes == null)
-                    return;
+                    return false;
 
-                if (rollingIndexes.TryGetValue(definition.Name, out var rollingIndex) == false)
-                    return;
+                if (rollingIndexes.TryGetValue(index, out var rollingIndex) == false)
+                    return false;
 
                 if (rollingIndex.ActiveDeployments.TryGetValue(nodeTag, out var currentDeployment) == false)
-                    return;
+                    return false;
 
                 if (currentDeployment.State != RollingIndexState.Running)
-                    return;
+                    return false;
 
-                if (HasReplacement(definition.Name))
-                    return; // if exists, the replacement index should finish the rolling deployment 
+                if (HasReplacement(index))
+                    return false; // if exists, the replacement index should finish the rolling deployment 
             }
 
-            if (index.IsStale())
-                return;
-
-            try
-            {
-                // We may send the command multiple times so we need a new Id every time.
-                var command = new PutRollingIndexCommand(_documentDatabase.Name, definition.Name, nodeTag, _documentDatabase.Time.GetUtcNow(), RaftIdGenerator.NewId());
-                _serverStore.SendToLeaderAsync(command).ContinueWith(t =>
-                {
-                    if (Logger.IsOperationsEnabled)
-                    {
-                        try
-                        {
-                            t.GetAwaiter().GetResult();
-                        }
-                        catch (Exception e)
-                        {
-                            Logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{definition.Name}' in node {nodeTag}.", e);
-                        }
-                    }
-                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.NotOnRanToCompletion);
-
-                ForTestingPurposes?.OnRollingIndexFinished?.Invoke(index);
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{definition.Name}' in node {nodeTag}.", e);
-            }
+            return true;
         }
 
         public RollingIndex GetRollingProgress(string name)
