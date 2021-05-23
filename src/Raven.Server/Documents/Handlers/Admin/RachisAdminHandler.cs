@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/debug/cluster/history-logs", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetHistoryLogs()
         {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();

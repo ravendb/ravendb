@@ -143,7 +143,7 @@ namespace FastTests
         {
             var updateIndex = 0L;
             var commandFound = false;
-            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 foreach (var entry in server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
@@ -163,7 +163,7 @@ namespace FastTests
 
         protected IEnumerable<DynamicJsonValue> GetRaftCommands(RavenServer server, string commandType = null)
         {
-            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 foreach (var entry in server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
