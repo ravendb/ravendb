@@ -147,13 +147,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             {
                 outerScope.NumberOfFiles++;
 
-                string localPath;
-                string folderName;
-                string fileName;
+                string localPath, folderName, fileName, safeFolderName;
                 using (outerScope.Start())
                 using (var loadScope = outerScope.For($"{EtlOperations.LoadLocal}/{outerScope.NumberOfFiles}"))
                 {
-                    localPath = transformed.GenerateFileFromItems(out folderName, out fileName);
+                    localPath = transformed.GenerateFile(out folderName, out safeFolderName, out fileName);
 
                     loadScope.FileName = fileName;
                     loadScope.NumberOfFiles = 1;
@@ -161,7 +159,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     count += transformed.Count;
                 }
 
-                UploadToServer(localPath, folderName, fileName, scope);
+                if (AnyRemoteDestinations())
+                    UploadToServer(localPath, folderName, fileName, safeFolderName, scope);
 
                 if (Configuration.Connection.LocalSettings != null)
                     continue;
@@ -289,21 +288,15 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         }
 
 
-        private void UploadToServer(string localPath, string folderName, string fileName, OlapEtlStatsScope scope)
+        private void UploadToServer(string localPath, string folderName, string fileName, string safeFolderName, OlapEtlStatsScope scope)
         {
             CancellationToken.ThrowIfCancellationRequested();
-
-            var uploaderSettings = new UploaderSettings
-            {
-                S3Settings = _s3Settings,
-                AzureSettings = _azureSettings,
-                FilePath = localPath,
-                FolderName = folderName,
-                FileName = fileName,
-                DatabaseName = Database.Name,
-                TaskName = Name
-            };
-
+            
+            _uploaderSettings.FilePath = localPath;
+            _uploaderSettings.FileName = fileName;
+            _uploaderSettings.FolderName = folderName;
+            _uploaderSettings.SafeFolderName = safeFolderName;
+            
             var backupUploader = new BackupUploader(uploaderSettings, new RetentionPolicyBaseParameters(), Logger, GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
 
             try
@@ -353,5 +346,12 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 return current.UploadProgress;
             }
         }
+
+        private bool AnyRemoteDestinations() =>
+            _uploaderSettings.S3Settings != null || 
+            _uploaderSettings.GlacierSettings != null || 
+            _uploaderSettings.AzureSettings != null || 
+            _uploaderSettings.GoogleCloudSettings != null ||
+            _uploaderSettings.FtpSettings != null;
     }
 }

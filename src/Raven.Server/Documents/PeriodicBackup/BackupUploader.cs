@@ -4,12 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
-using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
@@ -31,7 +29,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly List<PoolOfThreads.LongRunningWork> _threads;
         private readonly ConcurrentSet<Exception> _exceptions;
 
-        [CanBeNull]
         private readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
 
         private readonly bool _isFullBackup;
@@ -375,7 +372,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public BackupType? BackupType;
 
-        [CanBeNull]
         public string SafeFolderName;
     }
 }
