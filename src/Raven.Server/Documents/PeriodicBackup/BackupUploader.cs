@@ -190,6 +190,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private string CombinePathAndKey(string path, bool useSafeFolderName = false)
         {
+            if (path?.EndsWith('/') == true)
+                path = path[..^1];
+
             var prefix = string.IsNullOrWhiteSpace(path) == false ? $"{path}/" : string.Empty;
             var folderName = useSafeFolderName
                 ? _uploaderSettings.SafeFolderName
