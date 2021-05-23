@@ -28,7 +28,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         [Fact, Trait("Category", "Smuggler")]
         public void restore_azure_cloud_settings_tests()
         {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = s => $"{s}_2"
@@ -69,7 +68,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AzureFact]
+        [AzureFact, Trait("Category", "Smuggler")]
         public void can_backup_and_restore()
         {
             using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
@@ -83,35 +82,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                         session.SaveChanges();
                     }
 
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        BackupType = BackupType.Backup,
-                        AzureSettings = holder.Settings,
-                        IncrementalBackupFrequency = "0 0 1 1 *"
-                    };
-
-                    var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
-                    store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                    var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                    PeriodicBackupStatus status = null;
-                    var value = WaitForValue(() =>
-                    {
-                        status = store.Maintenance.Send(operation).Status;
-                        return status?.LastEtag;
-                    }, 4);
-                    Assert.True(4 == value, $"4 == value, Got status: {status != null}, exception: {status?.Error?.Exception}");
-                    Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
-
-                    OperationState backupOperation = null;
-                    var operationStatus = WaitForValue(() =>
-                    {
-                        backupOperation = store.Maintenance.Send(new GetOperationStateOperation(status.LastOperationId.Value));
-                        return backupOperation.Status;
-                    }, OperationStatus.Completed);
-                    Assert.Equal(OperationStatus.Completed, operationStatus);
-
-                    var backupResult = backupOperation.Result as BackupResult;
+                    var config = Backup.CreateBackupConfiguration(azureSettings: holder.Settings);
+                    var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                    var backupResult = (BackupResult)store.Maintenance.Send(new GetOperationStateOperation(Backup.GetBackupOperationId(store, backupTaskId))).Result;
                     Assert.NotNull(backupResult);
                     Assert.True(backupResult.Counters.Processed, "backupResult.Counters.Processed");
                     Assert.Equal(1, backupResult.Counters.ReadCount);
@@ -125,9 +98,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     }
 
                     var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                    store.Maintenance.Send(new StartBackupOperation(false, backupTaskId));
-                    value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                    Assert.Equal(lastEtag, value);
+                    var status = Backup.RunBackupAndReturnStatus(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                     // restore the database with a different name
                     var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -170,7 +141,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AzureFact]
+        [AzureFact, Trait("Category", "Smuggler")]
         public async Task can_create_azure_snapshot_and_restore_using_restore_point()
         {
             using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
@@ -184,24 +155,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                         session.SaveChanges();
                     }
 
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        BackupType = BackupType.Snapshot,
-                        AzureSettings = holder.Settings,
-                        IncrementalBackupFrequency = "0 0 1 1 *"
-                    };
-
-                    var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
-                    store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                    var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                    PeriodicBackupStatus status = null;
-                    var value = WaitForValue(() =>
-                    {
-                        status = store.Maintenance.Send(operation).Status;
-                        return status?.LastEtag;
-                    }, 4);
-                    Assert.True(4 == value, $"4 == value, Got status: {status != null}, exception: {status?.Error?.Exception}");
-                    Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
+                    var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, azureSettings: holder.Settings);
+                    var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                    var status = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status;
 
                     var client = store.GetRequestExecutor().HttpClient;
                     var data = new StringContent(JsonConvert.SerializeObject(holder.Settings), Encoding.UTF8, "application/json");

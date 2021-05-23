@@ -36,7 +36,7 @@ namespace SlowTests.Smuggler
         {
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanExportAndImportDatabaseRecord()
         {
             var file = Path.GetTempFileName();
@@ -87,19 +87,8 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_2"
                 }))
                 {
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 */1 * * *",
-                        IncrementalBackupFrequency = "0 */6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
+                    var config = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 */1 * * *", incrementalBackupFrequency: "0 */6 * * *", mentorNode: "A", name: "Backup");
+
                     store1.Maintenance.Send(new UpdateExternalReplicationOperation(new ExternalReplication("tempDatabase", "ExternalReplication")
                     {
                         TaskId = 1,
@@ -238,7 +227,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanMigrateDatabaseRecord()
         {
             var file = Path.GetTempFileName();
@@ -456,7 +445,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanExportAndImportMergedDatabaseRecord()
         {
             var file = Path.GetTempFileName();
@@ -843,58 +832,11 @@ namespace SlowTests.Smuggler
                     await store2.Maintenance.SendAsync(new AddEtlOperation<SqlConnectionString>(sqlEtl3));
                     await store2.Maintenance.SendAsync(new AddEtlOperation<SqlConnectionString>(sqlEtl4));
 
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 1 * * *",
-                        IncrementalBackupFrequency = "0 6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
-                    var config2 = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup2",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 1 * * *",
-                        IncrementalBackupFrequency = "0 6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
-                    var config3 = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup",
-                        BackupType = BackupType.Snapshot,
-                        FullBackupFrequency = "0 8 * * *",
-                        IncrementalBackupFrequency = "0 6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
-                    var config4 = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup4",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 1 * * *",
-                        IncrementalBackupFrequency = "0 6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
+                    var config = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 1 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup");
+                    var config2 = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 1 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup2");
+                    var config3 = Backup.CreateBackupConfiguration(backupPath: "FolderPath", backupType: BackupType.Snapshot, fullBackupFrequency: "0 8 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup");
+                    var config4 = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 1 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup4");
+                  
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config2));
                     await store2.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config3));
@@ -1021,11 +963,10 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanBackupAndRestoreDatabaseRecord()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var file = Path.GetTempFileName();
             var dummy = GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
@@ -1034,30 +975,27 @@ namespace SlowTests.Smuggler
                 privateKey = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Pfx));
             }
 
-            try
+            using (var store = GetDocumentStore(new Options
             {
-                using (var store = GetDocumentStore(new Options
-                {
-                    
-                    ModifyDatabaseName = s => $"{s}_1",
+                ModifyDatabaseName = s => $"{s}_1",
 
-                    ModifyDatabaseRecord = record =>
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
                     {
-                        record.ConflictSolverConfig = new ConflictSolver
-                        {
-                            ResolveToLatest = false,
-                            ResolveByCollection = new Dictionary<string, ScriptResolver>
-                                {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>
+                            {
                                     {
                                         "ConflictSolver", new ScriptResolver()
                                         {
                                             Script = "Script"
                                         }
                                     }
-                                }
-                        };
-                        record.Sorters = new Dictionary<string, SorterDefinition>
-                        {
+                            }
+                    };
+                    record.Sorters = new Dictionary<string, SorterDefinition>
+                    {
                             {
                                 "MySorter", new SorterDefinition
                                 {
@@ -1065,197 +1003,161 @@ namespace SlowTests.Smuggler
                                     Code = GetSorter("RavenDB_8355.MySorter.cs")
                                 }
                             }
-                        };
-                    }
-                }))
-                {
-                    store.Maintenance.Send(new UpdateExternalReplicationOperation(new ExternalReplication("tempDatabase", "ExternalReplication")
-                    {
-                        TaskId = 1,
-                        Name = "External",
-                        DelayReplicationFor = new TimeSpan(4),
-                        Url = "http://127.0.0.1/",
-                        Disabled = false
-                    }));
-                    store.Maintenance.Send(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink()
-                    {
-                        Database = "sinkDatabase",
-                        CertificatePassword = (string)null,
-                        CertificateWithPrivateKey = privateKey,
-                        TaskId = 2,
-                        Name = "Sink",
-                        HubDefinitionName = "hub",
-                        ConnectionStringName = "ConnectionName"
-                    }));
-                    store.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
-                    {
-                        TaskId = 3,
-                        Name = "hub",
-                        MentorNode = "A",
-                        DelayReplicationFor = new TimeSpan(3),
-                    }));
-
-                    var result1 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
-                    {
-                        Name = "ConnectionName",
-                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
-                        Database = "Northwind",
-                    }));
-                    Assert.NotNull(result1.RaftCommandIndex);
-
-                    var sqlConnectionString = new SqlConnectionString
-                    {
-                        Name = "connection",
-                        ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};",
-                        FactoryName = "System.Data.SqlClient"
                     };
+                }
+            }))
+            {
+                store.Maintenance.Send(new UpdateExternalReplicationOperation(new ExternalReplication("tempDatabase", "ExternalReplication")
+                {
+                    TaskId = 1,
+                    Name = "External",
+                    DelayReplicationFor = new TimeSpan(4),
+                    Url = "http://127.0.0.1/",
+                    Disabled = false
+                }));
+                store.Maintenance.Send(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink()
+                {
+                    Database = "sinkDatabase",
+                    CertificatePassword = (string)null,
+                    CertificateWithPrivateKey = privateKey,
+                    TaskId = 2,
+                    Name = "Sink",
+                    HubDefinitionName = "hub",
+                    ConnectionStringName = "ConnectionName"
+                }));
+                store.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
+                {
+                    TaskId = 3,
+                    Name = "hub",
+                    MentorNode = "A",
+                    DelayReplicationFor = new TimeSpan(3),
+                }));
 
-                    var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
-                    Assert.NotNull(result2.RaftCommandIndex);
-                    store.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
-                    {
-                        AllowEtlOnNonEncryptedChannel = true,
-                        ConnectionStringName = "ConnectionName",
-                        MentorNode = "A",
-                        Name = "Etl",
-                        TaskId = 4,
-                        TestMode = true
-                    }));
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                {
+                    Name = "ConnectionName",
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                    Database = "Northwind",
+                }));
+                Assert.NotNull(result1.RaftCommandIndex);
 
-                    store.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(new SqlEtlConfiguration()
-                    {
-                        AllowEtlOnNonEncryptedChannel = true,
-                        ForceQueryRecompile = false,
-                        ConnectionStringName = "connection",
-                        SqlTables =
+                var sqlConnectionString = new SqlConnectionString
+                {
+                    Name = "connection",
+                    ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};",
+                    FactoryName = "System.Data.SqlClient"
+                };
+
+                var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result2.RaftCommandIndex);
+                store.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
+                {
+                    AllowEtlOnNonEncryptedChannel = true,
+                    ConnectionStringName = "ConnectionName",
+                    MentorNode = "A",
+                    Name = "Etl",
+                    TaskId = 4,
+                    TestMode = true
+                }));
+
+                store.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(new SqlEtlConfiguration()
+                {
+                    AllowEtlOnNonEncryptedChannel = true,
+                    ForceQueryRecompile = false,
+                    ConnectionStringName = "connection",
+                    SqlTables =
                             {
                                 new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = false},
                                 new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = false},
                             },
-                        Name = "sql",
-                        ParameterizeDeletes = false,
-                        MentorNode = "A"
-                    }));
+                    Name = "sql",
+                    ParameterizeDeletes = false,
+                    MentorNode = "A"
+                }));
 
-                    using (var session = store.OpenAsyncSession())
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
                     {
-                        await session.StoreAsync(new User
-                        {
-                            Name = "oren"
-                        }, "users/1");
-                        await session.SaveChangesAsync();
-                    }
-
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        Name = "Real",
-                        BackupType = BackupType.Backup,
-                        LocalSettings = new LocalSettings
-                        {
-                            FolderPath = backupPath
-                        },
-                        IncrementalBackupFrequency = "0 */5 * * *"
-                    };
-                    var config2 = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 */1 * * *",
-                        IncrementalBackupFrequency = "0 */6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = backupPath
-                        }
-                    };
-
-                    await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config2));
-                    var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                    await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                    var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                    
-                    var value = WaitForValue(() =>
-                    {
-                        var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                        return getPeriodicBackupResult.Status?.LastEtag;
-                    }, 1);
-                    Assert.Equal(1, value);
-                    var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                    using (RestoreDatabase(store, new RestoreBackupConfiguration
-                    {
-                        BackupLocation = Directory.GetDirectories(backupPath).First(),
-                        DatabaseName = databaseName,
-                    }))
-                    {
-                        var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
-                        var backups = periodicBackupRunner.PeriodicBackups;
-
-                        Assert.Equal(2, backups.Count);
-                        Assert.Equal(true, backups.Any(x => x.Configuration.Name.Equals("Backup")));
-                        foreach (var backup in backups)
-                        {
-                            if (!backup.Configuration.Name.Equals("Backup"))
-                                continue;
-                            Assert.Equal(true, backup.Configuration.IncrementalBackupFrequency.Equals("0 */6 * * *"));
-                            Assert.Equal(true, backup.Configuration.FullBackupFrequency.Equals("0 */1 * * *"));
-                            Assert.Equal(BackupType.Backup, backup.Configuration.BackupType);
-                            Assert.Equal(false, backup.Configuration.Disabled);
-                        }
-
-                        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-
-                        Assert.NotNull(record.ConflictSolverConfig);
-                        Assert.Equal(false, record.ConflictSolverConfig.ResolveToLatest);
-                        Assert.Equal(1, record.ConflictSolverConfig.ResolveByCollection.Count);
-                        Assert.Equal(true, record.ConflictSolverConfig.ResolveByCollection.TryGetValue("ConflictSolver", out ScriptResolver sr));
-                        Assert.Equal("Script", sr.Script);
-
-                        Assert.Equal(1, record.Sorters.Count);
-                        Assert.Equal(true, record.Sorters.TryGetValue("MySorter", out SorterDefinition sd));
-                        Assert.Equal("MySorter", sd.Name);
-                        Assert.NotEmpty(sd.Code);
-
-                        Assert.Equal(1, record.ExternalReplications.Count);
-                        Assert.Equal("tempDatabase", record.ExternalReplications[0].Database);
-                        Assert.Equal(false, record.ExternalReplications[0].Disabled);
-
-                        Assert.Equal(1, record.SinkPullReplications.Count);
-                        Assert.Equal("sinkDatabase", record.SinkPullReplications[0].Database);
-                        Assert.Equal("hub", record.SinkPullReplications[0].HubDefinitionName);
-                        Assert.Equal((string)null, record.SinkPullReplications[0].CertificatePassword);
-                        Assert.Equal(privateKey, record.SinkPullReplications[0].CertificateWithPrivateKey);
-                        Assert.Equal(false, record.SinkPullReplications[0].Disabled);
-
-                        Assert.Equal(1, record.HubPullReplications.Count);
-                        Assert.Equal(new TimeSpan(3), record.HubPullReplications.First().DelayReplicationFor);
-                        Assert.Equal("hub", record.HubPullReplications.First().Name);
-                        Assert.Equal(false, record.HubPullReplications.First().Disabled);
-
-                        Assert.Equal(1, record.RavenEtls.Count);
-                        Assert.Equal("Etl", record.RavenEtls.First().Name);
-                        Assert.Equal("ConnectionName", record.RavenEtls.First().ConnectionStringName);
-                        Assert.Equal(true, record.RavenEtls.First().AllowEtlOnNonEncryptedChannel);
-                        Assert.Equal(false, record.RavenEtls.First().Disabled);
-
-                        Assert.Equal(1, record.SqlEtls.Count);
-                        Assert.Equal("sql", record.SqlEtls.First().Name);
-                        Assert.Equal(false, record.SqlEtls.First().ParameterizeDeletes);
-                        Assert.Equal(false, record.SqlEtls.First().ForceQueryRecompile);
-                        Assert.Equal("connection", record.SqlEtls.First().ConnectionStringName);
-                        Assert.Equal(true, record.SqlEtls.First().AllowEtlOnNonEncryptedChannel);
-                        Assert.Equal(false, record.SqlEtls.First().Disabled);
-                    }
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
                 }
-            }
-            finally
-            {
-                File.Delete(file);
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 */5 * * *", name: "Real");
+                var config2 = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 */1 * * *", incrementalBackupFrequency: "0 */6 * * *", mentorNode: "A", name: "Backup");
+
+                await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config2));
+                Backup.UpdateConfigAndRunBackup(Server, config, store);
+
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName,
+                }))
+                {
+                    var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
+                    var backups = periodicBackupRunner.PeriodicBackups;
+
+                    Assert.Equal(2, backups.Count);
+                    Assert.Equal(true, backups.Any(x => x.Configuration.Name.Equals("Backup")));
+                    foreach (var backup in backups)
+                    {
+                        if (!backup.Configuration.Name.Equals("Backup"))
+                            continue;
+                        Assert.Equal(true, backup.Configuration.IncrementalBackupFrequency.Equals("0 */6 * * *"));
+                        Assert.Equal(true, backup.Configuration.FullBackupFrequency.Equals("0 */1 * * *"));
+                        Assert.Equal(BackupType.Backup, backup.Configuration.BackupType);
+                        Assert.Equal(false, backup.Configuration.Disabled);
+                    }
+
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+
+                    Assert.NotNull(record.ConflictSolverConfig);
+                    Assert.Equal(false, record.ConflictSolverConfig.ResolveToLatest);
+                    Assert.Equal(1, record.ConflictSolverConfig.ResolveByCollection.Count);
+                    Assert.Equal(true, record.ConflictSolverConfig.ResolveByCollection.TryGetValue("ConflictSolver", out ScriptResolver sr));
+                    Assert.Equal("Script", sr.Script);
+
+                    Assert.Equal(1, record.Sorters.Count);
+                    Assert.Equal(true, record.Sorters.TryGetValue("MySorter", out SorterDefinition sd));
+                    Assert.Equal("MySorter", sd.Name);
+                    Assert.NotEmpty(sd.Code);
+
+                    Assert.Equal(1, record.ExternalReplications.Count);
+                    Assert.Equal("tempDatabase", record.ExternalReplications[0].Database);
+                    Assert.Equal(false, record.ExternalReplications[0].Disabled);
+
+                    Assert.Equal(1, record.SinkPullReplications.Count);
+                    Assert.Equal("sinkDatabase", record.SinkPullReplications[0].Database);
+                    Assert.Equal("hub", record.SinkPullReplications[0].HubDefinitionName);
+                    Assert.Equal((string)null, record.SinkPullReplications[0].CertificatePassword);
+                    Assert.Equal(privateKey, record.SinkPullReplications[0].CertificateWithPrivateKey);
+                    Assert.Equal(false, record.SinkPullReplications[0].Disabled);
+
+                    Assert.Equal(1, record.HubPullReplications.Count);
+                    Assert.Equal(new TimeSpan(3), record.HubPullReplications.First().DelayReplicationFor);
+                    Assert.Equal("hub", record.HubPullReplications.First().Name);
+                    Assert.Equal(false, record.HubPullReplications.First().Disabled);
+
+                    Assert.Equal(1, record.RavenEtls.Count);
+                    Assert.Equal("Etl", record.RavenEtls.First().Name);
+                    Assert.Equal("ConnectionName", record.RavenEtls.First().ConnectionStringName);
+                    Assert.Equal(true, record.RavenEtls.First().AllowEtlOnNonEncryptedChannel);
+                    Assert.Equal(false, record.RavenEtls.First().Disabled);
+
+                    Assert.Equal(1, record.SqlEtls.Count);
+                    Assert.Equal("sql", record.SqlEtls.First().Name);
+                    Assert.Equal(false, record.SqlEtls.First().ParameterizeDeletes);
+                    Assert.Equal(false, record.SqlEtls.First().ForceQueryRecompile);
+                    Assert.Equal("connection", record.SqlEtls.First().ConnectionStringName);
+                    Assert.Equal(true, record.SqlEtls.First().AllowEtlOnNonEncryptedChannel);
+                    Assert.Equal(false, record.SqlEtls.First().Disabled);
+                }
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanRestoreSubscriptionsFromBackup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1265,31 +1167,15 @@ namespace SlowTests.Smuggler
                 store.Subscriptions.Create<User>(x => x.Name == "Marcin");
                 store.Subscriptions.Create<User>();
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = store.Maintenance.Send(new UpdatePeriodicBackupOperation(config)).TaskId;
-                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                SpinWait.SpinUntil(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(15));
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 await ValidateSubscriptions(store);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = restoredDatabaseName
@@ -1351,7 +1237,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Theory]
+        [Theory, Trait("Category", "Smuggler")]
         [InlineData(true)]
         [InlineData(false)]
         public async Task CanDisableTasksAfterRestore(bool disableOngoingTasks)
@@ -1390,26 +1276,13 @@ namespace SlowTests.Smuggler
                 await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation("test"));
 
                 // backup
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup, LocalSettings = new LocalSettings {FolderPath = backupPath}, IncrementalBackupFrequency = "* * * * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 0);
-                Assert.Equal(0, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();
 
-                using (RestoreDatabase(store,
+                using (Backup.RestoreDatabase(store,
                     new RestoreBackupConfiguration
                     {
                         BackupLocation = Directory.GetDirectories(backupPath).First(),

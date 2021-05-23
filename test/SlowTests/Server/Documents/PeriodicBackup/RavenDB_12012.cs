@@ -25,8 +25,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
         }
 
-
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CreateFullAndIncrementalBackupWithIndexInTheMiddle()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -41,20 +40,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     session.SaveChanges();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
-                    BackupType = BackupType.Backup
-                };
-
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
-                PeriodicBackupTestsSlow.RunBackup(result.TaskId, documentDatabase, true, store);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var input = new IndexDefinition
                 {
@@ -69,10 +56,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await store
                     .Maintenance
                     .SendAsync(new PutIndexesOperation(new[] { input }));
-                config.IncrementalBackupFrequency = "* */300 * * *";
-                config.TaskId = result.TaskId;
-                result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                PeriodicBackupTestsSlow.RunBackup(result.TaskId, documentDatabase, false, store);
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
 
@@ -107,7 +91,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeInTheMiddle()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -122,21 +106,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     session.SaveChanges();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
-                    BackupType = BackupType.Backup
-                };
-
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
-                PeriodicBackupTestsSlow.RunBackup(result.TaskId, documentDatabase, true, store);
-
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 CompareExchangeResult<string> compareExchangeResult
                     = store.Operations.Send(
@@ -144,10 +115,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 WaitForValue(() => compareExchangeResult.Successful, true);
 
-                config.IncrementalBackupFrequency = "* */2 * * *";
-                config.TaskId = result.TaskId;
-                result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                PeriodicBackupTestsSlow.RunBackup(result.TaskId, documentDatabase, false, store);
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
 
                 compareExchangeResult
                     = store.Operations.Send(
@@ -155,11 +123,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 WaitForValue(() => compareExchangeResult.Successful, true);
 
-                config.IncrementalBackupFrequency = "* */2 * * *";
-                config.TaskId = result.TaskId;
-                result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                PeriodicBackupTestsSlow.RunBackup(result.TaskId, documentDatabase, false, store);
-
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
 
                 var databaseName = GetDatabaseName() + "restore";
@@ -200,7 +164,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CreateFullAndIncrementalBackupWithIdentitiesInTheMiddle()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -222,27 +186,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     session.SaveChanges();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
-                    BackupType = BackupType.Backup
-                };
-
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
-                PeriodicBackupTestsSlow.RunBackup(result.TaskId, documentDatabase, true, store);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 Dictionary<string, long> identities = store.Maintenance.Send(new GetIdentitiesOperation());
 
-                config.IncrementalBackupFrequency = "* */2 * * *";
-                config.TaskId = result.TaskId;
-                result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                PeriodicBackupTestsSlow.RunBackup(result.TaskId, documentDatabase, false, store);
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
 

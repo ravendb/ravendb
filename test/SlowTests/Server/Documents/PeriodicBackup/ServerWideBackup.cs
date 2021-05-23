@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             DoNotReuseServer();
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanAddServerWideBackupToNewDatabase()
         {
             using (var store = GetDocumentStore())
@@ -48,7 +48,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanStoreServerWideBackup()
         {
             using (var store = GetDocumentStore())
@@ -121,7 +121,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task UpdateServerWideBackupThroughUpdatePeriodicBackupFails()
         {
             using (var store = GetDocumentStore())
@@ -138,14 +138,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var currentBackupConfiguration = databaseRecord.PeriodicBackups.First();
                 var serverWideBackupTaskId = currentBackupConfiguration.TaskId;
-                var backupConfiguration = new PeriodicBackupConfiguration
-                {
-                    Disabled = true,
-                    TaskId = currentBackupConfiguration.TaskId,
-                    FullBackupFrequency = "0 2 * * 0",
-                    IncrementalBackupFrequency = "0 2 * * 1"
-                };
 
+                var backupConfiguration = Backup.CreateBackupConfiguration(taskId: currentBackupConfiguration.TaskId, fullBackupFrequency: "0 2 * * 0", incrementalBackupFrequency: "0 2 * * 1" ,disabled: true);
                 var taskName = PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(putConfiguration.GetDefaultTaskName());
                 var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
                 var expectedError = $"Can't delete task id: {currentBackupConfiguration.TaskId}, name: '{taskName}', because it is a server-wide backup task";
@@ -163,7 +157,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task ToggleDisableServerWideBackupFails()
         {
             using (var store = GetDocumentStore())
@@ -189,7 +183,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CreatePeriodicBackupFailsWhenUsingReservedName()
         {
             using (var store = GetDocumentStore())
@@ -206,14 +200,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var currentBackupConfiguration = databaseRecord.PeriodicBackups.First();
                 var serverWideBackupTaskId = currentBackupConfiguration.TaskId;
-                var backupConfiguration = new PeriodicBackupConfiguration
-                {
-                    Disabled = true,
-                    TaskId = currentBackupConfiguration.TaskId,
-                    FullBackupFrequency = "0 2 * * 0",
-                    IncrementalBackupFrequency = "0 2 * * 1"
-                };
-
+      
+                var backupConfiguration = Backup.CreateBackupConfiguration(taskId: currentBackupConfiguration.TaskId, fullBackupFrequency: "0 2 * * 0", incrementalBackupFrequency: "0 2 * * 1", disabled: true);
                 var taskName = PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(putConfiguration.GetDefaultTaskName());
                 var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
                 var expectedError = $"Can't delete task id: {currentBackupConfiguration.TaskId}, name: '{taskName}', because it is a server-wide backup task";
@@ -231,7 +219,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
+        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691"), Trait("Category", "Smuggler")]
         public async Task CanCreateBackupUsingConfigurationFromBackupScript()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -305,7 +293,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanCreateMoreThanOneServerWideBackup()
         {
             using (var store = GetDocumentStore())
@@ -358,7 +346,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDeleteServerWideBackup()
         {
             using (var store = GetDocumentStore())
@@ -411,7 +399,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task SkipExportingTheServerWideBackup1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -492,7 +480,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory]
+        [Theory, Trait("Category", "Smuggler")]
         [InlineData(EncryptionMode.None)]
         [InlineData(EncryptionMode.UseProvidedKey)]
         [InlineData(EncryptionMode.UseDatabaseKey)]
@@ -573,7 +561,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
                 var backupDirectory = $"{backupPath}/{store.Database}";
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupDirectory).First(),
                     DatabaseName = databaseName,
@@ -593,7 +581,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task SkipExportingTheServerWideBackup2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -618,25 +606,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupTaskId = backup.TaskId;
 
                 // save another backup task in the database record
-                var backupConfiguration = new PeriodicBackupConfiguration
-                {
-                    Disabled = true,
-                    FullBackupFrequency = "0 2 * * 0",
-                    IncrementalBackupFrequency = "0 2 * * 1"
-                };
+                var backupConfiguration = Backup.CreateBackupConfiguration(fullBackupFrequency: "0 2 * * 0", incrementalBackupFrequency: "0 2 * * 1", disabled: true);
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration));
 
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-
-                string backupDirectory = null;
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId)).Status;
-                    backupDirectory = status?.LocalBackup.BackupDirectory;
-                    return status?.LastEtag;
-                }, 0);
-
-                Assert.Equal(0, value);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: true);
+                string backupDirectory = status.LocalBackup.BackupDirectory;
 
                 var files = Directory.GetFiles(backupDirectory)
                     .Where(BackupUtils.IsBackupFile)
@@ -684,7 +658,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanCreateSnapshotBackupForNonEncryptedDatabase()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -726,7 +700,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanStoreAndEditServerWideBackupForIdleDatabase()
         {
             using var server = GetNewServer(new ServerCreationOptions
@@ -900,7 +874,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task ServerWideBackup_WhenEditingNameWithOldTaskId_ShouldThrow()
         {
             const string firstName = "FirstName";

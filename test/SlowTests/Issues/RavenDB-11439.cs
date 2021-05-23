@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task can_continue_incremental_backup_with_same_folder()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -26,25 +26,10 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 3 */3 * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(backupTaskId);
-                SpinWait.SpinUntil(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(getPeriodicBackupStatus);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(15));
-
                 var oldFolderName = store.Maintenance.Send(getPeriodicBackupStatus).Status.FolderName;
                 Assert.NotNull(oldFolderName);
 

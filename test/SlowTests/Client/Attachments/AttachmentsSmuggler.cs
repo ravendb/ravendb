@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
@@ -107,7 +106,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task ExportFullThanDeleteAttachmentAndCreateAnotherOneThanExportIncrementalThanImport()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -129,40 +128,21 @@ namespace SlowTests.Client.Attachments
                 using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
                     store.Operations.Send(new PutAttachmentOperation("users/1", "file1", stream, "image/png"));
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "* * * * *");
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                SpinWait.SpinUntil(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(15));
-
-                var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
+                var etagForBackups = (await store.Maintenance.SendAsync(operation)).Status.LastEtag;
                 store.Operations.Send(new DeleteAttachmentOperation("users/1", "file1"));
                 using (var stream = new MemoryStream(new byte[] { 4, 5, 6 }))
                     store.Operations.Send(new PutAttachmentOperation("users/1", "file2", stream, "image/png"));
 
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);
                 Assert.Equal(1, stats.CountOfAttachments);
                 Assert.Equal(1, stats.CountOfUniqueAttachments);
-
-                SpinWait.SpinUntil(() =>
-                {
-                    var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
-                    return newLastEtag != etagForBackups;
-                }, TimeSpan.FromMinutes(2));
+                Assert.NotNull(status.LastEtag);
+                Assert.NotEqual(etagForBackups, status.LastEtag);
             }
 
             using (var store = GetDocumentStore(new Options

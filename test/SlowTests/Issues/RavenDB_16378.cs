@@ -13,7 +13,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.PeriodicBackup;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +24,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task TombstonesOfArtificialDocumentsShouldNotBeRestored()
         {
             using (var store = GetDocumentStore())
@@ -51,20 +50,9 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
-
                 var backupPath = NewDataPath(suffix: "BackupFolder");
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings { FolderPath = backupPath },
-                    Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
-                    BackupType = BackupType.Backup
-                };
-
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                PeriodicBackupTestsSlow.RunBackup(result.TaskId, documentDatabase, isFullBackup: true, store); // full backup
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 // restore
 
@@ -103,7 +91,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task ShouldPreserveTombstoneFlagsAfterRestore()
         {
             using (var store = GetDocumentStore())
@@ -142,19 +130,10 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
                 var backupPath = NewDataPath(suffix: "BackupFolder");
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings { FolderPath = backupPath },
-                    Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
-                    BackupType = BackupType.Backup
-                };
-
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                PeriodicBackupTestsSlow.RunBackup(result.TaskId, documentDatabase, isFullBackup: true, store); // full backup
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 // restore
 

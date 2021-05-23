@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void FullBackupShouldBackupDocumentTombstones()
         {
             using var store = GetDocumentStore();
@@ -49,37 +49,16 @@ namespace SlowTests.Issues
             var res = store.Operations.Send(new DeleteCompareExchangeValueOperation<DummyDoc>($"emojis/Rhinoceros", rhinoceros.Index));
             Assert.True(res.Successful);
 
-            // run full backup
-            var config = new PeriodicBackupConfiguration
-            {
-                LocalSettings = new LocalSettings
-                {
-                    FolderPath = NewDataPath(forceCreateDir: true)
-                },
-                Name = "full backup with tombstones",
-                FullBackupFrequency = "0 0 1 1 *",
-                BackupType = BackupType.Backup
-            };
-
             var documentDb = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             (long etag, _) = documentDb.Result.ReadLastEtagAndChangeVector();
 
-            var result = store.Maintenance.Send(new UpdatePeriodicBackupOperation(config));
-            store.Maintenance.Send(new StartBackupOperation(true, result.TaskId));
-
-            var operation = new GetPeriodicBackupStatusOperation(result.TaskId);
-            PeriodicBackupStatus status = null;
-            var value = WaitForValue(() =>
-            {
-                status = store.Maintenance.Send(operation).Status;
-                return status?.LastEtag;
-            }, expectedVal: etag);
-            Assert.True(etag == value, $"gotStatus? {status != null}, Status Error: {status?.Error?.Exception}, LocalBackup Exception: {status?.LocalBackup?.Exception}");
-            Assert.NotNull(status.LocalBackup);
-
+            var config = Backup.CreateBackupConfiguration(NewDataPath(forceCreateDir: true));
+            var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+            var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+            var status = store.Maintenance.Send(operation).Status;
             var backupPath = status.LocalBackup.BackupDirectory;
             var restoredDbName = GetDatabaseName();
-            using (RestoreDatabase(store, new RestoreBackupConfiguration
+            using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
             {
                 BackupLocation = backupPath,
                 DatabaseName = restoredDbName

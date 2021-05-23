@@ -28,16 +28,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    FullBackupFrequency = "* */1 * * *",
-                    IncrementalBackupFrequency = "* */2 * * *"
-                };
-
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *");
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
                 var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
@@ -47,7 +38,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void CanSetupConfiguration()
         {
             var allDestinations = new HashSet<string>(BackupConfiguration._allDestinations);
@@ -92,7 +83,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void CanGetGenerateTheCorrectBackupName()
         {
             var configuration = new PeriodicBackupConfiguration
