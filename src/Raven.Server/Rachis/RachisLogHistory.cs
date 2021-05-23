@@ -279,7 +279,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public IEnumerable<DynamicJsonValue> GetHistoryLogs(TransactionOperationContext context)
+        public IEnumerable<DynamicJsonValue> GetHistoryLogs(ClusterOperationContext context)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
             foreach (var entryHolder in table.SeekForwardFrom(LogHistoryTable.FixedSizeIndexes[LogHistoryDateTimeSlice], 0, 0))
@@ -288,7 +288,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe List<DynamicJsonValue> GetLogByIndex(TransactionOperationContext context, long index)
+        public unsafe List<DynamicJsonValue> GetLogByIndex(ClusterOperationContext context, long index)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
             var reversedIndex = Bits.SwapBytes(index);
@@ -308,7 +308,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private static unsafe DynamicJsonValue ReadHistoryLog(TransactionOperationContext context, Table.TableValueHolder entryHolder)
+        private static unsafe DynamicJsonValue ReadHistoryLog(ClusterOperationContext context, Table.TableValueHolder entryHolder)
         {
             var djv = new DynamicJsonValue();
 
