@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Server.Basic.Entities;
@@ -16,9 +13,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP;
-using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
-using Raven.Server.Documents.PeriodicBackup.Restore;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -33,7 +28,6 @@ namespace SlowTests.Server.Documents.ETL.Olap
 
         private const string GoogleCloudTestsPrefix = "tests";
         private const string CollectionName = "Orders";
-        private static readonly HashSet<char> SpecialChars = new HashSet<char> { '&', '@', ':', ',', '$', '=', '+', '?', ';', ' ', '"', '^', '`', '>', '<', '{', '}', '[', ']', '#', '\'', '~', '|' };
 
         [GoogleCloudFact]
         public async Task CanUploadToGoogleCloud()
@@ -90,8 +84,6 @@ loadToOrders(partitionBy(key),
                     SetupGoogleCloudOlapEtl(store, script, settings);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                    Thread.Sleep(20000);
 
                     using (var client = new RavenGoogleCloudClient(settings))
                     {
@@ -167,8 +159,10 @@ loadToOrders(partitionBy(key),
 
                         var fullPath = cloudObjects[0].Name;
                         var stream = client.DownloadObject(fullPath);
+                        var ms = new MemoryStream();
+                        stream.CopyTo(ms);
 
-                        using (var parquetReader = new ParquetReader(stream))
+                        using (var parquetReader = new ParquetReader(ms))
                         {
                             Assert.Equal(1, parquetReader.RowGroupCount);
 
@@ -321,8 +315,6 @@ loadToOrders(partitionBy(key), orderData);
 
                     SetupGoogleCloudOlapEtl(store, script, settings);
                     etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                    Thread.Sleep(20000);
 
                     using (var client = new RavenGoogleCloudClient(settings))
                     {
@@ -540,8 +532,10 @@ loadToOrders(noPartition(),
                         Assert.Equal(1, cloudObjects.Count);
 
                         var stream = client.DownloadObject(cloudObjects[0].Name);
+                        var ms = new MemoryStream();
+                        stream.CopyTo(ms);
 
-                        using (var parquetReader = new ParquetReader(stream))
+                        using (var parquetReader = new ParquetReader(ms))
                         {
                             Assert.Equal(1, parquetReader.RowGroupCount);
 
@@ -667,61 +661,11 @@ loadToOrders(partitionBy(
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
                         var cloudObjects = await client.ListObjectsAsync(prefix/*, delimiter: "/", listFolders: true*/);
 
-                        Assert.Equal(2, cloudObjects.Count);
-                        Assert.Contains("Orders/year=2020/", cloudObjects[0].Name);
-                        Assert.Contains("Orders/year=2021/", cloudObjects[1].Name);
-
-                        for (var index = 1; index <= cloudObjects.Count; index++)
-                        {
-                            var folder = cloudObjects[index - 1];
-                            var objectsInFolder = await client.ListObjectsAsync(prefix: folder.Name/*, delimiter: "/", listFolders: true*/);
-
-                            Assert.Equal(2, objectsInFolder.Count);
-                            Assert.Contains($"month={index}/", objectsInFolder[0].Name);
-                            Assert.Contains($"month={index + 1}/", objectsInFolder[1].Name);
-                        }
-
-/*                        var files = await ListAllFilesInFolders(client, cloudObjects);
-                        Assert.Equal(4, files.Count);
-
-                        foreach (var filePath in files)
-                        {
-                            var blob = await client.GetObjectAsync(filePath.Replace("=", "%3D"));
-                            await using var ms = new MemoryStream();
-                            blob.Data.CopyTo(ms);
-
-                            using (var parquetReader = new ParquetReader(ms))
-                            {
-                                Assert.Equal(1, parquetReader.RowGroupCount);
-                                Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
-
-                                using var rowGroupReader = parquetReader.OpenRowGroupReader(0);
-                                foreach (var field in parquetReader.Schema.Fields)
-                                {
-                                    Assert.True(field.Name.In(expectedFields));
-                                    var data = rowGroupReader.ReadColumn((DataField)field).Data;
-
-                                    Assert.True(data.Length == 31 || data.Length == 28 || data.Length == 27 || data.Length == 10);
-                                    if (field.Name != "RequireAt")
-                                        continue;
-
-                                    var count = data.Length switch
-                                    {
-                                        31 => 0,
-                                        28 => 31,
-                                        27 => 365 + 33,
-                                        10 => 365 + 33 + 27
-                                    };
-
-                                    foreach (var val in data)
-                                    {
-                                        var expectedOrderDate = new DateTimeOffset(DateTime.SpecifyKind(baseline.AddDays(count++), DateTimeKind.Utc));
-                                        var expected = expectedOrderDate.AddDays(7);
-                                        Assert.Equal(expected, val);
-                                    }
-                                }
-                            }
-                        }*/
+                        Assert.Equal(4, cloudObjects.Count);
+                        Assert.Contains("Orders/year=2020/month=1", cloudObjects[0].Name);
+                        Assert.Contains("Orders/year=2020/month=2", cloudObjects[1].Name);
+                        Assert.Contains("Orders/year=2021/month=2", cloudObjects[2].Name);
+                        Assert.Contains("Orders/year=2021/month=3", cloudObjects[3].Name);
                     }
                 }
             }
@@ -775,77 +719,32 @@ var orderDate = new Date(this.OrderedAt);
 var year = orderDate.getFullYear();
 var month = orderDate.getMonth() + 1;
 
-// The order of the following array values determines the partitions order in parquet file path
-loadToOrders(partitionBy(['year', year], ['month', month], ['customPartitionName', $customPartitionValue]),
+loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPartitionValue]),
 {
     Company : this.Company,
     ShipVia : this.ShipVia
 });
 ";
 
-                    const string customField = "shop-16";
-                    SetupGoogleCloudOlapEtl(store, script, settings, customPrefix: customField);
+                    const string customPartition = "shop-16";
+                    SetupGoogleCloudOlapEtl(store, script, settings, customPartition: customPartition);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
                     using (var client = new RavenGoogleCloudClient(settings))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
-                        var cloudObjects = await client.ListObjectsAsync(prefix/*, delimiter: "/", listFolders: true*/);
-                        Assert.Equal(1, cloudObjects.Count);
+                        var cloudObjects = await client.ListObjectsAsync(prefix);
 
-/*                        var files = await ListAllFilesInFolders(s3Client, cloudObjects);
-                        Assert.Equal(2, files.Count);
-                        Assert.Contains($"/Orders/year=2020/month=1/source={customField}/", files[0]);
-                        Assert.Contains($"/Orders/year=2020/month=2/source={customField}/", files[1]);*/
+                        Assert.Equal(2, cloudObjects.Count);
+                        Assert.Contains($"/Orders/year=2020/month=1/source={customPartition}/", cloudObjects[0].Name);
+                        Assert.Contains($"/Orders/year=2020/month=2/source={customPartition}/", cloudObjects[1].Name);
                     }
                 }
             }
             finally
             {
                 await DeleteObjects(settings/*, prefix: $"{settings.RemoteFolderName}/{CollectionName}/", delimiter: "/", listFolder: true*/);
-            }
-        }
-
-        [GoogleCloudFact]
-        public async Task CanHandleSpecialCharsInEtlName()
-        {
-            var settings = GetGoogleCloudSettings();
-            try
-            {
-                using (var store = GetDocumentStore())
-                {
-                    await store.Maintenance.SendAsync(new CreateSampleDataOperation());
-
-                    WaitForIndexing(store);
-
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-
-                    var script = @"
-loadToOrders(noPartition(), {
-    Company: this.Company,
-    OrderedAt: this.OrderedAt
-});"
-;
-                    SetupGoogleCloudOlapEtl(store, script, settings, transformationName: "script#1=$'/orders'");
-
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                    using (var client = new RavenGoogleCloudClient(settings))
-                    {
-                        var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
-                        var cloudObjects = await client.ListObjectsAsync(prefix);
-
-                        Assert.Equal(1, cloudObjects.Count);
-                        Assert.Contains("script#1=$'_orders'", cloudObjects[0].Name);
-                        Assert.Contains(".parquet", cloudObjects[0].Name);
-                    }
-                }
-            }
-            finally
-            {
-                await DeleteObjects(settings);
-
             }
         }
 
@@ -936,8 +835,6 @@ for (var i = 0; i < this.Lines.length; i++){
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    Thread.Sleep(20000);
-
                     using (var client = new RavenGoogleCloudClient(settings))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
@@ -961,7 +858,7 @@ for (var i = 0; i < this.Lines.length; i++){
             }
         }
 
-        private void SetupGoogleCloudOlapEtl(DocumentStore store, string script, GoogleCloudSettings settings, string customPrefix = null, string transformationName = null)
+        private void SetupGoogleCloudOlapEtl(DocumentStore store, string script, GoogleCloudSettings settings, string customPartition = null, string transformationName = null)
         {
             var connectionStringName = $"{store.Database} to S3";
 
@@ -970,7 +867,7 @@ for (var i = 0; i < this.Lines.length; i++){
                 Name = "olap-s3-test",
                 ConnectionStringName = connectionStringName,
                 RunFrequency = LocalTests.DefaultFrequency,
-                CustomField = customPrefix,
+                CustomPartitionValue = customPartition,
                 Transforms =
                 {
                     new Transformation
@@ -1036,84 +933,6 @@ for (var i = 0; i < this.Lines.length; i++){
             {
                 // ignored
             }
-
-
-
-/*            await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}", delimiter: string.Empty);
-
-            if (additionalTable == null)
-                return;
-
-            await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{additionalTable}", delimiter: string.Empty);*/
-        }
-
-        private static async Task DeleteObjects(S3Settings s3Settings, string prefix, string delimiter, bool listFolder = false, bool replaceSpecialChars = false)
-        {
-            if (s3Settings == null)
-                return;
-
-            try
-            {
-                using (var s3Client = new RavenAwsS3Client(s3Settings))
-                {
-                    var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter, listFolder);
-                    if (cloudObjects.FileInfoDetails.Count == 0)
-                        return;
-
-                    if (listFolder == false)
-                    {
-                        if (replaceSpecialChars == false)
-                        {
-                            var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
-                            s3Client.DeleteMultipleObjects(pathsToDelete);
-                            return;
-                        }
-
-                        foreach (var path in cloudObjects.FileInfoDetails.Select(x => EnsureSafeName(x.FullPath)))
-                        {
-                            s3Client.DeleteObject(path);
-                        }
-
-                        return;
-                    }
-
-                    var filesToDelete = await ListAllFilesInFolders(s3Client, cloudObjects);
-                    s3Client.DeleteMultipleObjects(filesToDelete);
-                }
-            }
-            catch (Exception)
-            {
-                // ignored
-            }
-        }
-
-        private static async Task<List<string>> ListAllFilesInFolders(RavenAwsS3Client s3Client, ListObjectsResult cloudObjects)
-        {
-            var files = new List<string>();
-            foreach (var folder in cloudObjects.FileInfoDetails)
-            {
-                var objectsInFolder = await s3Client.ListObjectsAsync(prefix: folder.FullPath, delimiter: string.Empty, listFolders: false);
-                files.AddRange(objectsInFolder.FileInfoDetails.Select(fi => fi.FullPath));
-            }
-
-            return files;
-        }
-
-        private static string EnsureSafeName(string str)
-        {
-            var builder = new StringBuilder(str.Length);
-            foreach (char @char in str)
-            {
-                if (SpecialChars.Contains(@char))
-                {
-                    builder.AppendFormat("%{0:X2}", (int)@char);
-                    continue;
-                }
-
-                builder.Append(@char);
-            }
-
-            return builder.ToString();
         }
     }
 }
