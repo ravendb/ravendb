@@ -556,14 +556,21 @@ class query extends viewModelBase {
             detectTimeSeries: true, 
             timeSeriesActionHandler: (type, documentId, name, value, event) => {
                 if (type === "plot") {
-                    const chart = new timeSeriesPlotDetails([{
-                        documentId,
-                        value,
-                        name
-                    }]);
+                    const graphs = this.timeSeriesGraphs().filter(graph => _.includes(graph.documentIds, documentId));
+                    if (graphs.length) {
+                        graphs.forEach(g => {
+                           if (g.documentIds.length === 1) {
+                               this.timeSeriesGraphs.remove(g);
+                           }
+                        });
+                    }
+                    
+                    const chart = new timeSeriesPlotDetails([{ documentId, value, name}]);
                     this.timeSeriesGraphs.push(chart);
                     this.goToTimeSeriesTab(chart);
                 } else {
+                    this.timeSeriesTables.remove(x => x.documentId === documentId);
+                    
                     const table = new timeSeriesTableDetails(documentId, name, value);
                     this.timeSeriesTables.push(table);
                     this.goToTimeSeriesTab(table);
@@ -802,6 +809,7 @@ class query extends viewModelBase {
         }
         
         this.timeSeriesGraphs([]);
+        this.timeSeriesTables([]);
         
         this.graphTabIsDirty(true);
         this.columnsSelector.reset();
@@ -1206,6 +1214,15 @@ class query extends viewModelBase {
                 }
             });
         });
+        
+        const graphs = this.timeSeriesGraphs();
+        if (graphs) {
+            graphs.forEach(g => {
+                if (g.documentIds.length === 1 && timeSeries.length === 1 && g.documentIds[0] === timeSeries[0].documentId) {
+                    this.timeSeriesGraphs.remove(g);
+                }
+            });
+        }
         
         const chart = new timeSeriesPlotDetails(timeSeries);
         this.timeSeriesGraphs.push(chart);

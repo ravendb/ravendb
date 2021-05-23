@@ -269,6 +269,8 @@ class timeSeriesPlotDetails extends viewModelBase {
     
     private throttledTooltipUpdate = _.throttle((svgLocation: [number, number], globalLocation: [number, number]) => this.updateTooltip(svgLocation, globalLocation), 100);
     
+    documentIds: Array<string> = [];
+    
     constructor(timeSeries: Array<timeSeriesPlotItem>) {
         super();
         
@@ -288,6 +290,8 @@ class timeSeriesPlotDetails extends viewModelBase {
                     this.pointTimeSeries.push(new rawTimeSeriesContainer(item, onChange));
                     break;
             }
+            
+            this.documentIds.push(item.documentId);
         });
         
         _.bindAll(this, "getColor", "getColorClass");
