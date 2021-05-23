@@ -161,6 +161,8 @@ namespace SlowTests.Issues
                     databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Indexing.DefaultAnalyzer)] = "SimpleAnalyzer";
                     databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Indexing.DefaultExactAnalyzer)] = "SimpleAnalyzer";
                     databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer)] = "SimpleAnalyzer";
+                    databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexDeploymentMode)] = "Parallel";
+                    databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexDeploymentMode)] = "Parallel";
                 }
             }))
             {

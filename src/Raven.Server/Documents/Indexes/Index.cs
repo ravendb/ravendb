@@ -900,11 +900,23 @@ namespace Raven.Server.Documents.Indexes
             {
                 _rollingEvent.Set();
 
-                if (GetNumberOfDeployedNodes() != -1 && IsStaleInternal() == false)
-                    // this for the case when we removed a rolling side-by-side, we need the original node to complete the deployment
-                    // if the original has no work to do, we need to force it.
-                    _mre?.Set(ignoreThrottling: true);
+                CompleteIfSideBySideRemoved();
             }
+        }
+
+        private void CompleteIfSideBySideRemoved()
+        {
+            // this for the case when we removed a rolling side-by-side, we need the original node to complete the deployment
+            // if the original has no work to do, we need to force it.
+
+            if (_rollingCompletionTask?.IsCompletedSuccessfully == true)
+                return;
+
+            if (_rollingCompletionTask?.IsCompleted == false)
+                return;
+
+            if (GetNumberOfDeployedNodes() != -1 && IsStaleInternal() == false)
+                _mre?.Set();
         }
 
         private int GetNumberOfDeployedNodes()
@@ -951,6 +963,51 @@ namespace Raven.Server.Documents.Indexes
             if (State == IndexState.Normal)
             {
                 pending = DocumentDatabase.IndexStore.ShouldSkipThisNodeWhenRolling(this, out _lastPendingStatus, out replace);
+            }
+        }
+
+        private Task _rollingCompletionTask;
+        private void MaybeFinishRollingDeployment()
+        {
+            if (_rollingCompletionTask?.IsCompleted == false)
+                return;
+
+            if (DocumentDatabase.IndexStore.MaybeFinishRollingDeployment(Definition.Name) == false)
+                return;
+
+            if (IsStaleInternal())
+                return;
+
+            var nodeTag = DocumentDatabase.ServerStore.NodeTag;
+
+            try
+            {
+                // We may send the command multiple times so we need a new Id every time.
+                var command = new PutRollingIndexCommand(DocumentDatabase.Name, Definition.Name, nodeTag, DocumentDatabase.Time.GetUtcNow(), RaftIdGenerator.NewId());
+                _rollingCompletionTask = DocumentDatabase.ServerStore.SendToLeaderAsync(command);
+                _rollingCompletionTask.ContinueWith(t =>
+                {
+                    _rollingCompletionTask = null;
+
+                    if (_logger.IsOperationsEnabled)
+                    {
+                        try
+                        {
+                            t.GetAwaiter().GetResult();
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{Definition.Name}' in node {nodeTag}.", e);
+                        }
+                    }
+                }, TaskContinuationOptions.ExecuteSynchronously);
+
+                DocumentDatabase.IndexStore.ForTestingPurposes?.OnRollingIndexFinished?.Invoke(this);
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{Definition.Name}' in node {nodeTag}.", e);
             }
         }
 
@@ -1417,7 +1474,7 @@ namespace Raven.Server.Documents.Indexes
                                     }
                                     else
                                     {
-                                        DocumentDatabase.IndexStore.MaybeFinishRollingDeployment(this);
+                                        MaybeFinishRollingDeployment();
                                     }
 
                                     if (_logger.IsInfoEnabled)
@@ -1671,8 +1728,6 @@ namespace Raven.Server.Documents.Indexes
             return false;
         }
         
-        public bool IsStale() => IsStaleInternal();
-
         private void PauseIfCpuCreditsBalanceIsTooLow()
         {
             AlertRaised alert = null;
