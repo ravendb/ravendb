@@ -574,7 +574,7 @@ namespace SlowTests.Client.Counters
                     }
 
                     var config = Backup.CreateBackupConfiguration(backupPath);
-                    await Backup.UpdateConfigAndRunBackupAsync(Server, config, store1);
+                    await Backup.UpdateConfigAndRunBackupAsync(server, config, store1);
                     await Restore(backupPath, store2);
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
