@@ -12,21 +12,13 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanChangeBackupFrequency()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    FullBackupFrequency = "0 3 */3 * *",
-                };
-
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 3 */3 * *");
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
                 var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
@@ -35,15 +27,7 @@ namespace FastTests.Issues
                 var oldTimer = periodicBackup.GetTimer();
                 Assert.Equal("0 3 */3 * *", periodicBackup.Configuration.FullBackupFrequency);
 
-                config = new PeriodicBackupConfiguration
-                {
-                    TaskId = result.TaskId,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    FullBackupFrequency = "0 2 */3 * *",
-                };
+                config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 2 */3 * *", taskId: result.TaskId);
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 Assert.NotEqual(oldTimer, periodicBackup.GetTimer());
                 Assert.Equal("0 2 */3 * *", periodicBackup.Configuration.FullBackupFrequency);

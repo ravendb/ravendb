@@ -25,7 +25,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task BackupWithIdentityAndCompareExchangeShouldHaveOnlyOwnValues()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder1");
@@ -62,19 +62,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var cmpXchg2 = new User { Name = "🤡" };
                 await store2.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/clown", cmpXchg2, 0));
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
-                    BackupType = BackupType.Backup
-                };
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
-                PeriodicBackupTestsSlow.RunBackup(result.TaskId, documentDatabase, true, store); // FULL BACKUP
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store); // FULL BACKUP
             }
 
             var backupDirectory = Directory.GetDirectories(backupPath).First();

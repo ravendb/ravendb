@@ -29,8 +29,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         [Fact]
         public void restore_google_cloud_settings_tests()
         {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = s => $"{s}_2"
@@ -72,35 +70,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
                 
                 var googleCloudSettings = GetGoogleCloudSettings();
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    GoogleCloudSettings = googleCloudSettings,
-                    IncrementalBackupFrequency = "0 0 1 1 *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                PeriodicBackupStatus status = null;
-                var value = WaitForValue(() =>
-                {
-                    status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 4);
-                Assert.True(4 == value, $"4 == value, Got status: {status != null}, exception: {status?.Error?.Exception}");
-                Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
-
-                OperationState backupOperation = null;
-                var operationStatus = WaitForValue(() =>
-                {
-                    backupOperation = store.Maintenance.Send(new GetOperationStateOperation(status.LastOperationId.Value));
-                    return backupOperation.Status;
-                }, OperationStatus.Completed);
-                Assert.Equal(OperationStatus.Completed, operationStatus);
-
-                var backupResult = backupOperation.Result as BackupResult;
+                var config = Backup.CreateBackupConfiguration(googleCloudSettings: googleCloudSettings);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                var backupResult = (BackupResult)store.Maintenance.Send(new GetOperationStateOperation(Backup.GetBackupOperationId(store, backupTaskId))).Result;
                 Assert.NotNull(backupResult);
                 Assert.True(backupResult.Counters.Processed);
                 Assert.Equal(1, backupResult.Counters.ReadCount);
@@ -114,9 +86,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.Equal(lastEtag, value);
+                var status = Backup.RunBackupAndReturnStatus(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -130,7 +100,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     DisableOngoingTasks = true
                 };
 
-                using (RestoreDatabaseFromCloud(store, restoreFromGoogleCloudConfiguration, TimeSpan.FromSeconds(30)))
+                using (Backup.RestoreDatabaseFromCloud(store, restoreFromGoogleCloudConfiguration, TimeSpan.FromSeconds(30)))
                 {
                     using (var session = store.OpenAsyncSession(databaseName))
                     {
@@ -185,31 +155,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var googleCloudSettings = GetGoogleCloudSettings();
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    GoogleCloudSettings = googleCloudSettings,
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 4);
-                Assert.Equal(4, value);
-                var backupStatus = store.Maintenance.Send(operation);
-
-                var operationStatus = WaitForValue(() =>
-                {
-                    var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupStatus.Status.LastOperationId.Value));
-                    return backupOperation.Status;
-                }, OperationStatus.Completed);
-                Assert.Equal(OperationStatus.Completed, operationStatus);
+                var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, googleCloudSettings: googleCloudSettings);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -222,14 +169,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.Equal(lastEtag, value);
-
+                var status = Backup.RunBackupAndReturnStatus(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
                 // restore the database with a different name
                 string databaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
 
-                var subfolderGoogleCloudSettings = GetGoogleCloudSettings(backupStatus.Status.FolderName);
+                var subfolderGoogleCloudSettings = GetGoogleCloudSettings(status.FolderName);
                 
                 var restoreFromGoogleCloudConfiguration = new RestoreFromGoogleCloudConfiguration
                 {
@@ -237,7 +181,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     Settings = subfolderGoogleCloudSettings
                 };
 
-                using (RestoreDatabaseFromCloud(store, restoreFromGoogleCloudConfiguration, TimeSpan.FromSeconds(300)))
+                using (Backup.RestoreDatabaseFromCloud(store, restoreFromGoogleCloudConfiguration, TimeSpan.FromSeconds(300)))
                 {
                     using (var session = store.OpenAsyncSession(databaseName))
                     {

@@ -115,7 +115,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task ReplicateRevision_WhenSourceDataFromIncrementalBackupAndDocDeleted_ShouldNotRecreateTheDoc()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder", forceCreateDir: true);
@@ -138,16 +138,9 @@ namespace SlowTests.Server.Replication
                     await session.StoreAsync(entity);
                     await session.SaveChangesAsync();
                 }
-                
-                var config = new PeriodicBackupConfiguration
-                {
-                    MentorNode = secondNode.ServerStore.NodeTag,
-                    LocalSettings = new LocalSettings { FolderPath = backupPath },
-                    IncrementalBackupFrequency = "0 * * * *"
-                };
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await (await SendAsync(store, new StartBackupOperation(true, backupTaskId))).WaitForCompletionAsync();
-                
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 * * * *", mentorNode: secondNode.ServerStore.NodeTag);
+                var backupTaskId = await Backup.CreateAndRunBackupInClusterAsync(config, store, isFullBackup: true);
+
                 await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, firstNodeTag));
                 await WaitAndAssertForValueAsync(async () =>
                 {
@@ -166,8 +159,7 @@ namespace SlowTests.Server.Replication
                     session.Delete(entity.Id);
                     await session.SaveChangesAsync();
                 }
-
-                await (await SendAsync(store, new StartBackupOperation(false, backupTaskId))).WaitForCompletionAsync();
+                await Backup.RunBackupInClusterAsync(store, backupTaskId, isFullBackup: false);
             }
 
             using (var store = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 1}))
