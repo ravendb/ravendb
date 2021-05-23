@@ -1027,6 +1027,8 @@ namespace SlowTests.Cluster
                     Assert.True(WaitForDocument(revivedStore, "foo/bar"));
                     using (var session = revivedStore.OpenAsyncSession())
                     {
+                        session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
+
                         var user = await session.LoadAsync<User>("foo/bar");
                         var changeVector = session.Advanced.GetChangeVectorFor(user);
                         Assert.NotNull(await session.Advanced.Revisions.GetAsync<User>(changeVector));
