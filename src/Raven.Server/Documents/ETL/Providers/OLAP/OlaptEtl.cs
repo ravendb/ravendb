@@ -14,7 +14,6 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.PeriodicBackup.Retention;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
@@ -32,25 +31,47 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         public readonly OlapEtlMetricsCountersManager OlapMetrics = new OlapEtlMetricsCountersManager();
 
         private PeriodicBackup.PeriodicBackup.BackupTimer _timer;
-        private readonly S3Settings _s3Settings;
-        private readonly AzureSettings _azureSettings;
         private readonly OperationCancelToken _operationCancelToken;
         private static readonly IEnumerator<ToOlapItem> EmptyEnumerator = Enumerable.Empty<ToOlapItem>().GetEnumerator();
+
+        private OlapEtlStatsScope _uploadScope;
+        private UploaderSettings _uploaderSettings;
 
         public OlapEtl(Transformation transformation, OlapEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, OlaptEtlTag)
         {
             Metrics = OlapMetrics;
 
-            _s3Settings = BackupTask.GetBackupConfigurationFromScript(configuration.Connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
-                    Database, updateServerWideSettingsFunc: null, serverWide: false);
-
-            _azureSettings = BackupTask.GetBackupConfigurationFromScript(configuration.Connection.AzureSettings, x => JsonDeserializationServer.AzureSettings(x),
-                Database, updateServerWideSettingsFunc: null, serverWide: false);
+            GenerateUploaderSetting();
 
             _operationCancelToken = new OperationCancelToken(Database.DatabaseShutdown, CancellationToken);
 
             UpdateTimer(LastProcessState.LastBatchTime);
+        }
+
+        private void GenerateUploaderSetting()
+        {
+            var s3Settings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
+                Database, updateServerWideSettingsFunc: null, serverWide: false);
+
+            var azureSettings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.AzureSettings, x => JsonDeserializationServer.AzureSettings(x),
+                Database, updateServerWideSettingsFunc: null, serverWide: false);
+
+            var glacierSettings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x),
+                Database, updateServerWideSettingsFunc: null, serverWide: false);
+
+            var googleCloudSettings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x),
+                Database, updateServerWideSettingsFunc: null, serverWide: false);
+
+            _uploaderSettings = new UploaderSettings
+            {
+                S3Settings = s3Settings, 
+                AzureSettings = azureSettings, 
+                GlacierSettings = glacierSettings,
+                GoogleCloudSettings = googleCloudSettings,
+                DatabaseName = Database.Name, 
+                TaskName = Name
+            };
         }
 
         public override EtlType EtlType => EtlType.Olap;
@@ -267,7 +288,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             };
         }
 
-        private OlapEtlStatsScope _uploadScope;
 
         private void UploadToServer(string localPath, string folderName, string fileName, OlapEtlStatsScope scope)
         {

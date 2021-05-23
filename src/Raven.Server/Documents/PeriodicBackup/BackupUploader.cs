@@ -4,10 +4,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
@@ -29,7 +31,9 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly List<PoolOfThreads.LongRunningWork> _threads;
         private readonly ConcurrentSet<Exception> _exceptions;
 
+        [CanBeNull]
         private readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
+
         private readonly bool _isFullBackup;
 
         public readonly OperationCancelToken TaskCancelToken;
@@ -44,6 +48,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         private const string GoogleCloudName = "Google Cloud";
         private const string FtpName = "FTP";
 
+        private readonly bool _isOlapUpload;
+
         public BackupUploader(UploaderSettings uploaderSettings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
         {
             _uploaderSettings = uploaderSettings;
@@ -51,7 +57,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             _exceptions = new ConcurrentSet<Exception>();
 
             _retentionPolicyParameters = retentionPolicyParameters;
-            _isFullBackup = retentionPolicyParameters.IsFullBackup;
+            _isFullBackup = retentionPolicyParameters?.IsFullBackup ?? false;
+            _isOlapUpload = _uploaderSettings.BackupType.HasValue == false;
 
             TaskCancelToken = taskCancelToken;
             _logger = logger;
@@ -91,7 +98,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAwsS3Client(settings, progress, _logger, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName);
+                var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _isOlapUpload);
                 client.PutObject(key, stream, new Dictionary<string, string>
                 {
                     { "Description", GetArchiveDescription() }
@@ -99,6 +106,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(S3Name)} bucket named: {settings.BucketName}, with key: {key}");
+
+                if (_retentionPolicyParameters == null)
+                    return;
 
                 var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
@@ -109,10 +119,13 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAwsGlacierClient(settings, progress, _logger, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName ?? _uploaderSettings.DatabaseName);
+                var key = CombinePathAndKey(settings.RemoteFolderName ?? _uploaderSettings.DatabaseName, useSafeFolderName: _isOlapUpload);
                 var archiveId = client.UploadArchive(stream, key);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(GlacierName)}, archive ID: {archiveId}");
+
+                if (_retentionPolicyParameters == null)
+                    return;
 
                 var runner = new GlacierRetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
@@ -128,6 +141,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(FtpName)} server");
 
+                if (_retentionPolicyParameters == null)
+                    return;
+
                 var runner = new FtpRetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
             }
@@ -137,7 +153,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAzureClient(settings, progress, _logger, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName);
+                var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _isOlapUpload);
                 client.PutBlob(key, stream, new Dictionary<string, string>
                 {
                     { "Description", GetArchiveDescription() }
@@ -145,6 +161,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(AzureName)} container: {settings.StorageContainer}, with key: {key}");
+
+                if (_retentionPolicyParameters == null)
+                    return;
 
                 var runner = new AzureRetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
@@ -164,15 +183,22 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(GoogleCloudName)} storage bucket: {settings.BucketName}");
 
+                if (_retentionPolicyParameters == null)
+                    return;
+
                 var runner = new GoogleCloudRetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
             }
         }
 
-        private string CombinePathAndKey(string path)
+        private string CombinePathAndKey(string path, bool useSafeFolderName = false)
         {
             var prefix = string.IsNullOrWhiteSpace(path) == false ? $"{path}/" : string.Empty;
-            return $"{prefix}{_uploaderSettings.FolderName}/{_uploaderSettings.FileName}";
+            var folderName = useSafeFolderName
+                ? _uploaderSettings.SafeFolderName
+                : _uploaderSettings.FolderName;
+            
+            return $"{prefix}{folderName}/{_uploaderSettings.FileName}";
         }
 
         private void CreateUploadTaskIfNeeded<S, T>(S settings, Action<S, FileStream, Progress> uploadToServer, T uploadStatus, string targetName)
@@ -348,5 +374,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         public string TaskName;
 
         public BackupType? BackupType;
+
+        [CanBeNull]
+        public string SafeFolderName;
     }
 }
