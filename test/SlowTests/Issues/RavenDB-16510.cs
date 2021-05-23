@@ -22,6 +22,8 @@ namespace SlowTests.Issues
         [Fact]
         public async Task CheckTcpTrafficWatch()
         {
+            DoNotReuseServer();
+
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
@@ -127,12 +129,12 @@ namespace SlowTests.Issues
                     }
                 });
 
-                await SetupReplicationAsync(store2, store1);
-                
-                if (exceptionType == true)
+                if (exceptionType)
                     Server.ForTestingPurposesOnly().ThrowExceptionInListenToNewTcpConnection = true;
                 else
                     Server.ForTestingPurposesOnly().ThrowExceptionInTrafficWatchTcp = true;
+
+                await SetupReplicationAsync(store2, store1);
 
                 using (var session = store2.OpenSession())
                 {
