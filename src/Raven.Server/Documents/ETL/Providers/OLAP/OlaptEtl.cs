@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     count += transformed.Count;
                 }
 
-                if (AnyRemoteDestinations())
+                if (AnyRemoteDestinations)
                     UploadToServer(localPath, folderName, fileName, safeFolderName, scope);
 
                 if (Configuration.Connection.LocalSettings != null)
@@ -350,11 +350,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
         }
 
-        private bool AnyRemoteDestinations() =>
-            _uploaderSettings.S3Settings != null || 
-            _uploaderSettings.GlacierSettings != null || 
-            _uploaderSettings.AzureSettings != null || 
-            _uploaderSettings.GoogleCloudSettings != null ||
-            _uploaderSettings.FtpSettings != null;
+        private bool AnyRemoteDestinations =>
+            BackupConfiguration.CanBackupUsing(_uploaderSettings.S3Settings) || 
+            BackupConfiguration.CanBackupUsing(_uploaderSettings.GlacierSettings) || 
+            BackupConfiguration.CanBackupUsing(_uploaderSettings.AzureSettings) || 
+            BackupConfiguration.CanBackupUsing(_uploaderSettings.GoogleCloudSettings) || 
+            BackupConfiguration.CanBackupUsing(_uploaderSettings.FtpSettings);
     }
 }

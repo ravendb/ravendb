@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private const string GoogleCloudName = "Google Cloud";
         private const string FtpName = "FTP";
 
-        private readonly bool _isOlapUpload;
+        private readonly bool _useSafeFolderName;
 
         public BackupUploader(UploaderSettings uploaderSettings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
         {
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             _retentionPolicyParameters = retentionPolicyParameters;
             _isFullBackup = retentionPolicyParameters?.IsFullBackup ?? false;
-            _isOlapUpload = _uploaderSettings.BackupType.HasValue == false;
+            _useSafeFolderName = _uploaderSettings.BackupType.HasValue == false;
 
             TaskCancelToken = taskCancelToken;
             _logger = logger;
@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAwsS3Client(settings, progress, _logger, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _isOlapUpload);
+                var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _useSafeFolderName);
                 client.PutObject(key, stream, new Dictionary<string, string>
                 {
                     { "Description", GetArchiveDescription() }
@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAwsGlacierClient(settings, progress, _logger, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName ?? _uploaderSettings.DatabaseName, useSafeFolderName: _isOlapUpload);
+                var key = CombinePathAndKey(settings.RemoteFolderName ?? _uploaderSettings.DatabaseName, useSafeFolderName: _useSafeFolderName);
                 var archiveId = client.UploadArchive(stream, key);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(GlacierName)}, archive ID: {archiveId}");
@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAzureClient(settings, progress, _logger, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _isOlapUpload);
+                var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _useSafeFolderName);
                 client.PutBlob(key, stream, new Dictionary<string, string>
                 {
                     { "Description", GetArchiveDescription() }
