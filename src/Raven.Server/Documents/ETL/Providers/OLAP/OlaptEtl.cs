@@ -300,7 +300,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _uploaderSettings.FolderName = folderName;
             _uploaderSettings.SafeFolderName = safeFolderName;
             
-            var backupUploader = new BackupUploader(uploaderSettings, new RetentionPolicyBaseParameters(), Logger, GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
+            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
 
             try
             {

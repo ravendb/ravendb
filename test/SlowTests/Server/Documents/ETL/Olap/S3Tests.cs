@@ -1017,7 +1017,6 @@ for (var i = 0; i < this.Lines.length; i++){
             }
         }
 
-
         [AmazonS3Fact]
         public async Task CanUpdateS3Settings()
         {
@@ -1260,6 +1259,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}{CollectionName}", delimiter: string.Empty);
             }
         }
+       
         private void SetupS3OlapEtl(DocumentStore store, string script, S3Settings settings, string customPartitionValue = null, string transformationName = null)
         {
             var connectionStringName = $"{store.Database} to S3";
