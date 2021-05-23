@@ -10,8 +10,6 @@ import document = require("models/database/documents/document");
  * Virtual grid column that renders time series.
  */
 class timeSeriesColumn<T extends document> extends textColumn<T> {
-    
-    static readonly dateFormat = "YYYY-MM-DD";
 
     private readonly handler: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQueryEventObject) => void;
 
@@ -91,14 +89,18 @@ class timeSeriesColumn<T extends document> extends textColumn<T> {
             
             const resultType = model.detectResultType();
             
-            const dateRange = startDate && endDate 
-                ? generalUtils.formatUtcDateAsLocal(startDate, timeSeriesColumn.dateFormat) + " - " + generalUtils.formatUtcDateAsLocal(endDate, timeSeriesColumn.dateFormat)
+            const dateRange = startDate && endDate
+                ? generalUtils.formatUtcDateAsLocal(startDate, generalUtils.basicDateFormat) + " - " + generalUtils.formatUtcDateAsLocal(endDate, generalUtils.basicDateFormat)
                 : "N/A";
                 
-            const tsInfo = `<i title="Time Series" class="icon-timeseries margin-right"></i>` 
+            const dateRangeTooltip = startDate && endDate
+                ? generalUtils.formatUtcDateAsLocal(startDate, generalUtils.dateFormat) + " - " + generalUtils.formatUtcDateAsLocal(endDate, generalUtils.dateFormat)
+                : "N/A";
+
+            const tsInfo = `<i title="Time Series" class="icon-timeseries margin-right"></i>`
                 + `<div class="ts-group-property" data-label="Points">${model.getCount().toLocaleString()}</div>`
                 + (resultType === "grouped" ? `<div class="ts-group-property" data-label="Buckets">${model.getBucketCount().toLocaleString()}</div>` : "")
-                + `<div class="ts-group-property date-range" data-label="Date Range">${dateRange}</div>`
+                + `<div class="ts-group-property date-range" data-label="Date Range" title="${dateRangeTooltip}">${dateRange}</div>`
             ;
             
             let plotButtonTitle = "Plot time series graph";

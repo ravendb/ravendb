@@ -19,8 +19,8 @@ class genUtils {
         '=': '&#x3D;'
     };
 
-    static dateFormat = "YYYY MMMM Do, h:mm A";
-    
+    static readonly basicDateFormat = "YYYY-MM-DD";
+    static readonly dateFormat = "YYYY MMMM Do, h:mm A";
     static readonly utcFullDateFormat = "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]";
     
     /***  IP Address Methods  ***/
