@@ -21,6 +21,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -603,26 +604,27 @@ namespace Raven.Server.Smuggler.Documents
                         }
 
                         count++;
-                        if(document.TryGetMetadata(out var metadata) == false)
-                            throw new InvalidOperationException($"Document {docId} doesn't have '@metadata' element?!");
-
-                        if (metadata.TryGet(Client.Constants.Documents.Metadata.ClusterTransactionIndex, out BlittableJsonReaderObject cti) == false)
+                       
+                        var changeVectorList = document.ChangeVector.ToChangeVectorList();
+                        for (int i = 0; i < changeVectorList.Count; i++)
                         {
-                            metadata.Modifications = new DynamicJsonValue(metadata)
-                            {
-                                [Client.Constants.Documents.Metadata.ClusterTransactionIndex] = new DynamicJsonValue
-                                {
-                                    [context.DocumentDatabase.DatabaseGroupId] = Index
-                                }
-                            };
+                            if (changeVectorList[i].DbId != context.DocumentDatabase.ClusterTransactionId) 
+                                continue;
+                            
+                            changeVectorList.RemoveAt(i);
+                            i--;
                         }
-                        else
+                        changeVectorList.Add(new ChangeVectorEntry
                         {
-                            cti.Modifications = new DynamicJsonValue(cti) {[context.DocumentDatabase.DatabaseGroupId] = Index};
-                        }
+                            Etag = Index,
+                            DbId = context.DocumentDatabase.ClusterTransactionId,
+                            NodeTag = ChangeVectorParser.TrxnInt
+                        });
+                        var newChangeVector = changeVectorList.SerializeVector();
 
                         var newDoc = context.ReadObject(document.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                        context.DocumentDatabase.DocumentsStorage.Put(context, docId, document.ChangeVector, newDoc, document.LastModified.Ticks,
+                        context.DocumentDatabase.DocumentsStorage.Put(context, docId, null, newDoc, document.LastModified.Ticks,
+                            changeVector: newChangeVector,
                             flags: document.Flags);
                     }
 
@@ -1296,7 +1298,8 @@ namespace Raven.Server.Smuggler.Documents
                                 parentDocument.Data = parentDocument.Data.Clone(context);
 
                             _database.DocumentsStorage.Put(context, parentDocument.Id, null,
-                                parentDocument.Data, parentDocument.LastModified.Ticks, document.ChangeVector, parentDocument.Flags, parentDocument.NonPersistentFlags);
+                                parentDocument.Data, parentDocument.LastModified.Ticks, document.ChangeVector, null,
+                                parentDocument.Flags, parentDocument.NonPersistentFlags);
                         }
 
                         continue;
@@ -1309,7 +1312,7 @@ namespace Raven.Server.Smuggler.Documents
                     databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
                     try
                     {
-                        _database.DocumentsStorage.Put(context, id, expectedChangeVector: null, document.Data, document.LastModified.Ticks, document.ChangeVector, document.Flags, document.NonPersistentFlags);
+                        _database.DocumentsStorage.Put(context, id, expectedChangeVector: null, document.Data, document.LastModified.Ticks, document.ChangeVector, null, document.Flags, document.NonPersistentFlags);
                     }
                     catch (DocumentCollectionMismatchException)
                     {

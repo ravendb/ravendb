@@ -610,8 +610,7 @@ more responsive application.
             if (id == null)
                 throw new ArgumentNullException(nameof(id));
             string changeVector = null;
-            DocumentInfo documentInfo;
-            if (DocumentsById.TryGetValue(id, out documentInfo))
+            if (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo))
             {
                 using (var newObj = JsonConverter.ToBlittable(documentInfo.Entity, documentInfo))
                 {
@@ -634,7 +633,7 @@ more responsive application.
             _knownMissingIds.Add(id);
             changeVector = UseOptimisticConcurrency ? changeVector : null;
             _countersByDocId?.Remove(id);
-            Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector));
+            Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector, expectedChangeVector ?? documentInfo?.ChangeVector));
         }
 
         /// <summary>
@@ -1013,14 +1012,15 @@ more responsive application.
                             result.OnSuccess.RemoveDocumentById(documentInfo.Id);
                         }
 
-                        changeVector = UseOptimisticConcurrency ? changeVector : null;
-
+                        if (UseOptimisticConcurrency == false)
+                            changeVector = null;
+                       
                         if (deletedEntity.ExecuteOnBeforeDelete)
                         {
                             OnBeforeDeleteInvoke(new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity));
                         }
 
-                        var deleteCommandData = new DeleteCommandData(documentInfo.Id, changeVector);
+                        var deleteCommandData = new DeleteCommandData(documentInfo.Id, changeVector, documentInfo.ChangeVector);
                         if (TransactionMode == TransactionMode.ClusterWide)
                         {
                             // we need this to send the cluster transaction index to the cluster state machine
@@ -1129,7 +1129,7 @@ more responsive application.
                         }
                     }
 
-                    result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document, forceRevisionCreationStrategy));
+                    result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, entity.Value.ChangeVector, document, forceRevisionCreationStrategy));
                 }
             }
         }

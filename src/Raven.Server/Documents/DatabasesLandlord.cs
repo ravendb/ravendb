@@ -24,6 +24,7 @@ using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Util.Settings;
@@ -163,6 +164,7 @@ namespace Raven.Server.Documents
                         case ClusterDatabaseChangeType.PendingClusterTransactions:
                         case ClusterDatabaseChangeType.ClusterTransactionCompleted:
                             database.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
+                            database.ClusterTransactionId = topology.ClusterTransactionIdBase64;
                             database.NotifyOnPendingClusterTransaction(index, changeType);
                             break;
 
@@ -811,7 +813,7 @@ namespace Raven.Server.Documents
             {
                 if (databaseRecord == null)
                     return null;
-
+                
                 var record = databaseRecord.MaterializedRecord;
                 if (record.Encrypted)
                 {
@@ -821,7 +823,6 @@ namespace Raven.Server.Documents
                             $"The database {databaseName.Value} is encrypted, and must be accessed only via HTTPS, but the web url used is {_serverStore.Server.WebUrl}");
                     }
                 }
-
                 return CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, record);
             }
         }

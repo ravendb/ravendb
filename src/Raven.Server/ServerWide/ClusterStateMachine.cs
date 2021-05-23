@@ -879,10 +879,10 @@ namespace Raven.Server.ServerWide
             try
             {
                 clusterTransaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
-                var dbTopologyId = UpdateDatabaseRecordId(context, index, clusterTransaction);
+                var dbTopology = UpdateDatabaseRecordId(context, index, clusterTransaction);
 
                 var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-                var error = clusterTransaction.ExecuteCompareExchangeCommands(dbTopologyId, context, index, compareExchangeItems);
+                var error = clusterTransaction.ExecuteCompareExchangeCommands(dbTopology, context, index, compareExchangeItems);
                 if (error == null)
                 {
                     clusterTransaction.SaveCommandsBatch(context, index);
@@ -909,7 +909,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private string UpdateDatabaseRecordId(ClusterOperationContext context, long index, ClusterTransactionCommand clusterTransaction)
+        private DatabaseTopology UpdateDatabaseRecordId(ClusterOperationContext context, long index, ClusterTransactionCommand clusterTransaction)
         {
             var rawRecord = ReadRawDatabaseRecord(context, clusterTransaction.DatabaseName);
 
@@ -917,11 +917,12 @@ namespace Raven.Server.ServerWide
                 throw DatabaseDoesNotExistException.CreateWithMessage(clusterTransaction.DatabaseName, $"Could not execute update command of type '{nameof(ClusterTransactionCommand)}'.");
 
             var topology = rawRecord.Topology;
-            if (topology.DatabaseTopologyIdBase64 == null)
+            if (topology.DatabaseTopologyIdBase64 == null || topology.ClusterTransactionIdBase64 == null)
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 var databaseRecordJson = rawRecord.Raw;
-                topology.DatabaseTopologyIdBase64 = clusterTransaction.DatabaseRecordId;
+                topology.DatabaseTopologyIdBase64 ??= clusterTransaction.DatabaseRecordId;
+                topology.ClusterTransactionIdBase64 ??= clusterTransaction.ClusterTransactionId;
                 var dbKey = $"db/{clusterTransaction.DatabaseName}";
                 using (Slice.From(context.Allocator, dbKey, out var valueName))
                 using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out var valueNameLowered))
@@ -939,7 +940,7 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, databaseRecordJson);
                 }
             }
-            return topology.DatabaseTopologyIdBase64;
+            return topology;
         }
 
         private void ConfirmReceiptServerCertificate(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)

@@ -216,10 +216,9 @@ namespace Raven.Server.Utils
             if (string.IsNullOrEmpty(vectorBstring))
                 return vectorAstring;
 
-            if (_mergeVectorBuffer == null)
-                _mergeVectorBuffer = new EquatableList<ChangeVectorEntry>();
+            _mergeVectorBuffer ??= new List<ChangeVectorEntry>();
             _mergeVectorBuffer.Clear();
-
+  
             ChangeVectorParser.MergeChangeVector(vectorAstring, _mergeVectorBuffer);
             ChangeVectorParser.MergeChangeVector(vectorBstring, _mergeVectorBuffer);
 

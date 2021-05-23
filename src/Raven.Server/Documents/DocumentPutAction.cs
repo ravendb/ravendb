@@ -60,51 +60,31 @@ namespace Raven.Server.Documents
         {
             private readonly ServerStore _serverStore;
             private readonly DocumentPutAction _parent;
-            private readonly string _id;
-            private long? _expectedClusterIndex;
-            bool _validated;
 
-            public CompareClusterTransactionId(DocumentPutAction parent, string id)
+            public CompareClusterTransactionId(DocumentPutAction parent)
             {
                 _serverStore = parent._documentDatabase.ServerStore;
                 _parent = parent;
-                _id = id;
-                _expectedClusterIndex = null;
-                _validated = false;
             }
 
-            public void ValidateDocument(BlittableJsonReaderObject doc, NonPersistentDocumentFlags nonPersistentDocumentFlags)
+            public void ValidateAtomicGuard(string id, NonPersistentDocumentFlags nonPersistentDocumentFlags, string changeVector)
             {
-                if (_validated || // already validated the new document
-                    nonPersistentDocumentFlags.Contain(NonPersistentDocumentFlags.FromReplication)) // we assume it was alright on the other side 
+                if (nonPersistentDocumentFlags != NonPersistentDocumentFlags.None) // replication or engine running an operation, we can skip checking it 
                     return;
 
-                if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                   metadata.TryGet(Constants.Documents.Metadata.ClusterTransactionIndex, out BlittableJsonReaderObject clustIndex) &&
-                   clustIndex.TryGet(_parent._documentDatabase.DatabaseGroupId, out long clusterTransactionIndex))
-                {
-                    _validated = true;
-                    long index;
-                    if (_expectedClusterIndex == null)
-                    {
-                        using var _ = _serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext clusterContext);
-                        clusterContext.OpenReadTransaction();
-                        var guardId = CompareExchangeKey.GetStorageKey(_parent._documentDatabase.Name, ClusterTransactionCommand.GetAtomicGuardKey(_id));
-                        BlittableJsonReaderObject val;
-                        (index, val) = _serverStore.Cluster.GetCompareExchangeValue(clusterContext, guardId);
-                        _expectedClusterIndex = index;
-                    }
-                    else
-                    {
-                        index = _expectedClusterIndex.Value;
-                    }
-
-                    if(index != clusterTransactionIndex)
-                    {
-                        throw new ConcurrencyException($"Cannot PUT document '{_id}' because its '{Constants.Documents.Metadata.Key}'.'{Constants.Documents.Metadata.ClusterTransactionIndex}'.'{_parent._documentDatabase.DatabaseGroupId}' is set to {clusterTransactionIndex} but the compare exchange guard ('{ClusterTransactionCommand.GetAtomicGuardKey(_id)}') is set to {_expectedClusterIndex}");
-                    }
-                }
+                long indexFromOChangeVector = ChangeVectorUtils.GetEtagById(changeVector, _parent._documentDatabase.ClusterTransactionId);
+                if (indexFromOChangeVector == 0)
+                    return;
                 
+                using var _ = _serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext clusterContext);
+                clusterContext.OpenReadTransaction();
+                var guardId = CompareExchangeKey.GetStorageKey(_parent._documentDatabase.Name, ClusterTransactionCommand.GetAtomicGuardKey(id));
+                var (indexFromCluster, val) = _serverStore.Cluster.GetCompareExchangeValue(clusterContext, guardId);
+                if(indexFromOChangeVector != indexFromCluster)
+                {
+                    throw new ConcurrencyException($"Cannot PUT document '{id}' because its change vector's cluster transaction index is set to {indexFromOChangeVector} " +
+                                                   $"but the compare exchange guard ('{ClusterTransactionCommand.GetAtomicGuardKey(id)}') is set to {indexFromCluster}");
+                }
             }
         }
 
@@ -113,6 +93,7 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject document,
             long? lastModifiedTicks = null,
             string changeVector = null,
+            string oldChangeVectorForClusterTransactionIndexCheck = null,
             DocumentFlags flags = DocumentFlags.None,
             NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
@@ -127,6 +108,12 @@ namespace Raven.Server.Documents
 
             var newEtag = _documentsStorage.GenerateNextEtag();
             var modifiedTicks = _documentsStorage.GetOrCreateLastModifiedTicks(lastModifiedTicks);
+            
+            var compareClusterTransaction = new CompareClusterTransactionId(this);
+            if (oldChangeVectorForClusterTransactionIndexCheck != null)
+            {
+                compareClusterTransaction.ValidateAtomicGuard(id, nonPersistentFlags, oldChangeVectorForClusterTransactionIndexCheck);
+            }
 
             id = BuildDocumentId(id, newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
@@ -142,8 +129,6 @@ namespace Raven.Server.Documents
 
                     table.ReadByKey(lowerId, out oldValue);
                 }
-                var compareClusterTransaction = new CompareClusterTransactionId(this, id);
-                compareClusterTransaction.ValidateDocument(document, nonPersistentFlags);
 
                 BlittableJsonReaderObject oldDoc = null;
                 string oldChangeVector = "";
@@ -161,11 +146,15 @@ namespace Raven.Server.Documents
                     // "" / empty - means, must be new
                     // anything else - must match exactly
 
+                    oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
                     if (expectedChangeVector != null) 
                     {
-                        oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
                         if (string.Compare(expectedChangeVector, oldChangeVector, StringComparison.Ordinal) != 0)
                             ThrowConcurrentException(id, expectedChangeVector, oldChangeVector);
+                    }
+                    if (oldChangeVectorForClusterTransactionIndexCheck == null)
+                    {
+                        compareClusterTransaction.ValidateAtomicGuard(id, nonPersistentFlags, oldChangeVector);
                     }
 
                     oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out int oldSize), oldSize, context);
@@ -173,7 +162,6 @@ namespace Raven.Server.Documents
                     if (oldCollectionName != collectionName)
                         ThrowInvalidCollectionNameChange(id, oldCollectionName, collectionName);
 
-                    compareClusterTransaction.ValidateDocument(oldDoc, nonPersistentFlags);
 
                     var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
 
@@ -231,7 +219,6 @@ namespace Raven.Server.Documents
                     {
                         if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, oldDoc, oldChangeVector, collectionName))
                         {
-                            oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
                             var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
                             var oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref oldValue);
                             

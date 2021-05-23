@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
@@ -110,6 +112,7 @@ namespace Raven.Client.ServerWide
         public long TruncatedClusterTransactionCommandsCount;
 
         public HashSet<string> UnusedDatabaseIds = new HashSet<string>();
+        private string _clusterTransactionKey;
 
         public void AddSorter(SorterDefinition definition)
         {

@@ -12,7 +12,9 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -48,7 +50,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task WillDeleteOrphanedAtomicGuards_AfterRestoreFromBackup()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var leader = await CreateRaftClusterAndGetLeader(1);
             using var store = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 3});
 
             using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
@@ -87,19 +89,51 @@ namespace SlowTests.Issues
                     ClusterTransactionCommand.GetAtomicGuardKey("users/arava")
                 );
                 var arava = await session.LoadAsync<User>("users/arava");
-                var metadata = session.Advanced.GetMetadataFor(arava);
-                var cti = (IMetadataDictionary)metadata[Constants.Documents.Metadata.ClusterTransactionIndex];
+                var cv  = session.Advanced.GetChangeVectorFor(arava);
+                var cti = cv.ToChangeVectorList().Single(x=>x.NodeTag == ChangeVectorParser.TrxnInt);
                 var record = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store2.Database));
-                Assert.Equal(2, cti.Count);
-                var txid = cti[record.Topology.DatabaseTopologyIdBase64];
-                Assert.Equal(val.Index, txid);
+                Assert.Equal(val.Index, cti.Etag);
             }
         }
+        
+        [Fact]
+        public async Task CanHandleConflictsWithClusterTransactionIndex()
+        {
+            var leader = await CreateRaftClusterAndGetLeader(1);
+            using var store = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 3});
+            using var store2 = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 3});
 
+            using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+            {
+                await session.StoreAsync(new User {Name = "arava"}, "users/arava");
+                await session.StoreAsync(new User {Name = "marker"}, "marker");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session2 = store2.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+            {
+                await session2.StoreAsync(new User {Name = "Arava"}, "users/arava");
+                await session2.SaveChangesAsync();
+            }
+
+            await SetupReplicationAsync(store, store2);
+
+            Assert.True(WaitForDocument(store2, "marker"));
+            WaitForUserToContinueTheTest(store2);
+            using (var session2 = store2.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+            {
+                var arava = await session2.LoadAsync<User>("users/arava");
+                var cv  = session2.Advanced.GetChangeVectorFor(arava);
+                var cti = cv.ToChangeVectorList().Where(x=>x.NodeTag == ChangeVectorParser.TrxnInt).ToList();
+                Assert.Equal(2, cti.Count);
+                Assert.Equal("Arava", arava.Name);
+            }
+        }
+        
         [Fact]
         public async Task WillMarkClusterWideDocumentsWithTransactionId()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var leader = await CreateRaftClusterAndGetLeader(1);
             using var store = GetDocumentStore(new Options {Server = leader, ReplicationFactor = 3});
 
             using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
@@ -112,17 +146,17 @@ namespace SlowTests.Issues
             {
                 var arava = await session.LoadAsync<User>("users/arava");
                 var metadata = session.Advanced.GetMetadataFor(arava);
-                var cti = (IMetadataDictionary)metadata[Constants.Documents.Metadata.ClusterTransactionIndex];
-                var txid = cti[cti.Keys.Single()];
-                var guard = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<object>("rvn-atomic-guard/users/arava");
-                Assert.Equal(txid, guard.Index);
+                var cv  = session.Advanced.GetChangeVectorFor(arava);
+                var cti = cv.ToChangeVectorList().Single(x=>x.NodeTag == ChangeVectorParser.TrxnInt);
+                var guard = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<object>(ClusterTransactionCommand.GetAtomicGuardKey("users/arava"));
+                Assert.Equal(cti.Etag, guard.Index);
             }
         }
 
         [Fact]
         public async Task WillGetGoodErrorOnMismatchClusterTxId()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var leader = await CreateRaftClusterAndGetLeader(1);
             using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -134,22 +168,25 @@ namespace SlowTests.Issues
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var arava = await session.LoadAsync<User>("users/arava");
-                var metadata = session.Advanced.GetMetadataFor(arava);
-                var cti = (IMetadataDictionary)metadata[Constants.Documents.Metadata.ClusterTransactionIndex];
-                var key = cti.Keys.Single();
-                cti[key] = (long)(cti[key]) + 2;
+                
+                using (var nested = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var arava2 = await nested.LoadAsync<User>("users/arava");
+                    arava2.Name += "nested";
+                    await nested.SaveChangesAsync();
+                }
+              
                 arava.Name += "-modified";
                 var err = await Assert.ThrowsAsync<ConcurrencyException>(() => session.SaveChangesAsync());
                 Assert.Contains("Failed to execute cluster transaction due to the following issues: " +
-                    "Guard compare exchange value 'rvn-atomic-guard/users/arava' index does not match " +
-                    "'@metadata'.'Cluster-Transaction-Index'", err.Message);
+                    "Guard compare exchange value 'rvn-atomic/users/arava' index does not match ", err.Message);
             }
         }
 
         [Fact]
         public async Task WillFailNormalTransactionThatDoesNotMatchAtomicGuardIndex()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var leader = await CreateRaftClusterAndGetLeader(1);
             using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -163,22 +200,23 @@ namespace SlowTests.Issues
             }))
             {
                 var arava = await session.LoadAsync<User>("users/arava");
-                var metadata = session.Advanced.GetMetadataFor(arava);
-                var cti = (IMetadataDictionary)metadata[Constants.Documents.Metadata.ClusterTransactionIndex];
-                var key = cti.Keys.Single();
-                cti[key] = (long)(cti[key]) + 2;
-                arava.Name += "-modified";
                 
-                var err = await Assert.ThrowsAsync<ConcurrencyException>(() => session.SaveChangesAsync());
-                Assert.Contains("Cannot PUT document 'users/arava' because its '@metadata'.'Cluster-Transaction-Index'", err.Message);
-                Assert.Contains("but the compare exchange guard ('rvn-atomic-guard/users/arava') is set to", err.Message);
+                using (var nested = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var arava2 = await nested.LoadAsync<User>("users/arava");
+                    arava2.Name += "nested";
+                    await nested.SaveChangesAsync();
+                }
+                 
+                arava.Name += "-modified";
+                await Assert.ThrowsAsync<ConcurrencyException>(() => session.SaveChangesAsync());
             }
         }
 
         [Fact]
         public async Task CanDeleteCmpXchgValue()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var leader = await CreateRaftClusterAndGetLeader(1);
             using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -186,7 +224,6 @@ namespace SlowTests.Issues
                 await session.StoreAsync(new User { Name = "arava" }, "users/arava");
                 await session.SaveChangesAsync();
             }
-            WaitForUserToContinueTheTest(store);
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 session.Delete("users/arava");
@@ -206,7 +243,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task CanModifyDocumentAfterFirstTime()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var leader = await CreateRaftClusterAndGetLeader(1);
             using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -229,7 +266,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ModificationInAnotherTransactionWillFail()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var leader = await CreateRaftClusterAndGetLeader(1);
             using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -261,7 +298,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ModificationInAnotherTransactionWillFailWithDelete()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var leader = await CreateRaftClusterAndGetLeader(1);
             using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
