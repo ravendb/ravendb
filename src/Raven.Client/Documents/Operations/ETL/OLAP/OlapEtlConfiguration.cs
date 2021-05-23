@@ -17,6 +17,8 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
         public List<OlapEtlTable> OlapTables { get; set; }
 
         private string _name;
+        private const string Sftp = "sftp";
+        private const string Ftps = "ftps";
 
         public override string GetDestination()
         {
@@ -27,8 +29,14 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public override bool UsingEncryptedCommunicationChannel()
         {
-            return Connection.FtpSettings == null || 
-                   Connection.FtpSettings.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase) == false;
+            if (Connection.FtpSettings == null)
+                return true;
+
+            if (Uri.TryCreate(Connection.FtpSettings.Url, UriKind.RelativeOrAbsolute, out var uri) == false)
+                return false;
+
+            return string.Equals(uri.Scheme, Sftp, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(uri.Scheme, Ftps, StringComparison.OrdinalIgnoreCase);
         }
 
         public override string GetDefaultTaskName()
