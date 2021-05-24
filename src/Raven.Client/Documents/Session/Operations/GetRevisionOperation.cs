@@ -41,6 +41,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         public GetRevisionsCommand CreateRequest()
         {
+            _session.IncrementRequestCount();
             return _command;
         }
 

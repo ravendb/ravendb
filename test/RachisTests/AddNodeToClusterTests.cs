@@ -58,7 +58,7 @@ namespace RachisTests
             var leader = cluster.Leader;
             var watcher = cluster.Nodes.Single(x => x != leader);
 
-            await leader.ServerStore.RemoveFromClusterAsync(watcher.ServerStore.NodeTag);
+            await ActionWithLeader((l) => l.ServerStore.RemoveFromClusterAsync(watcher.ServerStore.NodeTag));
 
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null))
             using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
@@ -122,7 +122,8 @@ namespace RachisTests
                         await AddManyCompareExchange(store, cts.Token);
 
                     var followerAmbassador = leader.ServerStore.Engine.CurrentLeader.CurrentPeers[follower.ServerStore.NodeTag];
-                    await leader.ServerStore.RemoveFromClusterAsync(follower.ServerStore.NodeTag, cts.Token);
+
+                    await ActionWithLeader((l) => l.ServerStore.RemoveFromClusterAsync(follower.ServerStore.NodeTag, cts.Token));
                     var removed = await WaitForValueAsync(() =>
                     {
                         try
@@ -135,7 +136,7 @@ namespace RachisTests
                         }
                     }, true);
 
-                    Assert.True(removed,$"{followerAmbassador.Status}");
+                    Assert.True(removed, $"{followerAmbassador.Status}");
 
                     var result = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Emails/foo@example.org", "users/123", 0), token: cts.Token);
                     await leader.ServerStore.AddNodeToClusterAsync(follower.WebUrl, follower.ServerStore.NodeTag, asWatcher: true, token: cts.Token);
