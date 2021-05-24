@@ -68,11 +68,11 @@ class timeSeriesTableDetails {
     }
     
     isEqual(table: timeSeriesTableDetails) {
-        if (table.documentId != this.documentId) {
+        if (table.documentId !== this.documentId) {
             return false;
         }
         
-        if (table.name != this.name) {
+        if (table.name !== this.name) {
             return false;
         }
         
