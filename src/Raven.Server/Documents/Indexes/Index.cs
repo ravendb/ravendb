@@ -900,13 +900,13 @@ namespace Raven.Server.Documents.Indexes
             {
                 _rollingEvent.Set();
 
-                CompleteIfSideBySideRemoved();
+                CompleteIfRollingSideBySideRemoved();
             }
         }
 
-        private void CompleteIfSideBySideRemoved()
+        private void CompleteIfRollingSideBySideRemoved()
         {
-            // this for the case when we removed a rolling side-by-side, we need the original node to complete the deployment
+            // this for the case when we removed a rolling side-by-side, we need the original node to complete the deployment.
             // if the original has no work to do, we need to force it.
 
             if (_rollingCompletionTask?.IsCompletedSuccessfully == true)
@@ -969,6 +969,7 @@ namespace Raven.Server.Documents.Indexes
         private Task _rollingCompletionTask;
         private void MaybeFinishRollingDeployment()
         {
+            // we remember that task so we wouldn't flood the cluster with commands
             if (_rollingCompletionTask?.IsCompleted == false)
                 return;
 
