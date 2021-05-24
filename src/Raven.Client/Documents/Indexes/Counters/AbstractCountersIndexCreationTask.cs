@@ -77,7 +77,8 @@ namespace Raven.Client.Documents.Indexes.Counters
                 Configuration = Configuration,
                 LockMode = LockMode,
                 Priority = Priority,
-                State = State
+                State = State,
+                DeploymentMode = DeploymentMode
             };
 
             if (_map != default)

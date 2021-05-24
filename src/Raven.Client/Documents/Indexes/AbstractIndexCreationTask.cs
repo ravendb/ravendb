@@ -92,6 +92,8 @@ namespace Raven.Client.Documents.Indexes
 
         string IAbstractIndexCreationTask.IndexName => IndexName;
 
+        IndexDeploymentMode? IAbstractIndexCreationTask.DeploymentMode => DeploymentMode;
+
         DocumentConventions IAbstractIndexCreationTask.Conventions
         {
             get => Conventions;
@@ -131,6 +133,8 @@ namespace Raven.Client.Documents.Indexes
         public IndexPriority? Priority { get; set; }
 
         public IndexLockMode? LockMode { get; set; }
+
+        public IndexDeploymentMode? DeploymentMode { get; set; }
 
         /// <summary>
         /// Index state
@@ -216,6 +220,9 @@ namespace Raven.Client.Documents.Indexes
                 if (State.HasValue)
                     indexDefinition.State = State.Value;
 
+                if (DeploymentMode.HasValue)
+                    indexDefinition.DeploymentMode = DeploymentMode.Value;
+
                 return store.Maintenance.ForDatabase(database).SendAsync(new PutIndexesOperation(indexDefinition), token);
             }
             finally
@@ -232,6 +239,8 @@ namespace Raven.Client.Documents.Indexes
         IndexPriority? Priority { get; }
 
         IndexState? State { get; }
+
+        IndexDeploymentMode? DeploymentMode { get; }
 
         DocumentConventions Conventions { get; set; }
 
@@ -286,7 +295,8 @@ namespace Raven.Client.Documents.Indexes
                 Configuration = Configuration,
                 LockMode = LockMode,
                 Priority = Priority,
-                State = State
+                State = State,
+                DeploymentMode = DeploymentMode
             }.ToIndexDefinition(Conventions);
 
             return indexDefinition;
