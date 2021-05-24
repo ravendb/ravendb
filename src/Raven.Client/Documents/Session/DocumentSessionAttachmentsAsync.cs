@@ -27,6 +27,7 @@ namespace Raven.Client.Documents.Session
             using (Session.AsyncTaskHolder())
             {
                 var command = new HeadAttachmentCommand(documentId, name, null);
+                Session.IncrementRequestCount();
                 await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
                 return command.Result != null;
             }
@@ -36,7 +37,9 @@ namespace Raven.Client.Documents.Session
         {
             using (Session.AsyncTaskHolder())
             {
+                
                 var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
+                Session.IncrementRequestCount();
                 return await Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token).ConfigureAwait(false);
             }
         }
@@ -47,8 +50,9 @@ namespace Raven.Client.Documents.Session
             {
                 if (Session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
                     ThrowEntityNotInSessionOrMissingId(entity);
-
+               
                 var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
+                Session.IncrementRequestCount();
                 return await Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token).ConfigureAwait(false);
             }
         }
@@ -64,6 +68,7 @@ namespace Raven.Client.Documents.Session
             using (Session.AsyncTaskHolder())
             {
                 var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
+                Session.IncrementRequestCount();
                 return await Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token).ConfigureAwait(false);
             }
         }
