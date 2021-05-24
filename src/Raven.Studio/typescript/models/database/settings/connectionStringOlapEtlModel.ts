@@ -10,6 +10,10 @@ import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOp
 import database = require("models/resources/database");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import azureSettings = require("viewmodels/database/tasks/destinations/azureSettings");
+// TODO..
+import ftpSettings = require("models/database/tasks/periodicBackup/ftpSettings");
+import glacierSettings = require("models/database/tasks/periodicBackup/glacierSettings");
+import googleCloudSettings = require("models/database/tasks/periodicBackup/googleCloudSettings");
 
 class connectionStringOlapEtlModel extends connectionStringModel {
 
@@ -107,7 +111,10 @@ class connectionStringOlapEtlModel extends connectionStringModel {
             Name: "",
             S3Settings: s3Settings.empty(null, "OLAP").toDto(),
             LocalSettings: localSettings.empty("connectionString").toDto(),
-            AzureSettings: azureSettings.empty("OLAP").toDto()
+            AzureSettings: azureSettings.empty("OLAP").toDto(),
+            FtpSettings: ftpSettings.empty().toDto(),
+            GlacierSettings: glacierSettings.empty([]).toDto(),
+            GoogleCloudSettings: googleCloudSettings.empty().toDto()
         } , true, []);
     }
     
@@ -117,14 +124,17 @@ class connectionStringOlapEtlModel extends connectionStringModel {
             Name: this.connectionStringName(),
             S3Settings: this.s3Settings().enabled() ? this.s3Settings().toDto() : undefined,
             LocalSettings: this.localSettings().enabled() ? this.localSettings().toDto() : undefined,
-            AzureSettings: this.azureSettings().enabled() ? this.azureSettings().toDto() : undefined
+            AzureSettings: this.azureSettings().enabled() ? this.azureSettings().toDto() : undefined,
+            FtpSettings: undefined,
+            GlacierSettings: undefined,
+            GoogleCloudSettings: undefined
         };
     }
 
     private updateLocationInfo(path: string) {
         const getLocationCommand = new getBackupLocationCommand(path, activeDatabaseTracker.default.database());
 
-        const getLocationtask = getLocationCommand
+        const getLocationTask = getLocationCommand
             .execute()
             .done((result: Raven.Server.Web.Studio.DataDirectoryResult) => {
                 if (this.localSettings().folderPath() !== path) {
@@ -135,7 +145,7 @@ class connectionStringOlapEtlModel extends connectionStringModel {
                 this.locationInfo(result.List);
             });
 
-        generalUtils.delayedSpinner(this.spinners.locationInfoLoading, getLocationtask);
+        generalUtils.delayedSpinner(this.spinners.locationInfoLoading, getLocationTask);
     }
 
     private updateFolderPathOptions(path: string) {
