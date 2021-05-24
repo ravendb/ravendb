@@ -66,6 +66,18 @@ class highlightSection {
 class timeSeriesTableDetails {
     constructor(public documentId: string, public name: string, public value: timeSeriesQueryResultDto) {
     }
+    
+    isEqual(table: timeSeriesTableDetails) {
+        if (table.documentId != this.documentId) {
+            return false;
+        }
+        
+        if (table.name != this.name) {
+            return false;
+        }
+        
+        return true;
+    }
 }
 
 class perCollectionIncludes {
@@ -556,24 +568,25 @@ class query extends viewModelBase {
             detectTimeSeries: true, 
             timeSeriesActionHandler: (type, documentId, name, value, event) => {
                 if (type === "plot") {
-                    const graphs = this.timeSeriesGraphs().filter(graph => _.includes(graph.documentIds, documentId));
-                    if (graphs.length) {
-                        graphs.forEach(g => {
-                           if (g.documentIds.length === 1) {
-                               this.timeSeriesGraphs.remove(g);
-                           }
-                        });
+                    const newChart = new timeSeriesPlotDetails([{ documentId, value, name}]);
+
+                    const existingChart = this.timeSeriesGraphs().find(x => x.isEqual(newChart));
+                    if (existingChart) {
+                        this.goToTimeSeriesTab(existingChart);
+                    } else {
+                        this.timeSeriesGraphs.push(newChart);
+                        this.goToTimeSeriesTab(newChart);
                     }
-                    
-                    const chart = new timeSeriesPlotDetails([{ documentId, value, name}]);
-                    this.timeSeriesGraphs.push(chart);
-                    this.goToTimeSeriesTab(chart);
                 } else {
-                    this.timeSeriesTables.remove(x => x.documentId === documentId);
-                    
-                    const table = new timeSeriesTableDetails(documentId, name, value);
-                    this.timeSeriesTables.push(table);
-                    this.goToTimeSeriesTab(table);
+                    const newTable = new timeSeriesTableDetails(documentId, name, value);
+
+                    const existingTable = this.timeSeriesTables().find(x => x.isEqual(newTable));
+                    if (existingTable) {
+                        this.goToTimeSeriesTab(existingTable);
+                    } else {
+                        this.timeSeriesTables.push(newTable);
+                        this.goToTimeSeriesTab(newTable);
+                    }
                 }
             }
         });
@@ -1214,19 +1227,17 @@ class query extends viewModelBase {
                 }
             });
         });
+
+        const newChart = new timeSeriesPlotDetails(timeSeries);
         
-        const graphs = this.timeSeriesGraphs();
-        if (graphs) {
-            graphs.forEach(g => {
-                if (g.documentIds.length === 1 && timeSeries.length === 1 && g.documentIds[0] === timeSeries[0].documentId) {
-                    this.timeSeriesGraphs.remove(g);
-                }
-            });
+        const existingChart = this.timeSeriesGraphs().find(x => x.isEqual(newChart));
+        
+        if (existingChart) {
+            this.goToTimeSeriesTab(existingChart);
+        } else {
+            this.timeSeriesGraphs.push(newChart);
+            this.goToTimeSeriesTab(newChart);
         }
-        
-        const chart = new timeSeriesPlotDetails(timeSeries);
-        this.timeSeriesGraphs.push(chart);
-        this.goToTimeSeriesTab(chart);
     }
 
     refresh() {
