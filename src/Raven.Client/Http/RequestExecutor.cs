@@ -522,7 +522,17 @@ namespace Raven.Client.Http
 
             if (topologyUpdate != null && topologyUpdate.Status == TaskStatus.RanToCompletion || _disableTopologyUpdates)
             {
-                var (nodeIndex, chosenNode) = ChooseNodeForRequest(command, sessionInfo);
+                int nodeIndex;
+                ServerNode chosenNode;
+                try
+                {
+                    (nodeIndex, chosenNode) = ChooseNodeForRequest(command, sessionInfo);
+                }
+                catch (RequestedNodeUnavailableException)
+                {
+                    var any = _nodeSelector.GetPreferredNode();
+                    return UnlikelyExecuteAsync(command, context, UpdateTopologyAsync(new UpdateTopologyParameters(any.Node) { TimeoutInMs = 1000, ForceUpdate = true, DebugTag = "node-unavailable-exception" }), sessionInfo, token);
+                }
                 return ExecuteAsync(chosenNode, nodeIndex, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token);
             }
 
