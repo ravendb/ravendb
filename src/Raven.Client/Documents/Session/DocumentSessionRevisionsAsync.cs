@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Session
             {
                 var operation = new GetRevisionOperation(Session, id, start, pageSize);
                 var command = operation.CreateRequest();
-                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
                 operation.SetResult(command.Result);
                 return operation.GetRevisionsFor<T>();
             }
@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Session
             {
                 var operation = new GetRevisionOperation(Session, id, start, pageSize, true);
                 var command = operation.CreateRequest();
-                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
                 operation.SetResult(command.Result);
                 return operation.GetRevisionsMetadataFor();
             }
@@ -58,7 +58,7 @@ namespace Raven.Client.Documents.Session
             {
                 var operation = new GetRevisionOperation(Session, changeVector);
                 var command = operation.CreateRequest();
-                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
                 operation.SetResult(command.Result);
                 return operation.GetRevision<T>();
             }
@@ -71,7 +71,7 @@ namespace Raven.Client.Documents.Session
             {
                 var operation = new GetRevisionOperation(Session, changeVectors);
                 var command = operation.CreateRequest();
-                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
                 operation.SetResult(command.Result);
                 return operation.GetRevisions<T>();
             }
@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Session
             {
                 var operation = new GetRevisionOperation(Session, id, date);
                 var command = operation.CreateRequest();
-                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
                 operation.SetResult(command.Result);
                 return operation.GetRevisionsFor<T>().FirstOrDefault();
             }

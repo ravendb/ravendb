@@ -661,7 +661,8 @@ namespace RachisTests.DatabaseCluster
                 DatabaseRecord record = await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
                 Assert.Single(record.DeletionInProgress);
                 Assert.Equal(node, record.DeletionInProgress.First().Key);
-                await leader.ServerStore.RemoveFromClusterAsync(node);
+
+                await ActionWithLeader((l) => l.ServerStore.RemoveFromClusterAsync(node));
 
                 await leader.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, res.RaftCommandIndex + 1);
                 record = await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
@@ -945,7 +946,8 @@ namespace RachisTests.DatabaseCluster
             leader = Servers.Single(s => s.Disposed == false && s.ServerStore.IsLeader());
 
             // remove and rejoin to change the url
-            Assert.True(await leader.ServerStore.RemoveFromClusterAsync(nodeTag).WaitAsync(fromSeconds));
+
+            await ActionWithLeader((l) => l.ServerStore.RemoveFromClusterAsync(nodeTag));
             Assert.True(await Servers[1].ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(fromSeconds));
 
             Assert.True(await leader.ServerStore.AddNodeToClusterAsync(Servers[1].ServerStore.GetNodeHttpServerUrl(), nodeTag).WaitAsync(fromSeconds));
