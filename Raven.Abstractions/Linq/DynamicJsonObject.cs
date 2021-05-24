@@ -12,6 +12,7 @@ using System.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Linq
@@ -39,7 +40,11 @@ namespace Raven.Abstractions.Linq
             return
                 (
                     from item in inner
-                    where item.Key[0] != '$'
+                    where item.Key != JsonTypeReflector.IdPropertyName && 
+                          item.Key != JsonTypeReflector.RefPropertyName && 
+                          item.Key != JsonTypeReflector.TypePropertyName &&
+                          item.Key != JsonTypeReflector.ValuePropertyName &&
+                          item.Key != JsonTypeReflector.ArrayValuesPropertyName
                     select new KeyValuePair<object, object>(TransformToValue(item.Key), TransformToValue(item.Value))
                 )
                 .Cast<object>().GetEnumerator();
