@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Graph;
 using Raven.Client.Documents;
@@ -8,6 +9,8 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -68,6 +71,9 @@ namespace SlowTests.Issues
         [Fact]
         public async Task DeletingMasterKeyForExistedEncryptedDatabaseShouldFail()
         {
+            using var socket = new DummyWebSocket();
+            var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
+
             var (nodes, server) = await CreateRaftClusterWithSsl(1);
 
             var options = new Options
@@ -75,22 +81,47 @@ namespace SlowTests.Issues
                 Server = server,
                 Encrypted = true
             };
-            using (var store = GetDocumentStore(options))
-            {
-                await TrySavingDocument(store);
-                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                {
-                    using (ctx.OpenWriteTransaction())
-                    {
-                        Assert.Throws<InvalidOperationException>(() => server.ServerStore.DeleteSecretKey(ctx, store.Database));
-                    }
 
-                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, true));
-                    using (ctx.OpenWriteTransaction())
+            try
+            {
+                using (var store = GetDocumentStore(options))
+                {
+                    await TrySavingDocument(store);
+                    using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     {
-                        server.ServerStore.DeleteSecretKey(ctx, store.Database);
+                        using (ctx.OpenWriteTransaction())
+                        {
+                            Assert.Throws<InvalidOperationException>(() => server.ServerStore.DeleteSecretKey(ctx, store.Database));
+                        }
+
+                        store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, true));
+                        using (ctx.OpenWriteTransaction())
+                        {
+                            server.ServerStore.DeleteSecretKey(ctx, store.Database);
+                        }
                     }
                 }
+            }
+            catch
+            {
+                if (Context.TestOutput != null)
+                {
+                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        var licenseStatus = context.ReadObject(server.ServerStore.LicenseManager.LicenseStatus.ToJson(), "LicenseStatus");
+                        Context.TestOutput.WriteLine(licenseStatus.ToString());
+                    }
+                    server.ServerStore.LicenseManager.TryActivateLicense(false);
+                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        var licenseStatus = context.ReadObject(server.ServerStore.LicenseManager.LicenseStatus.ToJson(), "LicenseStatus");
+                        Context.TestOutput.WriteLine(licenseStatus.ToString());
+                    }
+
+                    Context.TestOutput.WriteLine(socket.CloseAndGetLogsAsync().Result);
+                }
+
+                throw;
             }
         }
 

@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
+using Sparrow.Logging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -111,6 +114,9 @@ namespace SlowTests.Server.Documents.ETL
         [Fact]
         public void Etl_from_encrypted_to_encrypted_db_will_work_even_if_AllowEtlOnNonEncryptedChannel_is_set()
         {
+            using var socket = new DummyWebSocket();
+            var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
+
             var certificates = SetupServerAuthentication();
             var srcDbName = GetDatabaseName();
             var dstDbName = GetDatabaseName();
@@ -136,8 +142,30 @@ namespace SlowTests.Server.Documents.ETL
                 Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
             }
 
-            Server.ServerStore.PutSecretKey(srcBase64Key, srcDbName, true);
-            Server.ServerStore.PutSecretKey(dstBase64Key, dstDbName, true);
+            try
+            {
+                Server.ServerStore.PutSecretKey(srcBase64Key, srcDbName, true);
+                Server.ServerStore.PutSecretKey(dstBase64Key, dstDbName, true);
+            }
+            catch
+            {
+                if (Context.TestOutput != null)
+                {
+                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        var licenseStatus = context.ReadObject(Server.ServerStore.LicenseManager.LicenseStatus.ToJson(), "LicenseStatus");
+                        Context.TestOutput.WriteLine(licenseStatus.ToString());
+                    }
+                    Server.ServerStore.LicenseManager.TryActivateLicense(false);
+                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        var licenseStatus = context.ReadObject(Server.ServerStore.LicenseManager.LicenseStatus.ToJson(), "LicenseStatus");
+                        Context.TestOutput.WriteLine(licenseStatus.ToString());
+                    }
+                    Context.TestOutput.WriteLine(socket.CloseAndGetLogsAsync().Result);
+                }
+                throw;
+            }
 
             using (var src = GetDocumentStore(new Options
             {
