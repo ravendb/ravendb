@@ -105,6 +105,11 @@ namespace Raven.Client.Documents.Indexes
         public IndexState? State { get; set; }
 
         /// <summary>
+        /// Index deployment mode
+        /// </summary>
+        public IndexDeploymentMode? DeploymentMode { get; set; }
+
+        /// <summary>
         /// If not null than each reduce result will be created as a document in the specified collection name.
         /// </summary>
         public string OutputReduceToCollection { get; set; }

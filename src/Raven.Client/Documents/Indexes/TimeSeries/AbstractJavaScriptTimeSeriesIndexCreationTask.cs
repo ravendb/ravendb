@@ -72,6 +72,7 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
             _definition.LockMode = LockMode;
             _definition.Priority = Priority;
             _definition.State = State;
+            _definition.DeploymentMode = DeploymentMode;
 
             var definition = new TimeSeriesIndexDefinition();
             _definition.CopyTo(definition);
