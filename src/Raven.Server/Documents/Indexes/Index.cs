@@ -967,10 +967,11 @@ namespace Raven.Server.Documents.Indexes
         }
 
         private Task _rollingCompletionTask;
+
         private void MaybeFinishRollingDeployment()
         {
             // we remember that task so we wouldn't flood the cluster with commands
-            if (_rollingCompletionTask?.IsCompleted == false)
+            if (_rollingCompletionTask != null)
                 return;
 
             if (DocumentDatabase.IndexStore.MaybeFinishRollingDeployment(Definition.Name) == false)
@@ -985,25 +986,29 @@ namespace Raven.Server.Documents.Indexes
             {
                 // We may send the command multiple times so we need a new Id every time.
                 var command = new PutRollingIndexCommand(DocumentDatabase.Name, Definition.Name, nodeTag, DocumentDatabase.Time.GetUtcNow(), RaftIdGenerator.NewId());
-                _rollingCompletionTask = DocumentDatabase.ServerStore.SendToLeaderAsync(command);
-                _rollingCompletionTask.ContinueWith(t =>
+                _rollingCompletionTask = DocumentDatabase.ServerStore.SendToLeaderAsync(command).ContinueWith(async t =>
                 {
-                    _rollingCompletionTask = null;
-
-                    if (_logger.IsOperationsEnabled)
+                    try
                     {
-                        try
-                        {
-                            t.GetAwaiter().GetResult();
-                        }
-                        catch (Exception e)
-                        {
-                            _logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{Definition.Name}' in node {nodeTag}.", e);
-                        }
-                    }
-                }, TaskContinuationOptions.ExecuteSynchronously);
+                        var result = await t;
+                        await DocumentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, TimeSpan.FromSeconds(15));
 
-                DocumentDatabase.IndexStore.ForTestingPurposes?.OnRollingIndexFinished?.Invoke(this);
+                        DocumentDatabase.IndexStore.ForTestingPurposes?.OnRollingIndexFinished?.Invoke(this);
+                    }
+                    catch (Exception e)
+                    {
+                        // we need to retry
+                        ScheduleIndexingRun();
+
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{Definition.Name}' in node {nodeTag}.", e);
+                    }
+                    finally
+                    {
+                        _rollingCompletionTask = null;
+                    }
+                });
+
             }
             catch (Exception e)
             {

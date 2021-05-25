@@ -5,6 +5,7 @@ using FastTests.Blittable;
 using FastTests.Client;
 using SlowTests.Issues;
 using SlowTests.MailingList;
+using SlowTests.Rolling;
 using SlowTests.Server.Documents.ETL.Raven;
 using Tests.Infrastructure;
 
@@ -26,9 +27,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new FirstClassPatch(testOutputHelper))
+                    using (var test = new RollingIndexesClusterTests(testOutputHelper))
                     {
-                         test.PatchNullField_ExpectFieldSetToNull();
+                         await test.RemoveNodeFromDatabaseGroupWhileRollingDeployment();
                     }
                 }
                 catch (Exception e)

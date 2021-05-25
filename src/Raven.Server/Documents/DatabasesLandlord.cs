@@ -78,6 +78,7 @@ namespace Raven.Server.Documents
         internal class TestingStuff
         {
             internal Action<ServerStore> BeforeHandleClusterDatabaseChanged;
+            internal Action<DocumentDatabase> AfterDatabaseCreation;
             internal int? HoldDocumentDatabaseCreation = null;
             internal bool PreventedRehabOfIdleDatabase = false;
         }
@@ -637,7 +638,15 @@ namespace Raven.Server.Documents
                 {
                     DeleteIfNeeded(databaseName, task);
                     task.Start(); // the semaphore will be released here at the end of the task
-                    task.ContinueWith(__ => _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
+                    task.ContinueWith(t =>
+                    {
+                        if (ForTestingPurposes?.AfterDatabaseCreation != null)
+                        {
+                            ForTestingPurposes.AfterDatabaseCreation.Invoke(t.GetAwaiter().GetResult());
+                        }
+
+                        _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _);
+                    }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
                 }
                 else
                     _databaseSemaphore.Release();
