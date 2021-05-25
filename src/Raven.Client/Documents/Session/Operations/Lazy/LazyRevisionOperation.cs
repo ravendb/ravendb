@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         
         public GetRequest CreateRequest(JsonOperationContext ctx)
         {
-            GetRevisionsCommand getRevisionsCommand = _getRevisionOperation.CreateRequest();
+            GetRevisionsCommand getRevisionsCommand = _getRevisionOperation.Command;
             var sb = new StringBuilder("?");
             getRevisionsCommand.GetRequestQueryString(sb);
             return new GetRequest {Method = HttpMethod.Get, Url = "/revisions", Query = sb.ToString()};
