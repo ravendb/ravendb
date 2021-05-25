@@ -954,24 +954,7 @@ namespace Raven.Server.Documents.Indexes
 
             ForTestingPurposes?.AfterIndexCreation?.Invoke(definition.Name);
 
-            return await WaitForRollingIndex(definition.Name);
-        }
-
-        private async Task<Index> WaitForRollingIndex(string name)
-        {
-            while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
-            {
-                try
-                {
-                    return GetIndex(name);
-                }
-                catch (PendingRollingIndexException)
-                {
-                    await Task.Delay(250);
-                }
-            }
-
-            return null;
+            return GetIndex(definition.Name);
         }
 
         private void ValidateAutoIndex(IndexDefinitionBase definition)
