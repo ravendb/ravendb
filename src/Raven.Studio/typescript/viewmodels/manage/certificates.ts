@@ -40,8 +40,8 @@ class certificates extends viewModelBase {
     
     model = ko.observable<certificateModel>();
     showDatabasesSelector: KnockoutComputed<boolean>;
-    canExportClusterCertificates: KnockoutComputed<boolean>;
-    canReplaceClusterCertificate: KnockoutComputed<boolean>;
+    canExportServerCertificates: KnockoutComputed<boolean>;
+    canReplaceServerCertificate: KnockoutComputed<boolean>;
     certificates = ko.observableArray<unifiedCertificateDefinition>();
     serverCertificateThumbprint = ko.observable<string>();
     serverCertificateSetupMode = ko.observable<Raven.Server.Commercial.SetupMode>();
@@ -171,12 +171,12 @@ class certificates extends viewModelBase {
             return this.model().securityClearance() === "ValidUser";
         });
         
-        this.canExportClusterCertificates = ko.pureComputed(() => {
+        this.canExportServerCertificates = ko.pureComputed(() => {
             const certs = this.certificates();
             return _.some(certs, x => x.SecurityClearance === "ClusterNode");
         });
         
-        this.canReplaceClusterCertificate = ko.pureComputed(() => {
+        this.canReplaceServerCertificate = ko.pureComputed(() => {
             const certs = this.certificates();
             return _.some(certs, x => x.SecurityClearance === "ClusterNode");
         });
@@ -236,7 +236,7 @@ class certificates extends viewModelBase {
             });
     }
 
-    exportClusterCertificates() {
+    exportServerCertificates() {
         eventsCollector.default.reportEvent("certificates", "export-certs");
         const targetFrame = $("form#certificates_export_form");
         targetFrame.attr("action", this.exportCertificateUrl);
@@ -253,7 +253,7 @@ class certificates extends viewModelBase {
         this.model(certificateModel.upload());
     }
     
-    replaceClusterCertificate() {
+    replaceServerCertificate() {
         eventsCollector.default.reportEvent("certificates", "replace");
         this.model(certificateModel.replace());
         
