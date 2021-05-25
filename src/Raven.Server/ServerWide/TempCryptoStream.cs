@@ -144,7 +144,9 @@ namespace Raven.Server.ServerWide
             {
                 if (_stream.Length != _stream.Position)
                 {
-                    throw new InvalidOperationException("Writing less than a block size is only allowed at the end of the stream");
+                    throw new InvalidOperationException("Writing less than a block size is only allowed at the end of the stream. " +
+                                                        $"Details: {nameof(_bufferValidIndex)} - {_bufferValidIndex}, {nameof(_internalBuffer)}.{nameof(_internalBuffer.Length)} - {_internalBuffer.Length}, " +
+                                                        $"{nameof(_stream)}.{nameof(_stream.Length)} - {_stream.Length}, {nameof(_stream)}.{nameof(_stream.Position)} - {_stream.Position}");
                 }
             }
 
