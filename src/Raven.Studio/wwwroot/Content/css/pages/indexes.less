@@ -142,6 +142,35 @@
         }
     }
 
+    .rolling-actions {
+        margin-left: -@grid-gutter-width/4;
+        margin-right: -@grid-gutter-width/4;
+        
+        .panel {
+            background-color: fadeout(@brand-warning-dark,80%);
+        }
+
+        .state {
+            i {
+                top: -1px;
+            }
+        }
+
+        .title {
+            color: @brand-warning-dark;
+            font-size: 15px;
+            font-weight: 300;
+            text-transform: uppercase;
+        }
+
+        .padding {
+            border: 1px dashed fadeout(@brand-warning, 70%);
+            border-left: none;
+            border-right: none;
+            padding: 4px 11px;
+        }
+    }
+
     .sidebyside-indexes {
         margin-bottom: @grid-gutter-width/2;
 

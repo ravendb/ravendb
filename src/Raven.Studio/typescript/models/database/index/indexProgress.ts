@@ -176,6 +176,7 @@ class indexProgress {
     globalProgress = ko.observable<progress>();
     isStale: boolean;
     name: string;
+    canSwitchToParallelMode: KnockoutComputed<boolean>;
 
     constructor(dto: Raven.Client.Documents.Indexes.IndexProgress) {
         this.isStale = dto.IsStale;
@@ -196,6 +197,17 @@ class indexProgress {
         this.globalProgress(new progress(
             processed, total, (processed: number) => `${processed.toLocaleString()} ${units}`,
             dto.ProcessedPerSecond, dto.IsStale, dto.IndexRunningStatus));
+        
+        this.canSwitchToParallelMode = ko.pureComputed(() => {
+            const progress = this.rollingProgress();
+            if (!progress) {
+                return false;
+            }
+            
+            // we allow to switch to parallel mode only if at least 2 nodes 
+            // are not done
+            return progress.filter(x => x.state() !== "Done").length > 1;
+        });
     }
     
     public markCompleted() {

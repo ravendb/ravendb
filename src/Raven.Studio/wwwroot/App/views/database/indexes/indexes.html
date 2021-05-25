@@ -435,7 +435,17 @@
             </div>
         </div>
         <div data-bind="with: progress, visible: !isErrorState() && !isFaulty()">
-            <hr class="small" />
+            <div class="rolling-actions" data-bind="visible: rollingProgress().length">
+                <div class="panel panel-warning">
+                    <div class="padding flex-horizontal">
+                        <div class="title">Rolling deployment</div>
+                        <div class="flex-separator"></div>
+                        <button class="btn btn-sm btn-warning" data-bind="visible: canSwitchToParallelMode, click: _.bind($root.forceParallelDeployment, $parent)">
+                            <i class="icon-force"></i> <span>Force parallel</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
             <div class="staggered-index" data-bind="foreach: rollingProgress">
                 <div class="flex-horizontal" data-bind="css: { 'indexing-running': state() === 'Running', 'indexing-pending': state() === 'Pending', 'indexing-done': state() === 'Done'}">
                     <div class="node-label" data-bind="attr: { title: state }"></div>
