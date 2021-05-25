@@ -228,9 +228,9 @@ namespace Raven.Server.Indexing
             get => InnerStream.Position;
             set
             {
-                if(value > _length)
+                if (value > _length)
                     throw new ArgumentOutOfRangeException($"Cannot set position ({value}) beyond the end of the file ({_length})");
-                InnerStream.Position = value;   
+                InnerStream.Position = value;
             }
         }
 
