@@ -575,6 +575,7 @@ namespace Raven.Server.Documents.Replication
             var sw = Stopwatch.StartNew();
             Task task = null;
 
+            using (_attachmentStreamsTempFile.Scope())
             using (var incomingReplicationAllocator = new IncomingReplicationAllocator(documentsContext, _database))
             using (var dataForReplicationCommand = new DataForReplicationCommand
             {
@@ -672,8 +673,6 @@ namespace Raven.Server.Documents.Replication
                         // in a bad state and likely in the process of shutting 
                         // down
                     }
-
-                    _attachmentStreamsTempFile?.Reset();
                 }
             }
         }
