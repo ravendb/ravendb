@@ -94,7 +94,7 @@ namespace Raven.Server.Indexing
 
             Stream resultStream = stream;
             if (_options.Encryption.IsEnabled)
-                resultStream = new TempCryptoStream(stream).IgnoreSetLength();
+                resultStream = new TempCryptoStream(stream, parent: null).IgnoreSetLength();
             return resultStream;
         }
 

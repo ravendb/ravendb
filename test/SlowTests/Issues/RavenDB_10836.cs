@@ -27,7 +27,7 @@ namespace SlowTests.Issues
 
                 file.SetLength(length);
                 
-                using (var stream = new TempCryptoStream(file))
+                using (var stream = new TempCryptoStream(file, parent: null))
                 {
                     var bytes = new byte[4096];
 

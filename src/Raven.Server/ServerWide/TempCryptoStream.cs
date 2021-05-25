@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using Raven.Server.Documents;
 using Raven.Server.Utils;
 using Sparrow.Server;
 using Sparrow.Utils;
@@ -12,14 +13,16 @@ namespace Raven.Server.ServerWide
         private readonly string _file;
         private bool _ignoreSetLength;
         private readonly Stream _stream;
+        private bool _reading;
+        private readonly StreamsTempFile _parent;
         private readonly MemoryStream _authenticationTags = new MemoryStream();
         private readonly MemoryStream _nonces = new MemoryStream();
         private readonly long _startPosition;
 
         public Stream InnerStream => _stream;
-        public override bool CanRead => true;
+        public override bool CanRead => _reading;
         public override bool CanSeek => true;
-        public override bool CanWrite => true;
+        public override bool CanWrite => _reading == false;
 
         public override long Length
         {
@@ -43,7 +46,7 @@ namespace Raven.Server.ServerWide
         private long _blockNumber;
         private long _maxLength;
 
-        public TempCryptoStream(string file) : this(SafeFileStream.Create(file, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose))
+        public TempCryptoStream(string file) : this(SafeFileStream.Create(file, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose), null)
         {
             _file = file;
         }
@@ -54,9 +57,10 @@ namespace Raven.Server.ServerWide
             return this;
         }
 
-        public TempCryptoStream(Stream stream)
+        public TempCryptoStream(Stream stream, StreamsTempFile parent)
         {
             _stream = stream;
+            _parent = parent;
             _startPosition = stream.Position;
             _internalBuffer = new byte[4096];
 
@@ -70,6 +74,9 @@ namespace Raven.Server.ServerWide
 
         public override void Write(byte[] buffer, int offset, int count)
         {
+            if (_reading)
+                throw new NotSupportedException();
+
             if (buffer == null)
                 throw new ArgumentNullException(nameof(buffer));
             if (offset < 0)
@@ -194,6 +201,9 @@ namespace Raven.Server.ServerWide
 
         public override int Read(byte[] buffer, int offset, int count)
         {
+            if (_reading == false)
+                throw new NotSupportedException();
+
             if (buffer == null)
                 throw new ArgumentNullException(nameof(buffer));
             if (offset < 0)
@@ -272,6 +282,10 @@ namespace Raven.Server.ServerWide
         {
             if (offset < 0 || origin != SeekOrigin.Begin)
                 throw new NotSupportedException();
+
+            _reading = true;
+            if (_parent != null)
+                _parent._reading = true;
 
             var blockNumber = offset / _internalBuffer.Length;
             var positionInsideBlock = (int)offset % _internalBuffer.Length;

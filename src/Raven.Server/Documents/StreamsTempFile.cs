@@ -12,7 +12,7 @@ namespace Raven.Server.Documents
         private readonly string _tempFile;
         private readonly StorageEnvironment _environment;
         private readonly FileStream _file;
-        private bool _reading;
+        internal bool _reading;
         private Stream _previousInstance;
         public StreamsTempFile(string tempFile, StorageEnvironment environment)
         {
@@ -30,7 +30,7 @@ namespace Raven.Server.Documents
             _previousInstance?.Flush();
             if (_environment.Options.Encryption.IsEnabled)
             {
-                _previousInstance = new TempCryptoStream(_file);
+                _previousInstance = new TempCryptoStream(_file, this);
             }
             else
             {
@@ -39,13 +39,12 @@ namespace Raven.Server.Documents
             return _previousInstance;
         }
 
-        public void Reset()
+        public void Reset(int maxSizeInBytes = 128 * 1024 * 1024)
         {
             _reading = false;
 
-            const int _128mb = 128 * 1024 * 1024;
-            if (_file.Length > _128mb)
-                _file.SetLength(_128mb);
+            if (_file.Length > maxSizeInBytes)
+                _file.SetLength(maxSizeInBytes);
         }
 
         public void Dispose()
