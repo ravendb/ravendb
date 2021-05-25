@@ -116,7 +116,7 @@ namespace Raven.Server.Documents
                 }
 
                 string message = $"We have detected that some documents have surpassed the configured threshold size ({new Size(_maxWarnSize, SizeUnit.Bytes)}). " +
-                                 "This may cause a performance impact." +
+                                 "This may cause a performance impact. " +
                                  $"You can alter the warning limits by changing '{RavenConfiguration.GetKey(x => x.PerformanceHints.HugeDocumentSize)}' configuration value.";
 
                 return PerformanceHint.Create(
