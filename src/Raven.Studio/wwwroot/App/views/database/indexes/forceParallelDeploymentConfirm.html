@@ -1,37 +1,30 @@
 <div class="modal-dialog" role="document">
     <div class="modal-content">
-        <div class="modal-header">
-            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
-                <i class="icon-cancel"></i>
-            </button>
-            <h4 class="modal-title">Parallel index deployment</h4>
-        </div>
         <div class="modal-body">
             <div>
-                <h3><strong>Force on all nodes</strong></h3>
+                <h3><strong>Parallel Indexing - All Nodes</strong></h3>
 
                 <div>
-                    Indexing will be continued in parallel mode on all nodes.
+                    Indexing deployment will be continued in Parallel mode on all nodes.
 
-                    <div class="text-right">
+                    <div class="text-right margin-top">
                         <button type="button" class="btn btn-warning" data-bind="click: _.partial(forceDeploymentMode, false)">
-                            <i class="icon-force"></i><span>Force parallel deployment</span>
+                            <i class="icon-force"></i><span>Force Parallel - All</span>
                         </button>
                     </div>
                 </div>
             </div>
             <div data-bind="visible: canForceCurrentNode">
                 <hr />
-                <h3><strong>Force for current node only</strong></h3>
+                <h3><strong>Parallel Indexing - Current Node Only</strong></h3>
         
                 <div>
-                    Indexing on the current node will continue in parallel. <br />
-                    Other nodes which didn't finish indexing
-                    will continue indexing in rolling mode.
+                    Indexing deployment on this node only will continue in parallel to all other nodes.<br />
+                    Indexing deployment on all other nodes will be continued in Rolling mode.
 
-                    <div class="text-right">
+                    <div class="text-right margin-top">
                         <button type="button" class="btn btn-warning" data-bind="click: _.partial(forceDeploymentMode, true)">
-                            <i class="icon-force"></i><span>Force parallel deployment (current node only)</span>
+                            <i class="icon-force"></i><span>Force Parallel - Current</span>
                         </button>
                     </div>
                 </div>
