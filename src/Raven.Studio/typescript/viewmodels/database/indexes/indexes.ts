@@ -20,7 +20,8 @@ import indexStalenessReasons = require("viewmodels/database/indexes/indexStalene
 import generalUtils = require("common/generalUtils");
 import shell = require("viewmodels/shell");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
-import bulkIndexOperationConfirm = require("./bulkIndexOperationConfirm");
+import bulkIndexOperationConfirm = require("viewmodels/database/indexes/bulkIndexOperationConfirm");
+import forceParallelDeploymentConfirm = require("viewmodels/database/indexes/forceParallelDeploymentConfirm");
 
 type indexGroup = {
     entityName: string;
@@ -76,6 +77,7 @@ class indexes extends viewModelBase {
             "lowPriority", "highPriority", "normalPriority",
             "openFaultyIndex", "resetIndex", "deleteIndex",
             "forceSideBySide",
+            "forceParallelDeployment",
             "showStaleReasons",
             "unlockIndex", "lockIndex", "lockErrorIndex",
             "enableIndex", "disableIndex", "disableSelectedIndexes", "enableSelectedIndexes",
@@ -914,6 +916,11 @@ class indexes extends viewModelBase {
         const view = new indexStalenessReasons(this.activeDatabase(), idx.name);
         eventsCollector.default.reportEvent("indexes", "show-stale-reasons");
         app.showBootstrapDialog(view);
+    }
+    
+    forceParallelDeployment(progress: indexProgress) {
+        const forceParallelDeploymentDialog = new forceParallelDeploymentConfirm(progress, this.localNodeTag(), this.activeDatabase());
+        app.showBootstrapDialog(forceParallelDeploymentDialog);
     }
 }
 
