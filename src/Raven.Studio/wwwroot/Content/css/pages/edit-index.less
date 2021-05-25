@@ -104,10 +104,21 @@
 
     .label {
         width: 120px;
+        flex-shrink: 0;
         color: @text-muted;
 
         h3 {
             margin: 0;
+        }
+    }
+
+    .auto-index-fields {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+
+        &>div {
+            margin: @gutter-xxs/2;
         }
     }
 
