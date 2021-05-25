@@ -46,6 +46,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         public GetRevisionsCommand CreateRequest()
         {
+            _session.IncrementRequestCount();
             return _command;
         }
 
@@ -54,6 +55,8 @@ namespace Raven.Client.Documents.Session.Operations
             _result = result;
         }
 
+        internal GetRevisionsCommand Command => _command;
+        
         private T GetRevision<T>(BlittableJsonReaderObject document)
         {
             if (document == null)
