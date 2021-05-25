@@ -13,16 +13,15 @@ namespace Raven.Server.ServerWide
         private readonly string _file;
         private bool _ignoreSetLength;
         private readonly Stream _stream;
-        private bool _reading;
         private readonly StreamsTempFile _parent;
         private readonly MemoryStream _authenticationTags = new MemoryStream();
         private readonly MemoryStream _nonces = new MemoryStream();
         private readonly long _startPosition;
 
         public Stream InnerStream => _stream;
-        public override bool CanRead => _reading;
+        public override bool CanRead => _parent == null || _parent._reading;
         public override bool CanSeek => true;
-        public override bool CanWrite => _reading == false;
+        public override bool CanWrite => _parent == null || _parent._reading == false;
 
         public override long Length
         {
@@ -74,7 +73,7 @@ namespace Raven.Server.ServerWide
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            if (_reading)
+            if (_parent != null && _parent._reading)
                 throw new NotSupportedException();
 
             if (buffer == null)
@@ -201,7 +200,7 @@ namespace Raven.Server.ServerWide
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (_reading == false)
+            if (_parent != null && _parent._reading == false)
                 throw new NotSupportedException();
 
             if (buffer == null)
@@ -283,7 +282,6 @@ namespace Raven.Server.ServerWide
             if (offset < 0 || origin != SeekOrigin.Begin)
                 throw new NotSupportedException();
 
-            _reading = true;
             if (_parent != null)
                 _parent._reading = true;
 
