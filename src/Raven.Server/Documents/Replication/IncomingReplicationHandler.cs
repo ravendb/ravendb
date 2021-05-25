@@ -105,7 +105,6 @@ namespace Raven.Server.Documents.Replication
 
             _conflictManager = new ConflictManager(_database, _parent.ConflictResolver);
 
-            _attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication");
             _copiedBuffer = bufferToCopy.Clone(_connectionOptions.ContextPool);
 
             LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
@@ -503,6 +502,7 @@ namespace Raven.Server.Documents.Replication
                 SupportedFeatures = SupportedFeatures,
                 Logger = _log
             })
+            using (var attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication"))
             {
                 try
                 {
@@ -513,7 +513,7 @@ namespace Raven.Server.Documents.Replication
                         var reader = new Reader(_stream, _copiedBuffer, incomingReplicationAllocator);
 
                         ReadItemsFromSource(replicatedItemsCount, documentsContext, dataForReplicationCommand, reader, networkStats);
-                        ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext, dataForReplicationCommand, reader, networkStats);
+                        ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext, dataForReplicationCommand, reader, networkStats, attachmentStreamsTempFile);
                     }
 
                     if (_allowedPathsValidator != null)
@@ -596,8 +596,6 @@ namespace Raven.Server.Documents.Replication
                         // in a bad state and likely in the process of shutting
                         // down
                     }
-
-                    _attachmentStreamsTempFile?.Reset();
                 }
             }
         }
@@ -682,7 +680,6 @@ namespace Raven.Server.Documents.Replication
 
         public IncomingConnectionInfo ConnectionInfo { get; }
 
-        private readonly StreamsTempFile _attachmentStreamsTempFile;
         private long _lastDocumentEtag;
         private readonly TcpConnectionOptions _connectionOptions;
         private readonly ConflictManager _conflictManager;
@@ -810,8 +807,13 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void ReadAttachmentStreamsFromSource(int attachmentStreamCount,
-            DocumentsOperationContext context, DataForReplicationCommand dataForReplicationCommand, Reader reader, IncomingReplicationStatsScope stats)
+        private void ReadAttachmentStreamsFromSource(
+            int attachmentStreamCount,
+            DocumentsOperationContext context,
+            DataForReplicationCommand dataForReplicationCommand,
+            Reader reader,
+            IncomingReplicationStatsScope stats,
+            StreamsTempFile attachmentStreamsTempFile)
         {
             if (attachmentStreamCount == 0)
                 return;
@@ -825,7 +827,7 @@ namespace Raven.Server.Documents.Replication
 
                 using (stats.For(ReplicationOperation.Incoming.AttachmentRead))
                 {
-                    attachment.ReadStream(context, _attachmentStreamsTempFile);
+                    attachment.ReadStream(context, attachmentStreamsTempFile);
                     replicatedAttachmentStreams[attachment.Base64Hash] = attachment;
                 }
             }
@@ -922,8 +924,6 @@ namespace Raven.Server.Documents.Replication
                     // nothing to do
                 }
                 _cts.Dispose();
-
-                _attachmentStreamsTempFile.Dispose();
             }
             finally
             {
@@ -978,7 +978,7 @@ namespace Raven.Server.Documents.Replication
                     return operationsCount;
 
                 operationsCount++;
-                
+
                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(current, _changeVector);
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
                 {
@@ -1050,12 +1050,12 @@ namespace Raven.Server.Documents.Replication
 
                         operationsCount++;
 
-                        if (_isSink) 
+                        if (_isSink)
                             ReplaceKnownSinkEntries(context, ref item.ChangeVector);
 
                         var changeVectorToMerge = item.ChangeVector;
 
-                        if (_isHub) 
+                        if (_isHub)
                             changeVectorToMerge = ReplaceUnknownEntriesWithSinkTag(context, ref item.ChangeVector);
 
                         var rcvdChangeVector = item.ChangeVector;
@@ -1075,9 +1075,9 @@ namespace Raven.Server.Documents.Replication
                                 {
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
                                     {
-                                            Debug.Assert(localAttachment == null || AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) != AttachmentType.Revision,
-                                                "the stream should have been written when the revision was added by the document");
-                                            database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
+                                        Debug.Assert(localAttachment == null || AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) != AttachmentType.Revision,
+                                            "the stream should have been written when the revision was added by the document");
+                                        database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
                                     }
 
                                     handledAttachmentStreams.Add(attachment.Base64Hash);
@@ -1090,7 +1090,7 @@ namespace Raven.Server.Documents.Replication
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
                                         contentType, attachment.Base64Hash, attachment.ChangeVector);
-                                    }
+                                }
                                 break;
 
                             case AttachmentTombstoneReplicationItem attachmentTombstone:
@@ -1374,8 +1374,8 @@ namespace Raven.Server.Documents.Replication
 
                 changeVector = newIncoming.SerializeVector();
 
-                return knownEntries.Count > 0 ? 
-                    knownEntries.SerializeVector() : 
+                return knownEntries.Count > 0 ?
+                    knownEntries.SerializeVector() :
                     null;
             }
 
