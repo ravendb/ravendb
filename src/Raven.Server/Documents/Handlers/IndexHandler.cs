@@ -378,7 +378,9 @@ namespace Raven.Server.Documents.Handlers
 
                                     var state = x.State;
 
-                                    if (e.IsOutOfMemory() == false && e.IsRavenDiskFullException() == false)
+                                    if (e.IsOutOfMemory() == false && 
+                                        e.IsRavenDiskFullException() == false && 
+                                        e is OperationCanceledException == false) // we probably closed the indexing thread
                                     {
                                         try
                                         {
