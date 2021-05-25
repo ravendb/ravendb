@@ -113,6 +113,9 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<result
     }
 
     static fillCache(perf: Raven.Client.Documents.Indexes.IndexingPerformanceStats) {
+        const detailsWithParent = perf.Details as IndexingPerformanceOperationWithParent;
+        detailsWithParent.Parent = perf;
+        
         const withCache = perf as IndexingPerformanceStatsWithCache;
         withCache.CompletedAsDate = perf.Completed ? liveIndexPerformanceWebSocketClient.isoParser.parse(perf.Completed) : undefined;
         withCache.StartedAsDate = liveIndexPerformanceWebSocketClient.isoParser.parse(perf.Started);
@@ -124,9 +127,6 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<result
             DurationInMs: withCache.Details.DurationInMs - waitTime,
             Operations: withCache.Details.Operations.filter(x => x.Name !== "Wait/ConcurrentlyRunningIndexesLimit")
         }
-
-        const detailsWithParent = perf.Details as IndexingPerformanceOperationWithParent;
-        detailsWithParent.Parent = perf;
     }
 
 }
