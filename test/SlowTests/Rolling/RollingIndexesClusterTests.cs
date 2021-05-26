@@ -1,26 +1,23 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.DirectoryServices.ActiveDirectory;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Orders;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Collections;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -44,7 +41,7 @@ namespace SlowTests.Rolling
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
@@ -66,7 +63,7 @@ namespace SlowTests.Rolling
 
                 await AssertWaitForValueAsync(() => Task.FromResult(count), 3L);
                 
-                VerifyHistory(cluster, store);
+                await VerifyHistory(cluster, store);
             }
         }
 
@@ -75,7 +72,7 @@ namespace SlowTests.Rolling
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 2,
@@ -135,36 +132,8 @@ namespace SlowTests.Rolling
 
                 await AssertWaitForValueAsync(() => Task.FromResult(count), 3L);
 
-                VerifyHistory(cluster, store);
+                await VerifyHistory(cluster, store);
             } 
-        }
-
-        [Fact(Skip = "WIP")]
-        public Task RollingIndexReplacementRetry()
-        {
-            return Task.CompletedTask;
-        }
-
-
-        // 1. create index
-        // 2. modify it
-        // 3. swap now
-        [Fact(Skip = "WIP")]
-        public Task RollingIndexReplcemantRetry2()
-        {
-            return Task.CompletedTask;
-        }
-
-        [Fact(Skip = "WIP")]
-        public Task RollingIndexDeployedWithError()
-        {
-            return Task.CompletedTask;
-        }
-
-        [Fact(Skip = "WIP")]
-        public Task RollingIndexDeployedSwapNow()
-        {
-            return Task.CompletedTask;
         }
 
         [Fact]
@@ -172,7 +141,7 @@ namespace SlowTests.Rolling
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
@@ -202,7 +171,7 @@ namespace SlowTests.Rolling
                 await AssertWaitForValueAsync(() => Task.FromResult(dic.Keys.Count), 1);
                 await AssertWaitForGreaterThanAsync(() => Task.FromResult(dic[nameof(MyRollingIndex)]), 2);
 
-                VerifyHistory(cluster, store);
+                await VerifyHistory(cluster, store);
             }
         }
 
@@ -211,7 +180,7 @@ namespace SlowTests.Rolling
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
@@ -239,7 +208,7 @@ namespace SlowTests.Rolling
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
@@ -264,7 +233,9 @@ namespace SlowTests.Rolling
                 var database1 = await cluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 await database1.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, database1.DatabaseShutdown);
 
-                VerifyHistory(cluster, store);
+                await VerifyHistory(cluster, store);
+
+                mre.Set();
             }
         }
 
@@ -273,11 +244,10 @@ namespace SlowTests.Rolling
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var cluster = await CreateRaftCluster(3);
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
-                RunInMemory = false,
                 DeleteDatabaseOnDispose = false // we removing a node, which will break the infra deletion, because we will bootstrap the removed node
             }))
             {
@@ -322,11 +292,10 @@ namespace SlowTests.Rolling
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var cluster = await CreateRaftCluster(3, watcherCluster:true);
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
-                RunInMemory = false,
             }))
             {
                 await CreateData(store);
@@ -361,6 +330,247 @@ namespace SlowTests.Rolling
             }
         }
 
+        
+        [Fact]
+        public async Task RollingIndexReplacementRetryWithUnauthorizedAccessException()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            using (var store = GetDocumentStoreForRollingIndexes(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = 3,
+            }))
+            {
+                await CreateData(store);
+                var mre = new ManualResetEventSlim();
+                var dic = new ConcurrentDictionary<string, int>();
+                foreach (var server in Servers)
+                {
+                    var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var indexStore = database.IndexStore;
+                    
+                    indexStore.ForTestingPurposesOnly().DuringIndexReplacement_AfterUpdatingCollectionOfIndexes = () =>
+                    {
+                        indexStore.ForTestingPurposesOnly().DuringIndexReplacement_AfterUpdatingCollectionOfIndexes = null;
+                        throw new UnauthorizedAccessException("Simulate UnauthorizedAccessException AfterUpdatingCollectionOfIndexes Once");
+                    };
+
+                    indexStore.ForTestingPurposesOnly().DuringIndexReplacement_OnOldIndexDeletion = () =>
+                    {
+                        indexStore.ForTestingPurposesOnly().DuringIndexReplacement_OnOldIndexDeletion = null;
+                        throw new UnauthorizedAccessException("Simulate UnauthorizedAccessException OnOldIndexDeletion Once");
+                    };
+
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexStart = _ => mre.Wait();
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexFinished = index =>
+                    {
+                        dic.AddOrUpdate(index.Name, 1, (_, val) => val + 1);
+                    };
+                }
+
+                await store.ExecuteIndexAsync(new MyRollingIndex());
+                await store.ExecuteIndexAsync(new MyEditedRollingIndex());
+
+                mre.Set();
+
+                WaitForIndexingInTheCluster(store, store.Database);
+
+                await AssertWaitForValueAsync(() => Task.FromResult(dic.Keys.Count), 1);
+                await AssertWaitForGreaterThanAsync(() => Task.FromResult(dic[nameof(MyRollingIndex)]), 2);
+
+                await VerifyHistory(cluster, store);
+            }
+        }
+
+
+         [Fact]
+        public async Task RollingIndexReplacementRetryWithIOException()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            using (var store = GetDocumentStoreForRollingIndexes(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = 3,
+            }))
+            {
+                await CreateData(store);
+                var mre = new ManualResetEventSlim();
+                var dic = new ConcurrentDictionary<string, int>();
+                foreach (var server in Servers)
+                {
+                    var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var indexStore = database.IndexStore;
+                    
+                    indexStore.ForTestingPurposesOnly().DuringIndexReplacement_AfterUpdatingCollectionOfIndexes = () =>
+                    {
+                        indexStore.ForTestingPurposesOnly().DuringIndexReplacement_AfterUpdatingCollectionOfIndexes = null;
+                        throw new IOException("Simulate IOException AfterUpdatingCollectionOfIndexes Once");
+                    };
+
+                    indexStore.ForTestingPurposesOnly().DuringIndexReplacement_OnOldIndexDeletion = () =>
+                    {
+                        indexStore.ForTestingPurposesOnly().DuringIndexReplacement_OnOldIndexDeletion = null;
+                        throw new IOException("Simulate IOException OnOldIndexDeletion Once");
+                    };
+
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexStart = _ => mre.Wait();
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexFinished = index =>
+                    {
+                        dic.AddOrUpdate(index.Name, 1, (_, val) => val + 1);
+                    };
+                }
+
+                await store.ExecuteIndexAsync(new MyRollingIndex());
+                await store.ExecuteIndexAsync(new MyEditedRollingIndex());
+
+                mre.Set();
+
+                WaitForIndexingInTheCluster(store, store.Database);
+
+                await AssertWaitForValueAsync(() => Task.FromResult(dic.Keys.Count), 1);
+                await AssertWaitForGreaterThanAsync(() => Task.FromResult(dic[nameof(MyRollingIndex)]), 2, timeout: (int)TimeSpan.FromSeconds(3600).TotalMilliseconds);
+
+                await VerifyHistory(cluster, store);
+            }
+        }
+
+        [Fact]
+        public async Task RollingIndexDeployedWithError()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            using (var store = GetDocumentStoreForRollingIndexes(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = 3,
+            }))
+            {
+                await CreateData(store);
+
+                var count = 0L;
+                foreach (var server in Servers)
+                {
+                    var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var indexStore = database.IndexStore;
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexFinished = _ => Interlocked.Increment(ref count);
+                }
+
+                await store.ExecuteIndexAsync(new MyErrorRollingIndex());
+
+                var runningNode = GetRunningNode(cluster, store);
+
+                WaitForIndexingErrors(store, indexNames: new[] {nameof(MyRollingIndex)}, nodeTag: runningNode);
+
+                // let's try to fix it
+                await store.ExecuteIndexAsync(new MyRollingIndex());
+
+                await AssertWaitForValueAsync(() => Task.FromResult(count), 3L);
+                
+                await VerifyHistory(cluster, store);
+            }
+        }
+
+        [Fact]
+        public async Task RollingIndexDeployedSwapNow()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            using (var store = GetDocumentStoreForRollingIndexes(new Options
+            {
+                Server = cluster.Leader, ReplicationFactor = 3,
+            }))
+            {
+                await CreateData(store);
+                var mre = new ManualResetEventSlim();
+                var dic = new ConcurrentDictionary<string, int>();
+                foreach (var server in Servers)
+                {
+                    var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var indexStore = database.IndexStore;
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexStart = index => mre.Wait(index.IndexingProcessCancellationToken);
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexFinished = index =>
+                    {
+                        dic.AddOrUpdate(index.Name, 1, (_, val) => val + 1);
+                    };
+                }
+
+                await store.ExecuteIndexAsync(new MyRollingIndex());
+                await store.ExecuteIndexAsync(new MyEditedRollingIndex());
+
+                var name = nameof(MyRollingIndex);
+                var replacementName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
+
+                var runningNodeTag = GetRunningNode(cluster, store);
+                var runningNode = cluster.Nodes.Single(n => n.ServerStore.NodeTag == runningNodeTag);
+                var runningDb = await runningNode.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                
+                await AssertWaitForNotNullAsync(() => Task.FromResult(runningDb.IndexStore.GetIndex(name)));
+                await AssertWaitForNotNullAsync(() => Task.FromResult(runningDb.IndexStore.GetIndex(replacementName)));
+
+                using (var token = new CancellationTokenSource(TimeSpan.FromMinutes(2)))
+                {
+                    runningDb.IndexStore.ReplaceIndexes(name, replacementName, token.Token);
+                }
+
+                mre.Set();
+
+                WaitForIndexingInTheCluster(store, store.Database);
+
+                await AssertWaitForValueAsync(() => Task.FromResult(dic.Keys.Count), 1);
+                await AssertWaitForGreaterThanAsync(() => Task.FromResult(dic[nameof(MyRollingIndex)]), 2);
+
+                await VerifyHistory(cluster, store);
+            }
+        }
+
+        [Fact]
+        public async Task RollingIndexDisableEnable()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            using (var store = GetDocumentStoreForRollingIndexes(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = 3,
+            }))
+            {
+                await CreateData(store);
+                var mre = new ManualResetEventSlim();
+                var dic = new ConcurrentDictionary<string, int>();
+                foreach (var server in Servers)
+                {
+                    var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var indexStore = database.IndexStore;
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexStart = index => mre.Wait(index.IndexingProcessCancellationToken);
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexFinished = index =>
+                    {
+                        dic.AddOrUpdate(index.Name, 1, (_, val) => val + 1);
+                    };
+                }
+
+                await store.ExecuteIndexAsync(new MyRollingIndex());
+
+                var runningNodeTag = GetRunningNode(cluster, store);
+                var otherNode = cluster.Nodes.First(n => n.ServerStore.NodeTag != runningNodeTag);
+                var otherDb = await otherNode.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                
+                var rollingIndex = await AssertWaitForNotNullAsync(() => Task.FromResult(otherDb.IndexStore.GetIndex(nameof(MyRollingIndex))));
+                rollingIndex.Disable();
+                rollingIndex.Enable();
+
+                mre.Set();
+
+                WaitForIndexingInTheCluster(store, store.Database);
+
+                await AssertWaitForValueAsync(() => Task.FromResult(dic.Keys.Count), 1);
+                await AssertWaitForGreaterThanAsync(() => Task.FromResult(dic[nameof(MyRollingIndex)]), 2);
+
+                await VerifyHistory(cluster, store);
+            }
+        }
+
         private static void VerifyHistoryAfterNodeRemoval((List<RavenServer> Nodes, RavenServer Leader) cluster, DocumentStore store)
         {
             using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -376,19 +586,49 @@ namespace SlowTests.Rolling
             }
         }
 
-        private static void VerifyHistory((List<RavenServer> Nodes, RavenServer Leader) cluster, DocumentStore store)
+        private async Task VerifyHistory((List<RavenServer> Nodes, RavenServer Leader) cluster, DocumentStore store)
+        {
+
+            await AssertWaitForValueAsync(() =>
+            {
+                using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, store.Database);
+                    var history = record.IndexesHistory;
+                    var deployment = history[nameof(MyRollingIndex)][0].RollingDeployment;
+                    Assert.True(deployment.All(x => x.Value.State == RollingIndexState.Done));
+
+                    return Task.FromResult(deployment.Count);
+                }
+            }, 3);
+
+            using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, store.Database);
+                if (record.RollingIndexes?.ContainsKey(nameof(MyRollingIndex)) == true)
+                    Assert.True(false, "RollingIndexes shouldn't contain 'MyRollingIndex'");
+            }
+
+        }
+
+        private static string GetRunningNode((List<RavenServer> Nodes, RavenServer Leader) cluster, DocumentStore store)
         {
             using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
                 var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, store.Database);
-                var history = record.IndexesHistory;
-                var deployment = history[nameof(MyRollingIndex)][0].RollingDeployment;
-                Assert.Equal(3, deployment.Count);
-                Assert.True(deployment.All(x => x.Value.State == RollingIndexState.Done));
-                if (record.RollingIndexes?.ContainsKey(nameof(MyRollingIndex)) == true)
-                    Assert.True(false, "RollingIndexes shouldn't contain 'MyRollingIndex'");
+                if (record.RollingIndexes.TryGetValue(nameof(MyRollingIndex), out var rolling))
+                {
+                    var running = rolling.ActiveDeployments.Single(x => x.Value.State == RollingIndexState.Running);
+                    return running.Key;
+                }
+                
+                Assert.True(false, "RollingIndexes should contain 'MyRollingIndex'");
             }
+
+            return null;
         }
 
         public static Dictionary<string, RollingIndexDeployment> ReadDeployment(RavenServer server, string database, string index)
@@ -400,22 +640,6 @@ namespace SlowTests.Rolling
                 var history = record.IndexesHistory;
                 return history[index][0].RollingDeployment;
             }
-        }
-
-        private static async Task<string> CreateIndex((List<RavenServer> Nodes, RavenServer Leader) cluster, string dbName)
-        {
-            var indexDefinition = new IndexDefinition { Name = "order_companies", Maps = { "from order in docs.Orders select new { company = order.Company }" }, DeploymentMode = IndexDeploymentMode.Rolling };
-
-            var db = await cluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
-
-            await db.IndexStore.CreateIndexInternal(indexDefinition, Guid.NewGuid().ToString());
-
-            foreach (var node in cluster.Nodes)
-            {
-                await WaitForRollingIndex(dbName, indexDefinition.Name, node);
-            }
-
-            return indexDefinition.Name;
         }
 
         private class MyRollingIndex : AbstractIndexCreationTask<Order>
@@ -430,6 +654,24 @@ namespace SlowTests.Rolling
 
                 DeploymentMode = IndexDeploymentMode.Rolling;
             }
+        }
+
+        private class MyErrorRollingIndex : AbstractIndexCreationTask<Order>
+        {
+            public MyErrorRollingIndex()
+            {
+                Map = orders => from order in orders
+                    select new
+                    {
+                        Name = order.Company, 
+                        // ReSharper disable once IntDivisionByZero
+                        Sum = order.Lines.Sum(x=>x.Quantity) / 0
+                    };
+
+                DeploymentMode = IndexDeploymentMode.Rolling;
+            }
+
+            public override string IndexName => nameof(MyRollingIndex);
         }
 
         private class MyEditedRollingIndex : AbstractIndexCreationTask<Order>
@@ -476,15 +718,6 @@ namespace SlowTests.Rolling
             {
                 await WaitForRollingIndex(database, name, server);
             }
-        }
-
-        private static async Task GenerateTestData(IDocumentStore leaderStore)
-        {
-            await leaderStore.Maintenance.SendAsync(new CreateSampleDataOperation());
-
-            var operation = await leaderStore.Operations.SendAsync(new PatchByQueryOperation(@"FROM Orders UPDATE { put(""Orders/"", this); }"));
-
-            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(2));
         }
     }
 }

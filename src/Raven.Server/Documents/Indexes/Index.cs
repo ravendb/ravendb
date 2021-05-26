@@ -127,6 +127,8 @@ namespace Raven.Server.Documents.Indexes
         /// </summary>
         private CancellationTokenSource _indexingProcessCancellationTokenSource;
 
+        internal CancellationToken IndexingProcessCancellationToken => _indexingProcessCancellationTokenSource.Token;
+
         private bool _indexDisabled;
 
         private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryIndexProgress =
@@ -1116,6 +1118,8 @@ namespace Raven.Server.Documents.Indexes
 
         private DisposeOnce<SingleAttempt> _disposeOnce;
 
+        public bool IsDisposed => _disposeOnce.Disposed;
+
         public void Dispose()
         {
             _disposeOnce.Dispose();
@@ -1366,10 +1370,17 @@ namespace Raven.Server.Documents.Indexes
                     {
                         while (true)
                         {
-                            _rollingEvent.Wait(_indexingProcessCancellationTokenSource.Token);
+
+                            WaitHandle.WaitAny(new [] {_mre.WaitHandle, _rollingEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle});
+                            _indexingProcessCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                            
+                            if (_indexDisabled)
+                                return;
+
                             _rollingEvent.Reset();
 
                             var replaceStatus = ReplaceIfNeeded(batchCompleted: false, didWork: false);
+
                             if (replaceStatus == ReplaceStatus.Succeeded)
                                 return;
 
@@ -1377,6 +1388,7 @@ namespace Raven.Server.Documents.Indexes
                                 break;
 
                             Thread.Sleep(500); // replace will be re-tried
+                            _rollingEvent.Set();
                         }
 
                         DocumentDatabase.IndexStore.ForTestingPurposes?.OnRollingIndexStart?.Invoke(this);
@@ -1708,6 +1720,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (ForceReplace.Lower() || ShouldReplace())
                 {
+                    if (Definition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix) == false)
+                        return ReplaceStatus.NotNeeded; // already replaced
+
                     var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.OrdinalIgnoreCase);
                     _isReplacing = true;
 
