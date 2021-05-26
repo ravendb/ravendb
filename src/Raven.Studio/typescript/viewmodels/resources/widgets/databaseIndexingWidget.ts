@@ -23,6 +23,10 @@ class databaseIndexingWidget extends abstractDatabaseAndNodeAwareTableWidget<Rav
         }
     }
 
+    protected createNoDataItem(nodeTag: string, databaseName: string): indexingSpeedItem {
+        return indexingSpeedItem.noData(nodeTag, databaseName);
+    }
+
     protected mapItems(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.DatabaseIndexingSpeedPayload): indexingSpeedItem[] {
         return data.Items.map(x => new indexingSpeedItem(nodeTag, x));
     }

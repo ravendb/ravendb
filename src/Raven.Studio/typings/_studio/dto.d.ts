@@ -816,6 +816,7 @@ interface databaseAndNodeAwareStats {
     nodeTag: string;
     hideDatabaseName: boolean;
     even: boolean;
+    noData: boolean;
 }
 
 interface cachedDateValue<T> {

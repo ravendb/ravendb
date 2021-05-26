@@ -7,17 +7,23 @@ class indexingSpeedItem implements databaseAndNodeAwareStats {
     indexedPerSecond: number;
     mappedPerSecond: number;
     reducedPerSecond: number;
+    noData: boolean;
     
     hideDatabaseName: boolean;
     even: boolean = false;
     
     constructor(nodeTag: string, data: Raven.Server.Dashboard.IndexingSpeedItem) {
         this.nodeTag = nodeTag;
-        this.database = data.Database;
         this.hideDatabaseName = false;
-        this.indexedPerSecond = indexingSpeedItem.roundNumber(data.IndexedPerSecond);
-        this.mappedPerSecond = indexingSpeedItem.roundNumber(data.MappedPerSecond);
-        this.reducedPerSecond = indexingSpeedItem.roundNumber(data.ReducedPerSecond);
+        if (data) {
+            this.noData = false;
+            this.database = data.Database;
+            this.indexedPerSecond = indexingSpeedItem.roundNumber(data.IndexedPerSecond);
+            this.mappedPerSecond = indexingSpeedItem.roundNumber(data.MappedPerSecond);
+            this.reducedPerSecond = indexingSpeedItem.roundNumber(data.ReducedPerSecond);
+        } else {
+            this.noData = true;
+        }
     }
     
     private static roundNumber(input: number) {
@@ -25,6 +31,12 @@ class indexingSpeedItem implements databaseAndNodeAwareStats {
             return Math.round(input);
         }
         return input;
+    }
+    
+    static noData(nodeTag: string, database: string): indexingSpeedItem {
+        const item = new indexingSpeedItem(nodeTag, null);
+        item.database = database;
+        return item;
     }
 }
 
