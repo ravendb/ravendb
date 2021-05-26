@@ -392,7 +392,7 @@ namespace Raven.Server.Documents.ETL
 
                 if (batchStopped == false && stats.HasBatchCompleteReason() == false)
                 {
-                    stats.RecordBatchCompleteReason("No more items to process");
+                    stats.RecordBatchCompleteReason("No items to process");
                 }
 
                 _testMode?.DebugOutput.AddRange(transformer.GetDebugOutput());
