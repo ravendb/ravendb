@@ -53,9 +53,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
             MaybeAddNewNodesToRollingDeployment(record, rollingIndex.ActiveDeployments);
 
-            if (string.IsNullOrEmpty(FinishedNodeTag))
-                return;
-
             if (CompleteAll)
             {
                 foreach (var nodeTag in record.Topology.AllNodes)
@@ -70,6 +67,9 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         private void FinishOneNode(DatabaseRecord record, string finishedNodeTag, RollingIndex rollingIndex)
         {
+            if (string.IsNullOrEmpty(finishedNodeTag))
+                return;
+
             if (rollingIndex.ActiveDeployments.TryGetValue(finishedNodeTag, out var rollingDeployment) == false)
                 return;
 
