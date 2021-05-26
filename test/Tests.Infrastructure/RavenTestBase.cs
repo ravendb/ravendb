@@ -268,6 +268,9 @@ namespace FastTests
                             [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString(),
                             [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
                             [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString(),
+                            // TODO: remove this after testing
+                            [RavenConfiguration.GetKey(x => x.Indexing.AutoIndexDeploymentMode)] = IndexDeploymentMode.Rolling.ToString(),
+                            [RavenConfiguration.GetKey(x => x.Indexing.StaticIndexDeploymentMode)] = IndexDeploymentMode.Rolling.ToString(),
                         }
                     };
 
