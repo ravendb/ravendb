@@ -18,8 +18,7 @@ class serverTraffic extends historyAwareNodeStats<Raven.Server.Dashboard.Cluster
         + x.CounterWritesPerSecond
         + x.TimeSeriesWritesPerSecond);
     
-    totalWritesPerSecondSize = this.conditionalDataExtractor(() => generalUtils.formatBytesToSize(this.totalWritesPerSecond(), 2, true)[0]);
-    totalWritesPerSecondUnit = this.conditionalDataExtractor(() => generalUtils.formatBytesToSize(this.totalWritesPerSecond(), 2, true)[1], { customNoData: "-" });
+    totalWritesPerSecondSize = this.conditionalDataExtractor(() => this.totalWritesPerSecond().toLocaleString(), { customNoData: "-" });
     
     totalWriteBytesPerSecond = this.dataExtractor(x => x.DocumentsWriteBytesPerSecond
         + x.AttachmentsWriteBytesPerSecond
