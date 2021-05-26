@@ -26,6 +26,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -632,7 +633,7 @@ namespace FastTests
             throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
         }
 
-        public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, string[] indexNames = null, TimeSpan? timeout = null)
+        public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, string[] indexNames = null, TimeSpan? timeout = null, string nodeTag = null)
         {
             timeout ??= (Debugger.IsAttached
                           ? TimeSpan.FromMinutes(15)
@@ -643,16 +644,23 @@ namespace FastTests
             var sp = Stopwatch.StartNew();
             while (sp.Elapsed < timeout.Value)
             {
-                var indexes = store.Maintenance.Send(new GetIndexErrorsOperation(indexNames));
-                foreach (var index in indexes)
+                try
                 {
-                    if (index.Errors.Length > 0)
+                    var indexes = store.Maintenance.Send(new GetIndexErrorsOperation(indexNames, nodeTag));
+                    foreach (var index in indexes)
                     {
-                        toWait.Remove(index.Name);
+                        if (index.Errors.Length > 0)
+                        {
+                            toWait.Remove(index.Name);
 
-                        if (toWait.Count == 0)
-                            return indexes;
+                            if (toWait.Count == 0)
+                                return indexes;
+                        }
                     }
+                }
+                catch (IndexDoesNotExistException)
+                {
+
                 }
 
                 Thread.Sleep(32);

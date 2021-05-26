@@ -51,6 +51,15 @@ namespace Tests.Infrastructure
 
         private readonly Random _random = new Random();
 
+        // workaround until RavenDB-16760 resolved
+        protected DocumentStore GetDocumentStoreForRollingIndexes(Options options = null,  [CallerMemberName]string caller = null)
+        {
+            Assert.NotNull(options?.Server);
+            options.RunInMemory = false; 
+
+            return base.GetDocumentStore(options, caller);
+        }
+
         protected void NoTimeouts()
         {
             foreach (var server in Servers)
