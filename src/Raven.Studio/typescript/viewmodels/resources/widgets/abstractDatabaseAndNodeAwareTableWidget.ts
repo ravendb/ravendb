@@ -75,7 +75,12 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
     onClientDisconnected(ws: clusterDashboardWebSocketClient) {
         super.onClientDisconnected(ws);
 
-        this.withStats(ws.nodeTag, x => x.disconnected(true));
+        this.withStats(ws.nodeTag, x => {
+            x.items = [];
+            x.disconnected(true);
+        });
+        
+        this.gridController().reset(false);
     }
 
     private withStats(nodeTag: string, action: (stats: TStats) => void) {
@@ -113,7 +118,7 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
         }
     }
 
-    protected prepareUrl(item: databaseAndNodeAwareStats): { url: string; openInNewTab: boolean } {
+    protected prepareUrl(item: databaseAndNodeAwareStats): { url: string; openInNewTab: boolean, noData: boolean } {
         const database = item.database;
         const nodeTag = item.nodeTag;
         const currentNodeTag = this.clusterManager.localNodeTag();
@@ -123,21 +128,46 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
         if (currentNodeTag === nodeTag) {
             return {
                 url: link,
+                noData: item.noData,
                 openInNewTab: false
             };
         } else {
             return {
                 url: appUrl.toExternalUrl(targetNode.serverUrl(), link),
+                noData: item.noData,
                 openInNewTab: true
             }
         }
     }
+    
+    protected abstract createNoDataItem(nodeTag: string, databaseName: string): TTableItem;
 
     protected prepareGridData(): JQueryPromise<pagedResult<TTableItem>> {
         let items: TTableItem[] = [];
-
+        
         this.nodeStats().forEach(nodeStat => {
             items.push(...nodeStat.items);
+        });
+        
+        const nodesPerDatabase = new Map<string, string[]>();
+        items.forEach(item => {
+            const nodes = nodesPerDatabase.get(item.database) || [];
+            nodes.push(item.nodeTag);
+            nodesPerDatabase.set(item.database, nodes);
+        });
+        
+        nodesPerDatabase.forEach((nodesWithData, dbName) => {
+            const db = this.databaseManager.getDatabaseByName(dbName);
+            if (db && db.nodes().length) {
+                const allDbNodes = db.nodes();
+                for (const dbNode of allDbNodes) {
+                    // we want to check if we are not out of sync 
+                    // as we get data from 2 different endpoints
+                    if (!_.includes(nodesWithData, dbNode)) {
+                        items.push(this.createNoDataItem(dbNode, dbName));
+                    }
+                }
+            }
         });
 
         this.sortGridData(items);

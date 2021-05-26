@@ -25,6 +25,10 @@ class databaseTrafficWidget extends abstractDatabaseAndNodeAwareTableWidget<Rave
         }
     }
 
+    protected createNoDataItem(nodeTag: string, databaseName: string): trafficWatchItem {
+        return trafficWatchItem.noData(nodeTag, databaseName);
+    }
+
     protected mapItems(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.DatabaseTrafficWatchPayload): trafficWatchItem[] {
         return data.Items.map(x => new trafficWatchItem(nodeTag, x));
     }
@@ -36,7 +40,7 @@ class databaseTrafficWidget extends abstractDatabaseAndNodeAwareTableWidget<Rave
             new nodeTagColumn<trafficWatchItem>(grid, item => this.prepareUrl(item)),
             new textColumn<trafficWatchItem>(grid, x => widget.formatNumber(x.requestsPerSecond), "Requests/s", "15%"),
             new textColumn<trafficWatchItem>(grid, x => widget.formatNumber(x.writesPerSecond), "Writes/s", "15%"),
-            new textColumn<trafficWatchItem>(grid, x => generalUtils.formatBytesToSize(x.dataWritesPerSecond), "Data written/s", "15%"),
+            new textColumn<trafficWatchItem>(grid, x => x.noData ? "-" : generalUtils.formatBytesToSize(x.dataWritesPerSecond), "Data written/s", "15%"),
         ];
     }
 

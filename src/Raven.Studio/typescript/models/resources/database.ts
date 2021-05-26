@@ -12,6 +12,7 @@ class database {
     errored = ko.observable<boolean>(false);
     isAdminCurrentTenant = ko.observable<boolean>(false);
     relevant = ko.observable<boolean>(true);
+    nodes = ko.observableArray<string>([]);
     hasRevisionsConfiguration = ko.observable<boolean>(false);
     hasExpirationConfiguration = ko.observable<boolean>(false);
     hasRefreshConfiguration = ko.observable<boolean>(false);
@@ -65,11 +66,14 @@ class database {
         
         if (incomingCopy.NodesTopology) {
             const nodeTag = this.clusterNodeTag();
-            const inMemberList = _.some(incomingCopy.NodesTopology.Members, x => x.NodeTag === nodeTag);
-            const inPromotableList = _.some(incomingCopy.NodesTopology.Promotables, x => x.NodeTag === nodeTag);
-            const inRehabList = _.some(incomingCopy.NodesTopology.Rehabs, x => x.NodeTag === nodeTag);
+            
+            const nodes: string[] = [];
+            incomingCopy.NodesTopology.Members.forEach(x => nodes.push(x.NodeTag));
+            incomingCopy.NodesTopology.Promotables.forEach(x => nodes.push(x.NodeTag));
+            incomingCopy.NodesTopology.Rehabs.forEach(x => nodes.push(x.NodeTag));
 
-            this.relevant(inMemberList || inPromotableList || inRehabList);
+            this.relevant(_.includes(nodes, nodeTag));
+            this.nodes(nodes);
         }
 
         const dbAccessLevel = accessManager.default.getEffectiveDatabaseAccessLevel(incomingCopy.Name);

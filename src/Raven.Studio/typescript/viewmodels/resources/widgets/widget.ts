@@ -124,6 +124,9 @@ abstract class widget<TConfig = unknown, TState = unknown> {
     }
 
     static formatNumber(input: number): string {
+        if (typeof input === "undefined") {
+            return "-";
+        }
         if (input === 0) {
             return "0";
         }

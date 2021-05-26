@@ -3,7 +3,7 @@
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import hyperlinkColumn = require("./hyperlinkColumn");
 
-class nodeTagColumn<T extends { nodeTag: string, database: string }> extends hyperlinkColumn<T> {
+class nodeTagColumn<T extends { nodeTag: string, database: string, noData: boolean }> extends hyperlinkColumn<T> {
     
     constructor(gridController: virtualGridController<any>, hrefProvider: (item: T) => { url: string; openInNewTab: boolean }) {
         super(gridController, item => this.valueProvider(item), item => hrefProvider(item).url, "Node", "70px", {
@@ -14,7 +14,8 @@ class nodeTagColumn<T extends { nodeTag: string, database: string }> extends hyp
     
     private valueProvider(item: T) {
         const nodeTag = item.nodeTag;
-        return `<span class="node-label node-${nodeTag}">${nodeTag}</span>`;
+        const extraClass = item.noData ? "no-data" : `node-${nodeTag}`;
+        return `<span class="node-label ${extraClass}">${nodeTag}</span>`;
     }
 
     toDto(): virtualColumnDto {
