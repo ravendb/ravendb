@@ -127,7 +127,7 @@ abstract class widget<TConfig = unknown, TState = unknown> {
         if (input === 0) {
             return "0";
         }
-        if (input > 1) {
+        if (input >= 1) {
             return Math.round(input).toLocaleString();
         }
         return generalUtils.formatNumberToStringFixed(input, 2);
