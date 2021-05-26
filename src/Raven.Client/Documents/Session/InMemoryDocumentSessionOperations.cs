@@ -1647,17 +1647,6 @@ more responsive application.
             CountersByDocId[id] = cache;
         }
 
-        // private void SetGotAllInCacheIfNeeded(IEnumerable<string> revisionsToInclude)
-        // {
-        //     foreach (var cv in revisionsToInclude)
-        //     {
-        //         if (string.IsNullOrEmpty(cv) == false)
-        //             continue;
-        //
-        //         SetGotAllCountersForDocument(cv);
-        //     }
-        // }
-
         private void SetGotAllInCacheIfNeeded(Dictionary<string, string[]> countersToInclude)
         {
             foreach (var kvp in countersToInclude)
@@ -2159,7 +2148,7 @@ more responsive application.
         
         public bool CheckIfChangeVectorAlreadyIncluded(IEnumerable<string> changeVectors)
         {
-            if (IncludedRevisionByChangeVectors == null) return false;
+            if (IncludedRevisionByChangeVectors?.Count == 0) return false;
             foreach (var cv in changeVectors)
             {
                 if (IncludedRevisionByChangeVectors.TryGetValue(cv, out DocumentInfo documentInfo) == false )
