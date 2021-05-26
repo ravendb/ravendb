@@ -1364,11 +1364,20 @@ namespace Raven.Server.Documents.Indexes
 
                     if (IsRolling)
                     {
-                        _rollingEvent.Wait(_indexingProcessCancellationTokenSource.Token);
-                        _rollingEvent.Reset();
+                        while (true)
+                        {
+                            _rollingEvent.Wait(_indexingProcessCancellationTokenSource.Token);
+                            _rollingEvent.Reset();
 
-                        if (ReplaceIfNeeded(batchCompleted: false, didWork: false))
-                            return;
+                            var replaceStatus = ReplaceIfNeeded(batchCompleted: false, didWork: false);
+                            if (replaceStatus == ReplaceStatus.Succeeded)
+                                return;
+
+                            if (replaceStatus == ReplaceStatus.NotNeeded)
+                                break;
+
+                            Thread.Sleep(500); // replace will be re-tried
+                        }
 
                         DocumentDatabase.IndexStore.ForTestingPurposes?.OnRollingIndexStart?.Invoke(this);
                     }
@@ -1555,7 +1564,7 @@ namespace Raven.Server.Documents.Indexes
                                         _logger.Info($"Could not update stats for '{Name}'.", e);
                                 }
 
-                                if (ReplaceIfNeeded(batchCompleted, didWork))
+                                if (ReplaceIfNeeded(batchCompleted, didWork) == ReplaceStatus.Succeeded)
                                     return;
                             }
                         }
@@ -1686,7 +1695,14 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public bool ReplaceIfNeeded(bool batchCompleted, bool didWork)
+        public enum ReplaceStatus
+        {
+            NotNeeded,
+            Failed,
+            Succeeded
+        }
+
+        public ReplaceStatus ReplaceIfNeeded(bool batchCompleted, bool didWork)
         {
             try
             {
@@ -1708,13 +1724,14 @@ namespace Raven.Server.Documents.Indexes
                         {
                             DocumentDatabase.IndexStore.ReplaceIndexes(originalName, Definition.Name, _indexingProcessCancellationTokenSource.Token);
                             StartIndexingThread();
-                            return true;
+                            return ReplaceStatus.Succeeded;
                         }
                         catch (OperationCanceledException)
                         {
                             // this can fail if the indexes lock is currently held, so we'll retry
                             // however, we might be requested to shutdown, so we want to skip replacing
                             // in this case, worst case scenario we'll handle this in the next batch
+                            return ReplaceStatus.Failed;
                         }
                     }
                     finally
@@ -1729,9 +1746,11 @@ namespace Raven.Server.Documents.Indexes
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Could not replace index '{Name}'.", e);
+
+                return ReplaceStatus.Failed;
             }
 
-            return false;
+            return ReplaceStatus.NotNeeded;
         }
         
         private void PauseIfCpuCreditsBalanceIsTooLow()

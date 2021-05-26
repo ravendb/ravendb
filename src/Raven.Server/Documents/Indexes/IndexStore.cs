@@ -134,6 +134,8 @@ namespace Raven.Server.Documents.Indexes
                     }
                     catch (OperationCanceledException e)
                     {
+                        // if we haven't start the index we must dispose it here
+                        index.Dispose(); 
                         _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
                         return;
                     }
@@ -2105,6 +2107,9 @@ namespace Raven.Server.Documents.Indexes
                         if (Logger.IsOperationsEnabled)
                             Logger.Operations($"Failed to rename index '{replacementIndexName}' to '{oldIndexName}' during replacement. Retrying ... ", e);
 
+                        if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
+                            throw; // nothing we can do here
+
                         Thread.Sleep(500);
                     }
                 }
@@ -2146,6 +2151,9 @@ namespace Raven.Server.Documents.Indexes
                         {
                             if (Logger.IsOperationsEnabled)
                                 Logger.Operations($"Failed to delete old index '{oldIndexName}' during replacement. Retrying ... ", e);
+
+                            if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
+                                throw; // nothing we can do here
 
                             Thread.Sleep(500);
                         }
@@ -2190,6 +2198,9 @@ namespace Raven.Server.Documents.Indexes
                         {
                             if (Logger.IsOperationsEnabled)
                                 Logger.Operations($"Failed to move directory of replacements index '{newIndex.Name}' during replacement. Retrying ... ", e);
+
+                            if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
+                                throw; // nothing we can do here
 
                             Thread.Sleep(500);
                         }
