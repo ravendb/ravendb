@@ -72,6 +72,9 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                         var receiveResult = await _localWebSocket.ReceiveAsync(buffer, _cts.Token);
 
+                        if (receiveResult.MessageType == WebSocketMessageType.Close)
+                            break;
+
                         await _remoteWebSocket.SendAsync(buffer.Slice(0, receiveResult.Count), receiveResult.MessageType, receiveResult.EndOfMessage, _cts.Token);
                     }
                 }
@@ -116,6 +119,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                         var buffer = segment.Memory.Memory;
 
                         var receiveResult = await _remoteWebSocket.ReceiveAsync(buffer, _cts.Token).ConfigureAwait(false);
+
+                        if (receiveResult.MessageType == WebSocketMessageType.Close)
+                            break;
 
                         await _localWebSocket.SendAsync(buffer.Slice(0, receiveResult.Count), receiveResult.MessageType, receiveResult.EndOfMessage, _cts.Token);
                     }
