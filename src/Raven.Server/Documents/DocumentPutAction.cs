@@ -56,7 +56,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private struct CompareClusterTransactionId
+        private readonly struct CompareClusterTransactionId
         {
             private readonly ServerStore _serverStore;
             private readonly DocumentPutAction _parent;
@@ -72,18 +72,21 @@ namespace Raven.Server.Documents
                 if (nonPersistentDocumentFlags != NonPersistentDocumentFlags.None) // replication or engine running an operation, we can skip checking it 
                     return;
 
-                long indexFromOChangeVector = ChangeVectorUtils.GetEtagById(changeVector, _parent._documentDatabase.ClusterTransactionId);
-                if (indexFromOChangeVector == 0)
+                long indexFromChangeVector = ChangeVectorUtils.GetEtagById(changeVector, _parent._documentDatabase.ClusterTransactionId);
+                if (indexFromChangeVector == 0)
                     return;
                 
-                using var _ = _serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext clusterContext);
-                clusterContext.OpenReadTransaction();
-                var guardId = CompareExchangeKey.GetStorageKey(_parent._documentDatabase.Name, ClusterTransactionCommand.GetAtomicGuardKey(id));
-                var (indexFromCluster, val) = _serverStore.Cluster.GetCompareExchangeValue(clusterContext, guardId);
-                if(indexFromOChangeVector != indexFromCluster)
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext clusterContext))
+                using (clusterContext.OpenReadTransaction())
                 {
-                    throw new ConcurrencyException($"Cannot PUT document '{id}' because its change vector's cluster transaction index is set to {indexFromOChangeVector} " +
-                                                   $"but the compare exchange guard ('{ClusterTransactionCommand.GetAtomicGuardKey(id)}') is set to {indexFromCluster}");
+                    var guardId = CompareExchangeKey.GetStorageKey(_parent._documentDatabase.Name, ClusterTransactionCommand.GetAtomicGuardKey(id));
+                    var (indexFromCluster, val) = _serverStore.Cluster.GetCompareExchangeValue(clusterContext, guardId);
+                    if (indexFromChangeVector != indexFromCluster)
+                    {
+                        throw new ConcurrencyException(
+                            $"Cannot PUT document '{id}' because its change vector's cluster transaction index is set to {indexFromChangeVector} " +
+                            $"but the compare exchange guard ('{ClusterTransactionCommand.GetAtomicGuardKey(id)}') is set to {indexFromCluster}");
+                    }
                 }
             }
         }
