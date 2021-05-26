@@ -138,22 +138,24 @@ namespace Raven.Server.ServerWide.Commands
 
         }
 
+        public const long InvalidIndexValue = -1;
+        
         public unsafe bool Validate(ClusterOperationContext context, Table items, long index, out long currentIndex)
         {
-            currentIndex = -1;
+            currentIndex = InvalidIndexValue ;
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
                 if (items.ReadByKey(keySlice, out var reader))
                 {
                     currentIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
 
-                    if (index == -1)
+                    if (index == InvalidIndexValue )
                         return true;
 
                     return Index == currentIndex;
                 }
             }
-            return index == 0 || index == -1;
+            return index == 0 || index == InvalidIndexValue;
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)

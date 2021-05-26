@@ -1021,11 +1021,6 @@ more responsive application.
                         }
 
                         var deleteCommandData = new DeleteCommandData(documentInfo.Id, changeVector, documentInfo.ChangeVector);
-                        if (TransactionMode == TransactionMode.ClusterWide)
-                        {
-                            // we need this to send the cluster transaction index to the cluster state machine
-                            deleteCommandData.Document = documentInfo.Metadata;
-                        }
                         result.SessionCommands.Add(deleteCommandData);
                     }
                 }
