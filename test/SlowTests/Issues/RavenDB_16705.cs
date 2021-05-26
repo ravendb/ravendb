@@ -83,6 +83,8 @@ namespace SlowTests.Issues
                 Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, documentId1, attachmentName2, 15 * 1000));
                 Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, documentId2, attachmentName1, 15 * 1000));
                 Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, documentId2, attachmentName2, 15 * 1000));
+
+                await EnsureNoReplicationLoop(Server, destination.Database);
             }
 
             static void ModifyAttachment(AttachmentsStorage attachmentStorage, DocumentsOperationContext context, string documentId, string attachmentName, string contentType)

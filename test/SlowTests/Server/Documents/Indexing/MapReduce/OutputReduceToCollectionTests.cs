@@ -389,7 +389,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             {
                 var databaseName = GetDatabaseName();
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration {BackupLocation = backupPath, DatabaseName = databaseName}))
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration {BackupLocation = backupPath, DatabaseName = databaseName}))
                 {
                     var exception = Assert.Throws<IndexInvalidException>(() => new Replacement_FieldNamesChanged.Orders_ByCompany().Execute(store, database: databaseName));
 

@@ -36,7 +36,7 @@ namespace SlowTests.Smuggler
         {
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanExportAndImportDatabaseRecord()
         {
             var file = Path.GetTempFileName();
@@ -95,19 +95,8 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_2"
                 }))
                 {
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 */1 * * *",
-                        IncrementalBackupFrequency = "0 */6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
+                    var config = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 */1 * * *", incrementalBackupFrequency: "0 */6 * * *", mentorNode: "A", name: "Backup");
+
                     store1.Maintenance.Send(new UpdateExternalReplicationOperation(new ExternalReplication("tempDatabase", "ExternalReplication")
                     {
                         TaskId = 1,
@@ -251,7 +240,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanMigrateDatabaseRecord()
         {
             var file = Path.GetTempFileName();
@@ -484,7 +473,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanExportAndImportMergedDatabaseRecord()
         {
             var file = Path.GetTempFileName();
@@ -867,58 +856,11 @@ namespace SlowTests.Smuggler
                     await store2.Maintenance.SendAsync(new AddEtlOperation<SqlConnectionString>(sqlEtl3));
                     await store2.Maintenance.SendAsync(new AddEtlOperation<SqlConnectionString>(sqlEtl4));
 
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 1 * * *",
-                        IncrementalBackupFrequency = "0 6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
-                    var config2 = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup2",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 1 * * *",
-                        IncrementalBackupFrequency = "0 6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
-                    var config3 = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup",
-                        BackupType = BackupType.Snapshot,
-                        FullBackupFrequency = "0 8 * * *",
-                        IncrementalBackupFrequency = "0 6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
-                    var config4 = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup4",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 1 * * *",
-                        IncrementalBackupFrequency = "0 6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
+                    var config = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 1 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup");
+                    var config2 = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 1 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup2");
+                    var config3 = Backup.CreateBackupConfiguration(backupPath: "FolderPath", backupType: BackupType.Snapshot, fullBackupFrequency: "0 8 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup");
+                    var config4 = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 1 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup4");
+                  
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config2));
                     await store2.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config3));
@@ -1044,11 +986,10 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanBackupAndRestoreDatabaseRecord()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var file = Path.GetTempFileName();
             var dummy = GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
@@ -1057,8 +998,6 @@ namespace SlowTests.Smuggler
                 privateKey = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Pfx));
             }
 
-            try
-            {
                 using (var store = GetDocumentStore(new Options
                 {
                     ModifyDatabaseName = s => $"{s}_1",
@@ -1167,45 +1106,14 @@ namespace SlowTests.Smuggler
                         }, "users/1");
                         await session.SaveChangesAsync();
                     }
-
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        Name = "Real",
-                        BackupType = BackupType.Backup,
-                        LocalSettings = new LocalSettings
-                        {
-                            FolderPath = backupPath
-                        },
-                        IncrementalBackupFrequency = "0 */5 * * *"
-                    };
-                    var config2 = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 */1 * * *",
-                        IncrementalBackupFrequency = "0 */6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = backupPath
-                        }
-                    };
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 */5 * * *", name: "Real");
+                var config2 = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 */1 * * *", incrementalBackupFrequency: "0 */6 * * *", mentorNode: "A", name: "Backup");
 
                     await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config2));
-                    var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                    await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                    var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                Backup.UpdateConfigAndRunBackup(Server, config, store);
 
-                    var value = WaitForValue(() =>
-                    {
-                        var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                        return getPeriodicBackupResult.Status?.LastEtag;
-                    }, 1);
-                    Assert.Equal(1, value);
                     var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                    using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                     {
                         BackupLocation = Directory.GetDirectories(backupPath).First(),
                         DatabaseName = databaseName,
@@ -1271,13 +1179,8 @@ namespace SlowTests.Smuggler
                     }
                 }
             }
-            finally
-            {
-                File.Delete(file);
-            }
-        }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanRestoreSubscriptionsFromBackup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1287,31 +1190,15 @@ namespace SlowTests.Smuggler
                 store.Subscriptions.Create<User>(x => x.Name == "Marcin");
                 store.Subscriptions.Create<User>();
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = store.Maintenance.Send(new UpdatePeriodicBackupOperation(config)).TaskId;
-                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                SpinWait.SpinUntil(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(15));
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 await ValidateSubscriptions(store);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = restoredDatabaseName
@@ -1373,7 +1260,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Theory]
+        [Theory, Trait("Category", "Smuggler")]
         [InlineData(true)]
         [InlineData(false)]
         public async Task CanDisableTasksAfterRestore(bool disableOngoingTasks)
@@ -1416,28 +1303,13 @@ namespace SlowTests.Smuggler
                 await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation("test"));
 
                 // backup
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings { FolderPath = backupPath },
-                    IncrementalBackupFrequency = "* * * * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 0);
-                Assert.Equal(0, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();
 
-                using (RestoreDatabase(store,
+                using (Backup.RestoreDatabase(store,
                     new RestoreBackupConfiguration
                     {
                         BackupLocation = Directory.GetDirectories(backupPath).First(),

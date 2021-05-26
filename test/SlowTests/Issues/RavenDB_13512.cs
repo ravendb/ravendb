@@ -27,7 +27,7 @@ namespace SlowTests.Issues
             {
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = backupPath,
                     DatabaseName = databaseName

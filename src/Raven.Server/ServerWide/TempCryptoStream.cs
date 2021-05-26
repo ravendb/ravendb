@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using Raven.Server.Utils;
 using Sparrow.Server;
-using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
 {
     public unsafe class TempCryptoStream : Stream
     {
-        private readonly string _file;
         private bool _ignoreSetLength;
         private readonly Stream _stream;
         private readonly MemoryStream _authenticationTags = new MemoryStream();
@@ -17,8 +14,11 @@ namespace Raven.Server.ServerWide
         private readonly long _startPosition;
 
         public Stream InnerStream => _stream;
+
         public override bool CanRead => true;
+
         public override bool CanSeek => true;
+
         public override bool CanWrite => true;
 
         public override long Length
@@ -39,14 +39,9 @@ namespace Raven.Server.ServerWide
         private readonly byte[] _internalBuffer;    // Temp buffer for one block only
         private int _bufferIndex;    // The position in the block buffer.
         private int _bufferValidIndex;
-        private bool _needToWrite = false;
+        private bool _needToWrite;
         private long _blockNumber;
         private long _maxLength;
-
-        public TempCryptoStream(string file) : this(SafeFileStream.Create(file, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose))
-        {
-            _file = file;
-        }
 
         public TempCryptoStream IgnoreSetLength()
         {
@@ -306,11 +301,6 @@ namespace Raven.Server.ServerWide
 
         protected override void Dispose(bool disposing)
         {
-            if (_file != null)
-            {
-                _stream.Dispose();
-                PosixFile.DeleteOnClose(_file);
-            }
         }
     }
 }

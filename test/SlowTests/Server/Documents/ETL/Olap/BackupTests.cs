@@ -149,7 +149,7 @@ loadToOrders(partitionBy(key),
 
                 var databaseName = $"{store}_Restore";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = Path.Combine(backupPath, result.LocalBackup.BackupDirectory), DatabaseName = databaseName }))
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = Path.Combine(backupPath, result.LocalBackup.BackupDirectory), DatabaseName = databaseName }))
                 {
                     var sourceRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                     var restoreRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
