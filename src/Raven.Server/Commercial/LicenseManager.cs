@@ -620,7 +620,8 @@ namespace Raven.Server.Commercial
                 {
                     var severity =
                         leasedLicense.NotificationSeverity == NotificationSeverity.None
-                            ? NotificationSeverity.Info : leasedLicense.NotificationSeverity;
+                            ? NotificationSeverity.Info
+                            : leasedLicense.NotificationSeverity;
                     var alert = AlertRaised.Create(
                         null,
                         leasedLicense.Title,
@@ -638,14 +639,11 @@ namespace Raven.Server.Commercial
 
                 return licenseChanged ? leasedLicense.License : null;
             }
-            catch (Exception e)
+            catch (HttpRequestException)
             {
-                if (e is HttpRequestException)
-                {
-                    var license = TryGetUpdatedLicenseFromStringOrPath(currentLicense);
-                    if (license != null)
-                        return license;
-                }
+                var license = TryGetUpdatedLicenseFromStringOrPath(currentLicense);
+                if (license != null)
+                    return license;
 
                 throw;
             }
