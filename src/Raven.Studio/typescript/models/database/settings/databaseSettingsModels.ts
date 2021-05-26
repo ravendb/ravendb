@@ -11,7 +11,9 @@ export abstract class settingsEntry {
     data: Raven.Server.Config.ConfigurationEntryDatabaseValue;
 
     keyName = ko.observable<string>();
+    
     showEntry = ko.observable<boolean>();
+    entryMatchesFilter = ko.observable<boolean>();
 
     isServerWideOnlyEntry = ko.observable<boolean>();
     serverOrDefaultValue: KnockoutComputed<string>;

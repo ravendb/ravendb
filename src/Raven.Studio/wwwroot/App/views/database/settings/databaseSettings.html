@@ -33,7 +33,7 @@
     <div class="flex-horizontal flex-stretch-items content-margin entries-grid" data-bind="visible: viewMode() === 'editMode'">
         <div class="flex-vertical">
             <div class="categories-list-container flex-vertical flex-grow" style="position:relative;">
-                <virtual-grid class="resizable" params="controller: categoriesGridController"></virtual-grid>
+                <virtual-grid class="resizable" params="controller: categoriesGridController, emptyTemplate: 'empty-categories-template'"></virtual-grid>
             </div>
         </div>
         <div class="flex-grow slidein-style">
@@ -226,3 +226,7 @@
 
 <div class="tooltip json-preview js-summary-details-tooltip" style="opacity: 0">
 </div>
+
+<script type="text/html" id="empty-categories-template">
+    No matching category
+</script>

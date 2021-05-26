@@ -34,6 +34,8 @@ class databaseSettings extends viewModelBase {
     isAnyMatchingEntries: KnockoutComputed<boolean>;
     
     categoriesInfo = ko.observable<Array<categoryInfo>>();
+    filteredCategories = ko.observable<Array<categoryInfo>>();
+    
     allCategoryNames: KnockoutComputed<Array<string>>;
     selectedCategory = ko.observable<string>();
 
@@ -72,16 +74,32 @@ class databaseSettings extends viewModelBase {
         });
 
         this.selectedCategory.subscribe(() => this.computeEntriesToShow());
-        this.filterKeys.throttle(500).subscribe(() => this.computeEntriesToShow());
+        
+        this.filterKeys.throttle(500).subscribe(() => {
+            this.computeEntriesToShow();
+            
+            if (this.filterKeys() && this.filteredCategories() && this.filteredCategories().length) {
+                this.setCategory(this.filteredCategories()[0].name());
+            } else {
+                this.setCategory(this.allCategoryNames()[0]);
+            }
+        });
 
         this.isAnyMatchingEntries = ko.pureComputed(() => !!this.allEntries().filter(x => x.showEntry()).length);
     }
     
     private computeEntriesToShow() {
-        this.allEntries().forEach(entry => entry.showEntry(this.shouldShowEntry(entry)));
-        
+        this.allEntries().forEach(entry => {
+            entry.showEntry(this.shouldShowEntry(entry));
+            entry.entryMatchesFilter(this.isEntryMatchingFilter(entry));
+        });
+
         if (this.viewMode() === "summaryMode") {
             this.summaryGridController().reset(false);
+        }
+
+        if (this.viewMode() === "editMode") {
+            this.categoriesGridController().reset(false);
         }
     }
 
@@ -90,9 +108,13 @@ class databaseSettings extends viewModelBase {
         const categoryCondition =  (this.viewMode() === "editMode" && this.selectedCategory() === entry.data.Metadata.Category) ||
                                     this.viewMode() === "summaryMode";
 
-        const filterCondition = !this.filterKeys() || this.entryContainsFilterText(entry);
+        const filterCondition = this.isEntryMatchingFilter(entry);
 
         return categoryCondition && filterCondition;
+    }
+
+    private isEntryMatchingFilter(entry: models.settingsEntry) {
+        return !this.filterKeys() || this.entryContainsFilterText(entry);
     }
     
     private entryContainsFilterText(entry: models.settingsEntry) {
@@ -134,6 +156,7 @@ class databaseSettings extends viewModelBase {
     private initCategoryGrid() {
         const categoriesGrid = this.categoriesGridController();
         categoriesGrid.headerVisible(true);
+
         categoriesGrid.init(() => this.fetchCategoriesData(), () =>
             [
                 new hyperlinkColumn<categoryInfo>(categoriesGrid, x => this.getCategoryHtml(x), x => appUrl.forDatabaseSettings(this.activeDatabase()), "Category", "90%",
@@ -146,12 +169,28 @@ class databaseSettings extends viewModelBase {
     }
 
     private fetchCategoriesData(): JQueryPromise<pagedResult<categoryInfo>> {
+        this.filteredCategories(this.categoriesInfo().filter(category => {
+            return this.shouldShowCategory(category);
+        }));
+        
         return $.when<pagedResult<categoryInfo>>({
-            items: this.categoriesInfo(),
-            totalResultCount: this.categoriesInfo().length,
+            items: this.filteredCategories(),
+            totalResultCount: this.filteredCategories().length,
             resultEtag: null,
             additionalResultInfo: undefined
         })
+    }
+    
+    private shouldShowCategory(category: categoryInfo) {
+        const entriesInCategory = this.allEntries().filter(entry => entry.data.Metadata.Category === category.name());
+
+        for (let i = 0; i < entriesInCategory.length; i++) {
+            if (entriesInCategory[i].entryMatchesFilter()) {
+                return true; 
+            }
+        }
+        
+        return false;
     }
 
     private selectActionHandler(categoryToShow: categoryInfo, event: JQueryEventObject) {
@@ -163,7 +202,7 @@ class databaseSettings extends viewModelBase {
         this.selectedCategory(category);
         
         if (this.categoriesGridController()) {
-            const categoryToSet = this.categoriesInfo().find(x => x.name() === category)
+            const categoryToSet = this.filteredCategories().find(x => x.name() === category)
             this.categoriesGridController().setSelectedItems([categoryToSet]);
         }
     }
@@ -488,12 +527,13 @@ class databaseSettings extends viewModelBase {
             this.categoriesGridController().reset(false);
         }
         
-        this.setCategory(this.selectedCategory() || this.allCategoryNames()[0]);
         this.computeEntriesToShow();
+        
+        if (this.filteredCategories() && this.filteredCategories().length) {
+            this.setCategory(this.filteredCategories()[0].name());
+        }
        
         this.allEntries().forEach(entry => {
-            entry.showEntry(this.shouldShowEntry(entry));
-
             if (entry instanceof models.databaseEntry) {
                 entry.override.subscribe((override) => {
                     this.categoriesGridController().reset(false);
