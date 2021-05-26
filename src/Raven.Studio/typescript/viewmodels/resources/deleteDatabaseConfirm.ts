@@ -2,7 +2,6 @@ import confirmViewModelBase = require("viewmodels/confirmViewModelBase");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import dialog = require("plugins/dialog");
 
 class deleteDatabaseConfirm extends confirmViewModelBase<deleteDatabaseConfirmResult> {
     private isKeepingFiles = ko.observable<boolean>(true);
@@ -14,6 +13,11 @@ class deleteDatabaseConfirm extends confirmViewModelBase<deleteDatabaseConfirmRe
         this.encryptedCount = databasesToDelete.filter(x => x.isEncrypted()).length;
     }
 
+    goToManageDbGroup() {
+        router.navigate(appUrl.forManageDatabaseGroup(this.databasesToDelete[0]));
+        this.cancel();
+    }
+    
     keepFiles() {
         this.isKeepingFiles(true);
         this.confirm();
@@ -24,9 +28,9 @@ class deleteDatabaseConfirm extends confirmViewModelBase<deleteDatabaseConfirmRe
         this.confirm();
     }
 
-    exportDatabase() {      
-        dialog.close(this);
+    exportDatabase() {
         router.navigate(appUrl.forExportDatabase(this.databasesToDelete[0]));
+        this.cancel();
     }
 
     protected getConfirmButton(): HTMLElement {
@@ -39,7 +43,6 @@ class deleteDatabaseConfirm extends confirmViewModelBase<deleteDatabaseConfirmRe
             keepFiles: this.isKeepingFiles()
         };
     }
-
 }
 
 export = deleteDatabaseConfirm;
