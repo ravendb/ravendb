@@ -48,8 +48,10 @@ using Xunit.Abstractions;
 
 namespace FastTests
 {
-    public abstract class RavenTestBase : TestBase
+    public abstract partial class RavenTestBase : TestBase
     {
+        public static BackupTestBase Backup => BackupTestBase.Instance.Value;
+
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
 
         protected RavenTestBase(ITestOutputHelper output) : base(output)
@@ -66,7 +68,7 @@ namespace FastTests
             store.Maintenance.Send(new CreateSampleDataOperation(operateOnTypes));
         }
 
-        protected async Task CreateLegacyNorthwindDatabase(DocumentStore store)
+        protected static async Task CreateLegacyNorthwindDatabase(DocumentStore store)
         {
             using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Tests.Infrastructure.Data.Northwind.4.2.ravendbdump"))
             {
@@ -139,7 +141,7 @@ namespace FastTests
             await Server.ServerStore.Cluster.WaitForIndexNotification(updateIndex, TimeSpan.FromSeconds(10));
         }
 
-        protected long LastRaftIndexForCommand(RavenServer server, string commandType)
+        protected static long LastRaftIndexForCommand(RavenServer server, string commandType)
         {
             var updateIndex = 0L;
             var commandFound = false;
@@ -161,7 +163,7 @@ namespace FastTests
             return updateIndex;
         }
 
-        protected IEnumerable<DynamicJsonValue> GetRaftCommands(RavenServer server, string commandType = null)
+        protected static IEnumerable<DynamicJsonValue> GetRaftCommands(RavenServer server, string commandType = null)
         {
             using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -180,7 +182,7 @@ namespace FastTests
             await WaitForRaftIndexToBeAppliedOnClusterNodes(index, Servers, timeout);
         }
 
-        protected async Task WaitForRaftIndexToBeAppliedOnClusterNodes(long index, List<RavenServer> nodes, TimeSpan? timeout = null)
+        protected static async Task WaitForRaftIndexToBeAppliedOnClusterNodes(long index, List<RavenServer> nodes, TimeSpan? timeout = null)
         {
             if (nodes.Count == 0)
                 throw new InvalidOperationException("Cannot wait for raft index to be applied when the cluster is empty. Make sure you are using the right server.");
@@ -199,7 +201,7 @@ namespace FastTests
             ThrowTimeoutException(nodes, tasks, index, timeout.Value);
         }
 
-        private void ThrowTimeoutException(List<RavenServer> nodes, List<Task> tasks, long index, TimeSpan timeout)
+        private static void ThrowTimeoutException(List<RavenServer> nodes, List<Task> tasks, long index, TimeSpan timeout)
         {
             var message = $"Timed out after {timeout} waiting for index {index} because out of {nodes.Count} servers" +
                           " we got confirmations that it was applied only on the following servers: ";
@@ -424,7 +426,7 @@ namespace FastTests
                 if (options.AdminCertificate != null)
                 {
                     using (var adminStore =
-                        new DocumentStore {Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate}.Initialize())
+                        new DocumentStore { Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate }.Initialize())
                     {
                         return adminStore.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
                     }
@@ -687,7 +689,7 @@ namespace FastTests
             return entriesCount;
         }
 
-        protected async Task<T> AssertWaitForGreaterThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable
+        protected static async Task<T> AssertWaitForGreaterThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable
         {
             var ret = await WaitForGreaterThanAsync(act, val, timeout, interval);
             if (ret.CompareTo(val) > 0 == false)
@@ -695,25 +697,25 @@ namespace FastTests
             return ret;
         }
 
-        protected async Task<T> WaitForGreaterThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable =>
+        protected static async Task<T> WaitForGreaterThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable =>
             await WaitForPredicateAsync(a => a.CompareTo(val) > 0, act, timeout, interval);
 
-        protected async Task AssertWaitForTrueAsync(Func<Task<bool>> act, int timeout = 15000, int interval = 100)
+        protected static async Task AssertWaitForTrueAsync(Func<Task<bool>> act, int timeout = 15000, int interval = 100)
         {
             Assert.True(await WaitForValueAsync(act, true, timeout, interval));
         }
 
-        protected async Task<T> AssertWaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
+        protected static async Task<T> AssertWaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
         {
             var ret = await WaitForValueAsync(act, expectedVal, timeout, interval);
             Assert.Equal(expectedVal, ret);
             return ret;
         }
 
-        protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) =>
+        protected static async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) =>
              await WaitForPredicateAsync(a => (a == null && expectedVal == null) || (a != null && a.Equals(expectedVal)), act, timeout, interval);
 
-        protected async Task AssertWaitForExceptionAsync<T>(Func<Task> act, int timeout = 15000, int interval = 100)
+        protected static async Task AssertWaitForExceptionAsync<T>(Func<Task> act, int timeout = 15000, int interval = 100)
             where T : class
         {
             await WaitAndAssertForValueAsync(async () =>
@@ -721,54 +723,54 @@ namespace FastTests
                     t.Exception?.InnerException?.GetType()), typeof(T), timeout, interval);
         }
 
-        protected async Task<T> AssertWaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class
+        protected static async Task<T> AssertWaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class
         {
             var ret = await WaitForNotNullAsync(act, timeout, interval);
             Assert.NotNull(ret);
             return ret;
         }
 
-        protected async Task<T> AssertWaitForNotDefaultAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100)
+        protected static async Task<T> AssertWaitForNotDefaultAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100)
         {
             var ret = await WaitForNotDefaultAsync(act, timeout, interval);
             Assert.NotEqual(ret, default);
             return ret;
         }
 
-        protected async Task AssertWaitForNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class
+        protected static async Task AssertWaitForNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class
         {
             var result = await WaitForNullAsync(act, timeout, interval);
             Assert.Null(result);
         }
 
-        protected async Task WaitAndAssertForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
+        protected static async Task WaitAndAssertForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
         {
             var val = await WaitForPredicateAsync(t => t.Equals(expectedVal), act, timeout, interval);
             Assert.Equal(expectedVal, val);
         }
 
-        protected async Task<T> AssertWaitFoGreaterAsync<T>(Func<T> act, T value, int timeout = 15000, int interval = 100) where T : IComparable
+        protected static async Task<T> AssertWaitFoGreaterAsync<T>(Func<T> act, T value, int timeout = 15000, int interval = 100) where T : IComparable
         {
             return await AssertWaitFoGreaterAsync(() => Task.FromResult(act()), value, timeout, interval);
         }
 
-        protected async Task<T> AssertWaitFoGreaterAsync<T>(Func<Task<T>> act, T value, int timeout = 15000, int interval = 100) where T : IComparable
+        protected static async Task<T> AssertWaitFoGreaterAsync<T>(Func<Task<T>> act, T value, int timeout = 15000, int interval = 100) where T : IComparable
         {
             var ret = await WaitForPredicateAsync(r => r.CompareTo(value) > 0, act, timeout, interval);
             Assert.NotNull(ret);
             return ret;
         }
 
-        protected async Task<T> WaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class =>
+        protected static async Task<T> WaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class =>
             await WaitForPredicateAsync(a => a != null, act, timeout, interval);
 
-        protected async Task<T> WaitForNotDefaultAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) =>
+        protected static async Task<T> WaitForNotDefaultAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) =>
             await WaitForPredicateAsync(a => !EqualityComparer<T>.Default.Equals(a, default), act, timeout, interval);
 
-        protected async Task<T> WaitForNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class =>
+        protected static async Task<T> WaitForNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class =>
             await WaitForPredicateAsync(a => a == null, act, timeout, interval);
 
-        protected async Task<T> WaitAndAssertForGreaterThanAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) where T : IComparable
+        protected static async Task<T> WaitAndAssertForGreaterThanAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) where T : IComparable
         {
             var actualValue = await WaitForGreaterThanAsync(act, expectedVal, timeout, interval);
             Assert.True(actualValue.CompareTo(expectedVal) > 0);
@@ -1023,27 +1025,7 @@ namespace FastTests
             return clientCertificate;
         }
 
-        protected IDisposable RestoreDatabase(IDocumentStore store, RestoreBackupConfiguration config, TimeSpan? timeout = null)
-        {
-            var restoreOperation = new RestoreBackupOperation(config);
-
-            var operation = store.Maintenance.Server.Send(restoreOperation);
-            operation.WaitForCompletion(timeout ?? TimeSpan.FromSeconds(30));
-
-            return EnsureDatabaseDeletion(config.DatabaseName, store);
-        }
-
-        protected IDisposable RestoreDatabaseFromCloud(IDocumentStore store, RestoreBackupConfigurationBase config, TimeSpan? timeout = null)
-        {
-            var restoreOperation = new RestoreBackupOperation(config);
-
-            var operation = store.Maintenance.Server.Send(restoreOperation);
-            operation.WaitForCompletion(timeout ?? TimeSpan.FromSeconds(30));
-
-            return EnsureDatabaseDeletion(config.DatabaseName, store);
-        }
-
-        protected IDisposable EnsureDatabaseDeletion(string databaseToDelete, IDocumentStore store)
+        protected static IDisposable EnsureDatabaseDeletion(string databaseToDelete, IDocumentStore store)
         {
             return new DisposableAction(() =>
             {
@@ -1338,7 +1320,7 @@ namespace FastTests
             Assert.True(false, $"We still have pending rollups left.");
         }
 
-        protected void CreateSimpleData(IDocumentStore store)
+        protected static void CreateSimpleData(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             {
@@ -1358,7 +1340,7 @@ namespace FastTests
             }
         }
 
-        protected void CreateDogDataWithCycle(IDocumentStore store)
+        protected static void CreateDogDataWithCycle(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             {
@@ -1378,7 +1360,7 @@ namespace FastTests
             }
         }
 
-        protected void CreateDogDataWithoutEdges(IDocumentStore store)
+        protected static void CreateDogDataWithoutEdges(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             {
@@ -1394,7 +1376,7 @@ namespace FastTests
             }
         }
 
-        protected void CreateDataWithMultipleEdgesOfTheSameType(IDocumentStore store)
+        protected static void CreateDataWithMultipleEdgesOfTheSameType(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             {
@@ -1422,7 +1404,7 @@ namespace FastTests
             }
         }
 
-        protected void CreateMoviesData(IDocumentStore store)
+        protected static void CreateMoviesData(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             {
@@ -1540,7 +1522,7 @@ namespace FastTests
             }
         }
 
-        protected void SaveChangesWithTryCatch<T>(IDocumentSession session, T loaded) where T : class
+        protected static void SaveChangesWithTryCatch<T>(IDocumentSession session, T loaded) where T : class
         {
             //This try catch is only to investigate RavenDB-15366 issue
             try
@@ -1563,7 +1545,7 @@ namespace FastTests
             }
         }
 
-        protected async Task SaveChangesWithTryCatchAsync<T>(IAsyncDocumentSession session, T loaded) where T : class
+        protected static async Task SaveChangesWithTryCatchAsync<T>(IAsyncDocumentSession session, T loaded) where T : class
         {
             //This try catch is only to investigate RavenDB-15366 issue
             try

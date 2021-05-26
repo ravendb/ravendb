@@ -19,24 +19,13 @@ namespace FastTests.Client
         {
         }
 
-        [LicenseRequiredFact]
+        [LicenseRequiredFact, Trait("Category", "Smuggler")]
         public void GetBackupTaskInfo()
         {
-            var backupConfig = new PeriodicBackupConfiguration
+            var backupConfig = Backup.CreateBackupConfiguration(backupPath: NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", azureSettings: new AzureSettings
             {
-                Name = "backup1",
-                LocalSettings = new LocalSettings
-                {
-                    FolderPath = NewDataPath(suffix: "BackupFolder")
-                },
-                AzureSettings = new AzureSettings
-                {
-                    StorageContainer = "abc"
-                },
-                FullBackupFrequency = "* */1 * * *",
-                IncrementalBackupFrequency = "* */2 * * *",
-                Disabled = true
-            };
+                StorageContainer = "abc"
+            }, disabled: true, name: "backup1");
 
             using (var store = GetDocumentStore())
             {

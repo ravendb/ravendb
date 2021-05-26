@@ -613,7 +613,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
                 var backupDirectory = $"{backupPath}/{store.Database}";
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupDirectory).First(),
                     DatabaseName = databaseName,

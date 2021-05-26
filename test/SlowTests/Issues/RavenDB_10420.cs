@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task ShouldWork()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -52,24 +52,8 @@ namespace SlowTests.Issues
 
                 var beforeBackupStats = store.Maintenance.Send(new GetStatisticsOperation());
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
-                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                await WaitForValueAsync(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, true);
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();
@@ -78,7 +62,7 @@ namespace SlowTests.Issues
                 var filesInBackupFolder = Directory.GetFiles(backupLocation);
                 Assert.True(filesInBackupFolder.Where(RestorePointsBase.IsBackupOrSnapshot).Any(), 
                     $"The backup folder \"{backupLocation}\" contains no backup or snapshot files.\n{string.Join(", ","filesInBackupFolder")}");
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = backupLocation,
                     DatabaseName = restoredDatabaseName
