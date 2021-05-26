@@ -86,7 +86,7 @@
                 <div class="dropdown">
                     <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
                             aria-expanded="true">
-                        <i class="icon-settings"></i><span>Server certificate</span>
+                        <i class="icon-settings"></i><span>Server certificates</span>
                         <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu">
@@ -211,7 +211,7 @@
                                 <h3 data-bind="visible: mode() === 'generate'">Generate client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'upload'">Upload client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'editExisting'">Edit permissions</h3>
-                                <h3 data-bind="visible: mode() === 'replace'">Replace server certificates</h3>
+                                <h3 data-bind="visible: mode() === 'replace'">Replace server certificates (cluster-wide)</h3>
                             </div>
                             <div class="flex-start">
                                 <button data-bind="click: $root.onCloseEdit" class="close"><i class="icon-cancel"></i></button>
@@ -219,7 +219,7 @@
                         </div>
                         <div class="bg-info padding padding-sm margin-bottom" data-bind="visible: mode() === 'replace'">
                             <small>
-                                Replace the server certificates without shutting down the servers.
+                                Replace all server certificates in the cluster without shutting down the servers.
                                 The update will happen when all nodes of the cluster confirm the replacement or when
                                 there are 3 days left for expiration.
                                 <Br />
