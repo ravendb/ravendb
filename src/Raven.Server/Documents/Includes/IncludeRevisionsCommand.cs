@@ -42,15 +42,23 @@ namespace Raven.Server.Documents.Includes
                     throw new InvalidOperationException($"Cannot include revisions for related document '{document.Id}', " +
                                                         $"document {document.Id} doesn't have a field named '{fieldName}'. ");
                 }
-                if(singleOrMultipleCv is BlittableJsonReaderArray arr)
+
+                var changeVector = string.Empty;
+                if(singleOrMultipleCv is BlittableJsonReaderArray blittableJsonReaderArray)
                 {
-                    
-                    foreach (object cv in arr)
+                    foreach (object cvObj in blittableJsonReaderArray)
                     {
-                        var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:cv.ToString());
-                        Results.Add(cv.ToString(),getRevisionsByCv);
+                        changeVector = Convert.ToString(cvObj);
+                        var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
+                        Results.Add(changeVector,getRevisionsByCv);
                     }
                 }
+                else if (singleOrMultipleCv is LazyStringValue lazyStringValue)
+                {
+                    var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:lazyStringValue);
+                    Results.Add(lazyStringValue,getRevisionsByCv);
+                }
+                
 
             }
         }

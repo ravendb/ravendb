@@ -59,7 +59,7 @@ namespace SlowTests.Tests.Linq
                 }
             }
         }
-        
+
         [Fact]
         public void  CanQueryAndIncludeRevisionsArrayInsideProperty()
         {
@@ -134,25 +134,6 @@ namespace SlowTests.Tests.Linq
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
                 
-                using (var session = store.OpenSession())
-                {
-                    var query =  session.Advanced
-                        .RawQuery<User>("from Users as u include revisions($p0, $p1, $p2)")
-                        .AddParameter("p0","u.FirstRevision")
-                        .AddParameter("p1","u.SecondRevision")
-                        .AddParameter("p2","u.ThirdRevision")
-                        .ToList();
-                    
-                    var revision1 =  session.Advanced.Revisions.Get<User>(cvList[0]);
-                    var revision2 =  session.Advanced.Revisions.Get<User>(cvList[1]);
-                    var revision3 =  session.Advanced.Revisions.Get<User>(cvList[2]);
-                
-                    Assert.NotNull(revision1);
-                    Assert.NotNull(revision2);
-                    Assert.NotNull(revision3);
-                    
-                    Assert.Equal(1, session.Advanced.NumberOfRequests);
-                }
             }
         }
         
@@ -213,40 +194,6 @@ namespace SlowTests.Tests.Linq
                     session.SaveChanges();
                     
                 }
-                using (var session = store.OpenSession())
-                {
-                    var query =  session.Advanced
-                        .RawQuery<User>("from Users as u include revisions(u.Revisions)")
-                        .ToList();
-                     
-                    var revision1 =  session.Advanced.Revisions.Get<User>(cvList[0]);
-                    var revision2 =  session.Advanced.Revisions.Get<User>(cvList[1]);
-                    var revision3 =  session.Advanced.Revisions.Get<User>(cvList[2]);
-                
-                    Assert.NotNull(revision1);
-                    Assert.NotNull(revision2);
-                    Assert.NotNull(revision3);
-                    
-                    Assert.Equal(1, session.Advanced.NumberOfRequests);
-                }
-                
-                using (var session = store.OpenSession())
-                {
-                     var query =  session.Advanced
-                        .RawQuery<User>("from Users as u include revisions(u.Revisions)")
-                        .ToList();
-                     
-                     var revision1 =  session.Advanced.Revisions.Get<User>(cvList[0]);
-                     var revision2 =  session.Advanced.Revisions.Get<User>(cvList[1]);
-                     var revision3 =  session.Advanced.Revisions.Get<User>(cvList[2]);
-                
-                     Assert.NotNull(revision1);
-                     Assert.NotNull(revision2);
-                     Assert.NotNull(revision3);
-                    
-                    Assert.Equal(1, session.Advanced.NumberOfRequests);
-                }
-                
                 using (var session = store.OpenSession())
                 {
                     var query =  session.Advanced
