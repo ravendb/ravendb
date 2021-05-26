@@ -1,12 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using FastTests.Utils;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Impl.Paging;
@@ -65,7 +68,8 @@ namespace FastTests.Sparrow
         public unsafe void WriteSeekAndReadInTempCryptoStream(int seed)
         {
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
-            using (var stream = new TempCryptoStream(Path.Combine(DataDir, "EncryptedTempFile")))
+            using (var file = SafeFileStream.Create(Path.Combine(DataDir, "EncryptedTempFile"), FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose))
+            using (var stream = new TempCryptoStream(file))
             {
                 var r = new Random(seed);
 
@@ -106,6 +110,85 @@ namespace FastTests.Sparrow
         }
 
         [Fact]
+        public unsafe void StreamsTempFile_With_Encryption_ShouldNotThrow_When_NotAllStreamsWereRead()
+        {
+            using (var options = StorageEnvironmentOptions.ForPath(DataDir))
+            {
+                options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+                using (var environment = new StorageEnvironment(options))
+                {
+                    using (var temp = new StreamsTempFile(Path.Combine(DataDir, "EncryptedTempFile"), environment))
+                    {
+                        for (int j = 0; j < 10; j++)
+                        {
+                            using (temp.Scope())
+                            {
+                                var streams = new List<Stream>();
+                                for (var i = 0; i < 10; i++)
+                                {
+                                    var stream = temp.StartNewStream();
+                                    var bytes = new byte[1024];
+                                    fixed (byte* b = bytes)
+                                    {
+                                        Memory.Set(b, (byte)i, bytes.Length);
+                                    }
+
+                                    stream.Write(bytes, 0, bytes.Length);
+                                    stream.Flush();
+                                    streams.Add(stream);
+                                }
+
+                                streams[0].Seek(0, SeekOrigin.Begin);
+                            }
+
+                            Assert.Equal(0, temp._file.Position);
+                            Assert.Equal(0, temp._file.Length);
+                            Assert.True(temp._file.InnerStream.Length > 0);
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public unsafe void StreamsTempFile_With_Encryption_ShouldThrow_When_SeekAndWrite_AreMixed_Without_ExecutingReset()
+        {
+            using (var options = StorageEnvironmentOptions.ForPath(DataDir))
+            {
+                options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+                using (var environment = new StorageEnvironment(options))
+                {
+                    using (var temp = new StreamsTempFile(Path.Combine(DataDir, "EncryptedTempFile"), environment))
+                    {
+                        var bytes = new byte[1024];
+                        fixed (byte* b = bytes)
+                        {
+                            Memory.Set(b, (byte)'I', bytes.Length);
+                        }
+
+                        Stream stream;
+                        using (temp.Scope())
+                        {
+                            stream = temp.StartNewStream();
+                            
+                            stream.Write(bytes, 0, bytes.Length);
+                            stream.Flush();
+
+                            stream.Seek(0, SeekOrigin.Begin);
+
+                            var read = stream.Read(new Span<byte>(new byte[10]));
+                            Assert.Equal(10, read);
+
+                            Assert.Throws<NotSupportedException>(() => stream.Write(bytes, 0, bytes.Length));
+                        }
+
+                        Assert.Throws<NotSupportedException>(() => stream.Write(bytes, 0, bytes.Length));
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public unsafe void RavenDB_15975()
         {
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
@@ -131,6 +214,7 @@ namespace FastTests.Sparrow
 
                             Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', overflowSize);
                         }
+
 
                         using (var tx = new TempPagerTransaction())
                         {

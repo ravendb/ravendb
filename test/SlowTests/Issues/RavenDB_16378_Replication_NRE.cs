@@ -38,7 +38,7 @@ namespace SlowTests.Issues
             {
                 var restoredDatabaseName = GetDatabaseName();
 
-                using (RestoreDatabase(mainStore, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(mainStore, new RestoreBackupConfiguration
                 {
                     BackupLocation = backupPath,
                     DatabaseName = restoredDatabaseName

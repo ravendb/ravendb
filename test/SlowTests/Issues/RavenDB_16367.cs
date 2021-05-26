@@ -214,7 +214,7 @@ namespace SlowTests.Issues
                 store.Maintenance.Server.Send(new SetDatabasesLockOperation(databaseName1, DatabaseLockMode.Unlock));
                 store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName1, hardDelete: true));
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     DatabaseName = databaseName2,
                     BackupLocation = Path.Combine(backupPath, result.LocalBackup.BackupDirectory)
