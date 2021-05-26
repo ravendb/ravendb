@@ -1450,14 +1450,13 @@ namespace Sparrow.Json
         [Conditional("DEBUG")]
         public static void AssertNoModifications(BlittableJsonReaderObject data, string id, bool assertChildren, bool assertRemovals = true, bool assertProperties = true)
         {
-            data.AssertContextNotDisposed();
-
             if (assertRemovals == false && assertProperties == false)
                 throw new InvalidOperationException($"Both {nameof(assertRemovals)} and {nameof(assertProperties)} cannot be set to false.");
 
             if (data == null)
                 return;
 
+            data.AssertContextNotDisposed();
             data.NoCache = true;
 
             if (assertRemovals && data.Modifications?.Removals?.Count > 0 && data.Modifications.SourceIndex < data.Count)

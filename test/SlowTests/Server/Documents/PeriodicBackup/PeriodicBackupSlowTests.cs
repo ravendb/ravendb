@@ -514,7 +514,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupLocation = Directory.GetDirectories(backupPath).First();
 
                 using (ReadOnly(backupLocation))
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = backupLocation,
                     DatabaseName = databaseName
@@ -657,7 +657,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
                 var backupLocation = Directory.GetDirectories(backupPath).First();
                 using (ReadOnly(backupLocation))
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = backupLocation,
                     DatabaseName = restoredDatabaseName
@@ -740,7 +740,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName
@@ -839,7 +839,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName
@@ -943,7 +943,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // restore the database with a different name
                 string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = restoredDatabaseName
@@ -1093,7 +1093,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         private async Task RestoreAndCheckTimeSeriesConfiguration(IDocumentStore store, string backupPath, TimeSeriesConfiguration timeSeriesConfiguration)
         {
             string restoredDatabaseName = $"{store.Database}-restored";
-            using (RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = restoredDatabaseName }))
+            using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = restoredDatabaseName }))
             {
                 var db = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(restoredDatabaseName));
                 var actual = db.TimeSeries;
@@ -1181,7 +1181,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var emptyFolder = NewDataPath(suffix: "BackupFolderRestore123");
                 var validDbName = "日本語-שלום-cześć_Привет.123";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DataDirectory = emptyFolder,
@@ -1637,7 +1637,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var databaseName = GetDatabaseName() + "restore";
 
-                using (RestoreDatabase(
+                using (Backup.RestoreDatabase(
                     store,
                     new RestoreBackupConfiguration()
                     {
@@ -1717,7 +1717,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var databaseName = GetDatabaseName() + "restore";
 
-                using (RestoreDatabase(
+                using (Backup.RestoreDatabase(
                     store,
                     new RestoreBackupConfiguration()
                     {
@@ -1966,7 +1966,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName
@@ -2028,7 +2028,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName
@@ -2137,7 +2137,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupLocation = Directory.GetDirectories(backupPath).First();
 
                 using (ReadOnly(backupLocation))
-                using (RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = backupLocation, DatabaseName = databaseName }))
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = backupLocation, DatabaseName = databaseName }))
                 {
                     using (var session = store.OpenAsyncSession(databaseName))
                     {

@@ -151,7 +151,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task IncludeArtificialDocuments_Backup_ShouldWork()
         {
             using (var store = GetDocumentStore())
@@ -186,30 +186,13 @@ namespace SlowTests.Issues
 
                 var toFolderWithArtificial = Path.Combine(NewDataPath(), "BackupFolder");
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = toFolderWithArtificial
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
-                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                var getPeriodicBackupStatusOperation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                Assert.True(WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(getPeriodicBackupStatusOperation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, true));
+                var config = Backup.CreateBackupConfiguration(toFolderWithArtificial);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 toFolderWithArtificial = Directory.GetDirectories(toFolderWithArtificial).First();
                 var toDatabaseName = store.Database + "_restored";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = toFolderWithArtificial,
                     DatabaseName = toDatabaseName,

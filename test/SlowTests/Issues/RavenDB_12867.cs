@@ -59,29 +59,13 @@ namespace SlowTests.Issues
                 store.Subscriptions.Create<User>(x => x.Name == "Marcin");
                 store.Subscriptions.Create<User>();
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = store.Maintenance.Send(new UpdatePeriodicBackupOperation(config)).TaskId;
-                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                SpinWait.SpinUntil(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(15));
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = restoredDatabaseName

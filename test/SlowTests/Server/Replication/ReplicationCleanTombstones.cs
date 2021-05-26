@@ -85,21 +85,12 @@ namespace SlowTests.Server.Replication
             {
                 CreateDatabase = false,
                 Server = cluster.Leader,
-                ModifyDatabaseName = _ => database
+                ModifyDatabaseName = _ => database,
+                // Backup.RunBackupInClusterAsync uses node tag to wait for backup occurrence
+                ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = false
             }))
             {
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    Name = "incremental",
-                    IncrementalBackupFrequency = "0 0 1 1 *",
-                    FullBackupFrequency = "0 0 1 1 *",
-                    BackupType = BackupType.Backup
-                };
-
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 1 *");
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
                 using (var session = store.OpenSession())
@@ -121,8 +112,11 @@ namespace SlowTests.Server.Replication
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, store.Database, (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15)));
                 }
+
+                // wait for CV to merge after replication
+                Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes, database));
 
                 var total = 0L;
                 foreach (var server in cluster.Nodes)
@@ -138,30 +132,25 @@ namespace SlowTests.Server.Replication
 
                 Assert.Equal(3, total);
 
-                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, result.TaskId));
+                await Backup.RunBackupInClusterAsync(store, result.TaskId, isFullBackup: true);
+                await ActionWithLeader(async x => await WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
 
-                Assert.True(await WaitForValueAsync(() =>
+                var res = await WaitForValueAsync(async () =>
                 {
-                    var operation = new GetPeriodicBackupStatusOperation(result.TaskId);
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, true));
-
-                await WaitForRaftCommandToBeAppliedInCluster(cluster.Leader, nameof(UpdatePeriodicBackupStatusCommand));
-
-                total = 0L;
-                foreach (var server in cluster.Nodes)
-                {
-                    var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    await storage.TombstoneCleaner.ExecuteCleanup();
-                    using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
+                    var c = 0L;
+                    foreach (var server in cluster.Nodes)
                     {
-                        total += storage.DocumentsStorage.GetNumberOfTombstones(context);
+                        var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                        await storage.TombstoneCleaner.ExecuteCleanup();
+                        using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            c += storage.DocumentsStorage.GetNumberOfTombstones(context);
+                        }
                     }
-                }
-
-                Assert.Equal(0, total);
+                    return c;
+                }, 0, interval: 333);
+                Assert.Equal(0, res);
             }
         }
 
@@ -181,17 +170,7 @@ namespace SlowTests.Server.Replication
                 ModifyDatabaseName = _ => database
             }))
             {
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    Name = "full",
-                    FullBackupFrequency = "0 0 1 1 *",
-                    BackupType = BackupType.Backup
-                };
-
+                var config = Backup.CreateBackupConfiguration(backupPath);
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
                 using (var session = store.OpenSession())
@@ -213,22 +192,28 @@ namespace SlowTests.Server.Replication
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, store.Database, (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15)));
                 }
 
-                var total = 0L;
-                foreach (var server in cluster.Nodes)
+                // wait for CV to merge after replication
+                Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes, database));
+
+                var res = await WaitForValueAsync(async () =>
                 {
-                    var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    await storage.TombstoneCleaner.ExecuteCleanup();
-                    using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
+                    var c = 0L;
+                    foreach (var server in cluster.Nodes)
                     {
-                        total += storage.DocumentsStorage.GetNumberOfTombstones(context);
+                        var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                        await storage.TombstoneCleaner.ExecuteCleanup();
+                        using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            c += storage.DocumentsStorage.GetNumberOfTombstones(context);
+                        }
                     }
-                }
-
-                Assert.Equal(0, total);
+                    return c;
+                }, 0, interval: 333);
+                Assert.Equal(0, res);
             }
         }
 
@@ -269,8 +254,11 @@ namespace SlowTests.Server.Replication
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, store.Database, (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
+                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
                 }
+
+                // wait for CV to merge after replication
+                Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes, database));
 
                 var total = 0L;
                 foreach (var server in cluster.Nodes)
@@ -299,18 +287,23 @@ namespace SlowTests.Server.Replication
                     Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)externalSession, "marker2", (m) => m.Id == "marker2", TimeSpan.FromSeconds(15)));
                 }
 
-                await WaitForRaftCommandToBeAppliedInCluster(cluster.Leader, nameof(UpdateExternalReplicationStateCommand));
-
-                foreach (var server in cluster.Nodes)
+                await ActionWithLeader(async x => await WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdateExternalReplicationStateCommand)), cluster.Nodes);
+                var res = await WaitForValueAsync(async () =>
                 {
-                    var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    await storage.TombstoneCleaner.ExecuteCleanup();
-                    using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
+                    var c = 0L;
+                    foreach (var server in cluster.Nodes)
                     {
-                        Assert.True(storage.DocumentsStorage.GetNumberOfTombstones(context) == 0);
+                        var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                        await storage.TombstoneCleaner.ExecuteCleanup();
+                        using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            c += storage.DocumentsStorage.GetNumberOfTombstones(context);
+                        }
                     }
-                }
+                    return c;
+                }, 0, interval: 333);
+                Assert.Equal(0, res);
             }
         }
 
@@ -621,7 +614,7 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
                 await SetupReplicationAsync(store1, store2);
-                await EnsureReplicatingAsync(store1,store2);
+                await EnsureReplicatingAsync(store1, store2);
 
                 using (storage1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
@@ -784,27 +777,9 @@ namespace SlowTests.Server.Replication
                     session.Store(new Company { Name = "Karmel" }, "marker");
                     session.SaveChanges();
                 }
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    Name = "incremental",
-                    IncrementalBackupFrequency = "* * */6 * *",
-                    FullBackupFrequency = "* */6 * * *",
-                    BackupType = BackupType.Backup
-                };
 
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: false, result.TaskId));
-                Assert.Equal(1, await WaitForValueAsync(() =>
-                 {
-                     var operation = new GetPeriodicBackupStatusOperation(result.TaskId);
-                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                     return getPeriodicBackupResult.Status?.LastEtag;
-                 }, 1));
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenSession())
                 {
@@ -830,18 +805,11 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: false, result.TaskId));
-                Assert.Equal(5, await WaitForValueAsync(() =>
-                 {
-                     var operation = new GetPeriodicBackupStatusOperation(result.TaskId);
-                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                     Assert.Null(getPeriodicBackupResult.Status.Error);
-                     return getPeriodicBackupResult.Status?.LastEtag;
-                 }, 5));
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
 
                 var databaseName = GetDatabaseName();
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName
