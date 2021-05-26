@@ -31,6 +31,16 @@ namespace Raven.Server.Commercial
                    Keys.All(otherLicense.Keys.Contains);
         }
 
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Id != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Id) : 0) * 397) ^ 
+                       (Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Name) : 0) ^
+                       (Keys != null ? Keys.GetHashCode() : 0);
+            }
+        }
+
         public override string ToString()
         {
             return $"Id: {Id}, Name: {Name}, Keys: {string.Join(",", Keys)}";

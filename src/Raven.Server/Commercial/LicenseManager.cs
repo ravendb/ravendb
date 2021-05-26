@@ -529,39 +529,6 @@ namespace Raven.Server.Commercial
             }
         }
 
-        /*public async Task<License> GetUpdatedLicense(
-            License currentLicense,
-            Func<HttpResponseMessage, Task> onFailure = null,
-            Func<LeasedLicense, License> onSuccess = null)
-        {
-            var leaseLicenseInfo = GetLeaseLicenseInfo(currentLicense);
-            var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/lease",
-                    new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"))
-                .ConfigureAwait(false);
-
-            if (response.IsSuccessStatusCode == false)
-            {
-                if (onFailure != null)
-                {
-                    await onFailure(response).ConfigureAwait(false);
-                }
-
-                return null;
-            }
-
-            var leasedLicenseAsStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-            using (var context = JsonOperationContext.ShortTermSingleUse())
-            {
-                var json = context.Read(leasedLicenseAsStream, "leased license info");
-                var leasedLicense = JsonDeserializationServer.LeasedLicense(json);
-
-                if (onSuccess == null)
-                    return leasedLicense.License;
-
-                return onSuccess.Invoke(leasedLicense);
-            }
-        }*/
-
         private LeaseLicenseInfo GetLeaseLicenseInfo(License license)
         {
             return new LeaseLicenseInfo
@@ -658,8 +625,11 @@ namespace Raven.Server.Commercial
             // - the same license id (can cause issues when updating the let's encrypt certificate)
             // - higher expiration date
 
-            if (license == null || license.Id != currentLicense.Id)
+            if (license == null)
                 return null;
+
+            if (license.Id != currentLicense.Id)
+                throw new InvalidOperationException("Updating a license from string or path by using a different license id isn't supported");
 
             var licenseStatus = GetLicenseStatus(license);
             ThrowIfCannotActivateLicense(licenseStatus);
