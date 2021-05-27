@@ -33,8 +33,8 @@ class databaseSettings extends viewModelBase {
     allEntries = ko.observableArray<models.settingsEntry>([]);
     isAnyMatchingEntries: KnockoutComputed<boolean>;
     
-    categoriesInfo = ko.observable<Array<categoryInfo>>();
-    filteredCategories = ko.observable<Array<categoryInfo>>();
+    categoriesInfo = ko.observable<Array<categoryInfo>>([]);
+    filteredCategories = ko.observable<Array<categoryInfo>>([]);
     
     allCategoryNames: KnockoutComputed<Array<string>>;
     selectedCategory = ko.observable<string>();
@@ -78,10 +78,8 @@ class databaseSettings extends viewModelBase {
         this.filterKeys.throttle(500).subscribe(() => {
             this.computeEntriesToShow();
             
-            if (this.filterKeys() && this.filteredCategories() && this.filteredCategories().length) {
+            if (this.filteredCategories().length) {
                 this.setCategory(this.filteredCategories()[0].name());
-            } else {
-                this.setCategory(this.allCategoryNames()[0]);
             }
         });
 
@@ -529,7 +527,7 @@ class databaseSettings extends viewModelBase {
         
         this.computeEntriesToShow();
         
-        if (this.filteredCategories() && this.filteredCategories().length) {
+        if (this.filteredCategories().length) {
             this.setCategory(this.filteredCategories()[0].name());
         }
        
