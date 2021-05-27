@@ -81,10 +81,19 @@ class editCustomAnalyzer extends viewModelBase {
             task.resolve();
         } else {
             viewHelpers.confirmationMessage("Index Reset Notice",
-                `<div class="bg-warning margin-bottom margin-bottom-sm padding padding-sm"> Modifying a custom analyzer doesn't trigger data re-indexing.<br />
-                If your change has any impact on the indexed data, you must reset any index that uses this analyzer manually.</div>
+                `<div class="bg-warning margin-bottom margin-bottom-sm padding padding-sm">
+                    <div class="flex-horizontal">
+                        <div class="flex-start">
+                            <i class="icon-warning"></i>
+                        </div>
+                        <div>
+                            Modifying a custom analyzer doesn't trigger data re-indexing.<br />
+                            If your change has any impact on the indexed data, you must reset all indexes that use this analyzer manually.
+                        </div> 
+                    </div>
+                </div>
                 
-                <div class="padding padding-sm text-info"><small><i class="icon-info"></i> Resetting indexes is done from the Index List View.</small></div>`, {
+                <div class="padding padding-sm"><small><i class="icon-info text-info"></i> Resetting indexes is done from the Index List View.</small></div>`, {
                     buttons: ["Cancel", "Save Analyzer"],
                     html: true
                 })
