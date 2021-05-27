@@ -24,7 +24,6 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.TimeSeries;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.TimeSeries;
@@ -1324,7 +1323,7 @@ namespace Raven.Server.Documents.Patch
 
                 object[] tsFunctionArgs = GetTimeSeriesFunctionArgs(name, args, out string docId, out var lazyIds);
 
-                var queryParams = ((Document)tsFunctionArgs[tsFunctionArgs.Length - 1]).Data;
+                var queryParams = ((Document)tsFunctionArgs[^1]).Data;
 
                 var retriever = new TimeSeriesRetriever(_docsCtx, queryParams, null);
 

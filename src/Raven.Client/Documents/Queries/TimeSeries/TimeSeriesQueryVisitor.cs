@@ -125,31 +125,40 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 case ConstantExpression constantExpression:
                     if (constantExpression.Value is Action<ITimePeriodBuilder> action)
                     {
-                        // document query
-                        timePeriod = GetTimePeriodFromAction(action, out with, out groupByTag, out var alias);
-                        LoadByTag(alias);
+                        timePeriod = GetGroupByArgsFromAction(action, out with, out groupByTag);
                         break;
                     }
                     timePeriod = constantExpression.Value.ToString();
                     break;
                 case LambdaExpression lambda:
                 {
-                    if (!(lambda.Body is MethodCallExpression methodCall))
+                    if (!(lambda.Body is MethodCallExpression methodCall) || lambda.Type != typeof(Action<ITimePeriodBuilder>))
                     {
                         ThrowInvalidMethodArgument(lambda, nameof(ITimeSeriesQueryable.GroupBy));
                         return;
                     }
-                    with = GroupByWith(ref methodCall);
-                    groupByTag = GroupByTag(ref methodCall);
-                    timePeriod = GetTimePeriodFromMethodCall(methodCall, nameof(ITimeSeriesQueryable.GroupBy));
+
+                    var typedLambda = Expression.Lambda<Action<ITimePeriodBuilder>>(methodCall, lambda.TailCall, lambda.Parameters);
+                    var compiledAction = typedLambda.Compile();
+                    timePeriod = GetGroupByArgsFromAction(compiledAction, out with, out groupByTag);
                     break;
                 }
                 default:
-                    timePeriod = TryGetValueFromArgument(expression, groupByArgument: true);
-                    break;
+                    if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression, out object value) == false)
+                        ThrowFailedToEvaluateArgument(expression, groupBy : true, new NotSupportedException("Unsupported node type: " + expression.NodeType));
+                    
+                    GroupBy(Expression.Constant(value));
+                    return;
             }
 
             _groupBy = $" group by '{timePeriod}' {groupByTag} {with}";
+        }
+
+        private string GetGroupByArgsFromAction(Action<ITimePeriodBuilder> action, out string with, out string groupByTag)
+        {
+            var timePeriod = GetTimePeriodFromAction(action, out with, out groupByTag, out var alias);
+            LoadByTag(alias);
+            return timePeriod;
         }
 
         private static string GetTimePeriodFromAction(Action<ITimePeriodBuilder> action, out string with, out string groupByTag, out string alias)
@@ -169,50 +178,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
 
             return timePeriod;
-        }
-
-        private string GroupByTag(ref MethodCallExpression groupByCall)
-        {
-            if (groupByCall.Method.DeclaringType != typeof(ITimeSeriesAggregationOperations))
-                return null;
-
-            if (!(groupByCall.Object is MethodCallExpression innerCall2))
-            {
-                ThrowInvalidMethodArgument(groupByCall, nameof(ITimeSeriesQueryable.GroupBy));
-                return null;
-            }
-
-            var method = groupByCall.Method;
-            var arguments = groupByCall.Arguments;
-            groupByCall = innerCall2;
-
-            string groupByTag;
-            switch (method.Name)
-            {
-                case nameof(ITimeSeriesAggregationOperations.ByTag):
-                    switch (arguments.Count)
-                    {
-                        case 0:
-                            groupByTag = ", tag";
-                            break;
-
-                        case 1:
-                            groupByTag = GroupByTagFromMethod(arguments[0], out var alias);
-                            LoadByTag(alias);
-
-                            break;
-
-                        default:
-                            throw new ArgumentOutOfRangeException(nameof(ITimeSeriesAggregationOperations.ByTag), "Invalid number of arguments");
-                    }
-
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(method.Name), "Unknown method name");
-            }
-
-            return groupByTag;
         }
 
         internal static string GroupByTagFromMethod(Expression argument, out string alias)
@@ -261,38 +226,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
 
             return groupByTag;
-        }
-
-        private static string GroupByWith(ref MethodCallExpression callExpression)
-        {
-            if (callExpression.Method.Name != nameof(ITimeSeriesAggregationOperations.WithOptions))
-                return null;
-
-            if (callExpression.Method.DeclaringType != typeof(ITimeSeriesAggregationOperations))
-            {
-                ThrowInvalidMethodArgument(callExpression, nameof(ITimeSeriesQueryable.GroupBy));
-                return null;
-            }
-
-            if (!(callExpression.Object is MethodCallExpression inner))
-            {
-                ThrowInvalidMethodArgument(callExpression, nameof(ITimeSeriesQueryable.GroupBy));
-                return null;
-            }
-
-            LinqPathProvider.GetValueFromExpressionWithoutConversion(callExpression.Arguments[0], out var value);
-            if (!(value is TimeSeriesAggregationOptions options))
-            {
-                ThrowInvalidMethodArgument(callExpression.Arguments[0], nameof(ITimeSeriesAggregationOperations.WithOptions));
-                return null;
-            }
-
-            callExpression = inner;
-
-            if (options.Interpolation == InterpolationType.None)
-                return null;
-
-            return $"with interpolation({options.Interpolation})";
         }
 
         private void WhereMethod(MethodCallExpression call)

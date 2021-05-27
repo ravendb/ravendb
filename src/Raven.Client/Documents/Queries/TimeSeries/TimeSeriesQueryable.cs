@@ -127,10 +127,10 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
     public interface ITimeSeriesAggregationOperations
     {
-        public void WithOptions(TimeSeriesAggregationOptions options);
+         void WithOptions(TimeSeriesAggregationOptions options);
 
-        public ITimeSeriesAggregationOperations ByTag();
+         ITimeSeriesAggregationOperations ByTag();
 
-        public ITimeSeriesAggregationOperations ByTag<TEntity>(Expression<Func<TEntity, object>> selector);
+         ITimeSeriesAggregationOperations ByTag<TEntity>(Expression<Func<TEntity, object>> selector);
     }
 }
