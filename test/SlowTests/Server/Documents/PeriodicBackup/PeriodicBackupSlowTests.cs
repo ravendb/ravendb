@@ -34,6 +34,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Json;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -63,14 +64,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "* * * * *");
                 var operation = new UpdatePeriodicBackupOperation(config);
                 var result = await store.Maintenance.SendAsync(operation);
                 var periodicBackupTaskId = result.TaskId;
@@ -121,24 +115,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -147,9 +125,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.Equal(lastEtag, value);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
             }
 
             using (var store = GetDocumentStore(new Options
@@ -191,25 +167,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -218,9 +177,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.Equal(lastEtag, value);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
             }
 
             using (var store = GetDocumentStore(new Options
@@ -253,24 +210,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -279,9 +220,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.Equal(lastEtag, value);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
             }
 
             using (var store = GetDocumentStore(new Options
@@ -312,24 +251,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                var backupStatus = await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -337,17 +260,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                Operation<StartBackupOperationResult> newBackupStatus;
-                do
-                {
-                    newBackupStatus = await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                }
-                //Race condition between reading the backup status and creating new backup
-                while (newBackupStatus.Id == backupStatus.Id);
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, 2);
-                Assert.Equal(2, value);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: 2);
             }
 
             using (var store = GetDocumentStore(new Options
@@ -377,24 +290,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -403,9 +300,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.Equal(lastEtag, value);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
             }
 
             using (var store1 = GetDocumentStore(new Options
@@ -460,36 +355,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 4);
-                Assert.Equal(4, value);
 
                 var backupStatus = store.Maintenance.Send(operation);
                 var backupOperationId = backupStatus.Status.LastOperationId;
 
-                OperationState backupOperation = null;
-                var status = WaitForValue(() =>
-                {
-                    backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupOperationId.Value));
-                    return backupOperation.Status;
-                }, OperationStatus.Completed);
-                Assert.Equal(OperationStatus.Completed, status);
+                var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupOperationId.Value));
+                Assert.Equal(OperationStatus.Completed, backupOperation.Status);
 
                 var backupResult = backupOperation.Result as BackupResult;
                 Assert.True(backupResult.Counters.Processed);
@@ -504,9 +378,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.Equal(lastEtag, value);
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -545,7 +417,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory]
+        [Theory, Trait("Category", "Smuggler")]
         [InlineData("* * * * *", null)]
         [InlineData(null, "* * * * *")]
         [InlineData("0 0 1 * *", null)]
@@ -555,16 +427,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    FullBackupFrequency = fullBackupFrequency,
-                    IncrementalBackupFrequency = incrementalBackupFrequency
-                };
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: fullBackupFrequency, incrementalBackupFrequency: incrementalBackupFrequency);
 
                 var backup = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
@@ -614,29 +477,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    SnapshotSettings = new SnapshotSettings
-                    {
-                        CompressionLevel = compressionLevel
-                    },
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 4);
-                Assert.Equal(4, value);
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+                config.SnapshotSettings = new SnapshotSettings {CompressionLevel = compressionLevel};
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -649,9 +492,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.Equal(lastEtag, value);
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
@@ -717,25 +558,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 2);
-                Assert.Equal(2, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -786,30 +610,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    FullBackupFrequency = "0 0 1 1 *" // at 00:00 on 1st January
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 6);
-                Assert.Equal(6, value);
 
                 var backupStatus = store.Maintenance.Send(operation);
                 var backupOperationId = backupStatus.Status.LastOperationId;
 
                 var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupOperationId.Value));
+                Assert.Equal(OperationStatus.Completed, backupOperation.Status);
 
                 var backupResult = backupOperation.Result as BackupResult;
                 Assert.True(backupResult.TimeSeries.Processed);
@@ -832,9 +641,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.Equal(lastEtag, value);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -905,25 +712,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 6);
-                Assert.Equal(6, value);
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -937,9 +727,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.Equal(lastEtag, value);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
@@ -1001,21 +789,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(timeSeriesConfiguration));
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings { FolderPath = backupPath },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                await WaitForValueAsync(async () =>
-                {
-                    var status = (await store.Maintenance.SendAsync(operation)).Status;
-                    return status != null;
-                }, true);
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 await RestoreAndCheckTimeSeriesConfiguration(store, backupPath, timeSeriesConfiguration);
             }
@@ -1034,27 +809,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings { FolderPath = backupPath },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                var op = await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                await op.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
-
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                long? statusLastEtag = null;
-                await WaitForValueAsync(async () =>
-                {
-                    var status = (await store.Maintenance.SendAsync(operation)).Status;
-                    if (status == null)
-                        return false;
-                    statusLastEtag = status.LastEtag;
-                    return statusLastEtag > 0;
-                }, true);
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                var statusLastEtag = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status.LastEtag;
 
                 var timeSeriesConfiguration = new TimeSeriesConfiguration
                 {
@@ -1069,22 +826,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(timeSeriesConfiguration));
-                op = await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await op.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
 
                 using (var session = store.OpenAsyncSession())
                 {
                     session.Advanced.Patch<User, string>(entity.Id, u => u.Name, "Patched");
                     await session.SaveChangesAsync();
                 }
-                op = await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await op.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
-
-                await WaitForValueAsync(async () =>
-                {
-                    var status = (await store.Maintenance.SendAsync(operation)).Status;
-                    return status != null && status.LastEtag > statusLastEtag;
-                }, true);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
+                Assert.True(status.LastEtag > statusLastEtag, "status.LastEtag > statusLastEtag");
 
                 await RestoreAndCheckTimeSeriesConfiguration(store, backupPath, timeSeriesConfiguration);
             }
@@ -1151,25 +901,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 restoreConfiguration.BackupLocation = backupPath;
                 restoreConfiguration.DataDirectory = backupPath;
@@ -1215,24 +948,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 8);
-                Assert.Equal(8, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 var exportPath = GetBackupPath(store, backupTaskId, incremental: false);
 
@@ -1271,9 +988,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.Equal(lastEtag, value);
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 exportPath = GetBackupPath(store, backupTaskId);
 
@@ -1329,24 +1044,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 6);
-                Assert.Equal(6, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 var exportPath = GetBackupPath(store, backupTaskId, incremental: false);
 
@@ -1391,9 +1090,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.Equal(lastEtag, value);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 exportPath = GetBackupPath(store, backupTaskId);
 
@@ -1433,7 +1130,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task BackupTaskShouldStayOnTheOriginalNode()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1453,25 +1150,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         TimeSpan.FromSeconds(15)));
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-                var operation = new UpdatePeriodicBackupOperation(config);
+                var operation = new UpdatePeriodicBackupOperation(Backup.CreateBackupConfiguration(backupPath));
                 var result = await store.Maintenance.SendAsync(operation);
                 var periodicBackupTaskId = result.TaskId;
 
                 await WaitForRaftIndexToBeAppliedInCluster(periodicBackupTaskId, TimeSpan.FromSeconds(15));
 
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, result.TaskId));
-
-                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
-                var done = SpinWait.SpinUntil(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, TimeSpan.FromSeconds(180));
-                Assert.True(done, "Failed to complete the backup in time");
+                await Backup.RunBackupInClusterAsync(store, result.TaskId, isFullBackup: true);
+                await ActionWithLeader(async x => await WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
 
                 var backupInfo = new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.Backup);
                 var backupInfoResult = await store.Maintenance.SendAsync(backupInfo);
@@ -1494,18 +1180,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(4, nodesCount);
 
                 backupInfoResult = await store.Maintenance.SendAsync(backupInfo);
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupInfoResult.TaskId));
 
-                getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
-                done = SpinWait.SpinUntil(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, TimeSpan.FromSeconds(180));
-                Assert.True(done, "Failed to complete the backup in time");
+                await Backup.RunBackupInClusterAsync(store, backupInfoResult.TaskId, isFullBackup: true);
+                await ActionWithLeader(async x => await WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
 
                 backupInfoResult = await store.Maintenance.SendAsync(backupInfo);
                 Assert.Equal(originalNode, backupInfoResult.ResponsibleNode.NodeTag);
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CreateFullBackupWithSeveralCompareExchange()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1523,20 +1207,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/pooclown", user2, 0));
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    Name = "full",
-                    FullBackupFrequency = "* */6 * * *",
-                    BackupType = BackupType.Backup
-                };
-
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
-                RunBackup(result.TaskId, documentDatabase, true, store);    // FULL BACKUP
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */6 * * *");
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -1577,7 +1249,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task incremental_and_full_check_last_file_for_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1589,23 +1261,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings { FolderPath = backupPath },
-                    IncrementalBackupFrequency = "0 0 1 1 *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                var opId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: true, backupTaskId);
-
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                long? lastEtag = 1;
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 1);
-                Assert.True(1 == value, BackupResultMessages());
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1613,10 +1270,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                opId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: false, backupTaskId);
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.True(lastEtag == value, BackupResultMessages());
+                var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 string backupFolder = Directory.GetDirectories(backupPath).OrderBy(Directory.GetCreationTime).Last();
                 var lastBackupToRestore = Directory.GetFiles(backupFolder).Where(BackupUtils.IsBackupFile)
@@ -1630,10 +1285,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                opId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: false, backupTaskId);
-
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.True(lastEtag == value, BackupResultMessages());
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 var databaseName = GetDatabaseName() + "restore";
 
@@ -1657,14 +1309,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Null(mediocreUser2);
                     }
                 }
-
-                string BackupResultMessages()
-                {
-                    var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(opId));
-                    var backupResult = backupOperation.Result as BackupResult;
-                    Assert.NotNull(backupResult);
-                    return $"Expected etag: {lastEtag}, backupResult:{Environment.NewLine}{string.Join(Environment.NewLine, backupResult.Messages)}";
-                }
             }
         }
 
@@ -1676,7 +1320,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             return op.Id;
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task can_run_incremental_with_no_changes()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1688,24 +1332,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings { FolderPath = backupPath },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LocalBackup.IncrementalBackupDurationInMs, 0);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
+                var value = status.LocalBackup.IncrementalBackupDurationInMs;
                 Assert.Equal(0, value);
 
                 string backupFolder = Directory.GetDirectories(backupPath).OrderBy(Directory.GetCreationTime).Last();
@@ -1736,7 +1367,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task can_create_local_snapshot_and_restore_using_restore_point()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1752,25 +1383,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     FolderPath = backupPath
                 };
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = localSettings,
-                    IncrementalBackupFrequency = "0 0 1 1 *"
-                };
 
-                var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
-                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                PeriodicBackupStatus status = null;
-                var value = WaitForValue(() =>
-                {
-                    status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 4);
-                Assert.True(4 == value, $"4 == value, Got status: {status != null}, exception: {status?.Error?.Exception}");
-                Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
-
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var client = store.GetRequestExecutor().HttpClient;
 
                 var data = new StringContent(JsonConvert.SerializeObject(localSettings), Encoding.UTF8, "application/json");
@@ -1813,7 +1428,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task SuccessfulFullBackupAfterAnErrorOneShouldClearTheErrorStatesFromBackupStatusAndLocalBackup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1829,31 +1444,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 1 *", backupEncryptionSettings: new BackupEncryptionSettings()
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 0 1 1 *",
-                    FullBackupFrequency = "0 0 1 1 *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings()
-                    {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
+                    EncryptionMode = EncryptionMode.UseDatabaseKey
+                });
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, opStatus: OperationStatus.Faulted);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                PeriodicBackupStatus status = null;
-                var value = WaitForValue(() =>
-                {
-                    status = store.Maintenance.Send(operation).Status;
-                    return status == null;
-                }, false);
-                Assert.False(value);
+                PeriodicBackupStatus status = store.Maintenance.Send(operation).Status;
                 Assert.NotNull(status.Error);
                 Assert.NotNull(status.LocalBackup);
                 Assert.NotNull(status.LocalBackup.Exception);
@@ -1885,14 +1482,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var id = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                 Assert.Equal(backupTaskId, id);
 
-                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
-                operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var etag = WaitForValue(() =>
-                {
-                    status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, etag);
+                status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: true, expectedEtag: 1);
 
                 Assert.Null(status.Error);
                 Assert.NotNull(status.LocalBackup);
@@ -1949,19 +1539,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                var result = await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                await result.WaitForCompletionAsync();
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -2002,28 +1581,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                var result = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
-                await result.WaitForCompletionAsync();
-
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                 using (var session = store.OpenAsyncSession())
                 {
                     session.TimeSeriesFor("users/1", "Heartrate").Delete();
                     await session.SaveChangesAsync();
                 }
 
-                result = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: false, backupTaskId));
-                await result.WaitForCompletionAsync();
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -2048,7 +1614,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory]
+        [Theory, Trait("Category", "Smuggler")]
         [InlineData(BackupType.Snapshot)]
         [InlineData(BackupType.Backup)]
         public async Task CanCreateOneTimeBackupAndRestore(BackupType backupType)
@@ -2148,17 +1714,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task PeriodicBackup_WhenEnabledAndDefinesNoDestinations_ShouldThrows()
         {
             using var store = GetDocumentStore();
 
-            var config = new PeriodicBackupConfiguration
-            {
-                BackupType = BackupType.Backup,
-                FullBackupFrequency = "* * * * *"
-            };
-
+            var config = Backup.CreateBackupConfiguration();
             var operation = new UpdatePeriodicBackupOperation(config);
 
             Assert.False(config.ValidateDestinations(out var message));
@@ -2166,7 +1727,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Assert.Contains(message, exception.Message);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task ManualBackup_WhenDefinesNoDestinations_ShouldThrowsOnServerAsWell()
         {
             using var store = GetDocumentStore();
@@ -2188,7 +1749,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task OneTimeBackupWithInvalidConfigurationShouldThrow()
         {
             using (var store = GetDocumentStore())
@@ -2209,7 +1770,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanGetOneTimeBackupStatusFromDatabasesInfo()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2245,7 +1806,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task IncrementalBackupWithNoChangesShouldSet_BackupStatus_IsFull_ToFalse()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2261,25 +1822,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 0 1 1 *",
-                    FullBackupFrequency = "0 0 1 1 *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                var result = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
-                await result.WaitForCompletionAsync();
-
-                result = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: false, backupTaskId));
-                await result.WaitForCompletionAsync();
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                PeriodicBackupStatus status = store.Maintenance.Send(operation).Status;
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 1 *");
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
 
                 Assert.False(status.IsFull);
                 Assert.NotNull(status.LocalBackup);
@@ -2292,7 +1837,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task can_move_database_with_backup()
         {
             DoNotReuseServer();
@@ -2302,7 +1847,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             await CreateDatabaseInCluster(databaseName, 2, cluster.Nodes[0].WebUrl);
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = new DocumentStore
+            using (DocumentStore store = new DocumentStore
             {
                 Urls = new[]
                 {
@@ -2310,8 +1855,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     cluster.Nodes[1].WebUrl
                 },
                 Database = databaseName
-            }.Initialize())
+            })
             {
+                store.Initialize();
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Grisha" }, "users/1");
@@ -2319,26 +1865,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                var responsibleNode = store.Maintenance.Send(operation).Status.NodeTag;
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "* * * * *");
+                var backupTaskId = await Backup.CreateAndRunBackupInClusterAsync(config, store);
+                var responsibleNode = await Backup.GetBackupResponsibleNode(cluster.Leader, backupTaskId, databaseName, keepTaskOnOriginalMemberNode: true);
 
                 store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: responsibleNode, timeToWaitForConfirmation: TimeSpan.FromSeconds(30)));
                 await WaitForDatabaseToBeDeleted(store, TimeSpan.FromSeconds(30));
@@ -2346,11 +1875,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var server = cluster.Nodes.FirstOrDefault(x => x.ServerStore.NodeTag == responsibleNode == false);
                 server.ServerStore.LicenseManager.LicenseStatus.Attributes["highlyAvailableTasks"] = false;
 
-                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
-                var backupStatus = database.PeriodicBackupRunner.GetBackupStatus(backupTaskId);
-                var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                config.TaskId = backupTaskId;
-                var newResponsibleNode = database.WhoseTaskIsIt(databaseRecord.Topology, config, backupStatus, keepTaskOnOriginalMemberNode: true);
+                var newResponsibleNode = await Backup.GetBackupResponsibleNode(server, backupTaskId, databaseName, keepTaskOnOriginalMemberNode: true);
 
                 Assert.Equal(server.ServerStore.NodeTag, newResponsibleNode);
                 Assert.NotEqual(responsibleNode, newResponsibleNode);
@@ -2382,7 +1907,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task Backup_WhenContainRevisionWithoutConfiguration_ShouldBackupRevisions()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2391,13 +1916,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var userForIncrementalBackup = new User();
             using (var src = GetDocumentStore())
             {
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings { FolderPath = backupPath },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-                var backupTaskId = (await src.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
                 using (var session = src.OpenAsyncSession())
                 {
                     await session.StoreAsync(userForFullBackup);
@@ -2407,14 +1925,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     session.Advanced.Revisions.ForceRevisionCreationFor(userForFullBackup.Id);
                     await session.SaveChangesAsync();
                 }
-                await BackupAndAssertWait(src, backupTaskId, true);
+
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "* * * * *");
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, src);
 
                 using (var session = src.OpenAsyncSession())
                 {
                     session.Advanced.Revisions.ForceRevisionCreationFor(userForIncrementalBackup.Id);
                     await session.SaveChangesAsync();
                 }
-                await BackupAndAssertWait(src, backupTaskId, false);
+                await Backup.RunBackupAsync(Server, backupTaskId, src, isFullBackup: false);
             }
 
             using (var dest = GetDocumentStore())
@@ -2436,7 +1956,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task Should_throw_on_document_with_changed_collection_when_no_tombstones_processed()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2449,10 +1969,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 1 1 *" };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                var fullBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: true, backupTaskId);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var fullBackupOpId = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status.LastOperationId;
+                Assert.NotNull(fullBackupOpId);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -2466,8 +1986,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var incBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: false, backupTaskId);
-                Assert.NotEqual(fullBackupOpId, incBackupOpId);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
+                Assert.NotNull(status.LastOperationId);
+                Assert.NotEqual(fullBackupOpId, status.LastOperationId);
 
                 // to have a different count of docs in databases
                 using (var session = store.OpenAsyncSession())
@@ -2517,7 +2038,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task Can_restore_backup_when_document_changed_collection_between_backups()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2530,10 +2051,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 1 1 *" };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                var fullBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: true, backupTaskId);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var fullBackupOpId = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status.LastOperationId;
+                Assert.NotNull(fullBackupOpId);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -2558,8 +2079,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var incBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: false, backupTaskId);
-                Assert.NotEqual(fullBackupOpId, incBackupOpId);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
+                Assert.NotNull(status.LastOperationId);
+                Assert.NotEqual(fullBackupOpId, status.LastOperationId);
 
                 // to have a different count of docs in databases
                 using (var session = store.OpenAsyncSession())
@@ -2605,7 +2127,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task Can_restore_snapshot_when_document_changed_collection_between_backups()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2618,18 +2140,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 0 1 1 *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                var fullBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: true, backupTaskId);
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var fullBackupOpId = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status.LastOperationId;
+                Assert.NotNull(fullBackupOpId);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -2654,8 +2168,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var incBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: false, backupTaskId);
-                Assert.NotEqual(fullBackupOpId, incBackupOpId);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
+                Assert.NotNull(status.LastOperationId);
+                Assert.NotEqual(fullBackupOpId, status.LastOperationId);
 
                 // to have a different count of docs in databases
                 using (var session = store.OpenAsyncSession())
@@ -2701,7 +2216,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task Can_restore_backup_when_document_with_attachment_changed_collection_between_backups()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2714,10 +2229,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 1 1 *" };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                var fullBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: true, backupTaskId);
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var fullBackupOpId = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status.LastOperationId;
+                Assert.NotNull(fullBackupOpId);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -2737,8 +2252,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal("test_attachment", result.Name);
                 }
 
-                var incBackupOpId = await RunBackupOperationAndAssertCompleted(store, isFullBackup: false, backupTaskId);
-                Assert.NotEqual(fullBackupOpId, incBackupOpId);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
+                Assert.NotNull(status.LastOperationId);
+                Assert.NotEqual(fullBackupOpId, status.LastOperationId);
 
                 // to have a different count of docs in databases
                 using (var session = store.OpenAsyncSession())
@@ -2785,28 +2301,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        private async Task BackupAndAssertWait(IDocumentStore store, long backupTaskId, bool isFullBackup)
-        {
-            await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, backupTaskId));
-            var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-            var databaseLastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDatabaseEtag;
-            var backupLastEtag = await WaitForValueAsync(async () => (await store.Maintenance.SendAsync(operation)).Status.LastEtag, databaseLastEtag);
-            Assert.Equal(databaseLastEtag, backupLastEtag);
-        }
-
-        internal static void RunBackup(long taskId, DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store, OperationStatus opStatus = OperationStatus.Completed)
-        {
-            var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-            var op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
-            var value = WaitForValue(() =>
-            {
-                var status = store.Maintenance.Send(new GetOperationStateOperation(op)).Status;
-                return status;
-            }, opStatus);
-
-            Assert.Equal(opStatus, value);
-        }
-
         private static string GetBackupPath(IDocumentStore store, long backTaskId, bool incremental = true)
         {
             var status = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backTaskId)).Status;
@@ -2850,152 +2344,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     File.SetAttributes(file, attributes);
                 }
             });
-        }
-
-        internal static string PrintBackupStatus(PeriodicBackupStatus status)
-        {
-            var sb = new StringBuilder();
-            if (status == null)
-                return $"{nameof(PeriodicBackupStatus)} is null";
-
-            var isFull = status.IsFull ? "a full" : "an incremental";
-            sb.AppendLine($"{nameof(PeriodicBackupStatus)} of backup task '{status.TaskId}', executed {isFull} '{status.BackupType}' on node '{status.NodeTag}' in '{status.DurationInMs}' ms.");
-            sb.AppendLine("Debug Info: ");
-            sb.AppendLine($"{nameof(PeriodicBackupStatus.LastDatabaseChangeVector)}: '{status.LastDatabaseChangeVector}'");
-            sb.AppendLine($"{nameof(PeriodicBackupStatus.LastEtag)}: {status.LastEtag}'");
-            sb.AppendLine($"{nameof(PeriodicBackupStatus.LastOperationId)}: '{status.LastOperationId}'");
-            sb.AppendLine($"{nameof(PeriodicBackupStatus.LastRaftIndex)}: '{status.LastRaftIndex}'");
-            sb.AppendLine($"{nameof(PeriodicBackupStatus.LastFullBackupInternal)}: '{status.LastFullBackupInternal}'");
-            sb.AppendLine($"{nameof(PeriodicBackupStatus.LastIncrementalBackupInternal)}: '{status.LastIncrementalBackupInternal}'");
-            sb.AppendLine($"{nameof(PeriodicBackupStatus.LastFullBackup)}: '{status.LastFullBackup}'");
-            sb.AppendLine($"{nameof(PeriodicBackupStatus.LastIncrementalBackup)}: '{status.LastIncrementalBackup}'");
-            sb.AppendLine();
-
-            if (status.Error == null && string.IsNullOrEmpty(status.LocalBackup?.Exception))
-            {
-                sb.AppendLine("There were no errors.");
-            }
-            else
-            {
-                sb.AppendLine("There were the following errors during backup task execution:");
-                if (status.Error != null)
-                {
-                    sb.AppendLine($"{nameof(PeriodicBackupStatus)}.{nameof(PeriodicBackupStatus.Error)}: ");
-                    sb.AppendLine(status.Error.Exception);
-                }
-
-                if (string.IsNullOrEmpty(status.LocalBackup?.Exception) == false)
-                {
-                    sb.AppendLine($"{nameof(PeriodicBackupStatus)}.{nameof(PeriodicBackupStatus.LocalBackup)}.{nameof(PeriodicBackupStatus.LocalBackup.Exception)}: ");
-                    sb.AppendLine(status.LocalBackup?.Exception);
-                }
-            }
-
-            sb.AppendLine();
-            sb.AppendLine("Backup upload status:");
-
-            if (status.UploadToAzure == null)
-            {
-                sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToAzure)} of backup task '{status.TaskId}' is null.");
-            }
-            else if (status.UploadToAzure.Skipped)
-            {
-                sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToAzure)} of backup task '{status.TaskId}' was skipped.");
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(status.UploadToAzure.Exception) == false)
-                {
-                    sb.AppendLine($"{nameof(PeriodicBackupStatus)}.{nameof(PeriodicBackupStatus.UploadToAzure)}.{nameof(PeriodicBackupStatus.UploadToAzure.Exception)}:");
-                    sb.AppendLine(status.UploadToAzure?.Exception);
-                }
-                else
-                {
-                    sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToAzure)} of backup task '{status.TaskId}', ran successfully in '{status.UploadToAzure.UploadProgress.UploadTimeInMs}' ms, size: '{status.UploadToAzure.UploadProgress.TotalInBytes}' bytes.");
-                }
-            }
-            if (status.UploadToFtp == null)
-            {
-                sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToFtp)} of backup task '{status.TaskId}' is null.");
-            }
-            else if (status.UploadToFtp.Skipped)
-            {
-                sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToFtp)} of backup task '{status.TaskId}' was skipped.");
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(status.UploadToFtp.Exception) == false)
-                {
-                    sb.AppendLine($"{nameof(PeriodicBackupStatus)}.{nameof(PeriodicBackupStatus.UploadToFtp)}.{nameof(PeriodicBackupStatus.UploadToFtp.Exception)}:");
-                    sb.AppendLine(status.UploadToFtp?.Exception);
-                }
-                else
-                {
-                    sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToFtp)} of backup task '{status.TaskId}', ran successfully in '{status.UploadToFtp.UploadProgress.UploadTimeInMs}' ms, size: '{status.UploadToFtp.UploadProgress.TotalInBytes}' bytes.");
-                }
-            }
-            if (status.UploadToGlacier == null)
-            {
-                sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToGlacier)} of backup task '{status.TaskId}' is null.");
-            }
-            else if (status.UploadToGlacier.Skipped)
-            {
-                sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToGlacier)} of backup task '{status.TaskId}' was skipped.");
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(status.UploadToGlacier.Exception) == false)
-                {
-                    sb.AppendLine($"{nameof(PeriodicBackupStatus)}.{nameof(PeriodicBackupStatus.UploadToGlacier)}.{nameof(PeriodicBackupStatus.UploadToGlacier.Exception)}:");
-                    sb.AppendLine(status.UploadToGlacier?.Exception);
-                }
-                else
-                {
-                    sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToGlacier)} of backup task '{status.TaskId}', ran successfully in '{status.UploadToGlacier.UploadProgress.UploadTimeInMs}' ms, size: '{status.UploadToGlacier.UploadProgress.TotalInBytes}' bytes.");
-                }
-            }
-            if (status.UploadToGoogleCloud == null)
-            {
-                sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToGoogleCloud)} of backup task '{status.TaskId}' is null.");
-            }
-            else if (status.UploadToGoogleCloud.Skipped)
-            {
-                sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToGoogleCloud)} of backup task '{status.TaskId}' was skipped.");
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(status.UploadToGoogleCloud.Exception) == false)
-                {
-                    sb.AppendLine($"{nameof(PeriodicBackupStatus)}.{nameof(PeriodicBackupStatus.UploadToGoogleCloud)}.{nameof(PeriodicBackupStatus.UploadToGoogleCloud.Exception)}:");
-                    sb.AppendLine(status.UploadToGoogleCloud?.Exception);
-                }
-                else
-                {
-                    sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToGoogleCloud)} of backup task '{status.TaskId}', ran successfully in '{status.UploadToGoogleCloud.UploadProgress.UploadTimeInMs}' ms, size: '{status.UploadToGoogleCloud.UploadProgress.TotalInBytes}' bytes.");
-                }
-            }
-            if (status.UploadToS3 == null)
-            {
-                sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToS3)} of backup task '{status.TaskId}' is null.");
-            }
-            else if (status.UploadToS3.Skipped)
-            {
-                sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToS3)} of backup task '{status.TaskId}' was skipped.");
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(status.UploadToS3.Exception) == false)
-                {
-                    sb.AppendLine($"{nameof(PeriodicBackupStatus)}.{nameof(PeriodicBackupStatus.UploadToS3)}.{nameof(PeriodicBackupStatus.UploadToS3.Exception)}:");
-                    sb.AppendLine(status.UploadToS3?.Exception);
-                }
-                else
-                {
-                    sb.AppendLine($"{nameof(PeriodicBackupStatus.UploadToS3)} of backup task '{status.TaskId}', ran successfully in '{status.UploadToS3.UploadProgress.UploadTimeInMs}' ms, size: '{status.UploadToS3.UploadProgress.TotalInBytes}' bytes.");
-                }
-            }
-
-            return sb.ToString();
         }
     }
 }

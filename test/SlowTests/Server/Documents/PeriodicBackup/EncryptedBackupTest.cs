@@ -766,8 +766,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     EncryptionMode = EncryptionMode.UseDatabaseKey
                 });
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store, opStatus:OperationStatus.Faulted);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 var value = WaitForValue(() =>
                 {
@@ -1080,9 +1079,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     EncryptionMode = EncryptionMode.UseProvidedKey
                 });
 
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store, opStatus: OperationStatus.Faulted);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 var value = WaitForValue(() =>
                 {
@@ -1115,8 +1112,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     EncryptionMode = EncryptionMode.UseProvidedKey
                 });
 
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store, opStatus: OperationStatus.Faulted);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 var value = WaitForValue(() =>
                 {
@@ -1148,8 +1144,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     EncryptionMode = EncryptionMode.UseDatabaseKey
                 });
 
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store, opStatus: OperationStatus.Faulted);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 var value = WaitForValue(() =>
                 {
