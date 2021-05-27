@@ -30,7 +30,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
         {
         }
 
-        private const string S3TestsPrefix = "olap/tests";
+        private readonly string _s3TestsPrefix = $"olap/tests/{nameof(S3Tests)}-{Guid.NewGuid()}";
         private const string CollectionName = "Orders";
         private static readonly HashSet<char> SpecialChars = new HashSet<char> { '&', '@', ':', ',', '$', '=', '+', '?', ';', ' ', '"', '^', '`', '>', '<', '{', '}', '[', ']', '#', '\'', '~', '|' };
 
@@ -1101,7 +1101,6 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-
                     using (var s3Client = new RavenAwsS3Client(settings1))
                     {
                         var prefix = $"{settings1.RemoteFolderName}/{CollectionName}";
@@ -1140,12 +1139,6 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     var putResult = store.Maintenance.Send(new PutConnectionStringOperation<OlapConnectionString>(connectionString));
                     Assert.NotNull(putResult.RaftCommandIndex);
 
-                    // re enable task
-
-                    configuration.Disabled = false;
-                    update = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
-                    Assert.NotNull(update.RaftCommandIndex);
-
                     // add more data
 
                     using (var session = store.OpenAsyncSession())
@@ -1168,6 +1161,12 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                         await session.SaveChangesAsync();
                     }
 
+                    // re enable task
+
+                    configuration.Disabled = false;
+                    update = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                    Assert.NotNull(update.RaftCommandIndex);
+
                     etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
                     Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
@@ -1185,7 +1184,6 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                         Assert.Contains("/year=2029", cloudObjects.FileInfoDetails[4].FullPath);
                     }
                 }
-
             }
             finally
             {
@@ -1297,13 +1295,13 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             });
         }
 
-        private static S3Settings GetS3Settings([CallerMemberName] string caller = null)
+        private S3Settings GetS3Settings([CallerMemberName] string caller = null)
         {
             var s3Settings = AmazonS3FactAttribute.S3Settings;
             if (s3Settings == null)
                 return null;
 
-            var remoteFolderName = S3TestsPrefix;
+            var remoteFolderName = _s3TestsPrefix;
             if (string.IsNullOrEmpty(caller) == false)
                 remoteFolderName = $"{remoteFolderName}/{caller}";
 
