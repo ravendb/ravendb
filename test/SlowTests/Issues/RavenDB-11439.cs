@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task can_continue_incremental_backup_with_same_folder()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -25,30 +25,14 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 3 */3 * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                var res = await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                await res.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
-
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 3 */3 * *");
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var getPeriodicBackupResult = store.Maintenance.Send(getPeriodicBackupStatus);
-                Assert.NotNull(getPeriodicBackupResult.Status);
-                Assert.True(getPeriodicBackupResult.Status.LastEtag > 0);
                 var oldFolderName = store.Maintenance.Send(getPeriodicBackupStatus).Status.FolderName;
                 Assert.NotNull(oldFolderName);
 
-                res = await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await res.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
-
-                var newfolderName = store.Maintenance.Send(getPeriodicBackupStatus).Status.FolderName;
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
+                var newfolderName = status.FolderName;
                 Assert.NotNull(newfolderName);
                 Assert.Equal(oldFolderName, newfolderName);
             }

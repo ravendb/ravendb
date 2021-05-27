@@ -28,7 +28,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         [Fact, Trait("Category", "Smuggler")]
         public void restore_azure_cloud_settings_tests()
         {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = s => $"{s}_2"
@@ -69,10 +68,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AzureFact]
+        [AzureFact, Trait("Category", "Smuggler")]
         public void can_backup_and_restore() => can_backup_and_restore_internal(oneTimeBackup: false);
 
-        [AzureFact]
+        [AzureFact, Trait("Category", "Smuggler")]
         public void can_onetime_backup_and_restore() => can_backup_and_restore_internal(oneTimeBackup: true);
 
         private void can_backup_and_restore_internal(bool oneTimeBackup)
@@ -94,28 +93,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     BackupResult backupResult = null;
                     if (oneTimeBackup == false)
                     {
-                        var config = new PeriodicBackupConfiguration { BackupType = BackupType.Backup, AzureSettings = holder.Settings, IncrementalBackupFrequency = "0 0 1 1 *" };
-                        backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
-                        operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                        store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-
-                        var value = WaitForValue(() =>
-                        {
-                            status = store.Maintenance.Send(operation).Status;
-                            return status?.LastEtag;
-                        }, 4);
-                        Assert.True(4 == value, $"4 == value, Got status: {status != null}, exception: {status?.Error?.Exception}");
-                        Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
-
-                        OperationState backupOperation = null;
-                        var operationStatus = WaitForValue(() =>
-                        {
-                            backupOperation = store.Maintenance.Send(new GetOperationStateOperation(status.LastOperationId.Value));
-                            return backupOperation.Status;
-                        }, OperationStatus.Completed);
-                        Assert.Equal(OperationStatus.Completed, operationStatus);
-
-                        backupResult = backupOperation.Result as BackupResult;
+                        var config = Backup.CreateBackupConfiguration(azureSettings: holder.Settings);
+                        backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                        backupResult = (BackupResult)store.Maintenance.Send(new GetOperationStateOperation(Backup.GetBackupOperationId(store, backupTaskId))).Result;
                         Assert.NotNull(backupResult);
                         Assert.True(backupResult.Counters.Processed, "backupResult.Counters.Processed");
                         Assert.Equal(1, backupResult.Counters.ReadCount);
@@ -132,9 +112,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     if (oneTimeBackup == false)
                     {
                         var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                        store.Maintenance.Send(new StartBackupOperation(false, backupTaskId));
-                        var value2 = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                        Assert.Equal(lastEtag, value2);
+                        status = Backup.RunBackupAndReturnStatus(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
                     }
 
                     if (oneTimeBackup)
@@ -192,7 +170,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [AzureFact]
+        [AzureFact, Trait("Category", "Smuggler")]
         public async Task can_create_azure_snapshot_and_restore_using_restore_point()
         {
             using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
@@ -201,29 +179,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 {
                     using (var session = store.OpenSession())
                     {
-                        session.Store(new User { Name = "oren" }, "users/1");
+                        session.Store(new User {Name = "oren"}, "users/1");
                         session.CountersFor("users/1").Increment("likes", 100);
                         session.SaveChanges();
                     }
 
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        BackupType = BackupType.Snapshot,
-                        AzureSettings = holder.Settings,
-                        IncrementalBackupFrequency = "0 0 1 1 *"
-                    };
-
-                    var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
-                    store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                    var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                    PeriodicBackupStatus status = null;
-                    var value = WaitForValue(() =>
-                    {
-                        status = store.Maintenance.Send(operation).Status;
-                        return status?.LastEtag;
-                    }, 4);
-                    Assert.True(4 == value, $"4 == value, Got status: {status != null}, exception: {status?.Error?.Exception}");
-                    Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
+                    var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, azureSettings: holder.Settings);
+                    var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                    var status = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status;
 
                     var client = store.GetRequestExecutor().HttpClient;
                     var data = new StringContent(JsonConvert.SerializeObject(holder.Settings), Encoding.UTF8, "application/json");
@@ -237,10 +200,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     holder.Settings.RemoteFolderName = holder.Settings.RemoteFolderName + "/" + status.FolderName;
                     var restoreOperation = await store.Maintenance.Server.SendAsync(new RestoreBackupOperation(new RestoreFromAzureConfiguration()
                     {
-                        DatabaseName = databaseName,
-                        Settings = holder.Settings,
-                        DisableOngoingTasks = true,
-                        LastFileNameToRestore = point.FileName,
+                        DatabaseName = databaseName, Settings = holder.Settings, DisableOngoingTasks = true, LastFileNameToRestore = point.FileName,
                     }));
 
                     await restoreOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
