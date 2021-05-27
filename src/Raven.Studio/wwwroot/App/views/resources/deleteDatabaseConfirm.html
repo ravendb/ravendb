@@ -82,12 +82,14 @@
                 </button>
             </div>
         </div>
-        <div class="padding" data-bind="visible: databasesToDelete.length === 1">
-            In order to delete the database from only a single node (or multiple nodes) go to:<br />
-            <a href="#" data-bind="click: goToManageDbGroup" title="Navigate to Manage Database Group View">Manage Database Group</a>
+        <div class="padding">
+            <span data-bind="visible: databasesToDelete.length === 1">
+                In order to delete the database from only a single node (or multiple nodes) go to:<br />
+                <a href="#" data-bind="click: goToManageDbGroup" title="Navigate to Manage Database Group View">Manage Database Group</a>
+            </span>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn btn-default margin-top margin-top-sm" data-bind="click: cancel" title="Cancel the delete operation">
+            <button type="button" class="btn btn-default" data-bind="click: cancel" title="Cancel the delete operation">
                 <i class="icon-cancel"></i><span>Cancel</span>
             </button>
         </div>
