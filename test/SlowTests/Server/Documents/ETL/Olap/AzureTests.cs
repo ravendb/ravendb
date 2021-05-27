@@ -28,7 +28,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
         {
         }
 
-        private const string AzureTestsPrefix = "olap/tests";
+        private readonly string _azureTestsPrefix = $"olap/tests/{nameof(AzureTests)}-{Guid.NewGuid()}";
         private const string CollectionName = "Orders";
 
         [AzureFact]
@@ -603,6 +603,8 @@ loadToOrders(noPartition(),
         public async Task SimpleTransformation_MultiplePartitions()
         {
             var settings = GetAzureSettings();
+            var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
+
             try
             {
                 using (var store = GetDocumentStore())
@@ -666,7 +668,6 @@ loadToOrders(partitionBy(
 
                     using (var client = new RavenAzureClient(settings))
                     {
-                        var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
                         var cloudObjects = await client.ListBlobsAsync(prefix, delimiter: "/", listFolders: true);
                         var list = cloudObjects.List.ToList();
 
@@ -731,7 +732,7 @@ loadToOrders(partitionBy(
             }
             finally
             {
-                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}/", delimiter: "/", listFolder: true);
+                await DeleteObjects(settings, prefix, delimiter: "/", listFolder: true);
             }
         }
 
@@ -845,13 +846,13 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
             });
         }
 
-        private static AzureSettings GetAzureSettings([CallerMemberName] string caller = null)
+        private AzureSettings GetAzureSettings([CallerMemberName] string caller = null)
         {
             var settings = AzureFactAttribute.AzureSettings;
             if (settings == null)
                 return null;
 
-            var remoteFolderName = AzureTestsPrefix;
+            var remoteFolderName = _azureTestsPrefix;
             if (string.IsNullOrEmpty(caller) == false)
                 remoteFolderName = $"{remoteFolderName}/{caller}";
 

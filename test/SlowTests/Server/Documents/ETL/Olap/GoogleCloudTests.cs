@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
         {
         }
 
-        private const string GoogleCloudTestsPrefix = "olap-tests";
+        private readonly string _googleCloudTestsPrefix = $"olap-tests/{nameof(GoogleCloudTests)}-{Guid.NewGuid()}";
         private const string CollectionName = "Orders";
 
         [GoogleCloudFact]
@@ -895,13 +895,13 @@ for (var i = 0; i < this.Lines.length; i++){
             });
         }
 
-        private static GoogleCloudSettings GetGoogleCloudSettings([CallerMemberName] string caller = null)
+        private GoogleCloudSettings GetGoogleCloudSettings([CallerMemberName] string caller = null)
         {
             var googleCloudSettings = GoogleCloudFactAttribute.GoogleCloudSettings;
             if (googleCloudSettings == null)
                 return null;
 
-            var remoteFolderName = GoogleCloudTestsPrefix;
+            var remoteFolderName = _googleCloudTestsPrefix;
             if (string.IsNullOrEmpty(caller) == false)
                 remoteFolderName = $"{remoteFolderName}/{caller}";
 
