@@ -30,11 +30,11 @@ namespace SlowTests.Issues
                         Url = "http://dummy:1234"
                     };
 
-                    var batchCommand = new SingleNodeBatchCommand(store.Conventions, context, new List<ICommandData>());
+                    var batchCommand = new SingleNodeBatchCommand(store.Conventions, new List<ICommandData>());
                     var uri = requestExecutor.CreateRequest(context, dummy, batchCommand, out _);
                     Assert.DoesNotContain("raft", uri.RequestUri.ToString());
 
-                    var clusterBatchCommand = new ClusterWideBatchCommand(store.Conventions, context, new List<ICommandData>());
+                    var clusterBatchCommand = new ClusterWideBatchCommand(store.Conventions, new List<ICommandData>());
                     uri = requestExecutor.CreateRequest(context, dummy, clusterBatchCommand, out _);
                     Assert.Contains("raft", uri.RequestUri.ToString());
                 }
