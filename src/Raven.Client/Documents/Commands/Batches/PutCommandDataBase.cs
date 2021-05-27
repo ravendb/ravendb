@@ -8,13 +8,13 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     internal class PutCommandDataWithBlittableJson : PutCommandDataBase<BlittableJsonReaderObject>
     {
-        public PutCommandDataWithBlittableJson(string id, string changeVector, string oldChangeVector, BlittableJsonReaderObject document)
-            : base(id, changeVector, oldChangeVector, document)
+        public PutCommandDataWithBlittableJson(string id, string changeVector, string originalChangeVector, BlittableJsonReaderObject document)
+            : base(id, changeVector, originalChangeVector, document)
         {
         }
         
-        public PutCommandDataWithBlittableJson(string id, string changeVector, string oldChangeVector, BlittableJsonReaderObject document, ForceRevisionStrategy strategy)
-            : base(id, changeVector, oldChangeVector, document, strategy)
+        public PutCommandDataWithBlittableJson(string id, string changeVector, string originalChangeVector, BlittableJsonReaderObject document, ForceRevisionStrategy strategy)
+            : base(id, changeVector, originalChangeVector, document, strategy)
         {
         }
 
@@ -30,8 +30,8 @@ namespace Raven.Client.Documents.Commands.Batches
         {
             
         }
-        public PutCommandData(string id, string changeVector, string oldChangeVector, DynamicJsonValue document)
-            : base(id, changeVector, oldChangeVector, document)
+        public PutCommandData(string id, string changeVector, string originalChangeVector, DynamicJsonValue document)
+            : base(id, changeVector, originalChangeVector, document)
         {
         }
 
@@ -40,8 +40,8 @@ namespace Raven.Client.Documents.Commands.Batches
         {
         }
         
-        public PutCommandData(string id, string changeVector, string oldChangeVector, DynamicJsonValue document, ForceRevisionStrategy strategy)
-            : base(id, changeVector, oldChangeVector, document, strategy)
+        public PutCommandData(string id, string changeVector, string originalChangeVector, DynamicJsonValue document, ForceRevisionStrategy strategy)
+            : base(id, changeVector, originalChangeVector, document, strategy)
         {
         }
 
@@ -52,14 +52,14 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public abstract class PutCommandDataBase<T> : ICommandData
     {
-        protected PutCommandDataBase(string id, string changeVector, string oldChangeVector, T document, ForceRevisionStrategy strategy = ForceRevisionStrategy.None)
+        protected PutCommandDataBase(string id, string changeVector, string originalChangeVector, T document, ForceRevisionStrategy strategy = ForceRevisionStrategy.None)
         {
             if (document == null)
                 throw new ArgumentNullException(nameof(document));
 
             Id = id;
             ChangeVector = changeVector;
-            OldChangeVector = oldChangeVector;
+            OriginalChangeVector = originalChangeVector;
             Document = document;
             ForceRevisionCreationStrategy = strategy;
         }
@@ -68,7 +68,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public string Name { get; } = null;
         public string ChangeVector { get; }
         
-        public string OldChangeVector { get; }
+        public string OriginalChangeVector { get; }
         public T Document { get; }
         public CommandType Type { get; } = CommandType.PUT;
         public ForceRevisionStrategy ForceRevisionCreationStrategy { get; }
@@ -82,9 +82,9 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Document)] = Document,
                 [nameof(Type)] = Type.ToString()
             };
-            if (OldChangeVector != null)
+            if (OriginalChangeVector != null)
             {
-                json[nameof(OldChangeVector)] = OldChangeVector;
+                json[nameof(OriginalChangeVector)] = OriginalChangeVector;
             }
             
             if (ForceRevisionCreationStrategy != ForceRevisionStrategy.None)

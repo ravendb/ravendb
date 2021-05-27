@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Handlers
             public BlittableJsonReaderObject CreateIfMissing;
             public BlittableJsonReaderObject PatchIfMissingArgs;
             public LazyStringValue ChangeVector;
-            public LazyStringValue OldChangeVector;
+            public LazyStringValue OriginalChangeVector;
             public bool IdPrefixed;
             public long Index;
             public bool FromEtl;
@@ -595,12 +595,12 @@ namespace Raven.Server.Documents.Handlers
                             commandData.ChangeVector = GetLazyStringValue(ctx, state);
                         }
                         break;
-                    case CommandPropertyName.OldChangeVector:
+                    case CommandPropertyName.OriginalChangeVector:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
                         if (state.CurrentTokenType == JsonParserToken.Null)
                         {
-                            commandData.OldChangeVector = null;
+                            commandData.OriginalChangeVector = null;
                         }
                         else
                         {
@@ -609,7 +609,7 @@ namespace Raven.Server.Documents.Handlers
                                 ThrowUnexpectedToken(JsonParserToken.String, state);
                             }
 
-                            commandData.OldChangeVector = GetLazyStringValue(ctx, state);
+                            commandData.OriginalChangeVector = GetLazyStringValue(ctx, state);
                         }
                         break;
 
@@ -872,7 +872,7 @@ namespace Raven.Server.Documents.Handlers
             Ids,
             Document,
             ChangeVector,
-            OldChangeVector,
+            OriginalChangeVector,
             Patch,
             PatchIfMissing,
             CreateIfMissing,
@@ -1029,13 +1029,16 @@ namespace Raven.Server.Documents.Handlers
                         *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 28265 &&
                         state.StringBuffer[14] == (byte)'g')
                         return CommandPropertyName.CreateIfMissing;
-                    if (*(long*)state.StringBuffer == 7453001533779897423 &&
-                        *(int*)(state.StringBuffer + sizeof(long)) == 1667585637 &&
-                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 28532 &&
-                        state.StringBuffer[14] == (byte)'r')
-                        return CommandPropertyName.OldChangeVector;
-
+        
                     return CommandPropertyName.NoSuchProperty;
+                
+                case 20:
+                    if (*(long*)state.StringBuffer == 7809644627822735951 &&
+                        *(long*)(state.StringBuffer + sizeof(long)) == 7302135340735752259 &&
+                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1919906915)
+                        return CommandPropertyName.OriginalChangeVector;
+                    return CommandPropertyName.NoSuchProperty;
+
 
                 case 29:
                     if (*(long*)state.StringBuffer == 8531315664536891206 &&
