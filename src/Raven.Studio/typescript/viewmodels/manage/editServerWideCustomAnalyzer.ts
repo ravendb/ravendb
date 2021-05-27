@@ -7,6 +7,7 @@ import saveServerWideCustomAnalyzerCommand = require("commands/serverWide/analyz
 import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyzers/getServerWideCustomAnalyzersCommand");
 import messagePublisher = require("common/messagePublisher");
 import fileImporter = require("common/fileImporter");
+import editCustomAnalyzer = require("viewmodels/database/settings/editCustomAnalyzer");
 
 class editServerWideCustomAnalyzer extends viewModelBase {
 
@@ -74,15 +75,18 @@ class editServerWideCustomAnalyzer extends viewModelBase {
 
     save() {
         if (this.isValid(this.editedServerWideAnalyzer().validationGroup)) {
-            this.spinners.save(true);
-
-            new saveServerWideCustomAnalyzerCommand(this.editedServerWideAnalyzer().toDto())
-                .execute()
+            editCustomAnalyzer.maybeShowIndexResetNotice(this.isAddingNewAnalyzer())
                 .done(() => {
-                    this.dirtyFlag().reset();
-                    this.goToServerWideCustomAnalyzersView();
-                })
-                .always(() => this.spinners.save(false));
+                    this.spinners.save(true);
+
+                    new saveServerWideCustomAnalyzerCommand(this.editedServerWideAnalyzer().toDto())
+                        .execute()
+                        .done(() => {
+                            this.dirtyFlag().reset();
+                            this.goToServerWideCustomAnalyzersView();
+                        })
+                        .always(() => this.spinners.save(false));
+                });
         }
     }
 }

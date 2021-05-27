@@ -7,6 +7,7 @@ import saveCustomAnalyzerCommand = require("commands/database/settings/saveCusto
 import getCustomAnalyzersCommand = require("commands/database/settings/getCustomAnalyzersCommand");
 import messagePublisher = require("common/messagePublisher");
 import fileImporter = require("common/fileImporter");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 class editCustomAnalyzer extends viewModelBase {
 
@@ -73,18 +74,44 @@ class editCustomAnalyzer extends viewModelBase {
             }
         });
     }
+
+    static maybeShowIndexResetNotice(newAnalyzer: boolean): JQueryPromise<void> {
+        const task = $.Deferred<void>();
+        if (newAnalyzer) {
+            task.resolve();
+        } else {
+            viewHelpers.confirmationMessage("Index Reset Notice",
+                `<div class="bg-warning margin-bottom margin-bottom-sm padding padding-sm"> Modifying a custom analyzer doesn't trigger data re-indexing.<br />
+                If your change has any impact on the indexed data, you must reset any index that uses this analyzer manually.</div>
+                
+                <div class="padding padding-sm text-info"><small><i class="icon-info"></i> Resetting indexes is done from the Index List View.</small></div>`, {
+                    buttons: ["Cancel", "Save Analyzer"],
+                    html: true
+                })
+                .done(result => {
+                    if (result.can) {
+                        task.resolve();
+                    }
+                });
+        }
+
+        return task;
+    }
     
     save() {
         if (this.isValid(this.editedAnalyzer().validationGroup)) {
-            this.spinners.save(true);
-            
-            new saveCustomAnalyzerCommand(this.activeDatabase(), this.editedAnalyzer().toDto())
-                .execute()
+            editCustomAnalyzer.maybeShowIndexResetNotice(this.isAddingNewAnalyzer())
                 .done(() => {
-                    this.dirtyFlag().reset();
-                    this.goToCustomAnalyzersView();
-                })
-                .always(() => this.spinners.save(false));
+                    this.spinners.save(true);
+
+                    new saveCustomAnalyzerCommand(this.activeDatabase(), this.editedAnalyzer().toDto())
+                        .execute()
+                        .done(() => {
+                            this.dirtyFlag().reset();
+                            this.goToCustomAnalyzersView();
+                        })
+                        .always(() => this.spinners.save(false));
+                });
         }
     }
 }
