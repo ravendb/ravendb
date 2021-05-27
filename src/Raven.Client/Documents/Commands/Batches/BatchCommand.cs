@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public bool? DisableAtomicDocumentWrites { get; }
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
 
-        public ClusterWideBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null, bool? disableAtomicDocumentsWrites = null) : base(conventions, context, commands, options, TransactionMode.ClusterWide)
+        public ClusterWideBatchCommand(DocumentConventions conventions, IList<ICommandData> commands, BatchOptions options = null, bool? disableAtomicDocumentsWrites = null) : base(conventions, commands, options, TransactionMode.ClusterWide)
         {
             DisableAtomicDocumentWrites = disableAtomicDocumentsWrites;
         }
@@ -55,20 +55,20 @@ namespace Raven.Client.Documents.Commands.Batches
             _commandsAsJson = new BlittableJsonReaderObject[_commands.Count];
             foreach (var command in commands)
             {
-                if (command is PutAttachmentCommandData putAttachmentCommandData == false) 
-                    continue;
-                
-                if (_attachmentStreams == null)
+                if (command is PutAttachmentCommandData putAttachmentCommandData)
                 {
-                    _attachmentStreams = new List<Stream>();
-                    _uniqueAttachmentStreams = new HashSet<Stream>();
-                }
+                    if (_attachmentStreams == null)
+                    {
+                        _attachmentStreams = new List<Stream>();
+                        _uniqueAttachmentStreams = new HashSet<Stream>();
+                    }
 
-                var stream = putAttachmentCommandData.Stream;
-                PutAttachmentCommandHelper.ValidateStream(stream);
-                if (_uniqueAttachmentStreams.Add(stream) == false)
-                    PutAttachmentCommandHelper.ThrowStreamWasAlreadyUsed();
-                _attachmentStreams.Add(stream);
+                    var stream = putAttachmentCommandData.Stream;
+                    PutAttachmentCommandHelper.ValidateStream(stream);
+                    if (_uniqueAttachmentStreams.Add(stream) == false)
+                        PutAttachmentCommandHelper.ThrowStreamWasAlreadyUsed();
+                    _attachmentStreams.Add(stream);
+                }
             }
             
             Timeout = options?.RequestTimeout;

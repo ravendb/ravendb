@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 };
             }
 
-            using (var batchCommand = new SingleNodeBatchCommand(DocumentConventions.DefaultForServer, context, commands, options))
+            using (var batchCommand = new SingleNodeBatchCommand(DocumentConventions.DefaultForServer, commands, options))
             {
                 var duration = Stopwatch.StartNew();
 
