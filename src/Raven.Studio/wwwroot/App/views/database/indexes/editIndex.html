@@ -489,6 +489,11 @@
                 </div>
                 <div class="flex-grow flex-vertical">
                     <div class="flex-horizontal flex-content-center">
+                        <div class="flex-horizontal flex-content-center flex-content-center" data-bind="if: !editedIndex().mapFields().length">
+                            <div class="panel padding padding-sm flex-vertical">
+                                No aggregation fields
+                            </div>
+                        </div>
                         <div class="auto-index-fields" data-bind="foreach: editedIndex().mapFields">
                             <div class="panel padding padding-sm flex-vertical" data-bind="template: { name: 'field-template-auto-index'}"></div>
                         </div>
