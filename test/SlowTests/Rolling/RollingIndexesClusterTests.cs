@@ -10,6 +10,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
@@ -126,6 +127,12 @@ namespace SlowTests.Rolling
                         return r.Topology.Members.Count;
                     },
                     3);
+
+                var reqEx = store.GetRequestExecutor();
+
+                var anyNode = await reqEx.GetPreferredNode();
+                await reqEx.UpdateTopologyAsync(
+                    new RequestExecutor.UpdateTopologyParameters(anyNode.Item2) {TimeoutInMs = 5000, ForceUpdate = true, DebugTag = "node-unavailable-exception"});
 
                 await WaitForRaftIndexToBeAppliedOnClusterNodes(last, Servers);
                 WaitForIndexingInTheCluster(store, store.Database);
