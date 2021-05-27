@@ -52,6 +52,7 @@ class databases extends viewModelBase {
 
     selectionState: KnockoutComputed<checkbox>;
     selectedDatabases = ko.observableArray<string>([]);
+    selectedDatabasesWithoutLock: KnockoutComputed<databaseInfo[]>;
 
     lockModeCommon: KnockoutComputed<string>;
     
@@ -146,6 +147,11 @@ class databases extends viewModelBase {
             }
             
             return result;
+        });
+        
+        this.selectedDatabasesWithoutLock = ko.pureComputed(() => {
+            const selected = this.getSelectedDatabases();
+            return selected.filter(x => x.lockMode() === "Unlock");
         });
     }
 
@@ -512,7 +518,10 @@ class databases extends viewModelBase {
     }
 
     deleteSelectedDatabases() {
-       this.deleteDatabases(this.getSelectedDatabases());
+        const withoutLock = this.selectedDatabasesWithoutLock();
+        if (withoutLock.length) {
+            this.deleteDatabases(withoutLock);
+        }
     }
 
     private deleteDatabases(toDelete: databaseInfo[]) {
@@ -521,8 +530,7 @@ class databases extends viewModelBase {
         confirmDeleteViewModel
             .result
             .done((confirmResult: deleteDatabaseConfirmResult) => {
-                if (confirmResult.can) {   
-
+                if (confirmResult.can) {
                     const dbsList = toDelete.map(x => {
                         x.isBeingDeleted(true);
                         const asDatabase = x.asDatabase();
@@ -532,7 +540,7 @@ class databases extends viewModelBase {
                         changesContext.default.disconnectIfCurrent(asDatabase, "DatabaseDeleted");
                         return asDatabase;
                     });
-                                    
+                    
                     new deleteDatabaseCommand(dbsList, !confirmResult.keepFiles)
                         .execute();
                 }

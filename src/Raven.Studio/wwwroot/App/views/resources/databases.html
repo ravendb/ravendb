@@ -3,7 +3,7 @@
         <div class="databasesToolbar">
             <div class="databasesToolbar-actions">
                 <div class="btn-group-label" data-bind="css: { active: selectedDatabases().length }, visible: accessManager.canSetState || accessManager.canDelete" data-label="Selection" role="group">
-                    <button class="btn btn-danger" data-bind="visible: accessManager.canDelete, enable: selectedDatabases().length, click: deleteSelectedDatabases">
+                    <button class="btn btn-danger" data-bind="visible: accessManager.canDelete, enable: selectedDatabasesWithoutLock().length, click: deleteSelectedDatabases">
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>
