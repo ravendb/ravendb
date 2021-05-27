@@ -215,14 +215,7 @@ class lineChart {
             xToUse = this.lastXPosition;
         } else {
             xToUse = d3.mouse(this.svg.node())[0];
-            this.lastXPosition = xToUse;
-
-            const globalLocation = d3.mouse(d3.select(".cluster-dashboard-container").node());
-            const [x, y] = globalLocation;
-            this.tooltip
-                .style("left", (x + 10) + "px")
-                .style("top", (y + 10) + "px")
-                .style('display', undefined);
+            this.tooltip.style('display', undefined);
         }
         
         if (!_.isNull(xToUse) && this.minDate) {
@@ -235,6 +228,23 @@ class lineChart {
             } else {
                 this.tooltip.style("display", "none");
             }
+        }
+        
+        if (!passive) {
+            this.lastXPosition = xToUse;
+
+            const container = d3.select(".cluster-dashboard-container").node();
+            const globalLocation = d3.mouse(container);
+            const [x, y] = globalLocation;
+            
+            const tooltipWidth = $(this.tooltip.node()).width();
+            const containerWidth = $(container).innerWidth();
+            
+            const tooltipX = Math.min(x + 10, containerWidth - tooltipWidth);
+            
+            this.tooltip
+                .style("left", tooltipX + "px")
+                .style("top", (y + 10) + "px")
         }
     }
     
