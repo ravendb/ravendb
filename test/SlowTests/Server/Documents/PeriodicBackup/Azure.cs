@@ -15,7 +15,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
-    public class Azure : NoDisposalNeeded
+    public class Azure : CloudBackupTestBase
     {
         public Azure(ITestOutputHelper output) : base(output)
         {
@@ -186,28 +186,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        internal static List<string> GenerateBlobNames(AzureSettings setting, int blobsCount, out string prefix)
-        {
-            var blobNames = new List<string>();
-
-            prefix = Guid.NewGuid().ToString();
-            if (string.IsNullOrEmpty(setting.RemoteFolderName) == false)
-                prefix = $"{setting.RemoteFolderName}/{prefix}";
-            else
-            {
-                Assert.True(false, $"Found empty {nameof(AzureSettings)}.RemoteFolderName:{Environment.NewLine}"+Environment.StackTrace);
-            }
-
-            for (var i = 0; i < blobsCount; i++)
-            {
-                var name = $"{prefix}/{i}";
-
-                blobNames.Add(name);
-            }
-
-            return blobNames;
-        }
-
         internal class AzureClientHolder : IDisposable
         {
             public RavenAzureClient Client { get; set; }
@@ -220,8 +198,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Settings = setting;
 
                 // keep only alphanumeric characters
-                caller = caller == null ? string.Empty : string.Concat(caller.Where(char.IsLetterOrDigit));
-                Settings.RemoteFolderName = _remoteFolder = $"{caller}{Guid.NewGuid()}";
+                Settings.RemoteFolderName = _remoteFolder = GetRemoteFolder(caller);
                 Client = new RavenAzureClient(Settings, progress);
             }
 

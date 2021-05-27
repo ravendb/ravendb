@@ -89,7 +89,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                     PeriodicBackupStatus status = null;
                     long backupTaskId = 0;
-                    GetPeriodicBackupStatusOperation operation = null;
                     BackupResult backupResult = null;
                     if (oneTimeBackup == false)
                     {
@@ -179,7 +178,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 {
                     using (var session = store.OpenSession())
                     {
-                        session.Store(new User {Name = "oren"}, "users/1");
+                        session.Store(new User { Name = "oren" }, "users/1");
                         session.CountersFor("users/1").Increment("likes", 100);
                         session.SaveChanges();
                     }
@@ -200,7 +199,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     holder.Settings.RemoteFolderName = holder.Settings.RemoteFolderName + "/" + status.FolderName;
                     var restoreOperation = await store.Maintenance.Server.SendAsync(new RestoreBackupOperation(new RestoreFromAzureConfiguration()
                     {
-                        DatabaseName = databaseName, Settings = holder.Settings, DisableOngoingTasks = true, LastFileNameToRestore = point.FileName,
+                        DatabaseName = databaseName,
+                        Settings = holder.Settings,
+                        DisableOngoingTasks = true,
+                        LastFileNameToRestore = point.FileName,
                     }));
 
                     await restoreOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));

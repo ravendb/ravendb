@@ -15,9 +15,16 @@ namespace Tests.Infrastructure
 
         private static readonly string ParsingError;
 
+        private static readonly bool EnvVariableMissing;
+
         static AzureTheoryAttribute()
         {
             var azureSettingsString = Environment.GetEnvironmentVariable(AzureCredentialEnvironmentVariable);
+            if (azureSettingsString == null)
+            {
+                EnvVariableMissing = true;
+                return;
+            }
 
             try
             {
@@ -33,10 +40,13 @@ namespace Tests.Infrastructure
         {
             get
             {
+                if (EnvVariableMissing)
+                    return $"Test is missing '{AzureCredentialEnvironmentVariable}' environment variable.";
+
                 if (string.IsNullOrEmpty(ParsingError) == false)
                     return $"Failed to parse the Azure settings, error: {ParsingError}";
 
-                if (AzureSettings == null)
+                if (_azureSettings == null)
                     return $"Azure tests missing {nameof(AzureSettings)}.";
 
                 return null;

@@ -101,7 +101,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public abstract class AmazonSettings : BackupSettings
+    public abstract class AmazonSettings : BackupSettings, ICloudBackupSettings
     {
         public string AwsAccessKey { get; set; }
 
@@ -144,6 +144,29 @@ namespace Raven.Client.Documents.Operations.Backups
         /// S3 server Url when using custom server
         /// </summary>
         public string CustomServerUrl { get; set; }
+
+        public S3Settings()
+        {
+        }
+
+        internal S3Settings(S3Settings settings)
+        {
+            if (settings == null)
+                throw new ArgumentNullException(nameof(settings));
+
+            BucketName = settings.BucketName;
+            CustomServerUrl = settings.CustomServerUrl;
+            AwsRegionName = settings.AwsRegionName;
+            AwsAccessKey = settings.AwsAccessKey;
+            AwsSecretKey = settings.AwsSecretKey;
+            AwsSessionToken = settings.AwsSessionToken;
+
+            RemoteFolderName = settings.RemoteFolderName;
+            Disabled = settings.Disabled;
+
+            if (settings.GetBackupConfigurationScript != null)
+                GetBackupConfigurationScript = new GetBackupConfigurationScript(settings.GetBackupConfigurationScript);
+        }
 
         public override bool HasSettings()
         {
@@ -228,7 +251,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class AzureSettings : BackupSettings
+    public class AzureSettings : BackupSettings, ICloudBackupSettings
     {
         /// <summary>
         /// Microsoft Azure Storage Container name.
@@ -335,7 +358,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return djv;
         }
     }
-    public class GoogleCloudSettings : BackupSettings
+    public class GoogleCloudSettings : BackupSettings, ICloudBackupSettings
     {
         /// <summary>
         /// Google cloud storage bucket name must be globally unique
@@ -378,5 +401,10 @@ namespace Raven.Client.Documents.Operations.Backups
 
             return djv;
         }
+    }
+
+    public interface ICloudBackupSettings
+    {
+        public string RemoteFolderName { get; set; }
     }
 }
