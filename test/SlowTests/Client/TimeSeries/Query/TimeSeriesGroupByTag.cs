@@ -671,7 +671,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        private static DateTime PopulateCanGroupByLoadedTag(DocumentStore store)
+        internal static DateTime PopulateCanGroupByLoadedTag(DocumentStore store)
         {
             var baseline = RavenTestHelper.UtcToday;
 
@@ -702,7 +702,7 @@ namespace SlowTests.Client.TimeSeries.Query
             return baseline;
         }
 
-        private static DateTime PopulateCanGroupByTagWithInterpolation(DocumentStore store)
+        internal static DateTime PopulateCanGroupByTagWithInterpolation(DocumentStore store)
         {
             var baseline = RavenTestHelper.UtcToday;
 
