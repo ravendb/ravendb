@@ -359,6 +359,19 @@ namespace Raven.Server.Documents.Handlers
                                 {
                                     return x.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, queryContext: context);
                                 }
+                                catch (OperationCanceledException)
+                                {
+                                    // we probably closed the indexing thread
+                                    return new IndexStats
+                                    {
+                                        Name = x.Name,
+                                        Type = x.Type,
+                                        State = x.State,
+                                        Status = x.Status,
+                                        LockMode = x.Definition.LockMode,
+                                        Priority = x.Definition.Priority,
+                                    };
+                                }
                                 catch (Exception e)
                                 {
                                     if (Logger.IsOperationsEnabled)
@@ -379,8 +392,7 @@ namespace Raven.Server.Documents.Handlers
                                     var state = x.State;
 
                                     if (e.IsOutOfMemory() == false && 
-                                        e.IsRavenDiskFullException() == false && 
-                                        e is OperationCanceledException == false) // we probably closed the indexing thread
+                                        e.IsRavenDiskFullException() == false) 
                                     {
                                         try
                                         {
