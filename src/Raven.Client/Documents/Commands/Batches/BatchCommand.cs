@@ -35,52 +35,65 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public class SingleNodeBatchCommand : RavenCommand<BatchCommandResult>, IDisposable
     {
-        private readonly BlittableJsonReaderObject[] _commands;
+        private BlittableJsonReaderObject[] _commandsAsJson;
+        private bool? _supportsAtomicWrites;
         private readonly List<Stream> _attachmentStreams;
         private readonly HashSet<Stream> _uniqueAttachmentStreams;
+        private readonly JsonOperationContext _context;
+        private readonly DocumentConventions _conventions;
+        private readonly IList<ICommandData> _commands;
         private readonly BatchOptions _options;
         private readonly TransactionMode _mode;
 
-        public SingleNodeBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode)
+        public SingleNodeBatchCommand(DocumentConventions conventions,  IList<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode)
         {
-            if (conventions == null)
-                throw new ArgumentNullException(nameof(conventions));
-            if (commands == null)
-                throw new ArgumentNullException(nameof(commands));
-            if (context == null)
-                throw new ArgumentNullException(nameof(context));
-
-            _commands = new BlittableJsonReaderObject[commands.Count];
-            for (var i = 0; i < commands.Count; i++)
-            {
-                var command = commands[i];
-                var json = command.ToJson(conventions, context);
-                _commands[i] = context.ReadObject(json, "command");
-
-                if (command is PutAttachmentCommandData putAttachmentCommandData)
-                {
-                    if (_attachmentStreams == null)
-                    {
-                        _attachmentStreams = new List<Stream>();
-                        _uniqueAttachmentStreams = new HashSet<Stream>();
-                    }
-
-                    var stream = putAttachmentCommandData.Stream;
-                    PutAttachmentCommandHelper.ValidateStream(stream);
-                    if (_uniqueAttachmentStreams.Add(stream) == false)
-                        PutAttachmentCommandHelper.ThrowStreamWasAlreadyUsed();
-                    _attachmentStreams.Add(stream);
-                }
-            }
-
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+            _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             _options = options;
             _mode = mode;
 
+            _commandsAsJson = new BlittableJsonReaderObject[_commands.Count];
+            foreach (var command in commands)
+            {
+                if (command is PutAttachmentCommandData putAttachmentCommandData == false) 
+                    continue;
+                
+                if (_attachmentStreams == null)
+                {
+                    _attachmentStreams = new List<Stream>();
+                    _uniqueAttachmentStreams = new HashSet<Stream>();
+                }
+
+                var stream = putAttachmentCommandData.Stream;
+                PutAttachmentCommandHelper.ValidateStream(stream);
+                if (_uniqueAttachmentStreams.Add(stream) == false)
+                    PutAttachmentCommandHelper.ThrowStreamWasAlreadyUsed();
+                _attachmentStreams.Add(stream);
+            }
+            
             Timeout = options?.RequestTimeout;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
+            if (_supportsAtomicWrites == null ||
+                node.SupportsAtomicClusterWrites != _supportsAtomicWrites)
+            {
+                _supportsAtomicWrites = node.SupportsAtomicClusterWrites;
+                for (var i = 0; i < _commands.Count; i++)
+                {
+                    var command = _commands[i];
+                  
+                    var json = command.ToJson(_conventions, ctx);
+
+                    if (node.SupportsAtomicClusterWrites == false)
+                    {   // support older clients
+                        json.RemoveInMemoryPropertyByName(nameof(PutCommandData.OriginalChangeVector));
+                    }
+                    _commandsAsJson[i] = ctx.ReadObject(json, "command");
+                }
+            }
+            
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
@@ -89,7 +102,7 @@ namespace Raven.Client.Documents.Commands.Batches
                     await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                     {
                         writer.WriteStartObject();
-                        writer.WriteArray("Commands", _commands);
+                        writer.WriteArray("Commands", _commandsAsJson);
                         if (_mode == TransactionMode.ClusterWide)
                         {
                             writer.WriteComma();
@@ -174,7 +187,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
         public void Dispose()
         {
-            foreach (var command in _commands)
+            foreach (var command in _commandsAsJson)
                 command?.Dispose();
 
             Result?.Results?.Dispose();

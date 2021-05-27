@@ -13,18 +13,19 @@ namespace Raven.Client.Documents.Commands.Batches
         {
             
         }
-        public DeleteCommandData(string id, string changeVector, string oldChangeVector)
+        public DeleteCommandData(string id, string changeVector, string originalChangeVector)
         {
             Id = id ?? throw new ArgumentNullException(nameof(id));
             ChangeVector = changeVector;
-            OldChangeVector = oldChangeVector;
+            OriginalChangeVector = originalChangeVector;
         }
 
-        public string OldChangeVector { get; }
+        public string OriginalChangeVector { get; }
         public string Id { get; }
         public string Name { get; } = null;
         public string ChangeVector { get; }
         public CommandType Type { get; } = CommandType.DELETE;
+        public BlittableJsonReaderObject Document { get; set; }
 
         public virtual DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
@@ -33,10 +34,11 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Id)] = Id,
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Type)] = Type.ToString(),
+                [nameof(Document)] = Document
             };
-            if (OldChangeVector != null)
+            if (OriginalChangeVector != null)
             {
-                json[nameof(OldChangeVector)] = OldChangeVector;
+                json[nameof(OriginalChangeVector)] = OriginalChangeVector;
             }
             return json;
         }

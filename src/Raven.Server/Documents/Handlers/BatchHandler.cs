@@ -799,7 +799,7 @@ namespace Raven.Server.Documents.Handlers
                                 }
 
                                 putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document, 
-                                    oldChangeVectorForClusterTransactionIndexCheck: cmd.OldChangeVector, flags: flags);
+                                    oldChangeVectorForClusterTransactionIndexCheck: cmd.OriginalChangeVector, flags: flags);
                             }
                             catch (Voron.Exceptions.VoronConcurrencyErrorException)
                             {

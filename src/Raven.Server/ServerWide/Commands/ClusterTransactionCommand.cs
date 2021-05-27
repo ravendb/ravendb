@@ -49,7 +49,7 @@ namespace Raven.Server.ServerWide.Commands
                 return new ClusterTransactionDataCommand
                 {
                     Id = command.Id,
-                    ChangeVector = command.OldChangeVector ?? command.ChangeVector,
+                    ChangeVector = command.OriginalChangeVector ?? command.ChangeVector,
                     Document = command.Document,
                     Index = command.Index,
                     Type = command.Type
@@ -104,7 +104,7 @@ namespace Raven.Server.ServerWide.Commands
         [JsonDeserializationIgnore]
         public ClusterTransactionOptions Options;
         
-        public bool DisableAtomicDocumentWrites;
+        public bool? DisableAtomicDocumentWrites;
 
         [JsonDeserializationIgnore]
         public readonly List<ClusterTransactionDataCommand> DatabaseCommands = new List<ClusterTransactionDataCommand>();
