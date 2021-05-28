@@ -86,6 +86,8 @@ namespace FastTests
         static unsafe TestBase()
         {
             IgnoreProcessorAffinityChanges(ignore: true);
+            LicenseManager.AddLicenseStatusToLicenseLimitsException = true;
+
             EncryptionBuffersPool.Instance.Disabled = true;
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
