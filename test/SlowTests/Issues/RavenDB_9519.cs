@@ -80,8 +80,6 @@ namespace SlowTests.Issues
                         sb.AppendLine("Actual:");
                         sb.AppendLine(JObject.FromObject(_testCompany).ToString(Formatting.Indented));
 
-                        Console.WriteLine(sb);
-
                         throw;
                     }
                 }
