@@ -17,7 +17,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task FirstBackupWithClusterDownStatusShouldRearrangeTheTimer()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -32,17 +32,8 @@ namespace StressTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var operation = new UpdatePeriodicBackupOperation(config);
-                var result = await store.Maintenance.SendAsync(operation);
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "* * * * *");
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
                 var val = WaitForValue(() => documentDatabase.PeriodicBackupRunner._forTestingPurposes.ClusterDownStatusSimulated, true, timeout: 66666, interval: 333);
                 Assert.True(val, "Failed to simulate ClusterDown Status");
@@ -53,7 +44,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task ShouldRearrangeTheTimeIfBackupAfterTimerCallbackGotActiveByOtherNode()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

@@ -55,7 +55,7 @@ namespace SlowTests.Issues
             await Tomstones_should_be_cleaned_properly_for_multiple_backup_tasks(BackupType.Backup);
         }
 
-        public async Task Tomstones_should_be_cleaned_properly_for_multiple_backup_tasks(BackupType backupType)
+        private async Task Tomstones_should_be_cleaned_properly_for_multiple_backup_tasks(BackupType backupType)
         {
             var backupPath1 = NewDataPath(suffix: "BackupFolder");
             var backupPath2 = NewDataPath(suffix: "BackupFolder");
@@ -117,7 +117,7 @@ namespace SlowTests.Issues
             }
         }
 
-        public async Task Tombstones_should_be_cleaned_only_after_backup_when_delete_is_last_operation(BackupType backupType, string taskName)
+        private async Task Tombstones_should_be_cleaned_only_after_backup_when_delete_is_last_operation(BackupType backupType, string taskName)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
@@ -166,7 +166,7 @@ namespace SlowTests.Issues
             }
         }
 
-        public async Task Tombstones_should_be_cleaned_only_after_backup_when_delete_is_not_a_last_operation(BackupType backupType, string taskName)
+        private async Task Tombstones_should_be_cleaned_only_after_backup_when_delete_is_not_a_last_operation(BackupType backupType, string taskName)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
