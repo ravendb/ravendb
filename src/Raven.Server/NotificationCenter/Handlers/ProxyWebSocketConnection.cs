@@ -73,7 +73,10 @@ namespace Raven.Server.NotificationCenter.Handlers
                         var receiveResult = await _localWebSocket.ReceiveAsync(buffer, _cts.Token);
 
                         if (receiveResult.MessageType == WebSocketMessageType.Close)
+                        {
+                            await _localWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NORMAL_CLOSE", _cts.Token);
                             break;
+                        }
 
                         await _remoteWebSocket.SendAsync(buffer.Slice(0, receiveResult.Count), receiveResult.MessageType, receiveResult.EndOfMessage, _cts.Token);
                     }
@@ -91,8 +94,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                 {
                     // if we received close from the client, we want to ignore it and close the websocket (dispose does it)
                     if (ex is WebSocketException webSocketException
-                        && webSocketException.WebSocketErrorCode == WebSocketError.InvalidState
-                        && _localWebSocket.State == WebSocketState.CloseReceived)
+                        && (webSocketException.WebSocketErrorCode == WebSocketError.InvalidState)
+                        && (_localWebSocket.State == WebSocketState.Closed || _remoteWebSocket.State == WebSocketState.Closed ||
+                            _localWebSocket.State == WebSocketState.CloseReceived || _remoteWebSocket.State == WebSocketState.CloseReceived))
                     {
                         // ignore
                     }
@@ -121,7 +125,10 @@ namespace Raven.Server.NotificationCenter.Handlers
                         var receiveResult = await _remoteWebSocket.ReceiveAsync(buffer, _cts.Token).ConfigureAwait(false);
 
                         if (receiveResult.MessageType == WebSocketMessageType.Close)
+                        {
+                            await _remoteWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NORMAL_CLOSE", _cts.Token);
                             break;
+                        }
 
                         await _localWebSocket.SendAsync(buffer.Slice(0, receiveResult.Count), receiveResult.MessageType, receiveResult.EndOfMessage, _cts.Token);
                     }
@@ -139,8 +146,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                 {
                     // if we received close from the client, we want to ignore it and close the websocket (dispose does it)
                     if (ex is WebSocketException webSocketException
-                        && webSocketException.WebSocketErrorCode == WebSocketError.InvalidState
-                        && _localWebSocket.State == WebSocketState.CloseReceived)
+                        && (webSocketException.WebSocketErrorCode == WebSocketError.InvalidState)
+                        && (_localWebSocket.State == WebSocketState.Closed || _remoteWebSocket.State == WebSocketState.Closed ||
+                            _localWebSocket.State == WebSocketState.CloseReceived || _remoteWebSocket.State == WebSocketState.CloseReceived))
                     {
                         // ignore
                     }
