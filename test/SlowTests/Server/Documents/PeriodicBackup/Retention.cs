@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -13,6 +12,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Server.Documents.PeriodicBackup.Restore;
 using Tests.Infrastructure;
 using Voron.Util.Settings;
 using Xunit;
@@ -20,7 +20,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
-    public class Retention : RavenTestBase
+    public class Retention : RestoreFromS3
     {
         public Retention(ITestOutputHelper output) : base(output)
         {
@@ -71,7 +71,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory(Skip = "Requires Amazon AWS Credentials")]
+        [AmazonS3Theory]
         [InlineData(7, 3, false)]
         [InlineData(7, 3, true)]
         public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
@@ -80,16 +80,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             try
             {
+                var settings = GetS3Settings();
                 BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
 
                 await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
                     (configuration, databaseName) =>
                     {
-                        configuration.S3Settings = GetS3Settings(databaseName);
+                        configuration.S3Settings = settings;
                     },
                     async databaseName =>
                     {
-                        using (var client = new RavenAwsS3Client(GetS3Settings(databaseName)))
+                        using (var client = new RavenAwsS3Client(settings))
                         {
                             var folders = await client.ListObjectsAsync($"{client.RemoteFolderName}/", "/", listFolders: true);
                             return folders.FileInfoDetails.Count;
@@ -242,18 +243,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var expectedNumberOfDirectories = checkIncremental ? 2 : 1;
                 Assert.Equal(expectedNumberOfDirectories, directoriesCount);
             }
-        }
-
-        private static S3Settings GetS3Settings(string databaseName, [CallerMemberName] string remoteFolderName = null)
-        {
-            return new S3Settings
-            {
-                AwsAccessKey = null,
-                AwsSecretKey = null,
-                AwsRegionName = null,
-                BucketName = "ravendb-test",
-                RemoteFolderName = $"{remoteFolderName}/{databaseName}"
-            };
         }
     }
 }

@@ -184,7 +184,18 @@ namespace FastTests
             public async Task RunBackupInClusterAsync(DocumentStore store, long taskId, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed)
             {
                 var op = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, taskId));
-                await op.WaitForCompletionAsync<BackupResult>(TimeSpan.FromSeconds(30));
+
+                var value = await WaitForValueAsync(async () =>
+                {
+                    var x = await store.Maintenance.SendAsync(new GetOperationStateOperation(op.Result.OperationId, op.Result.ResponsibleNode));
+                    if (x == null)
+                        return OperationStatus.Canceled;
+
+                    OperationStatus status = x.Status;
+                    return status;
+                }, opStatus);
+
+                Assert.Equal(opStatus, value);
             }
 
             public IDisposable RestoreDatabase(IDocumentStore store, RestoreBackupConfiguration config, TimeSpan? timeout = null)

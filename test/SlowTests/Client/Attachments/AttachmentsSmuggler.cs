@@ -106,7 +106,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task ExportFullThanDeleteAttachmentAndCreateAnotherOneThanExportIncrementalThanImport()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -128,38 +128,23 @@ namespace SlowTests.Client.Attachments
                 using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
                     store.Operations.Send(new PutAttachmentOperation("users/1", "file1", stream, "image/png"));
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                var res = await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                await res.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                Assert.NotNull(getPeriodicBackupResult.Status);
-                Assert.True(getPeriodicBackupResult.Status.LastEtag > 0);
-
                 var etagForBackups = getPeriodicBackupResult.Status.LastEtag;
+
                 store.Operations.Send(new DeleteAttachmentOperation("users/1", "file1"));
                 using (var stream = new MemoryStream(new byte[] { 4, 5, 6 }))
                     store.Operations.Send(new PutAttachmentOperation("users/1", "file2", stream, "image/png"));
 
-                res = await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await res.WaitForCompletionAsync();
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
+                Assert.True(status.LastEtag != etagForBackups);
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);
                 Assert.Equal(1, stats.CountOfAttachments);
                 Assert.Equal(1, stats.CountOfUniqueAttachments);
-
-                getPeriodicBackupResult = store.Maintenance.Send(operation);
-                Assert.NotNull(getPeriodicBackupResult.Status);
-                Assert.True(getPeriodicBackupResult.Status.LastEtag != etagForBackups);
             }
 
             using (var store = GetDocumentStore(new Options

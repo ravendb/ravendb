@@ -4,81 +4,94 @@
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
                 <i class="icon-cancel"></i>
             </button>
-            <h4 class="modal-title">Are you sure?</h4>
         </div>
-        <div class="modal-body">
-            <div class="padding padding-sm bg-info">
-                <span>You're deleting </span>
-                <strong data-bind="visible: databasesToDelete.length > 1, text: databasesToDelete.length"></strong>
-                <span data-bind="text: databasesToDelete.length === 1 ? 'database:' : 'databases:'"></span><br/>
-                <span data-bind="visible: databasesToDelete.length > 1">
-                    <i class="icon-warning"></i><span>The delete option selected below will apply to all of the deleted databases.</span>
-                </span>                
-                <div class="margin-top margin-top-sm">
-                    <ul data-bind="foreach: databasesToDelete" style="max-height: 100px; overflow-y: auto;">
-                        <li>
-                            <small title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-encryption text-success"></i></small>
-                            <small title="This database is not encrypted" data-bind="visible: !isEncrypted()"><i class="icon-unlock text-muted"></i></small>
-                            <strong data-bind="text: name"></strong>
-                        </li>
-                    </ul>
+        <div class="padding">
+            <h3><strong>
+                    <span>You're deleting </span>
+                    <span data-bind="visible: databasesToDelete.length > 1, text: databasesToDelete.length"></span>
+                    <span data-bind="text: databasesToDelete.length === 1 ? '1 database' : 'databases'"></span>
+                </strong>
+            </h3>
+            <span>Select a delete option below</span><br>
+            <span data-bind="visible: databasesToDelete.length > 1">
+                The option selected will apply to all of the deleted databases
+            </span>
+            <div class="margin-top">
+                <ul class="databases-list" data-bind="foreach: databasesToDelete">
+                    <li><i class="icon-database text-primary"></i>
+                        <small title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-encryption text-success"></i></small>
+                        <small title="This database is not encrypted" data-bind="visible: !isEncrypted()"><i class="icon-unlock text-muted"></i></small>
+                        <strong data-bind="text: name"></strong>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="padding bg-warning">
+            <h3><strong>Delete and keep files</strong></h3>
+            <div>
+                Database will be deleted from all nodes in the cluster.<br />
+                The physical files will be left untouched on disk.
+            </div>
+            <div class="flex-horizontal margin-top">
+                <div class="flex-start text-warning">
+                    <i class="icon-warning"></i>
+                </div>
+                <div>
+                    <i>Database Configuration, Identities &amp; Compare Exchange</i>
+                    data will not be recovered if the database is to be added again in the future.
+                    Please export this data before deleting if needed.
                 </div>
             </div>
+            <div class="flex-horizontal" data-bind="if: encryptedCount > 0">
+                <div class="flex-start text-warning">
+                    <i class="icon-warning"></i>
+                </div>
+                <div>
+                    <i>The Secret Key<span data-bind="text: encryptedCount === 1 ? '' : 's'"></span></i>
+                    will be deleted for the encrypted database<span data-bind="text: encryptedCount === 1 ? '' : 's'"></span>.<br>
+                    In order to export it, please use the rvn tool:<br>
+                    <code>./rvn offline-operation get-key &lt;path-to-database-dir&gt;</code>
+                </div>
+            </div>
+            <div class="text-right margin-top">
+                <button type="button" class="btn btn-info" title="Navigate to Export Database View"
+                        data-bind="visible: databasesToDelete.length === 1, click: exportDatabase">
+                    <i class="icon-export-database"></i><span>Export Data</span>
+                </button>
+                <button type="button" class="btn btn-warning margin-left margin-left-sm" data-bind="click: keepFiles"
+                        title="Delete & keep physical database files on disk">
+                    <i class="icon-trash"></i><span>Delete & Keep Files</span>
+                </button>
+            </div>
+        </div>
+        <div class="padding bg-danger">
+            <h3><strong>Delete all data</strong></h3>
+            <p>
+                Database will be deleted from all nodes in the cluster.<br/>
+                All on-disk files will be deleted.
+            </p>
+            <div class="flex-horizontal">
+                <div class="flex-start text-danger">
+                    <i class="icon-danger"></i>
+                </div>
+                <div>This action cannot be undone.</div>
+            </div>
+            <div class="text-right margin-top margin-top-sm">
+                <button type="button" class="btn btn-danger margin-left-xs" data-bind="click: deleteEverything" title="Delete all the on-disk files">
+                    <i class="icon-trash"></i>&nbsp;<i class="icon-force"></i><span>Delete All Data</span>
+                </button>
+            </div>
+        </div>
+        <div class="padding">
+            <span data-bind="visible: databasesToDelete.length === 1">
+                In order to delete the database from only a single node (or multiple nodes) go to:<br />
+                <a href="#" data-bind="click: goToManageDbGroup" title="Navigate to Manage Database Group View">Manage Database Group</a>
+            </span>
         </div>
         <div class="modal-footer">
-            <div class="margin-top">
-                <div class="text-left">
-                    <h3><strong>Delete and keep files</strong></h3>
-                    
-                    <div>Database will be deleted from the server. The physical files will be left untouched on disk.</div>
-                    
-                        <div class="flex-horizontal">
-                            <div class="flex-start text-warning">
-                                <i class="icon-warning"></i>
-                            </div>
-                            <div>
-                                <i>Database Configuration, Identities &amp; Compare Exchange</i>
-                                data will not be recovered if the database is to be added again in the future. Please export this data before deleting if needed.
-                            </div>
-                        </div>
-                    
-                        <div class="flex-horizontal" data-bind="if: encryptedCount > 0">
-                            <div class="flex-start text-warning">
-                                <i class="icon-warning"></i>
-                            </div>
-                            <div>
-                                <i>The Secret Key<span data-bind="text: encryptedCount === 1 ? '' : 's'"></span></i>
-                                will be deleted for the encrypted database<span data-bind="text: encryptedCount === 1 ? '' : 's'"></span>. In order to export it, please use the rvn tool:
-                                <code>./rvn offline-operation get-key &lt;path-to-database-dir&gt;"</code>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="padding">
-                        <button type="button" class="btn btn-info" data-bind="click: exportDatabase, attr: { title: 'Export Data for database ' + databasesToDelete[0].name }">
-                            <i class="icon-export-database"></i><span>Export Data</span>
-                        </button>
-                        <button type="button" class="btn btn-warning" data-bind="click: keepFiles"
-                                title="Delete & keep physical database files on disk">
-                            <i class="icon-trash"></i><span>Delete & Keep Files</span>
-                        </button>
-                    </div>
-                </div>
-                <hr/>
-                <div>
-                    <h3 class="text-left"><strong>Delete all data</strong></h3>
-                    <div class="text-left">Delete the database and all the on-disk files</div>
-                    <div class="padding">
-                        <button type="button" class="btn btn-default" data-bind="click: cancel"
-                            title="Cancel delete">
-                            <i class="icon-cancel"></i><span>Cancel</span>
-                        </button>
-                        <button type="button" class="btn btn-danger" data-bind="click: deleteEverything"
-                            title="Delete all the on-disk files for this database">
-                            <i class="icon-trash"></i>&nbsp;<i class="icon-force"></i><span>Delete All Data</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <button type="button" class="btn btn-default" data-bind="click: cancel" title="Cancel the delete operation">
+                <i class="icon-cancel"></i><span>Cancel</span>
+            </button>
         </div>
     </div>
 </div>
