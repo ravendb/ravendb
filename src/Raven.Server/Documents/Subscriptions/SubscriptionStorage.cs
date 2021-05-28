@@ -513,7 +513,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public void HandleDatabaseRecordChange(DatabaseRecord databaseRecord)
+        public void HandleDatabaseRecordChange(RawDatabaseRecord databaseRecord)
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())

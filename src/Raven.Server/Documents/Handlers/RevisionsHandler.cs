@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Handlers
                 RevisionsConfiguration revisionsConfig;
                 using (var rawRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
                 {
-                    revisionsConfig = rawRecord?.RevisionsConfiguration;
+                    revisionsConfig = rawRecord?.Revisions;
                 }
 
                 if (revisionsConfig != null)

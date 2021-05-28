@@ -65,7 +65,19 @@ namespace Raven.Server.Documents.ETL
 
         public List<OlapEtlConfiguration> OlapDestinations;
 
-        public void Initialize(DatabaseRecord record)
+        private Dictionary<string, RavenConnectionString> _ravenConnectionStrings;
+
+        private Dictionary<string, SqlConnectionString> _sqlConnectionStrings;
+
+        private bool _isEncrypted;
+
+        private List<SqlEtlConfiguration> _sqlEtls;
+
+        private List<RavenEtlConfiguration> _ravenEtls;
+
+        private DatabaseTopology _topology;
+
+        public void Initialize(RawDatabaseRecord record)
         {
             LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, toRemove: null);
         }
@@ -84,7 +96,7 @@ namespace Raven.Server.Documents.ETL
             ProcessRemoved?.Invoke(process);
         }
 
-        private void LoadProcesses(DatabaseRecord record,
+        private void LoadProcesses(RawDatabaseRecord record,
             List<RavenEtlConfiguration> newRavenDestinations,
             List<SqlEtlConfiguration> newSqlDestinations,
             List<OlapEtlConfiguration> newOlapDestinations,
@@ -92,9 +104,14 @@ namespace Raven.Server.Documents.ETL
         {
             lock (_loadProcessedLock)
             {
-                _databaseRecord = record;
-                RavenDestinations = _databaseRecord.RavenEtls;
-                SqlDestinations = _databaseRecord.SqlEtls;
+                RavenDestinations = record.RavenEtls;
+                SqlDestinations = record.SqlEtls;
+                _isEncrypted = record.IsEncrypted;
+                _sqlEtls = record.SqlEtls;
+                _ravenEtls = record.RavenEtls;
+                _ravenConnectionStrings = record.RavenConnectionStrings;
+                _sqlConnectionStrings = record.SqlConnectionStrings;
+                _topology = record.Topology;
                 OlapDestinations = _databaseRecord.OlapEtls;
                 var processes = new List<EtlProcess>(_processes);
 
@@ -207,7 +224,7 @@ namespace Raven.Server.Documents.ETL
                 {
                     case EtlType.Raven:
                         ravenConfig = config as RavenEtlConfiguration;
-                        if (_databaseRecord.RavenConnectionStrings.TryGetValue(config.ConnectionStringName, out var ravenConnection))
+                        if (_ravenConnectionStrings.TryGetValue(config.ConnectionStringName, out var ravenConnection))
                             ravenConfig.Initialize(ravenConnection);
                         else
                             connectionStringNotFound = true;
@@ -216,7 +233,7 @@ namespace Raven.Server.Documents.ETL
 
                     case EtlType.Sql:
                         sqlConfig = config as SqlEtlConfiguration;
-                        if (_databaseRecord.SqlConnectionStrings.TryGetValue(config.ConnectionStringName, out var sqlConnection))
+                        if (_sqlConnectionStrings.TryGetValue(config.ConnectionStringName, out var sqlConnection))
                             sqlConfig.Initialize(sqlConnection);
                         else
                             connectionStringNotFound = true;
@@ -249,7 +266,7 @@ namespace Raven.Server.Documents.ETL
                     continue;
 
                 var processState = GetProcessState(config.Transforms, _database, config.Name);
-                var whoseTaskIsIt = _database.WhoseTaskIsIt(_databaseRecord.Topology, config, processState);
+                var whoseTaskIsIt = _database.WhoseTaskIsIt(_topology, config, processState);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                     continue;
 
@@ -260,7 +277,7 @@ namespace Raven.Server.Documents.ETL
                     if (sqlConfig != null)
                         process = new SqlEtl(transform, sqlConfig, _database, _serverStore);
                     if (ravenConfig != null)
-                        process = new RavenEtl(transform, ravenConfig, _database, _serverStore); 
+                        process = new RavenEtl(transform, ravenConfig, _database, _serverStore);
                     if (olapConfig != null)
                         process = new OlapEtl(transform, olapConfig, _database, _serverStore);
 
@@ -299,7 +316,7 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            if (_databaseRecord.Encrypted && config.UsingEncryptedCommunicationChannel() == false && config.AllowEtlOnNonEncryptedChannel == false)
+            if (_isEncrypted && config.UsingEncryptedCommunicationChannel() == false && config.AllowEtlOnNonEncryptedChannel == false)
             {
                 LogConfigurationError(config,
                     new List<string>
@@ -310,7 +327,7 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            if (_databaseRecord.Encrypted && config.UsingEncryptedCommunicationChannel() == false && config.AllowEtlOnNonEncryptedChannel)
+            if (_isEncrypted && config.UsingEncryptedCommunicationChannel() == false && config.AllowEtlOnNonEncryptedChannel)
             {
                 LogConfigurationWarning(config,
                     new List<string>
@@ -398,7 +415,7 @@ namespace Raven.Server.Documents.ETL
             ea.ThrowIfNeeded();
         }
 
-        private bool IsMyEtlTask<T, TConnectionString>(DatabaseRecord record, T etlTask, ref Dictionary<string, string> responsibleNodes)
+        private bool IsMyEtlTask<T, TConnectionString>(RawDatabaseRecord record, T etlTask, ref Dictionary<string, string> responsibleNodes)
             where TConnectionString : ConnectionString
             where T : EtlConfiguration<TConnectionString>
         {
@@ -410,7 +427,7 @@ namespace Raven.Server.Documents.ETL
             return whoseTaskIsIt == _serverStore.NodeTag;
         }
 
-        public void HandleDatabaseRecordChange(DatabaseRecord record)
+        public void HandleDatabaseRecordChange(RawDatabaseRecord record)
         {
             if (record == null)
                 return;
@@ -458,50 +475,50 @@ namespace Raven.Server.Documents.ETL
                 {
                     case RavenEtl ravenEtl:
                     {
-                        RavenEtlConfiguration existing = null;
+                    RavenEtlConfiguration existing = null;
 
-                        foreach (var config in myRavenEtl)
+                    foreach (var config in myRavenEtl)
+                    {
+                        var diff = ravenEtl.Configuration.Compare(config);
+
+                        if (diff == EtlConfigurationCompareDifferences.None)
                         {
-                            var diff = ravenEtl.Configuration.Compare(config);
-
-                            if (diff == EtlConfigurationCompareDifferences.None)
-                            {
-                                existing = config;
-                                break;
-                            }
+                            existing = config;
+                            break;
                         }
+                    }
 
-                        if (existing != null)
-                        {
-                            toRemove.Remove(processesPerConfig.Key);
-                            myRavenEtl.Remove(existing);
-                        }
+                    if (existing != null)
+                    {
+                        toRemove.Remove(processesPerConfig.Key);
+                        myRavenEtl.Remove(existing);
+                    }
 
                         break;
-                    }
+                }
                     case SqlEtl sqlEtl:
+                {
+                    SqlEtlConfiguration existing = null;
+                    foreach (var config in mySqlEtl)
                     {
-                        SqlEtlConfiguration existing = null;
-                        foreach (var config in mySqlEtl)
-                        {
-                            var diff = sqlEtl.Configuration.Compare(config);
+                        var diff = sqlEtl.Configuration.Compare(config);
 
-                            if (diff == EtlConfigurationCompareDifferences.None)
-                            {
-                                existing = config;
-                                break;
-                            }
-                        }
-                        if (existing != null)
+                        if (diff == EtlConfigurationCompareDifferences.None)
                         {
-                            toRemove.Remove(processesPerConfig.Key);
-                            mySqlEtl.Remove(existing);
+                            existing = config;
+                            break;
                         }
+                    }
+                    if (existing != null)
+                    {
+                        toRemove.Remove(processesPerConfig.Key);
+                        mySqlEtl.Remove(existing);
+                    }
 
                         break;
-                    }
+                }
                     case OlapEtl olapEtl:
-                    {
+                {
                         OlapEtlConfiguration existing = null;
 
                         foreach (var config in myOlapEtl)
@@ -524,7 +541,7 @@ namespace Raven.Server.Documents.ETL
                         break;
                     }
                     default:
-                        throw new InvalidOperationException($"Unknown ETL process type: {process.GetType()}");
+                    throw new InvalidOperationException($"Unknown ETL process type: {process.GetType()}");
                 }
             }
 
@@ -619,7 +636,7 @@ namespace Raven.Server.Documents.ETL
             return reason;
         }
 
-        public void HandleDatabaseValueChanged(DatabaseRecord record)
+        public void HandleDatabaseValueChanged(RawDatabaseRecord record)
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -642,7 +659,7 @@ namespace Raven.Server.Documents.ETL
         {
             var lastProcessedTombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
-            var ravenEtls = _databaseRecord.RavenEtls;
+            var ravenEtls = _ravenEtls;
             if (tombstoneType == ITombstoneAware.TombstoneType.TimeSeries)
             {
                 foreach (var config in ravenEtls)
@@ -650,7 +667,7 @@ namespace Raven.Server.Documents.ETL
             }
             else
             {
-                var sqlEtls = _databaseRecord.SqlEtls;
+                var sqlEtls = _sqlEtls;
 
                 foreach (var config in ravenEtls)
                     MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);

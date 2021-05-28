@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.ServerWide;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Sorters;
@@ -17,12 +16,12 @@ namespace Raven.Server.Documents.Indexes.Sorting
         }
 
 
-        protected override bool DatabaseRecordContainsItem(DatabaseRecord databaseRecord, string name)
+        protected override bool DatabaseRecordContainsItem(RawDatabaseRecord databaseRecord, string name)
         {
             return databaseRecord.Sorters != null && databaseRecord.Sorters.ContainsKey(name);
         }
 
-        protected override IEnumerable<(string Name, string Code)> GetItemsFromDatabaseRecord(DatabaseRecord databaseRecord)
+        protected override IEnumerable<(string Name, string Code)> GetItemsFromDatabaseRecord(RawDatabaseRecord databaseRecord)
         {
             if (databaseRecord.Sorters == null || databaseRecord.Sorters.Count == 0)
                 yield break;

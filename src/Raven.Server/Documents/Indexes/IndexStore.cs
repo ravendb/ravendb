@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Indexes
             StoppedConcurrentIndexBatches = new SemaphoreSlim(stoppedConcurrentIndexBatches);
         }
 
-        public int HandleDatabaseRecordChange(DatabaseRecord record, long raftIndex)
+        public int HandleDatabaseRecordChange(RawDatabaseRecord record, long raftIndex)
         {
             try
             {
@@ -109,57 +109,57 @@ namespace Raven.Server.Documents.Indexes
                     HandleChangesForAutoIndexes(record, raftIndex, newIndexesToStart);
 
                     if (newIndexesToStart.Count <= 0)
-                        return 0;
+                    return 0;
 
                     indexesToDelete = new ConcurrentSet<Index>();
 
-                    var sp = Stopwatch.StartNew();
+                var sp = Stopwatch.StartNew();
 
-                    if (Logger.IsInfoEnabled)
+                if (Logger.IsInfoEnabled)
                         Logger.Info($"Starting {newIndexesToStart.Count} new index{(newIndexesToStart.Count > 1 ? "es" : string.Empty)}");
 
                     ExecuteForIndexes(newIndexesToStart, index =>
+                {
+                    var indexLock = GetIndexLock(index.Name);
+
+                    try
                     {
-                        var indexLock = GetIndexLock(index.Name);
-
-                        try
-                        {
-                            indexLock.Wait(_documentDatabase.DatabaseShutdown);
-                        }
-                        catch (OperationCanceledException e)
-                        {
+                        indexLock.Wait(_documentDatabase.DatabaseShutdown);
+                    }
+                    catch (OperationCanceledException e)
+                    {
                             AddToIndexesToDelete(index);
 
-                            _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
-                            return;
-                        }
+                        _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
+                        return;
+                    }
 
-                        try
-                        {
-                            StartIndex(index);
-                        }
-                        catch (Exception e)
-                        {
+                    try
+                    {
+                        StartIndex(index);
+                    }
+                    catch (Exception e)
+                    {
                             AddToIndexesToDelete(index);
 
-                            _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info($"Could not start index `{index.Name}`", e);
-                        }
-                        finally
-                        {
-                            indexLock.Release();
-                        }
-                    });
+                        _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Could not start index `{index.Name}`", e);
+                    }
+                    finally
+                    {
+                        indexLock.Release();
+                    }
+                });
 
-                    if (Logger.IsInfoEnabled)
+                if (Logger.IsInfoEnabled)
                         Logger.Info(
                             $"Started {newIndexesToStart.Count} new index{(newIndexesToStart.Count > 1 ? "es" : string.Empty)}, took: {sp.ElapsedMilliseconds}ms");
 
                     var numberOfIndexesToDelete = HandleIndexesToDelete();
 
                     return newIndexesToStart.Count - numberOfIndexesToDelete;
-                }
+            }
                 catch
                 {
                     HandleIndexesToDelete();
@@ -213,8 +213,11 @@ namespace Raven.Server.Documents.Indexes
                 : ProcessorInfo.ProcessorCount;
         }
 
-        private void HandleSorters(DatabaseRecord record, long index)
+        private void HandleSorters(RawDatabaseRecord record, long index)
         {
+            if (record.ClusterState.ShouldProcessSorters(index) == false)
+                return;
+
             try
             {
                 SorterCompilationCache.Instance.AddItems(record);
@@ -227,7 +230,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void HandleAnalyzers(DatabaseRecord record, long index)
+        private void HandleAnalyzers(RawDatabaseRecord record, long index)
         {
             try
             {
@@ -241,7 +244,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void HandleChangesForAutoIndexes(DatabaseRecord record, long index, List<Index> indexesToStart)
+        private void HandleChangesForAutoIndexes(RawDatabaseRecord record, long index, List<Index> indexesToStart)
         {
             var mode = _documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode;
 
@@ -391,7 +394,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void HandleChangesForStaticIndexes(DatabaseRecord record, long index, List<Index> indexesToStart)
+        private void HandleChangesForStaticIndexes(RawDatabaseRecord record, long index, List<Index> indexesToStart)
         {
             foreach (var kvp in record.Indexes)
             {
@@ -751,7 +754,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void HandleDeletes(DatabaseRecord record, long raftLogIndex)
+        private void HandleDeletes(RawDatabaseRecord record, long raftLogIndex)
         {
             foreach (var index in _indexes)
             {
@@ -779,7 +782,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public Task InitializeAsync(DatabaseRecord record, long raftIndex, Action<string> addToInitLog)
+        public Task InitializeAsync(RawDatabaseRecord record, long raftIndex, Action<string> addToInitLog)
         {
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
@@ -874,7 +877,7 @@ namespace Raven.Server.Documents.Indexes
                 raftRequestId,
                 _documentDatabase.Configuration.Indexing.HistoryRevisionsNumber,
                 _documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode
-            );
+                );
 
             long index = 0;
             try
@@ -1660,7 +1663,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void OpenIndexesFromRecord(DatabaseRecord record, long raftIndex, Action<string> addToInitLog)
+        private void OpenIndexesFromRecord(RawDatabaseRecord record, long raftIndex, Action<string> addToInitLog)
         {
             var path = _documentDatabase.Configuration.Indexing.StoragePath;
 

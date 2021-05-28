@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Revisions
             });
         }
 
-        public void InitializeFromDatabaseRecord(DatabaseRecord dbRecord)
+        public void InitializeFromDatabaseRecord(RawDatabaseRecord dbRecord)
         {
             try
             {

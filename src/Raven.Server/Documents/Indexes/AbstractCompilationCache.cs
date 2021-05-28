@@ -69,13 +69,13 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected abstract bool DatabaseRecordContainsItem(DatabaseRecord databaseRecord, string name);
+        protected abstract bool DatabaseRecordContainsItem(RawDatabaseRecord databaseRecord, string name);
 
-        protected abstract IEnumerable<(string Name, string Code)> GetItemsFromDatabaseRecord(DatabaseRecord databaseRecord);
+        protected abstract IEnumerable<(string Name, string Code)> GetItemsFromDatabaseRecord(RawDatabaseRecord databaseRecord);
 
         protected abstract IEnumerable<(string Name, string Code)> GetItemsFromCluster(ServerStore serverStore, TransactionOperationContext context);
 
-        public void AddItems(DatabaseRecord databaseRecord)
+        public void AddItems(RawDatabaseRecord databaseRecord)
         {
             foreach (var kvp in PerDatabaseCache.ForceEnumerateInThreadSafeManner())
             {

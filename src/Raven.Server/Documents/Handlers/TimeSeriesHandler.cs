@@ -622,7 +622,7 @@ namespace Raven.Server.Documents.Handlers
                 TimeSeriesConfiguration timeSeriesConfig;
                 using (var rawRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
                 {
-                    timeSeriesConfig = rawRecord?.TimeSeriesConfiguration;
+                    timeSeriesConfig = rawRecord?.TimeSeries;
                 }
 
                 if (timeSeriesConfig != null)
@@ -689,7 +689,7 @@ namespace Raven.Server.Documents.Handlers
                 TimeSeriesConfiguration current;
                 using (context.OpenReadTransaction())
                 {
-                    current = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name).TimeSeriesConfiguration ?? new TimeSeriesConfiguration();
+                    current = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name).TimeSeries ?? new TimeSeriesConfiguration();
                 }
 
                 current.Collections ??= new Dictionary<string, TimeSeriesCollectionConfiguration>(StringComparer.OrdinalIgnoreCase);
@@ -733,7 +733,7 @@ namespace Raven.Server.Documents.Handlers
                 TimeSeriesConfiguration current;
                 using (context.OpenReadTransaction())
                 {
-                    current = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name).TimeSeriesConfiguration;
+                    current = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name).TimeSeries;
                 }
 
                 if (current?.Collections?.ContainsKey(collection) == true)
@@ -778,7 +778,7 @@ namespace Raven.Server.Documents.Handlers
                 TimeSeriesConfiguration current;
                 using (context.OpenReadTransaction())
                 {
-                    current = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name).TimeSeriesConfiguration ?? new TimeSeriesConfiguration();
+                    current = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name).TimeSeries ?? new TimeSeriesConfiguration();
                 }
 
                 if (current.NamedValues == null)

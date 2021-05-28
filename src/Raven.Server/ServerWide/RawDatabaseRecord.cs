@@ -5,6 +5,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
@@ -32,9 +33,9 @@ namespace Raven.Server.ServerWide
             _record = record ?? throw new ArgumentNullException(nameof(record));
         }
 
-        private RawDatabaseRecord(DatabaseRecord record)
+        public RawDatabaseRecord(DatabaseRecord record)
         {
-            _materializedRecord = record;
+            _materializedRecord = record ?? throw new ArgumentNullException(nameof(record));
         }
 
         public BlittableJsonReaderObject Raw
@@ -45,6 +46,22 @@ namespace Raven.Server.ServerWide
                     throw new ArgumentNullException(nameof(_record));
 
                 return _record;
+            }
+        }
+
+        private DatabaseRecordClusterState _clusterState;
+
+        public DatabaseRecordClusterState ClusterState
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.ClusterState;
+
+                if (_clusterState == null && _record.TryGet(nameof(DatabaseRecord.ClusterState), out BlittableJsonReaderObject clusterStateJson))
+                    _clusterState = JsonDeserializationCluster.DatabaseRecordClusterState(clusterStateJson);
+
+                return _clusterState;
             }
         }
 
@@ -172,35 +189,35 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private TimeSeriesConfiguration _timeSeriesConfiguration;
+        private TimeSeriesConfiguration _timeSeries;
 
-        public TimeSeriesConfiguration TimeSeriesConfiguration
+        public TimeSeriesConfiguration TimeSeries
         {
             get
             {
                 if (_materializedRecord != null)
                     return _materializedRecord.TimeSeries;
-                
-                if (_timeSeriesConfiguration == null && _record.TryGet(nameof(DatabaseRecord.TimeSeries), out BlittableJsonReaderObject config) && config != null)
-                    _timeSeriesConfiguration = JsonDeserializationCluster.TimeSeriesConfiguration(config);
 
-                return _timeSeriesConfiguration;
+                if (_timeSeries == null && _record.TryGet(nameof(DatabaseRecord.TimeSeries), out BlittableJsonReaderObject config) && config != null)
+                    _timeSeries = JsonDeserializationCluster.TimeSeriesConfiguration(config);
+
+                return _timeSeries;
             }
         }
 
-        private RevisionsConfiguration _revisionsConfiguration;
+        private RevisionsConfiguration _revisions;
 
-        public RevisionsConfiguration RevisionsConfiguration
+        public RevisionsConfiguration Revisions
         {
             get
             {
                 if (_materializedRecord != null)
                     return _materializedRecord.Revisions;
 
-                if (_revisionsConfiguration == null && _record.TryGet(nameof(DatabaseRecord.Revisions), out BlittableJsonReaderObject config) && config != null)
-                    _revisionsConfiguration = JsonDeserializationCluster.RevisionsConfiguration(config);
+                if (_revisions == null && _record.TryGet(nameof(DatabaseRecord.Revisions), out BlittableJsonReaderObject config) && config != null)
+                    _revisions = JsonDeserializationCluster.RevisionsConfiguration(config);
 
-                return _revisionsConfiguration;
+                return _revisions;
             }
         }
 
@@ -219,69 +236,69 @@ namespace Raven.Server.ServerWide
 
                 return _revisionsForConflictsConfiguration;
             }
-        }  
+        }
 
-        private DocumentsCompressionConfiguration _documentsCompressionConfiguration;
+        private DocumentsCompressionConfiguration _documentsCompression;
 
-        public DocumentsCompressionConfiguration DocumentsCompressionConfiguration
+        public DocumentsCompressionConfiguration DocumentsCompression
         {
             get
             {
                 if (_materializedRecord != null)
                     return _materializedRecord.DocumentsCompression;
 
-                if (_documentsCompressionConfiguration == null && _record.TryGet(nameof(DatabaseRecord.DocumentsCompression), out BlittableJsonReaderObject config) && config != null)
-                    _documentsCompressionConfiguration = JsonDeserializationCluster.DocumentsCompressionConfiguration(config);
+                if (_documentsCompression == null && _record.TryGet(nameof(DatabaseRecord.DocumentsCompression), out BlittableJsonReaderObject config) && config != null)
+                    _documentsCompression = JsonDeserializationCluster.DocumentsCompressionConfiguration(config);
 
-                return _documentsCompressionConfiguration;
+                return _documentsCompression;
             }
         }
-        
-        private ConflictSolver _conflictSolverConfiguration;
 
-        public ConflictSolver ConflictSolverConfiguration
+        private ConflictSolver _conflictSolverConfig;
+
+        public ConflictSolver ConflictSolverConfig
         {
             get
             {
                 if (_materializedRecord != null)
                     return _materializedRecord.ConflictSolverConfig;
 
-                if (_conflictSolverConfiguration == null && _record.TryGet(nameof(DatabaseRecord.ConflictSolverConfig), out BlittableJsonReaderObject config) && config != null)
-                    _conflictSolverConfiguration = JsonDeserializationCluster.ConflictSolverConfig(config);
+                if (_conflictSolverConfig == null && _record.TryGet(nameof(DatabaseRecord.ConflictSolverConfig), out BlittableJsonReaderObject config) && config != null)
+                    _conflictSolverConfig = JsonDeserializationCluster.ConflictSolverConfig(config);
 
-                return _conflictSolverConfiguration;
+                return _conflictSolverConfig;
             }
         }
 
-        private ExpirationConfiguration _expirationConfiguration;
+        private ExpirationConfiguration _expiration;
 
-        public ExpirationConfiguration ExpirationConfiguration
+        public ExpirationConfiguration Expiration
         {
             get
             {
                 if (_materializedRecord != null)
                     return _materializedRecord.Expiration;
 
-                if (_expirationConfiguration == null && _record.TryGet(nameof(DatabaseRecord.Expiration), out BlittableJsonReaderObject config) && config != null)
-                    _expirationConfiguration = JsonDeserializationCluster.ExpirationConfiguration(config);
+                if (_expiration == null && _record.TryGet(nameof(DatabaseRecord.Expiration), out BlittableJsonReaderObject config) && config != null)
+                    _expiration = JsonDeserializationCluster.ExpirationConfiguration(config);
 
-                return _expirationConfiguration;
+                return _expiration;
             }
         }
 
-        private RefreshConfiguration _refreshConfiguration;
+        private RefreshConfiguration _refresh;
 
-        public RefreshConfiguration RefreshConfiguration
+        public RefreshConfiguration Refresh
         {
             get
             {
                 if (_materializedRecord != null)
                     return _materializedRecord.Refresh;
 
-                if (_refreshConfiguration == null && _record.TryGet(nameof(DatabaseRecord.Refresh), out BlittableJsonReaderObject config) && config != null)
-                    _refreshConfiguration = JsonDeserializationCluster.RefreshConfiguration(config);
+                if (_refresh == null && _record.TryGet(nameof(DatabaseRecord.Refresh), out BlittableJsonReaderObject config) && config != null)
+                    _refresh = JsonDeserializationCluster.RefreshConfiguration(config);
 
-                return _refreshConfiguration;
+                return _refresh;
             }
         }
 
@@ -307,8 +324,8 @@ namespace Raven.Server.ServerWide
                 return _externalReplications;
             }
         }
-        
-        
+
+
         public PullReplicationDefinition GetHubPullReplicationByName(string name)
         {
             if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) && bjra != null)
@@ -322,8 +339,8 @@ namespace Raven.Server.ServerWide
 
             return null;
         }
-        
-        
+
+
         public PullReplicationDefinition GetHubPullReplicationById(in long key)
         {
             if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) && bjra != null)
@@ -804,7 +821,7 @@ namespace Raven.Server.ServerWide
 
                 if (_ravenConnectionStrings == null)
                 {
-                    _ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();   
+                    _ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
                     if (_record.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
                     {
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
@@ -877,8 +894,132 @@ namespace Raven.Server.ServerWide
                 return _materializedRecord;
             }
         }
-        
-        public static implicit operator DatabaseRecord(RawDatabaseRecord raw) => raw.MaterializedRecord;
-        public static implicit operator RawDatabaseRecord(DatabaseRecord record) => new RawDatabaseRecord(record);
+
+        //public static implicit operator DatabaseRecord(RawDatabaseRecord raw) => raw.MaterializedRecord;
+        //public static implicit operator RawDatabaseRecord(DatabaseRecord record) => new RawDatabaseRecord(record);
+        private StudioConfiguration _studio;
+
+        public StudioConfiguration Studio
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.Studio;
+
+                if (_studio == null)
+                {
+                    if (_record.TryGet(nameof(DatabaseRecord.Studio), out BlittableJsonReaderObject obj) && obj != null)
+                        _studio = JsonDeserializationClient.StudioConfiguration(obj);
+                }
+
+                return _studio;
+            }
+        }
+
+        private ClientConfiguration _client;
+
+        public ClientConfiguration Client
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.Client;
+
+                if (_client == null)
+                {
+                    if (_record.TryGet(nameof(DatabaseRecord.Client), out BlittableJsonReaderObject obj) && obj != null)
+                        _client = JsonDeserializationClient.ClientConfiguration(obj);
+                }
+
+                return _client;
+            }
+        }
+
+        private HashSet<string> _unusedDatabaseIds;
+
+        public HashSet<string> UnusedDatabaseIds
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.UnusedDatabaseIds;
+
+                if (_unusedDatabaseIds == null)
+                {
+                    if (_record.TryGet(nameof(DatabaseRecord.UnusedDatabaseIds), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        _unusedDatabaseIds = new HashSet<string>();
+                        foreach (object o in bjra)
+                        {
+                            switch (o)
+                            {
+                                case string s:
+                                    _unusedDatabaseIds.Add(s);
+                                    break;
+
+                                case LazyStringValue lsv:
+                                    _unusedDatabaseIds.Add(lsv);
+                                    break;
+
+                                case LazyCompressedStringValue lcsv:
+                                    _unusedDatabaseIds.Add(lcsv);
+                                    break;
+
+                                default:
+                                    throw new NotSupportedException($"Not supported Unused Database ID: {o}");
+                            }
+                        }
+                    }
+                }
+
+                return _unusedDatabaseIds;
+            }
+        }
+
+        private List<PeriodicBackupConfiguration> _periodicBackups;
+
+        public List<PeriodicBackupConfiguration> PeriodicBackups
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.PeriodicBackups;
+
+                if (_periodicBackups == null)
+                {
+                    if (_record.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        _periodicBackups = new List<PeriodicBackupConfiguration>();
+                        foreach (BlittableJsonReaderObject bjro in bjra)
+                            _periodicBackups.Add(JsonDeserializationCluster.PeriodicBackupConfiguration(bjro));
+                    }
+                }
+
+                return _periodicBackups;
+            }
+        }
+
+        private List<PullReplicationAsSink> _sinkPullReplications;
+
+        public List<PullReplicationAsSink> SinkPullReplications
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.SinkPullReplications;
+
+                if (_sinkPullReplications == null)
+                {
+                    if (_record.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        _sinkPullReplications = new List<PullReplicationAsSink>();
+                        foreach (BlittableJsonReaderObject bjro in bjra)
+                            _sinkPullReplications.Add(JsonDeserializationCluster.PullReplicationAsSink(bjro));
+                    }
+                }
+
+                return _sinkPullReplications;
+            }
+        }
     }
 }

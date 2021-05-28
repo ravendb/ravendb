@@ -374,8 +374,8 @@ namespace Raven.Server.Documents.Replication
                     BlittableJsonDocumentBuilder.UsageMode.None, buffer))
                 {
                     initialRequest = JsonDeserializationServer.ReplicationInitialRequest(readerObject);
-                    }
                 }
+            }
 
             string[] allowedPaths = default;
             string pullDefinitionName = null;
@@ -389,15 +389,15 @@ namespace Raven.Server.Documents.Replication
                     if (header.AuthorizeInfo.AuthorizationFor == null)
                         throw new InvalidOperationException("Pull replication requires that the AuthorizationFor field will be set, but it wasn't provided");
 
-            PullReplicationDefinition pullReplicationDefinition;
-            using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
+                    PullReplicationDefinition pullReplicationDefinition;
+                    using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
                         pullReplicationDefinition = _server.Cluster.ReadPullReplicationDefinition(Database.Name, header.AuthorizeInfo.AuthorizationFor, ctx);
 
                         if (pullReplicationDefinition.Disabled)
                             throw new InvalidOperationException("The replication hub " + pullReplicationDefinition.Name + " is disabled and cannot be used currently");
-            }
+                    }
 
                     pullDefinitionName = header.AuthorizeInfo.AuthorizationFor;
 
@@ -786,7 +786,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public void Initialize(DatabaseRecord record)
+        public void Initialize(RawDatabaseRecord record)
         {
             if (_isInitialized) //precaution -> probably not necessary, but still...
                 return;
@@ -797,14 +797,14 @@ namespace Raven.Server.Documents.Replication
             _isInitialized.Raise();
         }
 
-        public void HandleDatabaseRecordChange(DatabaseRecord newRecord)
+        public void HandleDatabaseRecordChange(RawDatabaseRecord record)
         {
-            HandleConflictResolverChange(newRecord);
-            HandleTopologyChange(newRecord);
-            UpdateConnectionStrings(newRecord);
+            HandleConflictResolverChange(record);
+            HandleTopologyChange(record);
+            UpdateConnectionStrings(record);
         }
 
-        private void UpdateConnectionStrings(DatabaseRecord newRecord)
+        private void UpdateConnectionStrings(RawDatabaseRecord newRecord)
         {
             if (newRecord == null)
             {
@@ -823,35 +823,35 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void HandleConflictResolverChange(DatabaseRecord newRecord)
+        private void HandleConflictResolverChange(RawDatabaseRecord record)
         {
-            if (newRecord == null)
+            if (record == null)
             {
                 ConflictSolverConfig = null;
                 return;
             }
 
-            if (ConflictSolverConfig == null && newRecord.ConflictSolverConfig == null)
+            if (ConflictSolverConfig == null && record.ConflictSolverConfig == null)
             {
                 return;
             }
 
-            var conflictSolverChanged = ConflictSolverConfig?.ConflictResolutionChanged(newRecord.ConflictSolverConfig) ?? true;
+            var conflictSolverChanged = ConflictSolverConfig?.ConflictResolutionChanged(record.ConflictSolverConfig) ?? true;
             if (conflictSolverChanged)
             {
                 if (_log.IsInfoEnabled)
                 {
                     _log.Info("Conflict resolution was change.");
                 }
-                ConflictSolverConfig = newRecord.ConflictSolverConfig;
+                ConflictSolverConfig = record.ConflictSolverConfig;
                 ConflictResolver.RunConflictResolversOnce();
             }
         }
 
-        private void HandleTopologyChange(DatabaseRecord newRecord)
+        private void HandleTopologyChange(RawDatabaseRecord record)
         {
             var instancesToDispose = new List<IDisposable>();
-            if (newRecord == null || _server.IsPassive())
+            if (record == null || _server.IsPassive())
             {
                 DropOutgoingConnections(Destinations, instancesToDispose);
                 DropIncomingConnections(Destinations, instancesToDispose);
@@ -864,9 +864,9 @@ namespace Raven.Server.Documents.Replication
 
             _clusterTopology = GetClusterTopology();
 
-            HandleInternalReplication(newRecord, instancesToDispose);
-            HandleExternalReplication(newRecord, instancesToDispose);
-            HandleHubPullReplication(newRecord, instancesToDispose);
+            HandleInternalReplication(record, instancesToDispose);
+            HandleExternalReplication(record, instancesToDispose);
+            HandleHubPullReplication(record, instancesToDispose);
             var destinations = new List<ReplicationNode>();
             destinations.AddRange(_internalDestinations);
             destinations.AddRange(_externalDestinations);
@@ -876,14 +876,14 @@ namespace Raven.Server.Documents.Replication
             DisposeConnections(instancesToDispose);
         }
 
-        private void HandleHubPullReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
+        private void HandleHubPullReplication(RawDatabaseRecord record, List<IDisposable> instancesToDispose)
         {
             foreach (var instance in OutgoingHandlers)
             {
                 if (instance.PullReplicationDefinitionName == null)
                     continue;
 
-                var pullReplication = newRecord.HubPullReplications.Find(x => x.Name == instance.PullReplicationDefinitionName);
+                var pullReplication = record.GetHubPullReplicationByName(instance.PullReplicationDefinitionName);
 
                 if (pullReplication != null && pullReplication.Disabled == false)
                 {
@@ -969,7 +969,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private (List<ExternalReplicationBase> AddedDestinations, List<ExternalReplicationBase> RemovedDestiantions) FindExternalReplicationChanges(
-            DatabaseRecord databaseRecord, HashSet<ExternalReplicationBase> current,
+            RawDatabaseRecord record, HashSet<ExternalReplicationBase> current,
             List<ExternalReplicationBase> newDestinations)
         {
             var outgoingHandlers = OutgoingHandlers.ToList();
@@ -978,7 +978,7 @@ namespace Raven.Server.Documents.Replication
             var removedDestinations = current.ToList();
             foreach (var newDestination in newDestinations.ToArray())
             {
-                if (IsMyTask(databaseRecord.RavenConnectionStrings, databaseRecord.Topology, newDestination) == false)
+                if (IsMyTask(record.RavenConnectionStrings, record.Topology, newDestination) == false)
                     continue;
 
                 if (newDestination.Disabled)
@@ -1010,7 +1010,7 @@ namespace Raven.Server.Documents.Replication
                             ex.DelayReplicationFor = newDestinationEx.DelayReplicationFor;
                         }
                     }
-                    
+
                     continue;
                 }
 
@@ -1020,17 +1020,17 @@ namespace Raven.Server.Documents.Replication
             return (addedDestinations, removedDestinations);
         }
 
-        private void HandleExternalReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
+        private void HandleExternalReplication(RawDatabaseRecord record, List<IDisposable> instancesToDispose)
         {
-            var externalReplications = newRecord.ExternalReplications.Concat<ExternalReplicationBase>(newRecord.SinkPullReplications).ToList();
-            SetExternalReplicationProperties(newRecord, externalReplications);
+            var externalReplications = record.ExternalReplications.Concat<ExternalReplicationBase>(record.SinkPullReplications).ToList();
+            SetExternalReplicationProperties(record, externalReplications);
 
-            var changes = FindExternalReplicationChanges(newRecord, _externalDestinations, externalReplications);
+            var changes = FindExternalReplicationChanges(record, _externalDestinations, externalReplications);
 
             DropOutgoingConnections(changes.RemovedDestiantions, instancesToDispose);
             DropIncomingConnections(changes.RemovedDestiantions, instancesToDispose);
 
-            var newDestinations = GetMyNewDestinations(newRecord, changes.AddedDestinations);
+            var newDestinations = GetMyNewDestinations(record, changes.AddedDestinations);
 
             if (newDestinations.Count > 0)
             {
@@ -1056,12 +1056,12 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void SetExternalReplicationProperties(DatabaseRecord newRecord, List<ExternalReplicationBase> externalReplications)
+        private void SetExternalReplicationProperties(RawDatabaseRecord record, List<ExternalReplicationBase> externalReplications)
         {
             for (var i = 0; i < externalReplications.Count; i++)
             {
                 var externalReplication = externalReplications[i];
-                if (ValidateConnectionString(newRecord.RavenConnectionStrings, externalReplication, out var connectionString) == false)
+                if (ValidateConnectionString(record.RavenConnectionStrings, externalReplication, out var connectionString) == false)
                 {
                     continue;
                 }
@@ -1095,13 +1095,13 @@ namespace Raven.Server.Documents.Replication
 
                     i += 1;
                     externalReplications.Insert(i, other);
+                }
             }
         }
-        }
 
-        private List<ExternalReplicationBase> GetMyNewDestinations(DatabaseRecord newRecord, List<ExternalReplicationBase> added)
+        private List<ExternalReplicationBase> GetMyNewDestinations(RawDatabaseRecord record, List<ExternalReplicationBase> added)
         {
-            return added.Where(configuration => IsMyTask(newRecord.RavenConnectionStrings, newRecord.Topology, configuration)).ToList();
+            return added.Where(configuration => IsMyTask(record.RavenConnectionStrings, record.Topology, configuration)).ToList();
         }
 
         private bool IsMyTask(Dictionary<string, RavenConnectionString> connectionStrings, DatabaseTopology topology, ExternalReplicationBase task)
@@ -1233,10 +1233,10 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
-        private void HandleInternalReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
+        private void HandleInternalReplication(RawDatabaseRecord record, List<IDisposable> instancesToDispose)
         {
             var newInternalDestinations =
-                newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, newRecord.DeletionInProgress, _clusterTopology, _server.Engine.CurrentState);
+                record.Topology?.GetDestinations(_server.NodeTag, Database.Name, record.DeletionInProgress, _clusterTopology, _server.Engine.CurrentState);
             var internalConnections = DatabaseTopology.FindChanges(_internalDestinations, newInternalDestinations);
 
             if (internalConnections.RemovedDestiantions.Count > 0)
@@ -1380,29 +1380,29 @@ namespace Raven.Server.Documents.Replication
                 {
                     case ExternalReplicationBase exNode:
                         {
-                    var database = exNode.ConnectionString.Database;
-                    if (node is PullReplicationAsSink sink)
-                    {
-                        return GetPullReplicationTcpInfo(sink, certificate, database);
-                    }
+                            var database = exNode.ConnectionString.Database;
+                            if (node is PullReplicationAsSink sink)
+                            {
+                                return GetPullReplicationTcpInfo(sink, certificate, database);
+                            }
 
-                    // normal external replication
-                    return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
-                }
+                            // normal external replication
+                            return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
+                        }
                     case InternalReplication internalNode:
-                {
-                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown))
-                    {
-                        cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
+                        {
+                            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown))
+                            {
+                                cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
                                 return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
                                     "Replication",
                             certificate, cts.Token);
-                    }
-                }
+                            }
+                        }
                     default:
-                throw new InvalidOperationException(
-                    $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
-            }
+                        throw new InvalidOperationException(
+                            $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
+                }
             }
             catch (Exception e)
             {
@@ -1432,7 +1432,7 @@ namespace Raven.Server.Documents.Replication
                         AlertType.Replication,
                         NotificationSeverity.Error);
 
-                        _server.NotificationCenter.Add(alert);
+                    _server.NotificationCenter.Add(alert);
                 }
 
                 var replicationPulse = new LiveReplicationPulsesCollector.ReplicationPulse

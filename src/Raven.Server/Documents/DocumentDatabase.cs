@@ -306,13 +306,17 @@ namespace Raven.Server.Documents
                 MetricCacher.Initialize();
 
                 long index;
-                DatabaseRecord record;
+                RawDatabaseRecord record;
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
-                    record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
+                {
+                    var r = _serverStore.Cluster.ReadDatabase(context, Name, out index);
 
-                if (record == null)
-                    DatabaseDoesNotExistException.Throw(Name);
+                    if (r == null)
+                        DatabaseDoesNotExistException.Throw(Name);
+
+                    record = new RawDatabaseRecord(r);
+                }
 
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
 
@@ -347,11 +351,11 @@ namespace Raven.Server.Documents
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
-                ThreadPool.QueueUserWorkItem( _ =>
+                ThreadPool.QueueUserWorkItem(_ =>
                 {
                     try
                     {
-                        NotifyFeaturesAboutStateChange(record, index);
+                        NotifyFeaturesAboutStateChange(index);
                         RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                     }
                     catch (Exception e)
@@ -754,7 +758,7 @@ namespace Raven.Server.Documents
             {
                 _databaseShutdown.Dispose();
             });
-            
+
             exceptionAggregator.Execute(() =>
             {
                 _serverStore.LicenseManager.LicenseChanged -= LoadTimeSeriesPolicyRunnerConfigurations;
@@ -1078,12 +1082,6 @@ namespace Raven.Server.Documents
             return MasterKey == null ? fileStream : new EncryptingXChaCha20Poly1305Stream(fileStream, MasterKey);
         }
 
-        /// <summary>
-        /// this event is intended for entities that are not singletons
-        /// per database and still need to be informed on changes to the database record.
-        /// </summary>
-        public event Action<DatabaseRecord> DatabaseRecordChanged;
-
         public void ValueChanged(long index)
         {
             try
@@ -1091,14 +1089,7 @@ namespace Raven.Server.Documents
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                DatabaseRecord record;
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    record = _serverStore.Cluster.ReadDatabase(context, Name);
-                }
-
-                NotifyFeaturesAboutValueChange(record, index);
+                NotifyFeaturesAboutValueChange(index);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
@@ -1119,23 +1110,24 @@ namespace Raven.Server.Documents
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                DatabaseRecord record;
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    record = _serverStore.Cluster.ReadDatabase(context, Name);
+                    var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, Name, out index);
+                    if (record == null)
+                        return;
+
+                    if (_lastTopologyIndex < record.Topology.Stamp.Index)
+                        _lastTopologyIndex = record.Topology.Stamp.Index;
+
+                    ClientConfiguration = record.Client;
+                    IdentityPartsSeparator = record.Client?.IdentityPartsSeparator ?? '/';
+
+                    StudioConfiguration = record.Studio;
+
+                    NotifyFeaturesAboutStateChange(index);
+                    RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                 }
-
-                if (_lastTopologyIndex < record.Topology.Stamp.Index)
-                    _lastTopologyIndex = record.Topology.Stamp.Index;
-
-                ClientConfiguration = record.Client;
-                IdentityPartsSeparator = record.Client?.IdentityPartsSeparator ?? '/';
-
-                StudioConfiguration = record.Studio;
-
-                NotifyFeaturesAboutStateChange(record, index);
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
             {
@@ -1156,9 +1148,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
+        private void NotifyFeaturesAboutStateChange(long index)
         {
-            if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
+            if (CanSkipDatabaseRecordChange(index))
                 return;
 
             var taken = false;
@@ -1168,7 +1160,7 @@ namespace Raven.Server.Documents
 
                 try
                 {
-                    if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
+                    if (CanSkipDatabaseRecordChange(index))
                         return;
 
                     if (DatabaseShutdown.IsCancellationRequested)
@@ -1177,36 +1169,39 @@ namespace Raven.Server.Documents
                     if (taken == false)
                         continue;
 
-                    Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
-                        $"{Name} != {record.DatabaseName}");
-
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordChangeIndex}) for {record.DatabaseName}.");
-
-                    try
+                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
                     {
-                        DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
+                        var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, Name, out index);
+                        if (record == null)
+                            return;
+
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordChangeIndex}) for {record.DatabaseName}.");
+
+                        try
+                        {
+                            DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
                         ClusterTransactionId = record.Topology.ClusterTransactionIdBase64;
 
-                        SetUnusedDatabaseIds(record);
-                        InitializeFromDatabaseRecord(record);
-                        IndexStore.HandleDatabaseRecordChange(record, index);
-                        ReplicationLoader?.HandleDatabaseRecordChange(record);
-                        EtlLoader?.HandleDatabaseRecordChange(record);
-                        SubscriptionStorage?.HandleDatabaseRecordChange(record);
+                            SetUnusedDatabaseIds(record);
+                            InitializeFromDatabaseRecord(record);
+                            IndexStore.HandleDatabaseRecordChange(record, index);
+                            ReplicationLoader?.HandleDatabaseRecordChange(record);
+                            EtlLoader?.HandleDatabaseRecordChange(record);
+                            SubscriptionStorage?.HandleDatabaseRecordChange(record);
 
-                        OnDatabaseRecordChanged(record);
+                            LastDatabaseRecordChangeIndex = index;
 
-                        LastDatabaseRecordChangeIndex = index;
-
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
-                    }
-                    catch (Exception e)
-                    {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Encounter an error while processing record {index} for {record.DatabaseName}.", e);
-                        throw;
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
+                        }
+                        catch (Exception e)
+                        {
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Encounter an error while processing record {index} for {record.DatabaseName}.", e);
+                            throw;
+                        }
                     }
                 }
                 finally
@@ -1217,7 +1212,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void SetUnusedDatabaseIds(DatabaseRecord record)
+        private void SetUnusedDatabaseIds(RawDatabaseRecord record)
         {
             if (record.UnusedDatabaseIds == null && DocumentsStorage.UnusedDatabaseIds == null)
                 return;
@@ -1234,13 +1229,13 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool CanSkipDatabaseRecordChange(string database, long index)
+        private bool CanSkipDatabaseRecordChange(long index)
         {
             if (LastDatabaseRecordChangeIndex > index)
             {
                 // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Skipping record {index} (current {LastDatabaseRecordChangeIndex}) for {database} because it was already precessed.");
+                    _logger.Info($"Skipping record {index} (current {LastDatabaseRecordChangeIndex}) for {Name} because it was already precessed.");
                 return true;
             }
 
@@ -1260,9 +1255,9 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private void NotifyFeaturesAboutValueChange(DatabaseRecord record, long index)
+        private void NotifyFeaturesAboutValueChange(long index)
         {
-            if (CanSkipValueChange(record.DatabaseName, index))
+            if (CanSkipValueChange(Name, index))
                 return;
 
             var taken = false;
@@ -1272,7 +1267,7 @@ namespace Raven.Server.Documents
 
                 try
                 {
-                    if (CanSkipValueChange(record.DatabaseName, index))
+                    if (CanSkipValueChange(Name, index))
                         return;
 
                     if (DatabaseShutdown.IsCancellationRequested)
@@ -1281,11 +1276,18 @@ namespace Raven.Server.Documents
                     if (taken == false)
                         continue;
 
-                    DatabaseShutdown.ThrowIfCancellationRequested();
-                    SubscriptionStorage?.HandleDatabaseRecordChange(record);
-                    EtlLoader?.HandleDatabaseValueChanged(record);
+                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, Name, out index);
+                        if (record == null)
+                            return;
 
-                    LastValueChangeIndex = index;
+                        SubscriptionStorage?.HandleDatabaseRecordChange(record);
+                        EtlLoader?.HandleDatabaseValueChanged(record);
+
+                        LastValueChangeIndex = index;
+                    }
                 }
                 finally
                 {
@@ -1300,17 +1302,15 @@ namespace Raven.Server.Documents
             if (_databaseShutdown.IsCancellationRequested)
                 ThrowDatabaseShutdown();
 
-            DatabaseRecord record;
             long index;
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            {
-                record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
-            }
-            NotifyFeaturesAboutStateChange(record, index);
+                _ = _serverStore.Cluster.ReadRawDatabaseRecord(context, Name, out index);
+
+            NotifyFeaturesAboutStateChange(index);
         }
 
-        private void InitializeFromDatabaseRecord(DatabaseRecord record)
+        private void InitializeFromDatabaseRecord(RawDatabaseRecord record)
         {
             if (record == null || DocumentsStorage == null)
                 return;
@@ -1331,7 +1331,7 @@ namespace Raven.Server.Documents
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var record = _serverStore.Cluster.ReadDatabase(context, Name, out _);
+                var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, Name, out _);
                 TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
             }
         }
@@ -1413,11 +1413,6 @@ namespace Raven.Server.Documents
         {
             yield return TxMerger.GeneralWaitPerformanceMetrics;
             yield return TxMerger.TransactionPerformanceMetrics;
-        }
-
-        private void OnDatabaseRecordChanged(DatabaseRecord record)
-        {
-            DatabaseRecordChanged?.Invoke(record);
         }
 
         public bool HasTopologyChanged(long index)

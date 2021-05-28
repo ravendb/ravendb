@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
@@ -23,6 +24,27 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide
 {
+    public class DatabaseRecordClusterState
+    {
+        public long LastIndex;
+
+        public long LastSortersIndex;
+
+        internal bool ShouldProcessSorters(long index)
+        {
+            if (ShouldProcess(index))
+                return true;
+
+            return LastSortersIndex >= index;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool ShouldProcess(long index)
+        {
+            return LastIndex >= index;
+        }
+    }
+
     public class DatabaseRecordWithEtag : DatabaseRecord
     {
         public long Etag { get; set; }
@@ -33,9 +55,10 @@ namespace Raven.Client.ServerWide
     {
         public DatabaseRecord()
         {
+            ClusterState = new DatabaseRecordClusterState();
         }
 
-        public DatabaseRecord(string databaseName)
+        public DatabaseRecord(string databaseName) : this()
         {
             DatabaseName = databaseName.Trim();
         }
@@ -114,6 +137,8 @@ namespace Raven.Client.ServerWide
         public long TruncatedClusterTransactionCommandsCount;
 
         public HashSet<string> UnusedDatabaseIds = new HashSet<string>();
+
+        public DatabaseRecordClusterState ClusterState;
 
         public void AddSorter(SorterDefinition definition)
         {
@@ -247,7 +272,7 @@ namespace Raven.Client.ServerWide
             }
 
             AutoIndexes[definition.Name] = definition;
-            
+
             if (globalDeploymentMode == IndexDeploymentMode.Rolling)
             {
                 if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
@@ -266,7 +291,7 @@ namespace Raven.Client.ServerWide
         private void InitializeRollingDeployment(string indexName, DateTime createdAt)
         {
             RollingIndexes ??= new Dictionary<string, RollingIndex>();
-            
+
             var rollingIndex = new RollingIndex();
             RollingIndexes[indexName] = rollingIndex;
 

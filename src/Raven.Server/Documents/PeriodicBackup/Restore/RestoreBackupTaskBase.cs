@@ -549,7 +549,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     onDatabaseRecordAction: smugglerDatabaseRecord =>
                     {
                         // need to enable revisions before import
-                        database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
+                        database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(new RawDatabaseRecord(smugglerDatabaseRecord));
                     });
             }
 
@@ -615,7 +615,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.OlapEtls = smugglerDatabaseRecord.OlapEtls;
 
                     // need to enable revisions before import
-                    database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
+                    database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(new RawDatabaseRecord(smugglerDatabaseRecord));
                 });
         }
 
