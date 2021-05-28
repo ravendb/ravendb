@@ -213,9 +213,11 @@ namespace Raven.Server.Documents.Indexes
                 : ProcessorInfo.ProcessorCount;
         }
 
+        private long _lastProcessedSortersIndex;
+
         private void HandleSorters(RawDatabaseRecord record, long index)
         {
-            if (record.ClusterState.ShouldProcessSorters(index) == false)
+            if (record.ClusterState.ShouldProcessSorters(_lastProcessedSortersIndex) == false)
                 return;
 
             try
@@ -228,6 +230,8 @@ namespace Raven.Server.Documents.Indexes
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Could not update sorters", e);
             }
+
+            _lastProcessedSortersIndex = index;
         }
 
         private void HandleAnalyzers(RawDatabaseRecord record, long index)

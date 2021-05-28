@@ -1505,11 +1505,12 @@ namespace Raven.Server.ServerWide
             Exception exception = null;
             try
             {
+                addDatabaseCommand.Record.ClusterState.LastIndex = index;
+
                 Debug.Assert(addDatabaseCommand.Record.Topology.Count != 0, "Attempt to add database with no nodes");
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out Slice valueName))
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out Slice valueNameLowered))
-                using (var newDatabaseRecord = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(addDatabaseCommand.Record, context))
                 {
                     var databaseExists = items.ReadByKey(valueNameLowered, out TableValueReader reader);
                     if (addDatabaseCommand.RaftCommandIndex != null)
@@ -1528,14 +1529,23 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
+                    BlittableJsonReaderObject newDatabaseRecord;
+
                     bool shouldSetClientConfigEtag;
                     var dbId = Constants.Documents.Prefix + addDatabaseCommand.Name;
-                    using (var oldDatabaseRecord = Read(context, dbId, out _))
+                    using (var oldDatabaseRecord = ReadRawDatabaseRecord(context, dbId, out _))
                     {
-                        VerifyUnchangedTasks(oldDatabaseRecord);
+                        if (oldDatabaseRecord != null && oldDatabaseRecord.ClusterState != null)
+                            addDatabaseCommand.Record.ClusterState = oldDatabaseRecord.ClusterState;
+
+                        addDatabaseCommand.Record.ClusterState.LastIndex = index;
+                        newDatabaseRecord = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(addDatabaseCommand.Record, context);
+
+                        VerifyUnchangedTasks(addDatabaseCommand, newDatabaseRecord, oldDatabaseRecord);
                         shouldSetClientConfigEtag = ShouldSetClientConfigEtag(newDatabaseRecord, oldDatabaseRecord);
                     }
 
+                    using (newDatabaseRecord)
                     using (var databaseRecordAsJson = UpdateDatabaseRecordIfNeeded(databaseExists, shouldSetClientConfigEtag, index, addDatabaseCommand, newDatabaseRecord, context))
                     {
                         UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
@@ -1543,19 +1553,19 @@ namespace Raven.Server.ServerWide
                         return addDatabaseCommand.Record.Topology.Members;
                     }
 
-                    void VerifyUnchangedTasks(BlittableJsonReaderObject dbDoc)
+                    static void VerifyUnchangedTasks(AddDatabaseCommand command, BlittableJsonReaderObject newRecord, RawDatabaseRecord oldRecord)
                     {
-                        if (addDatabaseCommand.IsRestore)
+                        if (command.IsRestore)
                             return;
 
-                        if (dbDoc == null)
+                        if (oldRecord == null)
                         {
                             foreach (var task in DatabaseRecordTasks)
                             {
-                                if (newDatabaseRecord.TryGet(task, out BlittableJsonReaderArray dbRecordVal) && dbRecordVal.Length > 0)
+                                if (newRecord.TryGet(task, out BlittableJsonReaderArray dbRecordVal) && dbRecordVal.Length > 0)
                                 {
                                     throw new RachisInvalidOperationException(
-                                        $"Failed to create a new Database {addDatabaseCommand.Name}. Updating tasks configurations via DatabaseRecord is not supported, please use a dedicated operation to update the {task} configuration.");
+                                        $"Failed to create a new Database {command.Name}. Updating tasks configurations via DatabaseRecord is not supported, please use a dedicated operation to update the {task} configuration.");
                                 }
                             }
                         }
@@ -1566,9 +1576,9 @@ namespace Raven.Server.ServerWide
                             {
                                 var hasChanges = false;
 
-                                if (dbDoc.TryGet(task, out BlittableJsonReaderArray oldDbRecordVal))
+                                if (oldRecord.Raw.TryGet(task, out BlittableJsonReaderArray oldDbRecordVal))
                                 {
-                                    if (newDatabaseRecord.TryGet(task, out BlittableJsonReaderArray newDbRecordVal) == false && oldDbRecordVal.Length > 0)
+                                    if (newRecord.TryGet(task, out BlittableJsonReaderArray newDbRecordVal) == false && oldDbRecordVal.Length > 0)
                                     {
                                         hasChanges = true;
                                     }
@@ -1577,7 +1587,7 @@ namespace Raven.Server.ServerWide
                                         hasChanges = true;
                                     }
                                 }
-                                else if (newDatabaseRecord.TryGet(task, out BlittableJsonReaderArray newDbRecordObject) && newDbRecordObject.Length > 0)
+                                else if (newRecord.TryGet(task, out BlittableJsonReaderArray newDbRecordObject) && newDbRecordObject.Length > 0)
                                 {
                                     hasChanges = true;
                                 }
@@ -1713,7 +1723,7 @@ namespace Raven.Server.ServerWide
             return false;
         }
 
-        private static bool ShouldSetClientConfigEtag(BlittableJsonReaderObject newDatabaseRecord, BlittableJsonReaderObject oldDatabaseRecord)
+        private static bool ShouldSetClientConfigEtag(BlittableJsonReaderObject newDatabaseRecord, RawDatabaseRecord oldDatabaseRecord)
         {
             const string clientPropName = nameof(DatabaseRecord.Client);
             var hasNewConfiguration = newDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject newDbClientConfig) && newDbClientConfig != null;
@@ -1723,7 +1733,7 @@ namespace Raven.Server.ServerWide
             if (hasNewConfiguration == false)
                 return true;
 
-            return oldDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject oldDbClientConfig) == false
+            return oldDatabaseRecord.Raw.TryGet(clientPropName, out BlittableJsonReaderObject oldDbClientConfig) == false
                    || oldDbClientConfig == null
                    || oldDbClientConfig.Equals(newDbClientConfig) == false;
         }

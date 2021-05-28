@@ -24,25 +24,34 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide
 {
+    internal static class DatabaseRecordClusterStateExtensions
+    {
+        internal static bool ShouldProcessSorters(this DatabaseRecordClusterState state, long index)
+        {
+            if (state == null)
+                return true;
+
+            if (state.ShouldProcess(index))
+                return true;
+
+            return state.LastSortersIndex > index;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ShouldProcess(this DatabaseRecordClusterState state, long index)
+        {
+            if (state == null)
+                return true;
+
+            return state.LastIndex > index;
+        }
+    }
+
     public class DatabaseRecordClusterState
     {
         public long LastIndex;
 
         public long LastSortersIndex;
-
-        internal bool ShouldProcessSorters(long index)
-        {
-            if (ShouldProcess(index))
-                return true;
-
-            return LastSortersIndex >= index;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool ShouldProcess(long index)
-        {
-            return LastIndex >= index;
-        }
     }
 
     public class DatabaseRecordWithEtag : DatabaseRecord
@@ -140,17 +149,19 @@ namespace Raven.Client.ServerWide
 
         public DatabaseRecordClusterState ClusterState;
 
-        public void AddSorter(SorterDefinition definition)
+        public void AddSorter(SorterDefinition definition, long index)
         {
             if (Sorters == null)
                 Sorters = new Dictionary<string, SorterDefinition>(StringComparer.OrdinalIgnoreCase);
 
             Sorters[definition.Name] = definition;
+            ClusterState.LastSortersIndex = index;
         }
 
-        public void DeleteSorter(string sorterName)
+        public void DeleteSorter(string sorterName, long index)
         {
             Sorters?.Remove(sorterName);
+            ClusterState.LastSortersIndex = index;
         }
 
         public void AddAnalyzer(AnalyzerDefinition definition)

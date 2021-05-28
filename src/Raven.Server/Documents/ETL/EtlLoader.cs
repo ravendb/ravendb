@@ -29,8 +29,6 @@ namespace Raven.Server.Documents.ETL
         private EtlProcess[] _processes = new EtlProcess[0];
         private readonly HashSet<string> _uniqueConfigurationNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // read and modified under a lock.
 
-        private DatabaseRecord _databaseRecord;
-
         private readonly object _loadProcessedLock = new object();
         private readonly DocumentDatabase _database;
         private readonly ServerStore _serverStore;
@@ -68,6 +66,8 @@ namespace Raven.Server.Documents.ETL
         private Dictionary<string, RavenConnectionString> _ravenConnectionStrings;
 
         private Dictionary<string, SqlConnectionString> _sqlConnectionStrings;
+
+        private Dictionary<string, OlapConnectionString> _olapConnectionStrings;
 
         private bool _isEncrypted;
 
@@ -111,8 +111,9 @@ namespace Raven.Server.Documents.ETL
                 _ravenEtls = record.RavenEtls;
                 _ravenConnectionStrings = record.RavenConnectionStrings;
                 _sqlConnectionStrings = record.SqlConnectionStrings;
+                _olapConnectionStrings = record.OlapConnectionString;
                 _topology = record.Topology;
-                OlapDestinations = _databaseRecord.OlapEtls;
+                OlapDestinations = record.OlapEtls;
                 var processes = new List<EtlProcess>(_processes);
 
                 if (toRemove != null && toRemove.Count > 0)
@@ -241,7 +242,7 @@ namespace Raven.Server.Documents.ETL
                         break;
                     case EtlType.Olap:
                         olapConfig = config as OlapEtlConfiguration;
-                        if (_databaseRecord.OlapConnectionStrings.TryGetValue(config.ConnectionStringName, out var olapConnection))
+                        if (_olapConnectionStrings.TryGetValue(config.ConnectionStringName, out var olapConnection))
                             olapConfig.Initialize(olapConnection);
                         else
                             connectionStringNotFound = true;
@@ -474,74 +475,74 @@ namespace Raven.Server.Documents.ETL
                 switch (process)
                 {
                     case RavenEtl ravenEtl:
-                    {
-                    RavenEtlConfiguration existing = null;
-
-                    foreach (var config in myRavenEtl)
-                    {
-                        var diff = ravenEtl.Configuration.Compare(config);
-
-                        if (diff == EtlConfigurationCompareDifferences.None)
                         {
-                            existing = config;
-                            break;
-                        }
-                    }
+                            RavenEtlConfiguration existing = null;
 
-                    if (existing != null)
-                    {
-                        toRemove.Remove(processesPerConfig.Key);
-                        myRavenEtl.Remove(existing);
-                    }
-
-                        break;
-                }
-                    case SqlEtl sqlEtl:
-                {
-                    SqlEtlConfiguration existing = null;
-                    foreach (var config in mySqlEtl)
-                    {
-                        var diff = sqlEtl.Configuration.Compare(config);
-
-                        if (diff == EtlConfigurationCompareDifferences.None)
-                        {
-                            existing = config;
-                            break;
-                        }
-                    }
-                    if (existing != null)
-                    {
-                        toRemove.Remove(processesPerConfig.Key);
-                        mySqlEtl.Remove(existing);
-                    }
-
-                        break;
-                }
-                    case OlapEtl olapEtl:
-                {
-                        OlapEtlConfiguration existing = null;
-
-                        foreach (var config in myOlapEtl)
-                        {
-                            var diff = olapEtl.Configuration.Compare(config);
-
-                            if (diff == EtlConfigurationCompareDifferences.None && olapEtl.Configuration.Equals(config))
+                            foreach (var config in myRavenEtl)
                             {
-                                existing = config;
-                                break;
+                                var diff = ravenEtl.Configuration.Compare(config);
+
+                                if (diff == EtlConfigurationCompareDifferences.None)
+                                {
+                                    existing = config;
+                                    break;
+                                }
                             }
-                        }
 
-                        if (existing != null)
+                            if (existing != null)
+                            {
+                                toRemove.Remove(processesPerConfig.Key);
+                                myRavenEtl.Remove(existing);
+                            }
+
+                            break;
+                        }
+                    case SqlEtl sqlEtl:
                         {
-                            toRemove.Remove(processesPerConfig.Key);
-                            myOlapEtl.Remove(existing);
-                        }
+                            SqlEtlConfiguration existing = null;
+                            foreach (var config in mySqlEtl)
+                            {
+                                var diff = sqlEtl.Configuration.Compare(config);
 
-                        break;
-                    }
+                                if (diff == EtlConfigurationCompareDifferences.None)
+                                {
+                                    existing = config;
+                                    break;
+                                }
+                            }
+                            if (existing != null)
+                            {
+                                toRemove.Remove(processesPerConfig.Key);
+                                mySqlEtl.Remove(existing);
+                            }
+
+                            break;
+                        }
+                    case OlapEtl olapEtl:
+                        {
+                            OlapEtlConfiguration existing = null;
+
+                            foreach (var config in myOlapEtl)
+                            {
+                                var diff = olapEtl.Configuration.Compare(config);
+
+                                if (diff == EtlConfigurationCompareDifferences.None && olapEtl.Configuration.Equals(config))
+                                {
+                                    existing = config;
+                                    break;
+                                }
+                            }
+
+                            if (existing != null)
+                            {
+                                toRemove.Remove(processesPerConfig.Key);
+                                myOlapEtl.Remove(existing);
+                            }
+
+                            break;
+                        }
                     default:
-                    throw new InvalidOperationException($"Unknown ETL process type: {process.GetType()}");
+                        throw new InvalidOperationException($"Unknown ETL process type: {process.GetType()}");
                 }
             }
 

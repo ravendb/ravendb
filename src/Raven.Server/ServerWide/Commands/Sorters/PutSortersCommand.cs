@@ -25,7 +25,7 @@ namespace Raven.Server.ServerWide.Commands.Sorters
             if (Sorters != null)
             {
                 foreach (var definition in Sorters)
-                    record.AddSorter(definition);
+                    record.AddSorter(definition, etag);
             }
         }
 
