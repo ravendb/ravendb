@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
@@ -6,9 +6,9 @@ using Xunit;
 
 namespace Tests.Infrastructure
 {
-    public class CustomS3FactAttribute : FactAttribute
+    public class AmazonS3TheoryAttribute : TheoryAttribute
     {
-        private const string S3CredentialEnvironmentVariable = "CUSTOM_S3_SETTINGS";
+        private const string S3CredentialEnvironmentVariable = "S3_CREDENTIAL";
 
         private static readonly S3Settings _s3Settings;
 
@@ -18,21 +18,18 @@ namespace Tests.Infrastructure
 
         private static readonly bool EnvVariableMissing;
 
-        static CustomS3FactAttribute()
+        static AmazonS3TheoryAttribute()
         {
-            var strSettings = Environment.GetEnvironmentVariable(S3CredentialEnvironmentVariable);
-            if (strSettings == null)
+            var s3SettingsString = Environment.GetEnvironmentVariable(S3CredentialEnvironmentVariable);
+            if (s3SettingsString == null)
             {
                 EnvVariableMissing = true;
                 return;
             }
 
-            if (string.IsNullOrEmpty(strSettings))
-                return;
-
             try
             {
-                _s3Settings = JsonConvert.DeserializeObject<S3Settings>(strSettings);
+                _s3Settings = JsonConvert.DeserializeObject<S3Settings>(s3SettingsString);
             }
             catch (Exception e)
             {
@@ -40,7 +37,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        public CustomS3FactAttribute([CallerMemberName] string memberName = "")
+        public AmazonS3TheoryAttribute([CallerMemberName] string memberName = "")
         {
             if (EnvVariableMissing)
             {
@@ -50,13 +47,14 @@ namespace Tests.Infrastructure
 
             if (string.IsNullOrEmpty(ParsingError) == false)
             {
-                Skip = $"Failed to parse custom S3 settings, error: {ParsingError}";
+                Skip = $"Failed to parse the Amazon S3 settings, error: {ParsingError}";
                 return;
             }
 
             if (_s3Settings == null)
             {
-                Skip = $"S3 {memberName} tests missing S3 settings.";
+                Skip = $"S3 {memberName} tests missing Amazon S3 settings.";
+                return;
             }
         }
     }

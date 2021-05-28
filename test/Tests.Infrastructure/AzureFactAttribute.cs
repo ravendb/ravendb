@@ -16,9 +16,16 @@ namespace Tests.Infrastructure
 
         private static readonly string ParsingError;
 
+        private static readonly bool EnvVariableMissing;
+
         static AzureFactAttribute()
         {
             var azureSettingsString = Environment.GetEnvironmentVariable(AzureCredentialEnvironmentVariable);
+            if (azureSettingsString == null)
+            {
+                EnvVariableMissing = true;
+                return;
+            }
 
             try
             {
@@ -32,13 +39,19 @@ namespace Tests.Infrastructure
 
         public AzureFactAttribute([CallerMemberName] string memberName = "")
         {
+            if (EnvVariableMissing)
+            {
+                Skip = $"Test is missing '{AzureCredentialEnvironmentVariable}' environment variable.";
+                return;
+            }
+
             if (string.IsNullOrEmpty(ParsingError) == false)
             {
                 Skip = $"Failed to parse the Azure settings, error: {ParsingError}";
                 return;
             }
 
-            if (AzureSettings == null)
+            if (_azureSettings == null)
             {
                 Skip = $"Azure {memberName} tests missing {nameof(AzureSettings)}.";
                 return;
