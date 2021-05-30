@@ -136,21 +136,6 @@ class editPeriodicBackupTask extends viewModelBase {
                 content: tasksCommonContent.backupAgeInfo
             });
 
-        popoverUtils.longWithHover($(".bucket-gcs-info"),
-            {
-                content: tasksCommonContent.textForPopoverGCS("Bucket")
-            });
-
-        popoverUtils.longWithHover($(".vault-info"),
-            {
-                content: tasksCommonContent.textForPopover("Vault", "Backup")
-            });
-
-        popoverUtils.longWithHover($(".ftp-host-info"),
-            {
-                content: tasksCommonContent.ftpHostInfo
-            });
-
         popoverUtils.longWithHover($(".responsible-node"),
             {
                 content: tasksCommonContent.responsibleNodeInfo

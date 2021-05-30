@@ -1,15 +1,21 @@
 ﻿import amazonSettings = require("models/database/tasks/periodicBackup/amazonSettings");
 import jsonUtil = require("common/jsonUtil");
 import genUtils = require("common/generalUtils");
+import popoverUtils = require("common/popoverUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class glacierSettings extends amazonSettings {
     vaultName = ko.observable<string>();
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.GlacierSettings, allowedRegions: Array<string>) {
+    targetOperation: string;
+    
+    constructor(dto: Raven.Client.Documents.Operations.Backups.GlacierSettings, allowedRegions: Array<string>, targetOperation: string) {
         super(dto, "Glacier", allowedRegions);
 
         this.vaultName(dto.VaultName);
-
+        
+        this.targetOperation = targetOperation;
+        
         this.initValidation();
 
         this.dirtyFlag = new ko.DirtyFlag([
@@ -23,7 +29,14 @@ class glacierSettings extends amazonSettings {
             this.configurationScriptDirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
-
+    
+    compositionComplete(view: Element, container: HTMLElement) {
+        popoverUtils.longWithHover($(".vault-info"),
+            {
+                content: tasksCommonContent.textForPopover("Vault", this.targetOperation)
+            });
+    }
+    
     initValidation() {
         // - vault name can be between 1 and 255 characters long.
         // - allowed characters are a-z, A-Z, 0-9, '_' (underscore), '-' (hyphen), and '.' (period).
@@ -57,7 +70,7 @@ class glacierSettings extends amazonSettings {
         return genUtils.trimProperties(dto, ["RemoteFolderName", "AwsRegionName", "AwsAccessKey"]);
     }
 
-    static empty(allowedRegions: Array<string>): glacierSettings {
+    static empty(allowedRegions: Array<string>, targetOperation: string): glacierSettings {
         return new glacierSettings({
             Disabled: true,
             AwsAccessKey: null,
@@ -67,7 +80,7 @@ class glacierSettings extends amazonSettings {
             RemoteFolderName: null,
             VaultName: null,
             GetBackupConfigurationScript: null
-        }, allowedRegions);
+        }, allowedRegions, targetOperation);
     }
 }
 

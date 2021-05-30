@@ -512,7 +512,7 @@ class editOlapEtlTask extends viewModelBase {
         
         // 3. Validate *new connection string* (if relevant..)
         if (this.createNewConnectionString()) {
-            if (!this.isValid(this.newConnectionString().validationGroup)) {
+            if (!this.isValidConnectionString()) {
                 hasAnyErrors = true;
             }  else {
                 // Use the new connection string
@@ -563,6 +563,41 @@ class editOlapEtlTask extends viewModelBase {
                  })
                 .always(() => this.spinners.save(false));
         });
+    }
+
+    isValidConnectionString() {
+        const conStr = this.newConnectionString();
+        let isValid = true;
+
+        if (!this.isValid(conStr.validationGroup)) {
+            isValid = false;
+        }
+
+        const localSettings = conStr.localSettings();
+        if (localSettings.enabled() && !this.isValid(localSettings.effectiveValidationGroup()))
+            isValid = false;
+
+        const s3Settings = conStr.s3Settings();
+        if (s3Settings.enabled() && !this.isValid(s3Settings.effectiveValidationGroup()))
+            isValid = false;
+
+        const azureSettings = conStr.azureSettings();
+        if (azureSettings.enabled() && !this.isValid(azureSettings.effectiveValidationGroup()))
+            isValid = false;
+
+        const googleCloudSettings = conStr.googleCloudSettings();
+        if (googleCloudSettings.enabled() && !this.isValid(googleCloudSettings.effectiveValidationGroup()))
+            isValid = false;
+
+        const glacierSettings = conStr.glacierSettings();
+        if (glacierSettings.enabled() && !this.isValid(glacierSettings.effectiveValidationGroup()))
+            isValid = false;
+
+        const ftpSettings = conStr.ftpSettings();
+        if (ftpSettings.enabled() && !this.isValid(ftpSettings.effectiveValidationGroup()))
+            isValid = false;
+
+        return isValid;
     }
 
     cancelOperation() {

@@ -294,24 +294,44 @@ class connectionStrings extends viewModelBase {
         return getConnectionStringInfoCommand.forOlapEtl(this.activeDatabase(), connectionStringName)
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
-                this.editedOlapEtlConnectionString(new connectionStringOlapEtlModel(result.OlapConnectionStrings[connectionStringName], false, this.getTasksThatUseThisString(connectionStringName, "Olap")));
+                const olapConnectionString = new connectionStringOlapEtlModel(
+                    result.OlapConnectionStrings[connectionStringName],
+                    false,
+                    this.getTasksThatUseThisString(connectionStringName, "Olap"),
+                    this.serverConfiguration().AllowedAwsRegions);
+                
+                this.editedOlapEtlConnectionString(olapConnectionString);
                 this.onOlapEtl();
             });
     }
     
     private onOlapEtl() {
-        this.editedOlapEtlConnectionString().s3Settings().bucketName.subscribe(() => this.clearTestResult());
-        this.editedOlapEtlConnectionString().s3Settings().useCustomS3Host.subscribe(() => this.clearTestResult());
-        this.editedOlapEtlConnectionString().s3Settings().customServerUrl.subscribe(() => this.clearTestResult());
-        this.editedOlapEtlConnectionString().s3Settings().accessKeyPropertyName.subscribe(() => this.clearTestResult());
-        this.editedOlapEtlConnectionString().s3Settings().awsAccessKey.subscribe(() => this.clearTestResult());
-        this.editedOlapEtlConnectionString().s3Settings().awsSecretKey.subscribe(() => this.clearTestResult());
-        this.editedOlapEtlConnectionString().s3Settings().awsRegionName.subscribe(() => this.clearTestResult());
-        this.editedOlapEtlConnectionString().s3Settings().remoteFolderName.subscribe(() => this.clearTestResult());
+        const s3Settings = this.editedOlapEtlConnectionString().s3Settings();
+        s3Settings.bucketName.subscribe(() => this.clearTestResult());
+        s3Settings.useCustomS3Host.subscribe(() => this.clearTestResult());
+        s3Settings.customServerUrl.subscribe(() => this.clearTestResult());
+        s3Settings.accessKeyPropertyName.subscribe(() => this.clearTestResult());
+        s3Settings.awsAccessKey.subscribe(() => this.clearTestResult());
+        s3Settings.awsSecretKey.subscribe(() => this.clearTestResult());
+        s3Settings.awsRegionName.subscribe(() => this.clearTestResult());
+        s3Settings.remoteFolderName.subscribe(() => this.clearTestResult());
 
-        this.editedOlapEtlConnectionString().azureSettings().storageContainer.subscribe(() => this.clearTestResult());
-        this.editedOlapEtlConnectionString().azureSettings().accountName.subscribe(() => this.clearTestResult());
-        this.editedOlapEtlConnectionString().azureSettings().accountKey.subscribe(() => this.clearTestResult());
+        const azureSettings = this.editedOlapEtlConnectionString().azureSettings();
+        azureSettings.storageContainer.subscribe(() => this.clearTestResult());
+        azureSettings.accountName.subscribe(() => this.clearTestResult());
+        azureSettings.accountKey.subscribe(() => this.clearTestResult());
+        
+        const googleCloudSettings = this.editedOlapEtlConnectionString().googleCloudSettings();
+        googleCloudSettings.bucket.subscribe(() => this.clearTestResult());
+        googleCloudSettings.remoteFolderName.subscribe(() => this.clearTestResult());
+        googleCloudSettings.googleCredentialsJson.subscribe(() => this.clearTestResult());
+        
+        const glacierSettings = this.editedOlapEtlConnectionString().glacierSettings();
+        glacierSettings.vaultName.subscribe(() => this.clearTestResult());
+        glacierSettings.remoteFolderName.subscribe(() => this.clearTestResult());
+        glacierSettings.selectedAwsRegion.subscribe(() => this.clearTestResult());
+        glacierSettings.awsAccessKey.subscribe(() => this.clearTestResult());
+        glacierSettings.awsSecretKey.subscribe(() => this.clearTestResult());
         
         this.editedRavenEtlConnectionString(null);
         this.editedSqlEtlConnectionString(null);
@@ -471,6 +491,18 @@ class connectionStrings extends viewModelBase {
 
         const azureSettings = editedOlapEtl.azureSettings();
         if (azureSettings.enabled() && !this.isValid(azureSettings.effectiveValidationGroup()))
+            isValid = false;
+
+        const googleCloudSettings = editedOlapEtl.googleCloudSettings();
+        if (googleCloudSettings.enabled() && !this.isValid(googleCloudSettings.effectiveValidationGroup()))
+            isValid = false;
+
+        const glacierSettings = editedOlapEtl.glacierSettings();
+        if (glacierSettings.enabled() && !this.isValid(glacierSettings.effectiveValidationGroup()))
+            isValid = false;
+
+        const ftpSettings = editedOlapEtl.ftpSettings();
+        if (ftpSettings.enabled() && !this.isValid(ftpSettings.effectiveValidationGroup()))
             isValid = false;
         
         return isValid;

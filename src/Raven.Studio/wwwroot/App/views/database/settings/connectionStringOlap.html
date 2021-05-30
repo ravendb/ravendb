@@ -103,6 +103,114 @@
         </div>
     </div>
 </div>
+<div data-bind="with: googleCloudSettings" class="panel padding">
+    <div class="toggle margin-left">
+        <input id="toggle-google-cloud" type="checkbox" data-bind="checked: enabled">
+        <label for="toggle-google-cloud">Google Cloud</label>
+    </div>
+    <div data-bind="collapse: enabled">
+        <div>
+            <div class="row margin-bottom">
+                <label class="control-label col-xs-12 col-sm-6 col-lg-4"></label>
+                <div class="col-xs-12 col-sm-6 col-lg-8">
+                    <div class="toggle">
+                        <input id="googleSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript">
+                        <label for="googleSettingsViaScript">Override configuration via external script</label>
+                    </div>
+                </div>
+            </div>
+            <div data-bind="collapse: hasConfigurationScript">
+                <div data-bind="compose: 'partial/backupConfigurationScript.html'"></div>
+            </div>
+            <div data-bind="collapse: !hasConfigurationScript()">
+                <div data-bind="compose: $data"></div>
+                <div class="text-right">
+                    <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
+                        <i class="icon-rocket"></i>
+                        &nbsp;&nbsp;<span>Test credentials</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="panel-addon">
+            <div data-bind="with: testConnectionResult">
+                <div data-bind="compose: 'partial/backupDestinationTestCredentialsResults.html'"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<div data-bind="with: glacierSettings" class="panel padding">
+    <div class="toggle margin-left">
+        <input id="toggle-glacier" type="checkbox" data-bind="checked: enabled">
+        <label for="toggle-glacier">Amazon Glacier</label>
+    </div>
+    <div data-bind="collapse: enabled">
+        <div>
+            <div class="row margin-bottom">
+                <label class="control-label col-xs-12 col-sm-6 col-lg-4"></label>
+                <div class="col-xs-12 col-sm-6 col-lg-8">
+                    <div class="toggle">
+                        <input id="glacierSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript">
+                        <label for="glacierSettingsViaScript">Override configuration via external script</label>
+                    </div>
+                </div>
+            </div>
+            <div data-bind="collapse: hasConfigurationScript">
+                <div data-bind="compose: 'partial/backupConfigurationScript.html'"></div>
+            </div>
+            <div data-bind="collapse: !hasConfigurationScript()">
+                <div data-bind="compose: $data"></div>
+                <div class="text-right">
+                    <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
+                        <i class="icon-rocket"></i>
+                        &nbsp;&nbsp;<span>Test credentials</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="panel-addon">
+            <div data-bind="with: testConnectionResult">
+                <div data-bind="compose: 'partial/backupDestinationTestCredentialsResults.html'"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<div data-bind="with: ftpSettings" class="panel padding">
+    <div class="toggle margin-left">
+        <input id="toggle-ftp" type="checkbox" data-bind="checked: enabled">
+        <label for="toggle-ftp">FTP</label>
+    </div>
+    <div data-bind="collapse: enabled">
+        <div>
+            <div class="row margin-bottom">
+                <label class="control-label col-xs-12 col-sm-6 col-lg-4"></label>
+                <div class="col-xs-12 col-sm-6 col-lg-8">
+                    <div class="toggle">
+                        <input id="ftpSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript">
+                        <label for="ftpSettingsViaScript">Override configuration via external script</label>
+                    </div>
+                </div>
+            </div>
+            <div data-bind="collapse: hasConfigurationScript">
+                <div data-bind="compose: 'partial/backupConfigurationScript.html'"></div>
+            </div>
+            <div data-bind="collapse: !hasConfigurationScript()">
+                <div data-bind="compose: $data"></div>
+                <div class="text-right">
+                    <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
+                        <i class="icon-rocket"></i>
+                        &nbsp;&nbsp;<span>Test credentials</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="panel-addon">
+            <div data-bind="with: testConnectionResult">
+                <div data-bind="compose: 'partial/backupDestinationTestCredentialsResults.html'"></div>
+            </div>
+        </div>
+    </div>
+</div>
 <div data-bind="validationElement: destinationsChecked">
     <div class="help-block" data-bind="validationMessage: destinationsChecked"></div>
 </div>

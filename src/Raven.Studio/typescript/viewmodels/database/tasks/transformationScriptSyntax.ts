@@ -139,7 +139,7 @@ loadToOrders(partitionBy(['year', year], ['month', month]), {
     ShipVia: this.ShipVia
     // Note: 2 more field are always created per table by default:
     //       * _id: The ID column - can be overriden in the task definition
-    //       * _lastModifiedTicks: The document's last modification time column - cannot be overriden
+    //       * _lastModifiedTime: The document's last modification time column - cannot be overriden
 });`;
     
     olapEtlSamplePartitionHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSamplePartitionText);

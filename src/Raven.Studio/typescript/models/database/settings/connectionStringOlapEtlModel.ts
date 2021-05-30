@@ -10,16 +10,18 @@ import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOp
 import database = require("models/resources/database");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import azureSettings = require("viewmodels/database/tasks/destinations/azureSettings");
-// TODO..
-import ftpSettings = require("models/database/tasks/periodicBackup/ftpSettings");
-import glacierSettings = require("models/database/tasks/periodicBackup/glacierSettings");
-import googleCloudSettings = require("models/database/tasks/periodicBackup/googleCloudSettings");
+import googleCloudSettings = require("viewmodels/database/tasks/destinations/googleCloudSettings");
+import glacierSettings = require("viewmodels/database/tasks/destinations/glacierSettings");
+import ftpSettings = require("viewmodels/database/tasks/destinations/ftpSettings");
 
 class connectionStringOlapEtlModel extends connectionStringModel {
 
     s3Settings = ko.observable<s3Settings>();
     localSettings = ko.observable<localSettings>();
     azureSettings = ko.observable<azureSettings>();
+    googleCloudSettings = ko.observable<googleCloudSettings>();
+    glacierSettings = ko.observable<glacierSettings>();
+    ftpSettings = ko.observable<ftpSettings>();
     
     destinationsChecked: KnockoutComputed<boolean>;
     
@@ -29,15 +31,21 @@ class connectionStringOlapEtlModel extends connectionStringModel {
     locationInfo = ko.observableArray<Raven.Server.Web.Studio.SingleNodeDataDirectoryResult>([]);
     folderPathOptions = ko.observableArray<string>([]);
 
+    allowedAwsRegions: Array<string>;
+
     spinners = {
         locationInfoLoading: ko.observable<boolean>(false)
     };
     
     dirtyFlag: () => DirtyFlag;
 
-    constructor(dto: Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString, isNew: boolean, tasks: { taskName: string; taskId: number }[]) {
+    constructor(dto: Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString, 
+                isNew: boolean, 
+                tasks: { taskName: string; taskId: number }[],
+                allowedAwsRegions: Array<string>) {
         super(isNew, tasks);
         
+        this.allowedAwsRegions = allowedAwsRegions;
         this.update(dto);
         
         this.initObservables();
@@ -51,6 +59,9 @@ class connectionStringOlapEtlModel extends connectionStringModel {
         this.s3Settings(dto.S3Settings ? new s3Settings(dto.S3Settings, null, "OLAP") : s3Settings.empty(null, "OLAP"));
         this.localSettings(dto.LocalSettings ? new localSettings(dto.LocalSettings, "connectionString") : localSettings.empty("connectionString"));
         this.azureSettings(dto.AzureSettings ? new azureSettings(dto.AzureSettings, "OLAP") : azureSettings.empty("OLAP"));
+        this.googleCloudSettings(dto.GoogleCloudSettings ? new googleCloudSettings(dto.GoogleCloudSettings, "OLAP") : googleCloudSettings.empty("OLAP"));
+        this.glacierSettings(dto.GlacierSettings ? new glacierSettings(dto.GlacierSettings, this.allowedAwsRegions, "OLAP") : glacierSettings.empty(this.allowedAwsRegions, "OLAP"));
+        this.ftpSettings(dto.FtpSettings ? new ftpSettings(dto.FtpSettings, "OLAP") : ftpSettings.empty("OLAP"));
     }
     
     initObservables() {
@@ -65,7 +76,10 @@ class connectionStringOlapEtlModel extends connectionStringModel {
             this.connectionStringName,
             this.s3Settings().dirtyFlag().isDirty,
             this.localSettings().dirtyFlag().isDirty,
-            this.azureSettings().dirtyFlag().isDirty
+            this.azureSettings().dirtyFlag().isDirty,
+            this.googleCloudSettings().dirtyFlag().isDirty,
+            this.glacierSettings().dirtyFlag().isDirty,
+            this.ftpSettings().dirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.localSettings().folderPath.throttle(300).subscribe((newPathValue) => {
@@ -83,7 +97,11 @@ class connectionStringOlapEtlModel extends connectionStringModel {
             const localEnabled = this.localSettings().enabled();
             const s3Enabled = this.s3Settings().enabled();
             const azureEnabled = this.azureSettings().enabled();
-            return localEnabled || s3Enabled || azureEnabled;
+            const googleCloudEnabled = this.googleCloudSettings().enabled();
+            const glacierEnabled = this.glacierSettings().enabled();
+            const ftpEnabled = this.ftpSettings().enabled();
+            
+            return localEnabled || s3Enabled || azureEnabled || googleCloudEnabled || glacierEnabled || ftpEnabled;
         });
     }
 
@@ -112,10 +130,10 @@ class connectionStringOlapEtlModel extends connectionStringModel {
             S3Settings: s3Settings.empty(null, "OLAP").toDto(),
             LocalSettings: localSettings.empty("connectionString").toDto(),
             AzureSettings: azureSettings.empty("OLAP").toDto(),
-            FtpSettings: ftpSettings.empty().toDto(),
-            GlacierSettings: glacierSettings.empty([]).toDto(),
-            GoogleCloudSettings: googleCloudSettings.empty().toDto()
-        } , true, []);
+            GoogleCloudSettings: googleCloudSettings.empty("OLAP").toDto(),
+            GlacierSettings: glacierSettings.empty(null, "OLAP").toDto(),
+            FtpSettings: ftpSettings.empty("OLAP").toDto()
+        } , true, [], null);
     }
     
     toDto(): Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString {
@@ -125,9 +143,9 @@ class connectionStringOlapEtlModel extends connectionStringModel {
             S3Settings: this.s3Settings().enabled() ? this.s3Settings().toDto() : undefined,
             LocalSettings: this.localSettings().enabled() ? this.localSettings().toDto() : undefined,
             AzureSettings: this.azureSettings().enabled() ? this.azureSettings().toDto() : undefined,
-            FtpSettings: undefined,
-            GlacierSettings: undefined,
-            GoogleCloudSettings: undefined
+            GoogleCloudSettings: this.googleCloudSettings().enabled() ? this.googleCloudSettings().toDto() : undefined,
+            GlacierSettings: this.glacierSettings().enabled() ? this.glacierSettings().toDto() : undefined,
+            FtpSettings: this.ftpSettings().enabled() ? this.ftpSettings().toDto() : undefined
         };
     }
 

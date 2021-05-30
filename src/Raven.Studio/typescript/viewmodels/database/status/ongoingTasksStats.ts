@@ -916,8 +916,10 @@ class ongoingTasksStats extends viewModelBase {
                 + scriptsCount * ongoingTasksStats.betweenScriptsPadding
                 + ongoingTasksStats.openedTrackPadding;
             
+            const heightCount = etlTask.EtlType === "Olap"? 3 : 1; 
+            
             const openedHeight = 2 * ongoingTasksStats.openedTrackPadding
-                + ongoingTasksStats.trackHeight
+                + ongoingTasksStats.trackHeight * heightCount
                 + (scriptsCount - 1) * ongoingTasksStats.betweenScriptsPadding
                 + scriptsCount * ongoingTasksStats.singleOpenedEtlItemHeight
                 + ongoingTasksStats.openedTrackPadding;
@@ -1959,17 +1961,17 @@ class ongoingTasksStats extends viewModelBase {
                             tooltipHtml += `<hr />`;
                             tooltipHtml += ongoingTasksStats.uploadProgressTooltip("Azure", olapItem.AzureUpload, context.item.DurationInMs);
                         }
-                        if (olapItem.FtpUpload) {
+                        if (olapItem.GoogleCloudUpload) {
                             tooltipHtml += `<hr />`;
-                            tooltipHtml += ongoingTasksStats.uploadProgressTooltip("FTP", olapItem.FtpUpload, context.item.DurationInMs);
+                            tooltipHtml += ongoingTasksStats.uploadProgressTooltip("Google Cloud", olapItem.GoogleCloudUpload, context.item.DurationInMs);
                         }
                         if (olapItem.GlacierUpload) {
                             tooltipHtml += `<hr />`;
                             tooltipHtml += ongoingTasksStats.uploadProgressTooltip("Glacier", olapItem.GlacierUpload, context.item.DurationInMs);
                         }
-                        if (olapItem.GoogleCloudUpload) {
+                        if (olapItem.FtpUpload) {
                             tooltipHtml += `<hr />`;
-                            tooltipHtml += ongoingTasksStats.uploadProgressTooltip("Google Cloud", olapItem.GoogleCloudUpload, context.item.DurationInMs);
+                            tooltipHtml += ongoingTasksStats.uploadProgressTooltip("FTP", olapItem.FtpUpload, context.item.DurationInMs);
                         }
                     }
                     
@@ -1987,7 +1989,7 @@ class ongoingTasksStats extends viewModelBase {
     }
     
     static uploadProgressTooltip(header: string, progress: Raven.Client.Documents.Operations.Backups.UploadProgress, duration: number) {
-        let tooltipHtml = `<div class="tooltip-header">Upload to S3</div>`;
+        let tooltipHtml = `<div class="tooltip-header">${header}</div>`;
         tooltipHtml += `<div class="tooltip-li">Upload State: <div class="value">${progress.UploadState}</div></div>`;
         tooltipHtml += `<div class="tooltip-li">Upload Type: <div class="value">${progress.UploadType}</div></div>`;
         if (progress.UploadState === "Done") {

@@ -1,0 +1,44 @@
+<div class="row margin-bottom" data-bind="validationElement: vaultName">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">
+        Vault name <i class="required"></i> <small><i class="vault-info icon-info text-info"></i></small>
+    </label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <input data-bind="textInput: vaultName" type="text" class="form-control" />
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: remoteFolderName">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Remote folder name</label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: awsRegionName">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region <i class="required"></i></label>
+    <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }">
+        <div class="dropdown btn-block">
+            <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
+                   id="glacierRegionInput"
+                   data-bind="textInput: selectedAwsRegion"
+                   placeholder="Select an AWS region">
+            <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+            <ul class="dropdown-menu" data-bind="foreach: createAwsRegionAutoCompleter(false), autoComplete: '#' + 'glacierRegionInput'">
+                <li data-bind="click: $parent.useAwsRegion.bind($parent, $data)">
+                    <a href="#" data-bind="text: $data.label + ' - ' + $data.value"></a>
+                </li>
+            </ul>
+        </div>
+        <span class="help-block" data-bind="validationMessage: awsRegionName"></span>
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: awsAccessKey">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Access key <i class="required"></i></label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <input data-bind="textInput: awsAccessKey" class="form-control" />
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: awsSecretKey">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Secret key <i class="required"></i></label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <input data-bind="textInput: awsSecretKey" type="password" class="form-control" />
+    </div>
+</div>
