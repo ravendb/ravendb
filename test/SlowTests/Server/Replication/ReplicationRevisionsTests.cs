@@ -192,18 +192,5 @@ namespace SlowTests.Server.Replication
                 }
             }
         }
-
-        private static async Task<Operation> SendAsync(IDocumentStore store, IMaintenanceOperation<StartBackupOperationResult> operation, CancellationToken token = default)
-        {
-            var re = store.GetRequestExecutor();
-            using (re.ContextPool.AllocateOperationContext(out var context))
-            {
-                var command = operation.GetCommand(re.Conventions, context);
-
-                await re.ExecuteAsync(command, context, null, token).ConfigureAwait(false);
-                var selectedNodeTag = command.SelectedNodeTag ?? command.Result.ResponsibleNode;
-                return new Operation(re, () => store.Changes(store.Database, selectedNodeTag), re.Conventions, command.Result.OperationId, selectedNodeTag);
-            }
-        }
     }
 }
