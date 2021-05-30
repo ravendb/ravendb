@@ -1,9 +1,10 @@
 ﻿/// <reference path="../../../../../typings/tsd.d.ts"/>
 import localSettings = require("models/database/tasks/periodicBackup/localSettings");
 import s3Settings = require("viewmodels/database/tasks/destinations/s3Settings");
-import glacierSettings = require("models/database/tasks/periodicBackup/glacierSettings");
+import glacierSettings = require("viewmodels/database/tasks/destinations/glacierSettings");
 import azureSettings = require("viewmodels/database/tasks/destinations/azureSettings");
-import ftpSettings = require("models/database/tasks/periodicBackup/ftpSettings");
+import googleCloudSettings = require("viewmodels/database/tasks/destinations/googleCloudSettings");
+import ftpSettings = require("viewmodels/database/tasks/destinations/ftpSettings");
 import getBackupLocationCommand = require("commands/database/tasks/getBackupLocationCommand");
 import getServerWideBackupLocationCommand = require("commands/serverWide/tasks/getServerWideBackupLocationCommand");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
@@ -11,7 +12,6 @@ import backupSettings = require("backupSettings");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import snapshot = require("models/database/tasks/periodicBackup/snapshot");
 import encryptionSettings = require("models/database/tasks/periodicBackup/encryptionSettings");
-import googleCloudSettings = require("models/database/tasks/periodicBackup/googleCloudSettings");
 import generalUtils = require("common/generalUtils");
 
 abstract class backupConfiguration {
@@ -60,10 +60,10 @@ abstract class backupConfiguration {
         this.backupType(dto.BackupType);
         this.localSettings(!dto.LocalSettings ? localSettings.empty("backup") : new localSettings(dto.LocalSettings, "backup"));
         this.s3Settings(!dto.S3Settings ? s3Settings.empty(serverLimits.AllowedAwsRegions, "Backup") : new s3Settings(dto.S3Settings, serverLimits.AllowedAwsRegions, "Backup"));
-        this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty(serverLimits.AllowedAwsRegions) : new glacierSettings(dto.GlacierSettings, serverLimits.AllowedAwsRegions));
         this.azureSettings(!dto.AzureSettings ? azureSettings.empty("Backup") : new azureSettings(dto.AzureSettings, "Backup"));
-        this.googleCloudSettings(!dto.GoogleCloudSettings ? googleCloudSettings.empty() : new googleCloudSettings(dto.GoogleCloudSettings));
-        this.ftpSettings(!dto.FtpSettings ? ftpSettings.empty() : new ftpSettings(dto.FtpSettings));
+        this.googleCloudSettings(!dto.GoogleCloudSettings ? googleCloudSettings.empty("Backup") : new googleCloudSettings(dto.GoogleCloudSettings, "Backup"));
+        this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty(serverLimits.AllowedAwsRegions, "Backup") : new glacierSettings(dto.GlacierSettings, serverLimits.AllowedAwsRegions, "Backup"));
+        this.ftpSettings(!dto.FtpSettings ? ftpSettings.empty("Backup") : new ftpSettings(dto.FtpSettings, "Backup"));
         this.isServerWide(isServerWide);
         this.mentorNode(dto.MentorNode);
 

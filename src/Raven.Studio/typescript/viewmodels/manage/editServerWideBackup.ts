@@ -132,12 +132,12 @@ class editServerWideBackup extends viewModelBase {
 
         popoverUtils.longWithHover($(".bucket-info"),
             {
-                content: tasksCommonContent.textForPopover("Bucket", "Server-Wide Backup") 
+                content: tasksCommonContent.textForPopover("Bucket", "Server-Wide Backup")
             });
 
         popoverUtils.longWithHover($(".bucket-gcs-info"),
             {
-                content: tasksCommonContent.textForPopoverGCS("Bucket")
+                content: tasksCommonContent.textForPopoverGCS("Bucket", "Server-Wide Backup")
             });
 
         popoverUtils.longWithHover($(".storage-container-info"),

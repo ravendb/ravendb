@@ -272,17 +272,23 @@
                                                 <div class="property-name">Task Status:</div>
                                                 <div class="property-value text-details" data-bind="text: badgeText"></div>
                                             </div>
-                                                <!--    TODO ... Destination info is waiting for RavenDB-16435 -->
-<!--                                            <div class="property-item">-->
-<!--                                                <div class="property-name">Destination:</div>-->
-<!--                                                <div class="property-value" title="Destinations that are defined the in connection string">-->
-<!--                                                    <span data-bind="text: destinationDescription"></span>-->
-<!--                                                </div>-->
-<!--                                            </div>-->
+                                            <div class="property-item">
+                                                <div class="property-name">Destination:</div>
+                                                <div class="property-value" title="Destinations that are defined the in connection string">
+                                                        <span data-bind="text: firstDestination"></span>
+                                                </div>
+                                            </div>
+                                            <div data-bind="foreach: otherDestinations">
+                                                <div class="property-item">
+                                                    <div class="property-name"></div>
+                                                    <div class="property-value" title="Destinations that are defined the in connection string">
+                                                            <span data-bind="text: $data"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
                                             <div class="property-item" data-bind="template: { name: 'connection-string-template' }"></div>
                                         </div>
-                                        <!--    TODO ... Progress is waiting for RavenDB-16341 -->
-<!--                                    <div data-bind="template: { name: 'etl-progress-template' }"></div>-->
+                                        <div data-bind="template: { name: 'etl-progress-template' }"></div>
                                     </div>
                                 </div>
                             </div>

@@ -1,19 +1,25 @@
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import jsonUtil = require("common/jsonUtil");
 import genUtils = require("common/generalUtils");
+import popoverUtils = require("common/popoverUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class googleCloudSettings extends backupSettings {
     bucket = ko.observable<string>();
     remoteFolderName = ko.observable<string>();
     googleCredentialsJson = ko.observable<string>();
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.GoogleCloudSettings) {
+    targetOperation: string;
+    
+    constructor(dto: Raven.Client.Documents.Operations.Backups.GoogleCloudSettings, targetOperation: string) {
         super(dto, "GoogleCloud");
 
         this.bucket(dto.BucketName);
         this.remoteFolderName(dto.RemoteFolderName || "");
         this.googleCredentialsJson(dto.GoogleCredentialsJson);
 
+        this.targetOperation = targetOperation;
+        
         this.initValidation();
 
         this.dirtyFlag = new ko.DirtyFlag([
@@ -25,6 +31,13 @@ class googleCloudSettings extends backupSettings {
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
+    compositionComplete(view: Element, container: HTMLElement) {
+        popoverUtils.longWithHover($(".bucket-gcs-info", container),
+            {
+                content: tasksCommonContent.textForPopoverGCS("Bucket", this.targetOperation)
+            });
+    }
+    
     initValidation() {
         const allowedCharactersRegExp = /^[a-z0-9._-]+$/;
         const allowedBeginningCharactersRegExp = /^[a-z0-9]+$/;
@@ -92,14 +105,14 @@ class googleCloudSettings extends backupSettings {
         return genUtils.trimProperties(dto, ["RemoteFolderName"]);
     }
 
-    static empty(): googleCloudSettings {
+    static empty(targetOperation: string): googleCloudSettings {
         return new googleCloudSettings({
             Disabled: true,
             RemoteFolderName: null,
             GoogleCredentialsJson: null,
             BucketName: null,
             GetBackupConfigurationScript: null
-        });
+        }, targetOperation);
     }
 }
 

@@ -2,6 +2,8 @@
 import jsonUtil = require("common/jsonUtil");
 import fileImporter = require("common/fileImporter");
 import genUtils = require("common/generalUtils");
+import popoverUtils = require("common/popoverUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class ftpSettings extends backupSettings {
     url = ko.observable<string>();
@@ -19,7 +21,9 @@ class ftpSettings extends backupSettings {
         return this.url().toLowerCase().startsWith("ftps://");
     });
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.FtpSettings) {
+    targetOperation: string;
+
+    constructor(dto: Raven.Client.Documents.Operations.Backups.FtpSettings, targetOperation: string) {
         super(dto, "FTP");
 
         this.url(dto.Url || "");
@@ -34,6 +38,8 @@ class ftpSettings extends backupSettings {
             this.certificateFileName("certificate.cer");
         }
 
+        this.targetOperation = targetOperation;
+
         this.initValidation();
 
         this.dirtyFlag = new ko.DirtyFlag([
@@ -45,6 +51,13 @@ class ftpSettings extends backupSettings {
             this.certificateAsBase64,
             this.configurationScriptDirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
+    }
+
+    compositionComplete(view: Element, container: HTMLElement) {
+        popoverUtils.longWithHover($(".ftp-host-info"),
+            {
+                content: tasksCommonContent.ftpHostInfo
+            });
     }
 
     initValidation() {
@@ -143,7 +156,7 @@ class ftpSettings extends backupSettings {
         return genUtils.trimProperties(dto, ["Url", "UserName"]);
     }
 
-    static empty(): ftpSettings {
+    static empty(targetOperation: string): ftpSettings {
         return new ftpSettings({
             Disabled: true,
             Url: null,
@@ -153,7 +166,7 @@ class ftpSettings extends backupSettings {
             CertificateAsBase64: null,
             CertificateFileName: null,
             GetBackupConfigurationScript: null
-        });
+        }, targetOperation);
     }
 }
 

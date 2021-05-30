@@ -45,7 +45,8 @@
     static readonly ftpHostInfo =
         "To specify the server protocol, prepend the host with protocol identifier (ftp and ftps are supported).<br />" +
         "If no protocol is specified the default one (ftp://) will be used.<br />" +
-        "You can also enter a complete URL e.g. <strong>ftp://host.name:port/backup-folder/nested-backup-folder</strong>";
+        "You can also enter a complete URL<br />" +
+        "e.g. <strong>ftp://host.name:port/backup-folder/nested-backup-folder</strong>";
     
     static readonly serverwideSnapshotEncryptionInfo =
         "When selecting the <strong>'Snapshot'</strong> backup-type, encryption is dependant on the database the task is operating on.<br></li>" +
@@ -59,8 +60,8 @@
             "You can use the 'Test credentials' button to verify its existance.";
     }
 
-    static textForPopoverGCS(storageName: string): string {
-        return `${storageName} should be created manually in order for this backup to work.<br /> ` +
+    static textForPopoverGCS(storageName: string, targetOperation: string): string {
+        return `${storageName} should be created manually in order for this ${targetOperation} to work.<br /> ` +
             "You can use the 'Test credentials' button to verify its existance.<br />" +
             "<a href='https://cloud.google.com/storage/docs/bucket-naming' target='_blank'>Bucket naming guidelines</a>";
     }

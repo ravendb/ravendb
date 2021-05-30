@@ -204,40 +204,7 @@
                         <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
                     </div>
                     <div data-bind="collapse: !hasConfigurationScript()">
-                        <div class="row margin-bottom" data-bind="validationElement: bucket">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                                Bucket <i class="required"></i> <small><i class="bucket-gcs-info icon-info text-info"></i></small>
-                            </label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="textInput: bucket" type="text" class="form-control" />
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="validationElement: remoteFolderName">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Remote folder name</label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="validationElement: googleCredentialsJson">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Google Credentials Json <i class="required"></i></label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                            <textarea rows="9" data-bind="textInput: googleCredentialsJson" class="form-control" placeholder=
-                                'e.g.
-{
-    "type": "service_account",
-    "project_id": "test-raven-237012",
-    "private_key_id": "12345678123412341234123456789101",
-    "private_key": "-----BEGIN PRIVATE KEY-----\abCse=\n-----END PRIVATE KEY-----\n",
-    "client_email": "raven@test-raven-237012-237012.iam.gserviceaccount.com",
-    "client_id": "111390682349634407434",
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/viewonly%40test-raven-237012.iam.gserviceaccount.com"
-  }
-                              '></textarea>
-                            </div>
-                        </div>
+                        <div data-bind="compose: $data"></div>
                         <div data-bind="if: $parent.isServerWide()">
                             <div data-bind="template: { name: 'remote-folder-path' }"></div>
                         </div>
@@ -279,50 +246,7 @@
                         <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
                     </div>
                     <div data-bind="collapse: !hasConfigurationScript()">
-                        <div class="row margin-bottom" data-bind="validationElement: vaultName">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                                Vault name <i class="required"></i> <small><i class="vault-info icon-info text-info"></i></small>
-                            </label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="textInput: vaultName" type="text" class="form-control" />
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="validationElement: remoteFolderName">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Remote folder name</label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="validationElement: awsRegionName">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region <i class="required"></i></label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }">
-                                <div class="dropdown btn-block">
-                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                                           id="glacierRegionInput"
-                                           data-bind="textInput: selectedAwsRegion"
-                                           placeholder="Select an AWS region">
-                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu" data-bind="foreach: createAwsRegionAutoCompleter(false), autoComplete: '#' + 'glacierRegionInput'">
-                                        <li data-bind="click: $parent.useAwsRegion.bind($parent, $data)">
-                                            <a href="#" data-bind="text: $data.label + ' - ' + $data.value"></a>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <span class="help-block" data-bind="validationMessage: awsRegionName"></span>
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="validationElement: awsAccessKey">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Access key <i class="required"></i></label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="textInput: awsAccessKey" class="form-control" />
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="validationElement: awsSecretKey">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Secret key <i class="required"></i></label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="textInput: awsSecretKey" type="password" class="form-control" />
-                            </div>
-                        </div>
+                        <div data-bind="compose: $data"></div>
                         <div data-bind="if: $parent.isServerWide()">
                             <div data-bind="template: { name: 'remote-folder-path' }"></div>
                         </div>
@@ -364,48 +288,7 @@
                         <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
                     </div>
                     <div data-bind="collapse: !hasConfigurationScript()">
-                        <div class="row margin-bottom" data-bind="validationElement: url">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                                Host <i class="required"></i> <small><i class="ftp-host-info icon-info text-info"></i></small>
-                            </label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="textInput: url" type="text" class="form-control" />
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="validationElement: port">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Port</label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="numericInput: port" type="number" min="0" class="form-control" placeholder="default: 21" />
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="validationElement: userName">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">User name <i class="required"></i></label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="textInput: userName" type="text" class="form-control" />
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="validationElement: password">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Password <i class="required"></i></label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="textInput: password" type="password" class="form-control" />
-                            </div>
-                        </div>
-                        <div class="row margin-bottom" data-bind="visible: isFtps, validationElement: certificateFileName">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Certificate</label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8" >
-                                <div class="input-group file-input">
-                                    <input type="file" id="filePicker" data-bind="event: { change: _.partial(fileSelected, $element) }, disable: isLoadingFile" tabindex="-1", disabled>
-                                    <span class="static-name form-control" data-bind="text: certificateFileName() || 'Select file...'"></span>
-                                    <span class="input-group-btn">
-                                    <label for="filePicker" class="btn btn-default">
-                                        <i class="icon-document"></i>
-                                        <span>Browse</span>
-                                    </label>
-                                </span>
-                                    <p class="help-block" data-bind="validationMessage: certificateFileName"></p>
-                                </div>
-                            </div>
-                        </div>
+                        <div data-bind="compose: $data"></div>
                         <div class="row margin-bottom" data-bind="if: $parent.isServerWide()">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4"></label>
                             <div class="col-xs-12 col-sm-6 col-lg-8">
