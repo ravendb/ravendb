@@ -812,7 +812,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Assert.Equal($"{serverWideConfiguration.FtpSettings.Url}/{databaseName}", backupConfiguration.FtpSettings.Url);
         }
         
-        [Theory]
+        [Theory, Trait("Category", "Smuggler")]
         [InlineData(0)]
         [InlineData(1)]
         [InlineData(10)]

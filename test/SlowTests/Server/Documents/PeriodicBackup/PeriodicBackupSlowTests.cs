@@ -744,9 +744,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 Assert.Equal(4, nodesCount);
 
-                backupInfoResult = await store.Maintenance.SendAsync(backupInfo);
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupInfoResult.TaskId));
-
                 await Backup.RunBackupInClusterAsync(store, result.TaskId, isFullBackup: true);
                 await ActionWithLeader(async x => await WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
 
@@ -968,13 +965,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     FolderPath = backupPath
                 };
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = localSettings,
-                    IncrementalBackupFrequency = "0 0 1 1 *"
-                };
 
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
                 var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var client = store.GetRequestExecutor().HttpClient;
 
