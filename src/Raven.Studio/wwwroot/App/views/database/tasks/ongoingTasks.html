@@ -272,15 +272,10 @@
                                                 <div class="property-name">Task Status:</div>
                                                 <div class="property-value text-details" data-bind="text: badgeText"></div>
                                             </div>
-                                            <div class="property-item">
-                                                <div class="property-name">Destination:</div>
-                                                <div class="property-value" title="Destinations that are defined the in connection string">
-                                                        <span data-bind="text: firstDestination"></span>
-                                                </div>
-                                            </div>
-                                            <div data-bind="foreach: otherDestinations">
+                                            <div data-bind="foreach: destinations">
                                                 <div class="property-item">
-                                                    <div class="property-name"></div>
+                                                    <div class="property-name" data-bind="visible: $index() === 0">Destination:</div>
+                                                    <div class="property-name" data-bind="visible: $index() > 0"></div>
                                                     <div class="property-value" title="Destinations that are defined the in connection string">
                                                             <span data-bind="text: $data"></span>
                                                     </div>

@@ -7,8 +7,7 @@ class ongoingTaskOlapEtlListModel extends abstractOngoingTaskEtlListModel {
     
     destinationDescription = ko.observable<string>();
     
-    firstDestination = ko.observable<string>();
-    otherDestinations = ko.observableArray<string>();
+    destinations = ko.observableArray<string>();
     
     connectionStringDefined = ko.observable<boolean>(true); // needed for template in the ongoing tasks list view
         
@@ -27,10 +26,7 @@ class ongoingTaskOlapEtlListModel extends abstractOngoingTaskEtlListModel {
         const urls = appUrl.forCurrentDatabase();
         this.editUrl = urls.editOlapEtl(this.taskId);
         
-        const destinations = this.destinationDescription().split(',');
-        
-        this.firstDestination(destinations[0]);
-        this.otherDestinations(destinations.slice(1));
+        this.destinations(this.destinationDescription().split(','));
     }
 
     update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView) {
