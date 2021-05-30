@@ -149,9 +149,13 @@ namespace RachisTests.DatabaseCluster
             await LoadAndDeleteWhileUpdated(nodes, documentStore.Database, entity.Id);
         }
 
-        private static async Task LoadAndDeleteWhileUpdated(List<RavenServer> nodes, string database, string entityId)
+        private async Task LoadAndDeleteWhileUpdated(List<RavenServer> nodes, string database, string entityId)
         {
             using var disposable = LocalGetDocumentStores(nodes, database, out var stores);
+            foreach (IDocumentStore store in stores)
+            {
+                WaitForDocument<object>(store, entityId, o => o != null);
+            }
 
             var amre = new AsyncManualResetEvent();
             var amre2 = new AsyncManualResetEvent();
@@ -210,16 +214,20 @@ namespace RachisTests.DatabaseCluster
 
                 var operation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), documentStore.Smuggler);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-                WaitForUserToContinueTheTest(source);
             }
 
             await LoadAndUpdateWhileDeleted(nodes, documentStore.Database, entity.Id);
         }
 
-        private static async Task LoadAndUpdateWhileDeleted(List<RavenServer> nodes, string database, string entityId)
+        private async Task LoadAndUpdateWhileDeleted(List<RavenServer> nodes, string database, string entityId)
         {
             using var disposable = LocalGetDocumentStores(nodes, database, out var stores);
 
+            foreach (IDocumentStore store in stores)
+            {
+                WaitForDocument<object>(store, entityId, o => o != null);
+            }
+            
             var amre = new AsyncManualResetEvent();
             var amre2 = new AsyncManualResetEvent();
             var task = Task.Run(async () =>
