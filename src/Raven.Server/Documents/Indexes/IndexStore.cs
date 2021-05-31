@@ -253,6 +253,9 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleChangesForAutoIndexes(RawDatabaseRecord record, long index, List<Index> indexesToStart)
         {
+            if (record.ClusterState.ShouldProcessAutoIndexes(_documentDatabase.ClusterState) == false)
+                return;
+
             var mode = _documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode;
 
             foreach (var kvp in record.AutoIndexes)
@@ -277,6 +280,8 @@ namespace Raven.Server.Documents.Indexes
                         Logger.Info($"Could not create auto index {name}", e);
                 }
             }
+
+            _documentDatabase.ClusterState.LastAutoIndexesIndex = index;
         }
 
         private Index HandleAutoIndexChange(string name, AutoIndexDefinitionBase definition)
@@ -403,6 +408,9 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleChangesForStaticIndexes(RawDatabaseRecord record, long index, List<Index> indexesToStart)
         {
+            if (record.ClusterState.ShouldProcessStaticIndexes(_documentDatabase.ClusterState) == false)
+                return;
+
             foreach (var kvp in record.Indexes)
             {
                 _documentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
@@ -446,6 +454,8 @@ namespace Raven.Server.Documents.Indexes
                     _indexes.Add(fakeIndex);
                 }
             }
+
+            record.ClusterState.LastIndexesIndex = index;
         }
 
         public bool ShouldSkipThisNodeWhenRolling(Index index, out string reason, out bool replace)
@@ -763,6 +773,9 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleDeletes(RawDatabaseRecord record, long raftLogIndex)
         {
+            if (record.ClusterState.ShouldProcessStaticIndexes(_documentDatabase.ClusterState) == false)
+                return;
+
             foreach (var index in _indexes)
             {
                 _documentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();

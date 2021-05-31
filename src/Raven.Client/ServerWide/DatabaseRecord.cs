@@ -25,6 +25,28 @@ namespace Raven.Client.ServerWide
 {
     internal static class DatabaseRecordClusterStateExtensions
     {
+        internal static bool ShouldProcessStaticIndexes(this DatabaseRecordClusterState state, DatabaseRecordClusterState current)
+        {
+            if (state == null || current == null)
+                return true;
+
+            if (state.ShouldProcess(current))
+                return true;
+
+            return state.LastIndexesIndex > current.LastIndexesIndex;
+        }
+
+        internal static bool ShouldProcessAutoIndexes(this DatabaseRecordClusterState state, DatabaseRecordClusterState current)
+        {
+            if (state == null || current == null)
+                return true;
+
+            if (state.ShouldProcess(current))
+                return true;
+
+            return state.LastAutoIndexesIndex > current.LastAutoIndexesIndex;
+        }
+
         internal static bool ShouldProcessSorters(this DatabaseRecordClusterState state, DatabaseRecordClusterState current)
         {
             if (state == null || current == null)
@@ -64,6 +86,10 @@ namespace Raven.Client.ServerWide
         public long LastSortersIndex;
 
         public long LastAnalyzersIndex;
+
+        public long LastAutoIndexesIndex;
+
+        public long LastIndexesIndex;
     }
 
     public class DatabaseRecordWithEtag : DatabaseRecord
@@ -271,6 +297,8 @@ namespace Raven.Client.ServerWide
                     definition.DeploymentMode = IndexDeploymentMode.Rolling;
                 }
             }
+
+            ClusterState.LastIndexesIndex = raftIndex;
         }
 
         public void AddIndex(AutoIndexDefinition definition)
@@ -303,6 +331,8 @@ namespace Raven.Client.ServerWide
                 if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
                     InitializeRollingDeployment(definition.Name, createdAt);
             }
+
+            ClusterState.LastAutoIndexesIndex = raftIndex;
         }
 
         internal static bool IsRolling(IndexDeploymentMode? fromDefinition, IndexDeploymentMode fromSetting)
