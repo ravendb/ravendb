@@ -128,13 +128,13 @@ namespace SlowTests.Rolling
                     },
                     3);
 
+                await WaitForRaftIndexToBeAppliedOnClusterNodes(last, Servers);
+                
                 var reqEx = store.GetRequestExecutor();
-
                 var anyNode = await reqEx.GetPreferredNode();
                 await reqEx.UpdateTopologyAsync(
                     new RequestExecutor.UpdateTopologyParameters(anyNode.Item2) {TimeoutInMs = 5000, ForceUpdate = true, DebugTag = "node-unavailable-exception"});
 
-                await WaitForRaftIndexToBeAppliedOnClusterNodes(last, Servers);
                 WaitForIndexingInTheCluster(store, store.Database);
 
                 await AssertWaitForValueAsync(() => Task.FromResult(count), 3L);
@@ -496,7 +496,7 @@ namespace SlowTests.Rolling
                 {
                     var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     var indexStore = database.IndexStore;
-                    indexStore.ForTestingPurposesOnly().OnRollingIndexStart = index => mre.Wait(index.IndexingProcessCancellationToken);
+                    indexStore.ForTestingPurposesOnly().BeforeRollingIndexStart = index => mre.Wait(index.IndexingProcessCancellationToken);
                     indexStore.ForTestingPurposesOnly().OnRollingIndexFinished = index =>
                     {
                         dic.AddOrUpdate(index.Name, 1, (_, val) => val + 1);
