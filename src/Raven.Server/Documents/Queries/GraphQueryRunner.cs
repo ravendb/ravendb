@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Queries
 
                     //TODO: handle order by, load,  clauses
                     IncludeDocumentsCommand idc = null;
-                    IncludeRevisionsCommand irc = null;
+                    IncludeRevisionsCommand  irc = null;
                     IncludeCompareExchangeValuesCommand icevc = null;
                     if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                     {
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Queries
                         var fieldsToFetch = new FieldsToFetch(query, null);
                         idc   = new IncludeDocumentsCommand(Database.DocumentsStorage, queryContext.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
                         icevc = IncludeCompareExchangeValuesCommand.ExternalScope(queryContext, query.Metadata.CompareExchangeValueIncludes);
-                        irc   = new IncludeRevisionsCommand(database:Database, context:queryContext.Documents, pathsForRevisionsInDocuments: query.Metadata.RevisionIncludes.Revisions);
+                        irc    = new IncludeRevisionsCommand(database:Database, context:queryContext.Documents, pathsForRevisionsInDocuments: query.Metadata.RevisionIncludes?.Revisions);
                         
                         var resultRetriever = new GraphQueryResultRetriever(
                             q.GraphQuery,

@@ -64,6 +64,9 @@ namespace Raven.Server.Documents.Includes
 
         public void AddRange(HashSet<string> revisionsCvs)
         {
+            if (revisionsCvs is null)
+                return;
+            
             foreach (string revisionsCv in revisionsCvs)
             {
                 var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:revisionsCv);
