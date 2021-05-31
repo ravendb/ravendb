@@ -435,6 +435,7 @@ namespace Raven.Server.Documents
 
         private int _clusterTransactionDelayOnFailure = 1000;
         private FileLocker _fileLocker;
+        public DatabaseRecordClusterState ClusterState = new DatabaseRecordClusterState();
 
         private async Task ExecuteClusterTransactionTask()
         {

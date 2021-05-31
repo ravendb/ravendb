@@ -18,9 +18,9 @@ namespace Raven.Server.ServerWide.Commands.Analyzers
             AnalyzerName = name;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
-            record.DeleteAnalyzer(AnalyzerName);
+            record.DeleteAnalyzer(AnalyzerName, index);
         }
 
         public override void FillJson(DynamicJsonValue json)

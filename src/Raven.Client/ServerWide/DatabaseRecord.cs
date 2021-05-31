@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
@@ -26,24 +25,35 @@ namespace Raven.Client.ServerWide
 {
     internal static class DatabaseRecordClusterStateExtensions
     {
-        internal static bool ShouldProcessSorters(this DatabaseRecordClusterState state, long index)
+        internal static bool ShouldProcessSorters(this DatabaseRecordClusterState state, DatabaseRecordClusterState current)
         {
-            if (state == null)
+            if (state == null || current == null)
                 return true;
 
-            if (state.ShouldProcess(index))
+            if (state.ShouldProcess(current))
                 return true;
 
-            return state.LastSortersIndex > index;
+            return state.LastSortersIndex > current.LastSortersIndex;
+        }
+
+        internal static bool ShouldProcessAnalyzers(this DatabaseRecordClusterState state, DatabaseRecordClusterState current)
+        {
+            if (state == null || current == null)
+                return true;
+
+            if (state.ShouldProcess(current))
+                return true;
+
+            return state.LastAnalyzersIndex > current.LastAnalyzersIndex;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool ShouldProcess(this DatabaseRecordClusterState state, long index)
+        private static bool ShouldProcess(this DatabaseRecordClusterState state, DatabaseRecordClusterState current)
         {
-            if (state == null)
+            if (state == null || current == null)
                 return true;
 
-            return state.LastIndex > index;
+            return state.LastIndex > current.LastIndex;
         }
     }
 
@@ -52,6 +62,8 @@ namespace Raven.Client.ServerWide
         public long LastIndex;
 
         public long LastSortersIndex;
+
+        public long LastAnalyzersIndex;
     }
 
     public class DatabaseRecordWithEtag : DatabaseRecord
@@ -164,17 +176,19 @@ namespace Raven.Client.ServerWide
             ClusterState.LastSortersIndex = index;
         }
 
-        public void AddAnalyzer(AnalyzerDefinition definition)
+        public void AddAnalyzer(AnalyzerDefinition definition, long index)
         {
             if (Analyzers == null)
                 Analyzers = new Dictionary<string, AnalyzerDefinition>(StringComparer.OrdinalIgnoreCase);
 
             Analyzers[definition.Name] = definition;
+            ClusterState.LastAnalyzersIndex = index;
         }
 
-        public void DeleteAnalyzer(string sorterName)
+        public void DeleteAnalyzer(string sorterName, long index)
         {
             Analyzers?.Remove(sorterName);
+            ClusterState.LastAnalyzersIndex = index;
         }
 
         public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex, int revisionsToKeep, IndexDeploymentMode globalDeploymentMode)

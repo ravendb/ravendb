@@ -213,11 +213,9 @@ namespace Raven.Server.Documents.Indexes
                 : ProcessorInfo.ProcessorCount;
         }
 
-        private long _lastProcessedSortersIndex;
-
         private void HandleSorters(RawDatabaseRecord record, long index)
         {
-            if (record.ClusterState.ShouldProcessSorters(_lastProcessedSortersIndex) == false)
+            if (record.ClusterState.ShouldProcessSorters(_documentDatabase.ClusterState) == false)
                 return;
 
             try
@@ -231,11 +229,14 @@ namespace Raven.Server.Documents.Indexes
                     Logger.Info($"Could not update sorters", e);
             }
 
-            _lastProcessedSortersIndex = index;
+            _documentDatabase.ClusterState.LastSortersIndex = index;
         }
 
         private void HandleAnalyzers(RawDatabaseRecord record, long index)
         {
+            if (record.ClusterState.ShouldProcessAnalyzers(_documentDatabase.ClusterState) == false)
+                return;
+
             try
             {
                 AnalyzerCompilationCache.Instance.AddItems(record);
@@ -246,6 +247,8 @@ namespace Raven.Server.Documents.Indexes
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Could not update analyzers", e);
             }
+
+            _documentDatabase.ClusterState.LastAnalyzersIndex = index;
         }
 
         private void HandleChangesForAutoIndexes(RawDatabaseRecord record, long index, List<Index> indexesToStart)

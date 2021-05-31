@@ -20,12 +20,12 @@ namespace Raven.Server.ServerWide.Commands.Analyzers
         {
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             if (Analyzers != null)
             {
                 foreach (var definition in Analyzers)
-                    record.AddAnalyzer(definition);
+                    record.AddAnalyzer(definition, index);
             }
         }
 
