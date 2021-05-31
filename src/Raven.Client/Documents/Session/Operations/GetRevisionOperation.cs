@@ -16,7 +16,6 @@ namespace Raven.Client.Documents.Session.Operations
     internal class GetRevisionOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
-
         private BlittableArrayResult _result;
         private readonly GetRevisionsCommand _command;
 
@@ -46,7 +45,12 @@ namespace Raven.Client.Documents.Session.Operations
 
         public GetRevisionsCommand CreateRequest()
         {
-            _session.IncrementRequestCount();
+            if (_command.ChangeVectors is not null)
+                return _session.CheckIfChangeVectorAlreadyIncluded(_command.ChangeVectors) ? null : _command ;
+
+            if (_command._changeVector is not null)
+                return _session.CheckIfChangeVectorAlreadyIncluded(new[] {_command._changeVector}) ? null : _command;
+            
             return _command;
         }
 
@@ -102,7 +106,13 @@ namespace Raven.Client.Documents.Session.Operations
         public T GetRevision<T>()
         {
             if (_result == null)
+            {
+                if(_session.IncludedRevisionByChangeVectors.TryGetValue(_command._changeVector, out var revision))
+                {
+                    return GetRevision<T>(revision.Document);
+                }
                 return default(T);
+            }
 
             var document = (BlittableJsonReaderObject)_result.Results[0];
             return GetRevision<T>(document);

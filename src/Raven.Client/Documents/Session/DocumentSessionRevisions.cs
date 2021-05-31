@@ -92,8 +92,9 @@ namespace Raven.Client.Documents.Session
         public T Get<T>(string changeVector)
         {
             var operation = new GetRevisionOperation(Session, changeVector);
-
             var command = operation.CreateRequest();
+            if (command == null) return operation.GetRevision<T>();
+            SessionInfo?.IncrementRequestCount();
             RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
             operation.SetResult(command.Result);
             return operation.GetRevision<T>();
@@ -102,8 +103,8 @@ namespace Raven.Client.Documents.Session
         public Dictionary<string, T> Get<T>(IEnumerable<string> changeVectors)
         {
             var operation = new GetRevisionOperation(Session, changeVectors);
-
             var command = operation.CreateRequest();
+            if (command == null) return operation.GetRevision<Dictionary<string, T>>();
             RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
             operation.SetResult(command.Result);
             return operation.GetRevisions<T>();
@@ -113,6 +114,7 @@ namespace Raven.Client.Documents.Session
         {
             var operation = new GetRevisionOperation(Session, id, date);
             var command = operation.CreateRequest();
+            if (command == null) return operation.GetRevision<T>();
             RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
             operation.SetResult(command.Result);
             return operation.GetRevisionsFor<T>().FirstOrDefault();
@@ -122,6 +124,7 @@ namespace Raven.Client.Documents.Session
         {
             var operation = new GetRevisionsCountOperation(id);
             var command = operation.CreateRequest();
+            if (command == null) return command.Result;
             RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
             return command.Result;
         }
