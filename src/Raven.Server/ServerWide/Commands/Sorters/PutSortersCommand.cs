@@ -20,12 +20,12 @@ namespace Raven.Server.ServerWide.Commands.Sorters
         {
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             if (Sorters != null)
             {
                 foreach (var definition in Sorters)
-                    record.AddSorter(definition, etag);
+                    record.AddSorter(definition, index);
             }
         }
 

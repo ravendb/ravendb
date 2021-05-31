@@ -48,21 +48,21 @@ namespace Raven.Server.ServerWide.Commands
                 case OngoingTaskType.PullReplicationAsHub:
                     if (_hubNameToDelete == null)
                         return;
-                    
+
                     if (clusterAuditLog.IsInfoEnabled)
                         clusterAuditLog.Info($"Removed hub replication {_hubNameToDelete} in {DatabaseName} and all its certificates.");
-                    
+
                     var certs = ctx.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.ReplicationCertificatesSchema, ClusterStateMachine.ReplicationCertificatesSlice);
 
-                    using (Slice.From(ctx.Allocator, (this.DatabaseName + "/" + _hubNameToDelete + "/" ).ToLowerInvariant(), out var keySlice))
+                    using (Slice.From(ctx.Allocator, (this.DatabaseName + "/" + _hubNameToDelete + "/").ToLowerInvariant(), out var keySlice))
                     {
                         certs.DeleteByPrimaryKeyPrefix(keySlice);
                     }
                     break;
             }
-        } 
-        
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             Debug.Assert(TaskId != 0);
 
@@ -77,6 +77,7 @@ namespace Raven.Server.ServerWide.Commands
                             throw new InvalidOperationException($"Can't delete task id: {TaskId}, name: '{replicationTask.Name}', " +
                                                                 $"because it is a server-wide external replication task. Please use a dedicated operation.");
                         record.ExternalReplications.Remove(replicationTask);
+                        record.ClusterState.LastReplicationsIndex = index;
                     }
                     break;
                 case OngoingTaskType.PullReplicationAsHub:
@@ -85,6 +86,7 @@ namespace Raven.Server.ServerWide.Commands
                     {
                         _hubNameToDelete = hubDefinition.Name;
                         record.HubPullReplications.Remove(hubDefinition);
+                        record.ClusterState.LastReplicationsIndex = index;
                     }
                     break;
                 case OngoingTaskType.PullReplicationAsSink:
@@ -92,10 +94,12 @@ namespace Raven.Server.ServerWide.Commands
                     if (pullTask != null)
                     {
                         record.SinkPullReplications.Remove(pullTask);
+                        record.ClusterState.LastReplicationsIndex = index;
                     }
                     break;
                 case OngoingTaskType.Backup:
                     record.DeletePeriodicBackupConfiguration(TaskId);
+                    record.ClusterState.LastPeriodicBackupsIndex = index;
                     _taskIdToDelete = TaskId.ToString();
                     break;
 
@@ -104,6 +108,7 @@ namespace Raven.Server.ServerWide.Commands
                     if (sqlEtl != null)
                     {
                         record.SqlEtls.Remove(sqlEtl);
+                        record.ClusterState.LastSqlEtlsIndex = index;
                     }
                     break;
 
@@ -112,6 +117,7 @@ namespace Raven.Server.ServerWide.Commands
                     if (ravenEtl != null)
                     {
                         record.RavenEtls.Remove(ravenEtl);
+                        record.ClusterState.LastRavenEtlsIndex = index;
                     }
                     break;
 
@@ -120,6 +126,7 @@ namespace Raven.Server.ServerWide.Commands
                     if (olapEtl != null)
                     {
                         record.OlapEtls.Remove(olapEtl);
+                        record.ClusterState.LastOlapEtlsIndex = index;
                     }
                     break;
             }

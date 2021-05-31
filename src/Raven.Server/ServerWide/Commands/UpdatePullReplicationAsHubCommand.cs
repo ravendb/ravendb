@@ -15,11 +15,11 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             if (Definition.TaskId == 0)
             {
-                Definition.TaskId = etag;
+                Definition.TaskId = index;
             }
             else
             {
@@ -34,6 +34,8 @@ namespace Raven.Server.ServerWide.Commands
             
             record.EnsureTaskNameIsNotUsed(Definition.Name);
             record.HubPullReplications.Add(Definition);
+
+            record.ClusterState.LastReplicationsIndex = index;
         }
 
         public override void FillJson(DynamicJsonValue json)

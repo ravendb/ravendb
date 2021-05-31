@@ -90,6 +90,28 @@ namespace Raven.Client.ServerWide
         public long LastAutoIndexesIndex;
 
         public long LastIndexesIndex;
+
+        public long LastRevisionsIndex;
+
+        public long LastOlapEtlsIndex;
+
+        public long LastRavenEtlsIndex;
+
+        public long LastSqlEtlsIndex;
+
+        public long LastPeriodicBackupsIndex;
+
+        public long LastReplicationsIndex;
+
+        public long LastClientIndex;
+
+        public long LastDocumentsCompressionIndex;
+
+        public long LastExpirationIndex;
+
+        public long LastRefreshIndex;
+
+        public long LastTimeSeriesIndex;
     }
 
     public class DatabaseRecordWithEtag : DatabaseRecord
@@ -393,12 +415,15 @@ namespace Raven.Client.ServerWide
             return chosenNode;
         }
 
-        public void DeleteIndex(string name)
+        public void DeleteIndex(string name, long index)
         {
             Indexes?.Remove(name);
             AutoIndexes?.Remove(name);
             IndexesHistory?.Remove(name);
             RollingIndexes?.Remove(name);
+
+            ClusterState.LastIndexesIndex = index;
+            ClusterState.LastAutoIndexesIndex = index;
         }
 
         public void DeletePeriodicBackupConfiguration(long backupTaskId)

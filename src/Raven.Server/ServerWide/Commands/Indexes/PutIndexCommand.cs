@@ -36,7 +36,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         
         public int RevisionsToKeep { get; set; }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             try
             {
@@ -47,7 +47,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                     throw new InvalidOperationException($"Can not add index: {Definition.Name} because an index with the same name but different casing already exist");
                 }
 
-                record.AddIndex(Definition, Source, CreatedAt, etag, RevisionsToKeep, DefaultDeploymentMode ?? IndexDeploymentMode.Parallel);
+                record.AddIndex(Definition, Source, CreatedAt, index, RevisionsToKeep, DefaultDeploymentMode ?? IndexDeploymentMode.Parallel);
 
             }
             catch (Exception e)

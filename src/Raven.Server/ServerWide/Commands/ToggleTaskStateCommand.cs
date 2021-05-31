@@ -18,7 +18,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public ToggleTaskStateCommand()
         {
-
+            // for deserialization
         }
 
         public ToggleTaskStateCommand(long taskId, OngoingTaskType type, bool disable, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
@@ -28,7 +28,7 @@ namespace Raven.Server.ServerWide.Commands
             Disable = disable;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             Debug.Assert(TaskId != 0);
 
@@ -42,6 +42,7 @@ namespace Raven.Server.ServerWide.Commands
                         ThrowIfServerWideTask(watcher.Name, ServerWideExternalReplication.NamePrefix, "external replication");
 
                         watcher.Disabled = Disable;
+                        record.ClusterState.LastReplicationsIndex = index;
                     }
                     break;
 
@@ -53,6 +54,7 @@ namespace Raven.Server.ServerWide.Commands
                         ThrowIfServerWideTask(backup.Name, ServerWideBackupConfiguration.NamePrefix, "backup");
 
                         backup.Disabled = Disable;
+                        record.ClusterState.LastPeriodicBackupsIndex = index;
                     }
                     break;
 
@@ -62,15 +64,17 @@ namespace Raven.Server.ServerWide.Commands
                     if (sqlEtl != null)
                     {
                         sqlEtl.Disabled = Disable;
+                        record.ClusterState.LastSqlEtlsIndex = index;
                     }
                     break;
-                
+
                 case OngoingTaskType.OlapEtl:
 
                     var olapEtl = record?.OlapEtls?.Find(x => x.TaskId == TaskId);
                     if (olapEtl != null)
                     {
                         olapEtl.Disabled = Disable;
+                        record.ClusterState.LastOlapEtlsIndex = index;
                     }
                     break;
 
@@ -80,23 +84,26 @@ namespace Raven.Server.ServerWide.Commands
                     if (ravenEtl != null)
                     {
                         ravenEtl.Disabled = Disable;
+                        record.ClusterState.LastRavenEtlsIndex = index;
                     }
                     break;
-                
+
                 case OngoingTaskType.PullReplicationAsHub:
                     var pullAsHub = record?.HubPullReplications?.First(x => x.TaskId == TaskId);
                     if (pullAsHub != null)
                     {
                         pullAsHub.Disabled = Disable;
+                        record.ClusterState.LastReplicationsIndex = index;
                     }
 
                     break;
-                
+
                 case OngoingTaskType.PullReplicationAsSink:
                     var pullAsSink = record?.SinkPullReplications?.First(x => x.TaskId == TaskId);
                     if (pullAsSink != null)
                     {
                         pullAsSink.Disabled = Disable;
+                        record.ClusterState.LastReplicationsIndex = index;
                     }
 
                     break;
