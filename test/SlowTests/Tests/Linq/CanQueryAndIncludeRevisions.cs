@@ -61,6 +61,102 @@ namespace SlowTests.Tests.Linq
         }
         
         [Fact]
+        public void  CanQueryAndIncludeRevisionsArrayInsideProperty()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var cvList = new List<string>();
+                
+                const string id = "users/omer";
+                
+                 RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                
+                using (var session = store.OpenSession())
+                {
+                     session.Store(new User
+                        {
+                            Name = "Omer",
+                        },
+                        id);
+                 
+                     session.SaveChanges();
+                }
+
+                string changeVector;
+                using (var session = store.OpenSession())
+                {
+                    var metadatas =  session.Advanced.Revisions.GetMetadataFor(id);
+                    Assert.Equal(1, metadatas.Count);
+                      
+                    changeVector = metadatas.First().GetString(Constants.Documents.Metadata.ChangeVector);
+                    
+                    session.Advanced.Patch<User, string>(id, x => x.FirstRevision, changeVector);
+                    
+                    session.SaveChanges(); 
+                    
+                    cvList.Add(changeVector);
+                    
+                    metadatas =  session.Advanced.Revisions.GetMetadataFor(id);
+                    
+                    changeVector =  metadatas[0].GetString(Constants.Documents.Metadata.ChangeVector);
+                    
+                    cvList.Add(changeVector);
+                    
+                    session.Advanced.Patch<User, string>(id, x => x.SecondRevision, changeVector);
+                    
+                    session.SaveChanges(); 
+                    
+                    metadatas =  session.Advanced.Revisions.GetMetadataFor(id);
+
+                    changeVector = metadatas[0].GetString(Constants.Documents.Metadata.ChangeVector);
+                    
+                    cvList.Add(changeVector);
+
+                    session.Advanced.Patch<User, List<string>>(id, x => x.ChangeVectors, cvList);
+
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                   
+                    var query =  session.Advanced
+                        .RawQuery<User>("from Users include revisions(ChangeVectors)")
+                        .ToList();
+                     
+                    var revision1 =  session.Advanced.Revisions.Get<User>(cvList[0]);
+                    var revision2 =  session.Advanced.Revisions.Get<User>(cvList[1]);
+                    var revision3 =  session.Advanced.Revisions.Get<User>(cvList[2]);
+                
+                    Assert.NotNull(revision1);
+                    Assert.NotNull(revision2);
+                    Assert.NotNull(revision3);
+                    
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    var query =  session.Advanced
+                        .RawQuery<User>("from Users as u include revisions($p0, $p1, $p2)")
+                        .AddParameter("p0","u.FirstRevision")
+                        .AddParameter("p1","u.SecondRevision")
+                        .AddParameter("p2","u.ThirdRevision")
+                        .ToList();
+                    
+                    var revision1 =  session.Advanced.Revisions.Get<User>(cvList[0]);
+                    var revision2 =  session.Advanced.Revisions.Get<User>(cvList[1]);
+                    var revision3 =  session.Advanced.Revisions.Get<User>(cvList[2]);
+                
+                    Assert.NotNull(revision1);
+                    Assert.NotNull(revision2);
+                    Assert.NotNull(revision3);
+                    
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+        
+        [Fact]
         public void  CanQueryAndIncludeRevisionsArrayWithCache()
         {
             using (var store = GetDocumentStore())
@@ -117,11 +213,27 @@ namespace SlowTests.Tests.Linq
                     session.SaveChanges();
                     
                 }
+                using (var session = store.OpenSession())
+                {
+                    var query =  session.Advanced
+                        .RawQuery<User>("from Users as u include revisions(u.Revisions)")
+                        .ToList();
+                     
+                    var revision1 =  session.Advanced.Revisions.Get<User>(cvList[0]);
+                    var revision2 =  session.Advanced.Revisions.Get<User>(cvList[1]);
+                    var revision3 =  session.Advanced.Revisions.Get<User>(cvList[2]);
+                
+                    Assert.NotNull(revision1);
+                    Assert.NotNull(revision2);
+                    Assert.NotNull(revision3);
+                    
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
                 
                 using (var session = store.OpenSession())
                 {
                      var query =  session.Advanced
-                        .RawQuery<User>("from Users as u include revisions(u.FirstRevision, u.SecondRevision,u.ThirdRevision)")
+                        .RawQuery<User>("from Users as u include revisions(u.Revisions)")
                         .ToList();
                      
                      var revision1 =  session.Advanced.Revisions.Get<User>(cvList[0]);
@@ -533,6 +645,7 @@ namespace SlowTests.Tests.Linq
             public string FirstRevision { get; set; }
             public string SecondRevision { get; set; }
             public string ThirdRevision { get; set; }
+            public List<string> ChangeVectors { get; set; } 
         }
     }
 }

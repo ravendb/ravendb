@@ -126,6 +126,7 @@ namespace Raven.Client.Documents.Session
 
         Lazy<Task<T>> ILazyRevisionsOperationsAsync.GetAsync<T>(string id, DateTime dateTime, CancellationToken token)
         {
+            
             var operation = new GetRevisionOperation(Session, id, dateTime);
             var lazyRevisionOperation = new LazyRevisionOperation<T>(operation, LazyRevisionOperation<T>.Mode.Single);
             return ((AsyncDocumentSession )Session).AddLazyOperation<T>(lazyRevisionOperation, null, token);

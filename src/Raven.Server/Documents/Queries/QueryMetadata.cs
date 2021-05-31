@@ -594,8 +594,10 @@ namespace Raven.Server.Documents.Queries
                             throw new InvalidOperationException($"Cannot include revisions for related Expression '{fe}', " + 
                                                                 $"Parent alias is different than include alias '{Query.From.Alias?.Value}'" +
                                                                 $" compare to '{fe.Compound[0].Value}';. ");
-                        
-                        revisionIncludes.AddRevision(fe.FieldValueWithoutAlias);
+                      
+                        if(string.IsNullOrEmpty(fe.FieldValueWithoutAlias) == false)
+                           revisionIncludes.AddRevision(fe.FieldValueWithoutAlias);
+                        else revisionIncludes.AddRevision(fe.FieldValue);
                         break;
                     }
                     case ValueExpression {Value: ValueTokenType.Parameter} ve:
