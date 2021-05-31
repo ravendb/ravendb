@@ -26,6 +26,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
 
@@ -248,6 +249,17 @@ namespace Raven.Server.Web.Authentication
                     throw new ArgumentException("Unable to load the provided certificate.", e);
                 }
 
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    var clientCertificate = GetCurrentCertificate();
+                    var auditLog = LoggingSource.AuditLog.GetLogger("Certificates","Audit");
+                    var permissions = certificate?.Permissions != null
+                        ? Environment.NewLine + string.Join(Environment.NewLine, certificate.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))
+                        : string.Empty;
+                    auditLog.Info($"Add new certificate '{certificate?.Thumbprint}'. Security Clearance: {certificate?.SecurityClearance}. Permissions:{permissions}." +
+                                  $"{Environment.NewLine}IP: '{HttpContext.Connection.RemoteIpAddress}'. Certificate: {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
+                }
+                
                 try
                 {
                     await PutCertificateCollectionInCluster(certificate, certBytes, certificate.Password, ServerStore, ctx, GetRaftRequestIdFromQuery());
@@ -413,6 +425,13 @@ namespace Raven.Server.Web.Authentication
                 if (definition != null)
                     keysToDelete.AddRange(definition.CollectionSecondaryKeys);
 
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    var clientCertificate = GetCurrentCertificate();
+                    var auditLog = LoggingSource.AuditLog.GetLogger("Certificates","Audit");
+                    auditLog.Info($"Delete certificate '{thumbprint}'. IP: '{HttpContext.Connection.RemoteIpAddress}'. Certificate: {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
+                }
+                
                 await DeleteInternal(keysToDelete, GetRaftRequestIdFromQuery());
             }
 
