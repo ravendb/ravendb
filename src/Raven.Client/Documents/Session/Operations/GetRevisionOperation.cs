@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Session.Operations
         {
             if (_command.ChangeVectors is not null)
                 return _session.CheckIfChangeVectorAlreadyIncluded(_command.ChangeVectors) ? null : _command ;
-
+            
             if (_command._changeVector is not null)
                 return _session.CheckIfChangeVectorAlreadyIncluded(new[] {_command._changeVector}) ? null : _command;
             
