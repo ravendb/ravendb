@@ -28,6 +28,11 @@ namespace Raven.Client.Documents.Session
                 return _sessionId.Value;
             }
         }
+        
+        public void IncrementRequestCount()
+        {
+           _session.IncrementRequestCount();
+        }
 
         internal bool CanUseLoadBalanceBehavior => _canUseLoadBalanceBehavior;
 
@@ -50,7 +55,7 @@ namespace Raven.Client.Documents.Session
             AsyncCommandRunning = asyncCommandRunning;
             NoCaching = options.NoCaching;
         }
-
+        
         public void SetContext(string sessionKey)
         {
             if (string.IsNullOrWhiteSpace(sessionKey))
