@@ -107,7 +107,8 @@ namespace Raven.Client.Documents.Session.Operations
         {
             if (_result == null)
             {
-                if(_session.IncludedRevisionByChangeVectors.TryGetValue(_command._changeVector, out var revision))
+                if(_session.IncludedRevisionByChangeVectors is not null && 
+                   _session.IncludedRevisionByChangeVectors.TryGetValue(_command._changeVector, out var revision))
                 {
                     return GetRevision<T>(revision.Document);
                 }

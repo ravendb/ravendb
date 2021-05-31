@@ -261,7 +261,7 @@ namespace FastTests.Server.Documents.Revisions
                     var revisionsLazily = session.Advanced.Revisions.Lazily.Get<User>(cv);
                     var revisionsLazilyValue =  revisionsLazily.Value;
 
-                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
                     Assert.Equal(revisions.Id, revisionsLazilyValue.Id);
                     Assert.Equal(revisions.Name, revisionsLazilyValue.Name);
                 }

@@ -47,6 +47,8 @@ namespace Raven.Client.Documents.Session
             {
                 var operation = new GetRevisionOperation(Session, id, start, pageSize, true);
                 var command = operation.CreateRequest();
+                if (command == null) return operation.GetRevisionsMetadataFor();
+                SessionInfo?.IncrementRequestCount();
                 await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
                 operation.SetResult(command.Result);
                 return operation.GetRevisionsMetadataFor();
@@ -74,11 +76,11 @@ namespace Raven.Client.Documents.Session
             {
                 var operation = new GetRevisionOperation(Session, changeVectors);
                 var command = operation.CreateRequest();
-                if (command == null) return operation.GetRevision<Dictionary<string, T>>();
+                if (command == null) return operation.GetRevisions<T>();
                 SessionInfo?.IncrementRequestCount();
                 await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
                 operation.SetResult(command.Result);
-                return operation.GetRevision<Dictionary<string, T>>();
+                return operation.GetRevisions<T>();
             }
         }
 
