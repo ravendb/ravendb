@@ -33,6 +33,9 @@ namespace Raven.Client.ServerWide
             if (state.ShouldProcess(current))
                 return true;
 
+            if (state.LastIndexesIndex == null || current.LastIndexesIndex == null)
+                return true;
+
             return state.LastIndexesIndex > current.LastIndexesIndex;
         }
 
@@ -42,6 +45,9 @@ namespace Raven.Client.ServerWide
                 return true;
 
             if (state.ShouldProcess(current))
+                return true;
+
+            if (state.LastAutoIndexesIndex == null || current.LastAutoIndexesIndex == null)
                 return true;
 
             return state.LastAutoIndexesIndex > current.LastAutoIndexesIndex;
@@ -55,6 +61,9 @@ namespace Raven.Client.ServerWide
             if (state.ShouldProcess(current))
                 return true;
 
+            if (state.LastSortersIndex == null || current.LastSortersIndex == null)
+                return true;
+
             return state.LastSortersIndex > current.LastSortersIndex;
         }
 
@@ -64,6 +73,9 @@ namespace Raven.Client.ServerWide
                 return true;
 
             if (state.ShouldProcess(current))
+                return true;
+
+            if (state.LastAnalyzersIndex == null || current.LastAnalyzersIndex == null)
                 return true;
 
             return state.LastAnalyzersIndex > current.LastAnalyzersIndex;
@@ -81,37 +93,37 @@ namespace Raven.Client.ServerWide
 
     public class DatabaseRecordClusterState
     {
-        public long LastIndex;
+        public long? LastIndex;
 
-        public long LastSortersIndex;
+        public long? LastSortersIndex;
 
-        public long LastAnalyzersIndex;
+        public long? LastAnalyzersIndex;
 
-        public long LastAutoIndexesIndex;
+        public long? LastAutoIndexesIndex;
 
-        public long LastIndexesIndex;
+        public long? LastIndexesIndex;
 
-        public long LastRevisionsIndex;
+        public long? LastRevisionsIndex;
 
-        public long LastOlapEtlsIndex;
+        public long? LastOlapEtlsIndex;
 
-        public long LastRavenEtlsIndex;
+        public long? LastRavenEtlsIndex;
 
-        public long LastSqlEtlsIndex;
+        public long? LastSqlEtlsIndex;
 
-        public long LastPeriodicBackupsIndex;
+        public long? LastPeriodicBackupsIndex;
 
-        public long LastReplicationsIndex;
+        public long? LastReplicationsIndex;
 
-        public long LastClientIndex;
+        public long? LastClientIndex;
 
-        public long LastDocumentsCompressionIndex;
+        public long? LastDocumentsCompressionIndex;
 
-        public long LastExpirationIndex;
+        public long? LastExpirationIndex;
 
-        public long LastRefreshIndex;
+        public long? LastRefreshIndex;
 
-        public long LastTimeSeriesIndex;
+        public long? LastTimeSeriesIndex;
     }
 
     public class DatabaseRecordWithEtag : DatabaseRecord
