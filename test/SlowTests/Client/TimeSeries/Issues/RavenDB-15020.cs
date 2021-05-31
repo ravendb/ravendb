@@ -9,6 +9,7 @@ using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using User = SlowTests.Core.Utils.Entities.User;
@@ -1209,7 +1210,7 @@ select timeseries(
                         var sigma = groupValues.Sum(v => Math.Pow(v - mean, 2));
                         var expected = Math.Sqrt(sigma / (groupValues.Count - 1));
                          
-                        Assert.Equal(expected, rangeAggregation.StandardDeviation[0]);
+                        Assert.True(expected.AlmostEquals(rangeAggregation.StandardDeviation[0]));
                     }
                 }
             }
