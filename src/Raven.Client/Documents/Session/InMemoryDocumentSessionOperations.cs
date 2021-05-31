@@ -118,7 +118,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Translate between an CV and its associated entity
         /// </summary>
-        internal readonly Dictionary<string, DocumentInfo> IncludedRevisionByChangeVectors = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
+        internal  Dictionary<string, DocumentInfo> IncludedRevisionByChangeVectors;
         
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
@@ -1452,10 +1452,10 @@ more responsive application.
             {
                 includes.GetPropertyByIndex(i, ref propertyDetails);
 
-                if (propertyDetails.Value == null)
+                if (propertyDetails.Value is BlittableJsonReaderObject json == false)
                     continue;
 
-                var json = (BlittableJsonReaderObject)propertyDetails.Value;
+                 json = (BlittableJsonReaderObject)propertyDetails.Value;
 
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(json);
                 if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
@@ -1473,6 +1473,7 @@ more responsive application.
             if (includes == null)
                 return;
 
+            IncludedRevisionByChangeVectors ??= new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
             var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
             for (int i = 0; i < includes.Count; i++)
             {
@@ -1646,16 +1647,16 @@ more responsive application.
             CountersByDocId[id] = cache;
         }
 
-        private void SetGotAllInCacheIfNeeded(IEnumerable<string> revisionsToInclude)
-        {
-            foreach (var cv in revisionsToInclude)
-            {
-                if (string.IsNullOrEmpty(cv) == false)
-                    continue;
-
-                SetGotAllCountersForDocument(cv);
-            }
-        }
+        // private void SetGotAllInCacheIfNeeded(IEnumerable<string> revisionsToInclude)
+        // {
+        //     foreach (var cv in revisionsToInclude)
+        //     {
+        //         if (string.IsNullOrEmpty(cv) == false)
+        //             continue;
+        //
+        //         SetGotAllCountersForDocument(cv);
+        //     }
+        // }
 
         private void SetGotAllInCacheIfNeeded(Dictionary<string, string[]> countersToInclude)
         {
@@ -2158,6 +2159,7 @@ more responsive application.
         
         public bool CheckIfChangeVectorAlreadyIncluded(IEnumerable<string> changeVectors)
         {
+            if (IncludedRevisionByChangeVectors == null) return false;
             foreach (var cv in changeVectors)
             {
                 if (IncludedRevisionByChangeVectors.TryGetValue(cv, out DocumentInfo documentInfo) == false )

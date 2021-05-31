@@ -255,6 +255,16 @@ namespace FastTests.Server.Documents.Revisions
                     Assert.Equal(revisions.Id, revisionsLazilyValue.Id);
                     Assert.Equal(revisions.Name, revisionsLazilyValue.Name);
                 }
+                using (var session = store.OpenSession())
+                {
+                    var revisions =  session.Advanced.Revisions.Get<User>(cv);
+                    var revisionsLazily = session.Advanced.Revisions.Lazily.Get<User>(cv);
+                    var revisionsLazilyValue =  revisionsLazily.Value;
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(revisions.Id, revisionsLazilyValue.Id);
+                    Assert.Equal(revisions.Name, revisionsLazilyValue.Name);
+                }
             }
         }
         [Fact]
@@ -359,14 +369,21 @@ namespace FastTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
                 }
         
-                for (int i = 0; i < 10; i++)
+                // for (int i = 0; i < 10; i++)
+                // {
+                //     using (var session = store.OpenAsyncSession())
+                //     {
+                //         var user = await session.LoadAsync<Company>(id);
+                //         user.Name = "Omer " + i;
+                //         await session.SaveChangesAsync();
+                //     }
+                // }
+                using (var session = store.OpenAsyncSession())
                 {
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        var user = await session.LoadAsync<Company>(id);
-                        user.Name = "Omer " + i;
-                        await session.SaveChangesAsync();
-                    }
+                    var revision = session.Advanced.Lazily.LoadAsync<User>("users/1");
+                    var doc = await revision.Value;
+                 
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
 
                 var dateTime = DateTime.Now;
@@ -381,6 +398,7 @@ namespace FastTests.Server.Documents.Revisions
                     Assert.Equal(revision.Name, revisionLazilyResult.Name);
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
                 }
+                //
             }
         }
         [Fact]

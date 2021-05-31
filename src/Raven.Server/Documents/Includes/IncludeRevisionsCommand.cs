@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Includes
 {
@@ -8,7 +12,7 @@ namespace Raven.Server.Documents.Includes
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;
-        private readonly HashSet<string> _revisionsBySourcePath;
+        private readonly HashSet<string> _revisions;
 
         public Dictionary<string, Document> Results { get;  }
 
@@ -20,30 +24,33 @@ namespace Raven.Server.Documents.Includes
             Results = new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
         }
         
-        public IncludeRevisionsCommand(DocumentDatabase database, DocumentsOperationContext context, HashSet<string> revisionsBySourcePath)
+        public IncludeRevisionsCommand(DocumentDatabase database, DocumentsOperationContext context, HashSet<string> revisions)
             : this(database, context)
         {
-            _revisionsBySourcePath = revisionsBySourcePath;
+            _revisions = revisions;
         }
 
         public void Fill(Document document)
         {
             if (document == null)
                 return;
-            
-            var revisionCV = string.Empty;
 
-            foreach (var fieldName in _revisionsBySourcePath)
+            foreach (var fieldName in _revisions)
             {
-                if ( (fieldName != string.Empty && document.Data.TryGet(fieldName, out revisionCV)) == false)
+                if (document.Data.TryGet(fieldName, out object singleOrMultipleCv) == false)
                 {
-                    throw new InvalidOperationException($"Cannot include revisions for related document '{document.Id}', " + 
+                    throw new InvalidOperationException($"Cannot include revisions for related document '{document.Id}', " +
                                                         $"document {document.Id} doesn't have a field named '{fieldName}'. ");
                 }
-
-                var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector: revisionCV);
-                 
-                 Results.Add(revisionCV,getRevisionsByCv);
+                if(singleOrMultipleCv is BlittableJsonReaderArray arr)
+                {
+                    
+                    foreach (object cv in arr)
+                    {
+                        var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:cv.ToString());
+                        Results.Add(cv.ToString(),getRevisionsByCv);
+                    }
+                }
 
             }
         }
