@@ -822,7 +822,7 @@ namespace SlowTests.Smuggler
         public async Task ExportShouldSkipDeadSegments()
         {
             var file = GetTempFileName();
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             try
             {
@@ -969,7 +969,7 @@ namespace SlowTests.Smuggler
         public async Task CanExportAndImportTimeSeries()
         {
             var file = GetTempFileName();
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             try
             {
@@ -1065,7 +1065,7 @@ namespace SlowTests.Smuggler
         public async Task CanExportAndImportTimeSeriesWithMultipleSegments()
         {
             var file = GetTempFileName();
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             try
             {
@@ -1144,7 +1144,7 @@ namespace SlowTests.Smuggler
         public async Task CanSkipTimeSeriesOnExport()
         {
             var file = GetTempFileName();
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             try
             {
@@ -1224,7 +1224,7 @@ namespace SlowTests.Smuggler
         public async Task CanSkipTimeSeriesOnImport()
         {
             var file = GetTempFileName();
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             try
             {
@@ -1304,7 +1304,7 @@ namespace SlowTests.Smuggler
             var file = GetTempFileName();
             try
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 using (var store1 = GetDocumentStore())
                 using (var store2 = GetDocumentStore())
                 {
@@ -1362,7 +1362,7 @@ namespace SlowTests.Smuggler
             var file = GetTempFileName();
             try
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 using (var store1 = GetDocumentStore())
                 using (var store2 = GetDocumentStore())
                 {

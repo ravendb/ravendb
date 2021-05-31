@@ -12,6 +12,7 @@ using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

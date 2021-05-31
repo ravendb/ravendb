@@ -10,7 +10,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -28,7 +27,6 @@ using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
@@ -41,6 +39,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -591,7 +590,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 await store.TimeSeries.SetRawPolicyAsync("users", TimeValue.FromYears(1));
 
                 using (var session = store.OpenAsyncSession())
@@ -693,7 +692,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1025,7 +1024,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1514,7 +1513,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User
@@ -1562,7 +1561,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User

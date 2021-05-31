@@ -8,7 +8,7 @@ using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Server.Documents
+namespace FastTests.Server.Documents.TimeSeries
 {
     public unsafe class TimeSeriesRangeTests : NoDisposalNeeded
     {

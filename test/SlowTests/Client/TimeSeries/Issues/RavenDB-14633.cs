@@ -29,7 +29,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
@@ -86,7 +86,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
@@ -146,7 +146,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
@@ -253,7 +253,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
@@ -381,7 +381,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
@@ -474,7 +474,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
@@ -567,7 +567,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
@@ -693,7 +693,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
