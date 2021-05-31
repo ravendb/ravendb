@@ -1633,6 +1633,9 @@ namespace Raven.Server.ServerWide
             {
                 certs.DeleteByKey(thumbprintSlice);
             }
+            
+            if (_clusterAuditLog.IsInfoEnabled)
+                _clusterAuditLog.Info($"Deleted certificate '{thumbprint}' from the cluster.");
         }
 
         private void DeleteMultipleValues(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
