@@ -1368,6 +1368,8 @@ namespace Raven.Server.Documents.Indexes
 
                     if (IsRolling)
                     {
+                        DocumentDatabase.IndexStore.ForTestingPurposes?.BeforeRollingIndexStart?.Invoke(this);
+
                         while (true)
                         {
 

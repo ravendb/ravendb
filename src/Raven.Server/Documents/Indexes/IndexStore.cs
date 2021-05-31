@@ -2443,6 +2443,7 @@ namespace Raven.Server.Documents.Indexes
 
             internal Action<Index> OnRollingIndexFinished;
             internal Action<Index> OnRollingIndexStart;
+            internal Action<Index> BeforeRollingIndexStart;
             public TestingStuff(IndexStore parent)
             {
                 _parent = parent;
