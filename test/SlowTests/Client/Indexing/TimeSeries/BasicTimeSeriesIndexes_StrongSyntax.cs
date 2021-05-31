@@ -11,7 +11,6 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Client.Indexing.Counters;
 using Sparrow.Json;
 using Tests.Infrastructure.Operations;
 using Xunit;
@@ -475,7 +474,6 @@ namespace SlowTests.Client.Indexing.TimeSeries
             using (var store = GetDocumentStore())
             {
                 var now1 = DateTime.Now;
-                var now2 = now1.AddSeconds(1);
 
                 using (var session = store.OpenSession())
                 {

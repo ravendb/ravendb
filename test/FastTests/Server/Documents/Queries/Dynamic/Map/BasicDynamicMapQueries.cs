@@ -8,6 +8,7 @@ using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure.Entities;
 using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map

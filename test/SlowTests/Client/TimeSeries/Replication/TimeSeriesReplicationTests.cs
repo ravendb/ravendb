@@ -8,7 +8,6 @@ using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Core.Utils.Entities;
@@ -30,7 +29,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = storeA.OpenSession())
                 {
@@ -64,7 +63,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = storeA.OpenSession())
                 {
@@ -115,7 +114,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             {
                 await SetupReplicationAsync(storeA, storeB);
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = storeA.OpenSession())
                 {
@@ -320,7 +319,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 // this is not thread-safe intentionally, to have duplicate values
                 var mainRand = new Random(357);
@@ -419,7 +418,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
 
                 var fullSegment = 329;
 
@@ -490,7 +489,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 // this is not thread-safe intentionally, to have duplicate values
                 var offset = 0;
@@ -563,7 +562,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 // this is not thread-safe intentionally, to have duplicate values
                 var offset = 0;
@@ -647,7 +646,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = storeA.OpenSession())
                 {
@@ -688,8 +687,6 @@ namespace SlowTests.Client.TimeSeries.Replication
                     session.SaveChanges();
                 }
 
-                WaitForUserToContinueTheTest(storeA);
-
                 EnsureReplicating(storeA, storeB);
 
                 using (var sessionA = storeA.OpenSession())
@@ -726,7 +723,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = storeA.OpenSession())
                 {
@@ -761,7 +758,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = storeA.OpenSession())
                 {
@@ -782,7 +779,6 @@ namespace SlowTests.Client.TimeSeries.Replication
                     session.SaveChanges();
                 }
 
-                WaitForUserToContinueTheTest(storeB);
                 EnsureReplicating(storeA, storeB);
 
                 using (var session = storeB.OpenSession())
@@ -800,7 +796,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = storeA.OpenSession())
                 {
@@ -1011,7 +1007,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = storeA.OpenSession())
                 {
@@ -1065,7 +1061,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = storeA.OpenSession())
                 {

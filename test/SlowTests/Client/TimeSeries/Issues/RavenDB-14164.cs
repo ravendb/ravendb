@@ -19,7 +19,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             using (var store = GetDocumentStore())
             {
                 var tags = new[] {"watches/fitbit", "watches/apple", "watches/sony"};
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var documentId = "users/ayende";
                 using (var session = store.OpenSession())
@@ -99,7 +99,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             using (var store = GetDocumentStore())
             {
                 var tags = new[] { "watches/fitbit", "watches/apple", "watches/sony" };
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var documentId = "users/ayende";
                 using (var session = store.OpenAsyncSession())
@@ -178,7 +178,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             using (var store = GetDocumentStore())
             {
                 var tags = new[] { "watches/fitbit", "watches/apple", "watches/sony" };
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var documentId = "users/ayende";
                 using (var session = store.OpenSession())
@@ -269,7 +269,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             using (var store = GetDocumentStore())
             {
                 var tags = new[] { "watches/fitbit", "watches/apple", "watches/sony" };
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var documentId = "users/ayende";
                 using (var session = store.OpenSession())
@@ -374,7 +374,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             using (var store = GetDocumentStore())
             {
                 var tags = new[] { "watches/fitbit", "watches/apple", "watches/sony" };
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var documentId = "users/ayende";
                 using (var session = store.OpenSession())
@@ -486,7 +486,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             using (var store = GetDocumentStore())
             {
                 var tags = new[] { "watches/fitbit", "watches/apple", "watches/sony" };
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var documentId = "users/ayende";
                 using (var session = store.OpenSession())
@@ -608,7 +608,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             using (var store = GetDocumentStore())
             {
                 var tags = new[] { "watches/fitbit", "watches/apple", "watches/sony" };
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var documentId = "users/ayende";
                 using (var session = store.OpenSession())
@@ -692,7 +692,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             using (var store = GetDocumentStore())
             {
                 var tags = new[] { "watches/fitbit", "watches/apple", "watches/sony" };
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var documentId = "users/ayende";
                 using (var session = store.OpenSession())

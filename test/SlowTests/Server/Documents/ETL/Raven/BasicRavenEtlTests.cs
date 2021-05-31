@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Employee = Orders.Employee;
 using Xunit.Abstractions;

@@ -8,7 +8,6 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
 using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,7 +26,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
                 const double number = 90;
 
@@ -86,7 +85,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
                 const double number = 90;
 
@@ -176,7 +175,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -240,7 +239,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 var tags = new[] {"watches/fitbit", "watches/casio", "watches/apple"};
@@ -300,7 +299,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -370,7 +369,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -431,7 +430,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -526,7 +525,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -599,7 +598,7 @@ select timeseries(
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
-                var now = DateTime.Today.EnsureUtc();
+                var now = RavenTestHelper.UtcToday;
 
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
@@ -648,7 +647,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -718,7 +717,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -765,7 +764,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -805,7 +804,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -860,7 +859,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
 
@@ -935,7 +934,7 @@ select timeseries(
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
-                var now = DateTime.Today.EnsureUtc();
+                var now = RavenTestHelper.UtcToday;
 
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
@@ -993,7 +992,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 var values = new List<double>
@@ -1057,7 +1056,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 var values = new List<double>
@@ -1154,7 +1153,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -1221,7 +1220,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 var tags = new[] { "watches/fitbit", "watches/casio", "watches/apple" };
@@ -1283,7 +1282,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
 
@@ -1346,7 +1345,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -1420,7 +1419,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -1539,7 +1538,7 @@ select timeseries(
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
-                var now = DateTime.Today.EnsureUtc();
+                var now = RavenTestHelper.UtcToday;
 
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;

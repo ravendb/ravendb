@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -21,7 +18,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/1-A");
@@ -70,7 +67,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "users/1-A";
                 using (var session = store.OpenSession())
                 {
@@ -207,7 +204,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/1-A");
@@ -256,7 +253,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "users/1-A";
                 using (var session = store.OpenSession())
                 {
@@ -335,7 +332,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             {
                 var tag = "raven";
                 var id = "users/1";
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), id);
@@ -410,7 +407,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             {
                 var tag = "raven";
                 var id = "users/1";
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), id);

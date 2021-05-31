@@ -9,6 +9,7 @@ using FastTests.Server.Basic.Entities;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

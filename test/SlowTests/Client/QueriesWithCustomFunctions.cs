@@ -17,6 +17,7 @@ using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

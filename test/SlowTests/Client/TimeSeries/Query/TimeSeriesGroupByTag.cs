@@ -539,7 +539,6 @@ namespace SlowTests.Client.TimeSeries.Query
                 {
                     var query = session.Query<TimeSeriesLinqQuery.Person>()
                         .Select(u => RavenQuery.TimeSeries(u, "Heartrate",baseline.EnsureUtc(), baseline.AddMonths(2).EnsureUtc())
-                            //    .LoadByTag<TimeSeriesLinqQuery.Watch>().Where((entry, watch) => true)
                             .GroupBy(g => g
                                 .Hours(1)
                                 .ByTag()
