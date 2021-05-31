@@ -12,9 +12,9 @@ namespace Raven.Server.Documents.Queries.Revisions
             Revisions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
-        public void AddRevision(string revision, string sourcePath = null)
+        public void AddRevision(string field)
         {
-            Revisions.Add(string.IsNullOrEmpty(sourcePath) == false ? sourcePath : revision);
+            Revisions.Add(field);
         }
     }
 }

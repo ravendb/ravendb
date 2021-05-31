@@ -584,37 +584,46 @@ namespace Raven.Server.Documents.Queries
 
         private void AddToRevisionsInclude(RevisionIncludeField revisionIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
         {
-            string sourcePath = null;
-            
             foreach (var queryExpression in expression.Arguments)
             {
                 switch (queryExpression)
                 {
                     case FieldExpression fe:
+                    {
+                        if (Query.From.Alias?.Value.Equals(fe.Compound[0].Value) == false)
+                            throw new InvalidOperationException($"Cannot include revisions for related Expression '{fe}', " + 
+                                                                $"Parent alias is different than include alias '{Query.From.Alias?.Value}'" +
+                                                                $" compare to '{fe.Compound[0].Value}';. ");
+                        
                         revisionIncludes.AddRevision(fe.FieldValueWithoutAlias);
                         break;
-
+                    }
                     case ValueExpression {Value: ValueTokenType.Parameter} ve:
                     {
                         var vt = QueryBuilder.GetValue(Query, this, parameters, ve);
-                        
                         var split = vt.Value.ToString()?.Split('.');
-                        if (split.Length >= 2 && 
-                            split[0] == Query.From.Alias.Value)
-                        {
-                            sourcePath = vt.Value.ToString()?.Substring(split[0].Length + 1);
-                            AddRevisionToInclude(revisionIncludes, parameters, vt, sourcePath);
-                            break;
-
-                        }
-                        throw new InvalidOperationException($"Cannot include revisions for related Expression '{vt}', " + 
-                                                            $"Parent alias is different than include alias '{Query.From.Alias.Value}' compare to '{split[0]}';. ");
                         
+                        if(split.Length >= 2 && split[0] == Query.From.Alias?.Value)
+                        {
+                            var field = vt.Value.ToString()?.Substring(split[0].Length + 1);
+                            revisionIncludes.AddRevision(field);
+                            break;
+                        }
+
+                        if(split[0] == vt.Value)
+                        {
+                            revisionIncludes.AddRevision(vt.Value.ToString());
+                            break;
+                        }
+                        
+                        throw new InvalidOperationException($"Cannot include revisions for related Expression '{vt}', " + 
+                                                            $"Parent alias is different than include alias '{Query.From.Alias.Value}'" +
+                                                            $" compare to '{split[0]}';. ");
                     }
-                   
                 }
             } 
         }
+        
         private static ExplanationField CreateExplanationField(MethodExpression expression)
             {
             var result = new ExplanationField();
@@ -799,17 +808,6 @@ namespace Raven.Server.Documents.Queries
             counterIncludes.AddCounter(parameterValue.Value.ToString(), sourcePath);
             counterIncludes.AddCounter(parameterValue.Value.ToString(), sourcePath);
         }
-
-        private void AddRevisionToInclude(RevisionIncludeField revisionIncludeField, BlittableJsonReaderObject parameters,
-            (object Value, ValueTokenType Type) parameterValue, string sourcePath)
-        {
-            if (parameterValue.Type != ValueTokenType.String)
-                throw new InvalidQueryException("Parameters of method `revisions` must be of type `string` or `string[]`, " +
-                                                $"but got `{parameterValue.Value}` of type `{parameterValue.Type}`", QueryText, parameters);
-
-            revisionIncludeField.AddRevision(parameterValue.Value.ToString(), sourcePath);
-        }
-
         
         private void AddToTimeSeriesIncludes(TimeSeriesIncludesField timeSeriesIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
         {

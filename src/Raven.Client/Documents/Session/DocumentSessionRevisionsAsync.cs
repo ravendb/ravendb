@@ -34,7 +34,8 @@ namespace Raven.Client.Documents.Session
             {
                 var operation = new GetRevisionOperation(Session, id, start, pageSize);
                 var command = operation.CreateRequest();
-                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                SessionInfo?.IncrementRequestCount();
+                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
                 operation.SetResult(command.Result);
                 return operation.GetRevisionsFor<T>();
             }
@@ -58,7 +59,9 @@ namespace Raven.Client.Documents.Session
             {
                 var operation = new GetRevisionOperation(Session, changeVector);
                 var command = operation.CreateRequest();
-                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                if (command == null) return operation.GetRevision<T>();
+                SessionInfo?.IncrementRequestCount();
+                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
                 operation.SetResult(command.Result);
                 return operation.GetRevision<T>();
             }
@@ -71,9 +74,11 @@ namespace Raven.Client.Documents.Session
             {
                 var operation = new GetRevisionOperation(Session, changeVectors);
                 var command = operation.CreateRequest();
-                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                if (command == null) return operation.GetRevision<Dictionary<string, T>>();
+                SessionInfo?.IncrementRequestCount();
+                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
                 operation.SetResult(command.Result);
-                return operation.GetRevisions<T>();
+                return operation.GetRevision<Dictionary<string, T>>();
             }
         }
 
@@ -83,9 +88,11 @@ namespace Raven.Client.Documents.Session
             {
                 var operation = new GetRevisionOperation(Session, id, date);
                 var command = operation.CreateRequest();
-                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                if (command == null) return operation.GetRevision<T>();
+                SessionInfo?.IncrementRequestCount();
+                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
                 operation.SetResult(command.Result);
-                return operation.GetRevisionsFor<T>().FirstOrDefault();
+                return operation.GetRevision<T>();
             }
         }
 
@@ -95,7 +102,9 @@ namespace Raven.Client.Documents.Session
             {
                 var operation = new GetRevisionsCountOperation(id);
                 var command = operation.CreateRequest();
-                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
+                if (command == null) return command.Result;
+                SessionInfo?.IncrementRequestCount();
+                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
                 return command.Result;
             }
         }

@@ -2155,51 +2155,26 @@ more responsive application.
             HandleInternalMetadata(document);
             return JsonConverter.FromBlittable(entityType, ref document, id, trackEntity);
         }
-
-        // public bool CheckIfRevisionAlreadyIncluded(string[] cvs, KeyValuePair<string, Type>[] includes)
-        // {
-        //     if (includes == null) throw new ArgumentNullException(nameof(includes));
-        //     
-        //     return CheckIfRevisionAlreadyIncluded(cvs, includes.Select(x => x.Key));
-        // }
         
-        // private bool CheckIfRevisionAlreadyIncluded(string[] cvs, IEnumerable<string> includes)
-        // {
-        //     foreach (var cv in cvs)
-        //     {
-        //         if (_knownMissingIds.Contains(id))
-        //             continue;
-        //
-        //         // Check if document was already loaded, the check if we've received it through include
-        //         if (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) == false &&
-        //             IncludedDocumentsById.TryGetValue(id, out documentInfo) == false)
-        //             return false;
-        //
-        //         if ((documentInfo.Entity == null) && (documentInfo.Document == null))
-        //             return false;
-        //
-        //         if (includes == null)
-        //             continue;
-        //
-        //         foreach (var include in includes)
-        //         {
-        //             var hasAll = true;
-        //             IncludesUtil.Include(documentInfo.Document, include, s => { hasAll &= IsLoaded(s); });
-        //
-        //             if (hasAll == false)
-        //                 return false;
-        //         }
-        //     }
-        //
-        //     return true;
-        // }
+        public bool CheckIfChangeVectorAlreadyIncluded(IEnumerable<string> changeVectors)
+        {
+            foreach (var cv in changeVectors)
+            {
+                if (IncludedRevisionByChangeVectors.TryGetValue(cv, out DocumentInfo documentInfo) == false )
+                    return false;
+                
+                if ((documentInfo.Entity == null) && (documentInfo.Document == null))
+                    return false;
+            }
+
+            return true;
+        }
+
         public bool CheckIfIdAlreadyIncluded(string[] ids, KeyValuePair<string, Type>[] includes)
         {
             return CheckIfIdAlreadyIncluded(ids, includes.Select(x => x.Key));
         }
 
-
-        
         public bool CheckIfIdAlreadyIncluded(string[] ids, IEnumerable<string> includes)
         {
             foreach (var id in ids)
