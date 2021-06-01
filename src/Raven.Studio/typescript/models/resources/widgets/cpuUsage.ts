@@ -4,12 +4,16 @@ import historyAwareNodeStats = require("models/resources/widgets/historyAwareNod
 
 class cpuUsage extends historyAwareNodeStats<CpuUsagePayload> {
     
-    coresInfo = this.conditionalDataExtractor(x => x.UtilizedCores + "/" + x.NumberOfCores + " Cores", {
+    ravendbCoresInfo = this.conditionalDataExtractor(x => x.UtilizedCores + "/" + x.NumberOfCores + " Cores", {
         customNoData: "-/- Cores"
     });
+
+    machineCoresInfo = this.conditionalDataExtractor(x => x.NumberOfCores + " Cores", {
+        customNoData: "- Cores"
+    });
+    
     processCpuUsageFormatted = this.conditionalDataExtractor(x => x.ProcessCpuUsage + "%");
     machineCpuUsageFormatted = this.conditionalDataExtractor(x => x.MachineCpuUsage + "%");
-    
 }
 
 

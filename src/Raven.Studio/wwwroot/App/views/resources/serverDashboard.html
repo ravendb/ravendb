@@ -239,7 +239,7 @@
                                 <div data-bind="style: { visibility: $root.spinners.loading()? 'hidden' : 'visible' }">
                                     <!-- using visibility here to reserve space -->
                                     <div class="margin-bottom margin-bottom-sm"><small class="text-muted">Map Indexes</small></div>
-                                    Indexed Docs/s<br />
+                                    Indexed Items/s<br />
                                     <i class="indexed-legend legend-rect"></i>
                                     <strong data-bind="text: totalIndexedPerSecond().toLocaleString()"></strong>
                                 </div>
@@ -252,7 +252,7 @@
                                 <div class="absolute-center loading" data-bind="visible: $root.spinners.loading"><div class="global-spinner"></div></div>
                                 <div class="margin-bottom margin-bottom-sm"><small class="text-muted">Map-Reduce Indexes</small></div>
                                 <div class="margin-bottom margin-bottom-sm" data-bind="style: { visibility: $root.spinners.loading()? 'hidden' : 'visible' }">
-                                    Mapped Docs/s<br />
+                                    Mapped Items/s<br />
                                     <i class="mapped-legend legend-rect"></i>
                                     <strong data-bind="text: totalMappedPerSecond().toLocaleString()"></strong>
                                 </div>
