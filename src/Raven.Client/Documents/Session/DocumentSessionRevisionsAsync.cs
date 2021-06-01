@@ -94,7 +94,7 @@ namespace Raven.Client.Documents.Session
                 SessionInfo?.IncrementRequestCount();
                 await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
                 operation.SetResult(command.Result);
-                return operation.GetRevision<T>();
+                return operation.GetRevisionsFor<T>().FirstOrDefault();
             }
         }
 
