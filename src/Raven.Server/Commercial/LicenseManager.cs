@@ -83,6 +83,8 @@ namespace Raven.Server.Commercial
 
         internal static bool IgnoreProcessorAffinityChanges = false;
 
+        internal static bool AddLicenseStatusToLicenseLimitsException = false;
+
         static LicenseManager()
         {
             string publicKeyString;
@@ -1547,7 +1549,23 @@ namespace Raven.Server.Commercial
             string message,
             bool addNotification = false)
         {
+            if (AddLicenseStatusToLicenseLimitsException)
+            {
+                var licenseStatus = LicenseStatus;
+                if (licenseStatus != null)
+                {
+                    var djv = licenseStatus.ToJson();
+                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        var licenseStatusJson = context.ReadObject(djv, "license/status");
+
+                        message += $"{Environment.NewLine}License:{Environment.NewLine}{licenseStatusJson}";
+                    }
+                }
+            }
+
             var licenseLimit = new LicenseLimitException(limitType, message);
+
             if (addNotification)
                 LicenseLimitWarning.AddLicenseLimitNotification(_serverStore.NotificationCenter, licenseLimit);
 

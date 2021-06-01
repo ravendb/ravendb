@@ -1179,8 +1179,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 Assert.Equal(4, nodesCount);
 
-                backupInfoResult = await store.Maintenance.SendAsync(backupInfo);
-
                 await Backup.RunBackupInClusterAsync(store, backupInfoResult.TaskId, isFullBackup: true);
                 await ActionWithLeader(async x => await WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
 
