@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Utils;
@@ -35,6 +36,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public int ProtocolVersion;
 
+        private static int _numberOfActiveInstances = 0;
+
         public TcpConnectionOptions()
         {
             _bytesReceivedMetric = new MeterMetric();
@@ -45,6 +48,7 @@ namespace Raven.Server.Documents.TcpHandlers
             _connectedAt = DateTime.UtcNow;
 
             Id = Interlocked.Increment(ref _sequence);
+            Interlocked.Increment(ref _numberOfActiveInstances);
         }
 
         public long Id { get; set; }
@@ -54,9 +58,11 @@ namespace Raven.Server.Documents.TcpHandlers
         private string _debugTag;
         public X509Certificate2 Certificate;
 
+        public StringBuilder DebugInfo = new StringBuilder();
+
         public override string ToString()
         {
-            return $"TCP Connection ('{Operation}') {_debugTag}";
+            return $"TCP Connection ('{Operation}') {_debugTag} - {DebugInfo}";
         }
         public IDisposable ConnectionProcessingInProgress(string debugTag)
         {
@@ -70,9 +76,9 @@ namespace Raven.Server.Documents.TcpHandlers
             if (_isDisposed)
                 return;
 
-#if !RELEASE
+            Interlocked.Decrement(ref _numberOfActiveInstances);
+
             GC.SuppressFinalize(this);
-#endif
 
             using (TcpClient)
             using (Stream)
@@ -112,13 +118,15 @@ namespace Raven.Server.Documents.TcpHandlers
             // we'll let the _running be finalized, because otherwise we have
             // a possible race condition on dispose
         }
-
-#if !RELEASE
+        
         ~TcpConnectionOptions()
         {
-            throw new LowMemoryException($"Detected a leak on TcpConnectionOptions ('{ToString()}') when running the finalizer.");
+            string message = $"Detected a leak on TcpConnectionOptions ('{ToString()}') when running the finalizer. Number of active instances: {_numberOfActiveInstances} ({_sequence} created in total)";
+
+            Console.WriteLine(message);
+
+            throw new LowMemoryException(message);
         }
-#endif
 
         public void RegisterBytesSent(long bytesAmount)
         {

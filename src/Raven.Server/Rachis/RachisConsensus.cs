@@ -15,6 +15,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis.Remote;
@@ -1111,12 +1112,13 @@ namespace Raven.Server.Rachis
         /// This method is expected to run for a long time (lifetime of the connection)
         /// and can never throw. We expect this to be on a separate thread
         /// </summary>
-        public void AcceptNewConnection(Stream stream, Action disconnect, EndPoint remoteEndpoint, Action<RachisHello> sayHello = null)
+        public void AcceptNewConnection(Stream stream, Action disconnect, EndPoint remoteEndpoint, Action<RachisHello> sayHello = null, TcpConnectionOptions tcp = null)
         {
             RemoteConnection remoteConnection = null;
             try
             {
                 remoteConnection = new RemoteConnection(_tag, CurrentTerm, stream, disconnect);
+                tcp?.DebugInfo.Append(" AcceptNewConnection >");
                 try
                 {
                     RachisHello initialMessage;
@@ -1176,6 +1178,8 @@ namespace Raven.Server.Rachis
                     {
                         case InitialMessageType.RequestVote:
                             var elector = new Elector(this, remoteConnection);
+                            tcp?.DebugInfo.Append(" Elector >");
+
                             elector.Run();
                             break;
 
@@ -1183,6 +1187,8 @@ namespace Raven.Server.Rachis
                             if (Follower.CheckIfValidLeader(this, remoteConnection, out var negotiation))
                             {
                                 var follower = new Follower(this, negotiation.Term, remoteConnection);
+                                tcp?.DebugInfo.Append(" Follower >");
+
                                 follower.AcceptConnection(negotiation);
                             }
                             break;
