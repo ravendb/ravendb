@@ -43,7 +43,11 @@ class importDatabaseFromFile extends viewModelBase {
     importCommandPowerShell: KnockoutComputed<string>;
     importCommandCmd: KnockoutComputed<string>;
     importCommandBash: KnockoutComputed<string>;
-
+    
+    effectiveCommandType = ko.observable<commandLineType>("PowerShell");
+    effectiveCommandLabel: KnockoutComputed<string>;
+    effectiveCommand: KnockoutComputed<string>;
+    
     validationGroup = ko.validatedObservable({
         importedFileName: this.importedFileName,
         transformScript: this.model.transformScript
@@ -95,18 +99,6 @@ class importDatabaseFromFile extends viewModelBase {
             return `curl.exe -F 'importOptions=${json.replace(/"/g, '\\"')}' -F 'file=@.\\${fileName}' ${commandEndpointUrl(db)}`;
         });
         
-        this.importCommandBash = ko.pureComputed(() => {
-            const db = this.activeDatabase();
-            if (!db) {
-                return "";
-            }
-
-            const json = modelAsJson();
-            const fileName = fileNameProvider();
-            
-            return `curl -F 'importOptions=${json}' -F 'file=@${fileName}' ${commandEndpointUrl(db)}`;
-        });
-        
         this.importCommandCmd = ko.pureComputed(() => {
             const db = this.activeDatabase();
             if (!db) {
@@ -115,8 +107,37 @@ class importDatabaseFromFile extends viewModelBase {
 
             const json = modelAsJson();
             const fileName = fileNameProvider();
-
+            
             return `curl.exe -F "importOptions=${json.replace(/"/g, '\\"')}" -F "file=@.\\${fileName}" ${commandEndpointUrl(db)}`;
+        });
+        
+        this.importCommandBash = ko.pureComputed(() => {
+            const db = this.activeDatabase();
+            if (!db) {
+                return "";
+            }
+
+            const json = modelAsJson();
+            const fileName = fileNameProvider();
+
+            return `curl -F 'importOptions=${json}' -F 'file=@${fileName}' ${commandEndpointUrl(db)}`;
+        });
+
+        this.effectiveCommandLabel = ko.pureComputed(() => {
+            const cmdType = this.effectiveCommandType();
+            return this.getCommandTypeLabel(cmdType);
+        });
+        
+        this.effectiveCommand = ko.pureComputed(() => {
+            const cmdType = this.effectiveCommandType();
+            switch (cmdType) {
+                case "PowerShell":
+                    return this.importCommandPowerShell();
+                case "Cmd":
+                    return this.importCommandCmd();
+                case "Bash":
+                    return this.importCommandBash();
+            }
         });
 
         this.isUploading.subscribe((newValue) => {
@@ -265,7 +286,7 @@ class importDatabaseFromFile extends viewModelBase {
                     new importDatabaseCommand(db, operationId, fileInput.files[0], this.model, this.isUploading, this.uploadStatus)
                         .execute()
                         .always(() => this.isUploading(false));
-                });                
+                });
             })
             .fail((response: JQueryXHR) => {
                 messagePublisher.reportError("Invalid import options", response.responseText, response.statusText);
@@ -286,12 +307,8 @@ class importDatabaseFromFile extends viewModelBase {
                                 collectionsTracker.default.configureRevisions(db);
                             }
                         });
-                });    
+                });
         }
-    }
-
-    copyCommandToClipboard(command: string) {
-        copyToClipboard.copy(command, "Command was copied to clipboard.");
     }
 
     private getNextOperationId(db: database): JQueryPromise<number> {
@@ -302,6 +319,14 @@ class importDatabaseFromFile extends viewModelBase {
             });
     }
 
+    getCommandTypeLabel(cmdType: commandLineType) {
+        return `Import Command - ${cmdType}`;
+    }
+
+    copyCommandToClipboard() {
+        let command = this.effectiveCommand();
+        copyToClipboard.copy(command, "Import command was copied to clipboard.");
+    }
 }
 
 export = importDatabaseFromFile; 
