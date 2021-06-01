@@ -164,7 +164,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Running this test makes that not awaited async calls (intentional) can cause heap corruption. See https://issues.hibernatingrhinos.com/issue/RavenDB-16759")]
         public async Task ShouldThrowOnNotAwaitedAsyncMethods()
         {
             const string name = "1";
