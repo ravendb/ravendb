@@ -84,6 +84,7 @@ namespace SlowTests.Issues
         [InlineData(false)]
         public async Task CheckTcpTrafficWatchExceptionMessage(bool exceptionType)
         {
+            //var server = GetNewServer();
             DoNotReuseServer();
 
             using (var store1 = GetDocumentStore())
@@ -106,23 +107,25 @@ namespace SlowTests.Issues
                         while (cts.IsCancellationRequested == false)
                         {
                             buffer.Length = 0;
-                            WebSocketReceiveResult recvResult;
+                            WebSocketReceiveResult result;
 
                             do
                             {
-                                recvResult = await clientWebSocket.ReceiveAsync(arraySegment, cts.Token);
-                                var chars = Encodings.Utf8.GetChars(arraySegment.Array, 0, recvResult.Count, charBuffer, 0);
+                                result = await clientWebSocket.ReceiveAsync(arraySegment, cts.Token);
+                                var chars = Encodings.Utf8.GetChars(arraySegment.Array, 0, result.Count, charBuffer, 0);
                                 buffer.Append(charBuffer, 0, chars);
-                            } while (!recvResult.EndOfMessage);
+                            } while (!result.EndOfMessage);
 
-                            if (recvResult.Count > 2)
+                            if (result.Count > 2)
                             {
                                 var msg = buffer.ToString();
                                 JObject json = JObject.Parse(msg);
-                                if (json.HasValues && json.Value<string>("TrafficWatchType").Equals("Tcp"))
+                                var msgType = json.Value<string>("TrafficWatchType");
+                                var customInfo = json.Value<string>("CustomInfo");
+                                if (msgType.Equals("Tcp") && customInfo != null)
                                 {
-                                    Assert.True(json.Value<string>("CustomInfo").Contains("Simulated TCP failure."));
-                                    cts.Cancel();
+                                    Assert.True(customInfo.Contains("Simulated TCP failure."));
+                                    return;
                                 }
                             }
                         }
@@ -142,6 +145,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
+                cts.CancelAfter(10_000);
                 await readFromSocketTask;
             }
         }
