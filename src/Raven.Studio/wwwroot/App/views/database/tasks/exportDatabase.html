@@ -172,14 +172,24 @@
                             <div data-bind="compose: 'database/tasks/smugglerDatabaseRecord.html'"></div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="control-label">Command</label>
-                        <div class="input-group">
-                        <span class="input-group-btn">
-                            <button class="btn btn-default" data-bind="click: copyCommandToClipboard"><i class="icon-copy"></i> <span>Copy to clipboard</span></button>
-                        </span>
-                            <input onClick="this.select();" class="form-control" readonly data-bind="value: exportCommand" />
+                    <div class="flex-horizontal" data-bind="with: $root">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <span data-bind="text: effectiveCommandLabel"></span>
+                                <span class="caret margin-left margin-left-xs"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: effectiveCommandType.bind(effectiveCommandType, 'PowerShell')"><span data-bind="text: getCommandTypeLabel('PowerShell')"></span></a></li>
+                                <li><a href="#" data-bind="click: effectiveCommandType.bind(effectiveCommandType, 'Cmd')"><span data-bind="text: getCommandTypeLabel('Cmd')"></span></a></li>
+                                <li><a href="#" data-bind="click: effectiveCommandType.bind(effectiveCommandType, 'Bash')"><span data-bind="text: getCommandTypeLabel('Bash')"></span></a></li>
+                            </ul>
                         </div>
+                        <div class="flex-grow">
+                            <input onClick="this.select();" class="form-control" readonly data-bind="value: effectiveCommand" />
+                        </div>
+                        <button class="btn btn-default" data-bind="click: copyCommandToClipboard" title="Copy export command to clipboard">
+                            <i class="icon-copy-to-clipboard"></i><span>Copy</span>
+                        </button>
                     </div>
                 </div>
             </div>

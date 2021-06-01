@@ -745,3 +745,38 @@ interface sampleCode {
 }
 
 type OnlyStrings<T> = { [ P in keyof T]: T[P] extends string ? P : never }[keyof T & string];
+
+interface geoPointInfo extends Raven.Server.Documents.Indexes.Spatial.Coordinates {
+    PopupContent: document;
+}
+
+interface indexHistoryCommandResult {
+    Index: string;
+    History: Raven.Client.ServerWide.IndexHistoryEntry[];
+}
+
+interface databaseAccessInfo {
+    dbName: string;
+    accessLevel: databaseAccessLevel;
+}
+
+interface databaseAndNodeAwareStats {
+    database: string;
+    nodeTag: string;
+    hideDatabaseName: boolean;
+    even: boolean;
+    noData: boolean;
+}
+
+interface cachedDateValue<T> {
+    date: Date;
+    value: T;
+}
+
+type widgetType = Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType | "Welcome" | "License";
+
+type databaseAccessLevel = `Database${Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess}`;
+type securityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
+type accessLevel = databaseAccessLevel | securityClearance;
+
+type commandLineType = "PowerShell" | "Cmd" | "Bash";
