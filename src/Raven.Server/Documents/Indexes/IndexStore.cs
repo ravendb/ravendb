@@ -39,6 +39,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -91,56 +92,95 @@ namespace Raven.Server.Documents.Indexes
             if (record == null)
                 return 0;
 
-            var indexesToStart = new List<Index>();
-
             HandleSorters(record, raftIndex);
             HandleDeletes(record, raftIndex);
 
-            HandleChangesForStaticIndexes(record, raftIndex, indexesToStart);
-            HandleChangesForAutoIndexes(record, raftIndex, indexesToStart);
+            var newIndexesToStart = new List<Index>();
+            ConcurrentSet<Index> indexesToDelete = null;
 
-            if (indexesToStart.Count <= 0)
-                return 0;
-
-            var sp = Stopwatch.StartNew();
-
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Starting {indexesToStart.Count} new index{(indexesToStart.Count > 1 ? "es" : string.Empty)}");
-
-            ExecuteForIndexes(indexesToStart, index =>
+            try
             {
-                var indexLock = GetIndexLock(index.Name);
+                HandleChangesForStaticIndexes(record, raftIndex, newIndexesToStart);
+                HandleChangesForAutoIndexes(record, raftIndex, newIndexesToStart);
 
-                try
+                if (newIndexesToStart.Count <= 0)
+                    return 0;
+
+                indexesToDelete = new ConcurrentSet<Index>();
+
+                var sp = Stopwatch.StartNew();
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Starting {newIndexesToStart.Count} new index{(newIndexesToStart.Count > 1 ? "es" : string.Empty)}");
+
+                ExecuteForIndexes(newIndexesToStart, index =>
                 {
-                    indexLock.Wait(_documentDatabase.DatabaseShutdown);
-                }
-                catch (OperationCanceledException e)
-                {
-                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
+                    var indexLock = GetIndexLock(index.Name);
+
+                    try
+                    {
+                        indexLock.Wait(_documentDatabase.DatabaseShutdown);
+                    }
+                    catch (OperationCanceledException e)
+                    {
+                        AddToIndexesToDelete(index);
+
+                        _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
+                        return;
+                    }
+
+                    try
+                    {
+                        StartIndex(index);
+                    }
+                    catch (Exception e)
+                    {
+                        AddToIndexesToDelete(index);
+
+                        _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Could not start index `{index.Name}`", e);
+                    }
+                    finally
+                    {
+                        indexLock.Release();
+                    }
+                });
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Started {newIndexesToStart.Count} new index{(newIndexesToStart.Count > 1 ? "es" : string.Empty)}, took: {sp.ElapsedMilliseconds}ms");
+
+                var numberOfIndexesToDelete = HandleIndexesToDelete();
+
+                return newIndexesToStart.Count - numberOfIndexesToDelete;
+            }
+            catch
+            {
+                HandleIndexesToDelete();
+
+                throw;
+            }
+
+            void AddToIndexesToDelete(Index index)
+            {
+                if (index == null)
                     return;
-                }
 
-                try
-                {
-                    StartIndex(index);
-                }
-                catch (Exception e)
-                {
-                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Could not start index `{index.Name}`", e);
-                }
-                finally
-                {
-                    indexLock.Release();
-                }
-            });
+                // dispose only if we do not have this index
+                if (_indexes.TryGetByName(index.Name, out var oldIndex) == false || ReferenceEquals(oldIndex, index) == false)
+                    indexesToDelete.Add(index);
+            }
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Started {indexesToStart.Count} new index{(indexesToStart.Count > 1 ? "es" : string.Empty)}, took: {sp.ElapsedMilliseconds}ms");
+            int HandleIndexesToDelete()
+            {
+                if (indexesToDelete == null)
+                    return 0;
 
-            return indexesToStart.Count;
+                foreach (var index in indexesToDelete)
+                    DeleteIndexInternal(index, raiseNotification: false);
+
+                return indexesToDelete.Count;
+            }
         }
 
         private void ExecuteForIndexes(IEnumerable<Index> indexes, Action<Index> action)

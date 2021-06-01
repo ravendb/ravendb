@@ -49,7 +49,6 @@ namespace SlowTests.Client.Subscriptions
                     Order entity = new Order();
                     session.Store(entity, "orders/1");
                     session.SaveChanges();
-                    Console.WriteLine(session.Advanced.GetChangeVectorFor(entity));
                 }
 
                 var mre = new ManualResetEvent(false);

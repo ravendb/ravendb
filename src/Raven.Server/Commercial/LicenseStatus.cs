@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Raven.Client.Properties;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
@@ -165,7 +166,7 @@ namespace Raven.Server.Commercial
                 [nameof(MaxCores)] = MaxCores,
                 [nameof(MaxMemory)] = MaxMemory,
                 [nameof(MaxClusterSize)] = MaxClusterSizeInternal,
-                [nameof(Ratio)] = Ratio.ToString(),
+                [nameof(Ratio)] = Ratio.ToString(CultureInfo.InvariantCulture),
                 [nameof(Expiration)] = Expiration,
                 [nameof(Expired)] = Expired,
                 [nameof(Status)] = Status,
