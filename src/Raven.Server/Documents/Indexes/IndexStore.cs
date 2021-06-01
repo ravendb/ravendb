@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -15,17 +13,13 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
-using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Configuration;
@@ -39,20 +33,15 @@ using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
-using Raven.Server.Documents.Indexes.Workers;
-using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
-using Raven.Server.Documents.Queries.Results;
-using Raven.Server.Documents.Queries.Timings;
-using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Collections;
 using Sparrow.Logging;
-using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -106,60 +95,98 @@ namespace Raven.Server.Documents.Indexes
                 if (record == null)
                     return 0;
 
-                var indexesToStart = new List<Index>();
-
                 HandleSorters(record, raftIndex);
                 HandleAnalyzers(record, raftIndex);
 
                 HandleDeletes(record, raftIndex);
 
-                HandleChangesForStaticIndexes(record, raftIndex, indexesToStart);
-                HandleChangesForAutoIndexes(record, raftIndex, indexesToStart);
+                var newIndexesToStart = new List<Index>();
+                ConcurrentSet<Index> indexesToDelete = null;
 
-                if (indexesToStart.Count <= 0)
-                    return 0;
-
-                var sp = Stopwatch.StartNew();
-
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Starting {indexesToStart.Count} new index{(indexesToStart.Count > 1 ? "es" : string.Empty)}");
-
-                ExecuteForIndexes(indexesToStart, index =>
+                try
                 {
-                    var indexLock = GetIndexLock(index.Name);
+                    HandleChangesForStaticIndexes(record, raftIndex, newIndexesToStart);
+                    HandleChangesForAutoIndexes(record, raftIndex, newIndexesToStart);
 
-                    try
+                    if (newIndexesToStart.Count <= 0)
+                        return 0;
+
+                    indexesToDelete = new ConcurrentSet<Index>();
+
+                    var sp = Stopwatch.StartNew();
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Starting {newIndexesToStart.Count} new index{(newIndexesToStart.Count > 1 ? "es" : string.Empty)}");
+
+                    ExecuteForIndexes(newIndexesToStart, index =>
                     {
-                        indexLock.Wait(_documentDatabase.DatabaseShutdown);
-                    }
-                    catch (OperationCanceledException e)
-                    {
-                        // if we haven't start the index we must dispose it here
-                        index.Dispose(); 
-                        _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
+                        var indexLock = GetIndexLock(index.Name);
+
+                        try
+                        {
+                            indexLock.Wait(_documentDatabase.DatabaseShutdown);
+                        }
+                        catch (OperationCanceledException e)
+                        {
+                            AddToIndexesToDelete(index);
+
+                            _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
+                            return;
+                        }
+
+                        try
+                        {
+                            StartIndex(index);
+                        }
+                        catch (Exception e)
+                        {
+                            AddToIndexesToDelete(index);
+
+                            _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"Could not start index `{index.Name}`", e);
+                        }
+                        finally
+                        {
+                            indexLock.Release();
+                        }
+                    });
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info(
+                            $"Started {newIndexesToStart.Count} new index{(newIndexesToStart.Count > 1 ? "es" : string.Empty)}, took: {sp.ElapsedMilliseconds}ms");
+
+                    var numberOfIndexesToDelete = HandleIndexesToDelete();
+
+                    return newIndexesToStart.Count - numberOfIndexesToDelete;
+                }
+                catch
+                {
+                    HandleIndexesToDelete();
+
+                    throw;
+                }
+
+                void AddToIndexesToDelete(Index index)
+                {
+                    if (index == null)
                         return;
-                    }
 
-                    try
-                    {
-                        StartIndex(index);
-                    }
-                    catch (Exception e)
-                    {
-                        _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Could not start index `{index.Name}`", e);
-                    }
-                    finally
-                    {
-                        indexLock.Release();
-                    }
-                });
+                    // dispose only if we do not have this index
+                    if (_indexes.TryGetByName(index.Name, out var oldIndex) == false || ReferenceEquals(oldIndex, index) == false)
+                        indexesToDelete.Add(index);
+                }
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Started {indexesToStart.Count} new index{(indexesToStart.Count > 1 ? "es" : string.Empty)}, took: {sp.ElapsedMilliseconds}ms");
+                int HandleIndexesToDelete()
+                {
+                    if (indexesToDelete == null)
+                        return 0;
 
-                return indexesToStart.Count;
+                    foreach (var index in indexesToDelete)
+                        DeleteIndexInternal(index, raiseNotification: false);
+
+                    return indexesToDelete.Count;
+                }
             }
             finally
             {
@@ -226,7 +253,7 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     var definition = CreateAutoDefinition(kvp.Value, mode);
-                    
+
                     var indexToStart = HandleAutoIndexChange(name, definition);
                     if (indexToStart != null)
                     {
@@ -480,6 +507,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     replace = true;
                 }
+
                 return true;
             }
 
@@ -638,6 +666,7 @@ namespace Raven.Server.Documents.Indexes
                             default:
                                 throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
                         }
+
                         break;
 
                     case IndexSourceType.TimeSeries:
@@ -661,6 +690,7 @@ namespace Raven.Server.Documents.Indexes
                             default:
                                 throw new NotSupportedException($"Cannot create {definition.Type} index from TimeSeriesIndexDefinition");
                         }
+
                         break;
 
                     case IndexSourceType.Counters:
@@ -684,6 +714,7 @@ namespace Raven.Server.Documents.Indexes
                             default:
                                 throw new NotSupportedException($"Cannot create {definition.Type} index from TimeSeriesIndexDefinition");
                         }
+
                         break;
 
                     default:
@@ -731,6 +762,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     indexNormalizedName = indexNormalizedName.Remove(0, Constants.Documents.Indexing.SideBySideIndexNamePrefix.Length);
                 }
+
                 if (record.Indexes.ContainsKey(indexNormalizedName) || record.AutoIndexes.ContainsKey(indexNormalizedName))
                     continue;
 
@@ -812,7 +844,7 @@ namespace Raven.Server.Documents.Indexes
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name, out _ ))
+            using (var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name, out _))
             {
                 if (record == null)
                     return null;
@@ -835,14 +867,14 @@ namespace Raven.Server.Documents.Indexes
             ValidateStaticIndex(definition);
 
             var command = new PutIndexCommand(
-                definition, 
-                _documentDatabase.Name, 
-                source, 
-                _documentDatabase.Time.GetUtcNow(), 
-                raftRequestId, 
-                _documentDatabase.Configuration.Indexing.HistoryRevisionsNumber, 
+                definition,
+                _documentDatabase.Name,
+                source,
+                _documentDatabase.Time.GetUtcNow(),
+                raftRequestId,
+                _documentDatabase.Configuration.Indexing.HistoryRevisionsNumber,
                 _documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode
-                );
+            );
 
             long index = 0;
             try
@@ -1051,6 +1083,7 @@ namespace Raven.Server.Documents.Indexes
                         default:
                             throw new NotSupportedException($"Cannot update {definition.Type} index from {nameof(IndexDefinition)}");
                     }
+
                     break;
 
                 case IndexSourceType.Counters:
@@ -1069,6 +1102,7 @@ namespace Raven.Server.Documents.Indexes
                         default:
                             throw new NotSupportedException($"Cannot create {definition.Type} index from {nameof(CountersIndexDefinition)}");
                     }
+
                     break;
 
                 case IndexSourceType.TimeSeries:
@@ -1087,6 +1121,7 @@ namespace Raven.Server.Documents.Indexes
                         default:
                             throw new NotSupportedException($"Cannot create {definition.Type} index from {nameof(TimeSeriesIndexDefinition)}");
                     }
+
                     break;
 
                 default:
@@ -1189,7 +1224,7 @@ namespace Raven.Server.Documents.Indexes
 
             if ((differences & IndexDefinitionCompareDifferences.State) == IndexDefinitionCompareDifferences.State)
                 return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
-            
+
             if ((differences & IndexDefinitionCompareDifferences.DeploymentMode) == IndexDefinitionCompareDifferences.DeploymentMode)
                 return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
 
