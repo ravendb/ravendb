@@ -73,15 +73,7 @@ class importDatabaseFromFile extends viewModelBase {
         });
         
         this.effectiveCommand = ko.pureComputed(() => {
-            const cmdType = this.effectiveCommandType();
-            switch (cmdType) {
-                case "PowerShell":
-                    return this.getCommand("PowerShell");
-                case "Cmd":
-                    return this.getCommand("Cmd");
-                case "Bash":
-                    return this.getCommand("Bash");
-            }
+            return this.getCommand(this.effectiveCommandType());
         });
 
         this.isUploading.subscribe((newValue) => {
