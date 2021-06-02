@@ -817,7 +817,7 @@ namespace Voron
 
         internal bool IsInPreventNewTransactionsMode => _txCreation.IsWriteLockHeld;
 
-        internal bool TryPreventNewReadTransactions(TimeSpan timeout, out IDisposable exitWriteLock)
+        internal bool TryPreventNewTransactions(TimeSpan timeout, out IDisposable exitWriteLock)
         {
             if (_txCreation.TryEnterWriteLock(timeout))
             {

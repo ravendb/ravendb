@@ -498,10 +498,10 @@ namespace Voron.Impl.Paging
         public abstract override string ToString();
 
 
-        public static void ThrowAlreadyDisposedException()
+        public void ThrowAlreadyDisposedException()
         {
             // this is a separate method because we don't want to have an exception throwing in the hot path
-            throw new ObjectDisposedException("The pager is already disposed");
+            throw new ObjectDisposedException($"The pager is already disposed ({ToString()})");
         }
 
         protected void ThrowOnInvalidPageNumber(long pageNumber)
