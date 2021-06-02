@@ -74,6 +74,8 @@ namespace SlowTests.Voron
                 startTransactionWasCalled = true;
 
                 startTransactionThread.Start();
+
+                Thread.Sleep(1000); // give the thread starting new transaction more time
             }))
             {
                 Env.ScratchBufferPool.Cleanup();
@@ -83,6 +85,94 @@ namespace SlowTests.Voron
 
             Assert.True(startTransactionThread.Join(TimeSpan.FromSeconds(30)), "startTransactionThread.Join(TimeSpan.FromSeconds(30))");
             
+            Assert.Null(startTransactionException);
+        }
+
+        [Fact]
+        public void MustNotThrowObjectDisposedOnScratchPagerWhenCreatingNewReadTransactionRightAfterDisposingRecycledScratches()
+        {
+            RequireFileBasedPager();
+
+            for (int i = 0; i < 100; i++)
+            {
+                using (var tx = Env.WriteTransaction())
+                {
+                    var tree = tx.CreateTree("items");
+
+                    tree.Add("items/" + i, new byte[] { 1, 2, 3 });
+
+                    tx.Commit();
+                }
+            }
+
+            Env.FlushLogToDataFile();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("items");
+
+                tree.Add("foo/0", new byte[] { 1, 2, 3 });
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("items");
+
+                tree.Add("foo/1", new byte[] { 1, 2, 3 });
+
+                tx.Commit();
+            }
+
+            Exception startTransactionException = null;
+
+            var startTransactionThread = new Thread(() =>
+            {
+                try
+                {
+                    using (var tx = Env.ReadTransaction())
+                    {
+                        var pagerStates = tx.LowLevelTransaction.ForTestingPurposesOnly().GetPagerStates();
+
+                        Assert.Equal(2, pagerStates.Count); // data file, and one scratch file
+
+                        foreach (PagerState pagerState in pagerStates)
+                        {
+                            Assert.False(pagerState.CurrentPager.Disposed);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    startTransactionException = e;
+                }
+            });
+
+            var startTransactionWasCalled = false;
+
+            using (Env.ScratchBufferPool.ForTestingPurposesOnly().CallDuringRemovalsOfRecycledScratchesRightAfterDisposingScratch(() =>
+            {
+                if (startTransactionWasCalled)
+                    return;
+
+                startTransactionWasCalled = true;
+
+                startTransactionThread.Start();
+
+                Thread.Sleep(1000); // give the thread starting new transaction more time
+            }))
+            {
+                Env.ScratchBufferPool.RecycledScratchFileTimeout = TimeSpan.Zero; // by default we don't dispose scratches if they were recycled less than 1 minute ago
+
+                Env.FlushLogToDataFile();
+
+            }
+
+            Assert.True(startTransactionWasCalled, "startTransactionWasCalled");
+
+            Assert.True(startTransactionThread.Join(TimeSpan.FromSeconds(30)), "startTransactionThread.Join(TimeSpan.FromSeconds(30))");
+
             Assert.Null(startTransactionException);
         }
 
