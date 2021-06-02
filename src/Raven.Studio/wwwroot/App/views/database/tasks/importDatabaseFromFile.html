@@ -183,20 +183,18 @@
                     <div class="flex-horizontal" data-bind="with: $root">
                         <div class="btn-group">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                <span data-bind="text: effectiveCommandLabel"></span>
+                                <span data-bind="text: getCommandTypeLabel(effectiveCommandType())"></span>
                                 <span class="caret margin-left margin-left-xs"></span>
                             </button>
-                            <ul class="dropdown-menu">
-                                <li><a href="#" data-bind="click: effectiveCommandType.bind(effectiveCommandType, 'PowerShell')"><span data-bind="text: getCommandTypeLabel('PowerShell')"></span></a></li>
-                                <li><a href="#" data-bind="click: effectiveCommandType.bind(effectiveCommandType, 'Cmd')"><span data-bind="text: getCommandTypeLabel('Cmd')"></span></a></li>
-                                <li><a href="#" data-bind="click: effectiveCommandType.bind(effectiveCommandType, 'Bash')"><span data-bind="text: getCommandTypeLabel('Bash')"></span></a></li>
+                            <ul class="dropdown-menu" data-bind="foreach: commandTypes">
+                                <li><a href="#" data-bind="click: $root.effectiveCommandType.bind($root.effectiveCommandType, $data)"><span data-bind="text: $root.getCommandTypeLabel($data)"></span></a></li>
                             </ul>
                         </div>
                         <div class="flex-grow">
                             <input onClick="this.select();" class="form-control" readonly data-bind="value: effectiveCommand" />
                         </div>
                         <button class="btn btn-default" data-bind="click: copyCommandToClipboard" title="Copy import command to clipboard">
-                            <i class="icon-copy-to-clipboard"></i><span>Copy</span>
+                            <i class="icon-copy-to-clipboard"></i>
                         </button>
                     </div>
                 </div>
