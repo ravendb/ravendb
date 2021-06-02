@@ -27,6 +27,14 @@ namespace Raven.Server.Utils
                 public const string MemoryInfoExtended = "MemoryInfoExtended";
 
                 public const string DiskSpaceInfo = "DiskSpaceInfo";
+
+                public const string GcAny = "GC/Any";
+
+                public const string GcEphemeral = "GC/Ephemeral";
+
+                public const string GcFullBlocking = "GC/FullBlocking";
+
+                public const string GcBackground = "GC/Background";
             }
 
             public class Database

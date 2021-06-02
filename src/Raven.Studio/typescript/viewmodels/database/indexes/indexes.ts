@@ -19,6 +19,9 @@ import indexProgress = require("models/database/index/indexProgress");
 import indexStalenessReasons = require("viewmodels/database/indexes/indexStalenessReasons");
 import generalUtils = require("common/generalUtils");
 import shell = require("viewmodels/shell");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import bulkIndexOperationConfirm = require("viewmodels/database/indexes/bulkIndexOperationConfirm");
+import forceParallelDeploymentConfirm = require("viewmodels/database/indexes/forceParallelDeploymentConfirm");
 
 type indexGroup = {
     entityName: string;
@@ -35,7 +38,7 @@ class indexes extends viewModelBase {
     hasAnyStateFilter: KnockoutComputed<boolean>;
     autoRefresh = ko.observable<boolean>(true);
     showOnlyIndexesWithIndexingErrors = ko.observable<boolean>(false);
-    indexStatusFilter = ko.observableArray<indexStatus>(["Normal", "ErrorOrFaulty", "Stale", "Paused", "Disabled", "Idle"]);
+    indexStatusFilter = ko.observableArray<indexStatus>(["Normal", "ErrorOrFaulty", "Stale", "Paused", "Disabled", "Idle", "RollingDeployment"]);
     lockModeCommon: KnockoutComputed<string>;
     selectedIndexesName = ko.observableArray<string>();
     indexesSelectionState: KnockoutComputed<checkbox>;
@@ -44,6 +47,10 @@ class indexes extends viewModelBase {
     requestedIndexingInProgress = false;
     indexesCount: KnockoutComputed<number>;
     searchCriteriaDescription: KnockoutComputed<string>;
+
+    private clusterManager = clusterTopologyManager.default;
+    localNodeTag = ko.observable<string>();
+    isCluster: KnockoutComputed<boolean>;
 
     spinners = {
         globalStartStop: ko.observable<boolean>(false),
@@ -70,6 +77,7 @@ class indexes extends viewModelBase {
             "lowPriority", "highPriority", "normalPriority",
             "openFaultyIndex", "resetIndex", "deleteIndex",
             "forceSideBySide",
+            "forceParallelDeployment",
             "showStaleReasons",
             "unlockIndex", "lockIndex", "lockErrorIndex",
             "enableIndex", "disableIndex", "disableSelectedIndexes", "enableSelectedIndexes",
@@ -89,12 +97,12 @@ class indexes extends viewModelBase {
                 return;
             }
 
-            const hasStale = indexes.find(x => x.isStale() && !x.isDisabledState());
-            if (!hasStale) {
-                return;
-            }
+            const anyIndexStale = indexes.find(x => x.isStale() && !x.isDisabledState());
+            const anyRollingDeployment = indexes.find(x => x.rollingDeploymentInProgress() && !x.isDisabledState());
 
-            this.indexesProgressRefreshThrottle();
+            if (anyIndexStale || anyRollingDeployment) {
+                this.indexesProgressRefreshThrottle();
+            }
         }, 3000);
         
         this.indexesCount = ko.pureComputed(() => {
@@ -106,7 +114,7 @@ class indexes extends viewModelBase {
             let totalProcessedPerSecond = 0;
 
             this.indexGroups().forEach(indexGroup => {
-                var indexesInGroup = indexGroup.indexes().filter(i => !i.filteredOut());
+                const indexesInGroup = indexGroup.indexes().filter(i => !i.filteredOut());
                 indexesCount += indexesInGroup.length;
 
                 totalProcessedPerSecond += _.sum(indexesInGroup
@@ -161,6 +169,8 @@ class indexes extends viewModelBase {
             case "Paused":
             case "Stale":
                 return status;
+            case "RollingDeployment":
+                return "Rolling deployment";
             case "ErrorOrFaulty":
                 return "Error, Faulty";
         }
@@ -185,6 +195,9 @@ class indexes extends viewModelBase {
     }
 
     private initObservables() {
+        this.localNodeTag = this.clusterManager.localNodeTag;
+        this.isCluster = ko.pureComputed(() => this.clusterManager.nodesCount() > 1);
+        
         this.searchText.throttle(200).subscribe(() => this.filterIndexes(false));
         this.indexStatusFilter.subscribe(() => this.filterIndexes(false));
         this.showOnlyIndexesWithIndexingErrors.subscribe(() => this.filterIndexes(false));
@@ -364,22 +377,39 @@ class indexes extends viewModelBase {
             // do NOT touch visibility of indexes!
             return;
         }
-
+        
         const filterLower = this.searchText().toLowerCase();
         const typeFilter = this.indexStatusFilter();
         const withIndexingErrorsOnly = this.showOnlyIndexesWithIndexingErrors();
         
-        this.selectedIndexesName([]);
+        const selectedIndexes = this.selectedIndexesName();
+        let selectionChanged = false;
+        
         this.indexGroups().forEach(indexGroup => {
             let hasAnyInGroup = false;
             indexGroup.indexes().forEach(index => {
                 const match = index.filter(filterLower, typeFilter, withIndexingErrorsOnly);
                 if (match) {
                     hasAnyInGroup = true;
+                } else if (_.includes(selectedIndexes, index.name)) {
+                    _.pull(selectedIndexes, index.name);
+                    selectionChanged = true;
                 }
             });
 
             indexGroup.groupHidden(!hasAnyInGroup);
+        });
+        
+        if (selectionChanged) {
+            this.selectedIndexesName(selectedIndexes);    
+        }
+    }
+
+    createIndexesUrlObservableForNode(nodeTag: string) {
+        return ko.pureComputed(() => {
+            const nodeInfo = this.clusterManager.getClusterNodeByTag(nodeTag);
+            const link = appUrl.forIndexes(this.activeDatabase());
+            return appUrl.toExternalUrl(nodeInfo.serverUrl(), link);
         });
     }
     
@@ -684,32 +714,36 @@ class indexes extends viewModelBase {
             });
     }
 
-    disableSelectedIndexes() {
-        this.toggleDisableSelectedIndexes(false);
+    disableSelectedIndexes(clusterWide: boolean) {
+        this.toggleDisableSelectedIndexes(false, clusterWide);
     }
 
-    enableSelectedIndexes() {
-        this.toggleDisableSelectedIndexes(true);
+    enableSelectedIndexes(clusterWide: boolean) {
+        this.toggleDisableSelectedIndexes(true, clusterWide);
     }
 
-    private toggleDisableSelectedIndexes(start: boolean) {
-        const status = start ? "enable" : "disable";
-        this.confirmationMessage("Are you sure?", `Do you want to <strong>${generalUtils.escapeHtml(status)}</strong> selected indexes?`, {
-            html: true
-        })
-            .done(can => {
-                if (can) {
+    private toggleDisableSelectedIndexes(enableIndex: boolean, clusterWide: boolean) {
+        const selectedIndexes = this.getSelectedIndexes();
+        const nodeTag = this.localNodeTag();
+
+        const confirmation = clusterWide
+            ? (enableIndex ? bulkIndexOperationConfirm.forClusterWideEnable(selectedIndexes) : bulkIndexOperationConfirm.forClusterWideDisable(selectedIndexes))
+            : (enableIndex ? bulkIndexOperationConfirm.forEnable(selectedIndexes, nodeTag) : bulkIndexOperationConfirm.forDisable(selectedIndexes, nodeTag));
+        
+        confirmation.result
+            .done(result => {
+                if (result.can) {
                     eventsCollector.default.reportEvent("index", "toggle-status", status);
 
                     this.spinners.globalLockChanges(true);
 
-                    const indexes = this.getSelectedIndexes();
-                    indexes.forEach(i => start ? this.enableIndex(i) : this.disableIndex(i));
+                    selectedIndexes.forEach(i => enableIndex ? this.enableIndex(i, clusterWide) : this.disableIndex(i, clusterWide));
                 }
             })
             .always(() => this.spinners.globalLockChanges(false));
-    }
 
+        app.showBootstrapDialog(confirmation);
+    }
 
     pauseSelectedIndexes() {
         this.togglePauseSelectedIndexes(false);
@@ -720,21 +754,25 @@ class indexes extends viewModelBase {
     }
 
     private togglePauseSelectedIndexes(resume: boolean) {
-        const status = resume ? "resume" : "pause";
-        this.confirmationMessage("Are you sure?", `Do you want to <strong>${generalUtils.escapeHtml(status)}</strong> selected indexes?`, {
-            html: true
-        })
-            .done(can => {
-                if (can) {
+        const selectedIndexes = this.getSelectedIndexes();
+        const nodeTag = this.localNodeTag();
+        const confirmation = resume 
+            ? bulkIndexOperationConfirm.forResume(selectedIndexes, nodeTag) 
+            : bulkIndexOperationConfirm.forPause(selectedIndexes, nodeTag);
+        
+        confirmation.result
+            .done(result => {
+                if (result.can) {
                     eventsCollector.default.reportEvent("index", "toggle-status", status);
 
                     this.spinners.globalLockChanges(true);
 
-                    const indexes = this.getSelectedIndexes();
-                    indexes.forEach(i => resume ? this.resumeIndexing(i) : this.pauseUntilRestart(i));
+                    selectedIndexes.forEach(i => resume ? this.resumeIndexing(i) : this.pauseUntilRestart(i));
                 }
             })
             .always(() => this.spinners.globalLockChanges(false));
+
+        app.showBootstrapDialog(confirmation);
     }
 
     deleteSelectedIndexes() {
@@ -816,13 +854,13 @@ class indexes extends viewModelBase {
         }
     }
 
-    enableIndex(idx: index) {
+    enableIndex(idx: index, enableClusterWide: boolean) {
         eventsCollector.default.reportEvent("indexes", "set-state", "enabled");
 
-        if (idx.canBeEnabled()) {
+        if (idx.canBeEnabled() || enableClusterWide) {
             this.spinners.localState.push(idx.name);
 
-            new enableIndexCommand(idx.name, this.activeDatabase())
+            new enableIndexCommand(idx.name, this.activeDatabase(), enableClusterWide)
                 .execute()
                 .done(() => {
                     idx.state("Normal");
@@ -832,13 +870,13 @@ class indexes extends viewModelBase {
         }
     }
 
-    disableIndex(idx: index) {
+    disableIndex(idx: index, disableClusterWide: boolean) {
         eventsCollector.default.reportEvent("indexes", "set-state", "disabled");
 
-        if (idx.canBeDisabled()) {
+        if (idx.canBeDisabled() || disableClusterWide) {
             this.spinners.localState.push(idx.name);
 
-            new disableIndexCommand(idx.name, this.activeDatabase())
+            new disableIndexCommand(idx.name, this.activeDatabase(), disableClusterWide)
                 .execute()
                 .done(() => {
                     idx.state("Disabled");
@@ -878,6 +916,11 @@ class indexes extends viewModelBase {
         const view = new indexStalenessReasons(this.activeDatabase(), idx.name);
         eventsCollector.default.reportEvent("indexes", "show-stale-reasons");
         app.showBootstrapDialog(view);
+    }
+    
+    forceParallelDeployment(progress: indexProgress) {
+        const forceParallelDeploymentDialog = new forceParallelDeploymentConfirm(progress, this.localNodeTag(), this.activeDatabase());
+        app.showBootstrapDialog(forceParallelDeploymentDialog);
     }
 }
 

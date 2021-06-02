@@ -26,7 +26,7 @@ abstract class backupSettings {
     dirtyFlag: () => DirtyFlag;
     configurationScriptDirtyFlag: () => DirtyFlag;
 
-    effectiveValidationGroup = ko.pureComputed<KnockoutValidationGroup>(() => 
+    effectiveValidationGroup = ko.pureComputed<KnockoutValidationGroup>(() =>
         this.hasConfigurationScript() ? this.configurationScriptValidationGroup : this.localConfigValidationGroup);
 
     protected constructor(dto: Raven.Client.Documents.Operations.Backups.BackupSettings, connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType) {

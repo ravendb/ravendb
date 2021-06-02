@@ -4,9 +4,15 @@
             <div class="toolbar">
                 <div class="flex-horizontal">
                     <div>
-                        <button class="btn btn-primary" data-bind="enable: isSaveEnabled(), css: { 'btn-spinner': saveInProgress }"><i class="icon-save"></i><span>Save</span></button>
-                        <a data-bind="attr: { href: indexesUrl }" class="btn btn-default" title="Return to list of indexes"><i class="icon-cancel"></i><span>Cancel</span></a>
-                        <button class="btn btn-default" data-bind="click: cloneIndex, visible: isEditingExistingIndex" title="Clone this index"><i class="icon-clone"></i><span>Clone</span></button>
+                        <button class="btn btn-primary" data-bind="enable: isSaveEnabled(), css: { 'btn-spinner': saveInProgress }, requiredAccess: 'DatabaseReadWrite'">
+                            <i class="icon-save"></i><span>Save</span>
+                        </button>
+                        <a data-bind="attr: { href: indexesUrl }" class="btn btn-default" title="Return to list of indexes">
+                            <i class="icon-cancel"></i><span>Cancel</span>
+                        </a>
+                        <button class="btn btn-default" data-bind="click: cloneIndex, visible: isEditingExistingIndex, requiredAccess: 'DatabaseReadWrite'" title="Clone this index">
+                            <i class="icon-clone"></i><span>Clone</span>
+                        </button>
                     </div>
                     <div data-bind="if: showIndexHistory" style="margin: unset">
                         <div class="dropdown dropdown-menu-left loadpatch margin-left margin-left-xs" data-bind="template: { name: 'index-history-dialog' }"></div>
@@ -16,13 +22,16 @@
                         <a data-bind="click: getCSharpCode, visible: isEditingExistingIndex" class="btn" title="Copy the index c# code"><i class="icon-code"></i><span>Copy C#</span></a>
                         <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i><span>Query</span></a>
                         <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i><span>Terms</span></a>
-                        <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex, attr: { title: 'Delete index: ' + editedIndex().name() }"><i class="icon-trash"></i><span>Delete</span></button>
+                        <button class="btn btn-danger" 
+                                data-bind="visible: isEditingExistingIndex, click: deleteIndex, attr: { title: 'Delete index: ' + editedIndex().name() }, requiredAccess: 'DatabaseReadWrite'">
+                            <i class="icon-trash"></i><span>Delete</span>
+                        </button>
                     </div>
                 </div>
             </div>
-            <div class="row margin-top margin-top-sm">
+            <div class="row margin-top margin-top-lg">
                 <div class="col-sm-2">
-                    <h2 class="margin-bottom margin-bottom-xs on-base-background">Index</h2>
+                    <h3 class="margin-bottom margin-bottom-xs on-base-background">Index Name</h3>
                 </div>
                 <div class="col-sm-10 col-lg-8">
                     <div data-bind="if: !canEditIndexName()" class="force-text-wrap">
@@ -34,9 +43,24 @@
                     </div>
                 </div>
             </div>
+            <div class="row margin-top">
+                <div class="col-sm-2"><h3>Deployment Mode</h3></div>
+                <div class="col-sm-10">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                            <span data-bind="text: $root.effectiveDeploymentMode"></span> <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a href="#" data-bind="click: editedIndex().deploymentMode.bind(editedIndex().deploymentMode, null)"><span data-bind="text: $root.defaultDeploymentModeFormatted"></span></a></li>
+                            <li><a href="#" data-bind="click: editedIndex().deploymentMode.bind(editedIndex().deploymentMode, 'Rolling')"><span data-bind="text: $root.formatDeploymentMode('Rolling')"></span></a></li>
+                            <li><a href="#" data-bind="click: editedIndex().deploymentMode.bind(editedIndex().deploymentMode, 'Parallel')"><span data-bind="text: $root.formatDeploymentMode('Parallel')"></span></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
             <div class="row">
                 <div class="col-sm-2">
-                    <h2 id="map-title" class="margin-bottom margin-bottom-xs on-base-background margin-top">Maps</h2>
+                    <h3 id="map-title" class="margin-bottom margin-bottom-xs on-base-background margin-top">Maps</h3>
                     <a href="#" data-bind="click: mapIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
                 </div>
                 <div class="col-sm-10">
@@ -44,7 +68,7 @@
                         <div class="clearfix">
                             <div class="btn-group-sm pull-right" role="group" aria-label="...">
                                 <button type="button" class="btn btn-default" data-bind="click: _.partial($root.formatIndex, $index())"><i class="icon-indent"></i><span>Format</span></button>
-                                <button type="button" class="btn btn-danger" data-bind="click: _.partial($root.removeMap, $index()), enable: $root.editedIndex().maps().length > 1"
+                                <button type="button" class="btn btn-danger" data-bind="click: _.partial($root.removeMap, $index()), enable: $root.editedIndex().maps().length > 1, requiredAccess: 'DatabaseReadWrite'"
                                         title="Remove this map from the index">
                                     <i class="icon-trash"></i> <span>Delete</span>
                                 </button>
@@ -55,7 +79,9 @@
                         -->
                         <div class="margin-bottom">
                             <pre class="form-control map"
-                                 data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', typeName: 'map', completer: $root.indexAutoCompleter.indexMapCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: map"></pre>
+                                 data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq',
+                                            typeName: 'map', completer: $root.indexAutoCompleter.indexMapCompleter, readOnly: $root.isReadOnlyAccess() },
+                                            validationOptions: { errorsAsTitle: false }, validationElement: map"></pre>
     
                             <div data-bind="validationElement: map">
                                 <div class="help-block" data-bind="validationMessage: map"></div>
@@ -63,7 +89,7 @@
                         </div>
                     </div>
                     <div class="margin-bottom">
-                        <button class="btn btn-info" data-bind="click: addMap">
+                        <button class="btn btn-info" data-bind="click: addMap, requiredAccess: 'DatabaseReadWrite'">
                             <i class="icon-plus"></i><span>Add map</span>
                         </button>
                     </div>
@@ -71,7 +97,7 @@
             </div>
             <div class="row">
                 <div class="col-sm-2">
-                    <h2 id="reduce-title" class="margin-bottom margin-bottom-xs on-base-background margin-top">Reduce</h2>
+                    <h3 id="reduce-title" class="margin-bottom margin-bottom-xs on-base-background margin-top">Reduce</h3>
                     <a href="#" data-bind="click: mapReduceIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
                 </div>
                 <div class="col-sm-10" data-bind="with: editedIndex()">
@@ -79,7 +105,7 @@
                         <div class="clearfix">
                             <div class="btn-group-sm pull-right" role="group" aria-label="...">
                                 <button type="button" class="btn btn-default" data-bind="click: $root.formatReduce"><i class="icon-indent"></i><span>Format</span></button>
-                                <button type="button" class="btn btn-danger" data-bind="click: $root.removeReduce" title="Remove the Reduce function from the index">
+                                <button type="button" class="btn btn-danger" data-bind="click: $root.removeReduce, requiredAccess: 'DatabaseReadWrite'" title="Remove the Reduce function from the index">
                                     <i class="icon-trash"></i> <span>Delete</span>
                                 </button>
                             </div>
@@ -89,7 +115,9 @@
                         -->
                         <div class="margin-bottom">
                             <pre class="form-control map"
-                                 data-bind="aceEditor: { code: reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq', typeName: 'reduce', completer: $root.indexAutoCompleter.indexReduceCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: reduce"></pre>
+                                 data-bind="aceEditor: { code: reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq',
+                                            typeName: 'reduce', completer: $root.indexAutoCompleter.indexReduceCompleter, readOnly: $root.isReadOnlyAccess() },
+                                            validationOptions: { errorsAsTitle: false }, validationElement: reduce"></pre>
     
                             <div data-bind="validationElement: reduce">
                                 <div class="help-block" data-bind="validationMessage: reduce"></div>
@@ -105,7 +133,8 @@
                         <div class="row">
                             <div class="col-lg-4">
                                 <div class="toggle margin-left">
-                                    <input id="toggleOutputToCollection" type="checkbox" data-bind="checked: outputReduceToCollection" />
+                                    <input id="toggleOutputToCollection" type="checkbox" data-bind="checked: outputReduceToCollection,
+                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
                                     <label for="toggleOutputToCollection" class="control-label"><strong>Output Reduce Results to Collection </strong>
                                         <small class="margin-left margin-left-xs"><i id="reduce-output-info" class="icon-info text-info"></i></small>
                                     </label>
@@ -114,14 +143,15 @@
                             <div class="col-lg-7 margin-left">
                                 <div data-bind="visible: outputReduceToCollection, validationElement: reduceOutputCollectionName">
                                     <input type="text" class="form-control" placeholder="Enter Name for the Reduce Results Collection"
-                                           data-bind="textInput: reduceOutputCollectionName" />
+                                           data-bind="textInput: reduceOutputCollectionName, requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
                                 </div>
                             </div>
                         </div>
                         <div class="row" data-bind="collapse: outputReduceToCollection()">
                             <div class="col-lg-5">
                                 <div class="toggle margin-top margin-top-sm margin-left margin-left-lg">
-                                    <input id="togglePatternForReferences" type="checkbox" data-bind="checked: createReferencesToResultsCollection" />
+                                    <input id="togglePatternForReferences" type="checkbox" 
+                                           data-bind="checked: createReferencesToResultsCollection, requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
                                     <label class="control-label"><strong>Create References to Results Collection </strong>
                                         <small class="margin-left margin-left-xs"><i id="reference-docs-info" class="icon-info text-info"></i></small>
                                     </label>
@@ -137,7 +167,7 @@
                                 </div>
                                 <div class="col-lg-7 margin-left">
                                     <input type="text" class="form-control" placeholder="Enter Pattern for the Reference Documents ID" id="referencePattern"
-                                           data-bind="textInput: patternForReferencesToReduceOutputCollection" />
+                                           data-bind="textInput: patternForReferencesToReduceOutputCollection, requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
                                 </div>
                             </div>
                             <div class="row" data-bind="validationElement: collectionNameForReferenceDocuments">
@@ -148,7 +178,7 @@
                                 </div>
                                 <div class="col-lg-7 margin-left">
                                     <input type="text" class="form-control" placeholder="Enter Name for the Reference Documents Collection (Optional)" id="referenceCollectionName"
-                                           data-bind="textInput: collectionNameForReferenceDocuments" />
+                                           data-bind="textInput: collectionNameForReferenceDocuments, requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
                                 </div>
                             </div>
                         </div>
@@ -191,8 +221,12 @@
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane fade in active" id="fields">
                         <div class="margin-bottom flex-horizontal">
-                            <button class="btn btn-default" data-bind="click: addField"><i class="icon-plus"></i><span>Add field</span></button>
-                            <button class="btn btn-info" data-bind="click: addDefaultField, enable: !editedIndex().defaultFieldOptions()"><i class="icon-plus"></i><span>Add default field options</span></button>
+                            <button class="btn btn-default" data-bind="click: addField, requiredAccess: 'DatabaseReadWrite'">
+                                <i class="icon-plus"></i><span>Add field</span>
+                            </button>
+                            <button class="btn btn-info" data-bind="click: addDefaultField, enable: !editedIndex().defaultFieldOptions(), requiredAccess: 'DatabaseReadWrite'">
+                                <i class="icon-plus"></i><span>Add default field options</span>
+                            </button>
                             <span class="has-error margin-left margin-left-sm" data-bind="visible: editedIndex().hasDuplicateFieldsNames()">
                                 <span class="help-block"><i class="icon-warning"></i> Fields contain duplicate names</span>
                             </span>
@@ -213,7 +247,7 @@
                     </div>
                     <div role="tabpanel" class="tab-pane fade" id="configure">
                         <div class="row margin-left margin-bottom margin-bottom-lg">
-                            <button type="button" data-bind="click: addConfigurationOption" class="btn btn-info margin-left">
+                            <button type="button" data-bind="click: addConfigurationOption, requiredAccess: 'DatabaseReadWrite'" class="btn btn-info margin-left">
                                 <i class="icon-plus"></i>
                                 <span>Add customized indexing configuration</span>
                             </button>
@@ -252,7 +286,9 @@
                     </div>
                     <div role="tabpanel" class="tab-pane fade" id="additionalAssemblies">
                         <div class="row margin-left margin-bottom margin-bottom-lg">
-                            <button type="button" data-bind="click: addAssembly" class="btn btn-info margin-left"><i class="icon-plus"></i> <span>Add Assembly</span></button>
+                            <button type="button" data-bind="click: addAssembly, requiredAccess: 'DatabaseReadWrite'" class="btn btn-info margin-left">
+                                <i class="icon-plus"></i> <span>Add Assembly</span>
+                            </button>
                             <a href="#" data-bind="click: additionalAssemblySyntaxHelp" class="margin-left margin-left-sm"><small>Syntax <i class="icon-help"></i></small></a>
                         </div>
                         <div data-bind="foreach: editedIndex().additionalAssemblies">
@@ -351,7 +387,7 @@
                     <div role="tabpanel" class="tab-pane fade" id="additionalSources">
                         <div class="flex-horizontal">
                             <input type="file" accept=".cs,.js" id="additionalSourceFilePicker" class="hidden" data-bind="event: { change: _.partial(fileSelected, $element) }" tabindex="-1" />
-                            <div>
+                            <div data-bind="requiredAccess: 'DatabaseReadWrite'">
                                 <label for="additionalSourceFilePicker" class="btn btn-primary">
                                     <i class="icon-upload"></i><span>Upload Source File</span>
                                 </label>
@@ -452,7 +488,12 @@
                 </div>
                 <div class="flex-grow flex-vertical">
                     <div class="flex-horizontal flex-content-center">
-                        <div class="flex-horizontal" data-bind="foreach: editedIndex().mapFields">
+                        <div class="flex-horizontal flex-content-center flex-content-center" data-bind="if: !editedIndex().mapFields().length">
+                            <div class="panel padding padding-sm flex-vertical">
+                                No aggregation fields
+                            </div>
+                        </div>
+                        <div class="auto-index-fields" data-bind="foreach: editedIndex().mapFields">
                             <div class="panel padding padding-sm flex-vertical" data-bind="template: { name: 'field-template-auto-index'}"></div>
                         </div>
                     </div>
@@ -696,9 +737,9 @@
                                     <input class="form-control"
                                            data-bind="textInput: analyzer, disable: !!disabledAnalyzerText(),
                                                       attr: { id: 'analyzerName' + (isDefaultFieldOptions() ? '' : $index()), placeholder: analyzerPlaceHolder }" />
-                                    <ul class="dropdown-menu" role="menu"
+                                    <ul class="dropdown-menu analyzer-dropdown" role="menu"
                                         data-bind="autoComplete: '#analyzerName' + (isDefaultFieldOptions() ? '' : $index()), foreach: createAnalyzerNameAutocompleter($data.analyzer()),
-                                                       css: { 'list-dropup' : $root.shouldDropupMenu($data, isDefaultFieldOptions() ? 0 : $index())() }">
+                                                   css: { 'list-dropup' : $root.shouldDropupMenu($data, isDefaultFieldOptions() ? 0 : $index())() }">
                                         <li role="presentation" data-bind="click: $parent.analyzer.bind($parent, $data)" >
                                             <a role="menuitem" tabindex="-1" href="#">
                                                 <span data-bind="text: $data"></span>

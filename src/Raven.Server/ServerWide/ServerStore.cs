@@ -41,6 +41,8 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Analysis;
+using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TcpHandlers;
@@ -77,6 +79,7 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Constants = Raven.Client.Constants;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.ServerWide
 {
@@ -178,7 +181,12 @@ namespace Raven.Server.ServerWide
             HasFixedPort = Configuration.Core.ServerUrls == null ||
                            Uri.TryCreate(Configuration.Core.ServerUrls[0], UriKind.Absolute, out var uri) == false ||
                            uri.Port != 0;
+
+            if (Configuration.Indexing.MaxNumberOfConcurrentlyRunningIndexes != null)
+                ServerWideConcurrentlyRunningIndexesLock = new FifoSemaphore(Configuration.Indexing.MaxNumberOfConcurrentlyRunningIndexes.Value);
         }
+
+        internal readonly FifoSemaphore ServerWideConcurrentlyRunningIndexesLock;
 
         private void OnServerCertificateChanged(object sender, EventArgs e)
         {
@@ -283,7 +291,7 @@ namespace Raven.Server.ServerWide
                                         context.Reset();
                                         context.Renew();
 
-                                        var readTask = context.ReadFromWebSocket(ws, "ws from Leader", cts.Token);
+                                        var readTask = context.ReadFromWebSocketAsync(ws, "ws from Leader", cts.Token);
                                         using (var notification = readTask.Result)
                                         {
                                             if (notification == null)
@@ -721,6 +729,9 @@ namespace Raven.Server.ServerWide
             var myUrl = GetNodeHttpServerUrl();
             _engine.Initialize(_env, Configuration, clusterChanges, myUrl, out _lastClusterTopologyIndex);
 
+            SorterCompilationCache.Instance.AddServerWideItems(this);
+            AnalyzerCompilationCache.Instance.AddServerWideItems(this);
+
             LicenseManager.Initialize(_env, ContextPool);
             LatestVersionCheck.Instance.Check(this);
 
@@ -1045,7 +1056,7 @@ namespace Raven.Server.ServerWide
                     {
                         if (Logger.IsInfoEnabled)
                         {
-                            await Logger.InfoAsync("Unable to notify about cluster topology change", e);
+                            await Logger.InfoWithWait("Unable to notify about cluster topology change", e);
                         }
                     }
                 }
@@ -1095,6 +1106,7 @@ namespace Raven.Server.ServerWide
 
                 case nameof(ToggleDatabasesStateCommand):
                 case nameof(UpdateTopologyCommand):
+                case nameof(EditLockModeCommand):
                     NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.Update));
                     break;
 
@@ -1420,10 +1432,10 @@ namespace Raven.Server.ServerWide
 
                         try
                         {
-                            using (var certStream = File.Create(certPath))
+                            await using (var certStream = File.Create(certPath))
                             {
-                                certStream.Write(bytesToSave, 0, bytesToSave.Length);
-                                certStream.Flush(true);
+                                await certStream.WriteAsync(bytesToSave, 0, bytesToSave.Length, ServerShutdown);
+                                await certStream.FlushAsync(ServerShutdown);
                             }
                         }
                         catch (Exception e)
@@ -1918,6 +1930,17 @@ namespace Raven.Server.ServerWide
                         command = new AddSqlEtlCommand(sqlEtl, databaseName, raftRequestId);
                         break;
 
+                    case EtlType.Olap:
+                        var olapEtl = JsonDeserializationCluster.OlapEtlConfiguration(etlConfiguration);
+                        olapEtl.Validate(out var olapEtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, olapEtl.ConnectionStringName, olapEtl.EtlType) == false)
+                            olapEtlErr.Add($"Could not find connection string named '{olapEtl.ConnectionStringName}'. Please supply an existing connection string.");
+
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, olapEtlErr);
+
+                        command = new AddOlapEtlCommand(olapEtl, databaseName, raftRequestId);
+                        break;
+
                     default:
                         throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
                 }
@@ -1951,14 +1974,20 @@ namespace Raven.Server.ServerWide
 
         private bool ValidateConnectionString(RawDatabaseRecord databaseRecord, string connectionStringName, EtlType etlType)
         {
-            if (etlType == EtlType.Raven)
+            switch (etlType)
             {
-                var ravenConnectionStrings = databaseRecord.RavenConnectionStrings;
-                return ravenConnectionStrings != null && ravenConnectionStrings.TryGetValue(connectionStringName, out _);
+                case EtlType.Raven:
+                    var ravenConnectionStrings = databaseRecord.RavenConnectionStrings;
+                    return ravenConnectionStrings != null && ravenConnectionStrings.TryGetValue(connectionStringName, out _);
+                case EtlType.Sql:
+                    var sqlConnectionString = databaseRecord.SqlConnectionStrings;
+                    return sqlConnectionString != null && sqlConnectionString.TryGetValue(connectionStringName, out _);
+                case EtlType.Olap:
+                    var olapConnectionString = databaseRecord.OlapConnectionString;
+                    return olapConnectionString != null && olapConnectionString.TryGetValue(connectionStringName, out _);
             }
 
-            var sqlConnectionString = databaseRecord.SqlConnectionStrings;
-            return sqlConnectionString != null && sqlConnectionString.TryGetValue(connectionStringName, out _);
+            return false;
         }
 
         public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration, string raftRequestId)
@@ -1972,7 +2001,6 @@ namespace Raven.Server.ServerWide
                 {
                     case EtlType.Raven:
                         var rvnEtl = JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration);
-
                         rvnEtl.Validate(out var rvnEtlErr, validateName: false, validateConnection: false);
                         if (ValidateConnectionString(rawRecord, rvnEtl.ConnectionStringName, rvnEtl.EtlType) == false)
                             rvnEtlErr.Add($"Could not find connection string named '{rvnEtl.ConnectionStringName}'. Please supply an existing connection string.");
@@ -1981,9 +2009,7 @@ namespace Raven.Server.ServerWide
 
                         command = new UpdateRavenEtlCommand(id, rvnEtl, databaseName, raftRequestId);
                         break;
-
                     case EtlType.Sql:
-
                         var sqlEtl = JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration);
                         sqlEtl.Validate(out var sqlEtlErr, validateName: false, validateConnection: false);
                         if (ValidateConnectionString(rawRecord, sqlEtl.ConnectionStringName, sqlEtl.EtlType) == false)
@@ -1993,7 +2019,16 @@ namespace Raven.Server.ServerWide
 
                         command = new UpdateSqlEtlCommand(id, sqlEtl, databaseName, raftRequestId);
                         break;
+                    case EtlType.Olap:
+                        var olapEtl = JsonDeserializationCluster.OlapEtlConfiguration(etlConfiguration);
+                        olapEtl.Validate(out var olapEtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, olapEtl.ConnectionStringName, olapEtl.EtlType) == false)
+                            olapEtlErr.Add($"Could not find connection string named '{olapEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, olapEtlErr);
+
+                        command = new UpdateOlapEtlCommand(id, olapEtl, databaseName, raftRequestId);
+                        break;
                     default:
                         throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
                 }
@@ -2049,7 +2084,9 @@ namespace Raven.Server.ServerWide
                 case ConnectionStringType.Sql:
                     command = new PutSqlConnectionStringCommand(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName, raftRequestId);
                     break;
-
+                case ConnectionStringType.Olap:
+                    command = new PutOlapConnectionStringCommand(JsonDeserializationCluster.OlapConnectionString(connectionString), databaseName, raftRequestId);
+                    break;
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
             }
@@ -2121,6 +2158,25 @@ namespace Raven.Server.ServerWide
                         command = new RemoveSqlConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
                         break;
 
+                    case ConnectionStringType.Olap:
+
+                        var olapEtls = rawRecord.OlapEtls;
+
+                        // Don't delete the connection string if used by tasks types: Olap Etl
+                        if (olapEtls != null)
+                        {
+                            foreach (var olapETlTask in olapEtls)
+                            {
+                                if (olapETlTask.ConnectionStringName == connectionStringName)
+                                {
+                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {olapETlTask.Name}");
+                                }
+                            }
+                        }
+
+                        command = new RemoveOlapConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
+                        break;
+                    
                     default:
                         throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
                 }
@@ -2411,7 +2467,7 @@ namespace Raven.Server.ServerWide
             return true;
         }
         
-        private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database, out CleanupMode mode)
+        private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database, out DatabaseCleanupMode mode)
         {
             var now = DateTime.UtcNow;
 
@@ -2427,17 +2483,17 @@ namespace Raven.Server.ServerWide
 
             if ((now - maxLastWork).TotalMinutes > 5)
             {
-                mode = CleanupMode.Deep;
+                mode = DatabaseCleanupMode.Deep;
                 return true;
             }
 
             if ((now - database.LastIdleTime).TotalMinutes > 10)
             {
-                mode = CleanupMode.Regular;
+                mode = DatabaseCleanupMode.Regular;
                 return true;
             }
 
-            mode = CleanupMode.None;
+            mode = DatabaseCleanupMode.None;
             return false;
         }
 
@@ -2539,11 +2595,9 @@ namespace Raven.Server.ServerWide
                 if (string.IsNullOrEmpty(topology.DatabaseTopologyIdBase64))
                     topology.DatabaseTopologyIdBase64 = Guid.NewGuid().ToBase64Unpadded();
 
-                topology.Stamp = new LeaderStamp
-                {
-                    Term = _engine.CurrentTerm,
-                    LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0
-                };
+                topology.Stamp ??= new LeaderStamp();
+                topology.Stamp.Term = _engine.CurrentTerm;
+                topology.Stamp.LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0;
             }
         }
 
@@ -2931,9 +2985,9 @@ namespace Raven.Server.ServerWide
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
                     {
-                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                         {
                             writer.WriteObject(_command);
                         }
@@ -3196,6 +3250,8 @@ namespace Raven.Server.ServerWide
             var sizeOnDisk = environment.Environment.GenerateSizeReport(includeTempBuffers);
             var usage = new Client.ServerWide.Operations.MountPointUsage
             {
+                Name = environment.Name,
+                Type = environment.Type.ToString(),
                 UsedSpace = sizeOnDisk.DataFileInBytes,
                 DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
                 {
@@ -3219,6 +3275,8 @@ namespace Raven.Server.ServerWide
                 {
                     yield return new Client.ServerWide.Operations.MountPointUsage
                     {
+                        Name = environment.Name,
+                        Type = environment.Type.ToString(),
                         DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
                         {
                             DriveName = journalPathUsage.DriveName,
@@ -3244,6 +3302,8 @@ namespace Raven.Server.ServerWide
                     {
                         yield return new Client.ServerWide.Operations.MountPointUsage
                         {
+                            Name = environment.Name,
+                            Type = environment.Type.ToString(),
                             UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes,
                             DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
                             {

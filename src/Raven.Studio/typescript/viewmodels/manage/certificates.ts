@@ -57,7 +57,6 @@ class certificates extends viewModelBase {
     
     usingHttps = location.protocol === "https:";
     
-    resolveDatabasesAccess = certificateModel.resolveDatabasesAccess;
     accessManager = accessManager.default.certificatesView;
 
     importedFileName = ko.observable<string>();
@@ -109,6 +108,8 @@ class certificates extends viewModelBase {
         super.compositionComplete();
         
         this.addNotification(changesContext.default.serverNotifications().watchAllAlerts(alert => this.onAlert(alert)));
+
+        $('.certificates [data-toggle="tooltip"]').tooltip();
         
         popoverUtils.longWithHover($("#download-certificates"),
             {
@@ -176,7 +177,6 @@ class certificates extends viewModelBase {
                 html: true,
                 placement: "top"
             });
-
         $('.certificates [data-toggle="tooltip"]').tooltip();
     }
     
@@ -214,6 +214,22 @@ class certificates extends viewModelBase {
                 const dateFormatted = date.format("YYYY-MM-DD");
                 this.serverCertificateRenewalDate(dateFormatted);
             })
+    }
+    
+    databasesAccessInfo(certificateDefinition: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
+        return certificateModel.resolveDatabasesAccess(certificateDefinition);
+    }
+
+    getAccessIcon(accessLevel: databaseAccessLevel) {
+        return accessManager.default.getAccessIcon(accessLevel);
+    }
+
+    getAccessColor(accessLevel: databaseAccessLevel) {
+        return accessManager.default.getAccessColor(accessLevel);
+    }
+
+    getAccessInfoText(accessLevel: databaseAccessLevel) {
+        return accessManager.default.getAccessLevelText(accessLevel);
     }
     
     canBeAutomaticallyRenewed(thumbprints: string[]) {

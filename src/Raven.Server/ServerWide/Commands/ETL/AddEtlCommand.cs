@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
@@ -78,6 +79,24 @@ namespace Raven.Server.ServerWide.Commands.ETL
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             Add(ref record.SqlEtls, record, etag);
+        }
+    }
+
+    public class AddOlapEtlCommand : AddEtlCommand<OlapEtlConfiguration, OlapConnectionString>
+    {
+        public AddOlapEtlCommand()
+        {
+            // for deserialization
+        }
+
+        public AddOlapEtlCommand(OlapEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
+        {
+
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            Add(ref record.OlapEtls, record, etag);
         }
     }
 }

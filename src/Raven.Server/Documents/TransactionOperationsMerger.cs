@@ -17,6 +17,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
@@ -24,7 +25,6 @@ using Voron;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
-using Voron.Impl.Journal;
 
 namespace Raven.Server.Documents
 {

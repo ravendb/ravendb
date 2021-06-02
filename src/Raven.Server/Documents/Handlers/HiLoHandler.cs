@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Handlers
             return Math.Max(32, lastSize);
         }
 
-        [RavenAction("/databases/*/hilo/next", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/hilo/next", "GET", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task GetNextHiLo()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Handlers
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
@@ -132,7 +132,6 @@ namespace Raven.Server.Documents.Handlers
                     }
                     else
                     {
-
                         hiloDocReader.TryGet("Max", out long oldMax);
                         OldMax = Math.Max(oldMax, LastRangeMax);
 
@@ -168,7 +167,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/hilo/return", "PUT", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/hilo/return", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task HiLoReturn()
         {
             var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
@@ -231,7 +230,6 @@ namespace Raven.Server.Documents.Handlers
                 };
             }
         }
-
     }
 
     internal class MergedHiLoReturnCommandDto : TransactionOperationsMerger.IReplayableCommandDto<HiLoHandler.MergedHiLoReturnCommand>

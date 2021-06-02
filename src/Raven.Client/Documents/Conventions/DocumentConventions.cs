@@ -200,6 +200,10 @@ namespace Raven.Client.Documents.Conventions
             _firstBroadcastAttemptTimeout = TimeSpan.FromSeconds(5);
             _secondBroadcastAttemptTimeout = TimeSpan.FromSeconds(30);
 
+            _waitForIndexesAfterSaveChangesTimeout = TimeSpan.FromSeconds(15);
+            _waitForReplicationAfterSaveChangesTimeout = TimeSpan.FromSeconds(15);
+            _waitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15);
+
             _sendApplicationIdentifier = true;
             _maxContextSizeToKeep = PlatformDetails.Is32Bits == false
                 ? new Size(1, SizeUnit.Megabytes)
@@ -238,6 +242,9 @@ namespace Raven.Client.Documents.Conventions
         private TimeSpan? _requestTimeout;
         private TimeSpan _secondBroadcastAttemptTimeout;
         private TimeSpan _firstBroadcastAttemptTimeout;
+        private TimeSpan _waitForIndexesAfterSaveChangesTimeout;
+        private TimeSpan _waitForReplicationAfterSaveChangesTimeout;
+        private TimeSpan _waitForNonStaleResultsTimeout;
 
         private int _loadBalancerContextSeed;
         private LoadBalanceBehavior _loadBalanceBehavior;
@@ -348,6 +355,48 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _firstBroadcastAttemptTimeout = value;
+            }
+        }
+
+        /// <summary>
+        /// Sets the default timeout for DocumentSession.Advanced.WaitForIndexesAfterSaveChanges method.
+        /// Default: 15 Seconds.
+        /// </summary>
+        public TimeSpan WaitForIndexesAfterSaveChangesTimeout
+        {
+            get => _waitForIndexesAfterSaveChangesTimeout;
+            set
+            {
+                AssertNotFrozen();
+                _waitForIndexesAfterSaveChangesTimeout = value;
+            }
+        }
+
+        /// <summary>
+        /// Sets the default timeout for DocumentSession WaitForNonStaleResults methods.
+        /// Default: 15 Seconds.
+        /// </summary>
+        public TimeSpan WaitForNonStaleResultsTimeout
+        {
+            get => _waitForNonStaleResultsTimeout;
+            set
+            {
+                AssertNotFrozen();
+                _waitForNonStaleResultsTimeout = value;
+            }
+        }
+
+        /// <summary>
+        /// Sets the default timeout for DocumentSession.Advanced.WaitForReplicationAfterSaveChanges method.
+        /// Default: 15 Seconds.
+        /// </summary>
+        public TimeSpan WaitForReplicationAfterSaveChangesTimeout
+        {
+            get => _waitForReplicationAfterSaveChangesTimeout;
+            set
+            {
+                AssertNotFrozen();
+                _waitForReplicationAfterSaveChangesTimeout = value;
             }
         }
 

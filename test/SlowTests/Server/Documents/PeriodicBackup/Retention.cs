@@ -1,25 +1,26 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
-using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Server.Documents.PeriodicBackup.Restore;
+using Tests.Infrastructure;
 using Voron.Util.Settings;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
-    public class Retention : RavenTestBase
+    public class Retention : RestoreFromS3
     {
         public Retention(ITestOutputHelper output) : base(output)
         {
@@ -27,7 +28,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         private static readonly SemaphoreSlim Locker = new SemaphoreSlim(1, 1);
 
-        [Theory]
+        [Theory, Trait("Category", "Smuggler")]
         [InlineData(7, 3, false)]
         [InlineData(7, 3, true)]
         [InlineData(7, 3, false, "/E/G/O/R/../../../..")]
@@ -70,7 +71,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory(Skip = "Requires Amazon AWS Credentials")]
+        [AmazonS3Theory]
         [InlineData(7, 3, false)]
         [InlineData(7, 3, true)]
         public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
@@ -79,16 +80,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             try
             {
+                var settings = GetS3Settings();
                 BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
 
                 await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
                     (configuration, databaseName) =>
                     {
-                        configuration.S3Settings = GetS3Settings(databaseName);
+                        configuration.S3Settings = settings;
                     },
                     async databaseName =>
                     {
-                        using (var client = new RavenAwsS3Client(GetS3Settings(databaseName)))
+                        using (var client = new RavenAwsS3Client(settings))
                         {
                             var folders = await client.ListObjectsAsync($"{client.RemoteFolderName}/", "/", listFolders: true);
                             return folders.FileInfoDetails.Count;
@@ -102,44 +104,39 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory(Skip = "Batch operations are not supported in emulator")]
+        [AzureTheory, Trait("Category", "Smuggler")]
         [InlineData(7, 3, false)]
         [InlineData(7, 3, true)]
         public async Task can_delete_backups_by_date_azure(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
             await Locker.WaitAsync();
-
-            var containerName = Guid.NewGuid().ToString();
-            using var client = new RavenAzureClient(new AzureSettings { AccountName = Azure.AzureAccountName, AccountKey = Azure.AzureAccountKey, StorageContainer = containerName });
-
-            try
+            using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
             {
-                client.DeleteContainer();
-                client.PutContainer();
+                try
+                {
+                    BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
 
-                BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
+                    await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
+                        (configuration, databaseName) =>
+                        {
+                            configuration.AzureSettings = holder.Settings;
+                        },
+                        async databaseName =>
+                        {
 
-                await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
-                    (configuration, databaseName) =>
-                    {
-                        configuration.AzureSettings = GetAzureSettings(containerName, databaseName);
-                    },
-                    async databaseName =>
-                    {
-                        using var c = new RavenAzureClient(GetAzureSettings(containerName, databaseName));
-                        var folders = await c.ListBlobsAsync($"{c.RemoteFolderName}/", delimiter: "/", listFolders: true);
-                        return folders.List.Count();
-                    }, timeout: 120000, checkIncremental);
-            }
-            finally
-            {
-                BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = false;
-                client.DeleteContainer();
-                Locker.Release();
+                            var folders = await holder.Client.ListBlobsAsync($"{holder.Client.RemoteFolderName}/", delimiter: "/", listFolders: true);
+                            return folders.List.Count();
+                        }, timeout: 120000, checkIncremental);
+                }
+                finally
+                {
+                    BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = false;
+                    Locker.Release();
+                }
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task configuration_validation()
         {
             await Locker.WaitAsync();
@@ -150,15 +147,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store = GetDocumentStore())
                 {
-                    var config = new PeriodicBackupConfiguration
+                    var config = Backup.CreateBackupConfiguration(incrementalBackupFrequency: "30 3 L * ?", retentionPolicy: new RetentionPolicy
                     {
-                        IncrementalBackupFrequency = "30 3 L * ?",
-                        RetentionPolicy = new RetentionPolicy
-                        {
-                            MinimumBackupAgeToKeep = TimeSpan.FromDays(-5)
-                        }
-                    };
-
+                        MinimumBackupAgeToKeep = TimeSpan.FromDays(-5)
+                    });
                     var error = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)));
                     Assert.True(error.Message.Contains($"{nameof(RetentionPolicy.MinimumBackupAgeToKeep)} must be positive"));
 
@@ -184,20 +176,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore())
             {
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(incrementalBackupFrequency: "30 3 L * ?", retentionPolicy: new RetentionPolicy
                 {
-                    IncrementalBackupFrequency = "30 3 L * ?",
-                    RetentionPolicy = new RetentionPolicy
-                    {
-                        MinimumBackupAgeToKeep = minimumBackupAgeToKeep
-                    }
-                };
-
+                    MinimumBackupAgeToKeep = minimumBackupAgeToKeep
+                });
                 modifyConfiguration(config, store.Database);
 
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
 
-                var lastEtag = 0L;
                 var userId = "";
                 for (var i = 0; i < numberOfBackupsToCreate; i++)
                 {
@@ -211,7 +197,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
 
                     // create full backup
-                    lastEtag = await CreateBackup(store, true, backupTaskId, lastEtag, timeout);
+                    var etagForFullBackup = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                    await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: true, expectedEtag: etagForFullBackup, timeout: timeout);
 
                     using (var session = store.OpenAsyncSession())
                     {
@@ -221,7 +208,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
 
                     // create incremental backup
-                    lastEtag = await CreateBackup(store, false, backupTaskId, lastEtag, timeout);
+                    var etagForIncBackup = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                    Assert.NotEqual(etagForFullBackup, etagForIncBackup);
+                    await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: etagForIncBackup, timeout: timeout);
                 }
 
                 await Task.Delay(minimumBackupAgeToKeep + TimeSpan.FromSeconds(5));
@@ -237,7 +226,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
 
                     // create incremental backup with retention policy
-                    lastEtag = await CreateBackup(store, false, backupTaskId, lastEtag, timeout);
+                    var etagForIncBackup = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                    await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: etagForIncBackup, timeout: timeout);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -245,57 +235,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.StoreAsync(new User { Name = "Grisha" });
                     await session.SaveChangesAsync();
                 }
-                await CreateBackup(store, true, backupTaskId, lastEtag, timeout);
+
+                var etag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: true, expectedEtag: etag, timeout: timeout);
 
                 var directoriesCount = await getDirectoriesCount(store.Database);
                 var expectedNumberOfDirectories = checkIncremental ? 2 : 1;
                 Assert.Equal(expectedNumberOfDirectories, directoriesCount);
             }
-        }
-
-        private async Task<long> CreateBackup(DocumentStore store, bool isFullBackup, long backupTaskId, long lastEtag, int timeout)
-        {
-            await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, backupTaskId));
-            var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-            PeriodicBackupStatus status = null;
-            var value = WaitForValue(() =>
-            {
-                status = store.Maintenance.Send(operation).Status;
-                if (status?.LastEtag == null)
-                    return false;
-
-                if (status.LastEtag.Value <= lastEtag)
-                    return false;
-
-                lastEtag = status.LastEtag.Value;
-                return true;
-            }, true, timeout: timeout);
-            Assert.True(value, $"Got status: {status != null}, exception: {status?.Error?.Exception}, LocalBackup Exception: {status?.LocalBackup?.Exception}, lastEtag: {lastEtag}, status LastEtag: {status?.LastEtag}");
-
-            return lastEtag;
-        }
-
-        private static S3Settings GetS3Settings(string databaseName, [CallerMemberName] string remoteFolderName = null)
-        {
-            return new S3Settings
-            {
-                AwsAccessKey = null,
-                AwsSecretKey = null,
-                AwsRegionName = null,
-                BucketName = "ravendb-test",
-                RemoteFolderName = $"{remoteFolderName}/{databaseName}"
-            };
-        }
-
-        private static AzureSettings GetAzureSettings(string containerName, string databaseName, [CallerMemberName] string remoteFolderName = null)
-        {
-            return new AzureSettings
-            {
-                AccountName = Azure.AzureAccountName,
-                AccountKey = Azure.AzureAccountKey,
-                StorageContainer = containerName,
-                RemoteFolderName = $"{remoteFolderName}/{databaseName}"
-            };
         }
     }
 }

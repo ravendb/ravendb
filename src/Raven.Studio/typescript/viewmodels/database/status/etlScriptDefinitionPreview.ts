@@ -1,6 +1,5 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import database = require("models/resources/database");
 
 class etlScriptDefinitionPreview extends dialogViewModelBase {
     
@@ -18,7 +17,9 @@ class etlScriptDefinitionPreview extends dialogViewModelBase {
     
     constructor(etlType: Raven.Client.Documents.Operations.ETL.EtlType, 
                 transformationName: string,
-                task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails | Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails>) {
+                task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
+                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
+                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails>) {
         super();
 
         aceEditorBindingHandler.install();

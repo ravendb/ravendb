@@ -170,6 +170,50 @@ interface JQuery {
     fullScreen(): boolean;
 }
 
+///
+/// Packery
+///
+
+interface PackeryPacker {
+    width: number;
+    height: number;
+}
+
+class PackeryStatic {
+    layout(): void;
+    
+    columnWidth: number;
+    gutter: number;
+
+    bindDraggabillyEvents(events: any): void;
+
+    reloadItems(): void;
+
+    appended(elements: Element[] | Element): void;
+    
+    remove(elements: Element[] | Element): void;
+
+    getItemElements(): HTMLElement[];
+    getItem(element: HTMLElement): any;
+    packer: PackeryPacker;
+    _resetLayout(): void;
+    
+    on(event: "layoutComplete", callback: () => void);
+
+    shiftLayout(): void;
+}
+
+declare const Packery: new (selector: string | Element, options?: object) => PackeryStatic; 
+
+///
+/// Draggabilly
+///
+
+class DraggabillyStatic {
+    
+}
+
+declare const Draggabilly: new (selector: string | Element, options?: object) => DraggabillyStatic; 
 
 ///
 /// jwerty
@@ -271,6 +315,7 @@ interface DurandalRouteConfiguration {
     tooltip?: string;
     dynamicHash?: KnockoutObservable<string> | (() => string);
     tabName?: string;
+    requiredAccess?: accessLevel;
 }
 
 declare module AceAjax {

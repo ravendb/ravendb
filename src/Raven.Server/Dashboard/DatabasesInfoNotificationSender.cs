@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -60,7 +59,13 @@ namespace Raven.Server.Dashboard
                 if (_watchers.Count == 0)
                     return;
 
-                var databasesInfo = FetchDatabasesInfo(_serverStore, null, Cts).ToList();
+                var databasesInfo = new List<AbstractDashboardNotification>();
+
+                foreach (var item in DatabasesInfoRetriever.FetchDatabasesInfo(_serverStore, null, Cts.Token))
+                {
+                    databasesInfo.Add(item);
+                }
+
                 foreach (var watcher in _watchers)
                 {
                     foreach (var info in databasesInfo)

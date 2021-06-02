@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 _progress?.UploadProgress.ChangeState(UploadState.PendingUpload);
 
-                using (_content)
+                await using (_content)
                 {
                     while (true)
                     {

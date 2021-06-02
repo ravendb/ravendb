@@ -1,5 +1,9 @@
 ﻿.metricsContainer {
     position: relative;
+    
+    .tooltip-inner {
+        white-space: nowrap;
+    }
 
     .extent {
         cursor: ew-resize !important;
@@ -38,8 +42,9 @@ rect.pane {
     
     .color-definitions {
         .axis {
-            color: @layout-border;
+            color: fadeout(@text-color, 30%);
         }
+
         .axisText {
             color: @on-base-background-color;
         }
@@ -114,19 +119,15 @@ rect.pane {
             .networkTombstoneRead {
                 color: @color-3-2;
             }
-
             .storageTombstoneRead {
                 color: @color-3-2;
-            }
-            
+            }            
             .storageCounterRead {
                 color: @color-3-1;
             }
-            
             .storageTimeSeriesRead {
                 color: @color-5-2;
             }
-            
             .etl {
                 color: @color-4;
             }
@@ -138,6 +139,42 @@ rect.pane {
             }
             .load {
                 color: @color-2-2;
+            }
+            .loadLocal {
+                color: @color-3;
+            }
+            .loadLocalChild {
+                color: @color-3-2;
+            }
+            .loadUpload {
+                color: @color-5;
+            }
+            .loadUploadChild {
+                color: @color-4-3;
+            }
+            .connectionPending {
+                color: @color-2-2;
+            }
+            .connectionActive {
+                color: @color-1-1;
+            }
+            .batch {
+                color: @color-3;
+            }
+            .batchSendDocuments {
+                color: @color-2-1;
+            }
+            .batchWaitForAcknowledge {
+                color: @color-3-3;
+            }
+            .connectionAborted {
+                color: darken(red, 5%);
+            }
+            .connectionRejected {
+                color: darken(red, 5%);
+            }
+            .aggregatedBatchesInfo {
+                color: @color-4-3;
             }
         }
     }   
@@ -226,6 +263,11 @@ rect.pane {
                 }
             }
         }
+    }
+    
+    .tooltip-inner {
+        white-space: nowrap;
+        max-width: 350px;
     }
 }
 

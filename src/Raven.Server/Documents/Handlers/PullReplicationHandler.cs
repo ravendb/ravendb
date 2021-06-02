@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class PullReplicationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/tasks/pull-replication/hub", "PUT", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/tasks/pull-replication/hub", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task DefineHub()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Handlers
                 }, statusCode: HttpStatusCode.Created);
         }
 
-        [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "PUT", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task RegisterHubAccess()
         {
             var hubTaskName = GetStringQueryString("name", true);
@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Handlers
                     throw new InvalidOperationException("Cannot register hub access to a replication hub that already has inline certificates: " + hubTaskName +
                                                         ". Create a new replication hub and try again");
                 }
-                
+
                 var blittableJson = await context.ReadForMemoryAsync(RequestBodyStream(), "register-hub-access");
                 var access = JsonDeserializationClient.ReplicationHubAccess(blittableJson);
                 access.Validate(hubDefinition.WithFiltering);
@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Handlers
                 var result = await Server.ServerStore.SendToLeaderAsync(command);
                 await WaitForIndexToBeApplied(context, result.Index);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName(nameof(ReplicationHubAccessResponse.RaftCommandIndex));
@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "DELETE", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task UnregisterHubAccess()
         {
             var hub = GetStringQueryString("name", true);
@@ -114,8 +114,8 @@ namespace Raven.Server.Documents.Handlers
                 var command = new UnregisterReplicationHubAccessCommand(Database.Name, hub, thumbprint, GetRaftRequestIdFromQuery());
                 var result = await Server.ServerStore.SendToLeaderAsync(command);
                 await WaitForIndexToBeApplied(context, result.Index);
-                
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName(nameof(ReplicationHubAccessResponse.RaftCommandIndex));
@@ -125,8 +125,8 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "GET", AuthorizationStatus.Operator)]
-        public Task ListHubAccess()
+        [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "GET", AuthorizationStatus.DatabaseAdmin)]
+        public async Task ListHubAccess()
         {
             var hub = GetStringQueryString("name", true);
             var filter = GetStringQueryString("filter", false);
@@ -136,20 +136,18 @@ namespace Raven.Server.Documents.Handlers
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var results = Server.ServerStore.Cluster.GetReplicationHubCertificateByHub(context, Database.Name, hub, filter,start, pageSize);
+                var results = Server.ServerStore.Cluster.GetReplicationHubCertificateByHub(context, Database.Name, hub, filter, start, pageSize);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WriteArray(nameof(ReplicationHubAccessResult.Results), results);
                     writer.WriteEndObject();
                 }
-
-                return Task.CompletedTask;
             }
         }
 
-        [RavenAction("/databases/*/admin/tasks/sink-pull-replication", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/tasks/sink-pull-replication", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdatePullReplicationOnSinkNode()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -176,8 +174,8 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/pull-replication/generate-certificate", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
-        public Task GeneratePullReplicationCertificate()
+        [RavenAction("/databases/*/admin/pull-replication/generate-certificate", "POST", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
+        public async Task GeneratePullReplicationCertificate()
         {
             if (ServerStore.Server.Certificate?.Certificate == null)
                 throw new BadRequestException("This endpoint requires secured server.");
@@ -196,7 +194,7 @@ namespace Raven.Server.Documents.Handlers
             if (validMonths.HasValue && validMonths.Value > 0)
             {
                 notAfter = DateTime.UtcNow.AddMonths(validMonths.Value);
-            } 
+            }
             else if (validYears.HasValue && validYears.Value > 0)
             {
                 notAfter = DateTime.UtcNow.AddYears(validYears.Value);
@@ -217,7 +215,7 @@ namespace Raven.Server.Documents.Handlers
             };
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
 
@@ -234,8 +232,6 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
 
         public class PullReplicationCertificate

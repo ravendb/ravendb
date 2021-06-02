@@ -100,7 +100,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             this.manualChooseMentor(!!dto.Configuration.MentorNode);
             
             this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskSqlEtlTransformationModel(x, false, false)));
-            this.sqlTables(dto.Configuration.SqlTables.map(x => new ongoingTaskSqlEtlTableModel(x, false)));            
+            this.sqlTables(dto.Configuration.SqlTables.map(x => new ongoingTaskSqlEtlTableModel(x, false)));
         }        
     }
 
@@ -111,7 +111,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             EtlType: "Sql",
             ConnectionStringName: this.connectionStringName(),
             AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
-            Disabled: false,                     
+            Disabled: false,
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined, 
             FactoryName: "System.Data.SqlClient",
             ForceQueryRecompile: this.forceRecompileQuery(),
@@ -119,7 +119,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             CommandTimeout: this.commandTimeout() || null,
             QuoteTables: this.tableQuotation(),
             Transforms: this.transformationScripts().map(x => x.toDto()),
-            SqlTables: this.sqlTables().map(x => x.toDto())     
+            SqlTables: this.sqlTables().map(x => x.toDto())
         
         } as Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration;
     }
@@ -127,11 +127,11 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
     static empty(): ongoingTaskSqlEtlEditModel {
         return new ongoingTaskSqlEtlEditModel(
             {
-                TaskName: "", 
+                TaskName: "",
                 TaskType: "SqlEtl",
-                TaskState: "Enabled",               
-                TaskConnectionStatus: "Active",                
-                Configuration: {                
+                TaskState: "Enabled",
+                TaskConnectionStatus: "Active",
+                Configuration: {
                      ForceQueryRecompile: false,
                      ParameterizeDeletes: false,
                      QuoteTables: false,

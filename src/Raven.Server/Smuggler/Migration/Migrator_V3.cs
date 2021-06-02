@@ -122,10 +122,10 @@ namespace Raven.Server.Smuggler.Migration
                 SkipRevisionCreation = true
             };
 
-            destination.Initialize(options, parametersResult, _buildVersion);
+            destination.InitializeAsync(options, parametersResult, _buildVersion);
             using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var documentActions = destination.Documents())
+            await using (var documentActions = destination.Documents())
             {
                 var sp = Stopwatch.StartNew();
 
@@ -164,13 +164,13 @@ namespace Raven.Server.Smuggler.Migration
                         {
                             Parameters.Result.Tombstones.ReadCount++;
                             var id = StreamSource.GetLegacyAttachmentId(key);
-                            documentActions.DeleteDocument(id);
+                            await documentActions.DeleteDocumentAsync(id);
                             continue;
                         }
 
                         var contextToUse = documentActions.GetContextForNewDocument();
                         metadata = GetCleanMetadata(metadata, contextToUse);
-                        WriteDocumentWithAttachment(documentActions, contextToUse, dataStream, key, metadata);
+                        await WriteDocumentWithAttachmentAsync(documentActions, contextToUse, dataStream, key, metadata);
 
                         Parameters.Result.Documents.ReadCount++;
                         if (Parameters.Result.Documents.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
@@ -258,7 +258,7 @@ namespace Raven.Server.Smuggler.Migration
                                                     $"error: {responseString}");
             }
 
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
+            await using (var responseStream = await response.Content.ReadAsStreamAsync())
             {
                 var headersList = await context.ReadForMemoryAsync(responseStream, "ravenfs-headers-list");
                 if (headersList.TryGet("Results", out BlittableJsonReaderArray headers) == false)
@@ -317,8 +317,8 @@ namespace Raven.Server.Smuggler.Migration
                                                     $"error: {responseString}");
             }
 
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
-            using (var stream = new GZipStream(responseStream, mode: CompressionMode.Decompress))
+            await using (var responseStream = await response.Content.ReadAsStreamAsync())
+            await using (var stream = new GZipStream(responseStream, mode: CompressionMode.Decompress))
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(stream, context, Parameters.Database))
             {
@@ -335,7 +335,7 @@ namespace Raven.Server.Smuggler.Migration
 
                 var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
-                return smuggler.Execute();
+                return await smuggler.ExecuteAsync();
             }
         }
 

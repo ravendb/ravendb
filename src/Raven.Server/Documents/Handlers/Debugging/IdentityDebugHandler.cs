@@ -7,8 +7,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class IdentityDebugHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/identities", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task GetIdentities()
+        [RavenAction("/databases/*/debug/identities", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task GetIdentities()
         {
             var start = GetStart();
             var pageSize = GetPageSize();
@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
@@ -34,8 +34,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
     }
 }

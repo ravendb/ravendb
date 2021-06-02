@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -27,6 +28,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Exceptions;
+using Voron.Util.Settings;
 
 namespace Raven.Server.Documents
 {
@@ -80,6 +82,7 @@ namespace Raven.Server.Documents
         internal class TestingStuff
         {
             internal Action<ServerStore> BeforeHandleClusterDatabaseChanged;
+            internal Action<DocumentDatabase> AfterDatabaseCreation;
             internal int? HoldDocumentDatabaseCreation = null;
             internal bool PreventedRehabOfIdleDatabase = false;
         }
@@ -384,9 +387,12 @@ namespace Raven.Server.Documents
                             _logger.Info("Could not create database configuration", ex);
                     }
 
+                    
+
                     // this can happen if the database record was already deleted
                     if (configuration != null)
                     {
+                        CheckDatabasePathsIntersection(dbName, configuration);
                         DatabaseHelper.DeleteDatabaseFiles(configuration);
                     }
                 }
@@ -741,7 +747,15 @@ namespace Raven.Server.Documents
                 {
                     DeleteIfNeeded(databaseName, task);
                     task.Start(); // the semaphore will be released here at the end of the task
-                    task.ContinueWith(__ => _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
+                    task.ContinueWith(t =>
+                    {
+                        if (ForTestingPurposes?.AfterDatabaseCreation != null)
+                        {
+                            ForTestingPurposes.AfterDatabaseCreation.Invoke(t.GetAwaiter().GetResult());
+                        }
+
+                        _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _);
+                    }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
                 }
                 else
                     _databaseSemaphore.Release();
@@ -1166,8 +1180,7 @@ namespace Raven.Server.Documents
 
             database.DatabaseShutdownCompleted.Set();
         }
-        
-        
+
         public bool IsShardedDatabase(StringSegment databaseName)
         {
             if (IsDatabaseLoaded(databaseName))
@@ -1189,6 +1202,63 @@ namespace Raven.Server.Documents
                 }
 
                 return false;
+            }
+        }
+
+        private void CheckDatabasePathsIntersection(string databaseName, RavenConfiguration configuration)
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var allDatabasesRecords = _serverStore.Cluster.GetAllDatabases(context);
+
+                foreach (var currRecord in allDatabasesRecords)
+                {
+                    if (currRecord.DatabaseName.Equals(databaseName))
+                        continue;
+
+                    RavenConfiguration currentConfiguration;
+                    try
+                    {
+                        currentConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true, 
+                            ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: currRecord);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Could not create database configuration", e);
+                        continue;
+                    }
+
+                    CheckConfigurationPaths(configuration, currentConfiguration, databaseName, currRecord.DatabaseName);
+                }
+            }
+        }
+
+        private void CheckConfigurationPaths(RavenConfiguration parentConfiguration, RavenConfiguration currentConfiguration, string databaseName, string currentDatabaseName)
+        {
+            if (PathUtil.IsSubDirectory(currentConfiguration.Core.DataDirectory.FullPath, parentConfiguration.Core.DataDirectory.FullPath))
+            {
+                throw new InvalidOperationException($"Cannot delete database {databaseName} from {parentConfiguration.Core.DataDirectory.FullPath}. " +
+                                                    $"There is an intersection with database {currentDatabaseName} located in {currentConfiguration.Core.DataDirectory.FullPath}.");
+            }
+            if (currentConfiguration.Storage.TempPath != null && parentConfiguration.Storage.TempPath != null
+                                                           && PathUtil.IsSubDirectory(currentConfiguration.Storage.TempPath.FullPath, parentConfiguration.Storage.TempPath.FullPath))
+            {
+                throw new InvalidOperationException($"Cannot delete database {databaseName} from {parentConfiguration.Storage.TempPath.FullPath}. " +
+                                                    $"There is an intersection with database {currentDatabaseName} Temp file located in {currentConfiguration.Storage.TempPath.FullPath}.");
+            }
+            if (currentConfiguration.Indexing.StoragePath != null && parentConfiguration.Indexing.StoragePath != null
+                                                               && PathUtil.IsSubDirectory(currentConfiguration.Indexing.StoragePath.FullPath, parentConfiguration.Indexing.StoragePath.FullPath))
+            {
+                throw new InvalidOperationException($"Cannot delete database {databaseName} from {parentConfiguration.Indexing.StoragePath.FullPath}. " +
+                                                    $"There is an intersection with database {currentDatabaseName} located in {currentConfiguration.Indexing.StoragePath.FullPath}.");
+            }
+            if (currentConfiguration.Indexing.TempPath != null && parentConfiguration.Indexing.TempPath != null
+                                                            && PathUtil.IsSubDirectory(currentConfiguration.Indexing.TempPath.FullPath, parentConfiguration.Indexing.TempPath.FullPath))
+            {
+                throw new InvalidOperationException($"Cannot delete database {databaseName} from {parentConfiguration.Indexing.TempPath.FullPath}. " +
+                                                    $"There is an intersection with database {currentDatabaseName} Temp file located in {currentConfiguration.Indexing.TempPath.FullPath}.");
             }
         }
     }

@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using FastTests;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void LazyLoadResultShouldBeUpToDateEvenIfAggressiveCacheIsEnabled()
+        public async Task LazyLoadResultShouldBeUpToDateEvenIfAggressiveCacheIsEnabled()
         {
             using (var store = GetDocumentStore())
             {
@@ -37,8 +38,6 @@ namespace SlowTests.Issues
                     // make sure that object is cached
                     using (var session = store.OpenSession())
                     {
-                        //store.Changes().Task.Result.WaitForAllPendingSubscriptions();
-
                         var users = session.Load<User>(new[] { "users/1" });
 
                         Assert.Equal("Arek", users["users/1"].Name);
@@ -52,6 +51,9 @@ namespace SlowTests.Issues
                         Assert.Equal("Arek", users.Value["users/1"].Name);
                     }
 
+                    var requestExecutor = store.GetRequestExecutor();
+                    var before = requestExecutor.Cache.Generation;
+
                     using (var session = store.OpenSession())
                     {
                         session.Store(new User
@@ -61,6 +63,7 @@ namespace SlowTests.Issues
                         });
                         session.SaveChanges();
                     }
+                    await WaitAndAssertForGreaterThanAsync(() => Task.FromResult(requestExecutor.Cache.Generation), before);
 
                     using (var session = store.OpenSession())
                     {
@@ -71,6 +74,6 @@ namespace SlowTests.Issues
                     }
                 }
             }
-        } 
+        }
     }
 }

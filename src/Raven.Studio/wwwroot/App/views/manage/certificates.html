@@ -191,10 +191,13 @@
                                     </div>
                                     <div class="permissions">
                                         <h5><i class="icon-database"></i> DATABASE PERMISSIONS</h5>
-                                        <div class="flex-horizontal flex-wrap" data-bind="foreach: $root.resolveDatabasesAccess($data)">
-                                            <strong data-bind="text: $data"></strong>
+                                        <div class="flex-horizontal flex-wrap" data-bind="foreach: $root.databasesAccessInfo($data)">
+                                            <div class="margin-right" data-bind="attr: { title: $root.getAccessInfoText(accessLevel) }">
+                                                <strong data-bind="text: dbName"></strong>
+                                                <i data-bind="attr: { class: $root.getAccessColor(accessLevel) + ' ' + $root.getAccessIcon(accessLevel) }"></i>
+                                            </div>
                                         </div>
-                                        <strong class="flex-horizontal flex-wrap text-danger" data-bind="visible: !$root.resolveDatabasesAccess($data).length">
+                                        <strong class="flex-horizontal flex-wrap text-danger" data-bind="visible: !$root.databasesAccessInfo($data).length">
                                             None
                                         </strong>
                                     </div>
@@ -355,16 +358,21 @@
                                         <div data-bind="validationOptions: { insertMessages: false }">
                                             <div class="radio radio-default radio-inline">
                                                 <input type="radio" value="Admin"
-                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_admin_' + $index(), name: 'accessLevel_' + $index() }">
-                                                <label data-bind="attr: { for: 'accessLevel_admin_' + $index() }"> Admin </label>
+                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_admin_' + $index(), name: 'accessLevel_' + $index() }" />
+                                                <label class="text-success" data-bind="attr: { for: 'accessLevel_admin_' + $index() }"> Admin </label>
                                             </div>
                                             <div class="radio radio-default radio-inline">
                                                 <input type="radio" value="ReadWrite"
-                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_rw_' + $index(), name: 'accessLevel_' + $index() }">
-                                                <label data-bind="attr: { for: 'accessLevel_rw_' + $index() }"> Read/Write </label>
+                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_rw_' + $index(), name: 'accessLevel_' + $index() }" />
+                                                <label class="text-warning" data-bind="attr: { for: 'accessLevel_rw_' + $index() }"> Read/Write </label>
+                                            </div>
+                                            <div class="radio radio-default radio-inline">
+                                                <input type="radio" value="Read"
+                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_r_' + $index(), name: 'accessLevel_' + $index() }" />
+                                                <label class='text-danger' data-bind="attr: { for: 'accessLevel_r_' + $index() }"> Read </label>
                                             </div>
                                         </div>
-                                        <a href="#" data-bind="click: _.partial($root.deletePermission, $data)">
+                                        <a href="#" data-bind="click: _.partial($root.deletePermission, $data)" title="Delete this database permission">
                                             <i class="icon-trash"></i>
                                         </a>
                                     </li>

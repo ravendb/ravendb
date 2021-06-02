@@ -20,11 +20,17 @@ class popoverUtils {
         _.assign(options, extraOptions);
         const popover = selector.popover(options);
         
-        const scheduleHide = (self: HTMLElement) => hideHandler = setTimeout(() => {
-            if (!overElement) {
-                $(self).popover("hide");
-                lastHideTime = new Date().getTime();
+        const scheduleHide = (self: HTMLElement, tip: JQuery) => hideHandler = setTimeout(() => {
+            const elementStillInDom = document.contains(self);
+            if (elementStillInDom) {
+                if (!overElement) {
+                    $(self).popover("hide");
+                    lastHideTime = new Date().getTime();
+                }
+            } else {
+                $(tip).remove();
             }
+           
         }, 300);
         
         const maybeCancelHide = () => {
@@ -40,7 +46,7 @@ class popoverUtils {
             $tip
                 .on("mouseleave.popover", () => {
                     overElement = false;
-                    scheduleHide(popover[0]);
+                    scheduleHide(popover[0], $tip);
                 })
                 .on("mouseenter.popover", () => {
                     overElement = true;
@@ -67,8 +73,9 @@ class popoverUtils {
                 }
             }).on("mouseleave", function () {
                 const self = this;
+                const $tip = $(self).data('bs.popover').$tip;
                 overElement = false;
-                scheduleHide(self);
+                scheduleHide(self, $tip);
             });
     }
 }

@@ -11,7 +11,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 {
     public class DatabaseNotificationCenterHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/notification-center/watch", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
+        [RavenAction("/databases/*/notification-center/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task Get()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
@@ -28,7 +28,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                     foreach (var operation in Database.Operations.GetActive().OrderBy(x => x.Description.StartTime))
                     {
-                        var action = OperationChanged.Create(Database.Name,operation.Id, operation.Description, operation.State, operation.Killable);
+                        var action = OperationChanged.Create(Database.Name, operation.Id, operation.Description, operation.State, operation.Killable);
 
                         await writer.WriteToWebSocket(action.ToJson());
                     }
@@ -38,7 +38,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             }
         }
 
-        [RavenAction("/databases/*/notification-center/dismiss", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/notification-center/dismiss", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public Task DismissPost()
         {
             var id = GetStringQueryString("id");
@@ -52,7 +52,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             return NoContent();
         }
 
-        [RavenAction("/databases/*/notification-center/postpone", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/notification-center/postpone", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public Task PostponePost()
         {
             var id = GetStringQueryString("id");

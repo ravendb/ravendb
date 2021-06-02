@@ -63,9 +63,8 @@ namespace Lucene.Net.Search.Vectorhighlight
 
         public void flatten(Query sourceQuery, Dictionary<Query, Query> flatQueries)
         {
-            if (sourceQuery is BooleanQuery)
+            if (sourceQuery is BooleanQuery bq)
             {
-                BooleanQuery bq = (BooleanQuery)sourceQuery;
                 foreach (BooleanClause clause in bq.GetClauses())
                 {
                     if (!clause.IsProhibited)
@@ -77,9 +76,8 @@ namespace Lucene.Net.Search.Vectorhighlight
                 if (!flatQueries.ContainsKey(sourceQuery))
                     flatQueries.Add(sourceQuery, sourceQuery);
             }
-            else if (sourceQuery is DisjunctionMaxQuery)
+            else if (sourceQuery is DisjunctionMaxQuery dmq)
             {
-                DisjunctionMaxQuery dmq = (DisjunctionMaxQuery)sourceQuery;
                 foreach (Query query in dmq)
                 {
                     flatten(query, flatQueries);
@@ -90,11 +88,10 @@ namespace Lucene.Net.Search.Vectorhighlight
                 if (!flatQueries.ContainsKey(sourceQuery))
                     flatQueries.Add(sourceQuery, sourceQuery);
             }
-            else if (sourceQuery is PhraseQuery)
+            else if (sourceQuery is PhraseQuery pq)
             {
                 if (!flatQueries.ContainsKey(sourceQuery))
                 {
-                    PhraseQuery pq = (PhraseQuery)sourceQuery;
                     if (pq.GetTerms().Length > 1)
                         flatQueries.Add(pq, pq);
                     else if (pq.GetTerms().Length == 1)
@@ -239,15 +236,14 @@ namespace Lucene.Net.Search.Vectorhighlight
         {
             if (!fieldMatch)
                 return null;
-            if (query is TermQuery)
-                return ((TermQuery)query).Term.Field;
+            if (query is TermQuery termQuery)
+                return termQuery.Term.Field;
 
-            if (query is PrefixQuery)
-                return ((PrefixQuery)query).Prefix.Field;
+            if (query is PrefixQuery prefixQuery)
+                return prefixQuery.Prefix.Field;
 
-            if (query is PhraseQuery)
+            if (query is PhraseQuery pq)
             {
-                PhraseQuery pq = (PhraseQuery)query;
                 Term[] terms = pq.GetTerms();
                 return terms[0].Field;
             }
@@ -282,13 +278,13 @@ namespace Lucene.Net.Search.Vectorhighlight
             foreach (Query query in flatQueries.Keys)
             {
                 List<String> termSet = GetTermSet(query);
-                if (query is TermQuery)
-                    termSet.Add(((TermQuery)query).Term.Text);
-                else if (query is PrefixQuery)
-                    termSet.Add(((PrefixQuery)query).Prefix.Text + "*");
-                else if (query is PhraseQuery)
+                if (query is TermQuery termQuery)
+                    termSet.Add(termQuery.Term.Text);
+                else if (query is PrefixQuery prefixQuery)
+                    termSet.Add(prefixQuery.Prefix.Text + "*");
+                else if (query is PhraseQuery phraseQuery)
                 {
-                    foreach (Term term in ((PhraseQuery)query).GetTerms())
+                    foreach (Term term in phraseQuery.GetTerms())
                         termSet.Add(term.Text);
                 }
                 else
@@ -393,17 +389,16 @@ namespace Lucene.Net.Search.Vectorhighlight
 
             public void Add(Query query)
             {
-                if (query is TermQuery)
+                if (query is TermQuery termQuery)
                 {
-                    AddTerm(((TermQuery)query).Term.Text, query.Boost);
+                    AddTerm(termQuery.Term.Text, query.Boost);
                 }
-                else if (query is PrefixQuery)
+                else if (query is PrefixQuery prefixQuery)
                 {
-                    AddTerm(((PrefixQuery)query).Prefix.Text + "*", query.Boost);
+                    AddTerm(prefixQuery.Prefix.Text + "*", query.Boost);
                 }
-                else if (query is PhraseQuery)
+                else if (query is PhraseQuery pq)
                 {
-                    PhraseQuery pq = (PhraseQuery)query;
                     Term[] terms = pq.GetTerms();
                     HashMap<String, QueryPhraseMap> map = subMap;
                     QueryPhraseMap qpm = null;

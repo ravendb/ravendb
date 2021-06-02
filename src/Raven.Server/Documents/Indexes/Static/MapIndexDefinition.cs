@@ -7,6 +7,7 @@ using Raven.Server.Extensions;
 using Raven.Server.Json;
 
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -19,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public readonly IndexDefinition IndexDefinition;
 
         public MapIndexDefinition(IndexDefinition definition, IEnumerable<string> collections, string[] outputFields, bool hasDynamicFields, bool hasCompareExchange, long indexVersion)
-            : base(definition.Name, collections, definition.LockMode ?? IndexLockMode.Unlock, definition.Priority ?? IndexPriority.Normal, GetFields(definition, outputFields), indexVersion)
+            : base(definition.Name, collections, definition.LockMode ?? IndexLockMode.Unlock, definition.Priority ?? IndexPriority.Normal, definition.State ??IndexState.Normal, GetFields(definition, outputFields), indexVersion, definition.DeploymentMode)
         {
             _hasDynamicFields = hasDynamicFields;
             _hasCompareExchange = hasCompareExchange;
@@ -49,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return result.ToArray();
         }
 
-        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             var builder = IndexDefinition.ToJson();
             using (var json = context.ReadObject(builder, nameof(IndexDefinition), BlittableJsonDocumentBuilder.UsageMode.ToDisk))
@@ -59,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistMapFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             writer.WritePropertyName(nameof(MapFields));
             writer.WriteStartArray();
@@ -94,6 +95,7 @@ namespace Raven.Server.Documents.Indexes.Static
             definition.Type = IndexDefinition.Type;
             definition.LockMode = LockMode;
             definition.Priority = Priority;
+            definition.State = State;
             return definition;
         }
 
@@ -118,15 +120,14 @@ namespace Raven.Server.Documents.Indexes.Static
             using (var tx = environment.ReadTransaction())
             {
                 using (var stream = GetIndexDefinitionStream(environment, tx))
-                using (var reader = context.ReadForDisk(stream, "index/def"))
+                using (var reader = context.Sync.ReadForDisk(stream, "index/def"))
                 {
                     var definition = ReadIndexDefinition(reader);
                     definition.Name = ReadName(reader);
                     definition.LockMode = ReadLockMode(reader);
                     definition.Priority = ReadPriority(reader);
-
+                    definition.State = ReadState(reader);
                     version = ReadVersion(reader);
-
                     return definition;
                 }
             }

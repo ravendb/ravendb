@@ -50,6 +50,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             var definition = AutoMapReduceIndexDefinition.Load(environment);
             var instance = new AutoMapReduceIndex(definition);
             instance.Initialize(environment, documentDatabase, documentDatabase.Configuration.Indexing, documentDatabase.Configuration.PerformanceHints);
+            definition.DeploymentMode = documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode;
 
             return instance;
         }

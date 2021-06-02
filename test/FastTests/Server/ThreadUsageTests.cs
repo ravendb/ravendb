@@ -1,10 +1,6 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Indexes;
-using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,20 +14,28 @@ namespace FastTests.Server
         }
 
         [Fact]
-        public async Task ThreadUsage_WhenThreadsHaveSameCpuUsageAndTotalProcessorTime_ShouldListThemBoth()
+        public void ThreadUsage_WhenThreadsHaveSameCpuUsageAndTotalProcessorTime_ShouldListThemBoth()
         {
-            using (var database = CreateDocumentDatabase())
-            {
-                using var index1 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Companies", new[] { new AutoIndexField { Name = "Name" } }), Guid.NewGuid().ToString());
-                using var index2 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Age" } }), Guid.NewGuid().ToString());
-                {
-                    var threadsUsage = new ThreadsUsage();
-                    var threadsInfo = threadsUsage.Calculate();
-                    var threadNames = threadsInfo.List.Select(ti => ti.Name).ToArray();
-                    Assert.Contains(index1._indexingThread.Name, threadNames);
-                    Assert.Contains(index2._indexingThread.Name, threadNames);
-                }
-            }
+            using var database = CreateDocumentDatabase();
+
+            using var index1 = MapIndex.CreateNew(new IndexDefinition {Name = "Companies_ByName", Maps = { "from company in docs.Companies select new { company.Name }" },}, database);
+            using var index2 = MapIndex.CreateNew(new IndexDefinition {Name = "Users_ByName", Maps = {"from user in docs.Orders select new { user.Name }"},}, database);
+            using var index3 = MapIndex.CreateNew(new IndexDefinition {Name = "Orders_ByName", Maps = { "from order in docs.Orders select new { order.Name }" },}, database);
+
+            index1.Start();
+            index2.Start();
+            index3.Start();
+
+            var threadsUsage = new ThreadsUsage();
+            var threadsInfo = threadsUsage.Calculate();
+            var threadNames = threadsInfo.List.Select(ti => ti.Name).OrderBy(n => n).ToArray();
+
+            RavenTestHelper.AssertAll(() => string.Join('\n', threadNames.Select(s => $"\"{s}\"")),
+                () => AssertContains(index1._indexingThread.Name),
+                () => AssertContains(index2._indexingThread.Name),
+                () => AssertContains(index3._indexingThread.Name));
+
+            void AssertContains(string threadName) => Assert.True(threadNames.Contains(threadName), $"Not found : {threadName}");
         }
     }
 }

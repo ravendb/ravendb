@@ -4,6 +4,7 @@ using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

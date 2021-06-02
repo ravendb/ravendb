@@ -9,8 +9,8 @@ namespace Raven.Server.Documents.Handlers
 {
     public class SortersHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/sorters", "GET", AuthorizationStatus.ValidUser)]
-        public Task Get()
+        [RavenAction("/databases/*/sorters", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task Get()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -26,9 +26,8 @@ namespace Raven.Server.Documents.Handlers
                     sorters = new Dictionary<string, SorterDefinition>();
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-
                     writer.WriteStartObject();
 
                     writer.WriteArray(context, "Sorters", sorters.Values, (w, c, sorter) =>
@@ -48,9 +47,6 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
-
     }
 }

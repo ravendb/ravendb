@@ -14,6 +14,8 @@ namespace Raven.Client.Http
 {
     public class HttpCache : IDisposable, ILowMemoryHandler
     {
+        internal const string NotFoundResponse = "404 Response";
+
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<HttpCache>("Client");
 
         private readonly long _maxSize;
@@ -83,8 +85,6 @@ namespace Raven.Client.Http
                 // Do the actual deallocation. 
                 if (Allocation != null)
                 {
-                    
-
                     Cache._unmanagedBuffersPool.Return(Allocation);
                     Interlocked.Add(ref Cache._totalSize, -Size);
                 }
@@ -112,7 +112,7 @@ namespace Raven.Client.Http
                 if (_usages > 0)
                     throw new LowMemoryException("Detected a leak on HttpCache when running the finalizer. See: https://issues.hibernatingrhinos.com/issue/RavenDB-9737");
 
-        }
+            }
 #endif
         }
 
@@ -129,7 +129,7 @@ namespace Raven.Client.Http
 #endif 
             var mem = _unmanagedBuffersPool.Allocate(result.Size);
             result.CopyTo(mem.Address);
-            if (Interlocked.Add(ref _totalSize, result.Size) > _maxSize)
+            if (Interlocked.Add(ref _totalSize, mem.SizeInBytes) > _maxSize)
             {
                 if (_isFreeSpaceRunning == false)
                     Task.Run(FreeSpace);
@@ -166,7 +166,7 @@ namespace Raven.Client.Http
             var flag = aggressivelyCached ? ItemFlags.AggressivelyCached : ItemFlags.None;
             var httpCacheItem = new HttpCacheItem
             {
-                ChangeVector = "404 Response",
+                ChangeVector = NotFoundResponse,
                 Ptr = null,
                 Size = 0,
                 Allocation = null,
@@ -203,7 +203,7 @@ namespace Raven.Client.Http
                 if (_items.Count == 0)
                     return;
 
-                Debug.Assert(_isFreeSpaceRunning); 
+                Debug.Assert(_isFreeSpaceRunning);
 
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Started to clear the http cache. Items: {_items.Count:#,#;;0}");
@@ -256,7 +256,7 @@ namespace Raven.Client.Http
             finally
             {
                 _isFreeSpaceRunning.Lower();
-            }            
+            }
         }
 
         public struct ReleaseCacheItem : IDisposable

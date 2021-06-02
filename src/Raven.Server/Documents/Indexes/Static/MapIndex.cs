@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
@@ -109,6 +110,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
         {
             var staticEntries = _compiled.OutputFields.ToHashSet();
+            staticEntries.Add(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
 
             var dynamicEntries = GetDynamicEntriesFields(staticEntries);
 
@@ -144,6 +146,17 @@ namespace Raven.Server.Documents.Indexes.Static
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
         {
             return _compiled.ReferencedCollections;
+        }
+
+        public override bool WorksOnAnyCollection(HashSet<string> collections)
+        {
+            if (base.WorksOnAnyCollection(collections))
+                return true;
+
+            if (_referencedCollections == null)
+                return false;
+
+            return _referencedCollections.Overlaps(collections);
         }
 
         public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)

@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -23,7 +22,9 @@ namespace Raven.Server.ServerWide.Commands
 
         public abstract DynamicJsonValue ValueToJson();
 
-        public virtual void UpdateValue(long index) { }
+        public virtual void UpdateValue(ClusterOperationContext context, long index)
+        {
+        }
 
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {

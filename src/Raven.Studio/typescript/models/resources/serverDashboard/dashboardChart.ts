@@ -38,7 +38,7 @@ class dashboardChart {
     
     private xScale: d3.time.Scale<number, number>;
     
-    private containerSelector: string;
+    private readonly containerSelector: string;
     
     constructor(containerSelector: string, opts?: chartOpts) {
         this.opts = opts || {} as any;
@@ -53,7 +53,7 @@ class dashboardChart {
         const $container = $(containerSelector);
         
         this.width = $container.innerWidth();
-        this.height = $container.innerHeight();
+        this.height = $container.innerHeight() - 1;
 
         this.svg = container
             .append("svg")
@@ -117,7 +117,7 @@ class dashboardChart {
         const $container = $(this.containerSelector);
         
         this.width = $container.innerWidth();
-        this.height = $container.innerHeight();
+        this.height = $container.innerHeight() - 1;
 
         this.svg = container
             .select("svg")

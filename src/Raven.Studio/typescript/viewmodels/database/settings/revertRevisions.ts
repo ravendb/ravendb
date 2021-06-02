@@ -11,7 +11,8 @@ class revertRevisions extends viewModelBase {
     revisionsUrl: KnockoutComputed<string>;
     
     datePickerOptions = {
-        format: revertRevisionsRequest.defaultDateFormat
+        format: revertRevisionsRequest.defaultDateFormat,
+        maxDate: moment.utc().add(10, "minutes").toDate() // add 10 minutes to avoid issues with time skew
     };
     
     spinners = {

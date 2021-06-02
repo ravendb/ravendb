@@ -44,6 +44,7 @@ class appUrl {
         editSubscription: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId, taskName)),
         editRavenEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase(), taskId)),
         editSqlEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSqlEtl(appUrl.currentDatabase(), taskId)),
+        editOlapEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditOlapEtl(appUrl.currentDatabase(), taskId)),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         terms: (indexName?: string) => ko.pureComputed(() => appUrl.forTerms(indexName, appUrl.currentDatabase())),
         importDatabaseFromFileUrl: ko.pureComputed(() => appUrl.forImportDatabaseFromFile(appUrl.currentDatabase())),
@@ -61,6 +62,7 @@ class appUrl {
         editSubscriptionTaskUrl: ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase())),
         editRavenEtlTaskUrl: ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase())),
         editSqlEtlTaskUrl: ko.pureComputed(() => appUrl.forEditSqlEtl(appUrl.currentDatabase())),
+        editOlapEtlTaskUrl: ko.pureComputed(() => appUrl.forEditOlapEtl(appUrl.currentDatabase())),
         csvImportUrl: ko.pureComputed(() => appUrl.forCsvImport(appUrl.currentDatabase())),
         status: ko.pureComputed(() => appUrl.forStatus(appUrl.currentDatabase())),
 
@@ -85,7 +87,9 @@ class appUrl {
         timeSeries: ko.pureComputed(() => appUrl.forTimeSeries(appUrl.currentDatabase())),
         refresh: ko.pureComputed(() => appUrl.forRefresh(appUrl.currentDatabase())),
         customSorters: ko.pureComputed(() => appUrl.forCustomSorters(appUrl.currentDatabase())),
+        customAnalyzers: ko.pureComputed(() => appUrl.forCustomAnalyzers(appUrl.currentDatabase())),
         editCustomSorter: ko.pureComputed(() => appUrl.forEditCustomSorter(appUrl.currentDatabase())),
+        editCustomAnalyzer: ko.pureComputed(() => appUrl.forEditCustomAnalyzer(appUrl.currentDatabase())),
         connectionStrings: ko.pureComputed(() => appUrl.forConnectionStrings(appUrl.currentDatabase())),
         conflictResolution: ko.pureComputed(() => appUrl.forConflictResolution(appUrl.currentDatabase())),
 
@@ -190,6 +194,24 @@ class appUrl {
         return "#admin/settings/editServerWideExternalReplication" + replicationNamePart;
     }
 
+    static forServerWideCustomAnalyzers(): string {
+        return "#admin/settings/serverWideCustomAnalyzers";
+    }
+
+    static forEditServerWideCustomAnalyzer(serverWideCustomAnalyzerName? : string): string {
+        const analyzerNamePart = serverWideCustomAnalyzerName ? "?&analyzerName=" + encodeURIComponent(serverWideCustomAnalyzerName) : "";
+        return "#admin/settings/editServerWideCustomAnalyzer" + analyzerNamePart;
+    }
+
+    static forServerWideCustomSorters(): string {
+        return "#admin/settings/serverWideCustomSorters";
+    }
+
+    static forEditServerWideCustomSorter(serverWideCustomSorterName? : string): string {
+        const sorterNamePart = serverWideCustomSorterName ? "?&sorterName=" + encodeURIComponent(serverWideCustomSorterName) : "";
+        return "#admin/settings/editServerWideCustomSorter" + sorterNamePart;
+    }
+
     static forDatabases(databasesUrlAction?: "compact" | "restore", databaseToCompact?: string): string {
         let actionPart = "";
         
@@ -208,6 +230,10 @@ class appUrl {
     
     static forServerDashboard(): string {
         return "#dashboard";
+    }
+    
+    static forClusterDashboard(): string {
+        return "#clusterDashboard";
     }
 
     static forEditCmpXchg(key: string, db: database | databaseInfo) {
@@ -346,11 +372,22 @@ class appUrl {
         return "#databases/settings/customSorters?" + appUrl.getEncodedDbPart(db);
     }
 
+    static forCustomAnalyzers(db: database | databaseInfo): string {
+        return "#databases/settings/customAnalyzers?" + appUrl.getEncodedDbPart(db);
+    }
+
     static forEditCustomSorter(db: database | databaseInfo, sorterName?: string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const namePart = sorterName ? "&name=" + encodeURIComponent(sorterName) : "";
 
         return "#databases/settings/editCustomSorter?" + databasePart + namePart;
+    }
+
+    static forEditCustomAnalyzer(db: database | databaseInfo, analyzerName?: string): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const namePart = analyzerName ? "&name=" + encodeURIComponent(analyzerName) : "";
+
+        return "#databases/settings/editCustomAnalyzer?" + databasePart + namePart;
     }
 
     static forConnectionStrings(db: database | databaseInfo, type?: string, name?: string): string {
@@ -545,6 +582,12 @@ class appUrl {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editSqlEtlTask?" + databasePart + taskPart;
+    }
+
+    static forEditOlapEtl(db: database | databaseInfo, taskId?: number): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const taskPart = taskId ? "&taskId=" + taskId : "";
+        return "#databases/tasks/editOlapEtlTask?" + databasePart + taskPart;
     }
     
     static forSampleData(db: database | databaseInfo): string {

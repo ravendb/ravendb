@@ -88,7 +88,7 @@ class ravenTaskTestMode {
         });
 
         this.validationGroup = ko.validatedObservable({
-            documentId : this.documentId
+            documentId: this.documentId
         });
     }
 
@@ -100,8 +100,6 @@ class ravenTaskTestMode {
     previewDocument() {
         const spinner = this.spinners.preview;
         const documentId: KnockoutObservable<string> = this.documentId;
-        const documentIdValidationGroup = this.validationGroup;
-        const db = this.db;
 
         spinner(true);
 
@@ -170,7 +168,7 @@ class ravenTaskTestMode {
 
 class editRavenEtlTask extends viewModelBase {
     
-    static readonly scriptNamePrefix = "Script #";
+    static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskRavenEtlTransformationModel.isApplyToAll;
 
     enableTestArea = ko.observable<boolean>(false);
@@ -307,7 +305,7 @@ class editRavenEtlTask extends viewModelBase {
 
             // override transforms - use only current transformation
             const transformationScriptDto = this.editedRavenEtl().editedTransformationScriptSandbox().toDto();
-            transformationScriptDto.Name = "Script #1"; // assign fake name
+            transformationScriptDto.Name = "Script_1"; // assign fake name
             dto.Transforms = [transformationScriptDto];
 
             if (!dto.Name) {
@@ -480,7 +478,7 @@ class editRavenEtlTask extends viewModelBase {
         router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
     }
 
-    createCollectionNameAutocompleter(usedCollections: KnockoutObservableArray<string>, collectionText: KnockoutObservable<string>) {
+    createCollectionNameAutoCompleter(usedCollections: KnockoutObservableArray<string>, collectionText: KnockoutObservable<string>) {
         return ko.pureComputed(() => {
             let result;
             const key = collectionText();
@@ -497,8 +495,8 @@ class editRavenEtlTask extends viewModelBase {
                 result = filteredOptions;
             }
             
-            if (!_.includes(this.editedRavenEtl().editedTransformationScriptSandbox().transformScriptCollections(), ongoingTaskEtlTransformationModel.applyToAllCollectionsText)) {
-                result.unshift(ongoingTaskEtlTransformationModel.applyToAllCollectionsText);
+            if (!_.includes(this.editedRavenEtl().editedTransformationScriptSandbox().transformScriptCollections(), ongoingTaskRavenEtlTransformationModel.applyToAllCollectionsText)) {
+                result.unshift(ongoingTaskRavenEtlTransformationModel.applyToAllCollectionsText);
             }
             
             return result;

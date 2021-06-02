@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
@@ -16,17 +17,19 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 {
-    public abstract class RestoreFromS3 : RavenTestBase
+    public abstract class RestoreFromS3 : CloudBackupTestBase
     {
-        protected RestoreFromS3(ITestOutputHelper output) : base(output)
+        private readonly bool _isCustom;
+        private readonly string _remoteFolderName;
+        protected RestoreFromS3(ITestOutputHelper output, bool isCustom = false) : base(output)
         {
+            _isCustom = isCustom;
+            _remoteFolderName = GetRemoteFolder(GetType().Name);
         }
-
-        protected readonly string _cloudPathPrefix = $"{nameof(RestoreFromS3)}-{Guid.NewGuid()}";
 
         protected async Task can_backup_and_restore_internal()
         {
-            var defaultS3Settings = GetS3Settings();
+            var s3Settings = GetS3Settings();
 
             using (var store = GetDocumentStore())
             {
@@ -37,35 +40,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    S3Settings = defaultS3Settings,
-                    IncrementalBackupFrequency = "0 0 1 1 *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                PeriodicBackupStatus status = null;
-                var value = WaitForValue(() =>
-                {
-                    status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, expectedVal: 4, timeout: 30_000);
-                Assert.True(4 == value, $"gotStatus? {status != null}, Status Error: {status?.Error?.Exception}," +
-                                        $" S3 Error: {status?.UploadToS3?.Exception}, LocalBackup Exception: {status?.LocalBackup?.Exception}");
-                Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
-
-                OperationState backupOperation = null;
-                var operationStatus = WaitForValue(() =>
-                {
-                    backupOperation = store.Maintenance.Send(new GetOperationStateOperation(status.LastOperationId.Value));
-                    return backupOperation.Status;
-                }, OperationStatus.Completed);
-                Assert.Equal(OperationStatus.Completed, operationStatus);
-
-                var backupResult = backupOperation.Result as BackupResult;
+                var config = Backup.CreateBackupConfiguration(s3Settings: s3Settings);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                var backupResult = (BackupResult)store.Maintenance.Send(new GetOperationStateOperation(Backup.GetBackupOperationId(store, backupTaskId))).Result;
                 Assert.NotNull(backupResult);
                 Assert.True(backupResult.Counters.Processed, "backupResult.Counters.Processed");
                 Assert.Equal(1, backupResult.Counters.ReadCount);
@@ -79,23 +56,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() =>
-                {
-                    status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, expectedVal: lastEtag, timeout: 30_000);
-                Assert.True(lastEtag == value, $"gotStatus? {status != null}, Status Error: {status?.Error?.Exception}," +
-                                               $" S3 Error: {status?.UploadToS3?.Exception}, LocalBackup Exception: {status?.LocalBackup?.Exception}");
-
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
+                s3Settings.RemoteFolderName = $"{s3Settings.RemoteFolderName}/{status.FolderName}";
 
-                var subfolderS3Settings = GetS3Settings(status.FolderName);
-
-                using (RestoreDatabaseFromCloud(
+                using (Backup.RestoreDatabaseFromCloud(
                     store,
-                    new RestoreFromS3Configuration { DatabaseName = databaseName, Settings = subfolderS3Settings, DisableOngoingTasks = true },
+                    new RestoreFromS3Configuration { DatabaseName = databaseName, Settings = s3Settings, DisableOngoingTasks = true },
                     TimeSpan.FromSeconds(60)))
                 {
                     using (var session = store.OpenAsyncSession(databaseName))
@@ -125,7 +93,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
         protected async Task can_backup_and_restore_snapshot_internal()
         {
-            var defaultS3Settings = GetS3Settings();
+            var s3Settings = GetS3Settings();
 
             using (var store = GetDocumentStore())
             {
@@ -151,24 +119,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    S3Settings = defaultS3Settings,
-                    IncrementalBackupFrequency = "0 0 1 1 *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                PeriodicBackupStatus backupStatus = null;
-                var value = WaitForValue(() =>
-                {
-                    backupStatus = store.Maintenance.Send(operation).Status;
-                    return backupStatus?.LastEtag;
-                }, expectedVal: 4, timeout: 30_000);
-                Assert.True(4 == value, $"gotStatus? {backupStatus != null}, Status Error: {backupStatus?.Error?.Exception}," +
-                                        $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
+                var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, s3Settings: s3Settings);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -180,33 +132,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-
-                var operationStatus = WaitForValue(() =>
-                {
-                    var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupStatus.LastOperationId.Value));
-                    return backupOperation.Status;
-                }, OperationStatus.Completed);
-                Assert.Equal(OperationStatus.Completed, operationStatus);
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() =>
-                {
-                    backupStatus = store.Maintenance.Send(operation).Status;
-                    return backupStatus?.LastEtag;
-                }, expectedVal: lastEtag, timeout: 30_000);
-                Assert.True(lastEtag == value, $"gotStatus? {backupStatus != null}, Status Error: {backupStatus?.Error?.Exception}," +
-                                               $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
+                var backupStatus = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
+                s3Settings.RemoteFolderName = $"{s3Settings.RemoteFolderName}/{backupStatus.FolderName}";
 
-                var subfolderS3Settings = GetS3Settings(backupStatus.FolderName);
-
-                using (RestoreDatabaseFromCloud(store,
+                using (Backup.RestoreDatabaseFromCloud(store,
                     new RestoreFromS3Configuration
                     {
                         DatabaseName = restoredDatabaseName,
-                        Settings = subfolderS3Settings
+                        Settings = s3Settings
                     },
                     TimeSpan.FromSeconds(60)))
                 {
@@ -242,7 +178,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
         protected async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_database_key_internal()
         {
-            var defaultS3Settings = GetS3Settings();
+            var s3Settings = GetS3Settings();
 
             var key = EncryptedServer(out var certificates, out string dbName);
 
@@ -264,36 +200,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(s3Settings: s3Settings, fullBackupFrequency: null, incrementalBackupFrequency: "0 */6 * * *", backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    S3Settings = defaultS3Settings,
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                PeriodicBackupStatus backupStatus = null;
-                var value = WaitForValue(() =>
-                {
-                    backupStatus = store.Maintenance.Send(operation).Status;
-                    return backupStatus?.LastEtag;
-                }, expectedVal: 1, timeout: 30_000);
-                Assert.True(1 == value, $"gotStatus? {backupStatus != null}, Status Error: {backupStatus?.Error?.Exception}," +
-                                        $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
-
-                var operationStatus = WaitForValue(() =>
-                {
-                    var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupStatus.LastOperationId.Value));
-                    return backupOperation.Status;
-                }, OperationStatus.Completed);
-                Assert.Equal(OperationStatus.Completed, operationStatus);
+                    EncryptionMode = EncryptionMode.UseDatabaseKey
+                });
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -306,22 +217,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() =>
-                {
-                    backupStatus = store.Maintenance.Send(operation).Status;
-                    return backupStatus?.LastEtag;
-                }, expectedVal: lastEtag, timeout: 30_000);
-                Assert.True(lastEtag == value, $"gotStatus? {backupStatus != null}, Status Error: {backupStatus?.Error?.Exception}," +
-                                               $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
+                var backupStatus = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
+                s3Settings.RemoteFolderName = $"{s3Settings.RemoteFolderName}/{backupStatus.FolderName}";
 
-                var subfolderS3Settings = GetS3Settings(backupStatus.FolderName);
-
-                using (RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
+                using (Backup.RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
                 {
-                    Settings = subfolderS3Settings,
+                    Settings = s3Settings,
                     DatabaseName = databaseName,
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
@@ -343,7 +246,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
         protected async Task incremental_and_full_check_last_file_for_backup_internal()
         {
-            var defaultS3Settings = GetS3Settings();
+            var s3Settings = GetS3Settings();
 
             using (var store = GetDocumentStore())
             {
@@ -353,32 +256,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    S3Settings = defaultS3Settings,
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                PeriodicBackupStatus backupStatus = null;
-                var value = WaitForValue(() =>
-                {
-                    backupStatus = store.Maintenance.Send(operation).Status;
-                    return backupStatus?.LastEtag;
-                }, expectedVal: 1, timeout: 30_000);
-                Assert.True(1 == value, $"gotStatus? {backupStatus != null}, Status Error: {backupStatus?.Error?.Exception}," +
-                                        $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
-
-                var operationStatus = WaitForValue(() =>
-                {
-                    var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupStatus.LastOperationId.Value));
-                    return backupOperation.Status;
-                }, OperationStatus.Completed);
-                Assert.Equal(OperationStatus.Completed, operationStatus);
+                var config = Backup.CreateBackupConfiguration(s3Settings: s3Settings, fullBackupFrequency: null, incrementalBackupFrequency: "0 */6 * * *");
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -388,25 +267,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() =>
-                {
-                    backupStatus = store.Maintenance.Send(operation).Status;
-                    return backupStatus?.LastEtag;
-                }, expectedVal: lastEtag, timeout: 30_000);
-                Assert.True(lastEtag == value, $"gotStatus? {backupStatus != null}, Status Error: {backupStatus?.Error?.Exception}," +
-                                               $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
-
-                Assert.Equal(OperationStatus.Completed, WaitForValue(() =>
-                {
-                    var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupStatus.LastOperationId.Value));
-                    return backupOperation.Status;
-                }, OperationStatus.Completed));
+                var backupStatus = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 string lastFileToRestore;
-                using (var client = new RavenAwsS3Client(defaultS3Settings))
+                using (var client = new RavenAwsS3Client(s3Settings))
                 {
-                    var fullBackupPath = $"{defaultS3Settings.RemoteFolderName}/{backupStatus.FolderName}";
+                    var fullBackupPath = $"{s3Settings.RemoteFolderName}/{backupStatus.FolderName}";
                     lastFileToRestore = (await client.ListObjectsAsync(fullBackupPath, string.Empty, false)).FileInfoDetails.Last().FullPath;
                 }
 
@@ -418,23 +284,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() =>
-                {
-                    backupStatus = store.Maintenance.Send(operation).Status;
-                    return backupStatus?.LastEtag;
-                }, expectedVal: lastEtag, timeout: 30_000);
-                Assert.True(lastEtag == value, $"gotStatus? {backupStatus != null}, Status Error: {backupStatus?.Error?.Exception}," +
-                                               $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                var subfolderS3Settings = GetS3Settings(backupStatus.FolderName);
+                s3Settings.RemoteFolderName = $"{s3Settings.RemoteFolderName}/{backupStatus.FolderName}";
 
-                using (RestoreDatabaseFromCloud(store,
+                using (Backup.RestoreDatabaseFromCloud(store,
                     new RestoreFromS3Configuration
                     {
-                        Settings = subfolderS3Settings,
+                        Settings = s3Settings,
                         DatabaseName = databaseName,
                         LastFileNameToRestore = lastFileToRestore
                     }))
@@ -454,7 +313,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
         protected async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key_internal()
         {
-            var defaultS3Settings = GetS3Settings();
+            var s3Settings = GetS3Settings();
             var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
@@ -475,38 +334,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(s3Settings: s3Settings, fullBackupFrequency: null, incrementalBackupFrequency: "0 */6 * * *", backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    S3Settings = defaultS3Settings,
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                PeriodicBackupStatus backupStatus = null;
-                var value = WaitForValue(() =>
-                {
-                    backupStatus = store.Maintenance.Send(operation).Status;
-                    return backupStatus?.LastEtag;
-                }, expectedVal: 1, timeout: 30_000);
-                Assert.True(1 == value, $"gotStatus? {backupStatus != null}, Status Error: {backupStatus?.Error?.Exception}," +
-                                   $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
-
-                var operationStatus = WaitForValue(() =>
-                {
-                    var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupStatus.LastOperationId.Value));
-                    return backupOperation.Status;
-                }, OperationStatus.Completed);
-                Assert.Equal(OperationStatus.Completed, operationStatus);
-
+                    Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                    EncryptionMode = EncryptionMode.UseProvidedKey
+                });
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -518,21 +351,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() =>
-                {
-                    backupStatus = store.Maintenance.Send(operation).Status;
-                    return backupStatus?.LastEtag;
-                }, expectedVal: lastEtag, timeout: 30_000);
-                Assert.True(lastEtag == value, $"gotStatus? {backupStatus != null}, Status Error: {backupStatus?.Error?.Exception}," +
-                                               $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
+                var backupStatus = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                var subfolderS3Settings = GetS3Settings(backupStatus.FolderName);
+                s3Settings.RemoteFolderName = $"{s3Settings.RemoteFolderName}/{backupStatus.FolderName}";
 
-                using (RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
+                using (Backup.RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
                 {
-                    Settings = subfolderS3Settings,
+                    Settings = s3Settings,
                     DatabaseName = databaseName,
                     EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
                     BackupEncryptionSettings = new BackupEncryptionSettings
@@ -557,7 +383,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         {
             var key = EncryptedServer(out var certificates, out string dbName);
 
-            var defaultS3Settings = GetS3Settings();
+            var s3Settings = GetS3Settings();
             using (var store = GetDocumentStore(new Options
             {
                 AdminCertificate = certificates.ServerCertificate.Value,
@@ -575,32 +401,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    S3Settings = defaultS3Settings,
-                    IncrementalBackupFrequency = "0 */6 * * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                PeriodicBackupStatus backupStatus = null;
-                var value = WaitForValue(() =>
-                {
-                    backupStatus = store.Maintenance.Send(operation).Status;
-                    return backupStatus?.LastEtag;
-                }, expectedVal: 1, timeout: 30_000);
-                Assert.True(1 == value, $"gotStatus? {backupStatus != null}, Status Error: {backupStatus?.Error?.Exception}," +
-                                        $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
-
+                var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, s3Settings: s3Settings);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                var backupStatus = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId)).Status;
                 var databaseName = GetDatabaseName();
                 var subfolderS3Settings = GetS3Settings(backupStatus.FolderName);
 
-                using (RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
+                s3Settings.RemoteFolderName = $"{s3Settings.RemoteFolderName}/{backupStatus.FolderName}";
+                using (Backup.RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
                 {
-                    Settings = subfolderS3Settings,
+                    Settings = s3Settings,
                     DatabaseName = databaseName,
                     EncryptionKey = key,
                     BackupEncryptionSettings = new BackupEncryptionSettings
@@ -618,13 +428,36 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        protected abstract S3Settings GetS3Settings(string subPath = null);
+        public S3Settings GetS3Settings(string subPath = null, [CallerMemberName] string caller = null)
+        {
+            var s3Settings = _isCustom ? CustomS3FactAttribute.S3Settings : AmazonS3FactAttribute.S3Settings;
+            if (s3Settings == null)
+                return null;
+
+            var remoteFolderName = $"{s3Settings.RemoteFolderName}/{_remoteFolderName}/{GetRemoteFolder(caller)}";
+            if (string.IsNullOrEmpty(subPath) == false)
+                remoteFolderName = $"{remoteFolderName}/{subPath}";
+
+            var settings = new S3Settings
+            {
+                BucketName = s3Settings.BucketName,
+                RemoteFolderName = remoteFolderName,
+                AwsAccessKey = s3Settings.AwsAccessKey,
+                AwsSecretKey = s3Settings.AwsSecretKey,
+                AwsRegionName = s3Settings.AwsRegionName
+            };
+
+            if (_isCustom)
+                settings.CustomServerUrl = s3Settings.CustomServerUrl;
+
+            return settings;
+        }
 
         public override void Dispose()
         {
             base.Dispose();
 
-            var s3Settings = GetS3Settings();
+            var s3Settings = _isCustom ? CustomS3FactAttribute.S3Settings : AmazonS3FactAttribute.S3Settings;
             if (s3Settings == null)
                 return;
 
@@ -632,7 +465,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             {
                 using (var s3Client = new RavenAwsS3Client(s3Settings))
                 {
-                    var cloudObjects = s3Client.ListObjectsAsync(s3Settings.RemoteFolderName, string.Empty, false).GetAwaiter().GetResult();
+                    var cloudObjects = s3Client.ListObjects($"{s3Settings.RemoteFolderName}/{_remoteFolderName}/", string.Empty, false, includeFolders: true);
                     var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
 
                     s3Client.DeleteMultipleObjects(pathsToDelete);

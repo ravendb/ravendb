@@ -1,101 +1,209 @@
 ﻿/// <reference path="../../../typings/tsd.d.ts"/>
+import database = require("models/resources/database");
 
 class accessManager {
 
     static default = new accessManager();
     
     static clientCertificateThumbprint = ko.observable<string>();
+   
+    static databasesAccess: dictionary<databaseAccessLevel> = {};
     
     securityClearance = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>();
+    unsecureServer = ko.observable<boolean>(false);
 
     private allLevels = ko.pureComputed(() => true);
     
     // cluster node has the same privileges as cluster admin
-    clusterAdminOrClusterNode = ko.pureComputed(() => this.securityClearance() === "ClusterAdmin" || this.securityClearance() === "ClusterNode");
-        
-    operatorAndAbove = ko.pureComputed(() => { 
+    isClusterAdminOrClusterNode = ko.pureComputed(() => {
+        const clearance = this.securityClearance();
+        return clearance === "ClusterAdmin" || clearance === "ClusterNode";
+    });
+    
+    isOperatorOrAbove = ko.pureComputed(() => {
          const clearance = this.securityClearance();
          return clearance === "ClusterAdmin" || clearance === "ClusterNode" || clearance === "Operator";
     });
+
+    isAdminByDbName(dbName: string): boolean {
+        return this.getEffectiveDatabaseAccessLevel(dbName) === "DatabaseAdmin";
+    }
     
-    private createSecurityRule(enabledPredicate: KnockoutObservable<boolean>, requiredRoles: string) {
-        return ko.pureComputed(() => {
-            const enabled = enabledPredicate();
-            const clearance = this.securityClearance();
-            if (enabled) {
-                return undefined;
-            } else {
-                return "Insufficient security clearance. <br /> Required: " + requiredRoles + "<br />Current: " + clearance;
-            }
-        });
+    getEffectiveDatabaseAccessLevel(dbName: string): databaseAccessLevel {
+        if (this.isOperatorOrAbove()) {
+            return "DatabaseAdmin";
+        }
+        
+        return accessManager.databasesAccess[dbName];
     }
 
-    disableIfNotClusterAdminOrClusterNode = this.createSecurityRule(this.clusterAdminOrClusterNode, "Cluster Admin");
-
-    disableIfNotOperatorOrAbove = this.createSecurityRule(this.operatorAndAbove, "Cluster Admin or Operator");
+    getDatabaseAccessLevelTextByDbName(dbName: string): string {
+        const accessLevel = this.getEffectiveDatabaseAccessLevel(dbName);
+        return accessLevel ? accessManager.default.getAccessLevelText(accessLevel) : null;
+    }
     
+    getAccessLevelText(accessLevel: accessLevel): string {
+        if (this.unsecureServer()) {
+            return "";
+        }
+        
+        switch (accessLevel) {
+            case "ClusterNode":
+            case "ClusterAdmin":
+                return "Cluster Admin/Node";
+            case "Operator":
+                return "Operator";
+            case "DatabaseAdmin":
+                return "Admin";
+            case "DatabaseReadWrite":
+                return "Read/Write";
+            case "DatabaseRead":
+                return "Read Only";
+        }
+    }
+
+    getAccessColorByDbName(dbName: string): string {
+        const accessLevel = this.getEffectiveDatabaseAccessLevel(dbName);
+        return this.getAccessColor(accessLevel);
+    }
+    
+    getAccessColor(accessLevel: databaseAccessLevel): string {
+        switch (accessLevel) {
+            case "DatabaseAdmin":
+                return "text-success";
+            case "DatabaseReadWrite":
+                return "text-warning";
+            case "DatabaseRead":
+                return "text-danger";
+        }
+    }
+
+    getAccessIconByDbName(dbName: string): string {
+        const accessLevel = this.getEffectiveDatabaseAccessLevel(dbName);
+        return this.getAccessIcon(accessLevel);
+    }
+    
+    getAccessIcon(accessLevel: databaseAccessLevel): string {
+        switch (accessLevel) {
+            case "DatabaseAdmin":
+                return "icon-access-admin";
+            case "DatabaseReadWrite":
+                return "icon-access-read-write";
+            case "DatabaseRead":
+                return "icon-access-read";
+        }
+    }
+    
+    readOnlyOrAboveForDatabase(db: database) {
+        if (db) {
+            const accessLevel = this.getEffectiveDatabaseAccessLevel(db.name);
+            return accessLevel === "DatabaseRead";
+        }
+        return null;
+    }
+    
+    readWriteAccessOrAboveForDatabase(db: database) {
+        if (db) {
+            const accessLevel = this.getEffectiveDatabaseAccessLevel(db.name);
+            return accessLevel === "DatabaseReadWrite" || accessLevel === "DatabaseAdmin";
+        } 
+        return null;
+    }
+    
+    adminAccessOrAboveForDatabase(db: database) {
+        if (db) {
+            const accessLevel = this.getEffectiveDatabaseAccessLevel(db.name);
+            return accessLevel === "DatabaseAdmin";
+        }
+        return null;
+    }
+    
+    static isSecurityClearanceLevel(access: accessLevel): access is securityClearance {
+        return access === "ClusterAdmin" || access === "ClusterNode" || access === "Operator" || access === "ValidUser";
+    }
+    
+    static canHandleOperation(requiredAccess: accessLevel, dbName: string = null): boolean {
+        const actualAccessLevel = accessManager.default.isOperatorOrAbove()
+            ? accessManager.default.securityClearance()
+            : accessManager.databasesAccess[dbName];
+        
+        if (!actualAccessLevel) {
+            return false;
+        }
+        
+        const clusterAdminOrNode = actualAccessLevel === "ClusterAdmin" || actualAccessLevel === "ClusterNode";
+        const operator = actualAccessLevel === "Operator";
+        const dbAdmin = actualAccessLevel === "DatabaseAdmin";
+        const dbReadWrite = actualAccessLevel === "DatabaseReadWrite";
+        const dbRead = actualAccessLevel === "DatabaseRead";
+        
+        switch (requiredAccess) {
+            case "ClusterAdmin":
+            case "ClusterNode":
+                return clusterAdminOrNode;
+            case "Operator":
+                return clusterAdminOrNode || operator;
+            case "DatabaseAdmin":
+                return clusterAdminOrNode || operator || dbAdmin;
+            case "DatabaseReadWrite":
+                return clusterAdminOrNode || operator || dbAdmin || dbReadWrite;
+            case "DatabaseRead":
+                return clusterAdminOrNode || operator || dbAdmin || dbReadWrite || dbRead;
+            default: 
+                return false;
+        }
+    }
+    
+    static getDisableReasonHtml(requiredAccess: accessLevel) {
+        const securityClearance = accessManager.isSecurityClearanceLevel(requiredAccess);
+        const title = securityClearance ? "Insufficient security clearance" : "Insufficient database access";
+
+        const requiredText = accessManager.default.getAccessLevelText(requiredAccess);
+
+        return `<div class="text-left">
+                    <h4>${title}</h4>
+                    <ul>
+                        <li>Required: <strong>${requiredText}</strong></li>
+                    </ul>
+                </div>`;
+    }
+
     dashboardView = {
-        showCertificatesLink: this.operatorAndAbove
+        showCertificatesLink: this.isOperatorOrAbove
     };
     
     clusterView = {
-        canAddNode: this.clusterAdminOrClusterNode,
-        canDeleteNode: this.clusterAdminOrClusterNode,
-        showCoresInfo: this.clusterAdminOrClusterNode,
-        canDemotePromoteNode: this.clusterAdminOrClusterNode
+        canAddNode: this.isClusterAdminOrClusterNode,
+        canDeleteNode: this.isClusterAdminOrClusterNode,
+        showCoresInfo: this.isClusterAdminOrClusterNode,
+        canDemotePromoteNode: this.isClusterAdminOrClusterNode
     };
     
     aboutView = {
-        canReplaceLicense: this.clusterAdminOrClusterNode, 
-        canForceUpdate: this.clusterAdminOrClusterNode,
-        canRenewLicense: this.clusterAdminOrClusterNode,
-        canRegisterLicense: this.clusterAdminOrClusterNode
+        canReplaceLicense: this.isClusterAdminOrClusterNode,
+        canForceUpdate: this.isClusterAdminOrClusterNode,
+        canRenewLicense: this.isClusterAdminOrClusterNode,
+        canRegisterLicense: this.isClusterAdminOrClusterNode
     };
     
     databasesView = {
-        canCreateNewDatabase: this.operatorAndAbove,
-        canSetState: this.operatorAndAbove,
-        canDelete: this.operatorAndAbove,
-        canDisableEnableDatabase: this.operatorAndAbove,
-        canDisableIndexing: this.operatorAndAbove,
-        canCompactDatabase: this.operatorAndAbove
+        canCreateNewDatabase: this.isOperatorOrAbove,
+        canSetState: this.isOperatorOrAbove,
+        canDelete: this.isOperatorOrAbove,
+        canDisableEnableDatabase: this.isOperatorOrAbove,
+        canDisableIndexing: this.isOperatorOrAbove,
+        canCompactDatabase: this.isOperatorOrAbove
     };
     
     certificatesView = {
-        canRenewLetsEncryptCertificate: this.clusterAdminOrClusterNode,
-        canDeleteClusterNodeCertificate: this.clusterAdminOrClusterNode,
-        canDeleteClusterAdminCertificate: this.clusterAdminOrClusterNode,
-        canGenerateClientCertificateForAdmin: this.clusterAdminOrClusterNode
+        canRenewLetsEncryptCertificate: this.isClusterAdminOrClusterNode,
+        canDeleteClusterNodeCertificate: this.isClusterAdminOrClusterNode,
+        canDeleteClusterAdminCertificate: this.isClusterAdminOrClusterNode,
+        canGenerateClientCertificateForAdmin: this.isClusterAdminOrClusterNode
     };
 
     mainMenu = {
         showManageServerMenuItem: this.allLevels
-    };
-    
-    manageServerMenu = {
-        disableClusterMenuItem: undefined as KnockoutComputed<string>,
-        disableClientConfigurationMenuItem: this.disableIfNotOperatorOrAbove,
-        disableStudioConfigurationMenuItem: this.disableIfNotOperatorOrAbove,
-        disableAdminJSConsoleMenuItem: this.disableIfNotClusterAdminOrClusterNode,
-        disableCertificatesMenuItem: this.disableIfNotOperatorOrAbove,
-        disableServerWideTasksMenuItem: this.disableIfNotClusterAdminOrClusterNode,
-        disableAdminLogsMenuItem: this.disableIfNotOperatorOrAbove,
-        disableTrafficWatchMenuItem: this.disableIfNotOperatorOrAbove,
-        disableGatherDebugInfoMenuItem: this.disableIfNotOperatorOrAbove,
-        disableSystemStorageReport: this.disableIfNotOperatorOrAbove,
-        disableSystemIoStats: this.disableIfNotOperatorOrAbove,
-        disableAdvancedMenuItem: this.disableIfNotOperatorOrAbove,
-        disableCaptureStackTraces: this.disableIfNotOperatorOrAbove,
-        enableRecordTransactionCommands: this.operatorAndAbove
-    };
-    
-    databaseSettingsMenu = {
-        showDatabaseSettingsMenuItem: this.operatorAndAbove,
-        showDatabaseRecordMenuItem: this.operatorAndAbove,
-        showDatabaseIDsMenuItem: this.operatorAndAbove,
-        showConnectionStringsMenuItem: this.operatorAndAbove,
-        enableConnectionStringsMenuItem: this.clusterAdminOrClusterNode,
-        enableConflictResolutionMenuItem: this.clusterAdminOrClusterNode
     };
 }
 

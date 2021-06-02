@@ -1,9 +1,11 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Formatting;
+using Microsoft.Extensions.Primitives;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
@@ -82,10 +84,25 @@ namespace Raven.Server.Web.Studio
         }
 
         [RavenAction("/admin/studio-tasks/folder-path-options", "POST", AuthorizationStatus.Operator)]
-        public async Task GetFolderPathOptions()
+        public Task GetFolderPathOptionsForOperator()
+        {
+            var type = GetStringValuesQueryString("type", required: false);
+            var isBackupFolder = GetBoolValueQueryString("backupFolder", required: false) ?? false;
+            var path = GetStringQueryString("path", required: false);
+
+            return GetFolderPathOptionsInternal(ServerStore, type, isBackupFolder, path, RequestBodyStream, ResponseBodyStream);
+        }
+
+        internal static async Task GetFolderPathOptionsInternal(
+            ServerStore serverStore,
+            StringValues types,
+            bool isBackupFolder, 
+            string path,
+            Func<Stream> requestBodyStream,
+            Func<Stream> responseBodyStream)
         {
             PeriodicBackupConnectionType connectionType;
-            var type = GetStringValuesQueryString("type", false).FirstOrDefault();
+            var type = types.FirstOrDefault();
             if (type == null)
             {
                 //Backward compatibility
@@ -96,20 +113,19 @@ namespace Raven.Server.Web.Studio
                 throw new ArgumentException($"Query string '{type}' was not recognized as valid type");
             }
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var folderPathOptions = new FolderPathOptions();
                 ;
                 switch (connectionType)
                 {
                     case PeriodicBackupConnectionType.Local:
-                        var isBackupFolder = GetBoolValueQueryString("backupFolder", required: false) ?? false;
-                        var path = GetStringQueryString("path", required: false);
-                        folderPathOptions = FolderPath.GetOptions(path, isBackupFolder, ServerStore.Configuration);
+                        
+                        folderPathOptions = FolderPath.GetOptions(path, isBackupFolder, serverStore.Configuration);
                         break;
 
                     case PeriodicBackupConnectionType.S3:
-                        var json = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
+                        var json = await context.ReadForMemoryAsync(requestBodyStream(), "studio-tasks/format");
                         if (connectionType != PeriodicBackupConnectionType.Local && json == null)
                             throw new BadRequestException("No JSON was posted.");
 
@@ -126,7 +142,7 @@ namespace Raven.Server.Web.Studio
                         using (var client = new RavenAwsS3Client(s3Settings))
                         {
                             // fetching only the first 64 results for the auto complete
-                            var folders = await client.ListObjectsAsync(s3Settings.RemoteFolderName, "/", true, 64);
+                            var folders = await client.ListObjectsAsync(s3Settings.RemoteFolderName, "/", true, take: 64);
                             if (folders != null)
                             {
                                 foreach (var folder in folders.FileInfoDetails)
@@ -139,10 +155,11 @@ namespace Raven.Server.Web.Studio
                                 }
                             }
                         }
+
                         break;
 
                     case PeriodicBackupConnectionType.Azure:
-                        var azureJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
+                        var azureJson = await context.ReadForMemoryAsync(requestBodyStream(), "studio-tasks/format");
 
                         if (connectionType != PeriodicBackupConnectionType.Local && azureJson == null)
                             throw new BadRequestException("No JSON was posted.");
@@ -169,10 +186,11 @@ namespace Raven.Server.Web.Studio
                                 folderPathOptions.List.Add(fullPath);
                             }
                         }
+
                         break;
 
                     case PeriodicBackupConnectionType.GoogleCloud:
-                        var googleCloudJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
+                        var googleCloudJson = await context.ReadForMemoryAsync(requestBodyStream(), "studio-tasks/format");
 
                         if (connectionType != PeriodicBackupConnectionType.Local && googleCloudJson == null)
                             throw new BadRequestException("No JSON was posted.");
@@ -202,6 +220,7 @@ namespace Raven.Server.Web.Studio
                                 folderPathOptions.List.Add(result);
                             }
                         }
+
                         break;
 
                     case PeriodicBackupConnectionType.FTP:
@@ -211,18 +230,15 @@ namespace Raven.Server.Web.Studio
                         throw new ArgumentOutOfRangeException();
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, responseBodyStream()))
                 {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(FolderPathOptions.List)] = TypeConverter.ToBlittableSupportedType(folderPathOptions.List)
-                    });
+                    context.Write(writer, new DynamicJsonValue { [nameof(FolderPathOptions.List)] = TypeConverter.ToBlittableSupportedType(folderPathOptions.List) });
                 }
             }
         }
 
         [RavenAction("/admin/studio-tasks/offline-migration-test", "GET", AuthorizationStatus.Operator)]
-        public Task OfflineMigrationTest()
+        public async Task OfflineMigrationTest()
         {
             var mode = GetStringQueryString("mode");
             var path = GetStringQueryString("path");
@@ -253,7 +269,7 @@ namespace Raven.Server.Web.Studio
                     errorMessage = e.Message;
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
@@ -262,8 +278,6 @@ namespace Raven.Server.Web.Studio
                     });
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         public class OfflineMigrationValidation
@@ -272,7 +286,7 @@ namespace Raven.Server.Web.Studio
             public string ErrorMessage { get; set; }
         }
 
-        [RavenAction("/studio-tasks/periodic-backup/test-credentials", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/studio-tasks/periodic-backup/test-credentials", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task TestPeriodicBackupCredentials()
         {
             var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
@@ -348,15 +362,15 @@ namespace Raven.Server.Web.Studio
                     };
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, result);
                 }
             }
         }
 
-        [RavenAction("/studio-tasks/is-valid-name", "GET", AuthorizationStatus.ValidUser)]
-        public Task IsValidName()
+        [RavenAction("/studio-tasks/is-valid-name", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task IsValidName()
         {
             if (Enum.TryParse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("type").Trim(), out ItemType elementType) == false)
             {
@@ -382,47 +396,39 @@ namespace Raven.Server.Web.Studio
                         break;
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
                         [nameof(NameValidation.IsValid)] = isValid,
                         [nameof(NameValidation.ErrorMessage)] = errorMessage
                     });
-
-                    writer.Flush();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/studio-tasks/admin/migrator-path", "GET", AuthorizationStatus.Operator)]
-        public Task HasMigratorPathInConfiguration()
+        public async Task HasMigratorPathInConfiguration()
         {
             // If the path from the configuration is defined, the Studio will block the option to set the path in the import view
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
                         [$"Has{nameof(MigrationConfiguration.MigratorPath)}"] = Server.Configuration.Migration.MigratorPath != null
                     });
-
-                    writer.Flush();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/studio-tasks/format", "POST", AuthorizationStatus.ValidUser)]
-        public Task Format()
+        [RavenAction("/studio-tasks/format", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task Format()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var json = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "studio-tasks/format");
                 if (json == null)
                     throw new BadRequestException("No JSON was posted.");
 
@@ -430,7 +436,10 @@ namespace Raven.Server.Web.Studio
                     throw new BadRequestException("'Expression' property was not found.");
 
                 if (string.IsNullOrWhiteSpace(expressionAsString))
-                    return NoContent();
+                {
+                    NoContentStatus();
+                    return;
+                }
 
                 var type = IndexDefinitionHelper.DetectStaticIndexType(expressionAsString, reduce: null);
 
@@ -469,17 +478,15 @@ namespace Raven.Server.Web.Studio
                         throw new NotSupportedException($"Unknown index type '{type}'.");
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, formattedExpression.ToJson());
                 }
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/studio-tasks/next-cron-expression-occurrence", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetNextCronExpressionOccurrence()
+        [RavenAction("/studio-tasks/next-cron-expression-occurrence", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetNextCronExpressionOccurrence()
         {
             var expression = GetQueryStringValueAndAssertIfSingleAndNotEmpty("expression");
             CrontabSchedule crontabSchedule;
@@ -491,7 +498,7 @@ namespace Raven.Server.Web.Studio
             catch (Exception e)
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName(nameof(NextCronExpressionOccurrence.IsValid));
@@ -500,16 +507,15 @@ namespace Raven.Server.Web.Studio
                     writer.WritePropertyName(nameof(NextCronExpressionOccurrence.ErrorMessage));
                     writer.WriteString(e.Message);
                     writer.WriteEndObject();
-                    writer.Flush();
                 }
 
-                return Task.CompletedTask;
+                return;
             }
 
             var nextOccurrence = crontabSchedule.GetNextOccurrence(SystemTime.UtcNow.ToLocalTime());
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(NextCronExpressionOccurrence.IsValid));
@@ -521,10 +527,7 @@ namespace Raven.Server.Web.Studio
                 writer.WritePropertyName(nameof(NextCronExpressionOccurrence.ServerTime));
                 writer.WriteDateTime(nextOccurrence, false);
                 writer.WriteEndObject();
-                writer.Flush();
             }
-
-            return Task.CompletedTask;
         }
 
         public class NextCronExpressionOccurrence

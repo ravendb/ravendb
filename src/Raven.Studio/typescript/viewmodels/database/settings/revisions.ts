@@ -50,7 +50,7 @@ class revisions extends viewModelBase {
     private initObservables() {
         this.selectionState = ko.pureComputed<checkbox>(() => {
             const selectedCount = this.selectedItems().length;
-            const totalCount = this.perCollectionConfigurations().length + (this.defaultDocumentConfiguration() ? 1 : 0);
+            const totalCount = this.perCollectionConfigurations().length + (this.defaultDocumentConfiguration() ? 1 : 0) + 1 /* conflicts item */;
             if (totalCount && selectedCount === totalCount)
                 return "checked";
             if (selectedCount > 0)
@@ -291,6 +291,10 @@ class revisions extends viewModelBase {
     deleteItem(entry: revisionsConfigurationEntry) {
         this.selectedItems.remove(entry);
 
+        if (entry.isConflicts()) {
+            return;
+        }
+        
         if (entry.isDefault()) {
             this.defaultDocumentConfiguration(null);
         } else {
@@ -332,6 +336,7 @@ class revisions extends viewModelBase {
             if (this.defaultDocumentConfiguration()) {
                 selectedItems.push(this.defaultDocumentConfiguration());
             }
+            selectedItems.push(this.defaultConflictConfiguration());
 
             this.selectedItems(selectedItems);
         }

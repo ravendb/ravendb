@@ -60,6 +60,11 @@ namespace Raven.Client.Documents.Session
         Task<int> CountAsync(CancellationToken token = default);
 
         /// <summary>
+        /// Gets the total count of records for this query as int64 
+        /// </summary>
+        Task<long> LongCountAsync(CancellationToken token = default);
+
+        /// <summary>
         ///     Register the query as a lazy query and return a lazy
         ///     instance that will evaluate the query only when needed.
         /// Also provide a function to execute when the value is evaluated
@@ -72,6 +77,10 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQueryBase<T>
     {
         IAsyncRawDocumentQuery<T> Projection(ProjectionBehavior projectionBehavior);
+        /// <summary>
+        ///    Execute raw query aggregated by facet
+        /// </summary>
+        Task<Dictionary<string, FacetResult>> ExecuteAggregationAsync(CancellationToken token = default);
     }
 
     public interface IAsyncGraphQuery<T> :
@@ -166,7 +175,7 @@ namespace Raven.Client.Documents.Session
 
         IAsyncAggregationDocumentQuery<T> AggregateBy(FacetBase facet);
 
-        IAsyncAggregationDocumentQuery<T> AggregateBy(IEnumerable<Facet> facets);
+        IAsyncAggregationDocumentQuery<T> AggregateBy(IEnumerable<FacetBase> facets);
 
         IAsyncAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentId);
 

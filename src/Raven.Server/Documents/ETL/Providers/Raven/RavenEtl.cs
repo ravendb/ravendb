@@ -10,6 +10,7 @@ using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
@@ -17,7 +18,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
-    public class RavenEtl : EtlProcess<RavenEtlItem, ICommandData, RavenEtlConfiguration, RavenConnectionString>
+    public class RavenEtl : EtlProcess<RavenEtlItem, ICommandData, RavenEtlConfiguration, RavenConnectionString, EtlStatsScope, EtlPerformanceOperation>
     {
         private readonly RavenEtlConfiguration _configuration;
         private readonly ServerStore _serverStore;
@@ -97,7 +98,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             return new CountersToRavenEtlItems(context, counters, collection);
         }
-        
+
         protected override IEnumerator<RavenEtlItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
         {
             return new TimeSeriesToRavenEtlItems(timeSeries, collection);
@@ -137,12 +138,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return Transformation.IsEmptyScript || Transformation.TimeSeries.CollectionToLoadBehaviorFunction != null;
         }
 
-        protected override EtlTransformer<RavenEtlItem, ICommandData> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<RavenEtlItem, ICommandData, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
         {
             return new RavenEtlDocumentTransformer(Transformation, Database, context, _script);
         }
 
-        protected override int LoadInternal(IEnumerable<ICommandData> items, DocumentsOperationContext context)
+        protected override int LoadInternal(IEnumerable<ICommandData> items, DocumentsOperationContext context, EtlStatsScope scope)
         {
             var commands = items as List<ICommandData>;
 
@@ -183,6 +184,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     throw;
                 }
             }
+        }
+
+        protected override EtlStatsScope CreateScope(EtlRunStats stats)
+        {
+            return new EtlStatsScope(stats);
         }
 
         protected override bool ShouldFilterOutHiLoDocument()

@@ -51,6 +51,8 @@ import serverTime = require("common/helpers/database/serverTime");
 import saveGlobalStudioConfigurationCommand = require("commands/resources/saveGlobalStudioConfigurationCommand");
 import saveStudioConfigurationCommand = require("commands/resources/saveStudioConfigurationCommand");
 import studioSetting = require("common/settings/studioSetting");
+import genUtils = require("common/generalUtils");
+import leafMenuItem = require("common/shell/menu/leafMenuItem");
 
 class shell extends viewModelBase {
 
@@ -81,6 +83,10 @@ class shell extends viewModelBase {
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
     developerLicense = license.developerLicense;
+    
+    cloudClusterAdmin: KnockoutObservable<boolean>;
+    colorCustomizationDisabled = ko.observable<boolean>(false);
+    applyColorCustomization: KnockoutObservable<boolean>;
     
     clientCertificate = clientCertificateModel.certificateInfo;
 
@@ -136,7 +142,7 @@ class shell extends viewModelBase {
             viewModelBase.clientVersion(v.Version));
 
         buildInfo.serverBuildVersion.subscribe(buildVersionDto => {
-            this.initAnalytics([ buildVersionDto ]);        
+            this.initAnalytics([ buildVersionDto ]);
         });
 
         activeDatabaseTracker.default.database.subscribe(newDatabase => footer.default.forDatabase(newDatabase));
@@ -152,6 +158,19 @@ class shell extends viewModelBase {
         window.addEventListener("hashchange", e => {
             this.currentUrlHash(location.hash);
         });
+        
+        this.cloudClusterAdmin = ko.pureComputed(() => {
+            const isCloud = license.cloudLicense();
+            const isClusterAdmin = this.accessManager.securityClearance() === "ClusterAdmin";
+            return isCloud && isClusterAdmin;
+        });
+        
+        this.applyColorCustomization = ko.pureComputed(() => {
+            const cloudClusterAdmin = this.cloudClusterAdmin();
+            const disableColors = this.colorCustomizationDisabled();
+            
+            return !disableColors && cloudClusterAdmin;
+        })
 
         this.bindToCurrentInstance("toggleMenu");
     }
@@ -213,11 +232,20 @@ class shell extends viewModelBase {
                 // "http"
                 if (location.protocol === "http:") {
                     this.accessManager.securityClearance("ClusterAdmin");
+                    this.accessManager.unsecureServer(true);
                 } else {
                     // "https"
                     if (certificate) {
                         this.accessManager.securityClearance(certificate.SecurityClearance);
                         accessManager.clientCertificateThumbprint(certificate.Thumbprint);
+
+                        let databasesAccess: dictionary<databaseAccessLevel> = {};
+                        for (let key in certificate.Permissions) {
+                            let access = certificate.Permissions[key];
+                            databasesAccess[`${key}`] = `Database${access}` as databaseAccessLevel;
+                        }
+                        accessManager.databasesAccess = databasesAccess;
+                        
                     } else {
                         this.accessManager.securityClearance("ValidUser");
                     }
@@ -258,13 +286,18 @@ class shell extends viewModelBase {
         super.attached();
 
         if (this.clientCertificate() && this.clientCertificate().Name) {
-            
-            const dbAccess = certificateModel.resolveDatabasesAccess(this.clientCertificate());
-            const allowedDatabases = dbAccess.length ? dbAccess.map(x => `<div>${x}</div>`).join("") : "Access to all databases is denied";
+            const dbAccessArray = certificateModel.resolveDatabasesAccess(this.clientCertificate());
 
-            popoverUtils.longWithHover($(".js-client-cert"),
-                {
-                    content: `<dl class="dl-horizontal margin-none client-certificate-info">
+            const allowedDatabasesText = dbAccessArray.length ?
+                dbAccessArray.map(x => `<div>
+                                            <strong>${genUtils.escapeHtml(x.dbName)}</strong>
+                                            <span class="${this.accessManager.getAccessColor(x.accessLevel)} margin-left">
+                                                         ${accessManager.default.getAccessLevelText(x.accessLevel)}
+                                            </span>
+                                        </div>`).join("")
+                : "No access granted";
+            
+            const authenticationInfo = `<dl class="dl-horizontal margin-none client-certificate-info">
                             <dt>Client Certificate</dt>
                             <dd><strong>${this.clientCertificate().Name}</strong></dd>
                             <dt>Thumbprint</dt>
@@ -272,9 +305,22 @@ class shell extends viewModelBase {
                             <dt><span>Security Clearance</span></dt>
                             <dd><strong>${certificateModel.clearanceLabelFor(this.clientCertificate().SecurityClearance)}</strong></dd>
                             <dt><span>Access to databases:</span></dt>
-                            <dd><strong>${allowedDatabases}</strong></dd>
-                          </dl>`
-                    ,
+                            <dd><span>${allowedDatabasesText}</span></dd>
+                          </dl>`;
+            
+            popoverUtils.longWithHover($(".js-client-cert"),
+                {
+                    content: authenticationInfo,
+                    placement: 'top'
+                });
+        }
+        
+        if (!this.clientCertificate()) {
+            const authenticationInfo = "No authentication is set. Running in an unsecure mode.";
+            
+            popoverUtils.longWithHover($(".js-client-cert"),
+                {
+                    content: authenticationInfo,
                     placement: 'top'
                 });
         }
@@ -356,16 +402,6 @@ class shell extends viewModelBase {
         return appUrl.forCluster();
     }
 
-    private getIndexingDisbaledValue(indexingDisabledString: string) {
-        if (indexingDisabledString === undefined || indexingDisabledString == null)
-            return false;
-
-        if (indexingDisabledString.toLowerCase() === "true")
-            return true;
-
-        return false;
-    }
-
     connectToRavenServer() {
         return this.databasesManager.init();
     }
@@ -373,7 +409,7 @@ class shell extends viewModelBase {
     fetchServerBuildVersion() {
         new getServerBuildVersionCommand()
             .execute()
-            .done((serverBuildResult: serverBuildVersionDto, status: string,  response: JQueryXHR) => {            
+            .done((serverBuildResult: serverBuildVersionDto, status: string, response: JQueryXHR) => {
                
                 serverTime.default.calcTimeDifference(response.getResponseHeader("Date"));
                 serverTime.default.setStartUpTime(response.getResponseHeader("Server-Startup-Time"));
@@ -512,6 +548,25 @@ class shell extends viewModelBase {
             }
             
             return serverUrl + "/studio/index.html" + hash;
+        })
+    }
+
+    disableColorCustomization() {
+        this.colorCustomizationDisabled(true);
+    }
+    
+    disableReason(menuItem: leafMenuItem) {
+        return ko.pureComputed<string>(() => {
+            const requiredAccess = menuItem.requiredAccess;
+            if (!requiredAccess) {
+                return "";
+            }
+
+            const activeDatabase = activeDatabaseTracker.default.database();
+            
+            const canHandleOperation = accessManager.canHandleOperation(requiredAccess, activeDatabase?.name);
+                      
+            return canHandleOperation ? "" : accessManager.getDisableReasonHtml(requiredAccess);
         })
     }
 }

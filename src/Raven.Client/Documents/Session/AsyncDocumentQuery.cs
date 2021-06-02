@@ -23,8 +23,8 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// A query against a Raven index
     /// </summary>
-    public partial class AsyncDocumentQuery<T> : AbstractDocumentQuery<T, AsyncDocumentQuery<T>>, IAsyncDocumentQuery<T>,
-        IAsyncRawDocumentQuery<T>, IAsyncGraphQuery<T>, IDocumentQueryGenerator
+    public partial class AsyncDocumentQuery<T> : AbstractDocumentQuery<T, AsyncDocumentQuery<T>>, IAbstractDocumentQueryImpl<T>,
+        IAsyncRawDocumentQuery<T>, IAsyncGraphQuery<T>, IDocumentQueryGenerator, IAsyncDocumentQuery<T>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
@@ -1023,6 +1023,14 @@ namespace Raven.Client.Documents.Session
             Take(0);
             var result = await GetQueryResultAsync(token).ConfigureAwait(false);
             return result.TotalResults;
+        }
+
+        /// <inheritdoc />
+        async Task<long> IAsyncDocumentQueryBase<T>.LongCountAsync(CancellationToken token)
+        {
+            Take(0);
+            var result = await GetQueryResultAsync(token).ConfigureAwait(false);
+            return result.LongTotalResults;
         }
 
         /// <inheritdoc />

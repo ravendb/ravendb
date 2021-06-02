@@ -2,6 +2,11 @@
 {
     public abstract class SpatialShapeBase
     {
-        public SpatialShape ShapeType;
+        public readonly SpatialShapeType Type;
+
+        protected SpatialShapeBase(SpatialShapeType type)
+        {
+            Type = type;
+        }
     }
 }

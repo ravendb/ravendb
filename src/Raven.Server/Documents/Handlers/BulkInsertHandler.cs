@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class BulkInsertHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/bulk_insert", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/bulk_insert", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task BulkInsert()
         {
             var operationCancelToken = CreateOperationToken();
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Handlers
                             var numberOfCommands = 0;
                             long totalSize = 0;
                             int operationsCount = 0;
-                            
+
                             while (true)
                             {
                                 using (var modifier = new BlittableMetadataModifier(docsCtx))
@@ -119,18 +119,21 @@ namespace Raven.Server.Documents.Handlers
                                     if (numberOfCommands >= array.Length)
                                         Array.Resize(ref array, array.Length + Math.Min(1024, array.Length));
                                     array[numberOfCommands++] = commandData;
-                                    
+
                                     switch (commandData.Type)
                                     {
                                         case CommandType.PUT:
                                             progress.DocumentsProcessed++;
                                             break;
+
                                         case CommandType.AttachmentPUT:
                                             progress.AttachmentsProcessed++;
                                             break;
+
                                         case CommandType.Counters:
                                             progress.CountersProcessed++;
                                             break;
+
                                         case CommandType.TimeSeriesBulkInsert:
                                             progress.TimeSeriesProcessed++;
                                             break;
@@ -239,6 +242,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 case CommandType.PUT:
                     return (commandData.Document.Size, 1);
+
                 case CommandType.Counters:
                     foreach (var operation in commandData.Counters.Operations)
                     {
@@ -250,8 +254,10 @@ namespace Raven.Server.Documents.Handlers
                     }
 
                     return (size, commandData.Counters.Operations.Count);
+
                 case CommandType.AttachmentPUT:
                     return (commandData.ContentLength, 1);
+
                 case CommandType.TimeSeries:
                 case CommandType.TimeSeriesBulkInsert:
                     // we don't know the size of the change so we are just estimating
@@ -265,6 +271,7 @@ namespace Raven.Server.Documents.Handlers
                     }
 
                     return (size, commandData.TimeSeries.Appends.Count);
+
                 default:
                     throw new ArgumentOutOfRangeException($"'{commandData.Type}' isn't supported");
             }
@@ -357,6 +364,7 @@ namespace Raven.Server.Documents.Handlers
                             }
 
                             break;
+
                         case CommandType.Counters:
                             {
                                 var collection = CountersHandler.ExecuteCounterBatchCommand.GetDocumentCollection(cmd.Id, Database, context, fromEtl: false, out _);

@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//  <copyright file="Subscription.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="SubscriptionWorker.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -50,12 +50,13 @@ namespace Raven.Client.Documents.Subscriptions
         private int _forcedTopologyUpdateAttempts = 0;
 
         /// <summary>
-        /// allows the user to define stuff that happens after the confirm was received from the server (this way we know we won't
-        /// get those documents again)
+        /// Allows the user to define stuff that happens after the confirm was received from the server
+        /// (this way we know we won't get those documents again)
         /// </summary>
         public event AfterAcknowledgmentAction AfterAcknowledgment;
 
         public event Action<Exception> OnSubscriptionConnectionRetry;
+
         public event Action<Exception> OnUnexpectedSubscriptionError;
 
         internal SubscriptionWorker(SubscriptionWorkerOptions options, DocumentStore documentStore, string dbName)
@@ -75,9 +76,6 @@ namespace Raven.Client.Documents.Subscriptions
 
         public void Dispose(bool waitForSubscriptionTask)
         {
-            if (_disposed)
-                return;
-
             var dispose = DisposeAsync(waitForSubscriptionTask);
             if (dispose.IsCompletedSuccessfully)
                 return;
@@ -92,11 +90,11 @@ namespace Raven.Client.Documents.Subscriptions
 
         public async ValueTask DisposeAsync(bool waitForSubscriptionTask)
         {
+            if (_disposed)
+                return;
+
             try
             {
-                if (_disposed)
-                    return;
-
                 _disposed = true;
                 _processingCts?.Cancel();
 
@@ -228,16 +226,16 @@ namespace Raven.Client.Documents.Subscriptions
 
                 var databaseName = _store.GetDatabase(_dbName);
 
-                var parameters = new TcpNegotiateParameters
+                var parameters = new AsyncTcpNegotiateParameters
                 {
                     Database = databaseName,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
                     Version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion,
-                    ReadResponseAndGetVersionCallback = ReadServerResponseAndGetVersion,
+                    ReadResponseAndGetVersionCallbackAsync = ReadServerResponseAndGetVersionAsync,
                     DestinationNodeTag = CurrentNodeTag,
                     DestinationUrl = chosenUrl
                 };
-                _supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, _stream, parameters);
+                _supportedFeatures = await TcpNegotiation.NegotiateProtocolVersionAsync(context, _stream, parameters).ConfigureAwait(false);
 
                 if (_supportedFeatures.ProtocolVersion <= 0)
                 {
@@ -247,7 +245,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                 using (var optionsJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, context))
                 {
-                    optionsJson.WriteJsonTo(_stream);
+                    await optionsJson.WriteJsonToAsync(_stream, token).ConfigureAwait(false);
 
                     await _stream.FlushAsync(token).ConfigureAwait(false);
                 }
@@ -294,16 +292,17 @@ namespace Raven.Client.Documents.Subscriptions
             return tcpCommand.Result;
         }
 
-        private int ReadServerResponseAndGetVersion(JsonOperationContext context, BlittableJsonTextWriter writer, Stream stream, string url)
+        private async ValueTask<int> ReadServerResponseAndGetVersionAsync(JsonOperationContext context, AsyncBlittableJsonTextWriter writer, Stream stream, string destinationUrl)
         {
             //Reading reply from server
-            using (var response = context.ReadForMemory(_stream, "Subscription/tcp-header-response"))
+            using (var response = await context.ReadForMemoryAsync(_stream, "Subscription/tcp-header-response").ConfigureAwait(false))
             {
                 var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
                 switch (reply.Status)
                 {
                     case TcpConnectionStatus.Ok:
                         return reply.Version;
+
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"Cannot access database {_dbName} because " + reply.Message);
                     case TcpConnectionStatus.TcpVersionMismatch:
@@ -312,14 +311,14 @@ namespace Raven.Client.Documents.Subscriptions
                             return reply.Version;
                         }
                         //Kindly request the server to drop the connection
-                        SendDropMessage(context, writer, reply);
+                        await SendDropMessageAsync(context, writer, reply).ConfigureAwait(false);
                         throw new InvalidOperationException($"Can't connect to database {_dbName} because: {reply.Message}");
                 }
                 return reply.Version;
             }
         }
 
-        private void SendDropMessage(JsonOperationContext context, BlittableJsonTextWriter writer, TcpConnectionHeaderResponse reply)
+        private async ValueTask SendDropMessageAsync(JsonOperationContext context, AsyncBlittableJsonTextWriter writer, TcpConnectionHeaderResponse reply)
         {
             context.Write(writer, new DynamicJsonValue
             {
@@ -329,7 +328,8 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(TcpConnectionHeaderMessage.Info)] =
                     $"Couldn't agree on subscription TCP version ours:{TcpConnectionHeaderMessage.SubscriptionTcpVersion} theirs:{reply.Version}"
             });
-            writer.Flush();
+
+            await writer.FlushAsync().ConfigureAwait(false);
         }
 
         private void AssertConnectionState(SubscriptionConnectionServerMessage connectionStatus)
@@ -347,6 +347,7 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Accepted:
                     break;
+
                 case SubscriptionConnectionServerMessage.ConnectionStatus.InUse:
                     throw new SubscriptionInUseException(
                         $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it's in use and the connection strategy is {_options.Strategy}");
@@ -427,11 +428,11 @@ namespace Raven.Client.Documents.Subscriptions
 
                     while (_processingCts.IsCancellationRequested == false)
                     {
-                        // start the read from the server
+                        // start reading next batch from server on 1'st thread (can be before client started processing)
                         var readFromServer = ReadSingleSubscriptionBatchFromServer(contextPool, tcpStreamCopy, buffer, batch);
                         try
                         {
-                            // and then wait for the subscriber to complete
+                            // wait for the subscriber to complete processing on 2'nd thread
                             await notifiedSubscriber.ConfigureAwait(false);
                         }
                         catch (Exception)
@@ -450,13 +451,13 @@ namespace Raven.Client.Documents.Subscriptions
                             }
                             throw;
                         }
-                        var incomingBatch = await readFromServer.ConfigureAwait(false);
+                        var incomingBatch = await readFromServer.ConfigureAwait(false); // wait for batch reading to end
 
                         _processingCts.Token.ThrowIfCancellationRequested();
 
                         var lastReceivedChangeVector = batch.Initialize(incomingBatch);
 
-                        notifiedSubscriber = Task.Run(async () =>
+                        notifiedSubscriber = Task.Run(async () => // the 2'nd thread
                         {
                             // ReSharper disable once AccessToDisposedClosure
                             using (incomingBatch.ReturnContext)
@@ -485,7 +486,7 @@ namespace Raven.Client.Documents.Subscriptions
                             {
                                 if (tcpStreamCopy != null) //possibly prevent ObjectDisposedException
                                 {
-                                    await SendAckAsync(lastReceivedChangeVector, tcpStreamCopy, context).ConfigureAwait(false);
+                                    await SendAckAsync(lastReceivedChangeVector, tcpStreamCopy, context, _processingCts.Token).ConfigureAwait(false);
                                 }
                             }
                             catch (ObjectDisposedException)
@@ -502,9 +503,8 @@ namespace Raven.Client.Documents.Subscriptions
                 if (_disposed == false)
                     throw;
 
-                // otherwise this is thrown when shutting down, it
-                // isn't an error, so we don't need to treat
-                // it as such
+                // otherwise this is thrown when shutting down,
+                // it isn't an error, so we don't need to treat it as such
             }
         }
 
@@ -515,50 +515,67 @@ namespace Raven.Client.Documents.Subscriptions
             var counterIncludes = new List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)>();
             var timeSeriesIncludes = new List<BlittableJsonReaderObject>();
             IDisposable returnContext = contextPool.AllocateOperationContext(out JsonOperationContext context);
-            bool endOfBatch = false;
-            while (endOfBatch == false && _processingCts.IsCancellationRequested == false)
+            try
             {
-                SubscriptionConnectionServerMessage receivedMessage = await ReadNextObject(context, tcpStream, buffer).ConfigureAwait(false);
-                if (receivedMessage == null || _processingCts.IsCancellationRequested)
+                bool endOfBatch = false;
+                while (endOfBatch == false && _processingCts.IsCancellationRequested == false)
                 {
-                    break;
-                }
+                    SubscriptionConnectionServerMessage receivedMessage = await ReadNextObject(context, tcpStream, buffer).ConfigureAwait(false);
+                    if (receivedMessage == null || _processingCts.IsCancellationRequested)
+                    {
+                        break;
+                    }
 
-                switch (receivedMessage.Type)
-                {
-                    case SubscriptionConnectionServerMessage.MessageType.Data:
-                        incomingBatch.Add(receivedMessage);
-                        break;
-                    case SubscriptionConnectionServerMessage.MessageType.Includes:
-                        includes.Add(receivedMessage.Includes);
-                        break;
-                    case SubscriptionConnectionServerMessage.MessageType.CounterIncludes:
-                        counterIncludes.Add((receivedMessage.CounterIncludes, receivedMessage.IncludedCounterNames));
-                        break;
-                    case SubscriptionConnectionServerMessage.MessageType.TimeSeriesIncludes:
-                        timeSeriesIncludes.Add(receivedMessage.TimeSeriesIncludes);
-                        break;
-                    case SubscriptionConnectionServerMessage.MessageType.EndOfBatch:
-                        endOfBatch = true;
-                        break;
-                    case SubscriptionConnectionServerMessage.MessageType.Confirm:
-                        var onAfterAcknowledgment = AfterAcknowledgment;
-                        if (onAfterAcknowledgment != null)
-                            await onAfterAcknowledgment(batch).ConfigureAwait(false);
-                        incomingBatch.Clear();
-                        batch.Items.Clear();
-                        break;
-                    case SubscriptionConnectionServerMessage.MessageType.ConnectionStatus:
-                        AssertConnectionState(receivedMessage);
-                        break;
-                    case SubscriptionConnectionServerMessage.MessageType.Error:
-                        ThrowSubscriptionError(receivedMessage);
-                        break;
-                    default:
-                        ThrowInvalidServerResponse(receivedMessage);
-                        break;
+                    switch (receivedMessage.Type)
+                    {
+                        case SubscriptionConnectionServerMessage.MessageType.Data:
+                            incomingBatch.Add(receivedMessage);
+                            break;
+
+                        case SubscriptionConnectionServerMessage.MessageType.Includes:
+                            includes.Add(receivedMessage.Includes);
+                            break;
+
+                        case SubscriptionConnectionServerMessage.MessageType.CounterIncludes:
+                            counterIncludes.Add((receivedMessage.CounterIncludes, receivedMessage.IncludedCounterNames));
+                            break;
+
+                        case SubscriptionConnectionServerMessage.MessageType.TimeSeriesIncludes:
+                            timeSeriesIncludes.Add(receivedMessage.TimeSeriesIncludes);
+                            break;
+
+                        case SubscriptionConnectionServerMessage.MessageType.EndOfBatch:
+                            endOfBatch = true;
+                            break;
+
+                        case SubscriptionConnectionServerMessage.MessageType.Confirm:
+                            var onAfterAcknowledgment = AfterAcknowledgment;
+                            if (onAfterAcknowledgment != null)
+                                await onAfterAcknowledgment(batch).ConfigureAwait(false);
+                            incomingBatch.Clear();
+                            batch.Items.Clear();
+                            break;
+
+                        case SubscriptionConnectionServerMessage.MessageType.ConnectionStatus:
+                            AssertConnectionState(receivedMessage);
+                            break;
+
+                        case SubscriptionConnectionServerMessage.MessageType.Error:
+                            ThrowSubscriptionError(receivedMessage);
+                            break;
+
+                        default:
+                            ThrowInvalidServerResponse(receivedMessage);
+                            break;
+                    }
                 }
             }
+            catch (Exception)
+            {
+                returnContext?.Dispose();
+                throw;
+            }
+
             return new BatchFromServer
             {
                 Messages = incomingBatch,
@@ -604,7 +621,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private async Task SendAckAsync(string lastReceivedChangeVector, Stream stream, JsonOperationContext context)
+        private async Task SendAckAsync(string lastReceivedChangeVector, Stream stream, JsonOperationContext context, CancellationToken token)
         {
             var message = new SubscriptionConnectionClientMessage
             {
@@ -614,15 +631,15 @@ namespace Raven.Client.Documents.Subscriptions
 
             using (var messageJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(message, context))
             {
-                messageJson.WriteJsonTo(stream);
+                await messageJson.WriteJsonToAsync(stream, token).ConfigureAwait(false);
 
-                await stream.FlushAsync().ConfigureAwait(false);
+                await stream.FlushAsync(token).ConfigureAwait(false);
             }
         }
 
         private async Task RunSubscriptionAsync()
         {
-            while (_processingCts.Token.IsCancellationRequested == false)
+            while (_processingCts.IsCancellationRequested == false)
             {
                 try
                 {
@@ -645,7 +662,7 @@ namespace Raven.Client.Documents.Subscriptions
                     _recentExceptions.Enqueue(ex);
                     try
                     {
-                        if (_processingCts.Token.IsCancellationRequested)
+                        if (_processingCts.IsCancellationRequested)
                         {
                             if (_disposed == false)
                                 throw;
@@ -741,6 +758,7 @@ namespace Raven.Client.Documents.Subscriptions
                                         new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying"));
 
                     return true;
+
                 case NodeIsPassiveException e:
                     {
                         // if we failed to talk to a node, we'll forget about it and let the topology to
@@ -750,12 +768,14 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                 case SubscriptionChangeVectorUpdateConcurrencyException _:
                     return true;
+
                 case SubscriptionClosedException sce:
                     if (sce.CanReconnect)
                         return true;
 
                     _processingCts.Cancel();
                     return false;
+
                 case SubscriptionInUseException _:
                 case SubscriptionDoesNotExistException _:
                 case SubscriptionInvalidStateException _:
@@ -766,6 +786,7 @@ namespace Raven.Client.Documents.Subscriptions
                 case RavenException _:
                     _processingCts.Cancel();
                     return false;
+
                 default:
                     OnUnexpectedSubscriptionError?.Invoke(ex);
                     AssertLastConnectionFailure();

@@ -1,4 +1,7 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
+
+import accessManager = require("common/shell/accessManager");
+
 class database {
     static readonly type = "database";
     static readonly qualifier = "db";
@@ -9,6 +12,7 @@ class database {
     errored = ko.observable<boolean>(false);
     isAdminCurrentTenant = ko.observable<boolean>(false);
     relevant = ko.observable<boolean>(true);
+    nodes = ko.observableArray<string>([]);
     hasRevisionsConfiguration = ko.observable<boolean>(false);
     hasExpirationConfiguration = ko.observable<boolean>(false);
     hasRefreshConfiguration = ko.observable<boolean>(false);
@@ -17,6 +21,10 @@ class database {
     environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
     environmentClass = database.createEnvironmentColorComputed("label", this.environment);
 
+    databaseAccess = ko.observable<databaseAccessLevel>();
+    databaseAccessText = ko.observable<string>();
+    databaseAccessColor = ko.observable<string>();
+    
     private clusterNodeTag: KnockoutObservable<string>;
 
     constructor(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
@@ -58,21 +66,20 @@ class database {
         
         if (incomingCopy.NodesTopology) {
             const nodeTag = this.clusterNodeTag();
-            const inMemberList = _.some(incomingCopy.NodesTopology.Members, x => x.NodeTag === nodeTag);
-            const inPromotableList = _.some(incomingCopy.NodesTopology.Promotables, x => x.NodeTag === nodeTag);
-            const inRehabList = _.some(incomingCopy.NodesTopology.Rehabs, x => x.NodeTag === nodeTag);
+            
+            const nodes: string[] = [];
+            incomingCopy.NodesTopology.Members.forEach(x => nodes.push(x.NodeTag));
+            incomingCopy.NodesTopology.Promotables.forEach(x => nodes.push(x.NodeTag));
+            incomingCopy.NodesTopology.Rehabs.forEach(x => nodes.push(x.NodeTag));
 
-            this.relevant(inMemberList || inPromotableList || inRehabList);
+            this.relevant(_.includes(nodes, nodeTag));
+            this.nodes(nodes);
         }
-    }
 
-    private attributeValue(attributes: any, bundleName: string) {
-        for (var key in attributes){
-            if (attributes.hasOwnProperty(key) && key.toLowerCase() === bundleName.toLowerCase()) {
-                return attributes[key];
-            }
-        }
-        return "true";
+        const dbAccessLevel = accessManager.default.getEffectiveDatabaseAccessLevel(incomingCopy.Name);
+        this.databaseAccess(dbAccessLevel);
+        this.databaseAccessText(accessManager.default.getAccessLevelText(dbAccessLevel));
+        this.databaseAccessColor(accessManager.default.getAccessColor(dbAccessLevel));
     }
 
     static getNameFromUrl(url: string) {

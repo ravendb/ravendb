@@ -2,29 +2,28 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using Esprima.Ast;
 using Jint;
 using Jint.Native;
-using Jint.Native.Function;
-using Raven.Server.Documents.Patch;
-using Esprima.Ast;
 using Jint.Native.Array;
-using Jint.Runtime;
+using Jint.Native.Function;
 using Jint.Native.Object;
+using Jint.Runtime;
 using Jint.Runtime.Descriptors;
-using Sparrow.Json;
-using Sparrow;
 using Raven.Server.Documents.Indexes.MapReduce;
+using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
-using System.Runtime.CompilerServices;
+using Sparrow;
+using Sparrow.Json;
 using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     public class JavaScriptReduceOperation
     {
-        public JavaScriptReduceOperation(ArrowFunctionInstance reduce, ArrowFunctionInstance key, Engine engine, JintPreventResolvingTasksReferenceResolver resolver)
+        public JavaScriptReduceOperation(ScriptFunctionInstance reduce, ScriptFunctionInstance key, Engine engine, JintPreventResolvingTasksReferenceResolver resolver)
         {
             Reduce = reduce ?? throw new ArgumentNullException(nameof(reduce));
             Key = key ?? throw new ArgumentNullException(nameof(key));
@@ -122,7 +121,6 @@ namespace Raven.Server.Documents.Indexes.Static
                     return false;
 
                 return Memory.Compare(xBuffer.Address, yBuffer.Address, xBuffer.Size) == 0;
-
             }
 
             public int GetHashCode(BlittableJsonReaderObject obj)
@@ -252,16 +250,16 @@ namespace Raven.Server.Documents.Indexes.Static
 
                         var value = groupByField.GetValue(null, prop.Value);
 
-                        JsValue jsValue = value switch 
+                        JsValue jsValue = value switch
                         {
                             BlittableJsonReaderObject bjro => new BlittableObjectInstance(Engine, null, bjro, null, null, null),
                             Document doc => new BlittableObjectInstance(Engine, null, doc.Data, doc),
                             LazyStringValue lsv => new JsString(lsv.ToString()),
                             LazyCompressedStringValue lcsv => new JsString(lcsv.ToString()),
                             LazyNumberValue lnv => new JsNumber(lnv.ToDouble(CultureInfo.InvariantCulture)),
-                          _ =>  JsValue.FromObject(Engine, value)
+                            _ => JsValue.FromObject(Engine, value)
                         };
-                        
+
                         key.Set(propertyName, jsValue, throwOnError: false);
                     }
                 }
@@ -292,8 +290,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public Engine Engine { get; }
 
-        public ArrowFunctionInstance Reduce { get; }
-        public ArrowFunctionInstance Key { get; }
+        public ScriptFunctionInstance Reduce { get; }
+        public ScriptFunctionInstance Key { get; }
         public string ReduceString { get; internal set; }
 
         private CompiledIndexField[] _groupByFields;
@@ -345,7 +343,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
                     }
                     throw new InvalidOperationException($"Expected statement returning simple object expression inside group by block");
-                
+
                 // x => x.Name
                 case StaticMemberExpression sme:
                     if (sme.Property is Identifier id)
@@ -357,11 +355,12 @@ namespace Raven.Server.Documents.Indexes.Static
                     }
 
                     throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return object expression statement got a statement of type {actualBody.GetType().Name}.");
-                
+
                 // x => ({ A: x.A, B: x.B })
                 case ObjectExpression oe:
                     _groupByFields = CreateFieldsFromObjectExpression(oe);
                     return _groupByFields;
+
                 default:
                     throw new InvalidOperationException($"Unknown body type: {actualBody.GetType().Name}");
             }

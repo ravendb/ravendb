@@ -60,7 +60,7 @@ namespace Raven.Server.ServerWide.Commands
                     }
                     break;
             }
-        }
+        } 
         
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
@@ -114,7 +114,14 @@ namespace Raven.Server.ServerWide.Commands
                         record.RavenEtls.Remove(ravenEtl);
                     }
                     break;
-                
+
+                case OngoingTaskType.OlapEtl:
+                    var olapEtl = record.OlapEtls?.Find(x => x.TaskId == TaskId);
+                    if (olapEtl != null)
+                    {
+                        record.OlapEtls.Remove(olapEtl);
+                    }
+                    break;
             }
         }
 

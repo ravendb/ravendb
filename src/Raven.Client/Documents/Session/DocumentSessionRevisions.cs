@@ -8,17 +8,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Json;
 
 namespace Raven.Client.Documents.Session
 {
     public abstract class DocumentSessionRevisionsBase : AdvancedSessionExtensionBase
     {
+
         protected DocumentSessionRevisionsBase(InMemoryDocumentSessionOperations session)
             : base(session)
         {
         }
-
         public void ForceRevisionCreationFor<T>(T entity, ForceRevisionStrategy strategy = ForceRevisionStrategy.Before)
         {
             if (ReferenceEquals(entity, null))
@@ -61,11 +62,13 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server
     /// </summary>
-    public class DocumentSessionRevisions : DocumentSessionRevisionsBase, IRevisionsSessionOperations
+    public class DocumentSessionRevisions : DocumentSessionRevisionsBase, IRevisionsSessionOperations,ILazyRevisionsOperations
     {
         public DocumentSessionRevisions(InMemoryDocumentSessionOperations session) : base(session)
         {
         }
+
+        public ILazyRevisionsOperations Lazily => this;
 
         public List<T> GetFor<T>(string id, int start = 0, int pageSize = 25)
         {
@@ -76,7 +79,7 @@ namespace Raven.Client.Documents.Session
             operation.SetResult(command.Result);
             return operation.GetRevisionsFor<T>();
         }
-
+        
         public List<MetadataAsDictionary> GetMetadataFor(string id, int start = 0, int pageSize = 25)
         {
             var operation = new GetRevisionOperation(Session, id, start, pageSize, true);
@@ -122,5 +125,41 @@ namespace Raven.Client.Documents.Session
             RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
             return command.Result;
         }
+        Lazy<T> ILazyRevisionsOperations.Get<T>(string changeVector)
+        {
+            var operation = new GetRevisionOperation(Session, changeVector);
+            var lazyRevisionOperation = new LazyRevisionOperation<T>(operation, LazyRevisionOperation<T>.Mode.Single);
+            return ((DocumentSession)Session).AddLazyOperation<T>(lazyRevisionOperation, null);
+        }
+
+        Lazy<List<MetadataAsDictionary>> ILazyRevisionsOperations.GetMetadataFor(string id, int start, int pageSize)
+        {
+            var operation = new GetRevisionOperation(Session, id, start, pageSize);
+            var lazyRevisionOperation = new LazyRevisionOperation<MetadataAsDictionary>(operation, LazyRevisionOperation<MetadataAsDictionary>.Mode.ListOfMetadata);
+            return ((DocumentSession)Session).AddLazyOperation<List<MetadataAsDictionary>>(lazyRevisionOperation, null);
+        }
+
+        Lazy<Dictionary<string, T>> ILazyRevisionsOperations.Get<T>(IEnumerable<string> changeVectors)
+        {
+            var operation = new GetRevisionOperation(Session,changeVectors);
+            var lazyRevisionOperation = new LazyRevisionOperation<T>(operation, LazyRevisionOperation<T>.Mode.Map);
+            return ((DocumentSession)Session).AddLazyOperation<Dictionary<string, T>>(lazyRevisionOperation, null);
+        }
+
+        Lazy<T> ILazyRevisionsOperations.Get<T>(string id, DateTime date)
+        {
+            var operation = new GetRevisionOperation(Session, id, date);
+            var lazyRevisionOperation = new LazyRevisionOperation<T>(operation, LazyRevisionOperation<T>.Mode.Single);
+            return ((DocumentSession)Session).AddLazyOperation<T>(lazyRevisionOperation, null);
+        }
+        
+        Lazy<List<T>> ILazyRevisionsOperations.GetFor<T>(string id, int start , int pageSize)
+        {
+            var operation = new GetRevisionOperation(Session,id,start, pageSize);
+            var lazyRevisionOperation = new LazyRevisionOperation<T>(operation, LazyRevisionOperation<T>.Mode.Multi);
+            return ((DocumentSession)Session).AddLazyOperation<List<T>>(lazyRevisionOperation, null);
+        }
+
+  
     }
 }

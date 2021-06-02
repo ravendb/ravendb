@@ -1,19 +1,64 @@
-<div class="destinations flex-vertical absolute-fill content-margin">
+<div class="flex-vertical absolute-fill content-margin custom-sorters">
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6 flex-vertical">
-            <div class="flex-header">
+            <div class="flex-header flex-horizontal">
                 <div>
-                    <a class="btn btn-primary" data-bind="attr: { href: addUrl }">
-                        <i class="icon-plus"></i><span>Add Custom Sorter</span>
+                    <a class="btn btn-primary" data-bind="attr: { href: addUrl }, requiredAccess: 'DatabaseAdmin'">
+                        <i class="icon-plus"></i><span>Add a Database Custom Sorter</span>
                     </a>
                 </div>
+                <div class="flex-separator"></div>
+                <small title="Go to the RavenDB sorters documentation">
+                    <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/LGUJH8/' + clientVersion() }"><i class="icon-link"></i>Sorters tutorial</a>
+                </small>
             </div>
-
-            <div class="hr-title">
-                <h5 class="no-text-transform"><span>Current custom sorters</span></h5><hr>
+            <div class="hr-title margin-top">
+                <h5 class="no-text-transform"><span>Database custom sorters</span></h5><hr>
             </div>
-            
             <div data-bind="foreach: sorters">
+                <div class="panel item">
+                    <div class="padding padding-sm">
+                        <div class="flex-horizontal">
+                            <div class="flex-grow info">
+                                <span data-bind="text: name"></span>
+                            </div>
+                            <div class="text-info" data-bind="visible: overrideServerWide">
+                                <span data-placement="left" data-toggle="tooltip" title="Overrides server-wide sorter" data-animation="true">
+                                   <i class="icon-info"></i>
+                                </span>
+                            </div>
+                            <div class="actions">
+                                <button type="button" data-bind="click: $root.enterTestSorterMode.bind($root, $data)"
+                                        class="btn btn-default"><i class="icon-rocket" title="Test custom sorter"></i>
+                                </button>
+                                <button type="button" data-bind="click: $root.editSorter.bind($root, $data), visible: $root.isAdminAccessOrAbove"
+                                        class="btn btn-default"><i class="icon-edit" title="Edit custom sorter"></i>
+                                </button>
+                                <button type="button" data-bind="click: $root.editSorter.bind($root, $data), visible: !$root.isAdminAccessOrAbove()"
+                                        class="btn btn-default"><i class="icon-preview" title="View custom sorter"></i>
+                                </button>
+                                <button type="button" data-bind="click: $root.confirmRemoveSorter.bind($root, $data), requiredAccess: 'DatabaseAdmin'"
+                                        class="btn btn-danger"><i class="icon-trash" title="Delete custom sorter"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div data-bind="collapse: testModeEnabled">
+                        <div data-bind="template: { name: 'test-rql' }"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center text-muted margin-top" data-bind="visible: sorters().length === 0">
+                <i class="icon-lg icon-empty-set"></i>
+                <h2 class="margin-top margin-top-sm">No database custom sorters have been defined</h2>
+            </div>
+            <div class="hr-title margin-top margin-top-lg flex-horizontal">
+                <h5 class="no-text-transform"><span>Server-wide custom sorters</span></h5><hr>
+                <small class="padding padding-xs margin-left" data-bind="visible: canNavigateToServerWideCustomSorters" title="Go to the Server-Wide custom sorters view">
+                    <a target="_blank" data-bind="attr: { href: serverWideCustomSortersUrl }"><i class="icon-link"></i>Server-Wide Custom Sorters</a>
+                </small>
+            </div>
+            <div data-bind="foreach: serverWideSorters">
                 <div class="panel item">
                     <div class="padding padding-sm">
                         <div class="flex-horizontal">
@@ -24,50 +69,19 @@
                                 <button type="button" data-bind="click: $root.enterTestSorterMode.bind($root, $data)"
                                         class="btn btn-default"><i class="icon-rocket" title="Test custom sorter"></i>
                                 </button>
-                                <button type="button" data-bind="click: $root.editSorter.bind($root, $data)"
-                                        class="btn btn-default"><i class="icon-edit" title="Edit custom sorter"></i>
-                                </button>
-                                <button type="button" data-bind="click: $root.confirmRemoveSorter.bind($root, $data)"
-                                        class="btn btn-danger"><i class="icon-trash" title="Delete custom sorter"></i>
-                                </button>
                             </div>
                         </div>
                     </div>
                     <div data-bind="collapse: testModeEnabled">
-                        <div class="panel-addon padding padding-sm">
-                            <div class="margin-bottom">
-                                <label>Enter test RQL:</label>
-                                <pre class="form-control margin-top" placeholder="Enter query to test sorter"
-                                     data-bind="aceEditor: { code: testRql, lang:'ace/mode/rql', completer: $root.queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: testRql" style="height: 160px;">
-                            </pre>
-                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: testRql">
-                                    <div class="help-block" data-bind="validationMessage: testRql"></div>
-                                </div>
-                            </div>
-
-                            <div class="flex-horizontal toolbar">
-                                <div class="flex-separator"></div>
-                                <div>
-                                    <button class="btn btn-default" data-bind="click: $root.enterTestSorterMode.bind($root, $data)">
-                                        <i class="icon-cancel"></i>
-                                        <span>Close</span>
-                                    </button>
-                                    <button class="btn btn-primary" data-bind="click: _.partial($root.runTest, $data)">
-                                        <i class="icon-play2"></i>
-                                        <span>Run test</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                        <div data-bind="template: { name: 'test-rql' }"></div>
                     </div>
                 </div>
             </div>
-            
-            <div data-bind="visible: sorters().length === 0">
-                <h3 class="text-center text-muted">No custom sorters have been defined.</h3>
+            <div class="text-center text-muted margin-top" data-bind="visible: serverWideSorters().length === 0">
+                <i class="icon-lg icon-empty-set"></i>
+                <h2 class="margin-top margin-top-sm">No server-wide custom sorters have been defined</h2>
             </div>
         </div>
-
         <div class="col-sm-12 col-lg-6 flex-vertical" data-bind="visible: testResultsVisible">
             <div class="panel padding flex-vertical flex-grow fixed">
                 <div class="flex-header">
@@ -106,6 +120,33 @@
         </div>
     </div>
 </div>
+
+<script type="text/html" id="test-rql">
+    <div class="panel-addon padding padding-sm">
+        <div class="margin-bottom">
+            <label title="Enter a query to test the sorter">Enter test RQL:</label>
+            <pre class="form-control margin-top"
+                 data-bind="aceEditor: { code: testRql, lang:'ace/mode/rql', completer: $root.queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: testRql" style="height: 160px;">
+                                </pre>
+            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: testRql">
+                <div class="help-block" data-bind="validationMessage: testRql"></div>
+            </div>
+        </div>
+        <div class="flex-horizontal toolbar">
+            <div class="flex-separator"></div>
+            <div>
+                <button class="btn btn-default" data-bind="click: $root.enterTestSorterMode.bind($root, $data)">
+                    <i class="icon-cancel"></i>
+                    <span>Close</span>
+                </button>
+                <button class="btn btn-primary" data-bind="click: _.partial($root.runTest, $data)">
+                    <i class="icon-play2"></i>
+                    <span>Run test</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</script>
 
 <script type="text/html" id="empty-test-results-template">
     No results found.

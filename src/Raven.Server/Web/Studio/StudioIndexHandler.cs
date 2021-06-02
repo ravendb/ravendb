@@ -14,7 +14,8 @@ namespace Raven.Server.Web.Studio
 {
     public class StudioIndexHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/studio/index-type", "POST", AuthorizationStatus.ValidUser)]
+
+        [RavenAction("/databases/*/studio/index-type", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PostIndexType()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -26,7 +27,7 @@ namespace Raven.Server.Web.Studio
                     var indexType = indexDefinition.DetectStaticIndexType();
                     var indexSourceType = indexDefinition.DetectStaticIndexSourceType();
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
                         writer.WritePropertyName(nameof(IndexTypeInfo.IndexType));
@@ -45,8 +46,8 @@ namespace Raven.Server.Web.Studio
             public IndexType IndexType { get; set; }
             public IndexSourceType IndexSourceType { get; set; }
         }
-        
-        [RavenAction("/databases/*/studio/index-fields", "POST", AuthorizationStatus.ValidUser)]
+
+        [RavenAction("/databases/*/studio/index-fields", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PostIndexFields()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -76,17 +77,17 @@ namespace Raven.Server.Web.Studio
 
                         var outputFields = compiledIndex.OutputFields;
 
-                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                         {
                             writer.WriteStartObject();
-                            writer.WriteArray(context, "Results", outputFields, (w, c, field) => { w.WriteString(field); });
+                            writer.WriteArray(context, "Results", outputFields, (w, c, field) => w.WriteString(field));
                             writer.WriteEndObject();
                         }
                     }
                     catch (IndexCompilationException)
                     {
                         // swallow compilation exception and return empty array as response
-                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                         {
                             writer.WriteStartArray();
                             writer.WriteEndArray();
@@ -120,7 +121,7 @@ namespace Raven.Server.Web.Studio
                 return null;
 
             var result = new HashSet<AdditionalAssembly>();
-           
+
             foreach (BlittableJsonReaderObject assemblyJson in jsonArray)
             {
                 var assembly = GetAssembly(assemblyJson);
@@ -140,10 +141,10 @@ namespace Raven.Server.Web.Studio
             json.TryGet(nameof(AdditionalAssembly.PackageName), out string packageName);
             json.TryGet(nameof(AdditionalAssembly.PackageVersion), out string packageVersion);
             json.TryGet(nameof(AdditionalAssembly.PackageSourceUrl), out string packageSourceUrl);
-                
+
             var usings = new HashSet<string>();
             json.TryGet(nameof(AdditionalAssembly.Usings), out BlittableJsonReaderArray usingsArray);
-            
+
             if (usingsArray != null)
             {
                 foreach (var item in usingsArray)
@@ -166,9 +167,8 @@ namespace Raven.Server.Web.Studio
             {
                 return AdditionalAssembly.FromNuGet(packageName, packageVersion, packageSourceUrl, usings);
             }
-            
+
             return null;
         }
     }
 }
-

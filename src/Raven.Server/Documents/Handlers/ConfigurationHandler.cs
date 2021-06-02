@@ -5,22 +5,21 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
     public class ConfigurationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/configuration/studio", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetStudioConfiguration()
+        [RavenAction("/databases/*/configuration/studio", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetStudioConfiguration()
         {
             var configuration = Database.StudioConfiguration;
 
             if (configuration == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
+                return;
             }
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -28,23 +27,21 @@ namespace Raven.Server.Documents.Handlers
                 var val = configuration.ToJson();
                 var clientConfigurationJson = context.ReadObject(val, Constants.Configuration.StudioId);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteObject(clientConfigurationJson);
                 }
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/configuration/client", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetClientConfiguration()
+        [RavenAction("/databases/*/configuration/client", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetClientConfiguration()
         {
             var inherit = GetBoolValueQueryString("inherit", required: false) ?? true;
 
             var configuration = Database.ClientConfiguration;
             var serverConfiguration = GetServerClientConfiguration();
-            
+
             if (inherit && (configuration == null || configuration.Disabled) && serverConfiguration != null)
             {
                 configuration = serverConfiguration;
@@ -59,7 +56,7 @@ namespace Raven.Server.Documents.Handlers
                     clientConfigurationJson = context.ReadObject(val, Constants.Configuration.ClientId);
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
@@ -80,8 +77,6 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         private ClientConfiguration GetServerClientConfiguration()
@@ -91,7 +86,7 @@ namespace Raven.Server.Documents.Handlers
                 using (context.OpenReadTransaction())
                 {
                     var clientConfigurationJson = ServerStore.Cluster.Read(context, Constants.Configuration.ClientId, out _);
-                    var config =  clientConfigurationJson != null
+                    var config = clientConfigurationJson != null
                         ? JsonDeserializationServer.ClientConfiguration(clientConfigurationJson)
                         : null;
 

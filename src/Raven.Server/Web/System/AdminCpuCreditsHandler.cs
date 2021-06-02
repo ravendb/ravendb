@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -17,14 +16,13 @@ namespace Raven.Server.Web.System
     public class AdminCpuCreditsHandler : RequestHandler
     {
         [RavenAction("/admin/cpu-credits", "POST", AuthorizationStatus.ClusterAdmin)]
-        public Task UpdateCpuCredits()
+        public async Task UpdateCpuCredits()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var newCredits = ctx.ReadForDisk(RequestBodyStream(), "cpu-credits"))
+            using (var newCredits = await ctx.ReadForMemoryAsync(RequestBodyStream(), "cpu-credits"))
             {
                 var updated = JsonDeserializationServer.CpuCredits(newCredits);
                 Server.CpuCreditsBalance.RemainingCpuCredits = updated.RemainingCredits;
-                return Task.CompletedTask;
             }
         }
 
@@ -35,22 +33,21 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/debug/cpu-credits", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task GetCpuCredits()
+        [RavenAction("/debug/cpu-credits", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task GetCpuCredits()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var json = Server.CpuCreditsBalance.ToJson();
                 writer.WriteObject(context.ReadObject(json, "cpu/credits"));
-                return Task.CompletedTask;
             }
         }
 
         public class CpuCredits
         {
             public double RemainingCredits;
-            
+
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue

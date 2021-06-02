@@ -97,9 +97,13 @@ class autoIndexDefinition extends indexDefinition {
         this.collection(collection);
         // trim [ and ]
         fields = fields.substring(1, fields.length - 1);
-        const fieldsList = fields.split(";");
         
-        this.mapFields(fieldsList.map(x => new autoIndexMapField(x, fieldNames)));
+        if (fields) {
+            const fieldsList = fields.split(";");
+            this.mapFields(fieldsList.map(x => new autoIndexMapField(x, fieldNames)));
+        } else {
+            this.mapFields([]);
+        }
     }
 
     private parseReduceFields(reduceStr: string, fieldNames: dictionary<Raven.Client.Documents.Indexes.IndexFieldOptions>) {

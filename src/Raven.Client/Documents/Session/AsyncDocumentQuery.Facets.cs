@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Queries.Facets;
 
 namespace Raven.Client.Documents.Session
@@ -21,7 +23,7 @@ namespace Raven.Client.Documents.Session
             return new AsyncAggregationDocumentQuery<T>(this);
         }
 
-        public IAsyncAggregationDocumentQuery<T> AggregateBy(IEnumerable<Facet> facets)
+        public IAsyncAggregationDocumentQuery<T> AggregateBy(IEnumerable<FacetBase> facets)
         {
             foreach (var facet in facets)
                 base.AggregateBy(facet);
@@ -34,6 +36,12 @@ namespace Raven.Client.Documents.Session
             base.AggregateUsing(facetSetupDocumentId);
 
             return new AsyncAggregationDocumentQuery<T>(this);
+        }
+
+        public Task<Dictionary<string, FacetResult>> ExecuteAggregationAsync(CancellationToken token)
+        {
+            var query = new AsyncAggregationRawDocumentQuery<T>(this, AsyncSession);
+            return query.ExecuteAsync(token);
         }
     }
 }

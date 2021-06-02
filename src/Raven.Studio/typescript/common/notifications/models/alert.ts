@@ -15,7 +15,7 @@ class alert extends abstractNotification {
         super(db, dto);
         this.updateWith(dto);
         
-        this.canBeDismissed = ko.pureComputed(() => this.alertType() !== "LicenseManager_AGPL3");
+        this.canBeDismissed = ko.pureComputed(() => (this.alertType() !== "LicenseManager_AGPL3" && !this.readOnly) || !this.isPersistent());
 
         this.hasDetails = ko.pureComputed(() => !!this.details());
         
@@ -24,7 +24,7 @@ class alert extends abstractNotification {
                 (this.alertType() === "LicenseManager_LicenseLimit" || this.alertType() === "LicenseManager_AGPL3");
         });
 
-        this.canBePostponed = ko.pureComputed(() => this.isPersistent() && !this.isLicenseAlert());
+        this.canBePostponed = ko.pureComputed(() => this.isPersistent() && !this.isLicenseAlert() && !this.readOnly);
         
         this.injectCustomControl();
     }

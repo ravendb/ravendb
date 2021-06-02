@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers
     public class SecretKeyHandler : RequestHandler
     {
         [RavenAction("/admin/secrets", "GET", AuthorizationStatus.Operator)]
-        public Task GetKeys()
+        public async Task GetKeys()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
@@ -28,12 +28,11 @@ namespace Raven.Server.Documents.Handlers
                     ["Keys"] = new DynamicJsonArray(Server.ServerStore.GetSecretKeysNames(ctx))
                 };
 
-                using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(ctx, ResponseBodyStream()))
                 {
                     ctx.Write(writer, djv);
                 }
             }
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/secrets/generate", "GET", AuthorizationStatus.Operator)]
@@ -42,7 +41,7 @@ namespace Raven.Server.Documents.Handlers
             return Generate();
         }
 
-        [RavenAction("/secrets/generate", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/secrets/generate", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public unsafe Task Generate()
         {
             HttpContext.Response.ContentType = "application/base64";
@@ -55,30 +54,41 @@ namespace Raven.Server.Documents.Handlers
                 var base64 = Convert.ToBase64String(key);
                 Sodium.sodium_memzero(pKey, (UIntPtr)key.Length);
                 fixed (char* pBase64 = base64)
-                    using (var writer = new StreamWriter(ResponseBodyStream()))
+                {
+                    try
                     {
-                        writer.Write(base64);
+                        WriteAsync(ResponseBodyStream(), base64).Wait(ServerStore.ServerShutdown);
+                    }
+                    finally
+                    {
                         Sodium.sodium_memzero((byte*)pBase64, (UIntPtr)(base64.Length * sizeof(char)));
                     }
+                }
             }
             return Task.CompletedTask;
         }
 
+        private static async Task WriteAsync(Stream responseBodyStream, string base64)
+        {
+            await using (var writer = new StreamWriter(responseBodyStream))
+            {
+                await writer.WriteAsync(base64);
+            }
+        }
+
         [RavenAction("/admin/secrets", "POST", AuthorizationStatus.Operator)]
-        public Task PutKey()
+        public async Task PutKey()
         {
             var name = GetStringQueryString("name");
             var overwrite = GetBoolValueQueryString("overwrite", required: false) ?? false;
 
             using (var reader = new StreamReader(HttpContext.Request.Body))
             {
-                var base64 = reader.ReadToEnd();
+                var base64 = await reader.ReadToEndAsync();
                 ServerStore.PutSecretKey(base64, name, overwrite);
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/secrets/distribute", "POST", AuthorizationStatus.Operator)]
@@ -91,7 +101,7 @@ namespace Raven.Server.Documents.Handlers
 
             using (var reader = new StreamReader(HttpContext.Request.Body))
             {
-                var base64 = reader.ReadToEnd();
+                var base64 = await reader.ReadToEndAsync();
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
                     ClusterTopology clusterTopology;

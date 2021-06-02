@@ -23,10 +23,10 @@ namespace SlowTests.Issues
             {
                 long length = int.MaxValue;
 
-                length +=  4096;
+                length += 4096;
 
                 file.SetLength(length);
-                
+
                 using (var stream = new TempCryptoStream(file))
                 {
                     var bytes = new byte[4096];
@@ -41,11 +41,11 @@ namespace SlowTests.Issues
                     stream.Position = length - 4096 + 1;
 
                     stream.Write(bytes, 0, bytes.Length);
-                    
+
                     stream.Seek(0, SeekOrigin.Begin);
 
                     var readBytes = new byte[bytes.Length];
-                    
+
                     var read = stream.Read(readBytes, 0, readBytes.Length);
 
                     Assert.Equal(4096, read);

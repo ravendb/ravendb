@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
@@ -59,6 +60,24 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.SqlConnectionStrings.Remove(ConnectionStringName);
+        }
+    }
+
+    public class RemoveOlapConnectionStringCommand : RemoveConnectionStringCommand<OlapConnectionString>
+    {
+        protected RemoveOlapConnectionStringCommand()
+        {
+            // for deserialization
+        }
+
+        public RemoveOlapConnectionStringCommand(string connectionStringName, string databaseName, string uniqueRequestId) : base(connectionStringName, databaseName, uniqueRequestId)
+        {
+
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            record.OlapConnectionStrings.Remove(ConnectionStringName);
         }
     }
 }

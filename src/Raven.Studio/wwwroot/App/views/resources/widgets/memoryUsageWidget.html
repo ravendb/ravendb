@@ -1,0 +1,107 @@
+<div>
+    <div class="cluster-dashboard-item-header">
+        <h3> <i class="icon-memory"></i> <span>Memory</span></h3>
+        <button class="btn btn-warning btn-sm" data-bind="click: remove">
+            <i class="icon-trash"></i>
+        </button>
+        <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
+            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen }"></i>
+        </button>
+    </div>
+
+    <div class="property-container" data-bind="css: { 'property-collapse': !showProcessDetails() }">
+        <h4>RavenDB Memory usage</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <button class="collapse-arrow property-control" data-bind="click: toggleProcessDetails">
+                    <i class="icon-arrow-down"></i>
+                    <i class="icon-arrow-up"></i>
+                </button>
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-toggle="tooltip" data-placement="top" 
+                         data-bind="attr: { class: 'nodes-item node-' + tag }, css: { 'node-warning': lowMemorySeverity() === 'Low', 'node-danger': lowMemorySeverity() === 'ExtremelyLow', 'no-data': !currentItem(), 'spinner': spinner }, tooltipText: lowMemoryTitle()">
+                        <div class="nodes-item-header">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: workingSetFormatted()[0]"></span>
+                                <span class="supplementary-info" data-bind="text: workingSetFormatted()[1]"></span>
+                            </div>
+                        </div>
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Managed Allocations</div>
+                                <div class="details-item-value" data-bind="text: sizeFormatter(managedAllocations())"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Unmanaged Allocations</div>
+                                <div class="details-item-value" data-bind="text: sizeFormatter(unmanagedAllocations())"></div>
+                            </div>
+                            <div class="details-item" data-bind="visible: showEncryptionBuffers">
+                                <div class="details-item-name">Encryption Buffers in Use</div>
+                                <div class="details-item-value" data-bind="text: sizeFormatter(encryptionBuffersInUse())"></div>
+                            </div>
+                            <div class="details-item" data-bind="visible: showEncryptionBuffers">
+                                <div class="details-item-name">Encryption Buffers Pool</div>
+                                <div class="details-item-value" data-bind="text: sizeFormatter(encryptionBuffersPool())"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Dirty Memory</div>
+                                <div class="details-item-value" data-bind="text: sizeFormatter(dirtyMemory())"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Memory Mapped</div>
+                                <div class="details-item-value" data-bind="text: sizeFormatter(memoryMapped())"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="graph-container ravendb-line-chart">
+            </div>
+        </div>
+
+    </div>
+
+    <div class="property-container" data-bind="css: { 'property-collapse': !showMachineDetails() }">
+        <h4>Machine Memory usage</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <button class="collapse-arrow property-control" data-bind="click: toggleMachineDetails">
+                    <i class="icon-arrow-down"></i>
+                    <i class="icon-arrow-up"></i>
+                </button>
+
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag }, css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                        <div class="nodes-item-header">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: machineMemoryUsagePercentage"></span>
+                                <span class="supplementary-info" data-bind="text: machineMemoryUsage"></span>
+                            </div>
+                        </div>
+
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Swap</div>
+                                <div class="details-item-value" data-bind="text: sizeFormatter(swap())"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Available</div>
+                                <div class="details-item-value" data-bind="text: sizeFormatter(availableMemory())"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Available for processing</div>
+                                <div class="details-item-value" data-bind="text: sizeFormatter(availableMemoryForProcessing())"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="graph-container machine-line-chart">
+            </div>
+        </div>
+    </div>
+</div>

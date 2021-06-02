@@ -3,7 +3,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -14,14 +13,14 @@ namespace Raven.Server.Web.Operations
 {
     public class OperationsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/operations/next-operation-id", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetNextOperationId()
+        [RavenAction("/databases/*/operations/next-operation-id", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetNextOperationId()
         {
             var nextId = Database.Operations.GetNextOperationId();
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Id");
@@ -32,11 +31,9 @@ namespace Raven.Server.Web.Operations
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/operations/kill", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/operations/kill", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public Task Kill()
         {
             var id = GetLongQueryString("id");
@@ -46,8 +43,8 @@ namespace Raven.Server.Web.Operations
             return NoContent();
         }
 
-        [RavenAction("/databases/*/operations", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetAll()
+        [RavenAction("/databases/*/operations", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetAll()
         {
             var id = GetLongQueryString("id", required: false);
 
@@ -62,28 +59,23 @@ namespace Raven.Server.Web.Operations
                     if (operation == null)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return Task.CompletedTask;
+                        return;
                     }
 
                     operations = new List<Documents.Operations.Operations.Operation> { operation };
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WriteArray(context, "Results", operations, (w, c, operation) =>
-                    {
-                        c.Write(w, operation.ToJson());
-                    });
+                    writer.WriteArray(context, "Results", operations, (w, c, operation) => c.Write(w, operation.ToJson()));
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/operations/state", "GET", AuthorizationStatus.ValidUser)]
-        public Task State()
+        [RavenAction("/databases/*/operations/state", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task State()
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
@@ -92,12 +84,12 @@ namespace Raven.Server.Web.Operations
             if (state == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
+                return;
             }
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, state.ToJson());
                     // writes Patch response
@@ -105,8 +97,6 @@ namespace Raven.Server.Web.Operations
                         AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Operations);
                 }
             }
-
-            return Task.CompletedTask;
         }
     }
 }

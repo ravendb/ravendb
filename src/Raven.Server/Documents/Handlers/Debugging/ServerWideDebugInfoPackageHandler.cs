@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -34,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
             using (transactionOperationContext.OpenReadTransaction())
             {
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
@@ -51,7 +50,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         {
                             await WriteForDatabase(archive, jsonOperationContext, localEndpointClient, databaseName);
                         }
-
                     }
 
                     ms.Position = 0;
@@ -67,17 +65,22 @@ namespace Raven.Server.Documents.Handlers.Debugging
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             HttpContext.Response.Headers["Content-Type"] = "application/zip";
 
+            var token = CreateOperationToken();
+            var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
+
+            await ServerStore.Operations.AddOperation(null, "Created debug package for all cluster nodes", Operations.Operations.OperationType.DebugPackage, async _ =>
+            {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
             using (transactionOperationContext.OpenReadTransaction())
             {
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
                         var localEndpointClient = new LocalEndpointClient(Server);
 
-                        using (var localMemoryStream = new MemoryStream())
+                        await using (var localMemoryStream = new MemoryStream())
                         {
                             //assuming that if the name tag is empty
                             var nodeName = $"Node - [{ServerStore.NodeTag ?? "Empty node tag"}]";
@@ -93,12 +96,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             var entry = archive.CreateEntry($"{nodeName}.zip");
                             entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                            using (var entryStream = entry.Open())
+                            await using (var entryStream = entry.Open())
                             {
-                                localMemoryStream.CopyTo(entryStream);
-                                entryStream.Flush();
+                                await localMemoryStream.CopyToAsync(entryStream);
+                                await entryStream.FlushAsync();
                             }
                         }
+
                         var databaseNames = ServerStore.Cluster.GetDatabaseNames(transactionOperationContext);
                         var topology = ServerStore.GetClusterTopology(transactionOperationContext);
 
@@ -124,7 +128,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 catch (Exception e)
                                 {
                                     var entryName = $"Node - [{tagWithUrl.Key}]";
-                                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
+                                    await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, entryName);
                                 }
                             }
                         }
@@ -149,7 +153,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 catch (Exception e)
                                 {
                                     var entryName = $"Node - [{urlToDatabaseNamesMap.Value.Item2}]";
-                                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
+                                    await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, entryName);
                                 }
                             }
                         }
@@ -159,6 +163,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     await ms.CopyToAsync(ResponseBodyStream());
                 }
             }
+
+                return null;
+            }, operationId, token: token);
         }
 
         private async Task WriteDebugInfoPackageForNodeAsync(
@@ -178,7 +185,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 requestExecutor.DefaultTimeout = timeout;
 
-                using (var responseStream = await GetDebugInfoFromNodeAsync(
+                await using (var responseStream = await GetDebugInfoFromNodeAsync(
                     context,
                     requestExecutor,
                     databaseNames ?? EmptyStringArray))
@@ -186,7 +193,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     var entry = archive.CreateEntry($"Node - [{tag}].zip");
                     entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                    using (var entryStream = entry.Open())
+                    await using (var entryStream = entry.Open())
                     {
                         await responseStream.CopyToAsync(entryStream);
                         await entryStream.FlushAsync();
@@ -201,10 +208,16 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node [{ServerStore.NodeTag}].zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             HttpContext.Response.Headers["Content-Type"] = "application/zip";
-            
+
+
+            var token = CreateOperationToken();
+            var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
+
+            await ServerStore.Operations.AddOperation(null, "Created debug package for current server only", Operations.Operations.OperationType.DebugPackage, async _ =>
+            {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
@@ -218,6 +231,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     await ms.CopyToAsync(ResponseBodyStream());
                 }
             }
+
+                return null;
+            }, operationId, token: token);
         }
 
         private static async Task WriteLogFile(ZipArchive archive)
@@ -229,7 +245,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var entry = archive.CreateEntry(prefix, CompressionLevel.Optimal);
                 entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                using (var entryStream = entry.Open())
+                await using (var entryStream = entry.Open())
                 {
                     LoggingSource.Instance.AttachPipeSink(entryStream);
 
@@ -242,7 +258,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             catch (Exception e)
             {
                 LoggingSource.Instance.DetachPipeSink();
-                DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, prefix);
+                await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, prefix);
             }
         }
 
@@ -257,12 +273,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(NodeDebugInfoRequestHeader.DatabaseNames)] = databaseNames
             };
 
-            using (var ms = new MemoryStream())
-            using (var writer = new BlittableJsonTextWriter(context, ms))
+            await using (var ms = new MemoryStream())
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
             {
                 context.Write(writer, bodyJson);
-                writer.Flush();
-                ms.Flush();
+                await writer.FlushAsync();
+                await ms.FlushAsync();
 
                 var rawStreamCommand = new GetRawStreamResultCommand($"admin/debug/remote-cluster-info-package", ms);
 
@@ -284,18 +300,18 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     var entry = archive.CreateEntry(entryRoute);
                     entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                    using (var entryStream = entry.Open())
-                    using (var writer = new BlittableJsonTextWriter(context, entryStream))
+                    await using (var entryStream = entry.Open())
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, entryStream))
                     using (var endpointOutput = await localEndpointClient.InvokeAndReadObjectAsync(route, context))
                     {
                         context.Write(writer, endpointOutput);
-                        writer.Flush();
+                        await writer.FlushAsync();
                         await entryStream.FlushAsync();
                     }
                 }
                 catch (Exception e)
                 {
-                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryRoute);
+                    await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, entryRoute);
                 }
             }
         }
@@ -311,7 +327,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     {
                         if (rawRecord == null ||
                             rawRecord.Topology.RelevantFor(ServerStore.NodeTag) == false ||
-                            rawRecord.IsDisabled||
+                            rawRecord.IsDisabled ||
                             rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress ||
                             IsDatabaseBeingDeleted(ServerStore.NodeTag, rawRecord))
                             continue;
@@ -333,7 +349,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return deletionInProgress != null && deletionInProgress.TryGetValue(tag, out var delInProgress) && delInProgress != DeletionInProgressStatus.No;
         }
 
-        private static async Task WriteForDatabase(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, string databaseName, string path = null)
+        private static async Task WriteForDatabase(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, string databaseName, string path = null)
         {
             var endpointParameters = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
             {
@@ -347,20 +363,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     var entry = archive.CreateEntry(DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, path ?? databaseName));
                     entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                    using (var entryStream = entry.Open())
-                    using (var writer = new BlittableJsonTextWriter(jsonOperationContext, entryStream))
+                    await using (var entryStream = entry.Open())
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, entryStream))
                     {
-                        using (var endpointOutput = await localEndpointClient.InvokeAndReadObjectAsync(route, jsonOperationContext, endpointParameters))
+                        using (var endpointOutput = await localEndpointClient.InvokeAndReadObjectAsync(route, context, endpointParameters))
                         {
-                            jsonOperationContext.Write(writer, endpointOutput);
-                            writer.Flush();
+                            context.Write(writer, endpointOutput);
+                            await writer.FlushAsync();
                             await entryStream.FlushAsync();
                         }
                     }
                 }
                 catch (Exception e)
                 {
-                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, path ?? databaseName);
+                    await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, path ?? databaseName);
                 }
             }
         }
@@ -388,7 +404,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             return nodeUrlToDatabaseNames;
         }
-
 
         internal class NodeDebugInfoRequestHeader
         {

@@ -2,7 +2,7 @@
     <form data-bind="submit: saveChanges" novalidate>
         <div class="content-margin">
             <div class="toolbar">
-                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }">
+                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }, requiredAccess: 'DatabaseAdmin'">
                     <i class="icon-save"></i> <span>Save</span>
                 </button>
             </div>
@@ -10,7 +10,7 @@
                 <div class="col-sm-7">
                     <div class="panel padding margin-bottom">
                         <div class="toggle">
-                            <input id="toggleOverride" class="styled" type="checkbox" data-bind="checked: enabled">
+                            <input id="toggleOverride" class="styled" type="checkbox" data-bind="checked: enabled, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
                             <label for="toggleOverride">
                                 Enable document expiration
                             </label>

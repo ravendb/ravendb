@@ -156,6 +156,7 @@ class indexPerformance extends viewModelBase {
     private static readonly brushSectionIndexesWorkHeight = 22;
     private static readonly brushSectionLineWidth = 1;
     private static readonly trackHeight = 18; // height used for callstack item
+    private static readonly waitTrackPadding = 4;
     private static readonly stackPadding = 1; // space between call stacks
     private static readonly trackMargin = 4;
     private static readonly closedTrackPadding = 2;
@@ -248,6 +249,7 @@ class indexPerformance extends viewModelBase {
         stripeTextColor: undefined as string,
         progressStripes: undefined as string,
         tracks: {
+            "Wait/ConcurrentlyRunningIndexesLimit": undefined as string,
             "Collection": undefined as string,
             "Indexing": undefined as string,
             "Cleanup": undefined as string,
@@ -830,7 +832,7 @@ class indexPerformance extends viewModelBase {
         this.data.forEach(indexStats => {
             indexStats.Performance.forEach(perfStat => {
                 const perfStatsWithCache = perfStat as IndexingPerformanceStatsWithCache;
-                const start = perfStatsWithCache.StartedAsDate;
+                const start = perfStatsWithCache.StartedAsDateExcludingWaitTime;
                 let end: Date;
                 if (perfStat.Completed) {
                     end = perfStatsWithCache.CompletedAsDate;
@@ -957,7 +959,8 @@ class indexPerformance extends viewModelBase {
                 const perfLength = performance.length;
                 for (let perfIdx = 0; perfIdx < perfLength; perfIdx++) {
                     const perf = performance[perfIdx];
-                    const startDate = (perf as IndexingPerformanceStatsWithCache).StartedAsDate;
+                    const perfWithCache = perf as IndexingPerformanceStatsWithCache;
+                    const startDate = perfWithCache.StartedAsDate;
 
                     const startDateAsInt = startDate.getTime();
                     if (visibleEndDateAsInt < startDateAsInt) {
@@ -967,20 +970,22 @@ class indexPerformance extends viewModelBase {
                     if (startDateAsInt + perf.DurationInMs < visibleStartDateAsInt)
                         continue;
                     
+                    if (perfWithCache.WaitOperation && perfWithCache.WaitOperation.DurationInMs > 1) {
+                        this.drawWaitTime(context, xScale(perfWithCache.StartedAsDate), stripesYStart, extentFunc, yOffset !== 0, perfWithCache.WaitOperation);
+                    }
                     
-                    const x1 = xScale(startDate);
-                    
-                    this.drawStripes(0, perf, context, [perf.Details], x1, stripesYStart, yOffset, extentFunc, perfStat.Name);
+                    const x1 = xScale(perfWithCache.StartedAsDateExcludingWaitTime);
+                    this.drawStripes(0, perf, context, [perfWithCache.DetailsExcludingWaitTime], x1, stripesYStart, yOffset, extentFunc, perfStat.Name);
 
                     if (!perf.Completed) {
-                        this.findInProgressAction(context, perf, extentFunc, x1, stripesYStart, yOffset);
+                        this.findInProgressAction(context, perfWithCache, extentFunc, x1, stripesYStart, yOffset);
                     }
                 }
             }
         });
     }
 
-    private findInProgressAction(context: CanvasRenderingContext2D, perf: Raven.Client.Documents.Indexes.IndexingPerformanceStats, extentFunc: (duration: number) => number,
+    private findInProgressAction(context: CanvasRenderingContext2D, perf: IndexingPerformanceStatsWithCache, extentFunc: (duration: number) => number,
         xStart: number, yStart: number, yOffset: number): void {
 
         const extractor = (perfs: Raven.Client.Documents.Indexes.IndexingPerformanceOperation[], xStart: number, yStart: number, yOffset: number) => {
@@ -999,7 +1004,7 @@ class indexPerformance extends viewModelBase {
             });
         };
 
-        extractor([perf.Details], xStart, yStart, yOffset);
+        extractor([perf.DetailsExcludingWaitTime], xStart, yStart, yOffset);
     }
 
     private getColorForOperation(operationName: string): string {
@@ -1015,6 +1020,18 @@ class indexPerformance extends viewModelBase {
         throw new Error("Unable to find color for: " + operationName);
     }
 
+    
+    private drawWaitTime(context: CanvasRenderingContext2D, xStart: number, yStart: number, extentFunc: (duration: number) => number, trackIsOpened: boolean, op: Raven.Client.Documents.Indexes.IndexingPerformanceOperation) {
+        context.fillStyle = this.getColorForOperation("Wait/ConcurrentlyRunningIndexesLimit");
+        const dx = extentFunc(op.DurationInMs);
+        
+        context.fillRect(xStart, yStart + indexPerformance.waitTrackPadding, dx, indexPerformance.trackHeight - 2 * indexPerformance.waitTrackPadding);
+        
+        if (trackIsOpened && dx >= 0.8) {
+            this.hitTest.registerTrackItem(xStart, yStart + indexPerformance.waitTrackPadding, dx, indexPerformance.trackHeight - 2 * indexPerformance.waitTrackPadding, op);
+        }
+    }
+    
     private drawStripes(level: number, rootPerf:Raven.Client.Documents.Indexes.IndexingPerformanceStats, 
                         context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, 
                         xStart: number, yStart: number, yOffset: number, extentFunc: (duration: number) => number, indexName?: string) {
@@ -1067,10 +1084,10 @@ class indexPerformance extends viewModelBase {
             if (level === 1) {
                 if (op.Name === "Map" && rootPerf.FailedCount > 0) {
                     context.fillStyle = this.colors.itemWithError;
-                    graphHelper.drawErrorMark(context, currentX, yStart, dx);
+                    graphHelper.drawTriangle(context, currentX, yStart, dx);
                 } else if (op.Name === "Reduce" && op.ReduceDetails && op.ReduceDetails.ReduceErrors > 0) {
                     context.fillStyle = this.colors.itemWithError;
-                    graphHelper.drawErrorMark(context, currentX, yStart, dx);
+                    graphHelper.drawTriangle(context, currentX, yStart, dx);
                 }
             }
             
@@ -1164,8 +1181,8 @@ class indexPerformance extends viewModelBase {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== element) {
-            const tooltipHtml = "Gap start time: " + (element).start.toLocaleTimeString() +
-                "<br/>Gap duration: " + generalUtils.formatMillis((element).durationInMillis);
+            const tooltipHtml = '<div class="tooltip-li">Gap start time: <div class="value">' + (element).start.toLocaleTimeString() + '</div></div>'
+                + '<div class="tooltip-li">Gap duration: <div class="value">' + generalUtils.formatMillis((element).durationInMillis) + '</div></div>';
             this.handleTooltip(element, tooltipHtml, { x, y }, false);
         }
     } 
@@ -1183,30 +1200,30 @@ class indexPerformance extends viewModelBase {
         }
         
         if (currentDatum !== element || reuseTooltip) {
-            let tooltipHtml = `<span class="tooltip-title">${generalUtils.escapeHtml(element.Name)}</span><br/>Duration: ${generalUtils.formatMillis((element).DurationInMs)}`;
+            let tooltipHtml = `<div class="tooltip-header">${generalUtils.escapeHtml(element.Name)}</div> <div class="tooltip-li"> Duration: <div class="value">${generalUtils.formatMillis((element).DurationInMs)}</div></div>` ;
 
             const opWithParent = element as IndexingPerformanceOperationWithParent;
 
             if (opWithParent.Parent) {
                 const parentStats = opWithParent.Parent;
                 let countsDetails: string;
-                countsDetails = `<br/>*** <span class="tooltip-title">Entries details</span> ***<br/>`;
-                countsDetails += `Input Count: ${parentStats.InputCount.toLocaleString()}<br/>`;
-                countsDetails += `Output Count: ${parentStats.OutputCount.toLocaleString()}<br/>`;
-                countsDetails += `Failed Count: ${parentStats.FailedCount.toLocaleString()}<br/>`;
-                countsDetails += `Success Count: ${parentStats.SuccessCount.toLocaleString()}<br/>`;
-                countsDetails += `Documents Size: ${parentStats.DocumentsSize.HumaneSize}<br/>`;
+                countsDetails = `<div class="tooltip-header">Entries details</div>`;
+                countsDetails += `<div class="tooltip-li">Input Count: <div class="value">${parentStats.InputCount.toLocaleString()}</div></div>`;
+                countsDetails += `<div class="tooltip-li">Output Count: <div class="value">${parentStats.OutputCount.toLocaleString()}</div></div>`;
+                countsDetails += `<div class="tooltip-li">Failed Count: <div class="value">${parentStats.FailedCount.toLocaleString()}</div></div>`;
+                countsDetails += `<div class="tooltip-li">Success Count: <div class="value">${parentStats.SuccessCount.toLocaleString()}</div></div>`;
+                countsDetails += `<div class="tooltip-li">Documents Size: <div class="value">${parentStats.DocumentsSize.HumaneSize}</div></div>`;
 
                 if (parentStats.InputCount > 0) {
-                    countsDetails += `Average Document Size: ${generalUtils.formatBytesToSize(parentStats.DocumentsSize.SizeInBytes / parentStats.InputCount)}<br/>`;
+                    countsDetails += `<div class="tooltip-li">Average Document Size: <div class="value">${generalUtils.formatBytesToSize(parentStats.DocumentsSize.SizeInBytes / parentStats.InputCount)}</div></div>`;
                 }
 
-                countsDetails += `Managed Allocation Size: ${parentStats.AllocatedBytes.HumaneSize}<br/>`;
+                countsDetails += `<div class="tooltip-li">Managed Allocation Size: <div class="value">${parentStats.AllocatedBytes.HumaneSize}</div></div>`;
 
                 if (element.DurationInMs > 0) {
                     const durationInSec = element.DurationInMs / 1000;
-                    countsDetails += `Processed Data Speed: ${generalUtils.formatBytesToSize(parentStats.DocumentsSize.SizeInBytes / durationInSec)}/sec<br/>`;
-                    countsDetails += `Document Processing Speed: ${Math.floor(parentStats.InputCount / durationInSec).toLocaleString()} docs/sec<br/>`;
+                    countsDetails += `<div class="tooltip-li">Processed Data Speed: <div class="value">${generalUtils.formatBytesToSize(parentStats.DocumentsSize.SizeInBytes / durationInSec)}/sec</div></div>`;
+                    countsDetails += `<div class="tooltip-li">Document Processing Speed: <div class="value">${Math.floor(parentStats.InputCount / durationInSec).toLocaleString()} docs/sec</div></div>`;
                 }
 
                 tooltipHtml += countsDetails;
@@ -1214,32 +1231,32 @@ class indexPerformance extends viewModelBase {
 
             if (element.CommitDetails) {
                 let commitDetails: string;
-                commitDetails = `<br/>*** <span class="tooltip-title">Commit details</span> ***<br/>`;
-                commitDetails += `Modified pages: ${element.CommitDetails.NumberOfModifiedPages.toLocaleString()}<br/>`;
-                commitDetails += `Pages written to disk: ${element.CommitDetails.NumberOf4KbsWrittenToDisk.toLocaleString()}`;
+                commitDetails = `<div class="tooltip-header">Commit details</div>`;
+                commitDetails += `<div class="tooltip-li">Modified pages: <div class="value">${element.CommitDetails.NumberOfModifiedPages.toLocaleString()}</div></div>`;
+                commitDetails += `<div class="tooltip-li">Pages written to disk: <div class="value">${element.CommitDetails.NumberOf4KbsWrittenToDisk.toLocaleString()}</div></div>`;
                 tooltipHtml += commitDetails;
             }
 
             if (element.LuceneMergeDetails) {
                 let luceneMergeDetails: string;
-                luceneMergeDetails = `<br/>*** <span class="tooltip-title">Lucene Merge Details</span> ***<br/>`;
-                luceneMergeDetails += `Total merges: ${element.LuceneMergeDetails.TotalMergesCount.toLocaleString()}<br/>`;
-                luceneMergeDetails += `Executed merges: ${element.LuceneMergeDetails.ExecutedMergesCount.toLocaleString()}`;
+                luceneMergeDetails = `<div class="tooltip-header">Lucene Merge Details</div>`;
+                luceneMergeDetails += `<div class="tooltip-li">Total merges: <div class="value">${element.LuceneMergeDetails.TotalMergesCount.toLocaleString()}</div></div>`;
+                luceneMergeDetails += `<div class="tooltip-li">Executed merges: <div class="value">${element.LuceneMergeDetails.ExecutedMergesCount.toLocaleString()}</div></div>`;
                 if (element.LuceneMergeDetails.MergedFilesCount > 0)
-                    luceneMergeDetails += `<br/>Merged files: ${element.LuceneMergeDetails.MergedFilesCount.toLocaleString()}`;
+                    luceneMergeDetails += `<div class="tooltip-li">Merged files: <div class="value">${element.LuceneMergeDetails.MergedFilesCount.toLocaleString()}</div></div>`;
                 if (element.LuceneMergeDetails.MergedDocumentsCount > 0)
-                    luceneMergeDetails += `<br/>Merged documents: ${element.LuceneMergeDetails.MergedDocumentsCount.toLocaleString()}`;
+                    luceneMergeDetails += `<div class="tooltip-li">Merged documents: <div class="value">${element.LuceneMergeDetails.MergedDocumentsCount.toLocaleString()}</div></div>`;
                 tooltipHtml += luceneMergeDetails;
             }
 
             if (element.MapDetails) {
                 let mapDetails: string;
-                mapDetails = `<br/>*** <span class="tooltip-title">Map details</span> ***<br/>`;
-                mapDetails += `Allocation budget: ${generalUtils.formatBytesToSize(element.MapDetails.AllocationBudget)}<br/>`;
-                mapDetails += `Batch status: ${element.MapDetails.BatchCompleteReason || 'In progress'}<br/>`;
-                mapDetails += `Currently allocated: ${generalUtils.formatBytesToSize(element.MapDetails.CurrentlyAllocated)} <br/>`;
-                mapDetails += `Process private memory: ${generalUtils.formatBytesToSize(element.MapDetails.ProcessPrivateMemory)}<br/>`;
-                mapDetails += `Process working set: ${generalUtils.formatBytesToSize(element.MapDetails.ProcessWorkingSet)}`;
+                mapDetails = `<div class="tooltip-header">Map details</div>`;
+                mapDetails += `<div class="tooltip-li">Allocation budget: <div class="value">${generalUtils.formatBytesToSize(element.MapDetails.AllocationBudget)}</div></div>`;
+                mapDetails += `<div class="tooltip-li">Batch status: <div class="value">${element.MapDetails.BatchCompleteReason || 'In progress'}</div></div>`;
+                mapDetails += `<div class="tooltip-li">Currently allocated: <div class="value">${generalUtils.formatBytesToSize(element.MapDetails.CurrentlyAllocated)} </div></div>`;
+                mapDetails += `<div class="tooltip-li">Process private memory: <div class="value">${generalUtils.formatBytesToSize(element.MapDetails.ProcessPrivateMemory)}</div></div>`;
+                mapDetails += `<div class="tooltip-li">Process working set: <div class="value">${generalUtils.formatBytesToSize(element.MapDetails.ProcessWorkingSet)}</div></div>`;
                 tooltipHtml += mapDetails;
             }
 
@@ -1247,18 +1264,18 @@ class indexPerformance extends viewModelBase {
                 let reduceDetails: string;
 
                 if (element.ReduceDetails.TreesReduceDetails) {
-                    reduceDetails = `<br/>*** <span class="tooltip-title">Trees details</span> ***<br/>`;
-                    reduceDetails += `Modified leafs: ${element.ReduceDetails.TreesReduceDetails.NumberOfModifiedLeafs.toLocaleString()} (compressed: ${element.ReduceDetails.TreesReduceDetails.NumberOfCompressedLeafs.toLocaleString()})<br/>`;
-                    reduceDetails += `Modified branches: ${element.ReduceDetails.TreesReduceDetails.NumberOfModifiedBranches.toLocaleString()}`;
+                    reduceDetails = `<div class="tooltip-header">Trees details</div>`;
+                    reduceDetails += `<div class="tooltip-li">Modified leafs: <div class="value">${element.ReduceDetails.TreesReduceDetails.NumberOfModifiedLeafs.toLocaleString()} (compressed: ${element.ReduceDetails.TreesReduceDetails.NumberOfCompressedLeafs.toLocaleString()})</div></div>`;
+                    reduceDetails += `<div class="tooltip-li">Modified branches: <div class="value">${element.ReduceDetails.TreesReduceDetails.NumberOfModifiedBranches.toLocaleString()}</div></div>`;
                 }
                 else {
-                    reduceDetails = `<br/>*** <span class="tooltip-title">Reduce details</span> ***<br/>`;
-                    reduceDetails += `Reduce attempts: ${element.ReduceDetails.ReduceAttempts.toLocaleString()} <br/>`;
-                    reduceDetails += `Reduce successes: ${element.ReduceDetails.ReduceSuccesses.toLocaleString()} <br/>`;
-                    reduceDetails += `Reduce errors: ${element.ReduceDetails.ReduceErrors.toLocaleString()} <br/>`;
-                    reduceDetails += `Currently allocated: ${generalUtils.formatBytesToSize(element.ReduceDetails.CurrentlyAllocated)} <br/>`;
-                    reduceDetails += `Process private memory: ${generalUtils.formatBytesToSize(element.ReduceDetails.ProcessPrivateMemory)}<br/>`;
-                    reduceDetails += `Process working set: ${generalUtils.formatBytesToSize(element.ReduceDetails.ProcessWorkingSet)}`;
+                    reduceDetails = `<div class="tooltip-header">Reduce details</div>`;
+                    reduceDetails += `<div class="tooltip-li">Reduce attempts: <div class="value">${element.ReduceDetails.ReduceAttempts.toLocaleString()} </div></div>`;
+                    reduceDetails += `<div class="tooltip-li">Reduce successes: <div class="value">${element.ReduceDetails.ReduceSuccesses.toLocaleString()} </div></div>`;
+                    reduceDetails += `<div class="tooltip-li">Reduce errors: <div class="value">${element.ReduceDetails.ReduceErrors.toLocaleString()} </div></div>`;
+                    reduceDetails += `<div class="tooltip-li">Currently allocated: <div class="value">${generalUtils.formatBytesToSize(element.ReduceDetails.CurrentlyAllocated)} </div></div>`;
+                    reduceDetails += `<div class="tooltip-li">Process private memory: <div class="value">${generalUtils.formatBytesToSize(element.ReduceDetails.ProcessPrivateMemory)}</div></div>`;
+                    reduceDetails += `<div class="tooltip-li">Process working set: <div class="value">${generalUtils.formatBytesToSize(element.ReduceDetails.ProcessWorkingSet)}</div></div>`;
                 }
                 
                 tooltipHtml += reduceDetails;
@@ -1270,16 +1287,15 @@ class indexPerformance extends viewModelBase {
     
     private handleTooltip(element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation | timeGapInfo, tooltipHtml: string, position: { x: number, y: number }, reuseTooltip: boolean) {
         if (element && (!this.dialogVisible || !position)) {
-            const canvas = this.canvas.node() as HTMLCanvasElement;
-            const context = canvas.getContext("2d");
-            context.font = this.tooltip.style("font");
+
+            this.tooltip
+                .html(tooltipHtml)
+                .datum(element)
+                .style('display', undefined);
             
-
-            const longestLine = generalUtils.findLongestLine(tooltipHtml); 
-            const tooltipWidth = context.measureText(longestLine).width + 60;
-
-            const numberOfLines = generalUtils.findNumberOfLines(tooltipHtml);
-            const tooltipHeight = numberOfLines * 30 + 60;
+            const $tooltip = $(this.tooltip.node());
+            const tooltipWidth = $tooltip.width();
+            const tooltipHeight = $tooltip.height();
 
             if (!reuseTooltip) {
                 let x = position.x;
@@ -1289,18 +1305,13 @@ class indexPerformance extends viewModelBase {
 
                 this.tooltip
                     .style("left", (x + 10) + "px")
-                    .style("top", (y + 10) + "px")
-                    .style('display', undefined);
+                    .style("top", (y + 10) + "px");
 
                 this.tooltip
                     .transition()
                     .duration(250)
                     .style("opacity", 1);
             }
-            
-            this.tooltip
-                .html(tooltipHtml)
-                .datum(element);
         } else {
             this.hideTooltip();
         }
@@ -1309,7 +1320,8 @@ class indexPerformance extends viewModelBase {
     private hideTooltip() {
         this.tooltip.transition()
             .duration(250)
-            .style("opacity", 0);
+            .style("opacity", 0)
+            .each("end", () => this.tooltip.style("display", "none"));
          
         this.tooltip.datum(null);
     }
@@ -1416,7 +1428,14 @@ class indexPerformance extends viewModelBase {
             exportFileName = `indexPerf of ${this.activeDatabase().name} ${moment().format("YYYY-MM-DD HH-mm")}`; 
         }
 
-        const keysToIgnore: Array<keyof IndexingPerformanceStatsWithCache | keyof IndexingPerformanceOperationWithParent> = ["StartedAsDate", "CompletedAsDate", "Parent"];
+        const keysToIgnore: Array<keyof IndexingPerformanceStatsWithCache | keyof IndexingPerformanceOperationWithParent> = [
+            "StartedAsDate", 
+            "CompletedAsDate", 
+            "Parent",
+            "StartedAsDateExcludingWaitTime",
+            "WaitOperation",
+            "DetailsExcludingWaitTime"
+        ];
         fileDownloader.downloadAsJson(this.data, exportFileName + ".json", exportFileName, (key, value) => {
             if (_.includes(keysToIgnore, key)) {
                 return undefined;

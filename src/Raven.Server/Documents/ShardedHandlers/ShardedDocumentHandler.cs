@@ -51,7 +51,8 @@ namespace Raven.Server.Documents.ShardedHandlers
                 await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
 
-                cmd.Result?.WriteJsonTo(ResponseBodyStream());
+                if (cmd.Result != null)
+                    await cmd.Result.WriteJsonToAsync(ResponseBodyStream());
             }
         }
 
@@ -77,7 +78,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Response?.Headers?.ETag?.Tag;
 
-                cmd.Result.WriteJsonTo(ResponseBodyStream());
+                await cmd.Result.WriteJsonToAsync(ResponseBodyStream());
             }
         }
 
@@ -91,7 +92,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var patch = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
+                var patch = await context.ReadForMemoryAsync(RequestBodyStream(), "ScriptedPatchRequest");
 
                 var index = ShardedContext.GetShardIndex(context, id);
 
@@ -99,7 +100,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
-                cmd.Result.WriteJsonTo(ResponseBodyStream());
+                await cmd.Result.WriteJsonToAsync(ResponseBodyStream());
             }
         }
 
@@ -225,7 +226,8 @@ namespace Raven.Server.Documents.ShardedHandlers
                     //TODO - sharding: verify all headers are taken care of
                     HttpContext.Response.StatusCode = (int)cmds[0].StatusCode;
                     HttpContext.Response.Headers[Constants.Headers.Etag] = singleEtag;
-                    cmds[0].Result?.WriteJsonTo(ResponseBodyStream());
+                    if(cmds[0].Result != null)
+                        await cmds[0].Result.WriteJsonToAsync(ResponseBodyStream());
                     return;
                 }
 
@@ -284,7 +286,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                     await FetchMissingIncludes(cmds, tasks, missingIncludes, context, sb, includePaths, includesMap, metadataOnly);
                 }
 
-                using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), ServerStore.ServerShutdown))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), ServerStore.ServerShutdown))
                 {
                     writer.WriteStartObject();
 

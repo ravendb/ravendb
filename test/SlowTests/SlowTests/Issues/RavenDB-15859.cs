@@ -57,9 +57,10 @@ namespace SlowTests.SlowTests.Issues
 
         private class TestItem
         {
-#pragma warning disable 649
+#pragma warning disable CS0649
             public string Id;
-#pragma warning restore 649
+#pragma warning restore CS0649
+
             public string StringProp;
             public bool BoolProp;
         }

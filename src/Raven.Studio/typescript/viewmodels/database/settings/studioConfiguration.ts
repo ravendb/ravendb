@@ -5,11 +5,13 @@ import eventsCollector = require("common/eventsCollector");
 import saveStudioConfigurationCommand = require("commands/resources/saveStudioConfigurationCommand");
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
+import accessManager = require("common/shell/accessManager");
 
 class studioConfiguration extends viewModelBase {
 
     model: databaseStudioConfigurationModel;
     serverWideStudioConfigurationUrl = appUrl.forGlobalStudioConfiguration();
+    canNavigateToServerSettings: KnockoutComputed<boolean>;
 
     static environments = databaseStudioConfigurationModel.environments;
     
@@ -19,6 +21,8 @@ class studioConfiguration extends viewModelBase {
 
     activate(args: any) {
         super.activate(args);
+     
+        this.canNavigateToServerSettings = accessManager.default.isClusterAdminOrClusterNode;
         
         return new getStudioConfigurationCommand(this.activeDatabase())
             .execute()

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net.Http;
+﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -38,13 +37,10 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
                     {
-                        var jsonReaderObject = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(
-                                new Parameters { File = _filePath },
-                                ctx
-                            );
-                        ctx.Write(stream, jsonReaderObject);
+                        var parametersJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new Parameters { File = _filePath }, ctx);
+                        await ctx.WriteAsync(stream, parametersJson).ConfigureAwait(false);
                     })
                 };
                 return request;

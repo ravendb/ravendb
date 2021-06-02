@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -71,13 +73,13 @@ namespace Raven.Server.Documents.Queries
                 SpatialShapes = query.Metadata.SpatialShapes.ToArray();
         }
 
-        public abstract void AddResult(T result);
+        public abstract ValueTask AddResultAsync(T result, CancellationToken token);
 
         public abstract void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings);
 
         public abstract void AddExplanation(ExplanationResult explanationResult);
 
-        public abstract void HandleException(Exception e);
+        public abstract ValueTask HandleExceptionAsync(Exception e, CancellationToken token);
 
         public abstract bool SupportsExceptionHandling { get; }
 

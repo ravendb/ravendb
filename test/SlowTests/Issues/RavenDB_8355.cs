@@ -13,7 +13,9 @@ using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Sorters;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
@@ -30,14 +32,17 @@ namespace SlowTests.Issues
         [Fact]
         public void CanUseCustomSorter()
         {
+            var sorterName = GetDatabaseName();
+
             using (var store = GetDocumentStore(new Options
             {
+                ModifyDatabaseName = _ => sorterName,
                 ModifyDatabaseRecord = record => record.Sorters = new Dictionary<string, SorterDefinition>
                 {
                     { "MySorter", new SorterDefinition
                     {
-                        Name = "MySorter",
-                        Code = GetSorter("RavenDB_8355.MySorter.cs")
+                        Name = sorterName,
+                        Code = GetSorter("RavenDB_8355.MySorter.cs", "MySorter", sorterName)
                     }}
                 }
             }))
@@ -50,14 +55,21 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True");
+                CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True", sorterName);
             }
+
+            foreach (var key in SorterCompilationCache.Instance.PerDatabaseCache.ForceEnumerateInThreadSafeManner())
+                Assert.NotEqual(sorterName, key.Key.ResourceName);
         }
 
         [Fact]
         public void CanUseCustomSorterWithOperations()
         {
-            using (var store = GetDocumentStore(new Options()))
+            var sorterName = GetDatabaseName();
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = _ => sorterName
+            }))
             {
                 using (var session = store.OpenSession())
                 {
@@ -67,31 +79,31 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                CanUseSorterInternal<SorterDoesNotExistException>(store, "There is no sorter with 'MySorter' name", "There is no sorter with 'MySorter' name");
+                CanUseSorterInternal<SorterDoesNotExistException>(store, $"There is no sorter with '{sorterName}' name", $"There is no sorter with '{sorterName}' name", sorterName);
 
-                var sorterCode = GetSorter("RavenDB_8355.MySorter.cs");
+                var sorterCode = GetSorter("RavenDB_8355.MySorter.cs", "MySorter", sorterName);
 
                 store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
                 {
-                    Name = "MySorter",
+                    Name = sorterName,
                     Code = sorterCode
                 }));
 
                 // checking if we can send again same sorter
                 store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
                 {
-                    Name = "MySorter",
+                    Name = sorterName,
                     Code = sorterCode
                 }));
 
-                CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True");
+                CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True", sorterName);
 
                 sorterCode = sorterCode.Replace("Catch me", "Catch me 2");
 
                 // checking if we can update sorter
                 store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
                 {
-                    Name = "MySorter",
+                    Name = sorterName,
                     Code = sorterCode
                 }));
 
@@ -100,25 +112,29 @@ namespace SlowTests.Issues
                     // We should not be able to add sorter with non-matching name
                     store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
                     {
-                        Name = "MySorter_OtherName",
+                        Name = $"{sorterName}_OtherName",
                         Code = sorterCode
                     }));
                 });
 
-                Assert.Contains("Could not find type 'MySorter_OtherName' in given assembly.", e.Message);
+                Assert.Contains($"Could not find type '{sorterName}_OtherName' in given assembly.", e.Message);
 
-                CanUseSorterInternal<RavenException>(store, "Catch me 2: Name:2:0:False", "Catch me 2: Name:2:0:True");
+                CanUseSorterInternal<RavenException>(store, "Catch me 2: Name:2:0:False", "Catch me 2: Name:2:0:True", sorterName);
 
-                store.Maintenance.Send(new DeleteSorterOperation("MySorter"));
+                store.Maintenance.Send(new DeleteSorterOperation(sorterName));
 
-                CanUseSorterInternal<SorterDoesNotExistException>(store, "There is no sorter with 'MySorter' name", "There is no sorter with 'MySorter' name");
+                CanUseSorterInternal<SorterDoesNotExistException>(store, $"There is no sorter with '{sorterName}' name", $"There is no sorter with '{sorterName}' name", sorterName);
             }
         }
 
         [Fact]
         public void CanGetCustomSorterDiagnostics()
         {
-            using (var store = GetDocumentStore(new Options()))
+            var sorterName = GetDatabaseName();
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = _ => sorterName
+            }))
             {
                 using (var session = store.OpenSession())
                 {
@@ -130,18 +146,18 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
                 {
-                    Name = "MySorterWithDiagnostics",
-                    Code = GetSorter("RavenDB_8355.MySorterWithDiagnostics.cs")
+                    Name = $"{sorterName}_WithDiagnostics",
+                    Code = GetSorter("RavenDB_8355.MySorterWithDiagnostics.cs", "MySorterWithDiagnostics", $"{sorterName}_WithDiagnostics")
                 }));
 
-                var diagnostics = store.Operations.Send(new CustomQueryOperation("from Companies order by custom(Name, 'MySorterWithDiagnostics')"));
+                var diagnostics = store.Operations.Send(new CustomQueryOperation($"from Companies order by custom(Name, '{sorterName}_WithDiagnostics')"));
 
                 Assert.True(diagnostics.Count > 0);
                 Assert.Contains("Inner", diagnostics);
             }
         }
 
-        private static void CanUseSorterInternal<TException>(DocumentStore store, string asc, string desc)
+        private static void CanUseSorterInternal<TException>(DocumentStore store, string asc, string desc, string sorterName)
             where TException : RavenException
         {
             using (var session = store.OpenSession())
@@ -150,7 +166,7 @@ namespace SlowTests.Issues
                 {
                     session
                         .Advanced
-                        .RawQuery<Company>("from Companies order by custom(Name, 'MySorter')")
+                        .RawQuery<Company>($"from Companies order by custom(Name, '{sorterName}')")
                         .ToList();
                 });
 
@@ -160,7 +176,7 @@ namespace SlowTests.Issues
                 {
                     session
                         .Query<Company>()
-                        .OrderBy(x => x.Name, "MySorter")
+                        .OrderBy(x => x.Name, sorterName)
                         .ToList();
                 });
 
@@ -171,7 +187,7 @@ namespace SlowTests.Issues
                     session
                         .Advanced
                         .DocumentQuery<Company>()
-                        .OrderBy(x => x.Name, "MySorter")
+                        .OrderBy(x => x.Name, sorterName)
                         .ToList();
                 });
 
@@ -181,7 +197,7 @@ namespace SlowTests.Issues
                 {
                     session
                         .Advanced
-                        .RawQuery<Company>("from Companies order by custom(Name, 'MySorter') desc")
+                        .RawQuery<Company>($"from Companies order by custom(Name, '{sorterName}') desc")
                         .ToList();
                 });
 
@@ -191,7 +207,7 @@ namespace SlowTests.Issues
                 {
                     session
                         .Query<Company>()
-                        .OrderByDescending(x => x.Name, "MySorter")
+                        .OrderByDescending(x => x.Name, sorterName)
                         .ToList();
                 });
 
@@ -202,7 +218,7 @@ namespace SlowTests.Issues
                     session
                         .Advanced
                         .DocumentQuery<Company>()
-                        .OrderByDescending(x => x.Name, "MySorter")
+                        .OrderByDescending(x => x.Name, sorterName)
                         .ToList();
                 });
 
@@ -234,7 +250,6 @@ namespace SlowTests.Issues
                 }
 
                 public override bool IsReadRequest => false;
-                
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
@@ -254,11 +269,16 @@ namespace SlowTests.Issues
             }
         }
 
-        private static string GetSorter(string name)
+        private static string GetSorter(string resourceName, string originalSorterName, string sorterName)
         {
-            using (var stream = GetDump(name))
+            using (var stream = GetDump(resourceName))
             using (var reader = new StreamReader(stream))
-                return reader.ReadToEnd();
+            {
+                var analyzerCode = reader.ReadToEnd();
+                analyzerCode = analyzerCode.Replace(originalSorterName, sorterName);
+
+                return analyzerCode;
+            }
         }
 
         private static Stream GetDump(string name)

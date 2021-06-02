@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -10,7 +11,6 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
-using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.TrafficWatch;
@@ -97,6 +97,7 @@ namespace Raven.Server.Documents.Queries
             BlittableJsonReaderObject json,
             QueryMetadataCache cache,
             RequestTimeTracker tracker,
+            bool addSpatialProperties = false,
             DocumentDatabase database = null,
             QueryType queryType = QueryType.Select)
         {
@@ -168,7 +169,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public static IndexQueryServerSide Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context, RequestTimeTracker tracker, string overrideQuery = null)
+        public static async Task<IndexQueryServerSide> CreateAsync(HttpContext httpContext, int start, int pageSize, JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties = false, string overrideQuery = null)
         {
             IndexQueryServerSide result = null;
             try
@@ -184,6 +185,7 @@ namespace Raven.Server.Documents.Queries
                     // all defaults which need to have custom value
                     Start = start,
                     PageSize = pageSize,
+                    AddSpatialProperties = addSpatialProperties
                 };
 
                 foreach (var item in httpContext.Request.Query)
@@ -195,9 +197,9 @@ namespace Raven.Server.Documents.Queries
                             case "query":
                                 continue;
                             case "parameters":
-                                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(item.Value[0])))
+                                await using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(item.Value[0])))
                                 {
-                                    result.QueryParameters = context.Read(stream, "query parameters");
+                                    result.QueryParameters = await context.ReadForMemoryAsync(stream, "query parameters");
                                 }
                                 continue;
                             case "waitForNonStaleResults":
@@ -211,9 +213,6 @@ namespace Raven.Server.Documents.Queries
                                 break;
                             case "projectionBehavior":
                                 result.ProjectionBehavior = Enum.Parse<ProjectionBehavior>(item.Value[0], ignoreCase: true);
-                                break;
-                            case "addSpatialProperties":
-                                result.AddSpatialProperties = bool.Parse(item.Value[0]);
                                 break;
                         }
                     }

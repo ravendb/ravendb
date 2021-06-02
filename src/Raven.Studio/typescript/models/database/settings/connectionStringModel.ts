@@ -13,7 +13,7 @@ abstract class connectionStringModel {
     }    
 
     update(dto: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionString) {
-        this.connectionStringName(dto.Name);        
+        this.connectionStringName(dto.Name);
     }
 
     initValidation() {

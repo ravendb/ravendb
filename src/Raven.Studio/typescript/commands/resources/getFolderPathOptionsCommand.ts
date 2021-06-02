@@ -1,12 +1,15 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
+import database = require("models/resources/database");
 
 class getFolderPathOptionsCommand extends commandBase {
 
-    private constructor(private inputPath: string, 
-                        private isBackupFolder: boolean = false, 
-                        private connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType, 
-                        private credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings ) {
+    private constructor(
+        private db: database, 
+        private inputPath: string, 
+        private isBackupFolder: boolean = false, 
+        private connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType, 
+        private credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings ) {
         super();
     }
 
@@ -29,17 +32,19 @@ class getFolderPathOptionsCommand extends commandBase {
             args.backupFolder = this.isBackupFolder;
         }
 
-        const url = endpoints.global.studioTasks.adminStudioTasksFolderPathOptions + this.urlEncodeArgs(args);
+        const url = this.db 
+            ? endpoints.databases.studioDatabaseTasks.adminStudioTasksFolderPathOptions + this.urlEncodeArgs(args)
+            : endpoints.global.studioTasks.adminStudioTasksFolderPathOptions + this.urlEncodeArgs(args);
         
-        return this.post<Raven.Server.Web.Studio.FolderPathOptions>(url, this.preparePayload(), null);
+        return this.post<Raven.Server.Web.Studio.FolderPathOptions>(url, this.preparePayload(), this.db);
     }
     
-    static forServerLocal(inputPath: string, isBackupFolder: boolean) {
-        return new getFolderPathOptionsCommand(inputPath, isBackupFolder, "Local");
+    static forServerLocal(inputPath: string, isBackupFolder: boolean, db: database = null) {
+        return new getFolderPathOptionsCommand(db, inputPath, isBackupFolder, "Local");
     }
 
     static forCloudBackup(credentials: Raven.Client.Documents.Operations.Backups.BackupSettings,type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType) {
-        return new getFolderPathOptionsCommand(null, false, type, credentials);  
+        return new getFolderPathOptionsCommand(null, null, false, type, credentials);  
     }
 }
 

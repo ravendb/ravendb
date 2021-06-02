@@ -2,7 +2,6 @@ using System;
 using System.Net;
 using System.Net.Http;
 using Raven.Client.Documents.Commands.MultiGet;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
@@ -26,7 +25,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         {
             return new GetRequest
             {
-                CanCacheAggressively = _queryOperation.IndexQuery.DisableCaching == false &&  _queryOperation.IndexQuery.WaitForNonStaleResults == false,
+                CanCacheAggressively = _queryOperation.IndexQuery.DisableCaching == false && _queryOperation.IndexQuery.WaitForNonStaleResults == false,
                 Url = "/queries",
                 Method = HttpMethod.Post,
                 Query = $"?queryHash={_queryOperation.IndexQuery.GetQueryHash(ctx, _session.Conventions, _session.JsonSerializer)}",

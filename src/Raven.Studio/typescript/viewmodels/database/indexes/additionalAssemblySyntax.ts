@@ -3,17 +3,17 @@ import copyToClipboard = require("common/copyToClipboard");
 
 class additionalAssemblySyntax extends dialogViewModelBase {
 
-    htmlElement: HTMLElement;
+    dialogContainer: Element;
 
     compositionComplete() {
         super.compositionComplete();
         this.bindToCurrentInstance("copySample");
-        this.htmlElement = document.getElementById("additionalAssymblySyntaxDialog");
+        this.dialogContainer = document.getElementById("additionalAssymblySyntaxDialog");
     }
 
     copySample(sampleTitle: string) {
         const sampleText = additionalAssemblySyntax.csharpSamples.find(x => x.title === sampleTitle).text;
-        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.htmlElement);
+        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
     }
 
     static readonly additionalSourceCsharpText =

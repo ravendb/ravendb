@@ -5,11 +5,11 @@
     }
 
     .threadContainer {
-        fill: @gray-dark;
+        fill: @panel-bg;
     }
 
     .header {
-        fill: @gray-darker;
+        fill: @panel-footer-bg;
     }
 
     .link {
@@ -62,12 +62,12 @@
         fill-opacity: 1;
         transition: fill-opacity .2s ease;
         
-        fill: @gray-light;
+        fill: @text-color;
         font-size: 12px;
         alignment-baseline: middle;
 
         &.own {
-            fill: @gray-lighter;
+            fill: @text-emphasis;
             font-weight: 900;
         }
     }
@@ -114,18 +114,18 @@
     .count {
         font-size:26px;
         font-weight: bold;
-        fill: @gray-lighter;
+        fill: @text-emphasis;
         cursor: default;
     }
     
     .cpuUsage {
-        fill: @gray-lighter;
+        fill: @text-emphasis;
     }
 
     .cpuUsageContainer {
         .legend {
             font-size: 10px; 
-            fill: @gray-light; 
+            fill: @text-color; 
             opacity: 0;
             transition: opacity .4s ease;
         }
@@ -134,6 +134,6 @@
     .title {
         cursor: default;
         font-size:20px;
-        fill: @gray-light;
+        fill: @text-color;
     }
 }

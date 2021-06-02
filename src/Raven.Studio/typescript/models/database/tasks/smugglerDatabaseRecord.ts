@@ -20,10 +20,13 @@ class smugglerDatabaseRecord {
     includeExternalReplications = ko.observable<boolean>(true);
     includeRavenConnectionStrings = ko.observable<boolean>(true);
     includeSqlConnectionStrings = ko.observable<boolean>(true);
+    includeOlapConnectionStrings = ko.observable<boolean>(true);
     includeRavenEtls = ko.observable<boolean>(true);
     includeSqlEtls = ko.observable<boolean>(true);
+    includeOlapEtls = ko.observable<boolean>(true);
     includeClient = ko.observable<boolean>(true);
     includeSorters = ko.observable<boolean>(true);
+    includeAnalyzers = ko.observable<boolean>(true);
     includeHubReplications = ko.observable<boolean>(true);
     includeSinkReplications = ko.observable<boolean>(true);
 
@@ -54,6 +57,12 @@ class smugglerDatabaseRecord {
         popoverUtils.longWithHover($(".js-warning-sql-etl"),
             {
                 content: `SQL Connection strings were not selected.`,
+                placement: 'right'
+            });
+
+        popoverUtils.longWithHover($(".js-warning-olap-etl"),
+            {
+                content: `OLAP Connection strings were not selected.`,
                 placement: 'right'
             });
     }
@@ -89,17 +98,26 @@ class smugglerDatabaseRecord {
         if (this.includeSqlConnectionStrings()) {
             result.push("SqlConnectionStrings");
         }
+        if (this.includeOlapConnectionStrings()) {
+            result.push("OlapConnectionStrings");
+        }
         if (this.includeRavenEtls()) {
             result.push("RavenEtls");
         }
         if (this.includeSqlEtls()) {
             result.push("SqlEtls");
         }
+        if (this.includeOlapEtls()) {
+            result.push("OlapEtls");
+        }
         if (this.includeClient()) {
             result.push("Client");
         }
         if (this.includeSorters()) {
             result.push("Sorters");
+        }
+        if (this.includeAnalyzers()) {
+            result.push("Analyzers");
         }
         if (this.includeHubReplications()) {
             result.push("HubPullReplications");

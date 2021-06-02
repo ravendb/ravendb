@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
+using System.Threading;
 using Newtonsoft.Json;
 using Sparrow;
 using Sparrow.Extensions;
@@ -15,6 +16,8 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
         private readonly MethodInfo _genericReadJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod(nameof(GenericReadJson));
 
         public static readonly JsonDictionaryDateTimeKeysConverter Instance = new JsonDictionaryDateTimeKeysConverter();
+
+        private Dictionary<Type, bool> _canConvertCache = new();
 
         private JsonDictionaryDateTimeKeysConverter()
         {
@@ -34,16 +37,14 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
             foreach (var kvp in value)
             {
                 object key = kvp.Key;
-                if (key is DateTime)
+                if (key is DateTime dateTime)
                 {
-                    var dateTime = (DateTime)key;
                     if (dateTime.Kind == DateTimeKind.Unspecified)
                         dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
                     writer.WritePropertyName(dateTime.GetDefaultRavenFormat());
                 }
-                else if (key is DateTimeOffset)
+                else if (key is DateTimeOffset dateTimeOffset)
                 {
-                    var dateTimeOffset = (DateTimeOffset)key;
                     writer.WritePropertyName(dateTimeOffset.Offset == TimeSpan.Zero
                         ? dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(true)
                         : dateTimeOffset.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
@@ -120,14 +121,27 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
         {
             if (objectType.IsGenericType == false)
                 return false;
-            if (objectType.GetGenericTypeDefinition() != typeof(Dictionary<,>))
-                return false;
 
-            var keyType = objectType.GetGenericArguments()[0];
-            return typeof(DateTime) == keyType ||
-                typeof(DateTimeOffset) == keyType ||
-                typeof(DateTimeOffset?) == keyType ||
-                typeof(DateTime?) == keyType;
+            if (!_canConvertCache.TryGetValue(objectType, out bool canConvert))
+            {                
+                if (objectType.GetGenericTypeDefinition() != typeof(Dictionary<,>) && objectType.GetGenericTypeDefinition() != typeof(IDictionary<,>))
+                {
+                    canConvert = false;
+                }
+                else
+                {
+                    var keyType = objectType.GetGenericArguments()[0];
+                    canConvert = typeof(DateTime) == keyType ||
+                                    typeof(DateTimeOffset) == keyType ||
+                                    typeof(DateTimeOffset?) == keyType ||
+                                    typeof(DateTime?) == keyType;
+                }
+
+                // PERF: We are expecting a race condition here, this is an optimistic switch-on-change scheme.
+                //       It mostly works because the frequency of this call is very low. 
+                _canConvertCache = new Dictionary<Type, bool>(_canConvertCache) { [objectType] = canConvert };
+            }
+            return canConvert;
         }
     }
 }

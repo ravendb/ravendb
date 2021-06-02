@@ -1,33 +1,28 @@
 using System.Linq;
 using Lextm.SharpSnmpLib;
-using Raven.Client;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseTotalCount : ScalarObjectBase<Integer32>
+    public class DatabaseTotalCount : DatabaseBase<Integer32>
     {
-        private readonly ServerStore _serverStore;
-
         public DatabaseTotalCount(ServerStore serverStore)
-            : base(SnmpOids.Databases.General.TotalCount)
+            : base(serverStore, SnmpOids.Databases.General.TotalCount)
         {
-            _serverStore = serverStore;
         }
 
         protected override Integer32 GetData()
         {
-            return new Integer32(GetCount(_serverStore));
+            return new Integer32(GetCount());
         }
 
-        private static int GetCount(ServerStore serverStore)
+        private int GetCount()
         {
-            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var items = serverStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, 0, long.MaxValue);
-                return items.Count();
+                return GetDatabases(context).Count();
             }
         }
     }

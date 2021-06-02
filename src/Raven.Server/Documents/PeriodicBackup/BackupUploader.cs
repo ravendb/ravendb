@@ -25,11 +25,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 {
     public class BackupUploader
     {
-        private readonly BackupUploaderSettings _backupUploaderSettings;
+        private readonly UploaderSettings _uploaderSettings;
         private readonly List<PoolOfThreads.LongRunningWork> _threads;
         private readonly ConcurrentSet<Exception> _exceptions;
 
         private readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
+
         private readonly bool _isFullBackup;
 
         public readonly OperationCancelToken TaskCancelToken;
@@ -44,14 +45,17 @@ namespace Raven.Server.Documents.PeriodicBackup
         private const string GoogleCloudName = "Google Cloud";
         private const string FtpName = "FTP";
 
-        public BackupUploader(BackupUploaderSettings backupUploaderSettings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
+        private readonly bool _useSafeFolderName;
+
+        public BackupUploader(UploaderSettings uploaderSettings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
         {
-            _backupUploaderSettings = backupUploaderSettings;
+            _uploaderSettings = uploaderSettings;
             _threads = new List<PoolOfThreads.LongRunningWork>();
             _exceptions = new ConcurrentSet<Exception>();
 
             _retentionPolicyParameters = retentionPolicyParameters;
-            _isFullBackup = retentionPolicyParameters.IsFullBackup;
+            _isFullBackup = retentionPolicyParameters?.IsFullBackup ?? false;
+            _useSafeFolderName = _uploaderSettings.BackupType.HasValue == false;
 
             TaskCancelToken = taskCancelToken;
             _logger = logger;
@@ -59,13 +63,19 @@ namespace Raven.Server.Documents.PeriodicBackup
             _onProgress = onProgress;
         }
 
+        public bool AnyUploads => BackupConfiguration.CanBackupUsing(_uploaderSettings.S3Settings)
+                                   || BackupConfiguration.CanBackupUsing(_uploaderSettings.GlacierSettings)
+                                   || BackupConfiguration.CanBackupUsing(_uploaderSettings.AzureSettings)
+                                   || BackupConfiguration.CanBackupUsing(_uploaderSettings.GoogleCloudSettings)
+                                   || BackupConfiguration.CanBackupUsing(_uploaderSettings.FtpSettings);
+
         public void Execute()
         {
-            CreateUploadTaskIfNeeded(_backupUploaderSettings.S3Settings, UploadToS3, _backupResult.S3Backup, S3Name);
-            CreateUploadTaskIfNeeded(_backupUploaderSettings.GlacierSettings, UploadToGlacier, _backupResult.GlacierBackup, GlacierName);
-            CreateUploadTaskIfNeeded(_backupUploaderSettings.AzureSettings, UploadToAzure, _backupResult.AzureBackup, AzureName);
-            CreateUploadTaskIfNeeded(_backupUploaderSettings.GoogleCloudSettings, UploadToGoogleCloud, _backupResult.GoogleCloudBackup, GoogleCloudName);
-            CreateUploadTaskIfNeeded(_backupUploaderSettings.FtpSettings, UploadToFtp, _backupResult.FtpBackup, FtpName);
+            CreateUploadTaskIfNeeded(_uploaderSettings.S3Settings, UploadToS3, _backupResult.S3Backup, S3Name);
+            CreateUploadTaskIfNeeded(_uploaderSettings.GlacierSettings, UploadToGlacier, _backupResult.GlacierBackup, GlacierName);
+            CreateUploadTaskIfNeeded(_uploaderSettings.AzureSettings, UploadToAzure, _backupResult.AzureBackup, AzureName);
+            CreateUploadTaskIfNeeded(_uploaderSettings.GoogleCloudSettings, UploadToGoogleCloud, _backupResult.GoogleCloudBackup, GoogleCloudName);
+            CreateUploadTaskIfNeeded(_uploaderSettings.FtpSettings, UploadToFtp, _backupResult.FtpBackup, FtpName);
 
             _threads.ForEach(x => x.Join(int.MaxValue));
 
@@ -85,7 +95,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAwsS3Client(settings, progress, _logger, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName);
+                var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _useSafeFolderName);
                 client.PutObject(key, stream, new Dictionary<string, string>
                 {
                     { "Description", GetArchiveDescription() }
@@ -93,6 +103,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(S3Name)} bucket named: {settings.BucketName}, with key: {key}");
+
+                if (_retentionPolicyParameters == null)
+                    return;
 
                 var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
@@ -103,10 +116,13 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAwsGlacierClient(settings, progress, _logger, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName ?? _backupUploaderSettings.DatabaseName);
+                var key = CombinePathAndKey(settings.RemoteFolderName ?? _uploaderSettings.DatabaseName, useSafeFolderName: _useSafeFolderName);
                 var archiveId = client.UploadArchive(stream, key);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(GlacierName)}, archive ID: {archiveId}");
+
+                if (_retentionPolicyParameters == null)
+                    return;
 
                 var runner = new GlacierRetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
@@ -117,10 +133,13 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenFtpClient(settings, progress, TaskCancelToken.Token))
             {
-                client.UploadFile(_backupUploaderSettings.FolderName, _backupUploaderSettings.FileName, stream);
+                client.UploadFile(_uploaderSettings.FolderName, _uploaderSettings.FileName, stream);
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(FtpName)} server");
+
+                if (_retentionPolicyParameters == null)
+                    return;
 
                 var runner = new FtpRetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
@@ -131,7 +150,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAzureClient(settings, progress, _logger, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName);
+                var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _useSafeFolderName);
                 client.PutBlob(key, stream, new Dictionary<string, string>
                 {
                     { "Description", GetArchiveDescription() }
@@ -139,6 +158,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(AzureName)} container: {settings.StorageContainer}, with key: {key}");
+
+                if (_retentionPolicyParameters == null)
+                    return;
 
                 var runner = new AzureRetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
@@ -158,15 +180,25 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(GoogleCloudName)} storage bucket: {settings.BucketName}");
 
+                if (_retentionPolicyParameters == null)
+                    return;
+
                 var runner = new GoogleCloudRetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
             }
         }
 
-        private string CombinePathAndKey(string path)
+        private string CombinePathAndKey(string path, bool useSafeFolderName = false)
         {
+            if (path?.EndsWith('/') == true)
+                path = path[..^1];
+
             var prefix = string.IsNullOrWhiteSpace(path) == false ? $"{path}/" : string.Empty;
-            return $"{prefix}{_backupUploaderSettings.FolderName}/{_backupUploaderSettings.FileName}";
+            var folderName = useSafeFolderName
+                ? _uploaderSettings.SafeFolderName
+                : _uploaderSettings.FolderName;
+            
+            return $"{prefix}{folderName}/{_uploaderSettings.FileName}";
         }
 
         private void CreateUploadTaskIfNeeded<S, T>(S settings, Action<S, FileStream, Progress> uploadToServer, T uploadStatus, string targetName)
@@ -187,7 +219,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     NativeMemory.EnsureRegistered();
 
                     using (localUploadStatus.UpdateStats(_isFullBackup))
-                    using (var fileStream = File.OpenRead(_backupUploaderSettings.BackupPath))
+                    using (var fileStream = File.OpenRead(_uploaderSettings.FilePath))
                     {
                         var uploadProgress = localUploadStatus.UploadProgress;
                         try
@@ -220,6 +252,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                                 }
                             };
 
+                            uploadProgress.ChangeState(UploadState.Uploading);
+
                             uploadToServer(settings, fileStream, progress);
 
                             AddInfo($"Total uploaded: {totalToUpload}, took: {MsToHumanReadableString(uploadProgress.UploadTimeInMs)}");
@@ -244,7 +278,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     localUploadStatus.Exception = (exception ?? e).ToString();
                     _exceptions.Add(exception ?? new InvalidOperationException(error, e));
                 }
-            }, null, $"Upload backup file of database '{_backupUploaderSettings.DatabaseName}' to {targetName} (task: '{_backupUploaderSettings.TaskName}')");
+            }, null, $"Upload backup file of database '{_uploaderSettings.DatabaseName}' to {targetName} (task: '{_uploaderSettings.TaskName}')");
 
             _threads.Add(thread);
         }
@@ -257,8 +291,20 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private string GetArchiveDescription()
         {
-            var fullBackupText = _backupUploaderSettings.BackupType == BackupType.Backup ? "Full backup" : "A snapshot";
-            return $"{(_isFullBackup ? fullBackupText : "Incremental backup")} for db {_backupUploaderSettings.DatabaseName} at {SystemTime.UtcNow}";
+            var backupType = _uploaderSettings.BackupType;
+            string description;
+
+            if (backupType.HasValue)
+            {
+                var fullBackupText = backupType == BackupType.Backup ? "Full backup" : "A snapshot";
+                description = _isFullBackup ? fullBackupText : "Incremental backup";
+            }
+            else
+            {
+                description = $"OLAP ETL {_uploaderSettings.TaskName}";
+            }
+
+            return $"{description} for db {_uploaderSettings.DatabaseName} at {SystemTime.UtcNow}";
         }
 
         private static string MsToHumanReadableString(long milliseconds)
@@ -309,11 +355,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private string ReportSuccess(string name)
         {
-            return $"Successfully uploaded backup file '{_backupUploaderSettings.FileName}' to {name}";
+            return $"Successfully uploaded backup file '{_uploaderSettings.FileName}' to {name}";
         }
     }
 
-    public class BackupUploaderSettings
+    public class UploaderSettings
     {
         public S3Settings S3Settings;
         public GlacierSettings GlacierSettings;
@@ -321,12 +367,14 @@ namespace Raven.Server.Documents.PeriodicBackup
         public GoogleCloudSettings GoogleCloudSettings;
         public FtpSettings FtpSettings;
 
-        public string BackupPath;
+        public string FilePath;
         public string FolderName;
         public string FileName;
         public string DatabaseName;
         public string TaskName;
 
-        public BackupType BackupType;
+        public BackupType? BackupType;
+
+        public string SafeFolderName;
     }
 }

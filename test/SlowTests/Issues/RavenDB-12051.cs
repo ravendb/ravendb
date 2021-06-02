@@ -3,6 +3,7 @@ using System.IO;
 using FastTests;
 using Raven.Client.Documents.Commands;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
             {
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 using (var stringStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("{'Items': []}")))
-                using (var blittableJson = context.Read(stringStream, "Reading of foo/bar"))
+                using (var blittableJson = context.Sync.ReadForDisk(stringStream, "Reading of foo/bar"))
                 {
                     store.GetRequestExecutor().Execute(new PutDocumentCommand("foo/bar", null, blittableJson), context);
                 }

@@ -10,11 +10,15 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Extensions;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
@@ -42,6 +46,8 @@ using Raven.Server.Indexing;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Memory;
 using Raven.Server.Storage.Layout;
@@ -62,6 +68,7 @@ using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Compaction;
+using AsyncManualResetEvent = Sparrow.Server.AsyncManualResetEvent;
 using Constants = Raven.Client.Constants;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
 using Size = Sparrow.Size;
@@ -120,6 +127,8 @@ namespace Raven.Server.Documents.Indexes
         /// </summary>
         private CancellationTokenSource _indexingProcessCancellationTokenSource;
 
+        internal CancellationToken IndexingProcessCancellationToken => _indexingProcessCancellationTokenSource.Token;
+
         private bool _indexDisabled;
 
         private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryIndexProgress =
@@ -140,7 +149,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal TransactionContextPool _contextPool;
 
-        protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
+        protected ThrottledManualResetEventSlim _mre;
         private readonly object _disablingIndexLock = new object();
 
         private readonly ManualResetEventSlim _logsAppliedEvent = new ManualResetEventSlim();
@@ -164,6 +173,26 @@ namespace Raven.Server.Documents.Indexes
 
         private bool _didWork;
         private bool _isReplacing;
+        public bool IsRolling => Definition.DeploymentMode == IndexDeploymentMode.Rolling;
+        public bool DeployedOnAllNodes
+        {
+            get
+            {
+                if (IsRolling == false)
+                    return true;
+
+                // if we have no replacement - we are deploying, otherwise the replacement is deploying
+                if (DocumentDatabase.IndexStore.HasReplacement(Name))
+                    return true;
+
+                return GetNumberOfDeployedNodes() == -1;
+            }
+        }
+
+        public string NormalizedName => Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty);
+
+        private string _lastPendingStatus;
+        public MultipleUseFlag ForceReplace = new MultipleUseFlag();
 
         protected readonly bool HandleAllDocs;
 
@@ -189,9 +218,12 @@ namespace Raven.Server.Documents.Indexes
         private Lazy<Size?> _transactionSizeLimit;
         private bool _scratchSpaceLimitExceeded;
 
-        private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
+        private readonly AsyncReaderWriterLock _currentlyRunningQueriesLock = new AsyncReaderWriterLock();
+        private readonly AsyncLocal<bool> _isRunningQueriesWriteLockTaken = new AsyncLocal<bool>();
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
         private readonly MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
+        internal bool HadRealIndexingWork => _hadRealIndexingWorkToDo.IsRaised();
+
         private readonly MultipleUseFlag _definitionChanged = new MultipleUseFlag();
         private Size _initialManagedAllocations;
 
@@ -264,7 +296,7 @@ namespace Raven.Server.Documents.Indexes
                     throw new ArgumentException($"Unknown index source type: {sourceType}");
             }
 
-            _disposeOne = new DisposeOnce<SingleAttempt>(() =>
+            _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
             {
                 using (DrainRunningQueries())
                     DisposeIndex();
@@ -273,54 +305,50 @@ namespace Raven.Server.Documents.Indexes
 
         public void ScheduleIndexingRun()
         {
-            _mre.Set();
+            _mre.Set(ignoreThrottling: true);
         }
 
         protected virtual void DisposeIndex()
         {
-            var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
-            if (needToLock)
-                _currentlyRunningQueriesLock.EnterWriteLock();
-            try
+            if (_isRunningQueriesWriteLockTaken.Value == false)
+                throw new InvalidOperationException("Are you trying to dispose an index without a lock?");
+
+            _isRunningQueriesWriteLockTaken.Value = true;
+
+            _indexingProcessCancellationTokenSource?.Cancel();
+
+            //Does happen for faulty in memory indexes
+            if (DocumentDatabase != null)
             {
-                _indexingProcessCancellationTokenSource?.Cancel();
+                DocumentDatabase.TombstoneCleaner.Unsubscribe(this);
 
-                //Does happen for faulty in memory indexes
-                if (DocumentDatabase != null)
-                {
-                    DocumentDatabase.TombstoneCleaner.Unsubscribe(this);
-
-                    DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
-                }
-
-                var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
-
-                exceptionAggregator.Execute(() =>
-                {
-                    var indexingThread = _indexingThread;
-
-                    // If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
-                    if (indexingThread != null && PoolOfThreads.LongRunningWork.Current != indexingThread)
-                        indexingThread.Join(int.MaxValue);
-                });
-
-                exceptionAggregator.Execute(() => { IndexPersistence?.Dispose(); });
-
-                exceptionAggregator.Execute(() => { _environment?.Dispose(); });
-
-                exceptionAggregator.Execute(() => { _unmanagedBuffersPool?.Dispose(); });
-
-                exceptionAggregator.Execute(() => { _contextPool?.Dispose(); });
-
-                exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
-
-                exceptionAggregator.ThrowIfNeeded();
+                DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
             }
-            finally
+
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
+
+            exceptionAggregator.Execute(() =>
             {
-                if (needToLock)
-                    _currentlyRunningQueriesLock.ExitWriteLock();
-            }
+                var indexingThread = _indexingThread;
+
+                // If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
+                if (indexingThread != null && PoolOfThreads.LongRunningWork.Current != indexingThread)
+                    indexingThread.Join(int.MaxValue);
+            });
+
+            exceptionAggregator.Execute(() => { IndexPersistence?.Dispose(); });
+
+            exceptionAggregator.Execute(() => { _environment?.Dispose(); });
+
+            exceptionAggregator.Execute(() => { _unmanagedBuffersPool?.Dispose(); });
+
+            exceptionAggregator.Execute(() => { _contextPool?.Dispose(); });
+
+            exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
+
+            exceptionAggregator.Execute(() => { _mre?.Dispose(); });
+
+            exceptionAggregator.ThrowIfNeeded();
         }
 
         public static Index Open(string path, DocumentDatabase documentDatabase)
@@ -421,7 +449,7 @@ namespace Raven.Server.Documents.Indexes
                         }
                         else
                         {
-                            var definition = IndexStore.CreateAutoDefinition(autoDef);
+                            var definition = IndexStore.CreateAutoDefinition(autoDef, documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode);
 
                             if (definition is AutoMapIndexDefinition autoMapDef)
                                 return AutoMapIndex.CreateNew(autoMapDef, documentDatabase);
@@ -548,7 +576,7 @@ namespace Raven.Server.Documents.Indexes
 
         public AsyncManualResetEvent.FrozenAwaiter GetIndexingBatchAwaiter()
         {
-            if (_disposeOne.Disposed)
+            if (_disposeOnce.Disposed)
                 ThrowObjectDisposed();
 
             return _indexingBatchCompleted.GetFrozenAwaiter();
@@ -561,11 +589,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected void Initialize(DocumentDatabase documentDatabase, IndexingConfiguration configuration, PerformanceHintsConfiguration performanceHints)
         {
-            if (configuration.EnableMetrics)
-            {
-                ReducesPerSec = new MeterMetric();
-                MapsPerSec = new MeterMetric();
-            }
+            InitializeMetrics(configuration);
 
             _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
             using (DrainRunningQueries())
@@ -589,6 +613,20 @@ namespace Raven.Server.Documents.Indexes
                     options.Dispose();
                     throw;
                 }
+            }
+        }
+
+        private void InitializeMetrics(IndexingConfiguration configuration)
+        {
+            if (configuration.EnableMetrics)
+            {
+                ReducesPerSec = new MeterMetric();
+                MapsPerSec = new MeterMetric();
+            }
+            else
+            {
+                ReducesPerSec = null;
+                MapsPerSec = null;
             }
         }
 
@@ -616,11 +654,11 @@ namespace Raven.Server.Documents.Indexes
             options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
             options.OnRecoveryError += (s, e) => documentDatabase.HandleOnIndexRecoveryError(name, s, e);
             options.OnIntegrityErrorOfAlreadySyncedData += (s, e) => documentDatabase.HandleOnIndexIntegrityErrorOfAlreadySyncedData(name, s, e);
+            options.OnRecoverableFailure += documentDatabase.HandleRecoverableFailure;
             options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = documentDatabase.Configuration.Storage.EnablePrefetching;
             options.TimeToSyncAfterFlushInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
-            options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.Encryption.MasterKey = documentDatabase.MasterKey?.ToArray(); //clone
             options.Encryption.RegisterForJournalCompressionHandler();
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
@@ -643,20 +681,27 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        internal ExitWriteLock DrainRunningQueries()
+        internal IDisposable DrainRunningQueries()
         {
-            if (_currentlyRunningQueriesLock.IsWriteLockHeld)
-                return new ExitWriteLock();
+            if (_isRunningQueriesWriteLockTaken.Value)
+                return null;
 
-            if (_currentlyRunningQueriesLock.TryEnterWriteLock(TimeSpan.FromSeconds(10)) == false)
+            IDisposable currentlyRunningQueriesWriteLock;
+
+            try
             {
-                if (_disposeOne.Disposed)
+                currentlyRunningQueriesWriteLock = _currentlyRunningQueriesLock.WriterLock(new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
+                _isRunningQueriesWriteLockTaken.Value = true;
+            }
+            catch (OperationCanceledException)
+            {
+                if (_disposeOnce.Disposed)
                     ThrowObjectDisposed();
 
                 throw new TimeoutException("After waiting for 10 seconds for all running queries ");
             }
 
-            return new ExitWriteLock(_currentlyRunningQueriesLock);
+            return new ExitWriteLock(currentlyRunningQueriesWriteLock, this);
         }
 
         protected void Initialize(
@@ -665,9 +710,9 @@ namespace Raven.Server.Documents.Indexes
             IndexingConfiguration configuration,
             PerformanceHintsConfiguration performanceHints)
         {
-            configuration.InitializeAnalyzers();
+            configuration.InitializeAnalyzers(documentDatabase.Name);
 
-            if (_disposeOne.Disposed)
+            if (_disposeOnce.Disposed)
                 throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
 
             using (DrainRunningQueries())
@@ -690,6 +735,7 @@ namespace Raven.Server.Documents.Indexes
                 Configuration = configuration;
                 PerformanceHints = performanceHints;
 
+                _mre = new ThrottledManualResetEventSlim(Configuration.ThrottlingTimeInterval?.AsTimeSpan, throttlingBehavior: ThrottledManualResetEventSlim.ThrottlingBehavior.ManualManagement);
                 _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                 _environment = environment;
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
@@ -717,7 +763,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private bool IsStaleInternal()
+        private bool IsStaleInternal(List<string> stalenessReasons = null)
         {
             if (_indexingProcessCancellationTokenSource.IsCancellationRequested)
                 return true;
@@ -725,7 +771,7 @@ namespace Raven.Server.Documents.Indexes
             using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
             using (context.OpenReadTransaction())
             {
-                return IsStale(context);
+                return IsStale(context, stalenessReasons: stalenessReasons);
             }
         }
 
@@ -748,6 +794,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected virtual void OnInitialization()
         {
+            _numberOfDeployedNodes = GetNumberOfDeployedNodes();
             _indexWorkers = CreateIndexWorkExecutors();
         }
 
@@ -765,7 +812,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual void Start()
         {
-            if (_disposeOne.Disposed)
+            if (_disposeOnce.Disposed)
                 throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
 
             if (_initialized == false)
@@ -776,12 +823,14 @@ namespace Raven.Server.Documents.Indexes
                 Dispose();
                 return;
             }
-
+            
             using (DrainRunningQueries())
             {
                 StartIndexingThread();
             }
         }
+
+        private readonly ManualResetEventSlim _rollingEvent = new ManualResetEventSlim();
 
         private void StartIndexingThread()
         {
@@ -808,12 +857,13 @@ namespace Raven.Server.Documents.Indexes
                     PoolOfThreads.LongRunningWork.CurrentPooledThread.SetThreadAffinity(
                         DocumentDatabase.Configuration.Server.NumberOfUnusedCoresByIndexes,
                         DocumentDatabase.Configuration.Server.IndexingAffinityMask);
+                    
                     LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
                     ExecuteIndexing();
                 }
                 catch (ObjectDisposedException ode)
                 {
-                    if (_disposeOne.Disposed == false)
+                    if (_disposeOnce.Disposed == false)
                     {
                         ReportUnexpectedIndexingError(ode);
                     }
@@ -824,6 +874,149 @@ namespace Raven.Server.Documents.Indexes
                     ReportUnexpectedIndexingError(e);
                 }
             }, null, IndexingThreadName);
+
+            RollIfNeeded();
+        }
+
+        private int _numberOfDeployedNodes;
+
+        public void RollIfNeeded()
+        {
+            if (_initialized == false)
+                return;
+
+            if (_indexingThread == null)
+                return;
+
+            RaiseNotificationIfNeeded();
+
+            GetPendingAndReplaceStatus(out var pending, out var shouldReplace);
+
+            if (shouldReplace)
+            {
+                if (ForceReplace.Raise() == false)
+                    return; // need to wait for the replace to occur
+            }
+
+            if (shouldReplace || pending == false)
+            {
+                _rollingEvent.Set();
+
+                CompleteIfRollingSideBySideRemoved();
+            }
+        }
+
+        private void CompleteIfRollingSideBySideRemoved()
+        {
+            // this for the case when we removed a rolling side-by-side, we need the original node to complete the deployment.
+            // if the original has no work to do, we need to force it.
+
+            if (_rollingCompletionTask?.IsCompletedSuccessfully == true)
+                return;
+
+            if (_rollingCompletionTask?.IsCompleted == false)
+                return;
+
+            if (GetNumberOfDeployedNodes() != -1 && IsStaleInternal() == false)
+                _mre?.Set();
+        }
+
+        private int GetNumberOfDeployedNodes()
+        {
+            return DocumentDatabase.IndexStore.GetRollingProgress(NormalizedName)?.ActiveDeployments.Values.Count(x => x.State == RollingIndexState.Done) ?? -1;
+        }
+
+        private void RaiseNotificationIfNeeded()
+        {
+            if (IsRolling && DocumentDatabase.IndexStore.HasReplacement(Name) == false)
+            {
+                var numberOfDeployedNodes = _numberOfDeployedNodes;
+                var currentDeployedNodes = GetNumberOfDeployedNodes();
+
+                if (Interlocked.CompareExchange(ref _numberOfDeployedNodes, currentDeployedNodes, numberOfDeployedNodes) != numberOfDeployedNodes) 
+                    return;
+
+                // only one can replace it
+                if (numberOfDeployedNodes != currentDeployedNodes)
+                {
+                    DocumentDatabase.Changes.RaiseNotifications(
+                        new IndexChange {Name = Name, Type = IndexChangeTypes.RollingIndexChanged});
+                }
+            }
+        }
+
+        public bool IsPending
+        {
+            get
+            {
+                GetPendingAndReplaceStatus(out var pending, out _);
+                return pending;
+            }
+        }
+
+        private void GetPendingAndReplaceStatus(out bool pending, out bool replace)
+        {
+            pending = false;
+            replace = false;
+
+            if (IsRolling == false)
+                return;
+
+            if (State == IndexState.Normal)
+            {
+                pending = DocumentDatabase.IndexStore.ShouldSkipThisNodeWhenRolling(this, out _lastPendingStatus, out replace);
+            }
+        }
+
+        private Task _rollingCompletionTask;
+
+        private void MaybeFinishRollingDeployment()
+        {
+            // we remember that task so we wouldn't flood the cluster with commands
+            if (_rollingCompletionTask != null)
+                return;
+
+            if (DocumentDatabase.IndexStore.MaybeFinishRollingDeployment(Definition.Name) == false)
+                return;
+
+            if (IsStaleInternal())
+                return;
+
+            var nodeTag = DocumentDatabase.ServerStore.NodeTag;
+
+            try
+            {
+                // We may send the command multiple times so we need a new Id every time.
+                var command = new PutRollingIndexCommand(DocumentDatabase.Name, Definition.Name, nodeTag, DocumentDatabase.Time.GetUtcNow(), RaftIdGenerator.NewId());
+                _rollingCompletionTask = DocumentDatabase.ServerStore.SendToLeaderAsync(command).ContinueWith(async t =>
+                {
+                    try
+                    {
+                        var result = await t;
+                        await DocumentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, TimeSpan.FromSeconds(15));
+
+                        DocumentDatabase.IndexStore.ForTestingPurposes?.OnRollingIndexFinished?.Invoke(this);
+                    }
+                    catch (Exception e)
+                    {
+                        // we need to retry
+                        ScheduleIndexingRun();
+
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{Definition.Name}' in node {nodeTag}.", e);
+                    }
+                    finally
+                    {
+                        _rollingCompletionTask = null;
+                    }
+                });
+
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{Definition.Name}' in node {nodeTag}.", e);
+            }
         }
 
         private void ReportUnexpectedIndexingError(Exception e)
@@ -848,7 +1041,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual void Stop(bool disableIndex = false)
         {
-            if (_disposeOne.Disposed)
+            if (_disposeOnce.Disposed)
                 throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
 
             if (_initialized == false)
@@ -870,7 +1063,7 @@ namespace Raven.Server.Documents.Indexes
                 lock (_disablingIndexLock)
                 {
                     _indexDisabled = true;
-                    _mre.Set();
+                    _mre.Set(ignoreThrottling: true);
                 }
             }
             else
@@ -897,8 +1090,9 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(Type.IsStatic());
 
-            configuration.InitializeAnalyzers();
-
+            configuration.InitializeAnalyzers(DocumentDatabase.Name);
+            InitializeMetrics(configuration);
+            
             using (DrainRunningQueries())
             {
                 var status = Status;
@@ -910,6 +1104,9 @@ namespace Raven.Server.Documents.Indexes
                 Definition = definition;
                 Configuration = configuration;
 
+                if (Configuration.ThrottlingTimeInterval?.AsTimeSpan != _mre.ThrottlingInterval)
+                    _mre.Update(Configuration.ThrottlingTimeInterval?.AsTimeSpan);
+
                 OnInitialization();
 
                 _priorityChanged.Raise();
@@ -919,11 +1116,13 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private DisposeOnce<SingleAttempt> _disposeOne;
+        private DisposeOnce<SingleAttempt> _disposeOnce;
+
+        public bool IsDisposed => _disposeOnce.Disposed;
 
         public void Dispose()
         {
-            _disposeOne.Dispose();
+            _disposeOnce.Dispose();
         }
 
         public bool IsStale(QueryOperationContext queryContext, long? cutoff = null, List<string> stalenessReasons = null)
@@ -1157,12 +1356,45 @@ namespace Raven.Server.Documents.Indexes
                 var storageEnvironment = _environment;
                 if (storageEnvironment == null)
                     return; // can be null if we disposed immediately
+
+                _mre.EnableThrottlingTimer();
+
                 try
                 {
-                    if (storageEnvironment != null)
-                        storageEnvironment.OnLogsApplied += HandleLogsApplied;
+                    
+                    storageEnvironment.OnLogsApplied += HandleLogsApplied;
 
                     SubscribeToChanges(DocumentDatabase);
+
+                    if (IsRolling)
+                    {
+                        DocumentDatabase.IndexStore.ForTestingPurposes?.BeforeRollingIndexStart?.Invoke(this);
+
+                        while (true)
+                        {
+
+                            WaitHandle.WaitAny(new [] {_mre.WaitHandle, _rollingEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle});
+                            _indexingProcessCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                            
+                            if (_indexDisabled)
+                                return;
+
+                            _rollingEvent.Reset();
+
+                            var replaceStatus = ReplaceIfNeeded(batchCompleted: false, didWork: false);
+
+                            if (replaceStatus == ReplaceStatus.Succeeded)
+                                return;
+
+                            if (replaceStatus == ReplaceStatus.NotNeeded)
+                                break;
+
+                            Thread.Sleep(500); // replace will be re-tried
+                            _rollingEvent.Set();
+                        }
+
+                        DocumentDatabase.IndexStore.ForTestingPurposes?.OnRollingIndexStart?.Invoke(this);
+                    }
 
                     while (true)
                     {
@@ -1184,60 +1416,82 @@ namespace Raven.Server.Documents.Indexes
 
                         PauseIfCpuCreditsBalanceIsTooLow();
 
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Starting indexing for '{Name}'.");
-
-                        var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
-                        LastIndexingTime = stats.StartTime;
-
-                        AddIndexingPerformance(stats);
-
                         var batchCompleted = false;
 
                         bool didWork = false;
 
+                        var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
+
                         try
                         {
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Starting indexing for '{Name}'.");
+
+                            LastIndexingTime = stats.StartTime;
+
+                            AddIndexingPerformance(stats);
+
                             using (var scope = stats.CreateScope())
                             {
                                 try
                                 {
                                     _indexingProcessCancellationTokenSource.Token.ThrowIfCancellationRequested();
 
+                                    if (DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock != null)
+                                    {
+                                        if (DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock.TryAcquire(TimeSpan.Zero,
+                                            _indexingProcessCancellationTokenSource.Token) == false)
+                                        {
+                                            using (scope.For(IndexingOperation.Wait.AcquireConcurrentlyRunningIndexesLock))
+                                            {
+                                                DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock.Acquire(_indexingProcessCancellationTokenSource
+                                                    .Token);
+                                            }
+                                        }
+                                    }
+
                                     try
                                     {
                                         _indexingInProgress.Wait(_indexingProcessCancellationTokenSource.Token);
 
-                                        TimeSpentIndexing.Start();
+                                        try
+                                        {
 
-                                        didWork = DoIndexingWork(scope, _indexingProcessCancellationTokenSource.Token);
+                                            TimeSpentIndexing.Start();
 
-                                        if (_lowMemoryPressure > 0)
-                                            LowMemoryOver();
+                                            didWork = DoIndexingWork(scope, _indexingProcessCancellationTokenSource.Token);
 
-                                        batchCompleted = true;
-                                    }
-                                    catch
-                                    {
-                                        // need to call it here to the let the index continue running
-                                        // we'll stop when we reach the index error threshold
-                                        _mre.Set();
-                                        throw;
+                                            if (_lowMemoryPressure > 0)
+                                                LowMemoryOver();
+
+                                            batchCompleted = true;
+                                        }
+                                        catch
+                                        {
+                                            // need to call it here to the let the index continue running
+                                            // we'll stop when we reach the index error threshold
+                                            _mre.Set(ignoreThrottling: true);
+                                            throw;
+                                        }
+                                        finally
+                                        {
+                                            _indexingInProgress.Release();
+
+                                            if (_batchStopped)
+                                            {
+                                                _batchStopped = false;
+                                                DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Release();
+                                            }
+
+                                            _threadAllocations.CurrentlyAllocatedForProcessing = 0;
+                                            _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
+
+                                            TimeSpentIndexing.Stop();
+                                        }
                                     }
                                     finally
                                     {
-                                        _indexingInProgress.Release();
-
-                                        if (_batchStopped)
-                                        {
-                                            _batchStopped = false;
-                                            DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Release();
-                                        }
-
-                                        _threadAllocations.CurrentlyAllocatedForProcessing = 0;
-                                        _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
-
-                                        TimeSpentIndexing.Stop();
+                                        DocumentDatabase.ServerStore.ServerWideConcurrentlyRunningIndexesLock?.Release();
                                     }
 
                                     _indexingBatchCompleted.SetAndResetAtomically();
@@ -1247,6 +1501,10 @@ namespace Raven.Server.Documents.Indexes
                                         ResetErrors();
                                         _hadRealIndexingWorkToDo.Raise();
                                     }
+                                    else
+                                    {
+                                        MaybeFinishRollingDeployment();
+                                    }
 
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Finished indexing for '{Name}'.'");
@@ -1255,14 +1513,6 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     if (_logger.IsOperationsEnabled)
                                         _logger.Operations($"Failed to open write transaction, indexing will be retried", te);
-                                }
-                                catch (OutOfMemoryException oome)
-                                {
-                                    HandleOutOfMemoryException(oome, scope);
-                                }
-                                catch (EarlyOutOfMemoryException eoome)
-                                {
-                                    HandleOutOfMemoryException(eoome, scope);
                                 }
                                 catch (VoronUnrecoverableErrorException ide)
                                 {
@@ -1294,11 +1544,16 @@ namespace Raven.Server.Documents.Indexes
                                 }
                                 catch (OperationCanceledException)
                                 {
-                                    Debug.Assert(_indexingProcessCancellationTokenSource.IsCancellationRequested, $"Got {nameof(OperationCanceledException)} while the index was not canceled");
+                                    Debug.Assert(_indexingProcessCancellationTokenSource.IsCancellationRequested,
+                                        $"Got {nameof(OperationCanceledException)} while the index was not canceled");
 
                                     // We are here only in the case of indexing process cancellation.
                                     scope.RecordMapCompletedReason("Operation canceled.");
                                     return;
+                                }
+                                catch (Exception e) when (e.IsOutOfMemory())
+                                {
+                                    HandleOutOfMemoryException(scope, storageEnvironment, e);
                                 }
                                 catch (Exception e)
                                 {
@@ -1323,48 +1578,8 @@ namespace Raven.Server.Documents.Indexes
                                         _logger.Info($"Could not update stats for '{Name}'.", e);
                                 }
 
-                                try
-                                {
-                                    if (ShouldReplace())
-                                    {
-                                        var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.OrdinalIgnoreCase);
-                                        _isReplacing = true;
-
-                                        if (batchCompleted)
-                                        {
-                                            // this side-by-side index will be replaced in a second, notify about indexing success
-                                            // so we know that indexing batch is no longer in progress
-                                            NotifyAboutCompletedBatch(didWork);
-                                        }
-
-                                        try
-                                        {
-                                            try
-                                            {
-                                                DocumentDatabase.IndexStore.ReplaceIndexes(originalName, Definition.Name, _indexingProcessCancellationTokenSource.Token);
-                                                StartIndexingThread();
-                                                return;
-                                            }
-                                            catch (OperationCanceledException)
-                                            {
-                                                // this can fail if the indexes lock is currently held, so we'll retry
-                                                // however, we might be requested to shutdown, so we want to skip replacing
-                                                // in this case, worst case scenario we'll handle this in the next batch
-                                            }
-                                        }
-                                        finally
-                                        {
-                                            _isReplacing = false;
-                                        }
-                                    }
-                                }
-                                catch (Exception e)
-                                {
-                                    _mre.Set(); // try again
-
-                                    if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Could not replace index '{Name}'.", e);
-                                }
+                                if (ReplaceIfNeeded(batchCompleted, didWork) == ReplaceStatus.Succeeded)
+                                    return;
                             }
                         }
                         finally
@@ -1383,15 +1598,31 @@ namespace Raven.Server.Documents.Indexes
                             // This is because faster indexes will tend to allocate the memory faster, and we want to give them
                             // all the available resources so they can complete faster.
                             var timeToWaitForMemoryCleanup = 5000;
+
+                            var throttlingInterval = _mre.ThrottlingInterval;
+
+                            if (throttlingInterval != null && throttlingInterval.Value.TotalMilliseconds > timeToWaitForMemoryCleanup)
+                            {
+                                // when we're throttling the index then let's wait twice as much as the throttling interval to ensure
+                                // that we cleanup the memory only when we really don't have any work
+
+                                timeToWaitForMemoryCleanup = (int)(2 * throttlingInterval.Value.TotalMilliseconds);
+                            }
+
                             var forceMemoryCleanup = false;
 
                             if (_lowMemoryFlag.IsRaised())
                             {
-                                ReduceMemoryUsage(storageEnvironment, CleanupMode.Regular);
+                                ReduceMemoryUsage(storageEnvironment, IndexCleanup.Basic | IndexCleanup.Writers);
                             }
                             else if (_allocationCleanupNeeded > 0)
                             {
-                                timeToWaitForMemoryCleanup = 0; // if there is nothing to do, immediately cleanup everything
+                                if (_mre.IsSetScheduled == false)
+                                {
+                                    // if there is nothing to do and no work has been scheduled already (when running in throttled mode) then
+                                    // immediately cleanup everything 
+                                    timeToWaitForMemoryCleanup = 0;
+                                }
 
                                 // at any rate, we'll reduce the budget for this index to what it currently has allocated to avoid
                                 // the case where we freed memory at the end of the batch, but didn't adjust the budget accordingly
@@ -1435,7 +1666,10 @@ namespace Raven.Server.Documents.Indexes
                                 // so this is a good time to release resources we won't need
                                 // anytime soon
 
-                                var mode = NoQueryInLast10Minutes() ? CleanupMode.Deep : CleanupMode.Regular;
+                                var mode = IndexCleanup.Basic;
+                                if (NoQueryInLast10Minutes())
+                                    mode |= IndexCleanup.Readers;
+
                                 ReduceMemoryUsage(storageEnvironment, mode);
 
                                 if (forceMemoryCleanup)
@@ -1469,10 +1703,73 @@ namespace Raven.Server.Documents.Indexes
                         storageEnvironment.OnLogsApplied -= HandleLogsApplied;
 
                     UnsubscribeFromChanges(DocumentDatabase);
+
+                    _mre.DisableThrottlingTimer();
                 }
             }
         }
 
+        public enum ReplaceStatus
+        {
+            NotNeeded,
+            Failed,
+            Succeeded
+        }
+
+        public ReplaceStatus ReplaceIfNeeded(bool batchCompleted, bool didWork)
+        {
+            try
+            {
+                if (ForceReplace.Lower() || ShouldReplace())
+                {
+                    if (Definition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix) == false)
+                        return ReplaceStatus.NotNeeded; // already replaced
+
+                    var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.OrdinalIgnoreCase);
+                    _isReplacing = true;
+
+                    if (batchCompleted)
+                    {
+                        // this side-by-side index will be replaced in a second, notify about indexing success
+                        // so we know that indexing batch is no longer in progress
+                        NotifyAboutCompletedBatch(didWork);
+                    }
+
+                    try
+                    {
+                        try
+                        {
+                            DocumentDatabase.IndexStore.ReplaceIndexes(originalName, Definition.Name, _indexingProcessCancellationTokenSource.Token);
+                            StartIndexingThread();
+                            return ReplaceStatus.Succeeded;
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // this can fail if the indexes lock is currently held, so we'll retry
+                            // however, we might be requested to shutdown, so we want to skip replacing
+                            // in this case, worst case scenario we'll handle this in the next batch
+                            return ReplaceStatus.Failed;
+                        }
+                    }
+                    finally
+                    {
+                        _isReplacing = false;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                _mre.Set(ignoreThrottling: true); // try again
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Could not replace index '{Name}'.", e);
+
+                return ReplaceStatus.Failed;
+            }
+
+            return ReplaceStatus.NotNeeded;
+        }
+        
         private void PauseIfCpuCreditsBalanceIsTooLow()
         {
             AlertRaised alert = null;
@@ -1518,7 +1815,7 @@ namespace Raven.Server.Documents.Indexes
             batchCompletedAction?.Invoke((Name, didWork));
         }
 
-        public void Cleanup(CleanupMode mode)
+        public void Cleanup(IndexCleanup mode)
         {
             if (_initialized == false)
                 return;
@@ -1583,7 +1880,7 @@ namespace Raven.Server.Documents.Indexes
                 _logsAppliedEvent.Set();
         }
 
-        private void ReduceMemoryUsage(StorageEnvironment environment, CleanupMode mode)
+        private void ReduceMemoryUsage(StorageEnvironment environment, IndexCleanup mode)
         {
             if (_indexingInProgress.Wait(0) == false)
                 return;
@@ -1707,20 +2004,7 @@ namespace Raven.Server.Documents.Indexes
                                        $"going to try flushing and syncing the environment to cleanup the storage. " +
                                        $"Will wait for flush for: {timeToWaitInMilliseconds}ms", dfe);
 
-                // force flush and sync
-                var sp = Stopwatch.StartNew();
-                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(storageEnvironment);
-                if (_logsAppliedEvent.Wait(timeToWaitInMilliseconds, _indexingProcessCancellationTokenSource.Token))
-                {
-                    storageEnvironment.ForceSyncDataFile();
-                }
-
-                var timeLeft = timeToWaitInMilliseconds - sp.ElapsedMilliseconds;
-                // wait for sync
-                if (timeLeft > 0)
-                    Task.Delay((int)timeLeft, _indexingProcessCancellationTokenSource.Token).Wait();
-
-                storageEnvironment.Cleanup(tryCleanupRecycledJournals: true);
+                FlushAndSync(storageEnvironment, timeToWaitInMilliseconds, true);
                 return;
             }
 
@@ -1734,19 +2018,56 @@ namespace Raven.Server.Documents.Indexes
             SetErrorState($"State was changed due to excessive number of disk full errors ({diskFullErrors}).");
         }
 
+        private void FlushAndSync(StorageEnvironment storageEnvironment, int timeToWaitInMilliseconds, bool tryCleanupRecycledJournals)
+        {
+            // force flush and sync
+            var sp = Stopwatch.StartNew();
+            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(storageEnvironment);
+            if (_logsAppliedEvent.Wait(timeToWaitInMilliseconds, _indexingProcessCancellationTokenSource.Token))
+            {
+                storageEnvironment.ForceSyncDataFile();
+            }
+
+            var timeLeft = timeToWaitInMilliseconds - sp.ElapsedMilliseconds;
+            // wait for sync
+            if (timeLeft > 0)
+                Task.Delay((int)timeLeft, _indexingProcessCancellationTokenSource.Token).Wait();
+
+            storageEnvironment.Cleanup(tryCleanupRecycledJournals);
+        }
+
         private void SetErrorState(string reason)
         {
             _errorStateReason = reason;
             SetState(IndexState.Error, ignoreWriteError: true);
         }
 
-        private void HandleOutOfMemoryException(Exception exception, IndexingStatsScope scope)
+        private void HandleOutOfMemoryException(IndexingStatsScope scope, StorageEnvironment storageEnvironment, Exception exception)
         {
             try
             {
+                if (exception.IsPageFileTooSmall())
+                {
+                    // throw a better exception
+                    exception = new OutOfMemoryException("The paging file is too small for this operation to complete, consider increasing the size of the page file", exception);
+                }
+
                 scope.AddMemoryError(exception);
-                Interlocked.Add(ref _lowMemoryPressure, LowMemoryPressure);
+                var outOfMemoryErrors = Interlocked.Add(ref _lowMemoryPressure, LowMemoryPressure);
                 _lowMemoryFlag.Raise();
+
+                if (storageEnvironment.ScratchBufferPool.NumberOfScratchBuffers > 1)
+                {
+                    // we'll try to clear the scratch buffers to free up some memory
+                    var timeToWaitInMilliseconds = (int)Math.Min(Math.Pow(2, outOfMemoryErrors), 30) * 1000;
+
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"After out of memory error in index : '{Name}', " +
+                                           $"going to try flushing and syncing the environment to cleanup the scratch buffers. " +
+                                           $"Will wait for flush for: {timeToWaitInMilliseconds}ms", exception);
+
+                    FlushAndSync(storageEnvironment, timeToWaitInMilliseconds, false);
+                }
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Out of memory occurred for '{Name}'", exception);
@@ -1780,7 +2101,7 @@ namespace Raven.Server.Documents.Indexes
                 lock (_disablingIndexLock)
                 {
                     _indexDisabled = true;
-                    _mre.Set();
+                    _mre.Set(ignoreThrottling: true);
                 }
 
                 return;
@@ -1868,11 +2189,15 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 using (var scope = stats.For(work.Name))
                                 {
-                                    mightBeMore |= work.Execute(context, indexContext, writeOperation, scope,
-                                        cancellationToken);
+                                    var result = work.Execute(context, indexContext, writeOperation, scope, cancellationToken);
+                                    mightBeMore |= result.MoreWorkFound;
 
                                     if (mightBeMore)
-                                        _mre.Set();
+                                    {
+                                        var ignoreThrottling = result.BatchContinuationResult == CanContinueBatchResult.False; // if batch was stopped because of memory limit or batch size then let it continue immediately
+
+                                        _mre.Set(ignoreThrottling);
+                                    }
                                 }
                             }
 
@@ -1924,6 +2249,8 @@ namespace Raven.Server.Documents.Indexes
                                 if (entriesCount != null)
                                     stats.RecordEntriesCountAfterTxCommit(entriesCount.Value);
                             };
+
+                            tx.InnerTransaction.LowLevelTransaction.OnDispose += _ => IndexPersistence.CleanWritersIfNeeded();
 
                             tx.Commit();
                             SlowWriteNotification.Notify(commitStats, DocumentDatabase);
@@ -2076,7 +2403,7 @@ namespace Raven.Server.Documents.Indexes
                 catch (TimeoutException)
                 {
                     _definitionChanged.Raise();
-                    _mre.Set();
+                    _mre.Set(ignoreThrottling: true);
                 }
                 catch (Exception)
                 {
@@ -2204,7 +2531,7 @@ namespace Raven.Server.Documents.Indexes
                 catch (TimeoutException)
                 {
                     _definitionChanged.Raise();
-                    _mre.Set();
+                    _mre.Set(ignoreThrottling: true);
                 }
                 catch (Exception)
                 {
@@ -2247,7 +2574,7 @@ namespace Raven.Server.Documents.Indexes
 
                 Stop(disableIndex: true);
                 SetState(IndexState.Disabled);
-                Cleanup(CleanupMode.Deep);
+                Cleanup(IndexCleanup.All);
             }
         }
 
@@ -2262,7 +2589,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 queryContext.AssertOpenedTransactions();
 
-                var disposed = DocumentDatabase.DatabaseShutdown.IsCancellationRequested || _disposeOne.Disposed;
+                var disposed = DocumentDatabase.DatabaseShutdown.IsCancellationRequested || _disposeOnce.Disposed;
                 if (valid == false || disposed)
                 {
                     var progress = new IndexProgress
@@ -2271,7 +2598,7 @@ namespace Raven.Server.Documents.Indexes
                         Type = Type,
                         SourceType = SourceType,
                         IndexRunningStatus = Status,
-                        Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase)
+                        Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase),
                     };
 
                     if (disposed)
@@ -2294,7 +2621,7 @@ namespace Raven.Server.Documents.Indexes
                         SourceType = SourceType,
                         IsStale = isStale ?? IsStale(queryContext, context),
                         IndexRunningStatus = Status,
-                        Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase)
+                        Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase),
                     };
 
                     var stats = _indexStorage.ReadStats(tx);
@@ -2308,6 +2635,11 @@ namespace Raven.Server.Documents.Indexes
 
         private void UpdateIndexProgress(QueryOperationContext queryContext, IndexProgress progress, IndexStats stats)
         {
+            if (DeployedOnAllNodes == false)
+            {
+                progress.IndexRollingStatus = DocumentDatabase.IndexStore.GetRollingProgress(NormalizedName);
+            }
+
             if (progress.IndexRunningStatus == IndexRunningStatus.Running)
             {
                 var indexingPerformance = _lastStats?.ToIndexingPerformanceLiveStats();
@@ -2586,6 +2918,7 @@ namespace Raven.Server.Documents.Indexes
             var result = new StreamDocumentIndexEntriesQueryResult(response, writer, token);
             await IndexEntriesQueryInternal(result, query, queryContext, token);
             result.Flush();
+
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }
 
@@ -2636,7 +2969,7 @@ namespace Raven.Server.Documents.Indexes
                 while (true)
                 {
                     AssertIndexState();
-                    marker.HoldLock();
+                    await marker.HoldLockAsync();
 
                     // we take the awaiter _before_ the indexing transaction happens,
                     // so if there are any changes, it will already happen to it, and we'll
@@ -2778,7 +3111,8 @@ namespace Raven.Server.Documents.Indexes
                                         {
                                             var document = enumerator.Current;
 
-                                            resultToFill.TotalResults = totalResults.Value;
+                                            resultToFill.LongTotalResults = resultToFill.TotalResults = totalResults.Value;
+
                                             if (query.Offset != null || query.Limit != null)
                                             {
                                                 resultToFill.CappedMaxResults = Math.Min(
@@ -2787,7 +3121,7 @@ namespace Raven.Server.Documents.Indexes
                                                 );
                                             }
 
-                                            resultToFill.AddResult(document.Result);
+                                            await resultToFill.AddResultAsync(document.Result, token.Token);
 
                                             if (document.Highlightings != null)
                                                 resultToFill.AddHighlightings(document.Highlightings);
@@ -2812,7 +3146,7 @@ namespace Raven.Server.Documents.Indexes
                                     if (resultToFill.SupportsExceptionHandling == false)
                                         throw;
 
-                                    resultToFill.HandleException(e);
+                                    await resultToFill.HandleExceptionAsync(e, token.Token);
                                 }
 
                                 using (fillScope?.Start())
@@ -2832,8 +3166,9 @@ namespace Raven.Server.Documents.Indexes
 
                                 resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
                                 resultToFill.RegisterSpatialProperties(query);
-                                
+
                                 resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
+                                resultToFill.LongTotalResults = resultToFill.TotalResults;
                                 resultToFill.SkippedResults = skippedResults.Value;
                                 resultToFill.IncludedPaths = query.Metadata.Includes;
                             }
@@ -2888,7 +3223,7 @@ namespace Raven.Server.Documents.Indexes
                 while (true)
                 {
                     AssertIndexState();
-                    marker.HoldLock();
+                    await marker.HoldLockAsync();
                     var frozenAwaiter = GetIndexingBatchAwaiter();
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     using (var indexTx = indexContext.OpenReadTransaction())
@@ -2928,7 +3263,8 @@ namespace Raven.Server.Documents.Indexes
                             foreach (var indexEntry in reader.IndexEntries(query, totalResults, queryContext.Documents, GetOrAddSpatialField, token.Token))
                             {
                                 resultToFill.TotalResults = totalResults.Value;
-                                resultToFill.AddResult(indexEntry);
+                                resultToFill.LongTotalResults = totalResults.Value;
+                                await resultToFill.AddResultAsync(indexEntry, token.Token);
                             }
                         }
                         return;
@@ -2987,7 +3323,7 @@ namespace Raven.Server.Documents.Indexes
                     token.ThrowIfCancellationRequested();
 
                     AssertIndexState();
-                    marker.HoldLock();
+                    await marker.HoldLockAsync();
 
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     {
@@ -3042,6 +3378,7 @@ namespace Raven.Server.Documents.Indexes
                                 }
 
                                 result.TotalResults = result.Results.Count;
+                                result.LongTotalResults = result.Results.Count;
 
                                 return result;
                             }
@@ -3100,7 +3437,7 @@ namespace Raven.Server.Documents.Indexes
                 while (true)
                 {
                     AssertIndexState();
-                    marker.HoldLock();
+                    await marker.HoldLockAsync();
 
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     {
@@ -3147,6 +3484,7 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             result.TotalResults = result.Results.Count;
+                            result.LongTotalResults = result.Results.Count;
                             return result;
                         }
                     }
@@ -3187,7 +3525,7 @@ namespace Raven.Server.Documents.Indexes
             if (_initialized == false)
                 ThrowNotInitialized();
 
-            if (_disposeOne.Disposed)
+            if (_disposeOnce.Disposed)
                 ThrowWasDisposed();
 
             if (assertState && State == IndexState.Error)
@@ -3671,6 +4009,14 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
+        public virtual bool WorksOnAnyCollection(HashSet<string> collections)
+        {
+            if (Collections.Count == 0)
+                return false;
+
+            return Collections.Overlaps(collections);
+        }
+
         private int? _minBatchSize;
 
         private const int MinMapBatchSize = 128;
@@ -3758,6 +4104,7 @@ namespace Raven.Server.Documents.Indexes
 
         public enum CanContinueBatchResult
         {
+            None,
             True,
             False,
             RenewTransaction
@@ -4178,7 +4525,7 @@ namespace Raven.Server.Documents.Indexes
         public IDisposable RestartEnvironment(Action onBeforeEnvironmentDispose = null)
         {
             // shutdown environment
-            if (_currentlyRunningQueriesLock.IsWriteLockHeld == false)
+            if (_isRunningQueriesWriteLockTaken.Value == false)
                 throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
 
             // here we ensure that we aren't currently running any indexing,
@@ -4189,12 +4536,14 @@ namespace Raven.Server.Documents.Indexes
 
             onBeforeEnvironmentDispose?.Invoke();
 
+            IndexPersistence.Dispose();
+
             _environment.Dispose();
 
             return new DisposableAction(() =>
             {
                 // restart environment
-                if (_currentlyRunningQueriesLock.IsWriteLockHeld == false)
+                if (_isRunningQueriesWriteLockTaken.Value == false)
                     throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
 
                 var options = CreateStorageEnvironmentOptions(DocumentDatabase, Configuration);
@@ -4356,19 +4705,28 @@ namespace Raven.Server.Documents.Indexes
             return false;
         }
 
-        protected struct IndexQueryDoneRunning : IDisposable
+        protected class IndexQueryDoneRunning : IDisposable
         {
             private static readonly TimeSpan DefaultLockTimeout = TimeSpan.FromSeconds(3);
 
             private static readonly TimeSpan ExtendedLockTimeout = TimeSpan.FromSeconds(30);
 
+            private static readonly CancellationToken CancelledToken;
+
+            static IndexQueryDoneRunning()
+            {
+                var cts = new CancellationTokenSource();
+                cts.Cancel();
+
+                CancelledToken = cts.Token;
+            }
+
             private readonly Index _parent;
-            private bool _hasLock;
+            private IDisposable _lock;
 
             public IndexQueryDoneRunning(Index parent)
             {
                 _parent = parent;
-                _hasLock = false;
             }
 
             public void HoldLock()
@@ -4377,18 +4735,51 @@ namespace Raven.Server.Documents.Indexes
                     ? ExtendedLockTimeout
                     : DefaultLockTimeout;
 
-                if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(timeout) == false)
-                    ThrowLockTimeoutException();
+                if (_lock != null)
+                    ThrowLockAlreadyTaken();
 
-                _hasLock = true;
+                try
+                {
+                    _lock = _parent._currentlyRunningQueriesLock.ReaderLock(new CancellationTokenSource(timeout).Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    ThrowLockTimeoutException();
+                }
+            }
+
+            public async ValueTask HoldLockAsync()
+            {
+                var timeout = _parent._isReplacing
+                    ? ExtendedLockTimeout
+                    : DefaultLockTimeout;
+
+                if (_lock != null)
+                    ThrowLockAlreadyTaken();
+
+                try
+                {
+                    _lock = await _parent._currentlyRunningQueriesLock.ReaderLockAsync(new CancellationTokenSource(timeout).Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    ThrowLockTimeoutException();
+                }
             }
 
             public bool TryHoldLock()
             {
-                if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(0) == false)
-                    return false;
+                if (_lock != null)
+                    ThrowLockAlreadyTaken();
 
-                _hasLock = true;
+                try
+                {
+                    _lock = _parent._currentlyRunningQueriesLock.ReaderLock(CancelledToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return false;
+                }
 
                 return true;
             }
@@ -4399,37 +4790,45 @@ namespace Raven.Server.Documents.Indexes
                     $"Could not get the index read lock in a reasonable time, {_parent.Name} is probably undergoing maintenance now, try again later");
             }
 
+            private void ThrowLockAlreadyTaken()
+            {
+                throw new InvalidOperationException(
+                    $"Read lock of index {_parent.Name} was already taken");
+            }
+
             public void ReleaseLock()
             {
-                _hasLock = false;
-                _parent._currentlyRunningQueriesLock.ExitReadLock();
+                _lock?.Dispose();
+                _lock = null;
             }
 
             public void Dispose()
             {
-                if (_hasLock)
-                    _parent._currentlyRunningQueriesLock.ExitReadLock();
+                ReleaseLock();
             }
         }
 
-        internal struct ExitWriteLock : IDisposable
+        internal class ExitWriteLock : IDisposable
         {
-            private readonly ReaderWriterLockSlim _rwls;
+            private readonly IDisposable _writeLock;
+            private readonly Index _parent;
 
-            public ExitWriteLock(ReaderWriterLockSlim rwls)
+            public ExitWriteLock(IDisposable writeLock, Index parent)
             {
-                _rwls = rwls;
+                _writeLock = writeLock;
+                _parent = parent;
             }
 
             public void Dispose()
             {
-                _rwls?.ExitWriteLock();
+                _writeLock.Dispose();
+                _parent._isRunningQueriesWriteLockTaken.Value = false;
             }
         }
 
         public void AssertNotDisposed()
         {
-            if (_disposeOne.Disposed)
+            if (_disposeOnce.Disposed)
                 ThrowObjectDisposed();
         }
 

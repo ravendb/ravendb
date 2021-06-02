@@ -4,7 +4,7 @@
             <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                 <i class="icon-xl icon-empty-set text-muted"></i>
                 <h2 class="text-center text-muted">No indexes have been created for this database.</h2>
-                <p class="lead text-center text-muted">Go ahead and <a href="#" data-bind="attr: { href: newIndexUrl }">create one now</a>.</p>
+                <p data-bind="requiredAccess: 'DatabaseReadWrite'" class="lead text-center text-muted">Go ahead and <a href="#" data-bind="attr: { href: newIndexUrl }">create one now</a>.</p>
             </div>
         </div>
     </div>
@@ -13,7 +13,7 @@
             <div class="clearfix toolbar" data-bind="if: sortedGroups().length">
                 <div class="pull-left">
                     <div class="form-inline">
-                        <div class="checkbox checkbox-primary checkbox-inline align-checkboxes" title="Select all or none">
+                        <div class="checkbox checkbox-primary checkbox-inline align-checkboxes" title="Select all or none" data-bind="requiredAccess: 'DatabaseReadWrite'">
                             <input type="checkbox" class="styled" data-bind="checkboxTriple: indexesSelectionState, event: { change: toggleSelectAll }" />
                             <label></label>
                         </div>
@@ -28,38 +28,68 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="indexesToolbar-actions">
+                        <div class="indexesToolbar-actions", data-bind="requiredAccess: 'DatabaseReadWrite'">
                             <div class="btn-group-label" data-bind="css: { active: selectedIndexesName().length }" data-label="Selection" role="group">
-                                <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes, enable: selectedIndexesName().length"><i class="icon-trash"></i><span>Delete</span></button>
+                                <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes, enable: selectedIndexesName().length">
+                                    <i class="icon-trash"></i><span>Delete</span>
+                                </button>
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" title="Change the options of selected indexes"
-                                            data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges(), css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <button type="button" class="btn btn-default dropdown-toggle" title="Set the indexing state for the selected indexes"
+                                            data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges(),
+                                                       css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         <i class="icon-play"></i><span>Set indexing state...</span>
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
                                     <ul class="dropdown-menu">
-                                        <li data-bind="click: enableSelectedIndexes">
-                                            <a href="#" title="Enable">
+
+
+<!-- TODO return when issue RavenDB-16345 is done -->
+<!--                                        <li class="margin-left margin-top margin-top-sm" data-bind="visible: isCluster">-->
+<!--                                            <label><strong>Cluster Wide</strong></label>-->
+<!--                                        </li>-->
+<!--                                        <li data-bind="click: _.partial(enableSelectedIndexes, true), visible: isCluster">-->
+<!--                                            <a href="#" title="Enable indexing on ALL cluster nodes">-->
+<!--                                                <i class="icon-play"></i>-->
+<!--                                                <span>Enable</span>-->
+<!--                                            </a>-->
+<!--                                        </li>-->
+<!--                                        <li data-bind="click: _.partial(disableSelectedIndexes, true), visible: isCluster">-->
+<!--                                            <a href="#" title="Disable indexing on All cluster nodes">-->
+<!--                                                <i class="icon-cancel"></i>-->
+<!--                                                <span>Disable</span>-->
+<!--                                            </a>-->
+<!--                                        </li>-->
+<!--                                        <li class="divider" data-bind="visible: isCluster"></li>-->
+                                        
+                                        <li class="margin-left margin-top margin-top-sm" data-bind="visible: isCluster">
+                                            <label><strong>Local Node</strong></label>
+                                        </li>
+                                        <li data-bind="click: _.partial(enableSelectedIndexes, false),
+                                                       attr: { title: 'Enable indexing on node ' + localNodeTag() }">
+                                            <a href="#">
                                                 <i class="icon-play"></i>
                                                 <span>Enable</span>
                                             </a>
                                         </li>
-                                        <li data-bind="click: disableSelectedIndexes">
-                                            <a href="#" title="Disable">
-                                                <i class="icon-lock"></i>
+                                        <li data-bind="click: _.partial(disableSelectedIndexes, false),
+                                                       attr: { title: 'Disable indexing on node ' + localNodeTag() }">
+                                            <a href="#">
+                                                <i class="icon-cancel"></i>
                                                 <span>Disable</span>
                                             </a>
                                         </li>
                                         <li class="divider"></li>
-                                        <li data-bind="click: resumeSelectedIndexes">
-                                            <a href="#" title="Resume">
+                                        <li data-bind="click: resumeSelectedIndexes,
+                                                       attr: { title: 'Resume indexing on node ' + localNodeTag() }">
+                                            <a href="#">
                                                 <i class="icon-play"></i>
                                                 <span>Resume</span>
                                             </a>
                                         </li>
-                                        <li data-bind="click: pauseSelectedIndexes">
-                                            <a href="#" title="Pause">
+                                        <li data-bind="click: pauseSelectedIndexes,
+                                                       attr: { title: 'Pause indexing on node ' + localNodeTag() }">
+                                            <a href="#">
                                                 <i class="icon-pause"></i>
                                                 <span>Pause</span>
                                             </a>
@@ -67,7 +97,7 @@
                                     </ul>
                                 </div>
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" title="Change the options of selected indexes"
+                                    <button type="button" class="btn btn-default dropdown-toggle" title="Set the lock mode for the selected indexes"
                                             data-bind="enable: selectedIndexesName().length && !spinners.globalLockChanges(), 
                                                        css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         <i class="icon-lock"></i><span>Set lock mode...</span>
@@ -103,11 +133,13 @@
                         </div>
                     </div>
                 </div>
-                <div class="pull-right" id="toggleIndexing">
-                    <button class="btn btn-default disable-indexing" title="Pause indexing process for ALL indexes until restart"
-                            data-bind="click: stopIndexing, visible: $root.globalIndexingStatus() !== 'Paused', enable: !spinners.globalStartStop() && $root.globalIndexingStatus() !== 'Disabled', css: { 'btn-spinner': spinners.globalStartStop() }">
+                <div class="pull-right" id="toggleIndexing" data-bind="requiredAccess: 'DatabaseReadWrite'">
+                    <button class="btn btn-default disable-indexing" title="Pause indexing process for ALL indexes until restart - Local node"
+                            data-bind="click: stopIndexing, visible: $root.globalIndexingStatus() !== 'Paused', 
+                                       attr: { title: 'Pause indexing process for ALL indexes until restart - On node ' + localNodeTag() },
+                                       enable: !spinners.globalStartStop() && $root.globalIndexingStatus() !== 'Disabled', css: { 'btn-spinner': spinners.globalStartStop() }">
                         <i class="icon-pause"></i>
-                        <span>Pause indexing until restart</span>
+                        <span>Pause indexing until restart - Local node</span>
                     </button>
                     <button class="btn btn-success enable-indexing" title="Resume indexing process"
                             data-bind="click: startIndexing, visible: $root.globalIndexingStatus() === 'Paused', enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }">
@@ -156,7 +188,8 @@
         <div class="row">
             <div class="col-xs-12 col-sm-6 col-xl-4 info-container">
                 <div class="flex-horizontal">
-                    <div class="checkbox">
+<!--                // TODO: may want to fix the below checkbox with strategy of invisibilityHidden ??? -->
+                    <div class="checkbox" data-bind="requiredAccess: 'DatabaseReadWrite'">
                         <input type="checkbox" class="styled" data-bind="checked: $root.selectedIndexesName, checkedValue: name" />
                         <label></label>
                     </div>
@@ -187,7 +220,8 @@
                     <div class="btn-group properties-value">
                         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
                                 data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
-                                enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name)">
+                                           enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name),
+                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }">
                             <span class="text-warning" data-bind="visible: isPausedState() && !isErrorState()">
                                 <i class="icon-cancel"></i>
                                 <span>Paused until restart</span>
@@ -211,24 +245,46 @@
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu">
+                            
+<!-- TODO return when issue RavenDB-16345 is done -->                          
+<!--                            <li data-bind="visible: canBeEnabled() && $root.isCluster()">-->
+<!--                                <a href="#" data-bind="click: _.partial($root.enableIndex, $data, true)" title="Enable indexing on ALL cluster nodes">-->
+<!--                                    <i class="icon-play"></i>-->
+<!--                                    <span>Enable indexing - Cluster wide</span>-->
+<!--                                </a>-->
+<!--                            </li>-->
+                            
                             <li data-bind="visible: canBeEnabled()">
-                                <a href="#" data-bind="click: $root.enableIndex" title="Enable">
-                                    <i class="icon-check"></i><span>Enable</span>
+                                <a href="#" data-bind="click: _.partial($root.enableIndex, $data, false), attr: { title: 'Enable indexing on node ' + $root.localNodeTag() }">
+                                    <i class="icon-play"></i>
+                                    <span data-bind="text: $root.isCluster() ? 'Enable indexing - Local node' : 'Enable indexing'"></span>
                                 </a>
                             </li>
+                            
+<!-- TODO return when issue RavenDB-16345 is done -->
+<!--                            <li data-bind="visible: canBeDisabled() && $root.isCluster()">-->
+<!--                                <a href="#" data-bind="click: _.partial($root.disableIndex, $data, true)" title="Disable indexing on ALL cluster nodes">-->
+<!--                                    <i class="icon-cancel"></i>-->
+<!--                                    <span>Disable indexing - Cluster wide</span>-->
+<!--                                </a>-->
+<!--                            </li>-->
+                            
                             <li data-bind="visible: canBeDisabled()">
-                                <a href="#" data-bind="click: $root.disableIndex" title="Disable">
-                                    <i class="icon-cancel"></i><span>Disable indexing</span>
+                                <a href="#" data-bind="click: _.partial($root.disableIndex, $data, false), attr: { title: 'Disable indexing on node ' + $root.localNodeTag() }">
+                                    <i class="icon-cancel"></i>
+                                    <span data-bind="text: $root.isCluster() ? 'Disable indexing - Local node' : 'Disable indexing'"></span>
                                 </a>
                             </li>
                             <li data-bind="visible: canBePaused()">
                                 <a href="#" class="text-warning" data-bind="click: $root.pauseUntilRestart" title="Pause until restart">
-                                    <i class="icon-pause"></i><span>Pause indexing until restart</span>
+                                    <i class="icon-pause"></i>
+                                    <span>Pause indexing until restart</span>
                                 </a>
                             </li>
                             <li data-bind="visible: canBeResumed()">
                                 <a href="#" class="text-success" data-bind="click: $root.resumeIndexing" title="Resume indexing">
-                                    <i class="icon-check"></i><span>Resume indexing</span>
+                                    <i class="icon-play"></i>
+                                    <span>Resume indexing</span>
                                 </a>
                             </li>
                         </ul>
@@ -238,7 +294,8 @@
                     <span class="properties-label">Priority:</span>
                     <div class="btn-group properties-value">
                         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
-                                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localPriority(), name) }, enable: !_.includes($root.spinners.localPriority(), name)">
+                                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localPriority(), name) }, enable: !_.includes($root.spinners.localPriority(), name),
+                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }">
                             <span data-bind="visible: isNormalPriority()">
                                 <i class="icon-check"></i>
                                 <span>Normal</span>
@@ -272,11 +329,12 @@
                         </ul>
                     </div>
                 </div>
-                <div class="properties-item mode" data-bind="css: { 'hidden': type === 'AutoMap' || type === 'AutoMapReduce' || isSideBySide() }">
+                <div class="properties-item mode" data-bind="css: { 'hidden': type() === 'AutoMap' || type() === 'AutoMapReduce' || isSideBySide() }">
                     <span class="properties-label">Mode:</span>
                     <div class="btn-group properties-value">
                         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
-                                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localLockChanges(), name) }, enable: !_.includes($root.spinners.localLockChanges(), name)">
+                                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localLockChanges(), name) }, enable: !_.includes($root.spinners.localLockChanges(), name),
+                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }">
                             <span data-bind="visible: lockMode() === 'Unlock'">
                                 <i class="icon-unlock"></i><span>Unlocked</span>
                             </span>
@@ -362,67 +420,105 @@
                             </ul>
                         </div>
                         <div class="btn-group" role="group">
-                            <a class="btn btn-default" data-bind="attr: { href: editUrl() }, visible: !isAutoIndex()" title="Edit index"><i class="icon-edit"></i></a>
-                            <a class="btn btn-default" data-bind="attr: { href: editUrl() }, visible: isAutoIndex" title="View index fields"><i class="icon-preview"></i></a>
+                            <a class="btn btn-default" data-bind="attr: { href: editUrl() }, visible: !isAutoIndex() && !$root.isReadOnlyAccess()" title="Edit index"><i class="icon-edit"></i></a>
+                            <a class="btn btn-default" data-bind="attr: { href: editUrl() }, visible: isAutoIndex() || $root.isReadOnlyAccess()" title="View index"><i class="icon-preview"></i></a>
                         </div>
                         <div class="btn-group" role="group" data-bind="if: isFaulty">
                             <button class="btn btn-default" data-bind="click: $root.openFaultyIndex" title="Open index"><i class="icon-arrow-filled-up"></i></button>
                         </div>
                         <div class="btn-group" role="group">
-                            <button class="btn btn-default" data-bind="click: $root.resetIndex" title="Reset index"><i class="icon-reset"></i></button>
-                            <button class="btn btn-danger" data-bind="click: $root.deleteIndex" title="Delete the index"><i class="icon-trash"></i></button>
+                            <button class="btn btn-default" data-bind="click: $root.resetIndex, requiredAccess: 'DatabaseReadWrite'" title="Reset index"><i class="icon-reset"></i></button>
+                            <button class="btn btn-danger" data-bind="click: $root.deleteIndex, requiredAccess: 'DatabaseReadWrite'" title="Delete the index"><i class="icon-trash"></i></button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div data-bind="with: progress, visible: !isErrorState() && !isFaulty()">
-            <hr class="small" />
-            <div class="progress-container">
-                <div class="progress-overall">
-                    <div class="flex-horizontal" data-bind="with: globalProgress">
-                        <h3 class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></h3>
-                        <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
+            <div class="rolling-actions" data-bind="visible: rollingProgress().length">
+                <div class="panel panel-warning">
+                    <div class="padding flex-horizontal">
+                        <div class="title">Rolling deployment</div>
+                        <div class="flex-separator"></div>
+                        <button class="btn btn-sm btn-warning" data-bind="visible: canSwitchToParallelMode, click: _.bind($root.forceParallelDeployment, $parent)">
+                            <i class="icon-force"></i> <span>Force parallel</span>
+                        </button>
                     </div>
-                    <div class="progress" data-bind="with: globalProgress">
+                </div>
+            </div>
+            <div class="staggered-index" data-bind="foreach: rollingProgress">
+                <div class="flex-horizontal" data-bind="css: { 'indexing-running': state() === 'Running', 'indexing-pending': state() === 'Pending', 'indexing-done': state() === 'Done'}">
+                    <div class="node-label" data-bind="attr: { title: state }"></div>
+                    <div class="node-name" data-bind="text: nodeTag"></div>
+                    
+                    <div data-bind="visible: state() === 'Done' && $root.localNodeTag() !== nodeTag">
+                        <span class="margin-right">Indexing duration: <strong data-bind="text: elapsedText"></strong></span> Completed: <strong data-bind="text: finishedText"></strong> ago
+                    </div>
+                    <div data-bind="visible: state() === 'Running' && $root.localNodeTag() !== nodeTag">
+                        Indexing duration: <strong data-bind="text: elapsedText"></strong> 
+                        <a target="_blank" class="margin-left" data-bind="attr: { href: $root.createIndexesUrlObservableForNode(nodeTag)}">
+                            show details <i class="icon-newtab"></i>
+                        </a>
+                    </div>
+                    <div data-bind="visible: state() === 'Pending'">
+                        Waiting for indexing to complete on other nodes 
+                    </div>
+                    <div class="flex-grow" data-bind="with: $root.localNodeTag() === nodeTag && state() !== 'Pending' ? $parent : null">
+                        <div data-bind="template: { name: 'indexes-progress-template' }"></div>
+                    </div>
+                </div>
+            </div>
+            <div data-bind="if: !rollingProgress().length">
+                <div data-bind="template: { name: 'indexes-progress-template' }"></div>    
+            </div>
+        </div>
+    </div>
+</script>
+
+<script type="text/html" id="indexes-progress-template">
+    <div class="progress-container">
+        <div class="progress-overall">
+            <div class="flex-horizontal" data-bind="with: globalProgress">
+                <div class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></div>
+                <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
+            </div>
+            <div class="progress" data-bind="with: globalProgress">
+                <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                     class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                    <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
+                </div>
+            </div>
+        </div>
+        <div class="collections-container">
+            <!-- ko foreach: collections -->
+            <div class="panel collection-progress">
+                <div class="collection-name" data-bind="text: name, attr: { title: name }"></div>
+                <div class="documents">
+                    <div class="clearfix" data-bind="with: documentsProgress">
+                        <small class="name">Documents</small>
+                        <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress}"></small>
+                    </div>
+                    <div class="progress" data-bind="with: documentsProgress">
                         <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
                              class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                             <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
                         </div>
                     </div>
                 </div>
-                <div class="collections-container">
-                    <!-- ko foreach: collections -->
-                    <div class="panel collection-progress">
-                        <div class="collection-name" data-bind="text: name, attr: { title: name }"></div>
-                        <div class="documents">
-                            <div class="clearfix" data-bind="with: documentsProgress">
-                                <small class="name">Documents</small>
-                                <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress}"></small>
-                            </div>
-                            <div class="progress" data-bind="with: documentsProgress">
-                                <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
-                                     class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                    <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="tombstones">
-                            <div class="clearfix" data-bind="with: tombstonesProgress">
-                                <small class="name">Tombstones</small>
-                                <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
-                            </div>
-                            <div class="progress" data-bind="with: tombstonesProgress">
-                                <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
-                                     class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                    <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
-                                </div>
-                            </div>
+                <div class="tombstones">
+                    <div class="clearfix" data-bind="with: tombstonesProgress">
+                        <small class="name">Tombstones</small>
+                        <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
+                    </div>
+                    <div class="progress" data-bind="with: tombstonesProgress">
+                        <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                             class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                            <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
                         </div>
                     </div>
-                    <!-- /ko -->
                 </div>
             </div>
+            <!-- /ko -->
         </div>
     </div>
 </script>
@@ -453,6 +549,15 @@
                 <div class="flex-noshrink">
                     <div class="toggle toggle-warning">
                         <input type="checkbox" class="styled" data-bind="checkedValue: 'Stale', checked: indexStatusFilter">
+                        <label></label>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-horizontal">
+                <div class="control-label flex-grow">Rolling deployment</div>
+                <div class="flex-noshrink">
+                    <div class="toggle toggle-warning">
+                        <input type="checkbox" class="styled" data-bind="checkedValue: 'RollingDeployment', checked: indexStatusFilter">
                         <label></label>
                     </div>
                 </div>

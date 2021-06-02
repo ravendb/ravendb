@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
+using Raven.Server.Documents.Indexes.Analysis;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -43,14 +44,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             throw new InvalidOperationException($"Could not create new analyzer instance '{analyzerType.Name}' for field: {name}. No recognizable constructor found.");
         }
 
-        public static Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)
-        {
-            var analyzerType = GetAnalyzerType(name, analyzerTypeAsString);
-
-            return CreateAnalyzerInstance(name, analyzerType);
-        }
-
-        public static Type GetAnalyzerType(string name, string analyzerTypeAsString)
+        public static AnalyzerFactory GetAnalyzerType(string name, string analyzerTypeAsString, string databaseName)
         {
             var analyzerType = LuceneAssembly.GetType(analyzerTypeAsString) ??
                                Type.GetType(analyzerTypeAsString) ??
@@ -58,10 +52,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                LuceneAssembly.GetType("Lucene.Net.Analysis." + analyzerTypeAsString) ??
                                LuceneAssembly.GetType("Lucene.Net.Analysis.Standard." + analyzerTypeAsString);
 
-            if (analyzerType == null)
-                throw new InvalidOperationException($"Cannot find analyzer type '{analyzerTypeAsString}' for field: {name}");
+            if (analyzerType != null)
+                return new AnalyzerFactory(analyzerType);
 
-            return analyzerType;
+            var createAnalyzer = AnalyzerCompilationCache.Instance.GetItemType(analyzerTypeAsString, databaseName);
+            if (createAnalyzer != null)
+                return createAnalyzer;
+
+            throw new InvalidOperationException($"Cannot find analyzer type '{analyzerTypeAsString}' for field: {name}");
         }
 
         static IndexingExtensions()

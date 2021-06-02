@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
@@ -42,7 +43,7 @@ namespace FastTests.Voron
             }
 
             var stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(totalSize, stats.TotalSize);
+            Assert.Equal(totalSize, stats.TotalPoolSize);
 
             i = 1;
             foreach (var allocationInfo in stats.Details)
@@ -74,11 +75,11 @@ namespace FastTests.Voron
             }
 
             var stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(0, stats.TotalSize);
+            Assert.Equal(0, stats.TotalPoolSize);
 
             encryptionBuffersPool.LowMemory(lowMemorySeverity);
             stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(0, stats.TotalSize);
+            Assert.Equal(0, stats.TotalPoolSize);
 
             foreach (var o in toFree)
             {
@@ -86,19 +87,19 @@ namespace FastTests.Voron
             }
 
             stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(0, stats.TotalSize);
+            Assert.Equal(0, stats.TotalPoolSize);
 
             var pointer = encryptionBuffersPool.Get(1, out var size, out _);
             encryptionBuffersPool.Return(pointer, 8192, NativeMemory.ThreadAllocations.Value, encryptionBuffersPool.Generation);
 
             // will cache the buffer
             stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(8192, stats.TotalSize);
+            Assert.Equal(size, stats.TotalPoolSize);
 
             // will continue to cache the buffer
             encryptionBuffersPool.LowMemory(lowMemorySeverity);
             stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(8192, stats.TotalSize);
+            Assert.Equal(size, stats.TotalPoolSize);
 
             encryptionBuffersPool.LowMemoryOver();
             ClearMemory(encryptionBuffersPool);
@@ -121,7 +122,7 @@ namespace FastTests.Voron
             }
 
             var stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(0, stats.TotalSize);
+            Assert.Equal(0, stats.TotalPoolSize);
 
             foreach (var o in toFree)
             {
@@ -130,7 +131,7 @@ namespace FastTests.Voron
 
             stats = encryptionBuffersPool.GetStats();
             var allocated = toFree.Sum(x => x.Item2);
-            Assert.Equal(allocated, stats.TotalSize);
+            Assert.Equal(allocated, stats.TotalPoolSize);
 
             ClearMemory(encryptionBuffersPool);
         }
@@ -155,7 +156,7 @@ namespace FastTests.Voron
             }
 
             var stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(0, stats.TotalSize);
+            Assert.Equal(0, stats.TotalPoolSize);
 
             foreach (var o in toFree)
             {
@@ -164,7 +165,7 @@ namespace FastTests.Voron
 
             stats = encryptionBuffersPool.GetStats();
             var allocated = toFree.Sum(x => x.Item2);
-            Assert.Equal(allocated, stats.TotalSize);
+            Assert.Equal(allocated, stats.TotalPoolSize);
 
             ClearMemory(encryptionBuffersPool);
         }
@@ -176,15 +177,15 @@ namespace FastTests.Voron
 
             var ptr = encryptionBuffersPool.Get(1, out var size, out _);
             var stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(0, stats.TotalSize);
+            Assert.Equal(0, stats.TotalPoolSize);
 
             encryptionBuffersPool.Return(ptr, 8192, NativeMemory.ThreadAllocations.Value, encryptionBuffersPool.Generation);
             stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(size, stats.TotalSize);
+            Assert.Equal(size, stats.TotalPoolSize);
 
             encryptionBuffersPool.LowMemory(LowMemorySeverity.Low);
             stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(size, stats.TotalSize);
+            Assert.Equal(size, stats.TotalPoolSize);
 
             ClearMemory(encryptionBuffersPool);
         }
@@ -192,29 +193,38 @@ namespace FastTests.Voron
         [Fact]
         public void properly_calculate_thread_total_allocations_when_we_cant_put_buffer_in_pool()
         {
-            var encryptionBuffersPool = new EncryptionBuffersPool();
+            var encryptionBuffersPool = new EncryptionBuffersPool(registerLowMemory: false, registerCleanup: false);
 
-            var threadStats = NativeMemory.ThreadAllocations.Value;
-            var before = threadStats.Allocations;
+            var ptr = encryptionBuffersPool.Get(1, out var initialSize, out var threadStats);
 
-            var ptr = encryptionBuffersPool.Get(1, out var size, out threadStats);
-
-            Assert.Equal(before + size, threadStats.TotalAllocated);
-
+            var size = initialSize;
+            var free4KbAlignedMemoryCount = 0;
+            var updateMemoryStatsForThreadCount = 0;
             var testingStuff = encryptionBuffersPool.ForTestingPurposesOnly();
             testingStuff.CanAddToPerCorePool = false;
             testingStuff.CanAddToGlobalPool = false;
+            testingStuff.OnFree4KbAlignedMemory = s =>
+            {
+                free4KbAlignedMemoryCount++;
+                size -= s;
+            };
+            testingStuff.OnUpdateMemoryStatsForThread = s =>
+            {
+                updateMemoryStatsForThreadCount++;
+            };
 
-            encryptionBuffersPool.Return(ptr, size, threadStats, encryptionBuffersPool.Generation);
+            encryptionBuffersPool.Return(ptr, initialSize, threadStats, encryptionBuffersPool.Generation);
 
-            Assert.Equal(before, threadStats.TotalAllocated);
+            Assert.Equal(1, free4KbAlignedMemoryCount);
+            Assert.Equal(0, size);
+            Assert.Equal(0, updateMemoryStatsForThreadCount);
         }
 
         private static void ClearMemory(EncryptionBuffersPool encryptionBuffersPool)
         {
             encryptionBuffersPool.LowMemory(LowMemorySeverity.ExtremelyLow);
             var stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(0, stats.TotalSize);
+            Assert.Equal(0, stats.TotalPoolSize);
         }
     }
 }

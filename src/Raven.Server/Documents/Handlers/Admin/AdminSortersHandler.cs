@@ -37,14 +37,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                         auditLog.Info($"Sorter {sorterDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {sorterToAdd}");
                     }
 
-                    if (string.IsNullOrWhiteSpace(sorterDefinition.Name))
-                        throw new ArgumentException($"Sorter must have a '{nameof(SorterDefinition.Name)}' field");
-
-                    if (string.IsNullOrWhiteSpace(sorterDefinition.Code))
-                        throw new ArgumentException($"Sorter must have a '{nameof(SorterDefinition.Code)}' field");
+                    sorterDefinition.Validate();
 
                     // check if sorter is compilable
-                    SorterCompilationCache.AddSorter(sorterDefinition, Database.Name);
+                    SorterCompiler.Compile(sorterDefinition.Name, sorterDefinition.Code);
 
                     command.Sorters.Add(sorterDefinition);
                 }
@@ -53,9 +49,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
 
-                NoContentStatus();
-                
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                NoContentStatus(HttpStatusCode.Created);
             }
         }
 

@@ -56,8 +56,9 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
     public enum DatabaseAccess
     {
-        ReadWrite,
-        Admin
+        ReadWrite = 0,
+        Admin = 1,
+        Read = 2
     }
 
     public enum SecurityClearance

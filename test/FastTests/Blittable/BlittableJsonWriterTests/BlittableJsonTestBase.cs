@@ -1,10 +1,12 @@
 ﻿using System.Dynamic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +17,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         protected BlittableJsonTestBase(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         public string GenerateSimpleEntityForFunctionalityTest()
         {
             object employee = new
@@ -123,8 +125,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             //}";
         }
 
-        protected static unsafe void AssertComplexEmployee(string str, BlittableJsonReaderObject doc,
-         JsonOperationContext blittableContext)
+        protected static void AssertComplexEmployee(string str, BlittableJsonReaderObject doc, JsonOperationContext blittableContext)
         {
             var converter = new ExpandoObjectConverter();
             dynamic dynamicRavenJObject = JsonConvert.DeserializeObject<ExpandoObject>(str, converter);
@@ -152,10 +153,9 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     dynamicBlittableJObject.MegaDevices[i].Usages);
             }
             var ms = new MemoryStream();
-            blittableContext.Write(ms, doc);
+            blittableContext.Sync.Write(ms, doc);
 
             Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
-
         }
     }
 }

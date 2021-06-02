@@ -39,9 +39,9 @@ namespace Raven.Client.Extensions
         {
             int result = 0;
 
-            foreach (var kvp in self)
+            foreach (var item in self)
             {
-                result = (result * 397) ^ kvp.GetHashCode();
+                result = (result * 397) ^ (Equals(item, default(TKey)) == false ? item.GetHashCode() : 0);
             }
 
             return result;
@@ -54,7 +54,7 @@ namespace Raven.Client.Extensions
         /// <typeparam name="S"></typeparam>
         /// <param name="collection"></param>
         /// <returns></returns>
-        public static IEnumerable<KeyValuePair<T,S>> ForceEnumerateInThreadSafeManner<T,S>(this ConcurrentDictionary<T,S> collection)
+        public static IEnumerable<KeyValuePair<T, S>> ForceEnumerateInThreadSafeManner<T, S>(this ConcurrentDictionary<T, S> collection)
         {
             // thanks to: https://stackoverflow.com/questions/47630824/is-c-sharp-linq-orderby-threadsafe-when-used-with-concurrentdictionarytkey-tva#
             foreach (var item in collection)

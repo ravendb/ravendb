@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Admin
     public class AdminConfigurationHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/configuration/settings", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
-        public Task GetSettings()
+        public async Task GetSettings()
         {
             ConfigurationEntryScope? scope = null;
             var scopeAsString = GetStringQueryString("scope", required: false);
@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     if (dbDoc == null)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return Task.CompletedTask;
+                        return;
                     }
 
                     databaseRecord = JsonDeserializationCluster.DatabaseRecord(dbDoc);
@@ -65,13 +65,11 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, settingsResult.ToJson());
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/admin/configuration/settings", "PUT", AuthorizationStatus.DatabaseAdmin)]
@@ -81,7 +79,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var databaseSettingsJson = context.ReadForDisk(RequestBodyStream(), Constants.DatabaseSettings.StudioId);
+                var databaseSettingsJson = await context.ReadForDiskAsync(RequestBodyStream(), Constants.DatabaseSettings.StudioId);
 
                 Dictionary<string, string> settings = new Dictionary<string, string>();
                 var prop = new BlittableJsonReaderObject.PropertyDetails();
@@ -89,17 +87,13 @@ namespace Raven.Server.Documents.Handlers.Admin
                 for (int i = 0; i < databaseSettingsJson.Count; i++)
                 {
                     databaseSettingsJson.GetPropertyByIndex(i, ref prop);
-                    settings.Add(prop.Name, prop.Value?.ToString() ?? null);
+                    settings.Add(prop.Name, prop.Value?.ToString());
                 }
 
-                await UpdateDatabaseRecord(context, (record, _) =>
-                {
-                    record.Settings = settings;
-                }, GetRaftRequestIdFromQuery());
+                await UpdateDatabaseRecord(context, (record, _) => record.Settings = settings, GetRaftRequestIdFromQuery());
             }
 
-            NoContentStatus();
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+            NoContentStatus(HttpStatusCode.Created);
         }
 
         [RavenAction("/databases/*/admin/configuration/studio", "PUT", AuthorizationStatus.DatabaseAdmin)]
@@ -109,7 +103,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var studioConfigurationJson = context.ReadForDisk(RequestBodyStream(), Constants.Configuration.StudioId);
+                var studioConfigurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), Constants.Configuration.StudioId);
                 var studioConfiguration = JsonDeserializationServer.StudioConfiguration(studioConfigurationJson);
 
                 await UpdateDatabaseRecord(context, (record, _) =>
@@ -118,8 +112,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }, GetRaftRequestIdFromQuery());
             }
 
-            NoContentStatus();
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+            NoContentStatus(HttpStatusCode.Created);
         }
 
         [RavenAction("/databases/*/admin/configuration/client", "PUT", AuthorizationStatus.DatabaseAdmin)]
@@ -129,7 +122,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var clientConfigurationJson = context.ReadForDisk(RequestBodyStream(), Constants.Configuration.ClientId);
+                var clientConfigurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), Constants.Configuration.ClientId);
                 var clientConfiguration = JsonDeserializationServer.ClientConfiguration(clientConfigurationJson);
 
                 await UpdateDatabaseRecord(context, (record, index) =>
@@ -139,9 +132,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }, GetRaftRequestIdFromQuery());
             }
 
-            NoContentStatus();
+            NoContentStatus(HttpStatusCode.Created);
             HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
         }
 
         private async Task UpdateDatabaseRecord(TransactionOperationContext context, Action<DatabaseRecord, long> action, string raftRequestId)

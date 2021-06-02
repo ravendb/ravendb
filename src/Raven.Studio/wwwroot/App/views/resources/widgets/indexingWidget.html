@@ -1,0 +1,73 @@
+<div>
+    <div class="cluster-dashboard-item-header">
+        <h3> <i class="icon-indexing"></i> <span>Indexing</span></h3>
+        <button class="btn btn-warning btn-sm" data-bind="click: remove">
+            <i class="icon-trash"></i>
+        </button>
+        <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
+            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen }"></i>
+        </button>
+    </div>
+
+    <div class="property-container">
+        <h4>Map Indexes</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
+                        <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: indexedPerSecond"></span>
+                                <span class="supplementary-info">Indexed Items/s</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-container indexed-per-second-chart">
+            </div>
+        </div>
+    </div>
+
+    <div class="property-container">
+        <h4>Map-Reduce Indexes</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
+                        <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: mappedPerSecond"></span>
+                                <span class="supplementary-info">Mapped Items/s</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="graph-container mapped-per-second-chart">
+            </div>
+        </div>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
+                        <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: reducedPerSecond"></span>
+                                <span class="supplementary-info">Reduced Mapped Entries/s</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="graph-container reduced-per-second-chart">
+            </div>
+        </div>
+    </div>
+</div>
+

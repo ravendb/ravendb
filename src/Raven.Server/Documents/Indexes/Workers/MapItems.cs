@@ -10,7 +10,6 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
-using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
@@ -34,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public string Name => "Map";
 
-        public bool Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
+        public (bool MoreWorkFound, Index.CanContinueBatchResult BatchContinuationResult) Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false
@@ -42,7 +41,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                 : TimeSpan.FromMinutes(15);
 
             var moreWorkFound = false;
+            var batchContinuationResult = Index.CanContinueBatchResult.None;
             var totalProcessedCount = 0;
+
             foreach (var collection in _index.Collections)
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
@@ -125,11 +126,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                                                 $"Exception: {e}");
                                     }
 
-                                    var canContinueBatch = _index.CanContinueBatch(collectionStats, queryContext, indexContext, indexWriter, 
+                                    batchContinuationResult = _index.CanContinueBatch(collectionStats, queryContext, indexContext, indexWriter, 
                                         lastEtag, lastCollectionEtag, totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
-                                    if (canContinueBatch != Index.CanContinueBatchResult.True)
+                                    if (batchContinuationResult != Index.CanContinueBatchResult.True)
                                     {
-                                        keepRunning = canContinueBatch == Index.CanContinueBatchResult.RenewTransaction;
+                                        keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;
                                         break;
                                     }
 
@@ -166,7 +167,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 }
             }
 
-            return moreWorkFound;
+            return (moreWorkFound, batchContinuationResult);
         }
 
         protected abstract IEnumerable<IndexItem> GetItemsEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize);

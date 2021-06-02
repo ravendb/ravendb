@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         [RavenAction("/databases/*/admin/debug/txinfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
-        public Task TxInfo()
+        public async Task TxInfo()
         {
             var results = new List<TransactionInfo>();
 
@@ -37,33 +37,30 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, new DynamicJsonValue
                 {
                     ["tx-info"] = ToJson(results)
                 });
             }
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/admin/debug/cluster/txinfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
-        public Task ClusterTxInfo()
+        public async Task ClusterTxInfo()
         {
             var from = GetLongQueryString("from", false);
             var take = GetIntValueQueryString("take", false) ?? int.MaxValue;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, new DynamicJsonValue
                 {
                     ["Results"] = new DynamicJsonArray(ClusterTransactionCommand.ReadCommandsBatch(context, Database.Name, from, take))
                 });
             }
-
-            return Task.CompletedTask;
         }
 
         internal static DynamicJsonArray ToJson(List<TransactionInfo> txInfos)
@@ -91,6 +88,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(TxInfoResult.TotalTime)] = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).TotalMilliseconds} mSecs",
                 [nameof(TxInfoResult.FlushInProgressLockTaken)] = lowLevelTransaction.FlushInProgressLockTaken,
                 [nameof(TxInfoResult.Flags)] = lowLevelTransaction.Flags,
+                [nameof(TxInfoResult.IsCloned)] = lowLevelTransaction.IsCloned,
                 [nameof(TxInfoResult.IsLazyTransaction)] = lowLevelTransaction.IsLazyTransaction,
                 [nameof(TxInfoResult.NumberOfModifiedPages)] = lowLevelTransaction.NumberOfModifiedPages,
                 [nameof(TxInfoResult.Committed)] = lowLevelTransaction.Committed,
@@ -108,6 +106,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public int TotalTime;
         public bool FlushInProgressLockTaken;
         public TransactionFlags Flags;
+        public bool IsCloned;
         public bool IsLazyTransaction;
         public long NumberOfModifiedPages;
         public bool Committed;

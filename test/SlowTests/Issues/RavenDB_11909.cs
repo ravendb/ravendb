@@ -86,8 +86,9 @@ namespace SlowTests.Issues
         [Fact]
         public void ThrowOnDatabaseRecordChanges()
         {
-            const int numberOfFields = 33;
+            const int numberOfFields = 37;
             const int numberOfProperties = 1;
+
             var tasksList = new List<string>
             {
                 nameof(DatabaseRecord.PeriodicBackups),
@@ -95,7 +96,8 @@ namespace SlowTests.Issues
                 nameof(DatabaseRecord.SinkPullReplications),
                 nameof(DatabaseRecord.HubPullReplications),
                 nameof(DatabaseRecord.RavenEtls),
-                nameof(DatabaseRecord.SqlEtls)
+                nameof(DatabaseRecord.SqlEtls),
+                nameof(DatabaseRecord.OlapEtls)
             };
 
             var dbRecordType = typeof(DatabaseRecord);
@@ -103,11 +105,11 @@ namespace SlowTests.Issues
             var properties = dbRecordType.GetProperties().Select(x => x.Name);
 
             // check if deleted fields from our list
-            Assert.True(tasksList.All(val => fields.Contains(val)), 
+            Assert.True(tasksList.All(val => fields.Contains(val)),
                 $"Some configuration deleted from {nameof(DatabaseRecord)} please update the {nameof(tasksList)} in {nameof(ClusterStateMachine)}.AddDatabase() and here.");
-           
+
             // check if new fields or properties has been added to DatabaseRecord
-            Assert.True(numberOfFields == fields.Count(), 
+            Assert.True(numberOfFields == fields.Count(),
                 $"New fields has been added to {nameof(DatabaseRecord)} please bump {nameof(numberOfFields)} and update the {nameof(tasksList)} in {nameof(ClusterStateMachine)}.AddDatabase() and here if necessary");
 
             Assert.True(numberOfProperties == properties.Count(),

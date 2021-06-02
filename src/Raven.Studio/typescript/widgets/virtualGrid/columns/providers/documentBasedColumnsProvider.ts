@@ -109,7 +109,7 @@ class documentBasedColumnsProvider {
         }
 
         if (this.enableInlinePreview) {
-            const previewColumn = new actionColumn<document>(this.gridController, this.customInlinePreview, "Preview", `<i class="icon-preview"></i>`, "70px",
+            const previewColumn = new actionColumn<document>(this.gridController, this.customInlinePreview, "Preview", `<i class="icon-preview"></i>`, "75px",
             {
                 title: () => 'Show item preview'
             });

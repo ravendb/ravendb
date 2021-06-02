@@ -13,18 +13,28 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
     internal class BlittableJsonWriter : JsonWriter, IJsonWriter
     {
+        private readonly LazyStringValue _metadataKey;
+        private readonly LazyStringValue _metadataCollection;
+        private readonly LazyStringValue _metadataId;
+
+
         private readonly ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> _manualBlittableJsonDocumentBuilder;
         private bool _first;
         private readonly DocumentInfo _documentInfo;
 
         public BlittableJsonWriter(JsonOperationContext context, DocumentInfo documentInfo = null,
-            BlittableJsonDocumentBuilder.UsageMode? mode = null, BlittableWriter<UnmanagedWriteBuffer> writer = null)
+            BlittableJsonDocumentBuilder.UsageMode? mode = null, BlittableWriter<UnmanagedWriteBuffer> writer = null,
+            LazyStringValue idField = null, LazyStringValue keyField = null, LazyStringValue collectionField = null)
         {
             _manualBlittableJsonDocumentBuilder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context, mode ?? BlittableJsonDocumentBuilder.UsageMode.None, writer);
             _manualBlittableJsonDocumentBuilder.Reset(mode ?? BlittableJsonDocumentBuilder.UsageMode.None);
             _manualBlittableJsonDocumentBuilder.StartWriteObjectDocument();
             _documentInfo = documentInfo;
             _first = true;
+
+            _metadataId = idField ?? context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Id);
+            _metadataKey = keyField ?? context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key);
+            _metadataCollection = collectionField ?? context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Collection);
         }
 
         public override void WriteStartObject()
@@ -42,7 +52,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                 return;
             if (_documentInfo.Metadata?.Modifications != null && _documentInfo.Metadata.Modifications.Properties.Count > 0)
             {
-                _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(_metadataKey);
                 _manualBlittableJsonDocumentBuilder.StartWriteObject();
 
                 foreach (var prop in _documentInfo.Metadata.Modifications.Properties)
@@ -62,7 +72,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
                 if (_documentInfo.Collection != null)
                 {
-                    _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Collection);
+                    _manualBlittableJsonDocumentBuilder.WritePropertyName(_metadataCollection);
                     _manualBlittableJsonDocumentBuilder.WriteValue(_documentInfo.Collection);
                 }
 
@@ -71,7 +81,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             }
             else if (_documentInfo.Metadata != null)
             {
-                _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(_metadataKey);
                 _manualBlittableJsonDocumentBuilder.StartWriteObject();
 
                 for (int i = 0; i < _documentInfo.Metadata.Count; i++)
@@ -86,20 +96,20 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             }
             else if (_documentInfo.MetadataInstance != null)
             {
-                _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(_metadataKey);
                 WriteMetadata(_documentInfo.MetadataInstance);
             }
             else if (_documentInfo.Collection != null)
             {
-                _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(_metadataKey);
                 _manualBlittableJsonDocumentBuilder.StartWriteObject();
 
-                _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Collection);
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(_metadataCollection);
                 _manualBlittableJsonDocumentBuilder.WriteValue(_documentInfo.Collection);
 
                 if (_documentInfo.Id != null)
                 {
-                    _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Id);
+                    _manualBlittableJsonDocumentBuilder.WritePropertyName(_metadataId);
                     _manualBlittableJsonDocumentBuilder.WriteValue(_documentInfo.Id);
                 }
 

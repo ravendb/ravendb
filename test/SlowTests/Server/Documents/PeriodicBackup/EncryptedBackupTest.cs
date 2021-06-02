@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
@@ -26,7 +25,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -50,30 +49,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
@@ -94,7 +75,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -118,34 +99,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                    EncryptionMode = EncryptionMode.UseDatabaseKey
+                });
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
@@ -166,7 +128,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_new_key()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -190,34 +152,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                };
+                    Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                    EncryptionMode = EncryptionMode.UseProvidedKey
+                });
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
@@ -237,7 +181,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -261,30 +205,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
@@ -306,7 +232,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -330,34 +256,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                    EncryptionMode = EncryptionMode.UseDatabaseKey
+                });
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
@@ -379,7 +286,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_new_key()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -403,34 +310,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                    Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                    EncryptionMode = EncryptionMode.UseProvidedKey
+                });
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
@@ -451,7 +339,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_unencrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -475,35 +363,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.None
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                    EncryptionMode = EncryptionMode.None
+                });
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName
@@ -518,7 +387,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_unencrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -542,35 +411,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.None
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                    EncryptionMode = EncryptionMode.None
+                });
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
@@ -586,7 +436,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -610,31 +460,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }, "users/1");
                     await session.SaveChangesAsync();
                 }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
@@ -654,7 +485,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -678,34 +509,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath,backupType: BackupType.Snapshot, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                    EncryptionMode = EncryptionMode.None
+                });
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
@@ -725,7 +537,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task snapshot_encrypted_db__with_incremental_and_restore_to_encrypted_DB()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -752,26 +564,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -782,19 +576,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 2);
-                Assert.Equal(2, value);
-
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: 2);
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
@@ -822,7 +607,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -838,36 +623,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                    Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                    EncryptionMode = EncryptionMode.UseProvidedKey
+                });
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
@@ -887,62 +653,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
-        public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_not_encrypted_backup_1()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    session.SaveChanges();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                // restore the database with a different name
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
-                {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName,
-                }))
-                {
-                    using (var session = store.OpenSession(databaseName))
-                    {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                    }
-                }
-            }
-        }
-
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_not_encrypted_backup_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -958,36 +669,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     session.SaveChanges();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.None
-                    }
-
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                    EncryptionMode = EncryptionMode.None
+                });
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
@@ -1002,7 +693,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_not_encrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1018,22 +709,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                    Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                    EncryptionMode = EncryptionMode.UseProvidedKey
+                });
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
@@ -1047,7 +728,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
@@ -1067,7 +748,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task backup_unencrypted_db_and_encrypted_backup_fail_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1081,23 +762,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }, "users/1");
                     await session.SaveChangesAsync();
                 }
-
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                    EncryptionMode = EncryptionMode.UseDatabaseKey
+                });
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store, opStatus:OperationStatus.Faulted);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 var value = WaitForValue(() =>
                 {
@@ -1105,10 +774,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var errorException = getPeriodicBackupResult.Status?.Error.Exception.Contains("InvalidOperationException");
                     return errorException;
                 }, true);
+                Assert.True(value);
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore_encrypted()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1121,42 +791,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                };
+                    Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                    EncryptionMode = EncryptionMode.UseProvidedKey
+                });
 
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 4);
-                Assert.Equal(4, value);
-
                 var backupStatus = store.Maintenance.Send(operation);
                 var backupOperationId = backupStatus.Status.LastOperationId;
-
-                OperationState backupOperation = null;
-                var status = WaitForValue(() =>
-                {
-                    backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupOperationId.Value));
-                    return backupOperation.Status;
-                }, OperationStatus.Completed);
-                Assert.Equal(OperationStatus.Completed, status);
-
+                Assert.NotNull(backupOperationId);
+                OperationState backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupOperationId.Value));
                 var backupResult = backupOperation.Result as BackupResult;
                 Assert.True(backupResult.Counters.Processed);
                 Assert.Equal(1, backupResult.Counters.ReadCount);
@@ -1170,15 +816,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.Equal(lastEtag, value);
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName,
@@ -1210,7 +853,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore_sample_data_encrypted()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1240,35 +883,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var beforeBackupStats = store.Maintenance.Send(new GetStatisticsOperation());
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */8 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                };
+                    Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                    EncryptionMode = EncryptionMode.UseProvidedKey
+                });
 
-                var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
-                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                SpinWait.SpinUntil(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(15));
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = restoredDatabaseName,
@@ -1307,7 +933,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public unsafe void failed_to_restore_backup_wrong_key()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1320,29 +946,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     session.SaveChanges();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
-                    }
-                };
+                    Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                    EncryptionMode = EncryptionMode.UseProvidedKey
+                });
 
-                var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
-                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 4);
-                Assert.Equal(4, value);
+                Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -1355,7 +965,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var e = Assert.Throws<RavenException>(() =>
                 {
-                    using (RestoreDatabase(store, new RestoreBackupConfiguration
+                    using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                     {
                         BackupLocation = Directory.GetDirectories(backupPath).First(),
                         DatabaseName = databaseName,
@@ -1372,7 +982,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void encryption_settings_validation()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1387,29 +997,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     session.SaveChanges();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = key
-                    }
-                };
+                    Key = key
+                });
 
-                var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
-                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 4);
-                Assert.Equal(4, value);
+                Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -1440,7 +1033,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 void RestoreDatabaseInternal(EncryptionMode encryptionMode, string encryptionKey)
                 {
-                    using (RestoreDatabase(store, new RestoreBackupConfiguration
+                    using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                     {
                         BackupLocation = Directory.GetDirectories(backupPath).First(),
                         DatabaseName = databaseName,
@@ -1456,7 +1049,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task snapshot_encrypted_db_with_new_key_fail()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1480,24 +1073,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                };
+                    Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                    EncryptionMode = EncryptionMode.UseProvidedKey
+                });
 
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store, opStatus: OperationStatus.Faulted);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 var value = WaitForValue(() =>
                 {
@@ -1505,10 +1087,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var errorException = getPeriodicBackupResult.Status?.Error.Exception.Contains("InvalidOperationException");
                     return errorException;
                 }, true);
+                Assert.True(value);
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task snapshot_unencrypted_db_and_encrypted_backup_fail_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1523,23 +1106,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        EncryptionMode = EncryptionMode.UseProvidedKey
-                    }
-                };
+                    Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
+                    EncryptionMode = EncryptionMode.UseProvidedKey
+                });
 
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store, opStatus: OperationStatus.Faulted);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 var value = WaitForValue(() =>
                 {
@@ -1547,10 +1120,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var errorException = getPeriodicBackupResult.Status?.Error.Exception.Contains("InvalidOperationException");
                     return errorException;
                 }, true);
+                Assert.True(value);
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task snapshot_unencrypted_db_and_encrypted_backup_fail_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1565,22 +1139,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.UseDatabaseKey
-                    }
-                };
+                    EncryptionMode = EncryptionMode.UseDatabaseKey
+                });
 
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store, opStatus: OperationStatus.Faulted);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 var value = WaitForValue(() =>
                 {
@@ -1588,65 +1152,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var errorException = getPeriodicBackupResult.Status?.Error.Exception.Contains("InvalidOperationException");
                     return errorException;
                 }, true);
+                Assert.True(value);
             }
         }
 
-        [Fact]
-        public async Task snapshot_and_restore_unencrypted_db_and_unencrypted_backup_1()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                // restore the database with a different name
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
-                {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName
-                }))
-                {
-                    using (var session = store.OpenSession(databaseName))
-                    {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                    }
-                }
-            }
-        }
-
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task snapshot_and_restore_unencrypted_db_and_unencrypted_backup_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1662,35 +1172,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot, backupEncryptionSettings: new BackupEncryptionSettings
                 {
-                    BackupType = BackupType.Snapshot,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                    BackupEncryptionSettings = new BackupEncryptionSettings
-                    {
-                        EncryptionMode = EncryptionMode.None
-                    }
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                    EncryptionMode = EncryptionMode.None
+                });
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName
@@ -1705,7 +1196,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory]
+        [Theory, Trait("Category", "Smuggler")]
         [InlineData(BackupType.Backup, Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension)]
         [InlineData(BackupType.Snapshot, Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)]
         public async Task backup_encrypted_db_without_backup_encryption_configuration(BackupType backupType, string expectedExtension)
@@ -1731,26 +1222,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = backupType,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "0 */6 * * *",
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: backupType);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var folderPath = Directory.GetDirectories(backupPath).First();
                 var filePath = Directory.GetFiles(folderPath).First();
@@ -1761,7 +1234,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = folderPath,
                     DatabaseName = databaseName,

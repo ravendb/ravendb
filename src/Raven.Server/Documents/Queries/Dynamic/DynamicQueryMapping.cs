@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                         return indexField;
                     }
-                ).ToArray());
+                ).ToArray(), deploymentMode: null);
             }
 
             if (GroupByFields.Count == 0)
@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     indexField.HasSuggestions = field.HasSuggestions;
 
                     return indexField;
-                }).ToArray());
+                }).ToArray(), deploymentMode: null);
         }
 
         public void ExtendMappingBasedOn(AutoIndexDefinitionBase definitionOfExistingIndex)

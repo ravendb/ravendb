@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
+using Sparrow.Collections;
 using Sparrow.Server;
 using Sparrow.Threading;
 
@@ -34,14 +33,11 @@ namespace Raven.Server.Documents.Subscriptions
 
         private SubscriptionConnection _currentConnection;
 
-
+        private readonly ConcurrentSet<SubscriptionConnection> _pendingConnections = new ConcurrentSet<SubscriptionConnection>();
         private readonly ConcurrentQueue<SubscriptionConnection> _recentConnections = new ConcurrentQueue<SubscriptionConnection>();
         private readonly ConcurrentQueue<SubscriptionConnection> _rejectedConnections = new ConcurrentQueue<SubscriptionConnection>();
 
-
         public SubscriptionConnection Connection => _currentConnection;
-
-
 
         // we should have two locks: one lock for a connection and one lock for operations
         // remember to catch ArgumentOutOfRangeException for timeout problems
@@ -62,12 +58,12 @@ namespace Raven.Server.Documents.Subscriptions
 
                         case SubscriptionOpeningStrategy.OpenIfFree:
                             throw new SubscriptionInUseException(
-                                $"Subscription {incomingConnection.SubscriptionId} is occupied, connection cannot be opened");
+                                $"Subscription {incomingConnection.Options.SubscriptionName} is occupied, connection cannot be opened");
 
                         case SubscriptionOpeningStrategy.TakeOver:
                             if (_currentConnection?.Strategy == SubscriptionOpeningStrategy.TakeOver)
                                 throw new SubscriptionInUseException(
-                                    $"Subscription {incomingConnection.SubscriptionId} is already occupied by a TakeOver connection, connection cannot be opened");
+                                    $"Subscription {incomingConnection.Options.SubscriptionName} is already occupied by a TakeOver connection, connection cannot be opened");
 
                             if (_currentConnection != null)
                                 _storage.DropSubscriptionConnection(_currentConnection.SubscriptionId,
@@ -122,6 +118,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public IEnumerable<SubscriptionConnection> RecentConnections => _recentConnections;
         public IEnumerable<SubscriptionConnection> RecentRejectedConnections => _rejectedConnections;
+        public ConcurrentSet<SubscriptionConnection> PendingConnections => _pendingConnections;
 
         public string SubscriptionName { get; }
 

@@ -184,7 +184,7 @@ namespace Sparrow.Json.Parsing
                     Buffer.MemoryCopy(from, to, (uint)sizeToCopy, (uint)sizeToCopy);
                     str[i] = (byte)'\\';
                     str[i + 1] = (byte)'u';
-                    fixed (byte* controlString = AbstractBlittableJsonTextWriter.ControlCodeEscapes[value])
+                    fixed (byte* controlString = AsyncBlittableJsonTextWriter.ControlCodeEscapes[value])
                     {
                         Memory.Copy(str + i + 2, controlString, 4);
                     }

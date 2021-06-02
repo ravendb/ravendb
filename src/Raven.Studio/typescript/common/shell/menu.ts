@@ -216,8 +216,9 @@ class menu {
         $document.on("mouseup.menuResize", e => {
             const dx = e.pageX - startX;
             const requestedWidth = _.clamp(currentWidth + dx, menu.minWidth, menu.maxWidth);
-            this.width(_.clamp(requestedWidth, menu.minWidth, menu.maxWidth));
-            document.documentElement.style.setProperty('--menu-width', (_.clamp(currentWidth + dx, menu.minWidth, menu.maxWidth).toString() + 'px'));
+            const width = _.clamp(requestedWidth, menu.minWidth, menu.maxWidth);
+            this.width(width);
+            document.documentElement.style.setProperty('--menu-width', requestedWidth.toString() + 'px');
 
             studioSettings.default.globalSettings()
                 .done(settings => {

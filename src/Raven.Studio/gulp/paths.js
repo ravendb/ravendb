@@ -50,7 +50,10 @@ var paths = {
         'wwwroot/lib/bootstrap-select/dist/css/bootstrap-select.css',
         'wwwroot/lib/bootstrap-multiselect/dist/css/bootstrap-multiselect.css',
         'wwwroot/lib/Durandal/css/durandal.css',
-        'wwwroot/lib/animate.css/animate.css'
+        'wwwroot/lib/animate.css/animate.css',
+        'wwwroot/lib/leaflet/dist/leaflet.css',
+        'wwwroot/lib/leaflet.markercluster/dist/MarkerCluster.css', 
+        'wwwroot/lib/leaflet.markercluster/dist/MarkerCluster.Default.css'
     ],
     externalLibs: [
         'es6-shim/es6-shim.js',
@@ -81,7 +84,11 @@ var paths = {
         "qrcode.js/qrcode.js",
         "css-escape/css.escape.js",
         "cronstrue/dist/cronstrue.min.js",
-        "favico.js/favico.js"
+        "favico.js/favico.js",
+        "leaflet/dist/leaflet-src.js",
+        "leaflet.markercluster/dist/leaflet.markercluster.js",
+        "packery/dist/packery.pkgd.js",
+        "draggabilly/dist/draggabilly.pkgd.js"
     ]
 };
 

@@ -281,6 +281,29 @@ interface arrayOfResultsAndCountDto<T> {
     Count: number;
 }
 
+interface subscriptionItemTooltipInfo {
+    title: string;
+    clientUri: string;
+}
+
+interface subscriptionConnectionItemInfo extends subscriptionItemTooltipInfo {
+    duration: number;
+    strategy: string;
+    batchCount: number;
+    totalBatchSize: number;
+    connectionId: number;
+    exceptionText: string;
+}
+
+interface subscriptionPendingItemInfo extends subscriptionItemTooltipInfo {
+    duration: number;
+}
+
+interface subscriptionErrorItemInfo extends subscriptionItemTooltipInfo {
+    exceptionText: string;
+    strategy: string;
+}
+
 interface timeGapInfo {
     durationInMillis: number;
     start: Date;
@@ -332,8 +355,11 @@ declare module studio.settings {
 }
 
 interface IndexingPerformanceStatsWithCache extends Raven.Client.Documents.Indexes.IndexingPerformanceStats {
-    StartedAsDate: Date; // used for caching
-    CompletedAsDate: Date; // user for caching
+    StartedAsDate: Date;
+    StartedAsDateExcludingWaitTime: Date;
+    WaitOperation: Raven.Client.Documents.Indexes.IndexingPerformanceOperation;
+    CompletedAsDate: Date;
+    DetailsExcludingWaitTime: Raven.Client.Documents.Indexes.IndexingPerformanceOperation;
 }
 
 interface IOMetricsRecentStatsWithCache extends Raven.Server.Utils.IoMetrics.IOMetricsRecentStats {
@@ -341,7 +367,11 @@ interface IOMetricsRecentStatsWithCache extends Raven.Server.Utils.IoMetrics.IOM
     CompletedAsDate: Date; // used for caching
 }
 
-type ongoingTaskStatType = Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType | Raven.Client.Documents.Operations.ETL.EtlType;
+type subscriptionType =  "SubscriptionConnection" | "SubscriptionBatch" | "AggregatedBatchesInfo";
+
+type ongoingTaskStatType = Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType |
+                           Raven.Client.Documents.Operations.ETL.EtlType |
+                           subscriptionType;
 
 interface ReplicationPerformanceBaseWithCache extends Raven.Client.Documents.Replication.ReplicationPerformanceBase {
     StartedAsDate: Date;
@@ -356,6 +386,21 @@ interface EtlPerformanceBaseWithCache extends Raven.Server.Documents.ETL.Stats.E
     CompletedAsDate: Date;
     Type: Raven.Client.Documents.Operations.ETL.EtlType;
     HasErrors: boolean;
+}
+
+interface SubscriptionConnectionPerformanceStatsWithCache extends Raven.Server.Documents.Subscriptions.Stats.SubscriptionConnectionPerformanceStats {
+    StartedAsDate: Date;
+    CompletedAsDate: Date;
+    Type: subscriptionType;
+    HasErrors: boolean;
+}
+
+interface SubscriptionBatchPerformanceStatsWithCache extends Raven.Server.Documents.Subscriptions.SubscriptionBatchPerformanceStats {
+    StartedAsDate: Date;
+    CompletedAsDate: Date;
+    Type: subscriptionType;
+    HasErrors: boolean;
+    AggregatedBatchesCount: number;
 }
 
 interface IndexingPerformanceOperationWithParent extends Raven.Client.Documents.Indexes.IndexingPerformanceOperation {
@@ -554,17 +599,23 @@ interface adminLogsConfiguration extends Raven.Client.ServerWide.Operations.Logs
     CurrentMode: Sparrow.Logging.LogMode;
 }
 
+interface testEtlScriptResult {
+    DebugOutput: Array<string>;
+    TransformationErrors: Array<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>;
+}
+
 declare module Raven.Server.Documents.ETL.Providers.SQL.Test {
-    interface SqlEtlTestScriptResult {
-        DebugOutput: Array<string>;
-        TransformationErrors: Array<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>;
+    interface SqlEtlTestScriptResult extends testEtlScriptResult {
     }
 }
 
 declare module Raven.Server.Documents.ETL.Providers.Raven.Test {
-    interface RavenEtlTestScriptResult extends Raven.Server.Documents.ETL.Test.TestEtlScriptResult {
-        DebugOutput: Array<string>;
-        TransformationErrors: Array<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>;
+    interface RavenEtlTestScriptResult extends testEtlScriptResult {
+    }
+}
+
+declare module Raven.Server.Documents.ETL.Providers.OLAP.Test {
+    interface OlapEtlTestScriptResult extends testEtlScriptResult {
     }
 }
 
@@ -598,6 +649,7 @@ interface textColumnOpts<T> {
 interface hypertextColumnOpts<T> extends textColumnOpts<T> {
     handler?: (item: T, event: JQueryEventObject) => void;
     extraClassForLink?: (item: T) => string;
+    openInNewTab?: (item: T) => boolean;
 }
 
 type timeSeriesColumnEventType = "plot" | "preview";
@@ -607,7 +659,7 @@ interface timeSeriesColumnOpts<T> extends textColumnOpts<T> {
 }
 
 interface virtualColumnDto {
-    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom" | "timeSeries"
+    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom" | "timeSeries" | "nodeTag";
     width: string;
     header: string;
     serializedValue: string;
@@ -652,7 +704,9 @@ interface scrollColorConfig {
 
 type etlScriptDefinitionCacheItem = {
     etlType: Raven.Client.Documents.Operations.ETL.EtlType;
-    task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails | Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails>;
+    task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
+                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
+                        Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails>;
 }
 
 type addressType = "ipv4" | "ipv6" | "hostname" | "invalid";
@@ -696,7 +750,7 @@ interface rawStackTraceResponseItem {
     StackTrace: string[];
 }
 
-type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle";
+type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle" | "RollingDeployment";
 
 interface MigratorPathConfiguration {
     HasMigratorPath: boolean;
@@ -733,7 +787,7 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
     Deletes: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.DeleteOperation[];
 }
 
-type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink";
+type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "OLAP ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink";
 
 interface sampleCode {
     title: string;
@@ -751,3 +805,27 @@ interface indexHistoryCommandResult {
     Index: string;
     History: Raven.Client.ServerWide.IndexHistoryEntry[];
 }
+
+interface databaseAccessInfo {
+    dbName: string;
+    accessLevel: databaseAccessLevel;
+}
+
+interface databaseAndNodeAwareStats {
+    database: string;
+    nodeTag: string;
+    hideDatabaseName: boolean;
+    even: boolean;
+    noData: boolean;
+}
+
+interface cachedDateValue<T> {
+    date: Date;
+    value: T;
+}
+
+type widgetType = Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType | "Welcome" | "License";
+
+type databaseAccessLevel = `Database${Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess}`;
+type securityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
+type accessLevel = databaseAccessLevel | securityClearance;

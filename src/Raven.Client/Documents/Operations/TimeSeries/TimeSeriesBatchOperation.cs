@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
@@ -35,7 +33,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 _documentId = documentId;
                 _operation = operation;
             }
-            
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/timeseries?docId={Uri.EscapeDataString(_documentId)}";
@@ -44,10 +42,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 {
                     Method = HttpMethod.Post,
 
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
                     {
                         var op = ctx.ReadObject(_operation.ToJson(), "convert-time-series-operation");
-                        ctx.Write(stream, op);
+                        await ctx.WriteAsync(stream, op).ConfigureAwait(false);
                     })
                 };
             }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -82,6 +82,8 @@ namespace Raven.Client.Http
 
         private ServerNode _topologyTakenFromNode;
 
+        internal string LastServerVersion { get; private set; }
+
         private HttpClient _httpClient;
 
         public HttpClient HttpClient
@@ -131,8 +133,6 @@ namespace Raven.Client.Http
         protected bool _disableTopologyUpdates;
 
         protected bool _disableClientConfigurationUpdates;
-
-        internal string LastServerVersion;
 
         public TimeSpan? DefaultTimeout
         {
@@ -454,7 +454,7 @@ namespace Raven.Client.Http
                     await ExecuteAsync(parameters.Node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
                     var topology = command.Result;
 
-                    DatabaseTopologyLocalCache.TrySaving(_databaseName, TopologyHash, topology, Conventions, context);
+                    await DatabaseTopologyLocalCache.TrySavingAsync(_databaseName, TopologyHash, topology, Conventions, context, CancellationToken.None).ConfigureAwait(false);
 
                     if (_nodeSelector == null)
                     {
@@ -719,7 +719,7 @@ namespace Raven.Client.Http
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                if (TryLoadFromCache(context))
+                if (await TryLoadFromCacheAsync(context).ConfigureAwait(false))
                 {
                     InitializeUpdateTopologyTimer();
                     return;
@@ -800,9 +800,9 @@ namespace Raven.Client.Http
             }
         }
 
-        protected virtual bool TryLoadFromCache(JsonOperationContext context)
+        protected virtual async Task<bool> TryLoadFromCacheAsync(JsonOperationContext context)
         {
-            var cachedTopology = DatabaseTopologyLocalCache.TryLoad(_databaseName, TopologyHash, Conventions, context);
+            var cachedTopology = await DatabaseTopologyLocalCache.TryLoadAsync(_databaseName, TopologyHash, Conventions, context).ConfigureAwait(false);
             if (cachedTopology == null)
                 return false;
 
@@ -1051,8 +1051,18 @@ namespace Raven.Client.Http
 
             var response = await preferredTask.ConfigureAwait(false);
 
-            if (TryGetServerVersion(response, out var serverVersion))
-                LastServerVersion = serverVersion;
+            // PERF: The reason to avoid rechecking every time is that servers wont change so rapidly
+            //       and therefore we dimish its cost by orders of magnitude just doing it
+            //       once in a while. We dont care also about the potential race conditions that may happen
+            //       here mainly because the idea is to have a lax mechanism to recheck that is at least
+            //       orders of magnitude faster than currently. 
+            if (chosenNode.ShouldUpdateServerVersion())
+            {
+                if (TryGetServerVersion(response, out var serverVersion))
+                    chosenNode.UpdateServerVersion(serverVersion);                    
+            }
+
+            LastServerVersion = chosenNode.LastServerVersion;
 
             if (sessionInfo?.LastClusterTransactionIndex != null)
             {
@@ -1060,7 +1070,7 @@ namespace Raven.Client.Http
                 // Since the current executed command can be dependent on that, we have to wait for the cluster transaction.
                 // But we can't do that if the server is an old one.
 
-                if (serverVersion == null || string.Compare(serverVersion, "4.1", StringComparison.Ordinal) < 0)
+                if (LastServerVersion == null || string.Compare(LastServerVersion, "4.1", StringComparison.Ordinal) < 0)
                 {
                     using (response)
                     {
@@ -1418,6 +1428,29 @@ namespace Raven.Client.Http
                     await HandleConflict(context, response).ConfigureAwait(false);
                     break;
 
+                case (HttpStatusCode)425: // TooEarly
+
+                    if (shouldRetry == false)
+                        return false;
+
+                    if (nodeIndex != null)
+                        _nodeSelector.OnFailedRequest(nodeIndex.Value);
+
+                    if (command.FailedNodes == null)
+                        command.FailedNodes = new Dictionary<ServerNode, Exception>();
+
+                    if (command.IsFailedWithNode(chosenNode) == false)
+                        command.FailedNodes[chosenNode] = new UnsuccessfulRequestException($"Request to '{request.RequestUri}' ({request.Method}) is processing and not yet available on that node.");
+
+                    var nextNode = ChooseNodeForRequest(command, sessionInfo);
+
+                    await ExecuteAsync(nextNode.CurrentNode, nextNode.CurrentIndex, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
+                    
+                    if (nodeIndex.HasValue)
+                        _nodeSelector.RestoreNodeIndex(nodeIndex.Value);
+
+                    return true;
+
                 default:
                     command.OnResponseFailure(response);
                     await ExceptionDispatcher.Throw(context, response, AdditionalErrorInformation).ConfigureAwait(false);
@@ -1475,6 +1508,9 @@ namespace Raven.Client.Http
                 SpawnHealthChecks(chosenNode, nodeIndex.Value);
                 return false;
             }
+
+            // As the server is down, we discard the server version to ensure we update when it goes up. 
+            chosenNode.DiscardServerVersion();
 
             _nodeSelector.OnFailedRequest(nodeIndex.Value);
 
@@ -1624,7 +1660,16 @@ namespace Raven.Client.Http
             SpawnHealthChecks(chosenNode, nodeIndex);
             _nodeSelector?.OnFailedRequest(nodeIndex);
             var (_, serverNode) = await GetPreferredNode().ConfigureAwait(false);
-            await UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = "handle-server-not-responsive" }).ConfigureAwait(false);
+
+            if (_disableTopologyUpdates)
+            {
+                await PerformHealthCheck(chosenNode, nodeIndex).ConfigureAwait(false);
+            }
+            else
+            {
+                await UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = "handle-server-not-responsive" }).ConfigureAwait(false);
+            }
+
             OnFailedRequestInvoke(url, e);
             return serverNode;
         }
@@ -1713,6 +1758,13 @@ namespace Raven.Client.Http
             }
         }
 
+        protected virtual async Task PerformHealthCheck(ServerNode serverNode, int nodeIndex)
+        {
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                await PerformHealthCheck(serverNode, nodeIndex, context).ConfigureAwait(false);
+            }
+        }
         protected virtual async Task PerformHealthCheck(ServerNode serverNode, int nodeIndex, JsonOperationContext context)
         {
             try
@@ -1752,7 +1804,7 @@ namespace Raven.Client.Http
                 try
                 {
                     ms.Position = 0;
-                    using (var responseJson = context.ReadForMemory(ms, "RequestExecutor/HandleServerDown/ReadResponseContent"))
+                    using (var responseJson = await context.ReadForMemoryAsync(ms, "RequestExecutor/HandleServerDown/ReadResponseContent").ConfigureAwait(false))
                     {
                         return ExceptionDispatcher.Get(JsonDeserializationClient.ExceptionSchema(responseJson), response.StatusCode, e);
                     }
@@ -1765,7 +1817,7 @@ namespace Raven.Client.Http
                     {
                         Url = request.RequestUri.ToString(),
                         Message = "Got unrecognized response from the server",
-                        Error = new StreamReader(ms).ReadToEnd(),
+                        Error = await new StreamReader(ms).ReadToEndAsync().ConfigureAwait(false),
                         Type = "Unparseable Server Response"
                     }, response.StatusCode, e);
                 }
@@ -2109,17 +2161,14 @@ namespace Raven.Client.Http
 
         private async Task EnsureNodeSelector()
         {
-            if (_firstTopologyUpdate != null && _firstTopologyUpdate.Status != TaskStatus.RanToCompletion)
-                await _firstTopologyUpdate.ConfigureAwait(false);
+            if (_disableTopologyUpdates == false)
+                await WaitForTopologyUpdate(_firstTopologyUpdate).ConfigureAwait(false);
 
-            if (_nodeSelector == null)
+            _nodeSelector ??= new NodeSelector(new Topology
             {
-                _nodeSelector = new NodeSelector(new Topology
-                {
-                    Nodes = TopologyNodes.ToList(),
-                    Etag = TopologyEtag
-                });
-            }
+                Nodes = TopologyNodes.ToList(),
+                Etag = TopologyEtag
+            });
         }
 
         private static void ThrowIfClientException(Exception e)

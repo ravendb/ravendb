@@ -19,14 +19,14 @@ namespace Raven.Server.Documents.Handlers
 {
     public class ReplicationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/replication/tombstones", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetAllTombstones()
+        [RavenAction("/databases/*/replication/tombstones", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetAllTombstones()
         {
             var start = GetStart();
             var pageSize = GetPageSize();
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 var array = new DynamicJsonArray();
@@ -40,25 +40,22 @@ namespace Raven.Server.Documents.Handlers
                     ["Results"] = array
                 });
             }
-
-            return Task.CompletedTask;
         }
 
-       
-        [RavenAction("/databases/*/replication/conflicts", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/replication/conflicts", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task GetReplicationConflicts()
         {
             var docId = GetStringQueryString("docId", required: false);
             var etag = GetLongQueryString("etag", required: false) ?? 0;
-            return string.IsNullOrWhiteSpace(docId) ? 
+            return string.IsNullOrWhiteSpace(docId) ?
                 GetConflictsByEtag(etag) :
                 GetConflictsForDocument(docId);
         }
 
-        private Task GetConflictsByEtag(long etag)
+        private async Task GetConflictsByEtag(long etag)
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 var skip = GetStart();
@@ -91,15 +88,14 @@ namespace Raven.Server.Documents.Handlers
                     ["TotalResults"] = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
                     [nameof(GetConflictsResult.Results)] = array
                 });
-
-                return Task.CompletedTask;
             }
         }
-        private Task GetConflictsForDocument(string docId)
+
+        private async Task GetConflictsForDocument(string docId)
         {
             long maxEtag = 0;
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 var array = new DynamicJsonArray();
@@ -124,15 +120,14 @@ namespace Raven.Server.Documents.Handlers
                     [nameof(GetConflictsResult.LargestEtag)] = maxEtag,
                     [nameof(GetConflictsResult.Results)] = array
                 });
-                return Task.CompletedTask;
             }
         }
 
-        [RavenAction("/databases/*/replication/performance", "GET", AuthorizationStatus.ValidUser)]
-        public Task Performance()
+        [RavenAction("/databases/*/replication/performance", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task Performance()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
 
@@ -176,11 +171,9 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/performance/live", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
+        [RavenAction("/databases/*/replication/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task PerformanceLive()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
@@ -188,7 +181,7 @@ namespace Raven.Server.Documents.Handlers
                 var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
                 var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
 
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 using (var collector = new LiveReplicationPerformanceCollector(Database))
                 {
                     // 1. Send data to webSocket without making UI wait upon opening webSocket
@@ -206,7 +199,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/replication/pulses/live", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
+        [RavenAction("/databases/*/replication/pulses/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task PulsesLive()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
@@ -214,7 +207,7 @@ namespace Raven.Server.Documents.Handlers
                 var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
                 var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
 
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 using (var collector = new LiveReplicationPulsesCollector(Database))
                 {
                     // 1. Send data to webSocket without making UI wait upon opening webSocket
@@ -248,7 +241,7 @@ namespace Raven.Server.Documents.Handlers
             ms.SetLength(0);
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ms))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
             {
                 var pulse = tuple.Item2;
                 context.Write(writer, pulse.ToJson());
@@ -260,11 +253,11 @@ namespace Raven.Server.Documents.Handlers
             return true;
         }
 
-        [RavenAction("/databases/*/replication/active-connections", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetReplicationActiveConnections()
+        [RavenAction("/databases/*/replication/active-connections", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetReplicationActiveConnections()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var incoming = new DynamicJsonArray();
                 foreach (var item in Database.ReplicationLoader.IncomingConnections)
@@ -295,14 +288,13 @@ namespace Raven.Server.Documents.Handlers
                     ["OutgoingConnections"] = outgoing
                 });
             }
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/outgoing-failures", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task GetReplicationOutgoingFailureStats()
+        [RavenAction("/databases/*/replication/debug/outgoing-failures", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task GetReplicationOutgoingFailureStats()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
                 foreach (var item in Database.ReplicationLoader.OutgoingFailureInfo)
@@ -333,15 +325,13 @@ namespace Raven.Server.Documents.Handlers
                     ["Stats"] = data
                 });
             }
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/incoming-last-activity-time", "GET", AuthorizationStatus.ValidUser, 
-            IsDebugInformationEndpoint = true)]
-        public Task GetReplicationIncomingActivityTimes()
+        [RavenAction("/databases/*/replication/debug/incoming-last-activity-time", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task GetReplicationIncomingActivityTimes()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
                 foreach (var item in Database.ReplicationLoader.IncomingLastActivityTime)
@@ -364,14 +354,13 @@ namespace Raven.Server.Documents.Handlers
                     ["Stats"] = data
                 });
             }
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/incoming-rejection-info", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task GetReplicationIncomingRejectionInfo()
+        [RavenAction("/databases/*/replication/debug/incoming-rejection-info", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task GetReplicationIncomingRejectionInfo()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var stats = new DynamicJsonArray();
                 foreach (var statItem in Database.ReplicationLoader.IncomingRejectionStats)
@@ -398,15 +387,13 @@ namespace Raven.Server.Documents.Handlers
                     ["Stats"] = stats
                 });
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/outgoing-reconnect-queue", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task GetReplicationReconnectionQueue()
+        [RavenAction("/databases/*/replication/debug/outgoing-reconnect-queue", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task GetReplicationReconnectionQueue()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
                 foreach (var queueItem in Database.ReplicationLoader.ReconnectQueue)
@@ -424,15 +411,14 @@ namespace Raven.Server.Documents.Handlers
                     ["Queue-Info"] = data
                 });
             }
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/studio-tasks/suggest-conflict-resolution", "GET", AuthorizationStatus.ValidUser)]
-        public Task SuggestConflictResolution()
+        [RavenAction("/databases/*/studio-tasks/suggest-conflict-resolution", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task SuggestConflictResolution()
         {
             var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
@@ -444,13 +430,11 @@ namespace Raven.Server.Documents.Handlers
                     [nameof(ConflictResolverAdvisor.MergeResult.Document)] = resolved.Document,
                     [nameof(ConflictResolverAdvisor.MergeResult.Metadata)] = resolved.Metadata
                 });
-
-                return Task.CompletedTask;
             }
         }
-        
-        [RavenAction("/databases/*/replication/conflicts/solver", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetRevisionsConfig()
+
+        [RavenAction("/databases/*/replication/conflicts/solver", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetRevisionsConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -469,7 +453,7 @@ namespace Raven.Server.Documents.Handlers
                         resolveByCollection[collection.Key] = collection.Value.ToJson();
                     }
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
@@ -483,7 +467,6 @@ namespace Raven.Server.Documents.Handlers
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 }
             }
-            return Task.CompletedTask;
         }
     }
 }

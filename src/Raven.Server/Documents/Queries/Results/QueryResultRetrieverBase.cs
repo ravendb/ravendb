@@ -21,7 +21,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using BlittableJsonTextWriterExtensions = Raven.Server.Json.BlittableJsonTextWriterExtensions;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -277,14 +277,14 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected Document AddProjectionToResult(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
         {
-            if (_query.IsStream && 
+            if (_query.IsStream &&
                 key.StartsWith(Constants.TimeSeries.QueryFunction))
             {
                 doc.TimeSeriesStream ??= new TimeSeriesStream();
                 var value = (TimeSeriesRetriever.TimeSeriesRetrieverResult)fieldVal;
                 doc.TimeSeriesStream.TimeSeries = value.Stream;
                 doc.TimeSeriesStream.Key = key;
-                BlittableJsonTextWriterExtensions.MergeMetadata(result, value.Metadata);
+                Json.BlittableJsonTextWriterExtensions.MergeMetadata(result, value.Metadata);
                 return null;
             }
 
@@ -317,8 +317,10 @@ namespace Raven.Server.Documents.Queries.Results
                         StorageId = doc.StorageId,
                         TransactionMarker = doc.TransactionMarker
                     };
+
                 case Document d:
                     return d;
+
                 case TimeSeriesRetriever.TimeSeriesRetrieverResult ts:
                     return new Document
                     {
@@ -374,7 +376,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected Document ReturnProjection(DynamicJsonValue result, Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, JsonOperationContext context)
         {
-            var metadata = BlittableJsonTextWriterExtensions.GetOrCreateMetadata(result);
+            var metadata = Json.BlittableJsonTextWriterExtensions.GetOrCreateMetadata(result);
             metadata[Constants.Documents.Metadata.Projection] = true;
 
             var newData = context.ReadObject(result, "projection result");
@@ -389,7 +391,7 @@ namespace Raven.Server.Documents.Queries.Results
                 newData.Dispose();
                 throw;
             }
-            
+
             doc.Data = newData;
             FinishDocumentSetup(doc, scoreDoc);
 
@@ -499,6 +501,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     case Constants.Documents.Indexing.Fields.NullValue:
                         return null;
+
                     case Constants.Documents.Indexing.Fields.EmptyString:
                         return string.Empty;
                 }
@@ -507,7 +510,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (fieldType.IsJson == false)
                 return stringValue;
 
-            return context.ReadForMemory(stringValue, field.Name);
+            return context.Sync.ReadForMemory(stringValue, field.Name);
         }
 
         private static void ThrowBinaryValuesNotSupported()
@@ -608,6 +611,9 @@ namespace Raven.Server.Documents.Queries.Results
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cache this for the duration of the query
 
             _loadedDocuments[document.Id ?? string.Empty] = document;
+
+            document.IgnoreDispose = true; // so we can do multiple projections of the same value
+
             if (fieldToFetch.QueryField.SourceAlias != null)
             {
                 if (fieldToFetch.QueryField.IsQuoted)
@@ -678,7 +684,7 @@ namespace Raven.Server.Documents.Queries.Results
                     {
                         _loadedDocuments[docId] = doc = LoadDocument(docId);
                         if (doc != null)
-                            doc.IgnoreDispose = true;
+                            doc.IgnoreDispose = true; // so we can do multiple projections of the same value
                     }
                 }
                 if (doc == null)

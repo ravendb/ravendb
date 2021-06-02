@@ -7,6 +7,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Indexes;
 using SlowTests.Core.Utils.Entities;
+using SlowTests.Rolling;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -42,6 +43,7 @@ namespace SlowTests.Issues
                 foreach (var server in Servers)
                 {
                     documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                    await RollingIndexesClusterTests.WaitForRollingIndex(database, "MyIndex", server);
                     var index = documentDatabase.IndexStore.GetIndex("MyIndex");
                     index.SetState(IndexState.Error);
                 }
@@ -86,10 +88,12 @@ namespace SlowTests.Issues
                 var indexResult = result[0];
                 await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
 
+                await RollingIndexesClusterTests.WaitForRollingIndex(database, "MyIndex", Servers[0]);
                 documentDatabase = await Servers[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                 var index = documentDatabase.IndexStore.GetIndex("MyIndex");
                 index.SetState(IndexState.Error);
 
+                await RollingIndexesClusterTests.WaitForRollingIndex(database, "MyIndex", Servers[1]);
                 documentDatabase = await Servers[1].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                 index = documentDatabase.IndexStore.GetIndex("MyIndex");
                 index.SetState(IndexState.Error);
@@ -134,6 +138,7 @@ namespace SlowTests.Issues
                 var indexResult = result[0];
                 await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
 
+                await RollingIndexesClusterTests.WaitForRollingIndex(database, "MyIndex", Servers[2]);
                 var index = documentDatabase.IndexStore.GetIndex("MyIndex");
                 index.SetState(IndexState.Error);
 
@@ -173,6 +178,7 @@ namespace SlowTests.Issues
                 }}));
                 var indexResult = result[0];
                 await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                await RollingIndexesClusterTests.WaitForRollingIndex(database, "MyIndex", Servers[2]);
                 var index = documentDatabase.IndexStore.GetIndex("MyIndex");
                 index.SetState(IndexState.Error);
 

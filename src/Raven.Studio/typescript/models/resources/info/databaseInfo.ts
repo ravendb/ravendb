@@ -5,6 +5,7 @@ import databasesManager = require("common/shell/databasesManager");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import generalUtils = require("common/generalUtils");
 import databaseGroupNode = require("models/resources/info/databaseGroupNode");
+import accessManager = require("common/shell/accessManager");
 
 class databaseInfo {
 
@@ -27,6 +28,7 @@ class databaseInfo {
     isEncrypted = ko.observable<boolean>();
     isAdmin = ko.observable<boolean>();
     disabled = ko.observable<boolean>();
+    lockMode = ko.observable<Raven.Client.ServerWide.DatabaseLockMode>();
 
     filteredOut = ko.observable<boolean>(false);
     isBeingDeleted = ko.observable<boolean>(false);
@@ -45,6 +47,10 @@ class databaseInfo {
     hasLoadError: KnockoutComputed<boolean>;
     canNavigateToDatabase: KnockoutComputed<boolean>;
     isCurrentlyActiveDatabase: KnockoutComputed<boolean>;
+    
+    databaseAccessText = ko.observable<string>();
+    databaseAccessColor = ko.observable<string>();
+    databaseAccessClass = ko.observable<string>();
 
     inProgressAction = ko.observable<string>();
 
@@ -169,6 +175,7 @@ class databaseInfo {
 
     update(dto: Raven.Client.ServerWide.Operations.DatabaseInfo): void {
         this.name = dto.Name;
+        this.lockMode(dto.LockMode);
         this.disabled(dto.Disabled);
         this.isAdmin(dto.IsAdmin);
         this.isEncrypted(dto.IsEncrypted);
@@ -209,6 +216,10 @@ class databaseInfo {
             
             this.nodes(joinedNodes);
         }
+
+        this.databaseAccessText(accessManager.default.getDatabaseAccessLevelTextByDbName(this.name));
+        this.databaseAccessColor(accessManager.default.getAccessColorByDbName(this.name));
+        this.databaseAccessClass(accessManager.default.getAccessIconByDbName(this.name))
     }
 
     private applyNodesStatuses(nodes: databaseGroupNode[], statuses: { [key: string]: Raven.Client.ServerWide.Operations.DatabaseGroupNodeStatus;}) {

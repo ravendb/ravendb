@@ -41,14 +41,14 @@ namespace Raven.Client.Documents.Operations.Replication
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
                     {
                         var json = new DynamicJsonValue
                         {
                             ["Watcher"] = _newWatcher.ToJson()
                         };
 
-                        ctx.Write(stream, ctx.ReadObject(json, "update-replication"));
+                        await ctx.WriteAsync(stream, ctx.ReadObject(json, "update-replication")).ConfigureAwait(false);
                     })
                 };
 
@@ -67,5 +67,4 @@ namespace Raven.Client.Documents.Operations.Replication
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
-
 }

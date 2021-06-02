@@ -27,7 +27,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
-    public class RavenEtlDocumentTransformer : EtlTransformer<RavenEtlItem, ICommandData>
+    public class RavenEtlDocumentTransformer : EtlTransformer<RavenEtlItem, ICommandData, EtlStatsScope, EtlPerformanceOperation>
     {
         private readonly Transformation _transformation;
         private readonly ScriptInput _script;
@@ -230,7 +230,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return $"{documentId}/{_script.IdPrefixForCollection[loadCollectionName]}/";
         }
 
-        public override List<ICommandData> GetTransformedResults()
+        public override IEnumerable<ICommandData> GetTransformedResults()
         {
             return _currentRun?.GetCommands() ?? Enumerable.Empty<ICommandData>().ToList();
         }

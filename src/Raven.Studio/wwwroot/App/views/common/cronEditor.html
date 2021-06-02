@@ -1,6 +1,6 @@
 <div class="flex-horizontal margin-bottom flex-wrap">
     <div>
-        every    
+        Every
     </div>
     <div class="btn-group">
         <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
@@ -10,8 +10,7 @@
             <li><a href="#" data-bind="click: _.partial($root.period, $data)"><span data-bind="text: $data"></span></a></li>
         </ul>
     </div>
-    
-    <div class="dayOfWeek" data-bind="if: dayOfWeekVisible, visible: dayOfWeekVisible">       
+    <div class="dayOfWeek" data-bind="if: dayOfWeekVisible, visible: dayOfWeekVisible">
         on
     </div>
     <div class="dayOfWeek" data-bind="if: dayOfWeekVisible, visible: dayOfWeekVisible">
@@ -24,7 +23,6 @@
             </ul>
         </div>
     </div>
-    
     <div class="dayOfMonth" data-bind="if: dayOfMonthVisible, visible: dayOfMonthVisible">
         on the
     </div>
@@ -38,7 +36,6 @@
             </ul>
         </div>
     </div>
-
     <div class="month" data-bind="if: monthVisible, visible: monthVisible">
         of
     </div>
@@ -52,7 +49,6 @@
             </ul>
         </div>
     </div>
-    
     <div class="minutes" data-bind="if: minutesVisible, visible: minutesVisible">
         at
     </div>
@@ -65,11 +61,10 @@
                 <li><a href="#" data-bind="click: _.partial($root.minutes, $data)"><span data-bind="text: $data"></span></a></li>
             </ul>
         </div>
-    </div>    
+    </div>
     <div class="minutes" data-bind="if: minutesVisible, visible: minutesVisible">
         minutes past the hour
     </div>
-    
     <div class="time" style="display: inline" data-bind="if: timeVisible, visible: timeVisible">
         at
     </div>
@@ -96,35 +91,37 @@
             </ul>
         </div>
     </div>
-    
     <div class="custom flex-grow" data-bind="visible: textInputVisible">
         <input type="text" class="form-control" data-bind="textInput: targetField" placeholder="Cron expression, e.g. 0 1 * * * - every day at 01:00 AM">
     </div>
-
     <div data-bind="visible: textInputVisible">
-        <i class="icon-info text-info js-schedule-info"></i>    
+        <i class="icon-info text-info js-schedule-info"></i>
     </div>
 </div>
 <div>
     <div data-bind="visible: humanReadableVisible">
-        <span>Description:</span>
-        <strong data-bind="text: humanReadable"></strong>
+        <small>
+            <span>Description:</span>
+            <strong data-bind="text: humanReadable"></strong>
+        </small>
     </div>
     <div class="flex-horizontal">
-        <div class="flex-start">Estimated time of execution:</div>
+        <div class="flex-start"><small>Estimated next run:</small></div>
         <div>
             <div>
-                <strong data-bind="text: nextOccurrenceServerTime"></strong>
-                <span data-bind="if: nextOccurrenceServerTime() !== 'N/A'">
-                    <small data-bind="if: canDisplayNextOccurrenceLocalTime">(Server time)</small>
-                </span>
+                <small>
+                    <strong data-bind="text: nextOccurrenceServerTime"></strong>
+                    <span data-bind="if: nextOccurrenceServerTime() !== 'N/A' && canDisplayNextOccurrenceLocalTime()">(Server time)</span>
+                </small>
             </div>
-            
             <div class="next-backup-occurrence-local" data-bind="if: canDisplayNextOccurrenceLocalTime">
-                <strong data-bind="text: nextOccurrenceLocalTime"></strong> <small data-bind="if: nextOccurrenceLocalTime">(Local time)</small>
+                <small>
+                    <strong data-bind="text: nextOccurrenceLocalTime"></strong>
+                    <span data-bind="if: nextOccurrenceLocalTime">(Local time)</span>
+                </small>
             </div>
             <div class="next-backup-occurrence-local">
-                <strong data-bind="text: nextInterval"></strong>
+                <small><strong data-bind="text: nextInterval"></strong></small>
             </div>
         </div>
     </div>

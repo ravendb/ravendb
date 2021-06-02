@@ -3,7 +3,7 @@
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-header flex-horizontal">
                 <div>
-                    <button data-bind="click: addNewOngoingTask" class="btn btn-primary">
+                    <button data-bind="click: addNewOngoingTask, requiredAccess: 'DatabaseReadWrite'" class="btn btn-primary">
                         <i class="icon-plus"></i><span>Add a Database Task</span>
                     </button>
                 </div>
@@ -91,10 +91,10 @@
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template-admin' }"></div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="visible: !isServerWide(), template: { name: 'state-template' }"></div>
-                                    <div data-bind="template: { name: 'actions-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template-admin' }"></div>
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
@@ -109,7 +109,7 @@
                                                 <div class="property-name">Replication Delay Time:</div>
                                                 <div class="property-value" data-bind="text: delayHumane" title="Replication Delay Time"></div>
                                             </div>
-                                            <div class="property-item" data-bind="template: { name: 'connection-string' }"></div>
+                                            <div class="property-item" data-bind="template: { name: 'connection-string-template' }"></div>
                                             <div class="property-item" data-bind="visible: connectionStringDefined">
                                                 <div class="property-name">Destination Database:</div>
                                                 <div class="property-value" data-bind="text: destinationDB" title="Destination database"></div>
@@ -152,10 +152,10 @@
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template-admin' }"></div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'state-template' }"></div>
-                                    <div data-bind="template: { name: 'actions-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template-admin' }"></div>
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
@@ -166,7 +166,7 @@
                                                 <div class="property-name">Task Status:</div>
                                                 <div class="property-value" data-bind="text: badgeText"></div>
                                             </div>
-                                            <div class="property-item" data-bind="template: { name: 'connection-string' }"></div>
+                                            <div class="property-item" data-bind="template: { name: 'connection-string-template' }"></div>
                                             <div class="property-item" data-bind="visible: connectionStringDefined">
                                                 <div class="property-name">Destination Database:</div>
                                                 <div class="property-value" data-bind="text: destinationDB" title="Destination database"></div>
@@ -210,10 +210,10 @@
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template-admin' }"></div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'state-template' }"></div>
-                                    <div data-bind="template: { name: 'actions-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template-admin' }"></div>
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
@@ -222,7 +222,7 @@
                                         <div class="list-properties">
                                             <div class="property-item">
                                                 <div class="property-name">Task Status:</div>
-                                                <div class="property-value" class="text-details" data-bind="text: badgeText"></div>
+                                                <div class="property-value text-details" data-bind="text: badgeText"></div>
                                             </div>
                                             <div class="property-item" data-bind="visible: connectionStringDefined">
                                                 <div class="property-name">Destination:</div>
@@ -230,7 +230,58 @@
                                                     <span data-bind="text: destinationDescription"></span>
                                                 </div>
                                             </div>
-                                            <div class="property-item" data-bind="template: { name: 'connection-string' }"></div>
+                                            <div class="property-item" data-bind="template: { name: 'connection-string-template' }"></div>
+                                        </div>
+                                        <div data-bind="template: { name: 'etl-progress-template' }"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Olap Etl -->
+
+                <div data-bind="if: showOlapSection">
+                    <div class="hr-title">
+                        <h5 class="tasks-list-item olap-etl no-text-transform">
+                            <i class="icon-olap-etl"></i>
+                            <span>OLAP ETL</span><span data-bind="text: ' (' + olapTasks().length + ')'"></span>
+                        </h5><hr>
+                    </div>
+                    <div data-bind="foreach: olapTasks">
+                        <div class="panel destination-item olap-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
+                            <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
+                            <div class="padding destination-info flex-vertical">
+                                <div class="flex-horizontal">
+                                    <div class="checkbox panel-checkbox hide">
+                                        <input type="checkbox" class="styled" />
+                                        <label></label>
+                                    </div>
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template-admin' }"></div>
+                                    <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template-admin' }"></div>
+                                </div>
+                            </div>
+                            <div class="collapse panel-addon" data-bind="collapse: showDetails">
+                                <div class="padding flex-horizontal">
+                                    <div class="flex-grow">
+                                        <div class="list-properties">
+                                            <div class="property-item">
+                                                <div class="property-name">Task Status:</div>
+                                                <div class="property-value text-details" data-bind="text: badgeText"></div>
+                                            </div>
+                                            <div data-bind="foreach: destinations">
+                                                <div class="property-item">
+                                                    <div class="property-name" data-bind="visible: $index() === 0">Destination:</div>
+                                                    <div class="property-name" data-bind="visible: $index() > 0"></div>
+                                                    <div class="property-value" title="Destinations that are defined the in connection string">
+                                                            <span data-bind="text: $data"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="property-item" data-bind="template: { name: 'connection-string-template' }"></div>
                                         </div>
                                         <div data-bind="template: { name: 'etl-progress-template' }"></div>
                                     </div>
@@ -258,14 +309,14 @@
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template-admin' }"></div>
                                     <div>
                                         <small title="Backup is encrypted" data-bind="visible: isBackupEncrypted"><i class="icon-encryption text-success"></i></small>
                                         <small title="Backup is not encrypted" data-bind="visible: !isBackupEncrypted()"><i class="icon-unlock text-gray"></i></small>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="visible: !isServerWide(), template: { name: 'state-template' }"></div>
-                                    <div data-bind="template: { name: 'actions-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template-admin' }"></div>
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
@@ -307,9 +358,11 @@
                                         </div>
                                     </div>
                                     <div class="flex-noshrink">
+                                        <!--  // TODO - currently added requiredAccess, but maybe think what if 'show backup progress' ?? -->
                                         <button class="btn backup-now" data-bind="click: backupNow, enable: isBackupNowEnabled(), visible: isBackupNowVisible(),
                                              css: { 'btn-default': !neverBackedUp(), 'btn-info': backupNowInProgress, 'btn-spinner': backupNowInProgress, 'btn-warning': !backupNowInProgress() && neverBackedUp() },
-                                             attr: { 'title':  disabledBackupNowReason() || 'Click to trigger the backup task now' }">
+                                             attr: { 'title':  disabledBackupNowReason() || 'Click to trigger the backup task now' },
+                                             requiredAccess: 'DatabaseAdmin'">
                                             <i class="icon-backups"></i><span data-bind="text: backupNowInProgress() ? 'Show backup progress' : 'Backup now'"></span>
                                         </button>
                                         <button class="btn btn-default" data-bind="click: refreshBackupInfo" title="Refresh info"><i class="icon-refresh"></i></button>
@@ -338,10 +391,10 @@
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template-read-write' }"></div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'state-template' }"></div>
-                                    <div data-bind="template: { name: 'actions-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template-read-write' }"></div>
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
@@ -415,9 +468,9 @@
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template-admin' }"></div>
                                     <div class="status" data-bind="template: { name: 'state-template' }"></div>
-                                    <div data-bind="template: { name: 'actions-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template-admin' }"></div>
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
@@ -493,10 +546,10 @@
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template-admin' }"></div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'state-template' }"></div>
-                                    <div data-bind="template: { name: 'actions-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template-admin' }"></div>
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
@@ -510,7 +563,7 @@
                                             <div class="property-name">Task Status:</div>
                                             <div class="property-value" data-bind="text: badgeText"></div>
                                         </div>
-                                        <div class="property-item" data-bind="template: { name: 'connection-string' }"></div>
+                                        <div class="property-item" data-bind="template: { name: 'connection-string-template' }"></div>
                                         <div class="property-item" data-bind="visible: connectionStringDefined">
                                             <div class="property-name">Hub Database:</div>
                                             <div class="property-value" data-bind="text:  destinationDB" title="Destination database"></div>
@@ -567,16 +620,34 @@
     </div>
 </div>
 
-<script type="text/html" id="name-template">
+<script type="text/html" id="name-template-admin">
     <h3 data-bind="attr: { 'title': 'Task name: ' + taskName() }">
-        <a href="#" data-bind="if: !isServerWide(), click: editTask"><span data-bind="text: taskName"></span></a>
-        <span data-bind="if: isServerWide()"><span data-bind="text: taskName"></span></span>
+        <div data-bind="visible: $root.isAdminAccessOrAbove() && !isServerWide()">
+            <a href="#" data-bind="click: editTask"><span data-bind="text: taskName"></span></a>
+        </div>
+        <div data-bind="visible: !$root.isAdminAccessOrAbove() || isServerWide()">
+            <span><span data-bind="text: taskName"></span></span>
+        </div>
+    </h3>
+</script>
+
+<script type="text/html" id="name-template-read-write">
+    <h3 data-bind="attr: { 'title': 'Task name: ' + taskName() }">
+        <div class="panel-name flex-grow">
+            <div data-bind="visible: $root.isReadWriteAccessOrAbove() && !isServerWide()">
+                <a href="#" data-bind="click: editTask"><span data-bind="text: taskName"></span></a>
+            </div>
+            <div data-bind="visible: !$root.isReadWriteAccessOrAbove() || isServerWide()">
+                <span><span data-bind="text: taskName"></span></span>
+            </div>
+        </div>
     </h3>
 </script>
 
 <script type="text/html" id="state-template">
     <div class="btn-group">
-        <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+        <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false" 
+                data-bind="requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
             <!--set-size-->
             <span data-bind="text: stateText()"></span><span class="caret"></span>
         </button>
@@ -603,12 +674,22 @@
     </div>
 </script>
 
-<script type="text/html" id="actions-template">
+<script type="text/html" id="actions-template-admin">
     <div class="actions-container">
         <div class="actions">
             <button class="btn btn-default" data-bind="click: _.partial($root.toggleDetails, $data)" title="Click for details"><i class="icon-info"></i></button>
-            <button class="btn btn-default" title="Edit backup task" data-bind="visible: !isServerWide(), click: editTask"><i class="icon-edit"></i></button>
-            <button class="btn btn-danger" data-bind="visible: !isServerWide(), click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
+            <button class="btn btn-default" title="Edit task" data-bind="visible: !isServerWide(), click: editTask, requiredAccess: 'DatabaseAdmin'"><i class="icon-edit"></i></button>
+            <button class="btn btn-danger" data-bind="visible: !isServerWide(), click: $root.confirmRemoveOngoingTask, requiredAccess: 'DatabaseAdmin'" title="Delete task"><i class="icon-trash"></i></button>
+        </div>
+    </div>
+</script>
+
+<script type="text/html" id="actions-template-read-write">
+    <div class="actions-container">
+        <div class="actions">
+            <button class="btn btn-default" data-bind="click: _.partial($root.toggleDetails, $data)" title="Click for details"><i class="icon-info"></i></button>
+            <button class="btn btn-default" title="Edit task" data-bind="visible: !isServerWide(), click: editTask, requiredAccess: 'DatabaseReadWrite'"><i class="icon-edit"></i></button>
+            <button class="btn btn-danger" data-bind="visible: !isServerWide(), click: $root.confirmRemoveOngoingTask, requiredAccess: 'DatabaseReadWrite'" title="Delete task"><i class="icon-trash"></i></button>
         </div>
     </div>
 </script>
@@ -626,7 +707,7 @@
             <div class="overall-container">
                 <div class="text-info flex-horizontal">
                     <span data-bind="text: name"></span>
-                    <a title="Show script preview" href="#" data-bind="click: _.partial($root.showItemPreview, $parent, name())"><i class="icon-preview"></i></a>
+                    <a title="Show script preview" href="#" data-bind="click: _.partial($root.showItemPreview, $parent, name())"><i class="icon-preview margin-left margin-left-xs"></i></a>
                     <div class="flex-separator"></div>
                     <div class="text-warning" data-bind="visible: !globalProgress.total()">
                         <small>
@@ -668,11 +749,14 @@
     </div>
 </script>
 
-<script type="text/html" id="connection-string">
+<script type="text/html" id="connection-string-template">
     <div class="property-name">Connection String:</div>
     <div class="property-value" data-bind="visible: connectionStringDefined">
-        <div title="Connection string name">
+        <div title="Connection string name" data-bind="visible: $root.isAdminAccessOrAbove">
             <a target="_blank" data-bind="attr: { href: connectionStringsUrl }, text: connectionStringName"></a>
+        </div>
+        <div title="Connection string name" data-bind="visible: !$root.isAdminAccessOrAbove()">
+            <span data-bind="text: connectionStringName"></span>
         </div>
     </div>
     <div data-bind="visible: !connectionStringDefined()">

@@ -29,9 +29,8 @@ namespace Sparrow.Collections
             if (capacity < 0)
                 throw new ArgumentOutOfRangeException(nameof(capacity));
 
-            _items = capacity == 0 ? EmptyArray : new T[capacity];          
+            _items = capacity == 0 ? EmptyArray : new T[capacity];
         }
-
 
         public T this[int index]
         {
@@ -124,7 +123,7 @@ namespace Sparrow.Collections
             AddUnlikely(item, (int)_size + 1);
         }
 
-        public void CopyTo(FastList<int> dest)
+        public void CopyTo(FastList<T> dest)
         {
             int size = (int)_size;
             if (dest.Capacity < size)

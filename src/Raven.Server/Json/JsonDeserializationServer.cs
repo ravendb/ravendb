@@ -1,10 +1,13 @@
 ﻿using System;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Analysis;
+using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -24,27 +27,25 @@ using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Debugging;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Studio;
-using Raven.Server.ServerWide.BackgroundTasks;
-using Raven.Server.ServerWide.Maintenance;
-using Raven.Server.Smuggler.Documents.Data;
-using Sparrow.Json;
-using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Studio;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Smuggler.Documents;
+using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
-using Raven.Server.ServerWide;
-using Raven.Client.Documents.Indexes.TimeSeries;
-using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Server.Smuggler.Documents;
+using Sparrow.Json;
+using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
+using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 
 namespace Raven.Server.Json
 {
@@ -73,15 +74,17 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, SubscriptionWorkerOptions> SubscriptionConnectionOptions = GenerateJsonDeserializationRoutine<SubscriptionWorkerOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, ConflictSolver> ConflictSolver = GenerateJsonDeserializationRoutine<ConflictSolver>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, ScriptResolver> ScriptResolver = GenerateJsonDeserializationRoutine<ScriptResolver>();
 
         public static readonly Func<BlittableJsonReaderObject, TestSqlEtlScript> TestSqlEtlScript = GenerateJsonDeserializationRoutine<TestSqlEtlScript>();
 
         public static readonly Func<BlittableJsonReaderObject, TestRavenEtlScript> TestRavenEtlScript = GenerateJsonDeserializationRoutine<TestRavenEtlScript>();
 
+        public static readonly Func<BlittableJsonReaderObject, TestOlapEtlScript> TestOlapEtlScript = GenerateJsonDeserializationRoutine<TestOlapEtlScript>();
+
         public static readonly Func<BlittableJsonReaderObject, SubscriptionCreationOptions> SubscriptionCreationParams = GenerateJsonDeserializationRoutine<SubscriptionCreationOptions>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, SubscriptionUpdateOptions> SubscriptionUpdateOptions = GenerateJsonDeserializationRoutine<SubscriptionUpdateOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionTryout> SubscriptionTryout = GenerateJsonDeserializationRoutine<SubscriptionTryout>();
@@ -96,6 +99,8 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, SorterDefinition> SorterDefinition = GenerateJsonDeserializationRoutine<SorterDefinition>();
 
+        public static readonly Func<BlittableJsonReaderObject, AnalyzerDefinition> AnalyzerDefinition = GenerateJsonDeserializationRoutine<AnalyzerDefinition>();
+
         public static readonly Func<BlittableJsonReaderObject, AutoIndexDefinition> AutoIndexDefinition = GenerateJsonDeserializationRoutine<AutoIndexDefinition>();
 
         internal static readonly Func<BlittableJsonReaderObject, LegacyIndexDefinition> LegacyIndexDefinition = GenerateJsonDeserializationRoutine<LegacyIndexDefinition>();
@@ -105,7 +110,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, LatestVersionCheck.VersionInfo> LatestVersionCheckVersionInfo = GenerateJsonDeserializationRoutine<LatestVersionCheck.VersionInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, License> License = GenerateJsonDeserializationRoutine<License>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, SetupSettings> SetupSettings = GenerateJsonDeserializationRoutine<SetupSettings>();
 
         public static readonly Func<BlittableJsonReaderObject, LicenseInfo> LicenseInfo = GenerateJsonDeserializationRoutine<LicenseInfo>();
@@ -113,7 +118,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, LicenseLimits> LicenseLimits = GenerateJsonDeserializationRoutine<LicenseLimits>();
 
         public static readonly Func<BlittableJsonReaderObject, LeasedLicense> LeasedLicense = GenerateJsonDeserializationRoutine<LeasedLicense>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, RevertRevisionsRequest> RevertRevisions = GenerateJsonDeserializationRoutine<RevertRevisionsRequest>();
 
         public static readonly Func<BlittableJsonReaderObject, LicenseSupportInfo> LicenseSupportInfo = GenerateJsonDeserializationRoutine<LicenseSupportInfo>();
@@ -223,6 +228,8 @@ namespace Raven.Server.Json
             public static readonly Func<BlittableJsonReaderObject, UpdateUnusedDatabasesOperation.Parameters> UnusedDatabaseParameters = GenerateJsonDeserializationRoutine<UpdateUnusedDatabasesOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, ConfigureTimeSeriesValueNamesOperation.Parameters> TimeSeriesValueNamesParameters = GenerateJsonDeserializationRoutine<ConfigureTimeSeriesValueNamesOperation.Parameters>();
+
+            public static readonly Func<BlittableJsonReaderObject, SetDatabasesLockOperation.Parameters> SetDatabaseLockParameters = GenerateJsonDeserializationRoutine<SetDatabasesLockOperation.Parameters>();
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
@@ -26,13 +25,15 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public HashSet<string> SkippedTimeSeriesDocs { get; set; }
 
+        public DateTime? LastBatchTime { get; set; }
+
         private UpdateEtlProcessStateCommand()
         {
             // for deserialization
         }
 
         public UpdateEtlProcessStateCommand(string databaseName, string configurationName, string transformationName, long lastProcessedEtag, string changeVector,
-            string nodeTag, bool hasHighlyAvailableTasks, string uniqueRequestId, HashSet<string> skippedTimeSeriesDocs) : base(databaseName, uniqueRequestId)
+            string nodeTag, bool hasHighlyAvailableTasks, string uniqueRequestId, HashSet<string> skippedTimeSeriesDocs, DateTime? lastBatchTime) : base(databaseName, uniqueRequestId)
         {
             ConfigurationName = configurationName;
             TransformationName = transformationName;
@@ -41,6 +42,9 @@ namespace Raven.Server.ServerWide.Commands.ETL
             NodeTag = nodeTag;
             HasHighlyAvailableTasks = hasHighlyAvailableTasks;
             SkippedTimeSeriesDocs = skippedTimeSeriesDocs;
+
+            if (lastBatchTime.HasValue)
+                LastBatchTime = lastBatchTime;
         }
 
         public override string GetItemId()
@@ -70,6 +74,18 @@ namespace Raven.Server.ServerWide.Commands.ETL
                     if (sqlEtls[i].Name == ConfigurationName)
                     {
                         return sqlEtls[i];
+                    }
+                }
+            }
+
+            var parquetEtls = record.OlapEtls;
+            if (parquetEtls != null)
+            {
+                for (var i = 0; i < parquetEtls.Count; i++)
+                {
+                    if (parquetEtls[i].Name == ConfigurationName)
+                    {
+                        return parquetEtls[i];
                     }
                 }
             }
@@ -108,6 +124,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
             etlState.ChangeVector = ChangeVector;
             etlState.NodeTag = NodeTag;
             etlState.SkippedTimeSeriesDocs = SkippedTimeSeriesDocs;
+            etlState.LastBatchTime = LastBatchTime;
+
 
             return context.ReadObject(etlState.ToJson(), GetItemId());
         }
@@ -138,6 +156,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             json[nameof(NodeTag)] = NodeTag;
             json[nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks;
             json[nameof(SkippedTimeSeriesDocs)] = SkippedTimeSeriesDocs;
+            json[nameof(LastBatchTime)] = LastBatchTime;
         }
     }
 }

@@ -9,6 +9,8 @@ import databasesManager = require("common/shell/databasesManager");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import eventsCollector = require("common/eventsCollector");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import accessManager = require("common/shell/accessManager");
+import messagePublisher = require("common/messagePublisher");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -16,6 +18,13 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 class viewModelBase {
 
     protected activeDatabase = activeDatabaseTracker.default.database;
+    
+    protected isReadOnlyAccess =  ko.pureComputed(() => accessManager.default.readOnlyOrAboveForDatabase(this.activeDatabase()));
+    protected isReadWriteAccessOrAbove = ko.pureComputed(() => accessManager.default.readWriteAccessOrAboveForDatabase(this.activeDatabase()));
+    protected isAdminAccessOrAbove = ko.pureComputed(() => accessManager.default.adminAccessOrAboveForDatabase(this.activeDatabase()));
+    
+    protected isOperatorOrAbove = accessManager.default.isOperatorOrAbove;
+    protected isClusterAdminOrClusterNode = accessManager.default.isClusterAdminOrClusterNode;
     
     downloader = new downloader();
 
@@ -58,7 +67,26 @@ class viewModelBase {
         setTimeout(() => viewModelBase.showSplash(this.isAttached === false), 700);
         this.downloader.reset();
 
-        return this.databasesManager.activateBasedOnCurrentUrl();
+        const dbNameFromUrl = appUrl.getDatabaseNameFromUrl();
+        const canAccessView = this.canAccessView(dbNameFromUrl);
+          
+        if (!canAccessView) {
+            const task = $.Deferred<canActivateResultDto>();
+            messagePublisher.reportError("Access is forbidden. Redirecting to databases view.");
+            task.resolve({ redirect: appUrl.forDatabases() });
+            return task;
+        }
+        
+        return this.databasesManager.activateBasedOnCurrentUrl(dbNameFromUrl);
+    }
+
+    protected canAccessView(dbName?: string): boolean {
+        const requiredAccessForView = router.activeInstruction().config.requiredAccess;
+        if (!requiredAccessForView) {
+            return true;
+        }
+        
+        return accessManager.canHandleOperation(requiredAccessForView, dbName);
     }
 
     activate(args: any, parameters?: any) {
@@ -88,7 +116,7 @@ class viewModelBase {
         viewModelBase.showSplash(false);
     }
 
-    compositionComplete() {        
+    compositionComplete() {
         this.dirtyFlag().reset(); //Resync Changes
     }
    

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 123 123">
+  <defs>
+    <style>
+      .a {
+        fill: #262a30;
+      }
+
+      .b {
+        fill: #40556b;
+      }
+
+      .c {
+        fill: #99b3d1;
+      }
+
+      .d, .e {
+        fill: none;
+        stroke-linecap: round;
+        stroke-miterlimit: 10;
+        stroke-width: 3px;
+      }
+
+      .d {
+        stroke: #2f9ef3;
+      }
+
+      .e {
+        stroke: #ba50a1;
+      }
+    </style>
+  </defs>
+  <title>Artboard 3</title>
+  <rect class="a" x="-0.5" width="124" height="123"/>
+  <g>
+    <rect class="b" x="41.366" y="25.338" width="43.633" height="5.468"/>
+    <rect class="c" x="41.366" y="39.683" width="69.568" height="12.02"/>
+    <rect class="d" x="12.066" y="35.78" width="18" height="18" rx="9"/>
+    <rect class="e" x="12.066" y="88.147" width="18" height="18" rx="9"/>
+    <rect class="b" x="41.366" y="77.706" width="43.633" height="5.468"/>
+    <rect class="c" x="41.366" y="92.05" width="69.568" height="12.02"/>
+  </g>
+</svg>

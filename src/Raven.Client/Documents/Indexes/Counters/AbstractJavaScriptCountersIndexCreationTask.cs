@@ -71,7 +71,8 @@ namespace Raven.Client.Documents.Indexes.Counters
             _definition.Configuration = Configuration;
             _definition.LockMode = LockMode;
             _definition.Priority = Priority;
-
+            _definition.State = State;
+            _definition.DeploymentMode = DeploymentMode;
             var definition = new CountersIndexDefinition();
             _definition.CopyTo(definition);
 

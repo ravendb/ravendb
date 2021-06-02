@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 while (hasMore)
                 {
                     var foldersResult = GetSortedFolders();
-                    var resultType = hasMore ? "partial " : string.Empty;
+                    var resultType = foldersResult.HasMore ? "partial " : string.Empty;
                     _onProgress.Invoke($"Got {resultType}{foldersResult.List.Count:#,#} potential backups to check.");
 
                     var canContinue = UpdateFoldersToDelete(foldersResult, now, foldersToDelete);

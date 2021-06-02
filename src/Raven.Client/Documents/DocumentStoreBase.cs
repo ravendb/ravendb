@@ -210,10 +210,12 @@ namespace Raven.Client.Documents
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
 
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
-        
+
         public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
 
         public event EventHandler<SessionCreatedEventArgs> OnSessionCreated;
+
+        public event EventHandler<SessionDisposingEventArgs> OnSessionDisposing;
 
         public event EventHandler<BeforeConversionToDocumentEventArgs> OnBeforeConversionToDocument;
 
@@ -252,7 +254,7 @@ namespace Raven.Client.Documents
                 _onBeforeRequest -= value;
             }
         }
-        
+
         private event EventHandler<SucceedRequestEventArgs> _onSucceedRequest;
         public event EventHandler<SucceedRequestEventArgs> OnSucceedRequest
         {
@@ -267,7 +269,7 @@ namespace Raven.Client.Documents
                 _onSucceedRequest -= value;
             }
         }
-        
+
 
         private event EventHandler<TopologyUpdatedEventArgs> _onTopologyUpdated;
 
@@ -338,6 +340,8 @@ namespace Raven.Client.Documents
             session.OnAfterConversionToDocument += OnAfterConversionToDocument;
             session.OnBeforeConversionToEntity += OnBeforeConversionToEntity;
             session.OnAfterConversionToEntity += OnAfterConversionToEntity;
+
+            session.OnSessionDisposing += OnSessionDisposing;
         }
 
         protected internal void RegisterEvents(RequestExecutor requestExecutor)

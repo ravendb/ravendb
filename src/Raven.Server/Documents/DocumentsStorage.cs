@@ -46,6 +46,7 @@ namespace Raven.Server.Documents
         private static readonly Slice LastEtagSlice;
         private static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
+        private static readonly Slice GlobalFullChangeVectorSlice;
 
         private static readonly Slice AllTombstonesEtagsSlice;
         private static readonly Slice TombstonesPrefix;
@@ -115,6 +116,7 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
                 Slice.From(ctx, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
                 Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
+                Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
             }
             /*
             Collection schema is:
@@ -232,13 +234,13 @@ namespace Raven.Server.Documents
             options.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
             options.OnRecoveryError += DocumentDatabase.HandleOnDatabaseRecoveryError;
             options.OnIntegrityErrorOfAlreadySyncedData += DocumentDatabase.HandleOnDatabaseIntegrityErrorOfAlreadySyncedData;
+            options.OnRecoverableFailure += DocumentDatabase.HandleRecoverableFailure;
 
             options.GenerateNewDatabaseId = generateNewDatabaseId;
             options.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = DocumentDatabase.Configuration.Storage.EnablePrefetching;
             options.TimeToSyncAfterFlushInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
-            options.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.AddToInitLog = _addToInitLog;
             options.Encryption.MasterKey = DocumentDatabase.MasterKey?.ToArray();
             options.Encryption.RegisterForJournalCompressionHandler();
@@ -517,6 +519,8 @@ namespace Raven.Server.Documents
 
         public void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
+            SetFullDatabaseChangeVector(context, changeVector);
+
             if (TryRemoveUnusedIds(ref changeVector) == false)
                 ThrowOnNotUpdatedChangeVector(context, changeVector);
 
@@ -524,6 +528,31 @@ namespace Raven.Server.Documents
             using (Slice.From(context.Allocator, changeVector, out var slice))
             {
                 tree.Add(GlobalChangeVectorSlice, slice);
+            }
+        }
+
+        public static string GetFullDatabaseChangeVector(DocumentsOperationContext context)
+        {
+            var tx = context.Transaction.InnerTransaction;
+            var tree = tx.ReadTree(GlobalTreeSlice);
+            var val = tree.Read(GlobalFullChangeVectorSlice);
+            if (val == null)
+            {
+                return GetDatabaseChangeVector(context);
+            }
+            return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
+
+        }
+
+        public void SetFullDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
+        {
+
+            var fullChangeVector = ChangeVectorUtils.MergeVectors(changeVector, GetFullDatabaseChangeVector(context));
+
+            var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
+            using (Slice.From(context.Allocator, fullChangeVector, out var slice))
+            {
+                tree.Add(GlobalFullChangeVectorSlice, slice);
             }
         }
 
@@ -1730,7 +1759,7 @@ namespace Raven.Server.Documents
                     GenerateNextEtagForReplicatedTombstoneMissingDocument(context),
                     collectionName,
                     null,
-                    DateTime.UtcNow.Ticks,
+                    modifiedTicks,
                     changeVector,
                     documentFlags,
                     nonPersistentFlags).Etag;
@@ -1991,7 +2020,7 @@ namespace Raven.Server.Documents
         {
             var tombstoneCleanerState = DocumentDatabase.TombstoneCleaner.GetState();
             if (tombstoneCleanerState.TryGetValue(tombstoneCollectionName.Name, out var item) && item.Documents.Component != null)
-                throw new NotSupportedException($"Could not delete document '{lowerId}' from collection '{collectionName.Name}' because tombstone for that document already exists but in a different collection ('{tombstoneCollectionName.Name}'). Did you change the document's collection recently? If yes, please give some time for other system components (e.g. Indexing, Replication, Backup) and tombstone cleaner to process that change. At this point of time the component that holds the tombstone is '{item.Documents.Component}' with etag '{item.Documents.Value}' and tombstone cleaner is executed every '{DocumentDatabase.Configuration.Tombstones.CleanupInterval.AsTimeSpan.TotalMinutes}' minutes.", e);
+                throw new NotSupportedException($"Could not delete document '{lowerId}' from collection '{collectionName.Name}' because tombstone for that document already exists but in a different collection ('{tombstoneCollectionName.Name}'). Did you change the document's collection recently? If yes, please give some time for other system components (e.g. Indexing, Replication, Backup) and tombstone cleaner to process that change. At this point of time the component that holds the tombstone is '{item.Documents.Component}' with etag '{item.Documents.Etag}' and tombstone cleaner is executed every '{DocumentDatabase.Configuration.Tombstones.CleanupInterval.AsTimeSpan.TotalMinutes}' minutes.", e);
 
             throw new NotSupportedException($"Could not delete document '{lowerId}' from collection '{collectionName.Name}' because tombstone for that document already exists but in a different collection ('{tombstoneCollectionName.Name}'). Did you change the document's collection recently? If yes, please give some time for other system components (e.g. Indexing, Replication, Backup) and tombstone cleaner to process that change. Tombstone cleaner is executed every '{DocumentDatabase.Configuration.Tombstones.CleanupInterval.AsTimeSpan.TotalMinutes}' minutes.", e);
         }

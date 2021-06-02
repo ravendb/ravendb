@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Server.ServerWide.Context;
@@ -51,14 +53,15 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings, true);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
-                    
-                    using (var session  = store.OpenSession())
+
+                    using (var session = store.OpenSession())
                     {
                         var actor32 = session.Load<JObject>("Actors/32");
                         Assert.False(actor32.ContainsKey("Photo"));
@@ -67,9 +70,9 @@ namespace SlowTests.Server.Documents.Migration
                             .Select(x => x.Name)
                             .OrderBy(x => x)
                             .ToArray();
-                        
+
                         Assert.Equal(new[] { "Movies_0_Movie_File", "Movies_1_Movie_File", "Photo" }, attachments);
-                        
+
                         var actor34 = session.Load<JObject>("Actors/34");
                         Assert.False(actor34.ContainsKey("Photo"));
                         Assert.False(actor34.ContainsKey("photo"));
@@ -78,7 +81,7 @@ namespace SlowTests.Server.Documents.Migration
                 }
             }
         }
-        
+
         [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
@@ -113,14 +116,15 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings, binaryToAttachment: false);
-                        await driver.Migrate(settings, schema, db, context);
+                        await driver.Migrate(settings, schema, db, context, token: cts.Token);
                     }
-                    
-                    using (var session  = store.OpenSession())
+
+                    using (var session = store.OpenSession())
                     {
                         var actor32 = session.Load<JObject>("Actors/32");
                         Assert.Equal(0, session.Advanced.Attachments.GetNames(actor32).Length);
@@ -128,7 +132,7 @@ namespace SlowTests.Server.Documents.Migration
                         Assert.Equal("MjE=", actor32["Movies"][0]["Movie"]["File"]);
                         Assert.Equal("MjM=", actor32["Movies"][1]["Movie"]["File"]);
                         Assert.Equal(JTokenType.Null, actor32["Movies"][2]["Movie"]["File"].Type);
-                        
+
                         var actor34 = session.Load<JObject>("Actors/34");
                         Assert.Equal(0, session.Advanced.Attachments.GetNames(actor34).Length);
                         Assert.Equal(JTokenType.Null, actor34["Photo"].Type);

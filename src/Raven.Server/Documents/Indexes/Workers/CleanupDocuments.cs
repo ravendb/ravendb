@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public string Name => "Cleanup";
 
-        public virtual bool Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
+        public virtual (bool MoreWorkFound, Index.CanContinueBatchResult BatchContinuationResult) Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             const long pageSize = long.MaxValue;
@@ -44,7 +44,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                 : TimeSpan.FromMinutes(15);
 
             var moreWorkFound = false;
+            var batchContinuationResult = Index.CanContinueBatchResult.None;
             var totalProcessedCount = 0;
+
             foreach (var collection in _index.Collections)
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
@@ -98,12 +100,12 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionStats);
 
-                                var canContinueBatch = _index.CanContinueBatch(stats, queryContext, indexContext, indexWriter, lastEtag, lastCollectionEtag,
+                                batchContinuationResult = _index.CanContinueBatch(stats, queryContext, indexContext, indexWriter, lastEtag, lastCollectionEtag,
                                     totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
 
-                                if (canContinueBatch != Index.CanContinueBatchResult.True)
+                                if (batchContinuationResult != Index.CanContinueBatchResult.True)
                                 {
-                                    keepRunning = canContinueBatch == Index.CanContinueBatchResult.RenewTransaction;
+                                    keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;
                                     break;
                                 }
                             }
@@ -132,7 +134,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 }
             }
 
-            return moreWorkFound;
+            return (moreWorkFound, batchContinuationResult);
         }
     }
 }

@@ -36,6 +36,9 @@ import fileImporter = require("common/fileImporter");
 import popoverUtils = require("common/popoverUtils");
 import generalUtils = require("common/generalUtils");
 import documentHelpers = require("common/helpers/database/documentHelpers");
+import getCustomAnalyzersCommand = require("commands/database/settings/getCustomAnalyzersCommand");
+import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyzers/getServerWideCustomAnalyzersCommand");
+import getIndexDefaultsCommand = require("commands/database/index/getIndexDefaultsCommand");
 
 class editIndex extends viewModelBase {
 
@@ -75,6 +78,17 @@ class editIndex extends viewModelBase {
     
     previewItem = ko.observable<Raven.Client.ServerWide.IndexHistoryEntry>();
     previewDefinition = ko.observable<string>();
+    
+    defaultDeploymentMode = ko.observable<Raven.Client.Documents.Indexes.IndexDeploymentMode>();
+    defaultDeploymentModeFormatted = ko.pureComputed(() => {
+        return this.defaultDeploymentMode() === "Rolling" ? "Server default (rolling - one node at a time)" : "Server default (parallel - all nodes concurrently)";
+    });
+
+    effectiveDeploymentMode = ko.pureComputed(() => {
+        const index = this.editedIndex();
+        const deploymentMode = index.deploymentMode();
+        return this.formatDeploymentMode(deploymentMode);
+    });
 
     constructor() {
         super();
@@ -101,6 +115,17 @@ class editIndex extends viewModelBase {
         autoCompleteBindingHandler.install();
 
         this.initializeObservables();
+    }
+    
+    formatDeploymentMode(mode: Raven.Client.Documents.Indexes.IndexDeploymentMode) {
+        switch (mode) {
+            case "Rolling":
+                return "Rolling (one node at a time)";
+            case "Parallel":
+                return "Parallel (all nodes concurrently)";
+            default:
+                return this.defaultDeploymentModeFormatted();
+        }
     }
 
     private initializeObservables() {
@@ -196,6 +221,16 @@ class editIndex extends viewModelBase {
         if (!this.editedIndex().isAutoIndex() && !!indexToEditName) {
             this.showIndexHistory(true);
         }
+            
+        return $.when<any>(this.fetchCustomAnalyzers(), this.fetchServerWideCustomAnalyzers(), this.fetchIndexDefaults())
+            .done(([analyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
+                   [serverWideAnalyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
+                   [indexDefaults]: [Raven.Server.Web.Studio.StudioDatabaseTasksHandler.IndexDefaults]) => {
+                const analyzersList = [...analyzers.map(x => x.Name), ...serverWideAnalyzers.map(x => x.Name)];
+                this.editedIndex().registerCustomAnalyzers(analyzersList);
+                
+                this.defaultDeploymentMode(indexDefaults.StaticIndexDeploymentMode);
+        });
     }
 
     attached() {
@@ -265,6 +300,21 @@ class editIndex extends viewModelBase {
             .done((indexesNames) => {
                 this.indexesNames(indexesNames);
             });
+    }
+    
+    private fetchCustomAnalyzers(): JQueryPromise<Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>> {
+        return new getCustomAnalyzersCommand(this.activeDatabase(), true)
+            .execute();
+    }
+
+    private fetchServerWideCustomAnalyzers(): JQueryPromise<Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>> {
+        return new getServerWideCustomAnalyzersCommand()
+            .execute();
+    }
+    
+    private fetchIndexDefaults(): JQueryPromise<Raven.Server.Web.Studio.StudioDatabaseTasksHandler.IndexDefaults> {
+        return new getIndexDefaultsCommand(this.activeDatabase())
+            .execute();
     }
 
     private fetchIndexHistory() {
@@ -382,10 +432,7 @@ class editIndex extends viewModelBase {
 
         const hasDefaultFieldOptions = ko.pureComputed(() => !!indexDef.defaultFieldOptions());
         const hasAnyDirtyDefaultFieldOptions = ko.pureComputed(() => {
-           if (hasDefaultFieldOptions() && indexDef.defaultFieldOptions().dirtyFlag().isDirty()) {
-               return true;
-           }
-           return false;
+           return hasDefaultFieldOptions() && indexDef.defaultFieldOptions().dirtyFlag().isDirty();
         });
 
         const hasAnyDirtyAdditionalAssembly = ko.pureComputed(() => {
@@ -400,6 +447,7 @@ class editIndex extends viewModelBase {
         
         this.dirtyFlag = new ko.DirtyFlag([
             indexDef.name, 
+            indexDef.deploymentMode,
             indexDef.maps, 
             indexDef.reduce, 
             indexDef.numberOfFields,

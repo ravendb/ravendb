@@ -146,7 +146,7 @@ function z_release_ace_workers() {
 }
 
 function z_release_images() {
-    return gulp.src('wwwroot/Content/img/*', { base: 'wwwroot/Content' })
+    return gulp.src('wwwroot/Content/img/**/*', { base: 'wwwroot/Content' })
         .pipe(gulp.dest(PATHS.releaseTargetContent));
 }
 

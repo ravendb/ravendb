@@ -63,6 +63,8 @@ class index {
     isNormalState: KnockoutComputed<boolean>;
     isPausedState: KnockoutComputed<boolean>;
 
+    isPending: KnockoutComputed<boolean>;
+    rollingDeploymentInProgress: KnockoutComputed<boolean>;
     isFaulty: KnockoutComputed<boolean>;
     isAutoIndex: KnockoutComputed<boolean>;
     isSideBySide: KnockoutComputed<boolean>;
@@ -140,9 +142,9 @@ class index {
         this.isErrorState = ko.pureComputed(() => this.state() === "Error");
         this.isNormalState = ko.pureComputed(() => {
             const stateIsNormal = this.state() === "Normal";
-            const localStatusIsNormal = this.status() === "Running";
+            const localStatusIsNormalOrPending = this.status() === "Running" || this.status() === "Pending";
             const globalStatusIsNotDisabled = this.globalIndexingStatus() === "Running";
-            return stateIsNormal && globalStatusIsNotDisabled && localStatusIsNormal;
+            return stateIsNormal && globalStatusIsNotDisabled && localStatusIsNormalOrPending;
         });
 
         this.canBePaused = ko.pureComputed(() => {
@@ -180,7 +182,18 @@ class index {
             }
         });
 
+        this.isPending = ko.pureComputed(() => this.status() === "Pending");
         this.isFaulty = ko.pureComputed(() => this.type() === "Faulty");
+        
+        this.rollingDeploymentInProgress = ko.pureComputed(() => {
+            const progress = this.progress();
+            if (progress && progress.rollingProgress()) {
+                const rolling = progress.rollingProgress();
+                return rolling.some(x => x.state() !== "Done");
+            }
+            
+            return false;
+        })
         
         this.isAutoIndex = ko.pureComputed(() => {
             switch (this.type()) {
@@ -350,8 +363,7 @@ class index {
         const statusMatch = this.matchesAnyStatus(allowedStatuses);
         const indexingErrorsMatch = !withIndexingErrorsOnly || (withIndexingErrorsOnly && !!this.errorsCount()); 
         
-        const matches = nameMatch && statusMatch && indexingErrorsMatch;
-        return matches;
+        return nameMatch && statusMatch && indexingErrorsMatch;
     }
 
     private matchesAnyStatus(status: indexStatus[]) {
@@ -359,16 +371,13 @@ class index {
             return false;
         }
         
-        if (_.includes(status, "Stale")         && this.isStale()                            ||
-           (_.includes(status, "Normal")        && this.isNormalState())                     ||
-           (_.includes(status, "ErrorOrFaulty") && (this.isErrorState() || this.isFaulty())) ||
-           (_.includes(status, "Paused")        && this.isPausedState())                     ||
-           (_.includes(status, "Disabled")      && this.isDisabledState())                   ||
-           (_.includes(status, "Idle")          && this.isIdleState())) 
-        {
-           return true;
-        }
-        return false;
+        return _.includes(status, "Stale") && this.isStale()
+                || _.includes(status, "RollingDeployment") && this.rollingDeploymentInProgress()
+                || _.includes(status, "Normal") && this.isNormalState()
+                || _.includes(status, "ErrorOrFaulty") && (this.isErrorState() || this.isFaulty())
+                || _.includes(status, "Paused") && this.isPausedState()
+                || _.includes(status, "Disabled") && this.isDisabledState()
+                || _.includes(status, "Idle") && this.isIdleState();
     }
 }
 

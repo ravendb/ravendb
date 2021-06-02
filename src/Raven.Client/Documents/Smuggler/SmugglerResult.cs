@@ -199,9 +199,9 @@ namespace Raven.Client.Documents.Smuggler
         public CountsWithLastEtag CompareExchange { get; set; }
 
         public Counts Subscriptions { get; set; }
-        
+
         public Counts ReplicationHubCertificates { get; set; }
-        
+
         public CountsWithLastEtag Counters { get; set; }
 
         public CountsWithLastEtag TimeSeries { get; set; }
@@ -232,6 +232,8 @@ namespace Raven.Client.Documents.Smuggler
         {
             public bool SortersUpdated { get; set; }
 
+            public bool AnalyzersUpdated { get; set; }
+
             public bool SinkPullReplicationsUpdated { get; set; }
 
             public bool HubPullReplicationsUpdated { get; set; }
@@ -247,8 +249,8 @@ namespace Raven.Client.Documents.Smuggler
             public bool ConflictSolverConfigUpdated { get; set; }
 
             public bool TimeSeriesConfigurationUpdated { get; set; }
-            
-            public bool DocumentsCompressionConfigurationUpdated { get; set;  }
+
+            public bool DocumentsCompressionConfigurationUpdated { get; set; }
 
             public bool RevisionsConfigurationUpdated { get; set; }
 
@@ -263,6 +265,12 @@ namespace Raven.Client.Documents.Smuggler
             public bool ClientConfigurationUpdated { get; set; }
 
             public bool UnusedDatabaseIdsUpdated { get; set; }
+
+            public bool LockModeUpdated { get; set; }
+
+            public bool OlapEtlsUpdated { get; set; }
+
+            public bool OlapConnectionStringsUpdated { get; set; }
 
             public override DynamicJsonValue ToJson()
             {
@@ -310,6 +318,9 @@ namespace Raven.Client.Documents.Smuggler
                 if (SortersUpdated)
                     json[nameof(SortersUpdated)] = SortersUpdated;
 
+                if (AnalyzersUpdated)
+                    json[nameof(AnalyzersUpdated)] = AnalyzersUpdated;
+
                 if (SinkPullReplicationsUpdated)
                     json[nameof(SinkPullReplicationsUpdated)] = SinkPullReplicationsUpdated;
 
@@ -318,6 +329,15 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (UnusedDatabaseIdsUpdated)
                     json[nameof(UnusedDatabaseIdsUpdated)] = UnusedDatabaseIdsUpdated;
+
+                if (LockModeUpdated)
+                    json[nameof(LockModeUpdated)] = LockModeUpdated;
+
+                if (OlapConnectionStringsUpdated)
+                    json[nameof(OlapConnectionStringsUpdated)] = OlapConnectionStringsUpdated;
+
+                if (OlapEtlsUpdated)
+                    json[nameof(OlapEtlsUpdated)] = OlapEtlsUpdated;
 
                 return json;
             }
@@ -358,6 +378,9 @@ namespace Raven.Client.Documents.Smuggler
                 if (SortersUpdated)
                     sb.AppendLine("- Sorters");
 
+                if (AnalyzersUpdated)
+                    sb.AppendLine("- Analyzers");
+
                 if (SinkPullReplicationsUpdated)
                     sb.AppendLine("- Pull Replication Sinks");
 
@@ -375,6 +398,15 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (DocumentsCompressionConfigurationUpdated)
                     sb.AppendLine("- Documents Compression");
+
+                if (LockModeUpdated)
+                    sb.AppendLine("- Lock Mode");
+
+                if (OlapConnectionStringsUpdated)
+                    sb.AppendLine("- OLAP Connection Strings");
+
+                if (OlapEtlsUpdated)
+                    sb.AppendLine("- OLAP ETLs");
 
                 if (sb.Length == 0)
                     return string.Empty;
@@ -445,18 +477,18 @@ namespace Raven.Client.Documents.Smuggler
                 return $"{base.ToString()} Attachments: {Attachments}";
             }
         }
-        
+
         public class CountsWithSkippedCountAndLastEtag : CountsWithLastEtagAndAttachments
         {
             public long SkippedCount { get; set; }
-        
+
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
                 json[nameof(SkippedCount)] = SkippedCount;
                 return json;
             }
-        
+
             public override string ToString()
             {
                 return $"Skipped: {SkippedCount}. {base.ToString()}";

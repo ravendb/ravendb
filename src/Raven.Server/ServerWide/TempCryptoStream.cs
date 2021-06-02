@@ -1,23 +1,24 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using Raven.Server.Utils;
 using Sparrow.Server;
-using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
 {
     public unsafe class TempCryptoStream : Stream
     {
-        private readonly string _file;
-        private readonly bool _ignoreSetLength;
-        private readonly FileStream _stream;
+        private bool _ignoreSetLength;
+        private readonly Stream _stream;
         private readonly MemoryStream _authenticationTags = new MemoryStream();
         private readonly MemoryStream _nonces = new MemoryStream();
         private readonly long _startPosition;
 
+        public Stream InnerStream => _stream;
+
         public override bool CanRead => true;
+
         public override bool CanSeek => true;
+
         public override bool CanWrite => true;
 
         public override long Length
@@ -38,17 +39,17 @@ namespace Raven.Server.ServerWide
         private readonly byte[] _internalBuffer;    // Temp buffer for one block only
         private int _bufferIndex;    // The position in the block buffer.
         private int _bufferValidIndex;
-        private bool _needToWrite = false;
+        private bool _needToWrite;
         private long _blockNumber;
         private long _maxLength;
 
-        public TempCryptoStream(string file, bool ignoreSetLength = false) : this(SafeFileStream.Create(file, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose))
+        public TempCryptoStream IgnoreSetLength()
         {
-            _file = file;
-            _ignoreSetLength = ignoreSetLength;
+            _ignoreSetLength = true;
+            return this;
         }
 
-        public TempCryptoStream(FileStream stream)
+        public TempCryptoStream(Stream stream)
         {
             _stream = stream;
             _startPosition = stream.Position;
@@ -138,7 +139,9 @@ namespace Raven.Server.ServerWide
             {
                 if (_stream.Length != _stream.Position)
                 {
-                    throw new InvalidOperationException("Writing less than a block size is only allowed at the end of the stream");
+                    throw new InvalidOperationException("Writing less than a block size is only allowed at the end of the stream. " +
+                                                        $"Details: {nameof(_bufferValidIndex)} - {_bufferValidIndex}, {nameof(_internalBuffer)}.{nameof(_internalBuffer.Length)} - {_internalBuffer.Length}, " +
+                                                        $"{nameof(_stream)}.{nameof(_stream.Length)} - {_stream.Length}, {nameof(_stream)}.{nameof(_stream.Position)} - {_stream.Position}");
                 }
             }
 
@@ -298,11 +301,6 @@ namespace Raven.Server.ServerWide
 
         protected override void Dispose(bool disposing)
         {
-            if (_file != null)
-            {
-                _stream.Dispose();
-                PosixFile.DeleteOnClose(_file);
-            }
         }
     }
 }

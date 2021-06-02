@@ -15,7 +15,6 @@ class Routes {
 
         return routes.concat(MENU_BASED_ROUTER_CONFIGURATION);
     }
-
 }
 
 export = Routes;

@@ -1,12 +1,13 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
 import certificatePermissionModel = require("models/auth/certificatePermissionModel");
+import genUtils = require("common/generalUtils");
 
 class certificateModel {
 
     static securityClearanceTypes: valueAndLabelItem<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance, string>[] = [
         {
-            label: "Cluster Administrator",
+            label: "Cluster Admin",
             value: "ClusterAdmin"
         }, {
             label: "Operator", 
@@ -82,19 +83,23 @@ class certificateModel {
         return certificateModel.securityClearanceTypes.find(x => x.value === input).label;
     }
     
-    static resolveDatabasesAccess(certificateDefinition: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition): Array<string> {
+    static resolveDatabasesAccess(certificateDefinition: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition): Array<databaseAccessInfo> {
+        let dbAccessInfo;
+        
         switch (certificateDefinition.SecurityClearance) {
             case "ClusterAdmin":
             case "Operator":
             case "ClusterNode":
-                return ["All"];
+                dbAccessInfo =  { All : "Admin"};
+                break;
             default:
-                const access = Object.keys(certificateDefinition.Permissions);
-                if (access.length) {
-                    return _.sortBy(access, x => x.toLowerCase());
-                }
-                return [];
+                dbAccessInfo = certificateDefinition.Permissions;
         }
+        
+        const dbAccessArray = _.map(dbAccessInfo, (accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess, dbName: string) =>
+            ({ accessLevel: `Database${accessLevel}` as databaseAccessLevel,  dbName: dbName }));
+        
+        return _.sortBy(dbAccessArray, x => x.dbName.toLowerCase());
     }
 
     private initValidation() {

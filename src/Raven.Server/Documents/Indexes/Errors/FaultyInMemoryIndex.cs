@@ -28,12 +28,12 @@ namespace Raven.Server.Documents.Indexes.Errors
         private readonly DateTime _createdAt;
 
         public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration, AutoIndexDefinitionBase definition)
-            : this(e, configuration, new FaultyAutoIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" }, IndexLockMode.Unlock, IndexPriority.Normal, new IndexField[0], definition))
+            : this(e, configuration, new FaultyAutoIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, new IndexField[0], definition))
         {
         }
 
         public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration, IndexDefinition definition)
-            : this(e, configuration, new FaultyIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" }, IndexLockMode.Unlock, IndexPriority.Normal, new IndexField[0], definition))
+            : this(e, configuration, new FaultyIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, new IndexField[0], definition))
         {
         }
 

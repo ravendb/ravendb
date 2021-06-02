@@ -844,8 +844,8 @@ namespace Raven.Server.Documents.Queries
                     if (float.TryParse(s, out boost) == false)
                     {
                         throw new InvalidQueryException($"The boost value must be a valid float, but was called with {s}",
-                    metadata.QueryText, parameters);
-            }
+                        metadata.QueryText, parameters);
+                    }
                     break;
                 default:
                     throw new InvalidQueryException($"Unable to find boost value: {val} ({type})",
@@ -968,6 +968,9 @@ namespace Raven.Server.Documents.Queries
 
             if (firstQuery != null)
                 return firstQuery;
+
+            if (q == null)
+                q = new BooleanQuery(); // RavenDB-16439
 
             return q;
 
@@ -1113,10 +1116,10 @@ namespace Raven.Server.Documents.Queries
             switch (methodType)
             {
                 case MethodType.Spatial_Circle:
-                    shape = HandleCircle(query, shapeExpression, metadata, parameters, fieldName, spatialField);
+                    shape = HandleCircle(query, shapeExpression, metadata, parameters, fieldName, spatialField, out _);
                     break;
                 case MethodType.Spatial_Wkt:
-                    shape = HandleWkt(query, shapeExpression, metadata, parameters, fieldName, spatialField);
+                    shape = HandleWkt(query, shapeExpression, metadata, parameters, fieldName, spatialField, out _);
                     break;
                 default:
                     QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
@@ -1155,8 +1158,8 @@ namespace Raven.Server.Documents.Queries
             return spatialField.Strategy.MakeQuery(args);
         }
 
-        private static IShape HandleWkt(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
-            SpatialField spatialField)
+        internal static IShape HandleWkt(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
+            SpatialField spatialField, out SpatialUnits units)
         {
             var wktValue = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
             AssertValueIsString(fieldName, wktValue.Type);
@@ -1165,11 +1168,22 @@ namespace Raven.Server.Documents.Queries
             if (expression.Arguments.Count == 2)
                 spatialUnits = GetSpatialUnits(query, expression.Arguments[1] as ValueExpression, metadata, parameters, fieldName);
 
-            return spatialField.ReadShape(GetValueAsString(wktValue.Value), spatialUnits);
+            units = spatialUnits ?? spatialField.Units;
+
+            var wkt = GetValueAsString(wktValue.Value);
+
+            try
+            {
+                return spatialField.ReadShape(wkt, spatialUnits);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidQueryException($"Value '{wkt}' is not a valid WKT value.", query.QueryText, parameters, e);
+            }
         }
 
-        private static IShape HandleCircle(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
-            SpatialField spatialField)
+        internal static IShape HandleCircle(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
+            SpatialField spatialField, out SpatialUnits units)
         {
             var radius = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
             AssertValueIsNumber(fieldName, radius.Type);
@@ -1183,6 +1197,8 @@ namespace Raven.Server.Documents.Queries
             SpatialUnits? spatialUnits = null;
             if (expression.Arguments.Count == 4)
                 spatialUnits = GetSpatialUnits(query, expression.Arguments[3] as ValueExpression, metadata, parameters, fieldName);
+
+            units = spatialUnits ?? spatialField.Units;
 
             return spatialField.ReadCircle(Convert.ToDouble(radius.Value), Convert.ToDouble(latitude.Value), Convert.ToDouble(longitude.Value), spatialUnits);
         }

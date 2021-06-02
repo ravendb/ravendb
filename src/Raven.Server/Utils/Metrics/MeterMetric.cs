@@ -28,7 +28,7 @@ namespace Raven.Server.Utils.Metrics
         public double OneMinuteRate => GetRate(60);
         public double FiveSecondRate => GetRate(5);
 
-        private double GetRate(int count)
+        internal double GetRate(int count)
         {
             if (count == 0)
                 return 0.0;

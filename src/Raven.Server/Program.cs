@@ -88,6 +88,8 @@ namespace Raven.Server
 
             configuration.Initialize();
 
+            GlobalFlushingBehavior.NumberOfConcurrentSyncsPerPhysicalDrive = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
+
             EncryptionBuffersPool.Instance.Disabled = configuration.Storage.DisableEncryptionBuffersPooling;
 
             LoggingSource.UseUtcTime = configuration.Logs.UseUtcTime;
@@ -102,7 +104,7 @@ namespace Raven.Server
 
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");
-            
+
             InitializeThreadPoolThreads(configuration);
 
             MultiSourceNuGetFetcher.Instance.Initialize(configuration.Indexing.NuGetPackagesPath, configuration.Indexing.NuGetPackageSourceUrl);
@@ -289,7 +291,7 @@ namespace Raven.Server
                 finally
                 {
                     if (Logger.IsOperationsEnabled)
-                        Logger.OperationsAsync("Server has shut down").Wait(TimeSpan.FromSeconds(15));
+                        Logger.OperationsWithWait("Server has shut down").Wait(TimeSpan.FromSeconds(15));
                     ShutdownCompleteMre.Set();
                 }
             } while (rerun);
@@ -316,7 +318,7 @@ namespace Raven.Server
                 if (string.IsNullOrEmpty(serverStore.Configuration.Licensing.License) == false)
                 {
                     licenseJson = serverStore.Configuration.Licensing.License;
-                } 
+                }
                 else if (File.Exists(serverStore.Configuration.Licensing.LicensePath.FullPath))
                 {
                     try
@@ -326,7 +328,7 @@ namespace Raven.Server
                     }
                     catch
                     {
-                       // expected
+                        // expected
                     }
                 }
 
@@ -347,7 +349,7 @@ namespace Raven.Server
 
                         var configurationKey =
                             fromPath ? RavenConfiguration.GetKey(x => x.Licensing.LicensePath) : RavenConfiguration.GetKey(x => x.Licensing.License);
-                        expiredLicenseMessage = localLicense.Id == license.Id 
+                        expiredLicenseMessage = localLicense.Id == license.Id
                             ? ". You can update current license using the setting.json file"
                             : $". The license '{localLicense.Id}' obtained from '{configurationKey}' with expiration date of '{FormattedDateTime(localLicenseStatus.Expiration ?? DateTime.MinValue)}' is also expired.";
                     }
@@ -402,7 +404,7 @@ namespace Raven.Server
             if (configuration.Server.ThreadPoolMinWorkerThreads != null || configuration.Server.ThreadPoolMinCompletionPortThreads != null)
             {
                 ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
-                
+
                 int effectiveMinWorkerThreads = configuration.Server.ThreadPoolMinWorkerThreads ?? workerThreads;
                 int effectiveMinCompletionPortThreads = configuration.Server.ThreadPoolMinCompletionPortThreads ?? completionPortThreads;
 
@@ -486,7 +488,7 @@ namespace Raven.Server
                 try
                 {
                     if (Logger.IsOperationsEnabled)
-                        Logger.OperationsAsync("Server is about to shut down (interactive mode)").Wait(TimeSpan.FromSeconds(15));
+                        Logger.OperationsWithWait("Server is about to shut down (interactive mode)").Wait(TimeSpan.FromSeconds(15));
                     server.Dispose();
                     Console.WriteLine("Shutdown completed (interactive mode)");
                 }

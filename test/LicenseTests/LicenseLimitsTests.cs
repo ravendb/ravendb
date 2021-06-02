@@ -157,8 +157,8 @@ namespace LicenseTests
                     await server.ServerStore.LicenseManager.ChangeLicenseLimits(server.ServerStore.NodeTag, 1, Guid.NewGuid().ToString());
 
                     var license = server.ServerStore.LoadLicenseLimits();
-                    Assert.True(license.NodeLicenseDetails.TryGetValue(server.ServerStore.NodeTag, out var detailsPerNode), "license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode)");
-                    Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
+                    Assert.True(license.NodeLicenseDetails.TryGetValue(server.ServerStore.NodeTag, out var detailsPerNode), $"license.NodeLicenseDetails.TryGetValue(tag:{server.ServerStore.NodeTag}, out var detailsPerNode:{detailsPerNode})");
+                    Assert.True(detailsPerNode.UtilizedCores == 1, $"detailsPerNode.UtilizedCores:{detailsPerNode.UtilizedCores} == 1");
                 }
 
                 foreach (var tag in servers.Select(x => x.ServerStore.NodeTag).Where(x => x != leader.ServerStore.NodeTag))
@@ -173,12 +173,12 @@ namespace LicenseTests
                         {
                             ctx.OpenReadTransaction();
                             var topology = leader.ServerStore.GetClusterTopology(ctx);
-                            Assert.True(topology.Watchers.ContainsKey(tag), "topology.Watchers.ContainsKey(tag)");
+                            Assert.True(topology.Watchers.ContainsKey(tag), $"topology.Watchers.ContainsKey(tag:{tag})");
                         }
 
                         var license = leader.ServerStore.LoadLicenseLimits();
-                        Assert.True(license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode), "license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode)");
-                        Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
+                        Assert.True(license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode), $"license.NodeLicenseDetails.TryGetValue(tag:{tag}, out var detailsPerNode:{detailsPerNode})");
+                        Assert.True(detailsPerNode.UtilizedCores == 1, $"detailsPerNode.UtilizedCores:{detailsPerNode.UtilizedCores} == 1");
 
                         await re.ExecuteAsync(new PromoteClusterNodeCommand(tag), context);
                         await Task.Delay(reasonableTime);
@@ -187,12 +187,12 @@ namespace LicenseTests
                         {
                             ctx.OpenReadTransaction();
                             var topology = leader.ServerStore.GetClusterTopology(ctx);
-                            Assert.True(topology.Watchers.ContainsKey(tag) == false, "topology.Watchers.ContainsKey(tag) == false");
+                            Assert.True(topology.Watchers.ContainsKey(tag) == false, $"topology.Watchers.ContainsKey(tag:{tag}) == false");
                         }
 
                         license = leader.ServerStore.LoadLicenseLimits();
-                        Assert.True(license.NodeLicenseDetails.TryGetValue(tag, out detailsPerNode), "license.NodeLicenseDetails.TryGetValue(tag, out detailsPerNode)");
-                        Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
+                        Assert.True(license.NodeLicenseDetails.TryGetValue(tag, out detailsPerNode), $"license.NodeLicenseDetails.TryGetValue(tag:{tag}, out detailsPerNode:{detailsPerNode})");
+                        Assert.True(detailsPerNode.UtilizedCores == 1, $"detailsPerNode.UtilizedCores:{detailsPerNode.UtilizedCores} == 1");
                     }
                 }
             }

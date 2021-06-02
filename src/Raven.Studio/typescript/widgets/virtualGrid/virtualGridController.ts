@@ -12,6 +12,8 @@ interface virtualGridController<T> {
     
     headerVisible(value: boolean): void;
 
+    customRowClassProvider(provider: (item: T) => string[]): void;
+
     reset(hard?: boolean, retainSort?: boolean): void;
 
     findRowForCell(cellElement: JQuery | Element): virtualRow;

@@ -2,7 +2,7 @@
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import jsonUtil = require("common/jsonUtil");
 
-class ongoingTaskEtlTransformationModel {
+class ongoingTaskRavenEtlTransformationModel {
     
     static readonly applyToAllCollectionsText = "Apply to All Collections";
     
@@ -35,15 +35,15 @@ class ongoingTaskEtlTransformationModel {
     }
 
     static isApplyToAll(colectionName: string){
-        return colectionName === ongoingTaskEtlTransformationModel.applyToAllCollectionsText;
+        return colectionName === ongoingTaskRavenEtlTransformationModel.applyToAllCollectionsText;
     }
     
     getCollectionEntry(collectionName: string) {
-        return collectionsTracker.default.getCollectionColorIndex(collectionName);        
+        return collectionsTracker.default.getCollectionColorIndex(collectionName);
     }
 
-    static empty(): ongoingTaskEtlTransformationModel {
-        return new ongoingTaskEtlTransformationModel(
+    static empty(): ongoingTaskRavenEtlTransformationModel {
+        return new ongoingTaskRavenEtlTransformationModel(
             {
                 ApplyToAllDocuments: false, 
                 Collections: [],
@@ -100,12 +100,12 @@ class ongoingTaskEtlTransformationModel {
     }
     
     addWithBlink(collectionName: string) {
-        if (ongoingTaskEtlTransformationModel.isApplyToAll(collectionName)) {
+        if (ongoingTaskRavenEtlTransformationModel.isApplyToAll(collectionName)) {
             this.applyScriptForAllCollections(true);
-            this.transformScriptCollections([ongoingTaskEtlTransformationModel.applyToAllCollectionsText]);
+            this.transformScriptCollections([ongoingTaskRavenEtlTransformationModel.applyToAllCollectionsText]);
         } else {
-            this.applyScriptForAllCollections(false);          
-            _.remove(this.transformScriptCollections(), x => x === ongoingTaskEtlTransformationModel.applyToAllCollectionsText);
+            this.applyScriptForAllCollections(false);
+            _.remove(this.transformScriptCollections(), x => x === ongoingTaskRavenEtlTransformationModel.applyToAllCollectionsText);
             this.transformScriptCollections.unshift(collectionName);
         }
        
@@ -122,7 +122,7 @@ class ongoingTaskEtlTransformationModel {
         this.applyScriptForAllCollections(dto.ApplyToAllDocuments);
         
         if (this.applyScriptForAllCollections()) {
-            this.transformScriptCollections([ongoingTaskEtlTransformationModel.applyToAllCollectionsText]);
+            this.transformScriptCollections([ongoingTaskRavenEtlTransformationModel.applyToAllCollectionsText]);
         }
         
         this.isNew(isNew);
@@ -135,4 +135,4 @@ class ongoingTaskEtlTransformationModel {
     }
 }
 
-export = ongoingTaskEtlTransformationModel;
+export = ongoingTaskRavenEtlTransformationModel;

@@ -43,7 +43,7 @@ class about extends viewModelBase {
             return false;
         }
 
-        const isDevBuildNumber = (num: number) => num >= 40 && num < 50;
+        const isDevBuildNumber = (num: number) => num >= 40 && num < 60;
 
         return !isDevBuildNumber(latestVersionInfo.BuildNumber) &&
             latestVersionInfo.BuildNumber > serverVersion.BuildVersion;
@@ -99,27 +99,7 @@ class about extends viewModelBase {
         return licenseStatus.IsIsv ? "Updates Expiration" : "Expires";
     });
 
-    formattedExpiration = ko.pureComputed(() => {
-        const licenseStatus = license.licenseStatus();
-        if (!licenseStatus || !licenseStatus.Expiration) {
-            return null;
-        }
-
-        const dateFormat = "YYYY MMMM Do";
-        const expiration = moment(licenseStatus.Expiration);
-        const now = moment();
-        const nextMonth = moment().add(1, 'month');
-        if (now.isBefore(expiration)) {
-            const relativeDurationClass = nextMonth.isBefore(expiration) ? "" : "text-warning";
-            
-            const fromDuration = generalUtils.formatDurationByDate(expiration, true);
-            return `${expiration.format(dateFormat)} <br /><small class="${relativeDurationClass}">(${fromDuration})</small>`;
-        }
-
-        const expiredClass = licenseStatus.Expired ? "text-danger" : "";
-        const duration = generalUtils.formatDurationByDate(expiration, true);
-        return `${expiration.format(dateFormat)} <br /><Small class="${expiredClass}">(${duration} ago)</Small>`;
-    });
+    formattedExpiration = license.formattedExpiration;
 
     isCloud = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
@@ -135,27 +115,7 @@ class about extends viewModelBase {
         return !licenseStatus ? "None" : licenseStatus.Type;
     });
 
-    licenseTypeText = ko.pureComputed(() => {
-        const licenseStatus = license.licenseStatus();
-        if (!licenseStatus || licenseStatus.Type === "None") {
-            return "No license - AGPLv3 Restrictions Applied";
-        }
-
-        let licenseType = licenseStatus.Type;
-        if (licenseType === "Invalid") {
-            return "Invalid license";
-        }
-
-        if (licenseStatus.IsCloud) {
-            licenseType += " (Cloud)";
-        }
-
-        if (licenseStatus.IsIsv) {
-            licenseType += " (ISV)";
-        }
-
-        return licenseType;
-    });
+    licenseTypeText = license.licenseTypeText;
 
     hasLicense = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();

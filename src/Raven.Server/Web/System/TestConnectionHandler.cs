@@ -20,9 +20,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/test-connection", "POST", AuthorizationStatus.Operator)]
         public async Task TestConnection()
         {
-            
             var url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
-            var database = GetStringQueryString("database", required:false); // can be null
+            var database = GetStringQueryString("database", required: false); // can be null
             var bidirectional = GetBoolValueQueryString("bidirectional", required: false);
 
             url = UrlHelper.TryGetLeftPart(url);
@@ -31,7 +30,7 @@ namespace Raven.Server.Web.System
             var result = await ServerStore.TestConnectionToRemote(url, database);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 // test the connection from the remote node to this one
                 if (bidirectional == true && result.Success)
@@ -49,14 +48,14 @@ namespace Raven.Server.Web.System
         {
             TcpClient tcpClient;
             string url;
-            (tcpClient, url) =  await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, log);
+            (tcpClient, url) = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, log);
             var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, server.Certificate.Certificate, server.CipherSuitesPolicy, timeout);
             using (tcpClient)
             {
                 using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
-                using (var writer = new BlittableJsonTextWriter(ctx, connection))
+                await using (var writer = new AsyncBlittableJsonTextWriter(ctx, connection))
                 {
-                    WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.TestConnection, database);
+                    await WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.TestConnection, database);
                     using (var responseJson = await ctx.ReadForMemoryAsync(connection, $"TestConnectionHandler/{url}/Read-Handshake-Response"))
                     {
                         var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
@@ -65,14 +64,16 @@ namespace Raven.Server.Web.System
                             case TcpConnectionStatus.Ok:
                                 result.Success = true;
                                 break;
+
                             case TcpConnectionStatus.AuthorizationFailed:
                                 result.Success = false;
                                 result.Error = $"Connection to {url} failed because of authorization failure: {headerResponse.Message}";
                                 break;
+
                             case TcpConnectionStatus.TcpVersionMismatch:
                                 result.Success = false;
                                 result.Error = $"Connection to {url} failed because of mismatching tcp version: {headerResponse.Message}";
-                                WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.Drop, database);
+                                await WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.Drop, database);
                                 break;
                         }
                     }
@@ -80,10 +81,10 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer, TcpConnectionHeaderMessage.OperationTypes operation, string databaseName)
+        private static async ValueTask WriteOperationHeaderToRemote(AsyncBlittableJsonTextWriter writer, TcpConnectionHeaderMessage.OperationTypes operation, string databaseName)
         {
-            writer.WriteStartObject();
-            {
+           writer.WriteStartObject();
+           {
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Operation));
                 writer.WriteString(operation.ToString());
                 writer.WriteComma();
@@ -92,9 +93,9 @@ namespace Raven.Server.Web.System
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
                 writer.WriteString(databaseName);
-            }
-            writer.WriteEndObject();
-            writer.Flush();
+           }
+           writer.WriteEndObject();
+           await writer.FlushAsync();
         }
     }
 

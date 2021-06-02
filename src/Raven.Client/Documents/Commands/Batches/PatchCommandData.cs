@@ -9,16 +9,21 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public class PatchCommandData : ICommandData
     {
-        public PatchCommandData(string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing)
+        public PatchCommandData(string id, string changeVector, PatchRequest patch)
         {
             Id = id ?? throw new ArgumentNullException(nameof(id));
             ChangeVector = changeVector;
             Patch = patch ?? throw new ArgumentNullException(nameof(patch));
+        }
+        
+        public PatchCommandData(string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing) : this(id, changeVector, patch)
+        {
             PatchIfMissing = patchIfMissing;
         }
-
+        
         public string Id { get; }
         public string Name { get; } = null;
+        public BlittableJsonReaderObject CreateIfMissing { get; set; }
         public string ChangeVector { get; }
         public PatchRequest Patch { get; }
         public PatchRequest PatchIfMissing { get; }
@@ -37,6 +42,9 @@ namespace Raven.Client.Documents.Commands.Batches
 
             if (PatchIfMissing != null)
                 json[nameof(PatchIfMissing)] = PatchIfMissing.ToJson(conventions, context);
+
+            if (CreateIfMissing != null)
+                json[nameof(CreateIfMissing)] = CreateIfMissing;
 
             if (ReturnDocument)
                 json[nameof(ReturnDocument)] = ReturnDocument;

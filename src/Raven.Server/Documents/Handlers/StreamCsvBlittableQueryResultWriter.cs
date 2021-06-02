@@ -1,4 +1,6 @@
 ﻿using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
@@ -7,7 +9,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StreamCsvBlittableQueryResultWriter : StreamCsvResultWriter<BlittableJsonReaderObject>
     {
-        public override void AddResult(BlittableJsonReaderObject res)
+        public override async ValueTask AddResultAsync(BlittableJsonReaderObject res, CancellationToken token)
         {
             WriteCsvHeaderIfNeeded(res, false);
 
@@ -17,7 +19,7 @@ namespace Raven.Server.Documents.Handlers
                 GetCsvWriter().WriteField(o?.ToString());
             }
 
-            GetCsvWriter().NextRecord();
+            await GetCsvWriter().NextRecordAsync();
         }
 
         public StreamCsvBlittableQueryResultWriter(HttpResponse response, Stream stream, string[] properties = null,

@@ -9,23 +9,22 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
-using Raven.Client.Util;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
-using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Web.System;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
 
@@ -33,7 +32,6 @@ namespace Raven.Server.Web.Authentication
 {
     public class AdminCertificatesHandler : ServerRequestHandler
     {
-
         [RavenAction("/admin/certificates", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task Generate()
         {
@@ -49,7 +47,7 @@ namespace Raven.Server.Web.Authentication
 
                 var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
 
-                var certificateJson = ctx.ReadForDisk(stream, "certificate-generation");
+                var certificateJson = await ctx.ReadForDiskAsync(stream, "certificate-generation");
 
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
@@ -78,7 +76,7 @@ namespace Raven.Server.Web.Authentication
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "application/octet-stream";
 
-                HttpContext.Response.Body.Write(certs, 0, certs.Length);
+                await HttpContext.Response.Body.WriteAsync(certs, 0, certs.Length);
             }
         }
 
@@ -129,17 +127,16 @@ namespace Raven.Server.Web.Authentication
                 // The permissions go into the most significant 16 bits of an int
                 entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-                using (var s = entry.Open())
-                    s.Write(certBytes, 0, certBytes.Length);
+                await using (var s = entry.Open())
+                    await s.WriteAsync(certBytes, 0, certBytes.Length);
 
-                WriteCertificateAsPem(certificate.Name, clientCertBytes, certificate.Password, archive);
+                await WriteCertificateAsPemAsync(certificate.Name, clientCertBytes, certificate.Password, archive);
             }
 
             return ms.ToArray();
         }
 
-
-        public static void WriteCertificateAsPem(string name, byte[] rawBytes, string exportPassword, ZipArchive archive)
+        public static async Task WriteCertificateAsPemAsync(string name, byte[] rawBytes, string exportPassword, ZipArchive archive)
         {
             var a = new Pkcs12Store();
             a.Load(new MemoryStream(rawBytes), Array.Empty<char>());
@@ -165,8 +162,8 @@ namespace Raven.Server.Web.Authentication
             var zipEntryCrt = archive.CreateEntry(name + ".crt");
             zipEntryCrt.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-            using (var stream = zipEntryCrt.Open())
-            using (var writer = new StreamWriter(stream))
+            await using (var stream = zipEntryCrt.Open())
+            await using (var writer = new StreamWriter(stream))
             {
                 var pw = new PemWriter(writer);
                 pw.WriteObject(entry.Certificate);
@@ -175,8 +172,8 @@ namespace Raven.Server.Web.Authentication
             var zipEntryKey = archive.CreateEntry(name + ".key");
             zipEntryKey.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-            using (var stream = zipEntryKey.Open())
-            using (var writer = new StreamWriter(stream))
+            await using (var stream = zipEntryKey.Open())
+            await using (var writer = new StreamWriter(stream))
             {
                 var pw = new PemWriter(writer);
 
@@ -197,10 +194,9 @@ namespace Raven.Server.Web.Authentication
 
                 pw.WriteObject(privateKey);
 
-                writer.Flush();
+                await writer.FlushAsync();
             }
         }
-
 
         [RavenAction("/admin/certificates", "PUT", AuthorizationStatus.Operator)]
         public async Task Put()
@@ -210,7 +206,7 @@ namespace Raven.Server.Web.Authentication
 
             await ServerStore.EnsureNotPassiveAsync();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "put-certificate"))
+            using (var certificateJson = await ctx.ReadForDiskAsync(RequestBodyStream(), "put-certificate"))
             {
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
@@ -248,6 +244,17 @@ namespace Raven.Server.Web.Authentication
                     throw new ArgumentException("Unable to load the provided certificate.", e);
                 }
 
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    var clientCertificate = GetCurrentCertificate();
+                    var auditLog = LoggingSource.AuditLog.GetLogger("Certificates","Audit");
+                    var permissions = certificate?.Permissions != null
+                        ? Environment.NewLine + string.Join(Environment.NewLine, certificate.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))
+                        : string.Empty;
+                    auditLog.Info($"Add new certificate '{certificate?.Thumbprint}'. Security Clearance: {certificate?.SecurityClearance}. Permissions:{permissions}." +
+                                  $"{Environment.NewLine}IP: '{HttpContext.Connection.RemoteIpAddress}'. Certificate: {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
+                }
+                
                 try
                 {
                     await PutCertificateCollectionInCluster(certificate, certBytes, certificate.Password, ServerStore, ctx, GetRaftRequestIdFromQuery());
@@ -257,8 +264,7 @@ namespace Raven.Server.Web.Authentication
                     throw new InvalidOperationException($"Failed to put certificate {certificate.Name} in the cluster.", e);
                 }
 
-                NoContentStatus();
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                NoContentStatus(HttpStatusCode.Created);
             }
         }
 
@@ -305,7 +311,7 @@ namespace Raven.Server.Web.Authentication
                     currentCertDef.Certificate = Convert.ToBase64String(x509Certificate.Export(X509ContentType.Cert));
                 }
 
-                // In case of a collection, we group all the certificates together and treat them as one unit. 
+                // In case of a collection, we group all the certificates together and treat them as one unit.
                 // They all have the same name and permissions but a different thumbprint.
                 // The first certificate in the collection will be the primary certificate and its thumbprint will be the one shown in a GET request
                 // The other certificates are secondary certificates and will contain a link to the primary certificate.
@@ -366,7 +372,7 @@ namespace Raven.Server.Web.Authentication
                 foreach (var cert in allCerts)
                 {
                     if (cert.Value.TryGet(nameof(CertificateDefinition.NotAfter), out DateTime notAfter) && DateTime.UtcNow > notAfter)
-                            keysToDelete.Add(cert.Key);
+                        keysToDelete.Add(cert.Key);
                 }
 
                 await DeleteInternal(keysToDelete, GetRaftRequestIdFromQuery());
@@ -413,6 +419,13 @@ namespace Raven.Server.Web.Authentication
                 if (definition != null)
                     keysToDelete.AddRange(definition.CollectionSecondaryKeys);
 
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    var clientCertificate = GetCurrentCertificate();
+                    var auditLog = LoggingSource.AuditLog.GetLogger("Certificates","Audit");
+                    auditLog.Info($"Delete certificate '{thumbprint}'. IP: '{HttpContext.Connection.RemoteIpAddress}'. Certificate: {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
+                }
+                
                 await DeleteInternal(keysToDelete, GetRaftRequestIdFromQuery());
             }
 
@@ -449,7 +462,7 @@ namespace Raven.Server.Web.Authentication
         }
 
         [RavenAction("/admin/certificates", "GET", AuthorizationStatus.Operator)]
-        public Task GetCertificates()
+        public async Task GetCertificates()
         {
             var thumbprint = GetStringQueryString("thumbprint", required: false);
             var name = GetStringQueryString("name", required: false);
@@ -492,19 +505,16 @@ namespace Raven.Server.Web.Authentication
                         if (TryGetAndAddCertificateByThumbprint(context, certificateList, thumbprint, metadataOnly) == false)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            return Task.CompletedTask;
+                            return;
                         }
-                            }
+                    }
 
                     var wellKnown = ServerStore.Configuration.Security.WellKnownAdminCertificates;
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
-                        writer.WriteArray(context, "Results", certificateList.ToArray(), (w, c, cert) =>
-                        {
-                            c.Write(w, cert.Value);
-                        });
+                        writer.WriteArray(context, "Results", certificateList.ToArray(), (w, c, cert) => c.Write(w, cert.Value));
                         writer.WriteComma();
                         writer.WritePropertyName("LoadedServerCert");
                         writer.WriteString(Server.Certificate.Certificate?.Thumbprint);
@@ -519,27 +529,25 @@ namespace Raven.Server.Web.Authentication
                         cert.Value?.Dispose();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         private bool TryGetCertificateByThumbprint(TransactionOperationContext context, string thumbprint, out BlittableJsonReaderObject certificate)
         {
             certificate = ServerStore.CurrentRachisState == RachisState.Passive
-                ?ServerStore.Cluster.GetLocalStateByThumbprint(context, thumbprint)
-                :ServerStore.Cluster.GetCertificateByThumbprint(context, thumbprint);
+                ? ServerStore.Cluster.GetLocalStateByThumbprint(context, thumbprint)
+                : ServerStore.Cluster.GetCertificateByThumbprint(context, thumbprint);
             return certificate != null;
         }
 
         private bool TryGetAndAddCertificateByThumbprint(TransactionOperationContext context, Dictionary<string, BlittableJsonReaderObject> certificateList,
             string thumbprint, bool metadataOnly)
-            {
+        {
             if (TryGetCertificateByThumbprint(context, thumbprint, out var certificate) == false)
                 return false;
 
             var definition = JsonDeserializationServer.CertificateDefinition(certificate);
             if (string.IsNullOrEmpty(definition.CollectionPrimaryKey) == false)
-                {
+            {
                 certificate.Dispose();
                 if (TryGetCertificateByThumbprint(context, definition.CollectionPrimaryKey, out certificate) == false)
                     return false;
@@ -553,22 +561,22 @@ namespace Raven.Server.Web.Authentication
 
             certificateList.TryAdd(thumbprint, certificate);
             return true;
-                }
+        }
 
         private void GetAllRegisteredCertificates(
-            TransactionOperationContext context, 
-            Dictionary<string, BlittableJsonReaderObject> certificates, 
+            TransactionOperationContext context,
+            Dictionary<string, BlittableJsonReaderObject> certificates,
             bool includeSecondary,
             string name = null,
             bool metadataOnly = false)
-            {
+        {
             var localCertificates = ServerStore.CurrentRachisState == RachisState.Passive
                 // If we are passive, we take the certs from the local state
                 ? ClusterStateMachine.GetAllCertificatesFromLocalState(context)
                 : ClusterStateMachine.GetAllCertificatesFromCluster(context, GetStart(), GetPageSize());
-            
+
             foreach (var (thumbprint, certificate) in localCertificates)
-                {
+            {
                 var def = JsonDeserializationServer.CertificateDefinition(certificate);
                 if (name != null && name != def.Name || includeSecondary == false && string.IsNullOrEmpty(def.CollectionPrimaryKey) == false)
                 {
@@ -586,14 +594,15 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        [RavenAction("/certificates/whoami", "GET", AuthorizationStatus.ValidUser)]
-        public Task WhoAmI()
+        [RavenAction("/certificates/whoami", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task WhoAmI()
         {
             var clientCert = GetCurrentCertificate();
 
             if (clientCert == null)
             {
-                return NoContent();
+                NoContentStatus();
+                return;
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -641,13 +650,11 @@ namespace Raven.Server.Web.Authentication
                     }
                 }
 
-                using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(ctx, ResponseBodyStream()))
                 {
                     writer.WriteObject(certificate);
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/certificates/edit", "POST", AuthorizationStatus.Operator)]
@@ -659,7 +666,7 @@ namespace Raven.Server.Web.Authentication
             var clientCert = feature?.Certificate;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "edit-certificate"))
+            using (var certificateJson = await ctx.ReadForDiskAsync(RequestBodyStream(), "edit-certificate"))
             {
                 var newCertificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
@@ -702,16 +709,15 @@ namespace Raven.Server.Web.Authentication
                     }, GetRaftRequestIdFromQuery()));
                 await ServerStore.Cluster.WaitForIndexNotification(putResult.Index);
 
-                NoContentStatus();
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                NoContentStatus(HttpStatusCode.Created);
             }
         }
 
         [RavenAction("/admin/certificates/export", "GET", AuthorizationStatus.Operator)]
-        public Task GetClusterCertificates()
+        public async Task GetClusterCertificates()
         {
             if (Server.Certificate.Certificate == null)
-                return Task.CompletedTask;
+                return;
 
             var collection = new X509Certificate2Collection();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -729,7 +735,7 @@ namespace Raven.Server.Web.Authentication
                             var clusterNodes = allItems.Select(item => JsonDeserializationServer.CertificateDefinition(item.Value))
                                 .Where(certificateDef => certificateDef.SecurityClearance == SecurityClearance.ClusterNode)
                                 .ToList();
-                            
+
                             foreach (var cert in clusterNodes)
                             {
                                 var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(cert.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet);
@@ -756,17 +762,15 @@ namespace Raven.Server.Web.Authentication
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             HttpContext.Response.ContentType = "application/octet-stream";
 
-            HttpContext.Response.Body.Write(pfx, 0, pfx.Length);
-
-            return Task.CompletedTask;
+            await HttpContext.Response.Body.WriteAsync(pfx, 0, pfx.Length);
         }
 
         [RavenAction("/admin/certificates/mode", "GET", AuthorizationStatus.ClusterAdmin)]
-        public Task Mode()
+        public async Task Mode()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
-                using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(ctx, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("SetupMode");
@@ -774,12 +778,10 @@ namespace Raven.Server.Web.Authentication
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/certificates/cluster-domains", "GET", AuthorizationStatus.ClusterAdmin)]
-        public Task ClusterDomains()
+        public async Task ClusterDomains()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -803,7 +805,7 @@ namespace Raven.Server.Web.Authentication
                     };
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("ClusterDomains");
@@ -822,8 +824,6 @@ namespace Raven.Server.Web.Authentication
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/certificates/replacement/reset", "POST", AuthorizationStatus.ClusterAdmin)]
@@ -840,10 +840,10 @@ namespace Raven.Server.Web.Authentication
         }
 
         [RavenAction("/admin/certificates/replacement/status", "GET", AuthorizationStatus.ClusterAdmin)]
-        public Task ReplacementStatus()
+        public async Task ReplacementStatus()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 using (context.OpenReadTransaction())
                 {
@@ -881,12 +881,10 @@ namespace Raven.Server.Web.Authentication
                     }
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/certificates/letsencrypt/renewal-date", "GET", AuthorizationStatus.ClusterAdmin)]
-        public Task RenewalDate()
+        public async Task RenewalDate()
         {
             if (ServerStore.Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
                 throw new InvalidOperationException("This server wasn't set up using the Let's Encrypt setup mode.");
@@ -895,21 +893,19 @@ namespace Raven.Server.Web.Authentication
                 throw new InvalidOperationException("The server certificate is not loaded.");
 
             var (_, renewalDate) = Server.CalculateRenewalDate(Server.Certificate, false);
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("EstimatedRenewal");
                 writer.WriteDateTime(renewalDate, true);
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/certificates/letsencrypt/force-renew", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
-        public Task ForceRenew()
+        public async Task ForceRenew()
         {
             if (ServerStore.IsLeader())
             {
@@ -923,7 +919,7 @@ namespace Raven.Server.Web.Authentication
                 {
                     var success = Server.RefreshClusterCertificate(true, GetRaftRequestIdFromQuery());
                     using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
                         writer.WritePropertyName(nameof(ForceRenewResult.Success));
@@ -931,15 +927,15 @@ namespace Raven.Server.Web.Authentication
                         writer.WriteEndObject();
                     }
 
-                    return Task.CompletedTask;
+                    return;
                 }
                 catch (Exception e)
                 {
                     throw new InvalidOperationException($"Failed to force renew the Let's Encrypt server certificate for domain: {Server.Certificate.Certificate.GetNameInfo(X509NameType.SimpleName, false)}", e);
                 }
             }
+
             RedirectToLeader();
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/certificates/refresh", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
@@ -981,7 +977,7 @@ namespace Raven.Server.Web.Authentication
 
                 await ServerStore.EnsureNotPassiveAsync();
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "replace-cluster-cert"))
+                using (var certificateJson = await ctx.ReadForDiskAsync(RequestBodyStream(), "replace-cluster-cert"))
                 {
                     try
                     {
@@ -1036,16 +1032,15 @@ namespace Raven.Server.Web.Authentication
                     }
                 }
 
-                NoContentStatus();
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                NoContentStatus(HttpStatusCode.Created);
                 return;
             }
-            
+
             RedirectToLeader();
         }
 
         [RavenAction("/admin/certificates/local-state", "GET", AuthorizationStatus.Operator)]
-        public Task GetLocalState()
+        public async Task GetLocalState()
         {
             var includeSecondary = GetBoolValueQueryString("secondary", required: false) ?? false;
 
@@ -1072,13 +1067,10 @@ namespace Raven.Server.Web.Authentication
                             localCertificate.Dispose();
                     }
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
-                        writer.WriteArray(context, "Results", certificateList.ToArray(), (w, c, cert) =>
-                        {
-                            c.Write(w, cert.Value);
-                        });
+                        writer.WriteArray(context, "Results", certificateList.ToArray(), (w, c, cert) => c.Write(w, cert.Value));
                         writer.WriteEndObject();
                     }
                 }
@@ -1088,8 +1080,6 @@ namespace Raven.Server.Web.Authentication
                         cert.Value?.Dispose();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/certificates/local-state", "DELETE", AuthorizationStatus.ClusterAdmin)]
@@ -1115,7 +1105,7 @@ namespace Raven.Server.Web.Authentication
         }
 
         [RavenAction("/admin/certificates/local-state/apply", "POST", AuthorizationStatus.ClusterAdmin)]
-        public Task LocalStateApply()
+        public async Task LocalStateApply()
         {
             if (ServerStore.CurrentRachisState == RachisState.Passive)
                 throw new AuthorizationException("RavenDB is in passive state. Cannot apply certificates to the cluster.");
@@ -1124,6 +1114,7 @@ namespace Raven.Server.Web.Authentication
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
+                long? index = null;
                 List<string> localStateKeys;
                 using (ctx.OpenReadTransaction())
                 {
@@ -1140,11 +1131,14 @@ namespace Raven.Server.Web.Authentication
                             if (certificateDefinition.Thumbprint == ServerStore.Server.Certificate.Certificate.Thumbprint)
                                 continue;
 
-                            ServerStore.PutValueInClusterAsync(new PutCertificateCommand(localStateKey, certificateDefinition, $"{raftRequestId}/{localStateKey}"))
-                                .Wait(ServerStore.ServerShutdown);
+                            var (newIndex, _) = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(localStateKey, certificateDefinition, $"{raftRequestId}/{localStateKey}"));
+                            index = newIndex;
                         }
                     }
                 }
+
+                if (index.HasValue)
+                    await ServerStore.Cluster.WaitForIndexNotification(index.Value);
 
                 // Delete from local state
                 using (var tx = ctx.OpenWriteTransaction())
@@ -1154,7 +1148,7 @@ namespace Raven.Server.Web.Authentication
                 }
             }
 
-            return NoContent();
+            NoContentStatus();
         }
 
         public static void ValidateCertificateDefinition(CertificateDefinition certificate, ServerStore serverStore)
@@ -1166,6 +1160,8 @@ namespace Raven.Server.Web.Authentication
                 throw new ArgumentException("The certificate expiration date must be in the future.");
 
             ValidatePermissions(certificate, serverStore);
+
+            serverStore.LicenseManager.AssertCanAddReadOnlyCertificates(certificate);
         }
 
         private static void ValidatePermissions(CertificateDefinition certificate, ServerStore serverStore)
@@ -1181,8 +1177,16 @@ namespace Raven.Server.Web.Authentication
                 if (ResourceNameValidator.IsValidResourceName(kvp.Key, serverStore.Configuration.Core.DataDirectory.FullPath, out var errorMessage) == false)
                     throw new ArgumentException("Error in permissions in the certificate definition:" + errorMessage);
 
-                if (kvp.Value != DatabaseAccess.ReadWrite && kvp.Value != DatabaseAccess.Admin)
-                    throw new ArgumentException($"Error in permissions in the certificate definition, invalid access {kvp.Value} for database {kvp.Key}");
+                switch (kvp.Value)
+                {
+                    case DatabaseAccess.ReadWrite:
+                    case DatabaseAccess.Admin:
+                    case DatabaseAccess.Read:
+                        break;
+
+                    default:
+                        throw new ArgumentException($"Error in permissions in the certificate definition, invalid access {kvp.Value} for database {kvp.Key}");
+                }
             }
         }
     }

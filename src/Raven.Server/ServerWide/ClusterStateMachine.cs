@@ -12,11 +12,13 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -38,6 +40,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -326,6 +329,8 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(DeleteValueCommand):
+                    case nameof(DeleteServerWideAnalyzerCommand):
+                    case nameof(DeleteServerWideSorterCommand):
                         DeleteValue(context, type, cmd, index);
                         break;
 
@@ -374,9 +379,12 @@ namespace Raven.Server.ServerWide
 
                     case nameof(PutSortersCommand):
                     case nameof(DeleteSorterCommand):
+                    case nameof(PutAnalyzersCommand):
+                    case nameof(DeleteAnalyzerCommand):
                     case nameof(PutIndexCommand):
                     case nameof(PutIndexesCommand):
                     case nameof(PutAutoIndexCommand):
+                    case nameof(PutRollingIndexCommand):
                     case nameof(DeleteIndexCommand):
                     case nameof(SetIndexLockCommand):
                     case nameof(SetIndexPriorityCommand):
@@ -395,18 +403,23 @@ namespace Raven.Server.ServerWide
                     case nameof(ToggleTaskStateCommand):
                     case nameof(AddRavenEtlCommand):
                     case nameof(AddSqlEtlCommand):
+                    case nameof(AddOlapEtlCommand):
                     case nameof(UpdateRavenEtlCommand):
                     case nameof(UpdateSqlEtlCommand):
+                    case nameof(UpdateOlapEtlCommand):
                     case nameof(DeleteOngoingTaskCommand):
                     case nameof(PutRavenConnectionStringCommand):
                     case nameof(PutSqlConnectionStringCommand):
+                    case nameof(PutOlapConnectionStringCommand):
                     case nameof(RemoveRavenConnectionStringCommand):
                     case nameof(RemoveSqlConnectionStringCommand):
+                    case nameof(RemoveOlapConnectionStringCommand): 
                     case nameof(UpdatePullReplicationAsHubCommand):
                     case nameof(UpdatePullReplicationAsSinkCommand):
                     case nameof(EditDatabaseClientConfigurationCommand):
                     case nameof(EditDocumentsCompressionCommand):
                     case nameof(UpdateUnusedDatabaseIdsCommand):
+                    case nameof(EditLockModeCommand):
                         UpdateDatabase(context, type, cmd, index, leader, serverStore);
                         break;
 
@@ -540,6 +553,14 @@ namespace Raven.Server.ServerWide
                         PutValue<ServerWideStudioConfiguration>(context, type, cmd, index);
                         break;
 
+                    case nameof(PutServerWideAnalyzerCommand):
+                        PutValue<AnalyzerDefinition>(context, type, cmd, index);
+                        break;
+
+                    case nameof(PutServerWideSorterCommand):
+                        PutValue<SorterDefinition>(context, type, cmd, index);
+                        break;
+
                     case nameof(AddDatabaseCommand):
                         var addedNodes = AddDatabase(context, cmd, index, leader);
                         if (addedNodes != null)
@@ -556,11 +577,19 @@ namespace Raven.Server.ServerWide
                 }
 
                 _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, result, null);
+
+                DismissUnrecoverableNotification();
             }
             catch (Exception e) when (ExpectedException(e))
             {
                 if (_parent.Log.IsInfoEnabled)
-                    _parent.Log.Info($"Failed to execute command of type '{type}' on database '{DatabaseName}'", e);
+                {
+                    var error = $"Failed to execute command of type '{type}'";
+                    if (cmd.TryGet(DatabaseName, out string databaseName))
+                        error += $"on database '{databaseName}'";
+
+                    _parent.Log.Info(error, e);
+                }
 
                 _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, null, e);
                 NotifyLeaderAboutError(index, leader, e);
@@ -568,11 +597,17 @@ namespace Raven.Server.ServerWide
             catch (Exception e)
             {
                 // IMPORTANT
-                // Other exceptions MUST be consistent across the cluster (meaning: if it occured on one node it must occur on the rest also).
+                // Other exceptions MUST be consistent across the cluster (meaning: if it occurred on one node it must occur on the rest also).
                 // the exceptions here are machine specific and will cause a jam in the state machine until the exception will be resolved.
-                if (_parent.Log.IsInfoEnabled)
-                    _parent.Log.Info($"Unrecoverable exception on database '{DatabaseName}' at command type '{type}', execution will be retried later.", e);
+                var error = $"Unrecoverable exception at command type '{type}'";
+                if (cmd.TryGet(DatabaseName, out string databaseName))
+                    error += $"on database '{databaseName}'";
+                error += ", execution will be retried later.";
 
+                if (_parent.Log.IsOperationsEnabled)
+                    _parent.Log.Operations(error, e);
+
+                AddUnrecoverableNotification(error, e);
                 NotifyLeaderAboutError(index, leader, e);
                 throw;
             }
@@ -588,6 +623,41 @@ namespace Raven.Server.ServerWide
                     Term = leader?.Term,
                     LeaderShipDuration = leader?.LeaderShipDuration,
                 });
+            }
+
+            void DismissUnrecoverableNotification()
+            {
+                try
+                {
+                    serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.UnrecoverableClusterError, $"{_parent.CurrentTerm}/{index}"), context.Transaction, sendNotificationEvenIfDoesntExist: false);
+                }
+                catch
+                {
+                    // nothing we can do here
+                }
+            }
+
+            void AddUnrecoverableNotification(string error, Exception exception)
+            {
+                // must do it in a separate thread since we are not going to commit this tx anyway
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    try
+                    {
+                        serverStore.NotificationCenter.Add(AlertRaised.Create(
+                            null,
+                            "Unrecoverable Cluster Error",
+                            error,
+                            AlertType.UnrecoverableClusterError,
+                            NotificationSeverity.Error,
+                            key: $"{_parent.CurrentTerm}/{index}",
+                            details: new ExceptionDetails(exception)));
+                    }
+                    catch
+                    {
+                        // nothing we can do here
+                    }
+                }, null);
             }
         }
 
@@ -1108,6 +1178,19 @@ namespace Raven.Server.ServerWide
                             }
                         }
 
+                        if (record.RollingIndexes != null)
+                        {
+                            foreach (var rollingIndex in record.RollingIndexes)
+                            {
+                                if (rollingIndex.Value.ActiveDeployments.TryGetValue(removed, out var deployment))
+                                {
+                                    var dummy = new PutRollingIndexCommand(record.DatabaseName, rollingIndex.Key, removed, finishedAt: null, "dummy update");
+                                    dummy.UpdateDatabaseRecord(record, index);
+                                    rollingIndex.Value.ActiveDeployments.Remove(removed);
+                                }
+                            }
+                        }
+
                         var updated = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(record, context);
 
                         UpdateValue(index, items, lowerKey, key, updated);
@@ -1413,7 +1496,8 @@ namespace Raven.Server.ServerWide
             nameof(DatabaseRecord.SinkPullReplications),
             nameof(DatabaseRecord.HubPullReplications),
             nameof(DatabaseRecord.RavenEtls),
-            nameof(DatabaseRecord.SqlEtls)
+            nameof(DatabaseRecord.SqlEtls),
+            nameof(DatabaseRecord.OlapEtls)
         };
 
         private unsafe List<string> AddDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
@@ -1533,22 +1617,22 @@ namespace Raven.Server.ServerWide
 
         private BlittableJsonReaderObject UpdateDatabaseRecordIfNeeded(bool databaseExists, bool shouldSetClientConfigEtag, long index, AddDatabaseCommand addDatabaseCommand, BlittableJsonReaderObject newDatabaseRecord, ClusterOperationContext context)
         {
+            var hasChanges = false;
+
             if (shouldSetClientConfigEtag)
             {
+                addDatabaseCommand.Record.Client ??= new ClientConfiguration();
                 addDatabaseCommand.Record.Client.Etag = index;
-                return DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(addDatabaseCommand.Record, context);
+                hasChanges = true;
             }
 
-            if (databaseExists && addDatabaseCommand.IsRestore == false)
+            if (databaseExists == false || addDatabaseCommand.IsRestore)
             {
                 // the backup tasks cannot be changed by modifying the database record
                 // (only by using the dedicated UpdatePeriodicBackup command)
-                return newDatabaseRecord;
+                UpdatePeriodicBackups();
+                UpdateExternalReplications();
             }
-
-            var hasChanges = false;
-            UpdatePeriodicBackups();
-            UpdateExternalReplications();
 
             return hasChanges
                 ? DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(addDatabaseCommand.Record, context)
@@ -1631,8 +1715,12 @@ namespace Raven.Server.ServerWide
         private static bool ShouldSetClientConfigEtag(BlittableJsonReaderObject newDatabaseRecord, BlittableJsonReaderObject oldDatabaseRecord)
         {
             const string clientPropName = nameof(DatabaseRecord.Client);
-            if (newDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject newDbClientConfig) == false || newDbClientConfig == null)
-                return false;
+            var hasNewConfiguration = newDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject newDbClientConfig) && newDbClientConfig != null;
+            if (oldDatabaseRecord == null)
+                return hasNewConfiguration;
+
+            if (hasNewConfiguration == false)
+                return true;
 
             return oldDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject oldDbClientConfig) == false
                    || oldDbClientConfig == null
@@ -1673,9 +1761,11 @@ namespace Raven.Server.ServerWide
             DeleteValueCommand delCmd = null;
             try
             {
-                delCmd = JsonDeserializationCluster.DeleteValueCommand(cmd);
+                delCmd = (DeleteValueCommand)CommandBase.CreateFrom(cmd);
                 if (delCmd.Name.StartsWith("db/"))
                     throw new RachisApplyException("Cannot delete " + delCmd.Name + " using DeleteValueCommand, only via dedicated database calls");
+
+                delCmd.DeleteValue(context);
 
                 DeleteItem(context, delCmd.Name);
             }
@@ -1740,6 +1830,9 @@ namespace Raven.Server.ServerWide
             {
                 certs.DeleteByKey(thumbprintSlice);
             }
+            
+            if (_clusterAuditLog.IsInfoEnabled)
+                _clusterAuditLog.Info($"Deleted certificate '{thumbprint}' from the cluster.");
         }
 
         private void DeleteMultipleValues(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
@@ -1870,7 +1963,7 @@ namespace Raven.Server.ServerWide
                 if (command.Name.StartsWith(Constants.Documents.Prefix))
                     throw new RachisApplyException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls");
 
-                command.UpdateValue(index);
+                command.UpdateValue(context, index);
 
                 using (Slice.From(context.Allocator, command.Name, out Slice valueName))
                 using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out Slice valueNameLowered))
@@ -1892,7 +1985,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void PutValueDirectly(ClusterOperationContext context, string key, BlittableJsonReaderObject value, long index)
+        internal static void PutValueDirectly(ClusterOperationContext context, string key, BlittableJsonReaderObject value, long index)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             using (Slice.From(context.Allocator, key, out Slice keySlice))
@@ -2220,13 +2313,17 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdateExternalReplicationCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
+                case nameof(AddOlapEtlCommand):
                 case nameof(UpdateRavenEtlCommand):
                 case nameof(UpdateSqlEtlCommand):
+                case nameof(UpdateOlapEtlCommand):
                 case nameof(DeleteOngoingTaskCommand):
                 case nameof(PutRavenConnectionStringCommand):
                 case nameof(PutSqlConnectionStringCommand):
+                case nameof(PutOlapConnectionStringCommand):
                 case nameof(RemoveRavenConnectionStringCommand):
                 case nameof(RemoveSqlConnectionStringCommand):
+                case nameof(RemoveOlapConnectionStringCommand):
                 case nameof(PutIndexCommand):
                 case nameof(PutAutoIndexCommand):
                 case nameof(DeleteIndexCommand):
@@ -2239,6 +2336,7 @@ namespace Raven.Server.ServerWide
                 case nameof(EditExpirationCommand):
                 case nameof(EditRefreshCommand):
                 case nameof(EditDatabaseClientConfigurationCommand):
+                case nameof(EditLockModeCommand):
                     databaseRecord.EtagForBackup = index;
                     break;
             }
@@ -3313,9 +3411,9 @@ namespace Raven.Server.ServerWide
             return size;
         }
 
-        private int ClusterReadResponseAndGetVersion(JsonOperationContext ctx, BlittableJsonTextWriter writer, Stream stream, string url)
+        private async ValueTask<int> ClusterReadResponseAndGetVersion(JsonOperationContext ctx, AsyncBlittableJsonTextWriter writer, Stream stream, string url)
         {
-            using (var response = ctx.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
+            using (var response = await ctx.ReadForMemoryAsync(stream, "cluster-ConnectToPeer-header-response"))
             {
                 var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
                 switch (reply.Status)
@@ -3368,12 +3466,12 @@ namespace Raven.Server.ServerWide
                 (tcpClient, choosenUrl) = await TcpUtils.ConnectAsyncWithPriority(info, _parent.TcpConnectionTimeout).ConfigureAwait(false);
                 stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.CipherSuitesPolicy, _parent.TcpConnectionTimeout);
 
-                var parameters = new TcpNegotiateParameters
+                var parameters = new AsyncTcpNegotiateParameters
                 {
                     Database = null,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Cluster,
                     Version = TcpConnectionHeaderMessage.ClusterTcpVersion,
-                    ReadResponseAndGetVersionCallback = ClusterReadResponseAndGetVersion,
+                    ReadResponseAndGetVersionCallbackAsync = ClusterReadResponseAndGetVersion,
                     DestinationUrl = choosenUrl,
                     DestinationNodeTag = tag,
                     SourceNodeTag = _parent.Tag
@@ -3382,7 +3480,7 @@ namespace Raven.Server.ServerWide
                 TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, stream, parameters);
+                    supportedFeatures = await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters);
 
                     if (supportedFeatures.ProtocolVersion <= 0)
                     {
@@ -3412,7 +3510,8 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception)
             {
-                stream?.Dispose();
+                if (stream != null)
+                    await stream.DisposeAsync();
                 tcpClient?.Dispose();
                 throw;
             }
@@ -3524,7 +3623,7 @@ namespace Raven.Server.ServerWide
 
             const string dbKey = "db/";
             var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
-            (long? TaskId, string name) old = default;
+            long? oldTaskId = null;
 
             var allServerWideBackupNames = GetSeverWideBackupNames(context);
 
@@ -3556,7 +3655,10 @@ namespace Raven.Server.ServerWide
                             isBackupToEditFound = true;
 
                             if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
+                            {
                                 periodicBackupConfiguration.TaskId = taskId;
+                                oldTaskId = taskId;
+                            }
                         }
                     }
 
@@ -3578,7 +3680,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            ApplyDatabaseRecordUpdates(toUpdate, type, old.TaskId ?? serverWideBackupConfiguration.TaskId, serverWideBackupConfiguration.TaskId, items, context);
+            ApplyDatabaseRecordUpdates(toUpdate, type, oldTaskId ?? serverWideBackupConfiguration.TaskId, serverWideBackupConfiguration.TaskId, items, context);
         }
 
         private static bool IsServerWideBackupToEdit(BlittableJsonReaderObject databaseTask, string serverWideTaskName, HashSet<string> allServerWideTasksNames)

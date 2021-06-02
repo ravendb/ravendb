@@ -7,7 +7,7 @@ import fileDownloader = require("common/fileDownloader");
 import messagePublisher = require("common/messagePublisher");
 import liveIOStatsWebSocketClient = require("common/liveIOStatsWebSocketClient");
 import fileImporter = require("common/fileImporter");
-import viewHelpers = require("../../../common/helpers/view/viewHelpers");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 type rTreeLeaf = {
     minX: number;
@@ -209,7 +209,6 @@ class ioStatsGraph {
     private static readonly trackHeight = 18;
     private static readonly trackMargin = 4;
     private static readonly closedTrackPadding = 2;
-    private static readonly openedTrackPadding = 4;
     private static readonly closedTrackHeight = ioStatsGraph.closedTrackPadding + ioStatsGraph.trackHeight + ioStatsGraph.closedTrackPadding;
     private static readonly openedTrackHeight = ioStatsGraph.closedTrackHeight * 4;
     static readonly brushSectionHeight = ioStatsGraph.openedTrackHeight;
@@ -247,7 +246,7 @@ class ioStatsGraph {
     private isIndexesExpanded = ko.observable<boolean>(false);
     private filteredIndexesTracksNames = ko.observableArray<string>();
     private allIndexesAreFiltered = ko.observable<boolean>(false);
-    private indexesVisible: KnockoutComputed<boolean>;
+    indexesVisible: KnockoutComputed<boolean>;
 
     private legends = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, KnockoutObservable<legend>>();
     private itemSizePositions = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, KnockoutObservable<string>>();
@@ -255,7 +254,7 @@ class ioStatsGraph {
 
     /* private */
 
-    private liveViewClientProvider: (onData: (data: Raven.Server.Utils.IoMetrics.IOMetricsResponse) => void,
+    private readonly liveViewClientProvider: (onData: (data: Raven.Server.Utils.IoMetrics.IOMetricsResponse) => void,
                                       dateCutOff?: Date) => liveIOStatsWebSocketClient;
     private liveViewClient = ko.observable<liveIOStatsWebSocketClient>();
     private data: Raven.Server.Utils.IoMetrics.IOMetricsResponse;
@@ -263,7 +262,6 @@ class ioStatsGraph {
     private bufferUsage = ko.observable<string>("0.0");
     private dateCutoff: Date; // used to avoid showing server side cached items, after 'clear' is clicked. 
     private closedIndexesItemsCache: Array<IOMetricsRecentStatsWithCache>; 
-    private commonPathsPrefix: string;
     private totalWidth: number;
     private totalHeight: number;
     private currentYOffset = 0;
@@ -396,27 +394,21 @@ class ioStatsGraph {
     private initViewData() {
         this.hasIndexes(false);
 
-        // 1. Find common paths prefix
-        this.commonPathsPrefix = this.findPrefix(this.data.Environments.map(env => env.Path));
-
         const legendsCache = new Map<string, number>();
 
-        // 1.1 Init max size (for legend scale)
+        // Init max size (for legend scale)
         this.legends.forEach(x => legendsCache.set(x().type, 0));
 
-        // 2. Loop on info from EndPoint
         this.data.Environments.forEach(env => {
 
-            // 2.1 Check if indexes exist
-            if (env.Path.substring(this.commonPathsPrefix.length).startsWith(ioStatsGraph.indexesString)) {
+            if (env.Type === "Index") {
                 this.hasIndexes(true);
             }
 
-            // 2.2 Retrieve data for legend
             env.Files.forEach(file => {
                 file.Recent.forEach(recentItem => {
 
-                    // 2.3 Calc highest batch size for each type
+                    // Calc highest batch size for each type
                     const itemValue = ioStatsGraph.extractItemValue(recentItem);
                     const currentLegendMax = legendsCache.get(recentItem.Type);
                     legendsCache.set(recentItem.Type, itemValue > currentLegendMax ? itemValue : currentLegendMax);
@@ -444,7 +436,7 @@ class ioStatsGraph {
             .attr("height", this.totalHeight);
 
         this.xBrushNumericScale = d3.scale.linear<number>()
-            .range([0, this.totalWidth - 1]) // substract 1px to avoid issue with missing right stroke
+            .range([0, this.totalWidth - 1]) // subtract 1px to avoid issue with missing right stroke
             .domain([0, this.totalWidth]);
 
         this.xNumericScale = d3.scale.linear<number>()
@@ -523,12 +515,8 @@ class ioStatsGraph {
         const criteria = this.searchText().toLowerCase();
         this.allIndexesAreFiltered(false);
 
-        const indexesTracks = this.data ? this.data.Environments.filter((x) => {
-            const temp = x.Path.substring(this.commonPathsPrefix.length);
-            return temp.startsWith(ioStatsGraph.indexesString);
-        }) : [];
-
-        const indexesTracksNames = indexesTracks.map(x => x.Path.substring(this.commonPathsPrefix.length + 1 + ioStatsGraph.indexesString.length));
+        const indexesTracks = this.data ? this.data.Environments.filter(x => x.Type === "Index") : [];
+        const indexesTracksNames = indexesTracks.map(x => ioStatsGraph.findTrackName(x));
 
         // filteredIndexesTracksNames will be indexes tracks names that are NOT SUPPOSED TO BE SEEN ....
         this.filteredIndexesTracksNames(indexesTracksNames.filter(x => !(x.toLowerCase().includes(criteria))));
@@ -547,6 +535,7 @@ class ioStatsGraph {
 
             if (!firstTime) {
                 const timeToRemap = this.brush.empty() ? this.xBrushNumericScale.domain() as [number, number] : this.brush.extent() as [number, number];
+                // noinspection JSSuspiciousNameCombination
                 timeRange = timeToRemap.map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
             }
 
@@ -804,7 +793,7 @@ class ioStatsGraph {
                                     firstIndex = false;
                                 }
                                 // Push the index path - only if not filtered out..
-                                if (!this.filtered(env.Path)) {
+                                if (!this.filtered(env)) {
                                     domain.push(env.Path);
                                     range.push(currentOffset);
                                     currentOffset += ioStatsGraph.openedTrackHeight + ioStatsGraph.trackMargin;
@@ -852,11 +841,21 @@ class ioStatsGraph {
         const result = new Set<string>();
 
         this.data.Environments.forEach(track => {
-            const trackName = track.Path.substring(this.commonPathsPrefix.length);
-            result.add(trackName);
+            result.add(ioStatsGraph.findTrackName(track));
         });
         
         return Array.from(result);
+    }
+    
+    private static findTrackName(env: Raven.Server.Utils.IoMetrics.IOMetricsEnvironment): string {
+        if (env.Type === "Index") {
+            // an idea here it to take last part after '\' or '/'
+            // even when index has '/' in name disk path is converted to '_'
+            // '\' in index name of forbidden
+            
+            return env.Path.split(/([\\/])/g).pop();
+        }
+        return env.Type;
     }
 
     private getTicks(scale: d3.time.Scale<number, number>): Date[] {
@@ -939,6 +938,7 @@ class ioStatsGraph {
         this.fixCurrentOffset();
         this.constructYScale();
 
+        // noinspection JSSuspiciousNameCombination
         const visibleTimeFrame = this.xNumericScale.domain().map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
 
         const xScale = this.gapFinder.trimmedScale(visibleTimeFrame, this.totalWidth, 0);
@@ -956,7 +956,7 @@ class ioStatsGraph {
             context.clip();
 
             // Draw tracks background 
-            this.drawTracksBackground(context, xScale);
+            this.drawTracksBackground(context);
 
             // Draw gaps   
             this.drawGaps(context, xScale);
@@ -985,11 +985,10 @@ class ioStatsGraph {
 
             for (let envIdx = 0; envIdx < this.data.Environments.length; envIdx++) {
                 const env = this.data.Environments[envIdx];
-                if (this.filtered(env.Path)) {
+                if (this.filtered(env)) {
                     continue;
                 }
-                const trackName = env.Path.substring(this.commonPathsPrefix.length);
-                const isIndexTrack = trackName.startsWith(ioStatsGraph.indexesString);
+                const isIndexTrack = env.Type === "Index";
                 if (isIndexTrack) {
                     hasAtLeastOneIndexTrack = true;
                 }
@@ -1029,7 +1028,7 @@ class ioStatsGraph {
             return;
         }
 
-        const trackName = env.Path.substring(this.commonPathsPrefix.length) || env.Type;
+        const trackName = ioStatsGraph.findTrackName(env);
 
         // Draw track name
         this.drawTrackName(context, trackName, yStart);
@@ -1179,11 +1178,10 @@ class ioStatsGraph {
 
         for (let envIdx = 0; envIdx < this.data.Environments.length; envIdx++) {
             const env = this.data.Environments[envIdx];
-            if (this.filtered(env.Path)) {
+            if (this.filtered(env)) {
                 continue;
             }
-            const trackName = env.Path.substring(this.commonPathsPrefix.length);
-            const isIndexTrack = trackName.startsWith(ioStatsGraph.indexesString);
+            const isIndexTrack = env.Type === "Index";
             if (isIndexTrack) {
                 for (let fileIdx = 0; fileIdx < env.Files.length; fileIdx++) {
                     const file = env.Files[fileIdx];
@@ -1198,11 +1196,11 @@ class ioStatsGraph {
         this.closedIndexesItemsCache = closedIndexesItemsCache;
     }
 
-    private filtered(envPath: string): boolean {
-        return _.includes(this.filteredIndexesTracksNames(), envPath.substring(this.commonPathsPrefix.length + 1 + ioStatsGraph.indexesString.length));
+    private filtered(env: Raven.Server.Utils.IoMetrics.IOMetricsEnvironment): boolean {
+        return _.includes(this.filteredIndexesTracksNames(), ioStatsGraph.findTrackName(env));
     }
 
-    private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
+    private drawTracksBackground(context: CanvasRenderingContext2D) {
         context.save();
 
         context.beginPath();
@@ -1211,7 +1209,7 @@ class ioStatsGraph {
 
         context.fillStyle = this.colors.trackBackground;
         this.data.Environments.forEach(env => {
-            if (!this.filtered(env.Path)) {
+            if (!this.filtered(env)) {
                 context.fillRect(0, this.yScale(env.Path), this.totalWidth, ioStatsGraph.openedTrackHeight);
             }
         });
@@ -1337,24 +1335,30 @@ class ioStatsGraph {
 
         try {
             const importedData: Raven.Server.Utils.IoMetrics.IOMetricsResponse = JSON.parse(result);
-
+            
+            const hasEnvironments = importedData.hasOwnProperty('Environments');
+            
             // Check if data is an IOStats json data..
-            if (!importedData.hasOwnProperty('Environments')) {
+            if (!hasEnvironments) {
                 messagePublisher.reportError("Invalid IO Stats file format", undefined, undefined);
             } else {
-                if (this.hasAnyData()) {
-                    this.resetGraphData();
+                const importedEnvTypes = Array.from(new Set<string>(importedData.Environments.map(x => x.Type)));
+                if (importedEnvTypes.some(x => !_.includes(this.tracksOrder, x))) {
+                    messagePublisher.reportError("Invalid IO Stats file format", undefined, undefined);
+                } else {
+                    if (this.hasAnyData()) {
+                        this.resetGraphData();
+                    }
+                    this.data = importedData;
+                    this.fillCache();
+                    this.prepareTimeData();
+                    this.initViewData();
+                    this.setLegendScales();
+                    this.updateClosedIndexesInfo();
+                    this.draw(true);
+                    this.isImport(true);
                 }
-                this.data = importedData;
-                this.fillCache();
-                this.prepareTimeData();
-                this.initViewData();
-                this.setLegendScales();
-                this.updateClosedIndexesInfo();
-                this.draw(true);
-                this.isImport(true);
             }
-
         } catch (e) {
             messagePublisher.reportError("Failed to parse json data", undefined, undefined);
         }
@@ -1391,12 +1395,10 @@ class ioStatsGraph {
     }
 
     private setCutOffDate() {
-        const maxDate = d3.max(this.data.Environments,
+        this.dateCutoff = d3.max(this.data.Environments,
             env => d3.max(env.Files,
                 file => d3.max(file.Recent,
                     (r: IOMetricsRecentStatsWithCache) => r.StartedAsDate)));
-
-        this.dateCutoff = maxDate;
     }
 
     closeImport() {
@@ -1445,25 +1447,7 @@ class ioStatsGraph {
             return value;
         });
     }
-
-    private findPrefix(strings: Array<string>) {
-        if (!strings.length) {
-            return "";
-        }
-
-        const sorted = strings.slice(0).sort();
-        const string1 = sorted[0];
-        const string2 = sorted[sorted.length - 1];
-        let i = 0;
-        const l = Math.min(string1.length, string2.length);
-
-        while (i < l && string1[i] === string2[i]) {
-            i++;
-        }
-
-        return string1.slice(0, i);
-    }
-
+    
     private calcItemColor(type: Sparrow.Server.Meters.IoMetrics.MeterType, recentItem?: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats): string {
         if (recentItem) {
             return this.legends.get(type)().colorScale(ioStatsGraph.extractItemValue(recentItem));
@@ -1490,7 +1474,7 @@ class ioStatsGraph {
         return result;
     }
 
-    private computedItemValue(legendWrapped: KnockoutObservable<legend>): KnockoutComputed<string> {
+    computedItemValue(legendWrapped: KnockoutObservable<legend>): KnockoutComputed<string> {
         return ko.pureComputed(() => {
             const legend = legendWrapped();
             if (legend.type === "Compression") {
@@ -1509,8 +1493,8 @@ class ioStatsGraph {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== element) {
-            const tooltipHtml = "Gap start time: " + (element).start.toLocaleTimeString() +
-                "<br/>Gap duration: " + generalUtils.formatMillis((element).durationInMillis);
+            const tooltipHtml = '<div class="tooltip-li">Gap start time: <span class="value">' + (element).start.toLocaleTimeString() + '</span></div>'
+                + '<div class="tooltip-li">Gap duration:  <span class="value">' + generalUtils.formatMillis((element).durationInMillis) + '</span></div>';
             this.handleTooltip(element, x, y, tooltipHtml);
         }
     }
@@ -1542,29 +1526,29 @@ class ioStatsGraph {
         if (currentDatum !== element) {
             const typeString = ioStatsGraph.getMeterTypeFriendlyName(element.Type);
 
-            let tooltipHtml = `*** ${typeString} ***<br/>`;
+            let tooltipHtml = `<div class="tooltip-header"> ${typeString} </div>`;
             const duration = (element.Duration === 0) ? "0" : generalUtils.formatMillis((element).Duration);
-            tooltipHtml += `Duration: ${duration}<br/>`;
+            tooltipHtml += `<div class="tooltip-li">Duration: <span class="value">${duration}</span></div>`;
 
             if (element.Type !== "Compression") {
-                tooltipHtml += `Size: ${generalUtils.formatBytesToSize(element.Size)}<br/>`;
-                tooltipHtml += `Size (bytes): ${element.Size.toLocaleString()}<br/>`;
-                tooltipHtml += `Allocated Size: ${generalUtils.formatBytesToSize(element.FileSize)}<br/>`;
-                tooltipHtml += `Allocated Size (bytes): ${element.FileSize.toLocaleString()}<br/>`;
+                tooltipHtml += `<div class="tooltip-li">Size: <span class="value">${generalUtils.formatBytesToSize(element.Size)}</span></div>`;
+                tooltipHtml += `<div class="tooltip-li">Size (bytes): <span class="value">${element.Size.toLocaleString()}</span></div>`;
+                tooltipHtml += `<div class="tooltip-li">Allocated Size: <span class="value">${generalUtils.formatBytesToSize(element.FileSize)}</span></div>`;
+                tooltipHtml += `<div class="tooltip-li">Allocated Size (bytes): <span class="value">${element.FileSize.toLocaleString()}</span></div>`;
 
                 const speed = element.Duration ? generalUtils.formatBytesToSize(element.Size / element.Duration * 1000) + " / s" : "unknown";
-                tooltipHtml += `Speed: ${speed}<br />`;
+                tooltipHtml += `<div class="tooltip-li">Speed: <span class="value">${speed}</span></div>`;
 
             } else {
                 const compressionElement = element as Raven.Server.Utils.IoMetrics.IOMetricsRecentStatsAdditionalTypes;
-                tooltipHtml += `Original Size: ${generalUtils.formatBytesToSize(compressionElement.OriginalSize)}<br/>`;
-                tooltipHtml += `Original Size (bytes): ${compressionElement.OriginalSize.toLocaleString()}<br/>`;
-                tooltipHtml += `Compressed Size: ${generalUtils.formatBytesToSize(compressionElement.CompressedSize)}<br/>`;
-                tooltipHtml += `Compressed Size (bytes): ${compressionElement.CompressedSize.toLocaleString()}<br/>`;
-                tooltipHtml += `Compression Ratio: ${(compressionElement.CompressionRatio * 100).toFixed(2)}%<br/>`;
+                tooltipHtml += `<div class="tooltip-li">Original Size: <span class="value">${generalUtils.formatBytesToSize(compressionElement.OriginalSize)}</span></div>`;
+                tooltipHtml += `<div class="tooltip-li">Original Size (bytes): <span class="value">${compressionElement.OriginalSize.toLocaleString()}</span></div>`;
+                tooltipHtml += `<div class="tooltip-li">Compressed Size: <span class="value">${generalUtils.formatBytesToSize(compressionElement.CompressedSize)}</span></div>`;
+                tooltipHtml += `<div class="tooltip-li">Compressed Size (bytes): <span class="value">${compressionElement.CompressedSize.toLocaleString()}</span></div>`;
+                tooltipHtml += `<div class="tooltip-li">Compression Ratio: <span class="value">${(compressionElement.CompressionRatio * 100).toFixed(2)}%</span></div>`;
 
                 const compressionSpeed = element.Duration ? generalUtils.formatBytesToSize(compressionElement.OriginalSize / element.Duration * 1000) + " / s" : "unknown";
-                tooltipHtml += `Compression speed: ${compressionSpeed}`;
+                tooltipHtml += `<div class="tooltip-li">Compression speed: <span class="value">${compressionSpeed}</span></div>`;
             }
 
             this.handleTooltip(element, x, y, tooltipHtml);
@@ -1573,15 +1557,14 @@ class ioStatsGraph {
 
     private handleTooltip(element: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats | timeGapInfo, x: number, y: number, tooltipHtml: string) {
         if (element) {
-            const canvas = this.canvas.node() as HTMLCanvasElement;
-            const context = canvas.getContext("2d");
-            context.font = this.tooltip.style("font");
-
-            const longestLine = generalUtils.findLongestLine(tooltipHtml);
-            const tooltipWidth = context.measureText(longestLine).width + 60;
-
-            const numberOfLines = generalUtils.findNumberOfLines(tooltipHtml);
-            const tooltipHeight = numberOfLines * 30 + 60;
+            this.tooltip
+                .style("display", undefined)
+                .html(tooltipHtml)
+                .datum(element);
+            
+            const $tooltip = $(this.tooltip.node());
+            const tooltipWidth = $tooltip.width();
+            const tooltipHeight = $tooltip.height();
 
             x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
             y = Math.min(y, Math.max(this.totalHeight - tooltipHeight, 0));
@@ -1589,17 +1572,11 @@ class ioStatsGraph {
             this.tooltip
                 .style("left", (x + 10) + "px")
                 .style("top", (y + 10) + "px")
-                .style("display", undefined);
-
+            
             this.tooltip
                 .transition()
                 .duration(250)
                 .style("opacity", 1);
-
-            this.tooltip
-                .html(tooltipHtml)
-                .datum(element);
-
         } else {
             this.hideTooltip();
         }
@@ -1609,7 +1586,8 @@ class ioStatsGraph {
         this.tooltip
             .transition()
             .duration(250)
-            .style("opacity", 0);
+            .style("opacity", 0)
+            .each("end", () => this.tooltip.style("display", "none"));
 
         this.tooltip.datum(null);
 

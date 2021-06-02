@@ -15,6 +15,8 @@ namespace Raven.Client.Documents.Session
             var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
+            streamOperation.EnsureIsAcceptable(query.IndexName, command.Result);
+
             var result = streamOperation.SetResultForTimeSeries(command.Result);
 
             return YieldTimeSeriesResults(query, result);
@@ -27,6 +29,8 @@ namespace Raven.Client.Documents.Session
             var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
+            streamOperation.EnsureIsAcceptable(query.IndexName, command.Result);
+
             var result = streamOperation.SetResultForTimeSeries(command.Result);
             streamQueryStats = stats;
 

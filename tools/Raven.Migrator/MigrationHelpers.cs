@@ -34,7 +34,8 @@ namespace Raven.Migrator
         private const string AttachmentInfoSize = "Size";
 
         private static readonly Lazy<JsonSerializer> JsonSerializer = new Lazy<JsonSerializer>(() => new JsonSerializer());
-        private static readonly Lazy<IBlake2B> Blake2BFactory = new Lazy<IBlake2B>(() => 
+
+        private static readonly Lazy<IBlake2B> Blake2BFactory = new Lazy<IBlake2B>(() =>
             System.Data.HashFunction.Blake2.Blake2BFactory.Instance.Create(new Blake2BConfig
             {
                 HashSizeInBits = 256
@@ -81,7 +82,7 @@ namespace Raven.Migrator
             }
 
             using (GetStream(configuration, stream, out var outStream))
-            using (var streamWriter = new StreamWriter(outStream))
+            await using (var streamWriter = new StreamWriter(outStream))
             using (var jsonTextWriter = new JsonTextWriter(streamWriter))
             {
                 if (configuration.ConsoleExport == false)
@@ -129,7 +130,6 @@ namespace Raven.Migrator
                 using (stream)
                 using (gzipStream)
                 {
-                    
                 }
             });
         }
@@ -167,8 +167,8 @@ namespace Raven.Migrator
             JsonSerializer.Value.Serialize(jsonTextWriter, document);
         }
 
-        public static async Task<Dictionary<string, object>> WriteAttachment( 
-            Stream attachmentStream, long totalSize, string attachmentId, 
+        public static async Task<Dictionary<string, object>> WriteAttachment(
+            Stream attachmentStream, long totalSize, string attachmentId,
             string collectionName, string contentType, long attachmentNumber,
             JsonTextWriter jsonTextWriter, StreamWriter streamWriter)
         {

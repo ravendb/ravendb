@@ -46,6 +46,8 @@ namespace Raven.Client.Documents.Session
         event EventHandler<BeforeConversionToEntityEventArgs> OnBeforeConversionToEntity;
         event EventHandler<AfterConversionToEntityEventArgs> OnAfterConversionToEntity;
 
+        event EventHandler<SessionDisposingEventArgs> OnSessionDisposing;
+
         /// <summary>
         ///     Gets a value indicating whether any of the entities tracked by the session has changes.
         /// </summary>

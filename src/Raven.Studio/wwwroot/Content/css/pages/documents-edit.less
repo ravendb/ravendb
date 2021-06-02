@@ -22,6 +22,7 @@
 
     .editors-container {
         z-index: 0;
+
         .left-editor {
             left: 0;
             top: 0;
@@ -204,10 +205,15 @@
             }
         }
 
+
+        .btn i {
+            display: block;
+        }
+
         &.btn-group-justified {
-            
+
             .badge {
-                
+
                 &.kilo {
                     &::after {
                         content: 'K';
@@ -223,9 +229,10 @@
                         font-size: 11px;
                     }
                 }
-                
-                top: 0;
-                transform: translateX(-40%);
+
+                top: @gutter-xxs;
+                left: auto;
+                right: @gutter-xxs;
             }
         }
     }

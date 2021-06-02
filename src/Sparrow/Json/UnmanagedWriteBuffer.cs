@@ -49,9 +49,9 @@ namespace Sparrow.Json
             if (count == 0)
                 return;
 
-            if (_buffer.Length - Used > count)
+            if (_buffer.Size - Used > count)
             {
-                Memory.Copy(_buffer.Pointer + Used, buffer, (uint)count);
+                Memory.Copy(_buffer.Address + Used, buffer, (uint)count);
                 _sizeInBytes += count;
                 Used += count;
             }
@@ -68,15 +68,15 @@ namespace Sparrow.Json
             var lengthLeft = count;
             do
             {
-                if (Used == _buffer.Length)
+                if (Used == _buffer.Size)
                 {
-                    _stream.Write(_buffer.Memory.Span.Slice(0, Used));
+                    _stream.Write(_buffer.Memory.Memory.Span.Slice(0, Used));
                     Used = 0;
                 }
 
-                var bytesToWrite = Math.Min(lengthLeft, _buffer.Length - Used);
+                var bytesToWrite = Math.Min(lengthLeft, _buffer.Size - Used);
 
-                Memory.Copy(_buffer.Pointer + Used, buffer, (uint)bytesToWrite);
+                Memory.Copy(_buffer.Address + Used, buffer, (uint)bytesToWrite);
 
                 _sizeInBytes += bytesToWrite;
                 lengthLeft -= bytesToWrite;
@@ -91,13 +91,13 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteByte(byte data)
         {
-            if (Used == _buffer.Length)
+            if (Used == _buffer.Size)
             {
-                _stream.Write(_buffer.Memory.Span.Slice(0, Used));
+                _stream.Write(_buffer.Memory.Memory.Span.Slice(0, Used));
                 Used = 0;
             }
             _sizeInBytes++;
-            *(_buffer.Pointer + Used) = data;
+            *(_buffer.Address + Used) = data;
             Used++;
         }
 
@@ -116,9 +116,9 @@ namespace Sparrow.Json
             using (_returnBuffer)
             {
                 if (Used != 0)
-                    _stream.Write(_buffer.Memory.Span.Slice(0, Used));
+                    _stream.Write(_buffer.Memory.Memory.Span.Slice(0, Used));
                 Used = 0;
-            }            
+            }
         }
 
         public void EnsureSingleChunk(JsonParserState state)
@@ -128,7 +128,7 @@ namespace Sparrow.Json
         public void EnsureSingleChunk(out byte* ptr, out int size)
         {
             throw new NotSupportedException();
-        }        
+        }
     }
 
     public unsafe struct UnmanagedWriteBuffer : IUnmanagedWriteBuffer
@@ -314,9 +314,13 @@ namespace Sparrow.Json
         {
             Debug.Assert(required > 0);
 
+            if (required > ArenaMemoryAllocator.MaxArenaSize)
+                ThrowOnAllocationSizeExceeded(required, ArenaMemoryAllocator.MaxArenaSize);
+
             // Grow by doubling segment size until we get to 1 MB, then just use 1 MB segments
             // otherwise a document with 17 MB will waste 15 MB and require very big allocations
-            var segmentSize = Math.Max(Bits.PowerOf2(required), _head.Allocation.SizeInBytes * 2);
+            var requiredPowerOfTwo = Bits.PowerOf2(required);
+            var segmentSize = Math.Max(requiredPowerOfTwo, _head.Allocation.SizeInBytes * 2);
             const int oneMb = 1024 * 1024;
             if (segmentSize > oneMb && required <= oneMb)
                 segmentSize = oneMb;
@@ -348,10 +352,15 @@ namespace Sparrow.Json
             _head.AccumulatedSizeInBytes = previousHead.AccumulatedSizeInBytes;
         }
 
+        private static void ThrowOnAllocationSizeExceeded(int required, int maxSizeInBytes)
+        {
+            throw new InvalidOperationException($"Tried to allocate {new Size(required, SizeUnit.Bytes)}, which exceeds maximum allocation size of {new Size(maxSizeInBytes, SizeUnit.Bytes)}");
+        }
+
         private static void ThrowOnAllocationSizeMismatch(int allocationSizeInBytes, int required)
         {
             throw new InvalidOperationException($"Allocated {new Size(allocationSizeInBytes, SizeUnit.Bytes)}" +
-                                                $"but we requested at least {new Size(required, SizeUnit.Bytes)}");
+                                                $" but we requested at least {new Size(required, SizeUnit.Bytes)}");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -368,7 +377,7 @@ namespace Sparrow.Json
             head.Used++;
             return;
 
-Grow:
+        Grow:
             WriteByteUnlikely(data);
         }
 
@@ -470,7 +479,9 @@ Grow:
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EnsureSingleChunk(JsonParserState state)
         {
-            EnsureSingleChunk(out state.StringBuffer, out state.StringSize);
+            EnsureSingleChunk(out var buffer, out var size);
+            state.StringBuffer = buffer;
+            state.StringSize = size;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -486,7 +497,7 @@ Grow:
                 size = SizeInBytes;
                 return;
             }
-            
+
             UnlikelyEnsureSingleChunk(out ptr, out size);
         }
 
@@ -509,7 +520,7 @@ Grow:
             }
 
             var totalSize = SizeInBytes;
-            
+
             // We might need to allocate, but we don't want to allocate the usual power of 2 * 3 
             // because we know _exactly_ what we need
             using (_context.AvoidOverAllocation())
@@ -537,6 +548,6 @@ Grow:
 
             ptr = _head.Address;
             size = _head.Used;
-        }  
+        }
     }
 }

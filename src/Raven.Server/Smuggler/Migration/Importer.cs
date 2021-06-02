@@ -158,8 +158,8 @@ namespace Raven.Server.Smuggler.Migration
                                                     $"error: {responseString}");
             }
 
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
-            using (var stream = new GZipStream(responseStream, mode: CompressionMode.Decompress))
+            await using (var responseStream = await response.Content.ReadAsStreamAsync())
+            await using (var stream = new GZipStream(responseStream, mode: CompressionMode.Decompress))
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(stream, context, Parameters.Database))
             {
@@ -172,7 +172,7 @@ namespace Raven.Server.Smuggler.Migration
                 };
                 var smuggler = new Documents.DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
-                smuggler.Execute();
+                await smuggler.ExecuteAsync();
             }
         }
 
@@ -190,7 +190,7 @@ namespace Raven.Server.Smuggler.Migration
             }
 
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
+            await using (var responseStream = await response.Content.ReadAsStreamAsync())
             {
                 var operationIdResponse = await context.ReadForMemoryAsync(responseStream, "operation-id");
                 if (operationIdResponse.TryGet("Id", out long id) == false)
@@ -230,7 +230,7 @@ namespace Raven.Server.Smuggler.Migration
             }
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
+            await using (var responseStream = await response.Content.ReadAsStreamAsync())
             {
                 var databaseList = await context.ReadForMemoryAsync(responseStream, "databases-list");
 

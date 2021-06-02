@@ -15,7 +15,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    internal class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords>
+    internal class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
     {
         private static readonly JsValue DefaultVarCharSize = 50;
         
@@ -172,9 +172,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             throw new InvalidOperationException($"Table '{tableName}' was not defined in the configuration of SQL ETL task");
         }
 
-        public override List<SqlTableWithRecords> GetTransformedResults()
+        public override IEnumerable<SqlTableWithRecords> GetTransformedResults()
         {
-            return _tables.Values.ToList();
+            return _tables.Values;
         }
 
         public override void Transform(ToSqlItem item, EtlStatsScope stats, EtlProcessState state)

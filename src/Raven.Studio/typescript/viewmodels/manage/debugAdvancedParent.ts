@@ -17,7 +17,8 @@ class debugAdvanced {
                     title: 'Threads Runtime Info',
                     tabName: "Threads Runtime Info",
                     nav: true,
-                    hash: appUrl.forDebugAdvancedThreadsRuntime()
+                    hash: appUrl.forDebugAdvancedThreadsRuntime(),
+                    requiredAccess: "Operator"
                 },
                 {
                     route: 'admin/settings/debug/advanced/memoryMappedFiles',
@@ -25,7 +26,8 @@ class debugAdvanced {
                     title: 'Memory Mapped Files',
                     tabName: "Memory Mapped Files",
                     nav: true,
-                    hash: appUrl.forDebugAdvancedMemoryMappedFiles()
+                    hash: appUrl.forDebugAdvancedMemoryMappedFiles(),
+                    requiredAccess: "Operator"
                 },
                 {
                     route: 'admin/settings/debug/advanced/observerLog',
@@ -33,15 +35,17 @@ class debugAdvanced {
                     title: 'Cluster Observer Log',
                     tabName: "Cluster Observer Log",
                     nav: true,
-                    hash: appUrl.forDebugAdvancedObserverLog()
+                    hash: appUrl.forDebugAdvancedObserverLog(),
+                    requiredAccess: "Operator"
                 },
                 {
                     route: 'admin/settings/debug/advanced/recordTransactionCommands',
                     moduleId: 'viewmodels/manage/debugAdvancedRecordTransactionCommands',
                     title: 'Record Transaction Commands',
                     tabName: "Record Transaction Commands",
-                    nav: accessManager.default.manageServerMenu.enableRecordTransactionCommands(),
-                    hash: appUrl.forDebugAdvancedRecordTransactionCommands()
+                    nav: true,
+                    hash: appUrl.forDebugAdvancedRecordTransactionCommands(),
+                    requiredAccess: "Operator"
                 },
                 {
                     route: 'admin/settings/debug/advanced/replayTransactionCommands',
@@ -49,7 +53,8 @@ class debugAdvanced {
                     title: 'Replay Transaction Commands',
                     tabName: "Replay Transaction Commands",
                     nav: true,
-                    hash: appUrl.forDebugAdvancedReplayTransactionCommands()
+                    hash: appUrl.forDebugAdvancedReplayTransactionCommands(),
+                    requiredAccess: "Operator"
                 }
             ])
             .buildNavigationModel();

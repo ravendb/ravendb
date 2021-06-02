@@ -198,7 +198,7 @@ namespace StressTests.Issues
                 using (var store = new DocumentStore { Urls = new[] { server.WebUrl }, Conventions = { DisableTopologyUpdates = true }, Database = _databaseName }.Initialize())
                 {
                     var status = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(_taskId)).Status;
-                    reasons.Add(server.ServerStore.NodeTag, PeriodicBackupTestsSlow.PrintBackupStatus(status));
+                    reasons.Add(server.ServerStore.NodeTag, BackupTestBase.PrintBackupStatus(status));
 
                     if (status?.LastFullBackup != null)
                         count++;

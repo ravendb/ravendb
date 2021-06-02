@@ -31,111 +31,128 @@ class documentHelpers {
     }
 
     static unescapeNewlinesAndTabsInTextFields(str: string): string {
-        var AceDocumentClass = ace.require("ace/document").Document;
-        var AceEditSessionClass = ace.require("ace/edit_session").EditSession;
-        
-        var AceJSONMode = (ace.require("ace/mode/json") || 
+        const AceDocumentClass = ace.require("ace/document").Document;
+        const AceEditSessionClass = ace.require("ace/edit_session").EditSession;
+
+        const AceJSONMode = (ace.require("ace/mode/json") || 
                            ace.require("ace/mode/raven_document") ||
                            ace.require("ace/mode/json_newline_friendly")).Mode;
-        
-        var documentTextAceDocument = new AceDocumentClass(str);
-        var jsonMode = new AceJSONMode();
-        var documentTextAceEditSession = new AceEditSessionClass(documentTextAceDocument, jsonMode);
-        var TokenIterator = ace.require("ace/token_iterator").TokenIterator;
-        var iterator = new TokenIterator(documentTextAceEditSession, 0, 0);
-        var curToken = iterator.getCurrentToken();
-        // first, calculate newline indexes
-        var rowsIndexes = str.split("").map((x, index) => ({ char: x, index: index })).filter(x => x.char === "\n" ).map(x => x.index);
 
-        // start iteration from the end of the document
-        while (curToken) {
-            curToken = iterator.stepForward();
-        }
-        curToken = iterator.stepBackward();
+        const documentTextAceDocument = new AceDocumentClass(str);
+        const jsonMode = new AceJSONMode();
+        const documentTextAceEditSession = new AceEditSessionClass(documentTextAceDocument, jsonMode);
+        try {
+            const TokenIterator = ace.require("ace/token_iterator").TokenIterator;
+            const iterator = new TokenIterator(documentTextAceEditSession, 0, 0);
+            let curToken = iterator.getCurrentToken();
+            // first, calculate newline indexes
+            const rowsIndexes = str.split("").map((x, index) => ({
+                char: x,
+                index: index
+            })).filter(x => x.char === "\n").map(x => x.index);
 
-        var lastTextSectionPosEnd: { row: number, column: number } = null;
+            // start iteration from the end of the document
+            while (curToken) {
+                curToken = iterator.stepForward();
+            }
+            curToken = iterator.stepBackward();
 
-        while (curToken) {
-            if (curToken.type === "string" || curToken.type == "constant.language.escape") {
-                if (lastTextSectionPosEnd == null) {
-                    curToken = iterator.stepForward();
-                    lastTextSectionPosEnd = { row: iterator.getCurrentTokenRow(), column: iterator.getCurrentTokenColumn() + 1 };
-                    curToken = iterator.stepBackward();
+            let lastTextSectionPosEnd: { row: number, column: number } = null;
+
+            while (curToken) {
+                if (curToken.type === "string" || curToken.type == "constant.language.escape") {
+                    if (lastTextSectionPosEnd == null) {
+                        curToken = iterator.stepForward();
+                        lastTextSectionPosEnd = {
+                            row: iterator.getCurrentTokenRow(),
+                            column: iterator.getCurrentTokenColumn() + 1
+                        };
+                        curToken = iterator.stepBackward();
+                    }
+                } else {
+                    if (lastTextSectionPosEnd != null) {
+                        curToken = iterator.stepForward();
+                        const lastTextSectionPosStart = {
+                            row: iterator.getCurrentTokenRow(),
+                            column: iterator.getCurrentTokenColumn() + 1
+                        };
+                        const stringTokenStartIndexInSourceText = (lastTextSectionPosStart.row > 0 ? rowsIndexes[lastTextSectionPosStart.row - 1] : 0) + lastTextSectionPosStart.column;
+                        const stringTokenEndIndexInSourceText = (lastTextSectionPosEnd.row > 0 ? rowsIndexes[lastTextSectionPosEnd.row - 1] : 0) + lastTextSectionPosEnd.column;
+                        const newTextPrefix: string = str.substring(0, stringTokenStartIndexInSourceText);
+                        const newTextSuffix: string = str.substring(stringTokenEndIndexInSourceText, str.length);
+                        const newStringTokenValue: string = str.substring(stringTokenStartIndexInSourceText, stringTokenEndIndexInSourceText)
+                            .replace(/(\\\\n|\\\\r\\\\n|\\n|\\r\\n|\\t|\\\\t)/g, (x) => {
+                                if (x == "\\\\n" || x === "\\\\r\\\\n") {
+                                    return "\\r\\n";
+                                } else if (x === "\\n" || x === "\\r\\n") {
+                                    return "\r\n";
+                                } else if (x === "\\t") {
+                                    return "\t";
+                                } else if (x === "\\\\t") {
+                                    return "\\t";
+                                } else {
+                                    return "\r\n";
+                                }
+                            });
+
+                        str = newTextPrefix + newStringTokenValue + newTextSuffix;
+                        curToken = iterator.stepBackward();
+                    }
+                    lastTextSectionPosEnd = null;
                 }
-            } else {
-                if (lastTextSectionPosEnd != null) {
-                    curToken = iterator.stepForward();
-                    var lastTextSectionPosStart = { row: iterator.getCurrentTokenRow(), column: iterator.getCurrentTokenColumn() + 1 };
-                    var stringTokenStartIndexInSourceText = (lastTextSectionPosStart.row > 0 ? rowsIndexes[lastTextSectionPosStart.row - 1] : 0) + lastTextSectionPosStart.column;
-                    var stringTokenEndIndexInSourceText = (lastTextSectionPosEnd.row > 0 ? rowsIndexes[lastTextSectionPosEnd.row - 1] : 0) + lastTextSectionPosEnd.column;
-                    var newTextPrefix: string = str.substring(0, stringTokenStartIndexInSourceText);
-                    var newTextSuffix: string = str.substring(stringTokenEndIndexInSourceText, str.length);
-                    var newStringTokenValue: string = str.substring(stringTokenStartIndexInSourceText, stringTokenEndIndexInSourceText)
-                        .replace(/(\\\\n|\\\\r\\\\n|\\n|\\r\\n|\\t|\\\\t)/g, (x) => {
-                            if (x == "\\\\n" || x === "\\\\r\\\\n") {
-                                return "\\r\\n";
-                            } else if (x === "\\n" || x === "\\r\\n") {
-                                return "\r\n";
-                            } else if (x === "\\t") {
-                                return "\t";
-                            } else if (x === "\\\\t") {
-                                return "\\t";
-                            } else {
-                                return "\r\n";
-                            }
-                        });
 
-                    str = newTextPrefix + newStringTokenValue + newTextSuffix;
-                    curToken = iterator.stepBackward();
-                }
-                lastTextSectionPosEnd = null;
+                curToken = iterator.stepBackward();
             }
 
-            curToken = iterator.stepBackward();
+            return str;
+        } finally {
+            documentTextAceEditSession.destroy();
         }
-
-        return str;
     }
 
     static escapeNewlinesAndTabsInTextFields(str: string): any {
-        var AceDocumentClass = ace.require("ace/document").Document;
-        var AceEditSessionClass = ace.require("ace/edit_session").EditSession;
-        var AceJSONMode = (ace.require("ace/mode/json_newline_friendly") || ace.require("ace/mode/raven_document_newline_friendly")).Mode;
-        var documentTextAceDocument = new AceDocumentClass(str);
-        var jsonMode = new AceJSONMode();
-        var documentTextAceEditSession = new AceEditSessionClass(documentTextAceDocument, jsonMode);
-        var previousLine = 0;
+        const AceDocumentClass = ace.require("ace/document").Document;
+        const AceEditSessionClass = ace.require("ace/edit_session").EditSession;
+        const AceJSONMode = (ace.require("ace/mode/json_newline_friendly") || ace.require("ace/mode/raven_document_newline_friendly")).Mode;
+        const documentTextAceDocument = new AceDocumentClass(str);
+        const jsonMode = new AceJSONMode();
+        const documentTextAceEditSession = new AceEditSessionClass(documentTextAceDocument, jsonMode);
+        try {
+            let previousLine = 0;
 
-        var TokenIterator = ace.require("ace/token_iterator").TokenIterator;
-        var iterator = new TokenIterator(documentTextAceEditSession, 0, 0);
-        var curToken = iterator.getCurrentToken();
-        var text = "";
-        while (curToken) {
-            if (iterator.$row - previousLine > 1) {
-                var rowsGap = iterator.$row - previousLine;
-                for (var i = 0; i < rowsGap - 1; i++) {
-                    text += "\\r\\n";
+            const tokenIterator = ace.require("ace/token_iterator").TokenIterator;
+            const iterator = new tokenIterator(documentTextAceEditSession, 0, 0);
+            let curToken = iterator.getCurrentToken();
+            let text = "";
+            while (curToken) {
+                if (iterator.$row - previousLine > 1) {
+                    const rowsGap = iterator.$row - previousLine;
+                    for (let i = 0; i < rowsGap - 1; i++) {
+                        text += "\\r\\n";
+                    }
                 }
-            }
-            if (curToken.type === "string" || curToken.type === "constant.language.escape") {
-                if (previousLine < iterator.$row) {
-                    text += "\\r\\n";
+                if (curToken.type === "string" || curToken.type === "constant.language.escape") {
+                    if (previousLine < iterator.$row) {
+                        text += "\\r\\n";
+                    }
+
+                    const newTokenValue = curToken.value
+                        .replace(/(\r\n)/g, '\\r\\n')
+                        .replace(/(\n)/g, '\\n')
+                        .replace(/(\t)/g, '\\t');
+                    text += newTokenValue;
+                } else {
+                    text += curToken.value;
                 }
 
-                var newTokenValue = curToken.value
-                    .replace(/(\r\n)/g, '\\r\\n')
-                    .replace(/(\n)/g, '\\n')
-                    .replace(/(\t)/g, '\\t');
-                text += newTokenValue;
-            } else {
-                text += curToken.value;
+                previousLine = iterator.$row;
+                curToken = iterator.stepForward();
             }
 
-            previousLine = iterator.$row;
-            curToken = iterator.stepForward();
+            return text;
+        } finally {
+            documentTextAceEditSession.destroy();
         }
-
-        return text;
     }
 
     static findSchema(documents: Array<document>): document {

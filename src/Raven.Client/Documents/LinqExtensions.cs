@@ -444,6 +444,40 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
+        /// Returns the number of elements in a sequence as int64 type.
+        /// </summary>
+        public static long LongCount<TSource>(this IQueryable<TSource> source)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException(nameof(provider));
+
+            var query = provider.ToDocumentQuery<TSource>(source.Expression);
+            return query.LongCount();
+        }
+
+        /// <summary>
+        /// Returns the number of elements in a sequence as int64 type.
+        /// </summary>
+        public static Task<long> LongCountAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException(nameof(provider));
+
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression);
+            return query.LongCountAsync(token);
+        }
+
+        /// <summary>
         /// Returns the number of elements in the specified sequence that satisfies a condition.
         /// </summary>
         /// 
