@@ -1322,7 +1322,11 @@ more responsive application.
 
             var asyncTasksCounter = Interlocked.Read(ref _asyncTasksCounter);
             if (asyncTasksCounter != 0)
+            {
+                _forTestingPurposes?.OnSessionDisposeAboutToThrowDueToRunningAsyncTask?.Invoke();
+
                 throw new InvalidOperationException($"Disposing session with active async task is forbidden, please make sure that all asynchronous session methods returning Task are awaited. Number of active async tasks: {asyncTasksCounter}");
+            }
 
             _isDisposed = true;
 
@@ -1937,6 +1941,28 @@ more responsive application.
                 collectionName = Conventions.GetCollectionName(type) ?? Constants.Documents.Collections.AllDocumentsCollection;
 
             return (indexName, collectionName);
+        }
+
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action OnSessionDisposeAboutToThrowDueToRunningAsyncTask;
+
+            internal IDisposable CallOnSessionDisposeAboutToThrowDueToRunningAsyncTask(Action action)
+            {
+                OnSessionDisposeAboutToThrowDueToRunningAsyncTask = action;
+
+                return new DisposableAction(() => OnSessionDisposeAboutToThrowDueToRunningAsyncTask = null);
+            }
         }
     }
 
