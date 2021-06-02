@@ -427,7 +427,7 @@
                             <button class="btn btn-default" data-bind="click: $root.openFaultyIndex" title="Open index"><i class="icon-arrow-filled-up"></i></button>
                         </div>
                         <div class="btn-group" role="group">
-                            <button class="btn btn-default" data-bind="click: $root.resetIndex, requiredAccess: 'DatabaseReadWrite'" title="Reset index"><i class="icon-reset"></i></button>
+                            <button class="btn btn-warning" data-bind="click: $root.resetIndex, requiredAccess: 'DatabaseReadWrite'" title="Reset index (rebuild)"><i class="icon-reset-index"></i></button>
                             <button class="btn btn-danger" data-bind="click: $root.deleteIndex, requiredAccess: 'DatabaseReadWrite'" title="Delete the index"><i class="icon-trash"></i></button>
                         </div>
                     </div>
