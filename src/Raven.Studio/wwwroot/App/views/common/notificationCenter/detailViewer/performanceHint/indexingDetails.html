@@ -1,4 +1,4 @@
-<div class="modal-dialog" role="document">
+<div class="modal-dialog modal-lg indexingDetails" role="document">
     <div class="modal-content" tabindex="-1">
         <div class="modal-header">
             <div class="flex-horizontal">
@@ -14,37 +14,20 @@
         </div>
         <div class="modal-body">
             <h3 data-bind="html: hint.message"></h3>
-
-            <div data-bind="with: hint.details">
-                <div class="modal-details">
-                    <div class="details-item">
-                        <div class="row">
-                            <div class="col-md-8 text-right">Number of exceeding documents</div>
-                            <div class="col-md-4 details-value" data-bind="text: NumberOfExceedingDocuments.toLocaleString()"></div>
-                        </div>
-                    </div>
-
-                    <div class="details-item">
-                        <div class="row">
-                            <div class="col-md-8 text-right">Sample document ID</div>
-                            <div class="col-md-4 details-value" data-bind="text: SampleDocumentId"></div>
-                        </div>
-                    </div>
-
-                    <div class="details-item">
-                        <div class="row">
-                            <div class="col-md-8 text-right">Maximum number of outputs per document</div>
-                            <div class="col-md-4 details-value" data-bind="text: MaxNumberOutputsPerDocument.toLocaleString()"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="bg-info padding padding-sm ">
-                    <strong>Suggestion:</strong>
-                    <div class="small" data-bind="text: Suggestion"></div>
+            <div style="position: relative; height: 300px">
+                <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController"></virtual-grid>
+            </div>
+            <div class="bg-info text-info padding">
+                <strong data-bind="visible: suggestions.length = 1">Suggestion:</strong>
+                <strong data-bind="visible: suggestions.length > 1">Suggestions:</strong>
+                <div data-bind="foreach: suggestions">
+                    <div data-bind="text: $data"></div>
                 </div>
             </div>
         </div>
         <div class="modal-footer" data-bind="compose: 'common/notificationCenter/detailViewer/performanceHint/footerPartial.html'">
         </div>
     </div>
+</div>
+<div class="tooltip json-preview js-indexing-details-tooltip" style="opacity: 0">
 </div>

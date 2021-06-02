@@ -23,7 +23,8 @@ namespace Raven.Server.NotificationCenter
         private readonly string _database;
 
         private readonly object _locker = new object();
-        private readonly ConcurrentQueue<(PagingOperationType Type, string Action, string Details, long NumberOfResults, int PageSize, long Duration, DateTime Occurrence)> _pagingQueue = new ConcurrentQueue<(PagingOperationType Type, string Action, string Details, long NumberOfResults, int PageSize, long Duration, DateTime Occurrence)>();
+        private readonly ConcurrentQueue<(PagingOperationType Type, string Action, string Details, long NumberOfResults, int PageSize, long Duration, DateTime Occurrence)> _pagingQueue = 
+            new ConcurrentQueue<(PagingOperationType Type, string Action, string Details, long NumberOfResults, int PageSize, long Duration, DateTime Occurrence)>();
         private readonly DateTime[] _pagingUpdates = new DateTime[Enum.GetNames(typeof(PagingOperationType)).Length];
         private Timer _pagingTimer;
         private readonly Logger _logger;
@@ -145,11 +146,17 @@ namespace Raven.Server.NotificationCenter
                 {
                     case PagingOperationType.Documents:
                     case PagingOperationType.Queries:
-                        return PerformanceHint.Create(_database, $"Page size too big ({type.ToString().ToLower()})", "We have detected that some of the requests are returning excessive amount of documents. Consider using smaller page sizes or streaming operations.", PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
+                        return PerformanceHint.Create(_database, $"Page size too big ({type.ToString().ToLower()})",
+                            "We have detected that some of the requests are returning excessive amount of documents. Consider using smaller page sizes or streaming operations.",
+                            PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
                     case PagingOperationType.Revisions:
-                        return PerformanceHint.Create(_database, "Page size too big (revisions)", "We have detected that some of the requests are returning excessive amount of revisions. Consider using smaller page sizes.", PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
+                        return PerformanceHint.Create(_database, "Page size too big (revisions)", 
+                            "We have detected that some of the requests are returning excessive amount of revisions. Consider using smaller page sizes.",
+                            PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
                     case PagingOperationType.CompareExchange:
-                        return PerformanceHint.Create(_database, "Page size too big (compare exchange)", "We have detected that some of the requests are returning excessive amount of compare exchange values. Consider using smaller page sizes.", PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
+                        return PerformanceHint.Create(_database, "Page size too big (compare exchange)",
+                            "We have detected that some of the requests are returning excessive amount of compare exchange values. Consider using smaller page sizes.",
+                            PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
                     default:
                         throw new ArgumentOutOfRangeException(nameof(type), type, null);
                 }
