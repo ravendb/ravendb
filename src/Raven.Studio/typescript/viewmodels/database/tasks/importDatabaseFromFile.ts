@@ -39,13 +39,9 @@ class importDatabaseFromFile extends viewModelBase {
 
     isUploading = ko.observable<boolean>(false);
     uploadStatus = ko.observable<number>();
-
-    importCommandPowerShell: KnockoutComputed<string>;
-    importCommandCmd: KnockoutComputed<string>;
-    importCommandBash: KnockoutComputed<string>;
     
+    commandTypes: Array<commandLineType> = ["PowerShell", "Cmd", "Bash"];
     effectiveCommandType = ko.observable<commandLineType>("PowerShell");
-    effectiveCommandLabel: KnockoutComputed<string>;
     effectiveCommand: KnockoutComputed<string>;
     
     validationGroup = ko.validatedObservable({
@@ -76,67 +72,15 @@ class importDatabaseFromFile extends viewModelBase {
             }
         });
         
-        const modelAsJson = () => {
-            const args = this.model.toDto();
-            if (!args.TransformScript) {
-                delete args.TransformScript;
-            }
-            return JSON.stringify(args);
-        };
-        
-        const fileNameProvider = () => this.importedFileName() || "Dump of Database.ravendbdump";
-        const commandEndpointUrl = (db: database) => appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerImport;
-        
-        this.importCommandPowerShell = ko.pureComputed(() => {
-            const db = this.activeDatabase();
-            if (!db) {
-                return "";
-            }
-            
-            const json = modelAsJson();
-            const fileName = fileNameProvider();
-
-            return `curl.exe -F 'importOptions=${json.replace(/"/g, '\\"')}' -F 'file=@.\\${fileName}' ${commandEndpointUrl(db)}`;
-        });
-        
-        this.importCommandCmd = ko.pureComputed(() => {
-            const db = this.activeDatabase();
-            if (!db) {
-                return "";
-            }
-
-            const json = modelAsJson();
-            const fileName = fileNameProvider();
-            
-            return `curl.exe -F "importOptions=${json.replace(/"/g, '\\"')}" -F "file=@.\\${fileName}" ${commandEndpointUrl(db)}`;
-        });
-        
-        this.importCommandBash = ko.pureComputed(() => {
-            const db = this.activeDatabase();
-            if (!db) {
-                return "";
-            }
-
-            const json = modelAsJson();
-            const fileName = fileNameProvider();
-
-            return `curl -F 'importOptions=${json}' -F 'file=@${fileName}' ${commandEndpointUrl(db)}`;
-        });
-
-        this.effectiveCommandLabel = ko.pureComputed(() => {
-            const cmdType = this.effectiveCommandType();
-            return this.getCommandTypeLabel(cmdType);
-        });
-        
         this.effectiveCommand = ko.pureComputed(() => {
             const cmdType = this.effectiveCommandType();
             switch (cmdType) {
                 case "PowerShell":
-                    return this.importCommandPowerShell();
+                    return this.getCommand("PowerShell");
                 case "Cmd":
-                    return this.importCommandCmd();
+                    return this.getCommand("Cmd");
                 case "Bash":
-                    return this.importCommandBash();
+                    return this.getCommand("Bash");
             }
         });
 
@@ -324,8 +268,34 @@ class importDatabaseFromFile extends viewModelBase {
     }
 
     copyCommandToClipboard() {
-        let command = this.effectiveCommand();
+        const command = this.effectiveCommand();
         copyToClipboard.copy(command, "Import command was copied to clipboard.");
+    }
+    
+    private getCommand(commandType: commandLineType) {
+
+        const db = this.activeDatabase();
+        if (!db) {
+            return "";
+        }
+
+        const args = this.model.toDto();
+        if (!args.TransformScript) {
+            delete args.TransformScript;
+        }
+
+        const json = JSON.stringify(args);
+        const fileName = this.importedFileName() || "Dump of Database.ravendbdump";
+        const commandEndpointUrl = (db: database) => appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerImport;
+        
+        switch (commandType) {
+            case "PowerShell":
+                return `curl.exe -F 'importOptions=${json.replace(/"/g, '\\"')}' -F 'file=@.\\${fileName}' ${commandEndpointUrl(db)}`;
+            case "Cmd":
+                return `curl.exe -F "importOptions=${json.replace(/"/g, '\\"')}" -F "file=@.\\${fileName}" ${commandEndpointUrl(db)}`;
+            case "Bash":
+                return `curl -F 'importOptions=${json}' -F 'file=@${fileName}' ${commandEndpointUrl(db)}`;
+        }
     }
 }
 
