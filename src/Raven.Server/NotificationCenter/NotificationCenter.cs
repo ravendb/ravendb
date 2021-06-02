@@ -32,6 +32,7 @@ namespace Raven.Server.NotificationCenter
             _config = config;
             Options = new NotificationCenterOptions();
             Paging = new Paging(this, _notificationsStorage, database);
+            Indexing = new Indexing(this, _notificationsStorage, database);
             RequestLatency = new RequestLatency(this, _notificationsStorage, database);
             EtlNotifications = new EtlNotifications(this, _notificationsStorage, _database);
             SlowWrites = new SlowWriteNotifications(this, _notificationsStorage, _database);
@@ -52,6 +53,7 @@ namespace Raven.Server.NotificationCenter
         }
 
         public readonly Paging Paging;
+        public readonly Indexing Indexing;
         public readonly RequestLatency RequestLatency;
         public readonly EtlNotifications EtlNotifications;
         public readonly SlowWriteNotifications SlowWrites;
@@ -180,6 +182,7 @@ namespace Raven.Server.NotificationCenter
         public new void Dispose()
         {
             Paging?.Dispose();
+            Indexing?.Dispose();
             RequestLatency?.Dispose();
             SlowWrites?.Dispose();
 
