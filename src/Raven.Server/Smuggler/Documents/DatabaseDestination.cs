@@ -595,7 +595,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (_operationContext.readTrx == null || _operationContext.readTrx.Disposed)
                         _operationContext.readTrx = _operationContext.ctx.OpenReadTransaction();
 
-                    using var doc = _database.DocumentsStorage.Get(_operationContext.ctx, docId);
+                    var doc = _database.DocumentsStorage.Get(_operationContext.ctx, docId, DocumentFields.Data);
                     if (doc == null)
                         return;
 
@@ -605,7 +605,6 @@ namespace Raven.Server.Smuggler.Documents
                         Document = doc.Data,
                         Type = CommandType.PUT
                     });
-                    doc.Data = null;
                 }
                 _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context, RaftIdGenerator.DontCareId, fromBackup: true));
 
