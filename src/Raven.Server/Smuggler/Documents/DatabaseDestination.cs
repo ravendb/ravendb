@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
@@ -53,15 +54,17 @@ namespace Raven.Server.Smuggler.Documents
     public class DatabaseDestination : ISmugglerDestination
     {
         private readonly DocumentDatabase _database;
+        private readonly CancellationToken _token;
         internal DuplicateDocsHandler _duplicateDocsHandler;
 
         private readonly Logger _log;
         private BuildVersionType _buildType;
         private static DatabaseSmugglerOptionsServerSide _options;
 
-        public DatabaseDestination(DocumentDatabase database)
+        public DatabaseDestination(DocumentDatabase database, CancellationToken token = default)
         {
             _database = database;
+            _token = token;
             _log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
             _duplicateDocsHandler = new DuplicateDocsHandler(_database);
         }
@@ -110,12 +113,12 @@ namespace Raven.Server.Smuggler.Documents
 
         public ICompareExchangeActions CompareExchange(JsonOperationContext context)
         {
-            return new DatabaseCompareExchangeActions(_database, context);
+            return new DatabaseCompareExchangeActions(_database, context, _token);
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context)
         {
-            return new DatabaseCompareExchangeActions(_database, context);
+            return new DatabaseCompareExchangeActions(_database, context, _token);
         }
 
         public ICounterActions Counters(SmugglerResult result)
@@ -549,15 +552,17 @@ namespace Raven.Server.Smuggler.Documents
 
             private readonly DocumentDatabase _database;
             private readonly JsonOperationContext _context;
+            private readonly CancellationToken _token;
             private readonly List<RemoveCompareExchangeCommand> _compareExchangeRemoveCommands = new List<RemoveCompareExchangeCommand>();
             private readonly List<AddOrUpdateCompareExchangeCommand> _compareExchangeAddOrUpdateCommands = new List<AddOrUpdateCompareExchangeCommand>();
-            private DisposableReturnedArray<BatchRequestParser.CommandData> _commandParsedCommands = new DisposableReturnedArray<BatchRequestParser.CommandData>(1024);
+            private DisposableReturnedArray<BatchRequestParser.CommandData> _clusterTransactionCommands = new DisposableReturnedArray<BatchRequestParser.CommandData>(1024);
             private (IDisposable disposable, DocumentsOperationContext ctx, DocumentsTransaction readTrx) _operationContext;
 
-            public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context)
+            public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, CancellationToken token)
             {
                 _database = database;
                 _context = context;
+                _token = token;
                 _operationContext.disposable = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _operationContext.ctx);
             }
 
@@ -585,26 +590,26 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value)
             {
-                if(_operationContext.readTrx.Disposed)
-                    _operationContext.readTrx = _operationContext.ctx.OpenReadTransaction();
-
-                _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context, RaftIdGenerator.DontCareId, fromBackup: true));
                 if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
                 {
-                    using var doc = _database.DocumentsStorage.Get(_operationContext.ctx, docId);
-                    if (doc != null)
-                    {
-                        _commandParsedCommands.Push(new BatchRequestParser.CommandData
-                        {
-                            Id = docId,
-                            Document = doc.Data,
-                            Type = CommandType.PUT
-                        });
-                        doc.Data = null;
-                    }
-                }
+                    if (_operationContext.readTrx == null || _operationContext.readTrx.Disposed)
+                        _operationContext.readTrx = _operationContext.ctx.OpenReadTransaction();
 
-                if (_compareExchangeAddOrUpdateCommands.Count < BatchSize)
+                    using var doc = _database.DocumentsStorage.Get(_operationContext.ctx, docId);
+                    if (doc == null)
+                        return;
+
+                    _clusterTransactionCommands.Push(new BatchRequestParser.CommandData
+                    {
+                        Id = docId,
+                        Document = doc.Data,
+                        Type = CommandType.PUT
+                    });
+                    doc.Data = null;
+                }
+                _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context, RaftIdGenerator.DontCareId, fromBackup: true));
+
+                if (_compareExchangeAddOrUpdateCommands.Count + _clusterTransactionCommands.Length < BatchSize)
                     return;
 
                 await SendAddOrUpdateCommandsAsync(_context);
@@ -623,7 +628,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask DisposeAsync()
             {
-                using (_commandParsedCommands)
+                using (_clusterTransactionCommands)
                 using (_operationContext.disposable)
                 using (_operationContext.readTrx)
                 {
@@ -634,6 +639,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private async ValueTask SendAddOrUpdateCommandsAsync(JsonOperationContext context)
             {
+                Debug.Assert(_compareExchangeAddOrUpdateCommands.Count == _clusterTransactionCommands.Length);
                 if (_compareExchangeAddOrUpdateCommands.Count == 0)
                     return;
 
@@ -647,7 +653,7 @@ namespace Raven.Server.Smuggler.Documents
                 using (_operationContext.readTrx)
                 using (_database.ClusterTransactionWaiter.CreateTask(out var taskId))
                 {
-                    var parsedCommands = _commandParsedCommands.GetArraySegment();
+                    var parsedCommands = _clusterTransactionCommands.GetArraySegment();
 
                     var raftRequestId = RaftIdGenerator.NewId();
                     var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId);
@@ -655,13 +661,14 @@ namespace Raven.Server.Smuggler.Documents
 
                     var clusterTransactionCommand = new ClusterTransactionCommand(_database.Name, _database.IdentityPartsSeparator, topology, parsedCommands, options, raftRequestId);
                     var (ctcIndex, _) = await _database.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-                    for (int i = 0; i < _commandParsedCommands.Length; i++)
+                    for (int i = 0; i < _clusterTransactionCommands.Length; i++)
                     {
-                        _commandParsedCommands[i].Document.Dispose();
+                        _clusterTransactionCommands[i].Document.Dispose();
                     }
-                    _commandParsedCommands.Clear();
+                    _clusterTransactionCommands.Clear();
                     await _database.ServerStore.Cluster.WaitForIndexNotification(ctcIndex);
                     await _database.ServerStore.Cluster.WaitForIndexNotification(aoucecIndex);
+                    await _database.ClusterTransactionWaiter.WaitForResults(taskId, _token);
                 }
             }
             private async ValueTask SendRemoveCommandsAsync(JsonOperationContext context)
