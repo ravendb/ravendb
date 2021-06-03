@@ -124,12 +124,12 @@ namespace Raven.Client.Documents.Session
             operation.SetResult(command.Result);
             return operation.GetRevisionsFor<T>().FirstOrDefault();
         }
-
+        
         public long GetCountFor(string id)
         {
             var operation = new GetRevisionsCountOperation(id);
             var command = operation.CreateRequest();
-            if (command == null) return command.Result;
+            SessionInfo?.IncrementRequestCount();
             RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
             return command.Result;
         }

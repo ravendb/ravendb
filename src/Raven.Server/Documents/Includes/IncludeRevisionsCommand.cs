@@ -51,11 +51,21 @@ namespace Raven.Server.Documents.Includes
                         }
                         break;
                     }
+                    
                     case LazyStringValue lazyStringValue:
                     {
                         var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:lazyStringValue);
                         Results ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
                         Results[lazyStringValue] = getRevisionsByCv;
+                        break;
+                    }
+                    
+                    case LazyCompressedStringValue lazyCompressedStringValue:
+                    {
+                        var toLazyStringValue = lazyCompressedStringValue.ToLazyStringValue();
+                        var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:toLazyStringValue);
+                        Results ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
+                        Results[toLazyStringValue] = getRevisionsByCv;
                         break;
                     }
                 }

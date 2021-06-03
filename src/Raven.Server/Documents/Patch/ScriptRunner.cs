@@ -1785,25 +1785,6 @@ namespace Raven.Server.Documents.Patch
                 }
             }
             
-            private JsValue LoadRevisionInternal(IEnumerable<JsValue> cvs)
-            {
-                
-                if (cvs is null)
-                    return JsValue.Undefined;
-                
-                IncludeRevisionsChangeVectors ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                Dictionary<string,Document> documents = new();
-                foreach (var cv in cvs)
-                {
-                    documents.Add(cv.ToString(),_database.DocumentsStorage.RevisionsStorage.GetRevision(_docsCtx,cv.ToString()));
-                    IncludeRevisionsChangeVectors.Add(cv.ToString());
-
-                }
-                
-                return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, documents.First().Value);
-            }
-            
             private JsValue LoadDocumentInternal(string id)
             {
                 if (string.IsNullOrEmpty(id))
