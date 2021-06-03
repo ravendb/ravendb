@@ -1487,7 +1487,6 @@ more responsive application.
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(json);
                 if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
                     continue;
-                
                 if (newDocumentInfo.Metadata.TryGet(Constants.Documents.Metadata.ChangeVector,out string cv))
                     
                     IncludedRevisionByChangeVectors[cv] = newDocumentInfo;

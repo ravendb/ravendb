@@ -612,15 +612,12 @@ namespace Raven.Server.Documents.Queries
                             break;
                         }
 
-                        if(split[0] == vt.Value)
-                        {
-                            revisionIncludes.AddRevision(vt.Value.ToString());
-                            break;
-                        }
-                        
-                        throw new InvalidOperationException($"Cannot include revisions for related Expression '{vt}', " + 
-                                                            $"Parent alias is different than include alias '{Query.From.Alias.Value}'" +
-                                                            $" compare to '{split[0]}';. ");
+                        if (split[0] != vt.Value)
+                            throw new InvalidOperationException($"Cannot include revisions for related Expression '{vt}', " +
+                                                                $"Parent alias is different than include alias '{Query.From.Alias.Value}'" +
+                                                                $" compare to '{split[0]}';. ");
+                        revisionIncludes.AddRevision(vt.Value.ToString());
+                        break;
                     }
                 }
             } 

@@ -190,8 +190,7 @@ namespace Raven.Client.Documents.Session.Operations
                 
                 if (queryResult.RevisionIncludes != null)
                 {
-                    _session.RegisterRevisionIncludes(
-                        queryResult.RevisionIncludes);
+                    _session.RegisterRevisionIncludes(queryResult.RevisionIncludes);
                 }
             }
         }
