@@ -34,6 +34,7 @@ namespace Raven.Client.Documents.Session
             {
                 var operation = new GetRevisionOperation(Session, id, start, pageSize);
                 var command = operation.CreateRequest();
+                if (command == null) operation.GetRevisionsFor<T>();
                 SessionInfo?.IncrementRequestCount();
                 await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
                 operation.SetResult(command.Result);
@@ -104,7 +105,6 @@ namespace Raven.Client.Documents.Session
             {
                 var operation = new GetRevisionsCountOperation(id);
                 var command = operation.CreateRequest();
-                if (command == null) return command.Result;
                 SessionInfo?.IncrementRequestCount();
                 await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
                 return command.Result;
