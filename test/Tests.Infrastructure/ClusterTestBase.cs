@@ -832,15 +832,16 @@ namespace Tests.Infrastructure
                 urls = await GetClusterNodeUrlsAsync(leadersUrl, store);
             }
 
-            var currentServers = Servers.Where(s => s.Disposed == false &&
-                                                    databaseResult.NodesAddedTo.Contains(s.WebUrl, StringComparer.CurrentCultureIgnoreCase)).ToArray();
+            var firstUrlNode = databaseResult.NodesAddedTo.First();
+            var currentCluster = Servers.Where(s => s.Disposed == false && s.ServerStore.GetClusterTopology().TryGetNodeTagByUrl(firstUrlNode).HasUrl).ToArray();
+
             int numberOfInstances = 0;
-            foreach (var server in currentServers)
+            foreach (var server in currentCluster)
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
             }
 
-            var relevantServers = currentServers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToArray();
+            var relevantServers = currentCluster.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToArray();
             foreach (var server in relevantServers)
             {
                 await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(record.DatabaseName);
@@ -850,7 +851,7 @@ namespace Tests.Infrastructure
             if (numberOfInstances != replicationFactor)
                 throw new InvalidOperationException($@"Couldn't create the db on all nodes, just on {numberOfInstances}
                                                     out of {replicationFactor}{Environment.NewLine}
-                                                    Server urls are {string.Join(",", Servers.Select(x => $"[{x.WebUrl}|{x.Disposed}]"))}; Current cluster (members) urls are : {string.Join(",", urls)}; The relevant servers are : {string.Join(",", relevantServers.Select(x => x.WebUrl))}; current servers are : {string.Join(",", currentServers.Select(x => x.WebUrl))}");
+                                                    Server urls are {string.Join(",", Servers.Select(x => $"[{x.WebUrl}|{x.Disposed}]"))}; Current cluster (members) urls are : {string.Join(",", urls)}; The relevant servers are : {string.Join(",", relevantServers.Select(x => x.WebUrl))}; current servers are : {string.Join(",", currentCluster.Select(x => x.WebUrl))}");
             return (databaseResult, relevantServers.ToList());
         }
 
