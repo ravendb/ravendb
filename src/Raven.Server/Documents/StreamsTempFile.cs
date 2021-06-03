@@ -13,15 +13,19 @@ namespace Raven.Server.Documents
     public class StreamsTempFile : IDisposable
     {
         private readonly string _tempFile;
-        private readonly StorageEnvironment _environment;
+        private readonly bool _encrypted;
         internal readonly TempFileStream _file;
         internal bool _reading;
         private InnerStream _previousInstance;
 
-        public StreamsTempFile(string tempFile, StorageEnvironment environment)
+        public StreamsTempFile(string tempFile, StorageEnvironment environment) : this (tempFile, environment.Options.Encryption.IsEnabled)
+        {
+        }
+
+        public StreamsTempFile(string tempFile, bool encrypted)
         {
             _tempFile = tempFile;
-            _environment = environment;
+            _encrypted = encrypted;
 
             _file = new TempFileStream(SafeFileStream.Create(_tempFile, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan));
         }
@@ -32,7 +36,7 @@ namespace Raven.Server.Documents
                 throw new NotSupportedException("The temp file was already moved to reading mode");
 
             _previousInstance?.Flush();
-            _previousInstance = _environment.Options.Encryption.IsEnabled
+            _previousInstance = _encrypted
                 ? new InnerStream(new TempCryptoStream(_file), this)
                 : new InnerStream(new InnerPartStream(_file), this);
 

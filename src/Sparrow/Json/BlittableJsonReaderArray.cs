@@ -240,7 +240,7 @@ namespace Sparrow.Json
             }
         }
 
-        public struct BlittableJsonArrayEnumerator : IEnumerator<object>
+        public struct BlittableJsonArrayEnumerator : IEnumerator<object>, IEnumerable<object>
         {
             private readonly BlittableJsonReaderArray _reader;
             private int _counter;
@@ -267,6 +267,16 @@ namespace Sparrow.Json
             object IEnumerator.Current => Current;
 
             public void Dispose() {}
+
+            public IEnumerator<object> GetEnumerator()
+            {
+                return this;
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
         }
 
 

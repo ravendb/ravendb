@@ -418,6 +418,10 @@ namespace FastTests
                 var documentDatabase = AsyncHelpers.RunSync(async () => await serverToUse.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name));
                 documentDatabase.ForTestingPurposesOnly().SkipDrainAllRequests = true;
             }
+            catch (InvalidOperationException)
+            {
+                // expected if sharded
+            }
             catch (DatabaseNotRelevantException)
             {
             }

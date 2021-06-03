@@ -63,9 +63,7 @@ namespace Raven.Server.Web.System
                         items = items.Where(item => allowedDbs.AuthorizedDatabases.ContainsKey(item.DatabaseName));
                     }
 
-                    items = items.SelectMany(x => x.AsShardsOrNormal());
-
-                    writer.WriteArray(context, nameof(DatabasesInfo.Databases), items, (w, c, dbDoc) =>
+                    writer.WriteArray(context, nameof(DatabasesInfo.Databases), items.SelectMany(x => x.AsShardsOrNormal()), (w, c, dbDoc) =>
                     {
                         var databaseName = dbDoc.DatabaseName;
                         if (namesOnly)
@@ -126,7 +124,8 @@ namespace Raven.Server.Web.System
                         return;
                     }
 
-                    if (rawRecord.Topology.Members.Count == 0 && rawRecord.Topology.Rehabs.Count == 0 && rawRecord.DeletionInProgress.Any())
+                    if (rawRecord.DeletionInProgress.Count > 0 &&
+                        rawRecord.Topologies.Sum(t => t.Topology.Count) == rawRecord.DeletionInProgress.Count)
                     {
                         // The database at deletion progress from all nodes
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
@@ -135,13 +134,14 @@ namespace Raven.Server.Web.System
                         {
                             context.Write(writer, new DynamicJsonValue
                             {
-                                ["Type"] = "Error",
+                                ["Type"] = "Error", 
                                 ["Message"] = "Database " + name + " was deleted"
                             });
                         }
 
                         return;
                     }
+
 
                     clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Raven.Server.Documents.Indexes;
 using Raven.Client.Documents.Indexes;
@@ -16,6 +17,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
+using Raven.Server.Config;
 using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -173,20 +175,29 @@ namespace Raven.Server.ServerWide
             return array != null && array.Length > 0;
         }
 
-
-
         public RawDatabaseRecord GetShardedDatabaseRecord(int index)
         {
             _record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array);
             var name = DatabaseName;
             var shardedTopology = (BlittableJsonReaderObject)array[index];
             var shardName = name + "$" + index;
+
+            var settings = new Dictionary<string, string>();
+            foreach (var setting in Settings)
+            {
+                settings.Add(setting.Key, setting.Value);
+            }
+            // TODO: get rid of the strings
+            var dir = settings["DataDir"] ?? ".";
+            settings["DataDir"] = Path.Combine(dir, shardName);
+
             _record.Modifications = new DynamicJsonValue(_record)
             {
                 [nameof(DatabaseRecord.DatabaseName)] = shardName,
                 [nameof(DatabaseRecord.Topology)] = shardedTopology,
                 [nameof(DatabaseRecord.ShardAllocations)] = null,
                 [nameof(DatabaseRecord.Shards)] = null,
+                [nameof(DatabaseRecord.Settings)] = DynamicJsonValue.Convert(settings)
             };
 
             return new RawDatabaseRecord(_context, _context.ReadObject(_record, shardName));
@@ -206,25 +217,9 @@ namespace Raven.Server.ServerWide
                || array == null)
                 yield break;
 
-            var name = DatabaseName;
-
             for (var index = 0; index < array.Length; index++)
             {
-                using (var clone = _record.CloneOnTheSameContext())
-                {
-                    var shardedTopology = (BlittableJsonReaderObject)array[index];
-                    var shardName = name + "$" + index;
-                    clone.Modifications = new DynamicJsonValue(clone)
-                    {
-                        [nameof(DatabaseRecord.DatabaseName)] = shardName,
-                        [nameof(DatabaseRecord.Topology)] = shardedTopology,
-                        [nameof(DatabaseRecord.ShardAllocations)] = null,
-                        [nameof(DatabaseRecord.Shards)] = null,
-                    };
-                    var modifiedClone = _context.ReadObject(clone, shardName);
-                    var shardRecord = new RawDatabaseRecord(_context, modifiedClone);
-                    yield return shardRecord;
-                }
+                yield return GetShardedDatabaseRecord(index);
             }
         }
 

@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
             var message = new HttpRequestMessage
             {
                 Method = Method, 
-                Content = Content == null ? null : new BlittableJsonContent((stream)=> Content.WriteJsonTo(stream)),
+                Content = Content == null ? null : new BlittableJsonContent(async (stream)=> await Content.WriteJsonToAsync(stream)),
             };
             foreach ((string key, string value) in Headers)
             {

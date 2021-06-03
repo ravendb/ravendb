@@ -116,10 +116,7 @@ namespace Raven.Server.Documents
 
                         if (rawRecord.IsSharded())
                         {
-                            // We materialize the values here because we may close the read transaction
-                            // if we are deleting the database
-                            var rawDatabaseRecords = rawRecord.GetShardedDatabaseRecords().ToList();
-                            foreach (var shardRawRecord in rawDatabaseRecords)
+                            foreach (var shardRawRecord in rawRecord.GetShardedDatabaseRecords())
                             {
                                 await HandleSpecificClusterDatabaseChanged(
                                     shardRawRecord.DatabaseName, index, type, changeType, context, shardRawRecord);
@@ -337,6 +334,7 @@ namespace Raven.Server.Documents
                 // that all the documents were replicated from this node, therefore the deletion will be called from the replication code.
                 return false;
 
+            // We materialize the values here because we close the read transaction
             var record = rawRecord.MaterializedRecord;
             context.CloseTransaction();
 
@@ -386,8 +384,6 @@ namespace Raven.Server.Documents
                         if (_logger.IsInfoEnabled)
                             _logger.Info("Could not create database configuration", ex);
                     }
-
-                    
 
                     // this can happen if the database record was already deleted
                     if (configuration != null)
@@ -1210,7 +1206,7 @@ namespace Raven.Server.Documents
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var allDatabasesRecords = _serverStore.Cluster.GetAllDatabases(context);
+                var allDatabasesRecords = _serverStore.Cluster.GetAllRawDatabases(context).SelectMany(r => r.AsShardsOrNormal());
 
                 foreach (var currRecord in allDatabasesRecords)
                 {
