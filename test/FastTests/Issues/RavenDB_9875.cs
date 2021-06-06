@@ -29,6 +29,7 @@ namespace FastTests.Issues
                 typeof(SingleNodeBatchCommand),
                 typeof(ClusterWideBatchCommand),
                 typeof(PatchOperation.PatchCommand),
+                typeof(JsonPatchOperation.JsonPatchCommand),
                 typeof(GetTimeSeriesOperation<>.GetTimeSeriesCommand),
                 typeof(ConditionalGetDocumentsCommand)
             };

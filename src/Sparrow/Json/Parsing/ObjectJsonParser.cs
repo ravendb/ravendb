@@ -61,9 +61,16 @@ namespace Sparrow.Json.Parsing
             if (propertyIndex == -1)
                 return;
 
-            if (Removals == null)
-                Removals = new HashSet<int>();
+            Removals ??= new HashSet<int>();
             Removals.Add(propertyIndex);
+            for (int i = 0; i < Properties.Count; i++)
+            {
+                if (Properties[i].Name == property)
+                {
+                    Properties.RemoveAt(i);
+                    break;
+                }
+            }
         }
 
         public object this[string name]
@@ -112,6 +119,7 @@ namespace Sparrow.Json.Parsing
 
     public class DynamicJsonArray : IEnumerable<object>, IDisposable
     {
+        public bool SkipOriginalArray;
         public int SourceIndex = -1;
         public int ModificationsIndex;
         public readonly List<object> Items;
@@ -129,21 +137,24 @@ namespace Sparrow.Json.Parsing
 
         public void RemoveAt(int index)
         {
-            if (Removals == null)
-                Removals = new List<int>();
+            Removals ??= new List<int>();
             Removals.Add(index);
         }
 
         public void Add(object obj)
         {
-#if DEBUG
-            if (obj != null &&
-                obj.GetType().FullName == "Raven.Server.Documents.Document")
+            EnsureNotDocumentInArray(obj);
+            Items.Add(obj);
+        }
+
+        [Conditional("DEBUG")]
+        private static void EnsureNotDocumentInArray(object value)
+        {
+            if (value != null &&
+                value.GetType().FullName == "Raven.Server.Documents.Document")
             {
                 throw new InvalidOperationException("Cannot add Document to DynamicJsonArray");
             }
-#endif
-            Items.Add(obj);
         }
 
         public int Count => Items.Count;
@@ -327,7 +338,7 @@ namespace Sparrow.Json.Parsing
                     if (_seenValues.Add(bjra.Modifications))
                     {
                         _elements.Push(bjra);
-                        bjra.Modifications.SourceIndex = -1;
+                        bjra.Modifications.SourceIndex = bjra.Modifications.SkipOriginalArray  ? bjra.Length : -1;
                         bjra.Modifications.ModificationsIndex = 0;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
                         return true;
@@ -341,13 +352,13 @@ namespace Sparrow.Json.Parsing
                         {
                             continue;
                         }
-                        _elements.Push(bjra);
+
                         current = bjra[modifications.SourceIndex];
+                        _elements.Push(bjra);
                         continue;
                     }
                     current = modifications;
                     continue;
-
                 }
 
                 if (current is IBlittableJsonContainer dbj)
