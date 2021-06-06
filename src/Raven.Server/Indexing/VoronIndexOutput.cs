@@ -39,7 +39,6 @@ namespace Raven.Server.Indexing
             _tx.ReadTree(_tree).AddStream(name, Stream.Null); // ensure it's visible by LuceneVoronDirectory.FileExists, the actual write is inside Dispose
         }
 
-
         public override void FlushBuffer(byte[] b, int offset, int len)
         {
             try
@@ -52,15 +51,11 @@ namespace Raven.Server.Indexing
                         _ms.Write(b, offset, len);
                         return;
                     }
+
                     // too big, copy the buffer to the file
-                    _file = _fileCache.RentFileStream();
-                    var position = _ms.Position;
-                    _ms.Position = 0;
-                    _ms.CopyTo(_file);
-                    _file.Position = position;
-                    _fileCache.ReturnMemoryStream(_ms);
-                    _ms = null;
+                    ConvertMemoryStreamToFileStream();
                 }
+
                 _file.Write(b, offset, len);
             }
             catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
@@ -92,6 +87,12 @@ namespace Raven.Server.Indexing
         {
             try
             {
+                if (_ms != null && _ms.Capacity < length)
+                {
+                    // too big, copy the buffer to the file
+                    ConvertMemoryStreamToFileStream();
+                }
+
                 if (_ms != null)
                     _ms.SetLength(length);
                 else
@@ -120,6 +121,17 @@ namespace Raven.Server.Indexing
                     _fileCache.ReturnFileStream(_file);
                 _file = null;
             }
+        }
+
+        private void ConvertMemoryStreamToFileStream()
+        {
+            _file = _fileCache.RentFileStream();
+            var position = _ms.Position;
+            _ms.Position = 0;
+            _ms.CopyTo(_file);
+            _file.Position = position;
+            _fileCache.ReturnMemoryStream(_ms);
+            _ms = null;
         }
 
         private void CopyFileStream()
