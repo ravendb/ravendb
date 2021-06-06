@@ -8,13 +8,8 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 
-type indexingDetailsItemDto = {
+interface indexingDetailsItemDto extends Raven.Server.NotificationCenter.Notifications.Details.WarnIndexOutputsPerDocument.WarningDetails {
     IndexName: string;
-    NumberOfExceedingDocuments: number;
-    SampleDocumentId: string;
-    MaxNumberOutputsPerDocument: number;
-    Suggestion: string;
-    LastWarningTime: string;
 }
 
 class indexingDetails extends abstractPerformanceHintDetails {
@@ -70,7 +65,7 @@ class indexingDetails extends abstractPerformanceHintDetails {
             (details: indexingDetailsItemDto, column: textColumn<indexingDetailsItemDto>, e: JQueryEventObject,
              onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue(details);
-                if (column.header === "Last warned atDate") {
+                if (column.header === "Date") {
                     onValue(moment.utc(details.LastWarningTime), details.LastWarningTime);
                 } else if (!_.isUndefined(value)) {
                     onValue(generalUtils.escapeHtml(value), value);
@@ -88,15 +83,7 @@ class indexingDetails extends abstractPerformanceHintDetails {
 
     private mapItems(details: Raven.Server.NotificationCenter.Notifications.Details.WarnIndexOutputsPerDocument): indexingDetailsItemDto[] {
         return _.flatMap(details.Warnings, (value, key) => {
-            return value.map(item =>
-                ({
-                    IndexName: key,
-                    NumberOfExceedingDocuments: item.NumberOfExceedingDocuments,
-                    SampleDocumentId: item.SampleDocumentId,
-                    MaxNumberOutputsPerDocument: item.MaxNumberOutputsPerDocument,
-                    Suggestion: item.Suggestion,
-                    LastWarningTime: item.LastWarningTime
-                } as indexingDetailsItemDto));
+            return value.map(item => ({ IndexName: key, ...item }));
         });
     }
 
