@@ -20,8 +20,8 @@ namespace Raven.Server.NotificationCenter
         private readonly string _database;
 
         private DateTime _warningUpdateTime = new DateTime();
-        private ConcurrentQueue<(string Action, WarnIndexOutputsPerDocument.WarningDetails warningDetails)> _warningQueue = 
-            new ConcurrentQueue<(string Action, WarnIndexOutputsPerDocument.WarningDetails warningDetails)>();
+        private ConcurrentQueue<(string indexName, WarnIndexOutputsPerDocument.WarningDetails warningDetails)> _warningQueue = 
+            new ConcurrentQueue<(string indexName, WarnIndexOutputsPerDocument.WarningDetails warningDetails)>();
         
         private Timer _indexingTimer;
         private readonly Logger _logger;
@@ -59,7 +59,7 @@ namespace Raven.Server.NotificationCenter
                 if (_indexingTimer != null)
                     return;
 
-                _indexingTimer = new Timer(UpdateIndexing, null, TimeSpan.FromSeconds(0), TimeSpan.FromMinutes(5)); 
+                _indexingTimer = new Timer(UpdateIndexing, null, TimeSpan.FromSeconds(0), TimeSpan.FromMinutes(5));
             }
         }
 

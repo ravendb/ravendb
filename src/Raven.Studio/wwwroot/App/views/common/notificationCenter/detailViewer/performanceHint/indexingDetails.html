@@ -18,7 +18,7 @@
                 <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController"></virtual-grid>
             </div>
             <div class="bg-info text-info padding">
-                <strong data-bind="visible: suggestions.length = 1">Suggestion:</strong>
+                <strong data-bind="visible: suggestions.length === 1">Suggestion:</strong>
                 <strong data-bind="visible: suggestions.length > 1">Suggestions:</strong>
                 <div data-bind="foreach: suggestions">
                     <div data-bind="text: $data"></div>
