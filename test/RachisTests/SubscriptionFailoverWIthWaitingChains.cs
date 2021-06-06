@@ -565,20 +565,7 @@ namespace RachisTests
                 if ((attempts >= 0 && rehabNodes.Count == 0) == false)
                 {
                     var sb = new StringBuilder();
-                    (ClusterObserverLogEntry[] List, long Iteration) logs;
-                    logs.List = null;
-                    await ActionWithLeader((l) =>
-                    {
-                        logs = l.ServerStore.Observer.ReadDecisionsForDatabase();
-                        return Task.CompletedTask;
-                    });
-
-                    sb.AppendLine("Cluster Observer Log Entries:\n-----------------------");
-                    foreach (var log in logs.List)
-                    {
-                        sb.AppendLine(
-                            $"{nameof(log.Date)}: {log.Date}\n{nameof(log.Database)}: {log.Database}\n{nameof(log.Iteration)}: {log.Iteration}\n{nameof(log.Message)}: {log.Message}\n-----------------------");
-                    }
+                    await GetClusterDebugLogs(sb);
 
                     List<string> currentRehabNodes;
                     string currentException = null;
