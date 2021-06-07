@@ -659,6 +659,11 @@ namespace Raven.Server.Documents.Handlers
                     }
 
                     var updatedChangeVector = ChangeVectorUtils.TryUpdateChangeVector("RAFT", Database.DatabaseGroupId, count, global);
+
+                    if (options.DisableAtomicDocumentWrites == false)
+                        updatedChangeVector = ChangeVectorUtils.TryUpdateChangeVector("TRXN", Database.ClusterTransactionId, command.Index,
+                            updatedChangeVector.ChangeVector ?? global);
+
                     if (updatedChangeVector.IsValid)
                     {
                         context.LastDatabaseChangeVector = updatedChangeVector.ChangeVector;
