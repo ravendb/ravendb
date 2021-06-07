@@ -125,6 +125,12 @@ class periodicBackupConfiguration {
                 this.spinners.backupLocationInfoLoading(false);
             }
         });
+        
+        this.encryptionSettings.subscribe(() => {
+           if (this.backupType() === "Snapshot" && this.encryptionSettings().enabled()) {
+               this.encryptionSettings().mode("UseDatabaseKey");
+           } 
+        });
 
         this.dirtyFlag = new ko.DirtyFlag([
             this.name,
