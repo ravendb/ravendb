@@ -111,6 +111,8 @@ class editPeriodicBackupTask extends viewModelBase {
             title: "Destination was disabled by administrator",
             placement: "right"
         });
+
+        this.setupDisableReasons();
         
         document.getElementById("taskName").focus();
     }
