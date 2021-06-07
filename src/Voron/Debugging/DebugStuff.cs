@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Sparrow.Platform;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
+using Voron.Data.Sets;
 using Voron.Global;
 using Voron.Impl;
 
@@ -206,11 +209,17 @@ namespace Voron.Debugging
 
             if (PlatformDetails.RunningOnPosix == false)
             {
+                var exec = new[]
+                {
+                     @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                     @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+                }.First(f => File.Exists(f));
+
                 var process = new Process
                 {
                     StartInfo =
                     {
-                        FileName = @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                        FileName = exec,
                         Arguments = output,
                         UseShellExecute = false,
                         CreateNoWindow = true,
@@ -283,6 +292,75 @@ namespace Voron.Debugging
         private static unsafe FixedSizeTreePage CreateFixedSizeTreePage(Page page, FixedSizeTreeSafe.LargeFixedSizeTreeSafe tree)
         {
             return new FixedSizeTreePage(page.Pointer, tree.ValueSize + sizeof(long), Constants.Storage.PageSize);
+        }
+
+        [Conditional("DEBUG")]
+        public static void RenderAndShow(Set tree)
+        {
+            var headerData = $"<p>{tree.State}</p>";
+            RenderAndShowTCompactTree(tree, tree.State.RootPage, headerData);
+        }
+
+        [Conditional("DEBUG")]
+        public static void RenderAndShowTCompactTree(Set tree, long startPageNumber, string headerData = null)
+        {
+            RenderHtmlTreeView(writer =>
+            {
+                if (headerData != null)
+                    writer.WriteLine(headerData);
+                writer.WriteLine("<div class='css-treeview'><ul>");
+
+                RenderPageInternal(tree, tree.Llt.GetPage(startPageNumber), writer, "Root", true);
+
+                writer.WriteLine("</ul></div>");
+            });
+        }
+
+        private static unsafe void RenderPageInternal(Set tree, Page page, TextWriter sw, string text, bool open)
+        {
+            var header = new SetCursorState { Page = page };
+            var leaf = new SetLeafPage(page.Pointer);
+            var branch = new SetBranchPage(page.Pointer);
+
+            List<long> leafEntries = null;
+            if (header.IsLeaf)
+                leafEntries = leaf.GetDebugOutput();
+            sw.WriteLine(
+                string.Format("<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries - {5}</label><ul>",
+                    page.PageNumber, header.IsLeaf ? "leaf" : "branch", header.IsLeaf ? leafEntries!.Count : branch.Header->NumberOfEntries, open ? "checked" : "", text, 
+                    header.IsLeaf ? leaf.SpaceUsed + " used" : ""));
+
+            if (header.IsLeaf)
+            {
+                //sw.WriteLine(
+                //    string.Format("<ul><li><input type='checkbox' id='page-{0}-details'/><label for='page-{0}-details'>Compression details</label><ul>",
+                //        page.PageNumber));
+                for (int i = 0; i < leaf.Header->NumberOfCompressedPositions; i++)
+                {
+                    var entry = leaf.Positions[i];
+                    sw.Write($"<li>Compressed with {entry.Length:#,#;;0} bytes</li>");
+                }
+                sw.Write($"<li>Raw with {leaf.Header->NumberOfRawValues:#,#;;0} values</li>");
+                var range = leaf.GetRange();
+                sw.WriteLine($"<li>Range {range.First} ... {range.Last}</li>");
+
+                //sw.WriteLine("</ul></li></ul>");
+
+                //foreach (long val in leafEntries!)
+                //{
+                //    sw.Write($"<li>{val:#,#;;0}</li>");
+                //}
+            }
+            else
+            {
+                for (int i = 0; i < branch.Header->NumberOfEntries; i++)
+                {
+                    (long key, long pageNum) = branch.GetByIndex(i);
+                    RenderPageInternal(tree, tree.Llt.GetPage(pageNum), sw, key.ToString("#,#;;0"), false);
+                }
+            }
+
+            sw.WriteLine("</ul></li></ul>");
         }
 
         [Conditional("DEBUG")]

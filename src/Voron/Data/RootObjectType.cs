@@ -6,7 +6,8 @@
         VariableSizeTree = 1,
         EmbeddedFixedSizeTree = 2,
         FixedSizeTree = 3,
-        PrefixTree = 4,
+        Reserved = 4,
         Table = 5,
+        Set = 6,
     }
 }

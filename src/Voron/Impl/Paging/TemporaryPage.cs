@@ -79,5 +79,7 @@ namespace Voron.Impl.Paging
             };
         }
         public IDisposable ReturnTemporaryPageToPool { get; set; }
+
+        public Span<byte> AsSpan() => new Span<byte>(TempPagePointer, PageSize);
     }
 }

@@ -824,6 +824,15 @@ namespace Sparrow.Server
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public InternalScope Allocate<T>(int length, out Span<T> output)
+            where T: unmanaged
+        {
+            var r = Allocate(length * sizeof(T), out ByteString str);
+            output = MemoryMarshal.Cast<byte, T>(str.ToSpan());
+            return r;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public InternalScope Allocate(int length, out ByteString output)
         {
             output = AllocateInternal(length, ByteStringType.Mutable);

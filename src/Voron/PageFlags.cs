@@ -12,6 +12,6 @@ namespace Voron
         Stream = 16,
         RawData = 32,
         Compressed = 64,
-        ReservedValue3 = 128,
+        SetPage = 128,
     }
 }

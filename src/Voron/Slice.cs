@@ -26,6 +26,8 @@ namespace Voron
         {
             Content = content;
         }
+        
+        public ReadOnlySpan<byte> AsReadOnlySpan() => new ReadOnlySpan<byte>(Content.Ptr, Content.Length);
 
         public bool HasValue => Content.HasValue;
 
