@@ -155,10 +155,12 @@ namespace Raven.Server.ServerWide.Commands
 
         public List<string> ExecuteCompareExchangeCommands(DatabaseTopology dbTopology, ClusterOperationContext context, long index, Table items)
         {
-            if (DisableAtomicDocumentWrites == false)
+            if (DisableAtomicDocumentWrites == false && 
+                ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 52_000) // for mixed cluster, retain the old behaviour
             {
                 EnsureAtomicDocumentWrites(dbTopology, context, items, index);
             }
+
             if (ClusterCommands == null || ClusterCommands.Count == 0)
                 return null;
 
@@ -222,7 +224,8 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (SerializedDatabaseCommands == null)
                 return;
-            if(SerializedDatabaseCommands.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray commands) == false)
+
+            if (SerializedDatabaseCommands.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray commands) == false)
                 return;
             
             ClusterCommands ??= new List<ClusterTransactionDataCommand>();
