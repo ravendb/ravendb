@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Raven.Client.Exceptions
+﻿namespace Raven.Client.Exceptions.Documents.Indexes
 {
     public class PendingRollingIndexException : RavenException
     {
