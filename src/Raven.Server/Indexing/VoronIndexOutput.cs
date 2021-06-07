@@ -22,6 +22,8 @@ namespace Raven.Server.Indexing
         private MemoryStream _ms;
         private readonly IndexOutputFilesSummary _indexOutputFilesSummary;
 
+        private Stream StreamToUse => _ms ?? _file;
+
         public VoronIndexOutput(
             TempFileCache fileCache,
             string name,
@@ -70,10 +72,8 @@ namespace Raven.Server.Indexing
             try
             {
                 base.Seek(pos);
-                if (_ms != null)
-                    _ms.Seek(pos, SeekOrigin.Begin);
-                else
-                    _file.Seek(pos, SeekOrigin.Begin);
+
+                StreamToUse.Seek(pos, SeekOrigin.Begin);
             }
             catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
             {
@@ -81,7 +81,7 @@ namespace Raven.Server.Indexing
             }
         }
 
-        public override long Length => _ms?.Length ?? _file.Length;
+        public override long Length => StreamToUse.Length;
 
         public override void SetLength(long length)
         {
@@ -93,10 +93,7 @@ namespace Raven.Server.Indexing
                     ConvertMemoryStreamToFileStream();
                 }
 
-                if (_ms != null)
-                    _ms.SetLength(length);
-                else
-                    _file.SetLength(length);
+                StreamToUse.SetLength(length);
             }
             catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
             {
@@ -148,16 +145,8 @@ namespace Raven.Server.Indexing
 
                 using (Slice.From(_tx.Allocator, _name, out var nameSlice))
                 {
-                    if (_ms != null)
-                    {
-                        _ms.Seek(0, SeekOrigin.Begin);
-                        files.AddStream(nameSlice, _ms);
-                    }
-                    else
-                    {
-                        _file.Seek(0, SeekOrigin.Begin);
-                        files.AddStream(nameSlice, _file);
-                    }
+                    StreamToUse.Seek(0, SeekOrigin.Begin);
+                    files.AddStream(nameSlice, StreamToUse);
                 }
             }
             catch (Exception e)
