@@ -9,6 +9,7 @@ using Voron.Data.Tables;
 using System.Diagnostics;
 using Sparrow.Json;
 using Sparrow.Server;
+using Voron.Data.CompactTrees;
 using Voron.Data.RawData;
 using Constants = Voron.Global.Constants;
 
@@ -437,6 +438,17 @@ namespace Voron.Impl
             _lowLevelTransaction?.Dispose();
 
             _lowLevelTransaction = null;
+        }
+
+        public CompactTree CompactTreeFor(string treeName)
+        {
+            Slice.From(Allocator, treeName, ByteStringType.Immutable, out var treeNameSlice);
+            return CompactTreeFor(treeNameSlice);
+        }
+
+        public CompactTree CompactTreeFor(Slice treeName)
+        {
+            return CompactTree.Create(_lowLevelTransaction, treeName);
         }
 
         public FixedSizeTree FixedTreeFor(string treeName)

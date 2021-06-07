@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
+using Voron.Data.BTrees;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
@@ -238,21 +239,43 @@ namespace Voron.Data.CompactTrees
             return (ushort*)(pagePtr + PageHeader.SizeOf + DictionarySize);
         }
 
-        private CompactTree()
+        private CompactTree(Slice name)
         {
+            Name = name;
         }
+
+        public Slice Name 
+        { 
+            get; 
+            private set;
+        }
+
+        public long NumberOfEntries => _state.NumberOfEntries;
 
         public static CompactTree Create(LowLevelTransaction llt, string name)
         {
             using var _ = Slice.From(llt.Allocator, name, out var slice);
-            return Create(llt, slice);
+            return Create(llt, llt.RootObjects, slice);
         }
+
         public static CompactTree Create(LowLevelTransaction llt, Slice name)
         {
+            return Create(llt, llt.RootObjects, name);
+        }
+
+        public static CompactTree Create(LowLevelTransaction llt, Tree parent, string name)
+        {
+            return Create(llt, parent, name);
+        }
+
+        public static CompactTree Create(LowLevelTransaction llt, Tree parent, Slice name)
+        {
             CompactTreeState* header;
-            var existing = llt.RootObjects.Read(name);
+
+            var existing = parent.Read(name);
             if (existing == null)
             {
+                // TODO: This can be created a single time and stored in the root tree. 
                 var dictionaryId = PersistentHopeDictionary.CreateEmpty(llt);
                 var newPage = llt.AllocatePage(1);
                 var compactPageHeader = (CompactPageHeader*)newPage.Pointer;
@@ -261,7 +284,8 @@ namespace Voron.Data.CompactTrees
                 compactPageHeader->Upper = Constants.Storage.PageSize;
                 compactPageHeader->FreeSpace = Constants.Storage.PageSize - (PageHeader.SizeOf + DictionarySize);
                 compactPageHeader->DictionaryId = dictionaryId;
-                using var _ = llt.RootObjects.DirectAdd(name, sizeof(CompactTreeState), out var p);
+                
+                using var _ = parent.DirectAdd(name, sizeof(CompactTreeState), out var p);
                 header = (CompactTreeState*)p;
                 *header = new CompactTreeState
                 {
@@ -283,11 +307,21 @@ namespace Voron.Data.CompactTrees
                 throw new InvalidOperationException($"Tried to open {name} as a compact tree, but it is actually a " +
                                                     header->RootObjectType);
 
-            return new CompactTree
+            return new CompactTree(name)
             {
                 _llt = llt,
                 _state = *header
             };
+        }
+
+        public static void Delete(CompactTree tree)
+        {
+            Delete( tree, tree.Llt.RootObjects);
+        }
+
+        public static void Delete(CompactTree tree, Tree parent)
+        {
+            throw new NotImplementedException();
         }
 
         public void Seek(string key)

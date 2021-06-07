@@ -1,6 +1,7 @@
 ﻿using System;
 using Sparrow.Server;
 using Voron.Data.BTrees;
+using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
 using Voron.Data.Fixed;
 
@@ -58,6 +59,16 @@ namespace Voron.Global
             static FixedSizeTree()
             {
                 Constants.Assert(() => PageHeaderSize == sizeof(FixedSizeTreePageHeader), () => $"{nameof(FixedSizeTreePageHeader)} size has changed and not updated at Voron.Global.Constants.");
+            }
+        }
+
+        public static class CompactTree
+        {
+            public const int PageHeaderSize = CompactPageHeader.SizeOf;
+
+            static CompactTree()
+            {
+                Constants.Assert(() => PageHeaderSize == sizeof(CompactPageHeader), () => $"{nameof(CompactPageHeader)} size has changed and not updated at Voron.Global.Constants.");
             }
         }
 
