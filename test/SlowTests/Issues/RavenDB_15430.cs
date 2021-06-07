@@ -83,16 +83,19 @@ namespace SlowTests.Issues
                     var tss = database.DocumentsStorage.TimeSeriesStorage;
                     await database.TimeSeriesPolicyRunner.RunRollups();
 
-                    using (var session = store.OpenSession())
-                    {
-                        var name = config.Collections["Users"].Policies[0].GetTimeSeriesName("Heartrate");
+                    var name = config.Collections["Users"].Policies[0].GetTimeSeriesName("Heartrate");
                         WaitForValue(() =>
                         {
-                            var val = session.TimeSeriesFor("users/karmel/0", name)
-                                .Get(DateTime.MinValue, DateTime.MaxValue);
-                            return val != null;
+                            using (var session = store.OpenSession())
+                            {
+                                var val = session.TimeSeriesFor("users/karmel/0", name)
+                                    .Get(DateTime.MinValue, DateTime.MaxValue);
+                                return val != null;
+                            }
                         }, true);
 
+                        using (var session = store.OpenSession())
+                        {
                         var val = session.TimeSeriesFor("users/karmel/0", name)
                             .Get(DateTime.MinValue, DateTime.MaxValue).Length;
                         res.Add(server.ServerStore.NodeTag, val);
