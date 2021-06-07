@@ -793,13 +793,13 @@ class serverDashboard extends viewModelBase {
         this.registerDisposable(timeHelpers.utcNowWithMinutePrecision.subscribe(() => this.onTick()));
     }
     
-    private onTick() {
-            const startTime = serverTime.default.startUpTime();
-            if (!startTime) {
-                return "a few seconds";
-            }
+    private onTick(): void {
+        const startTime = serverTime.default.startUpTime();
+        if (!startTime) {
+            this.formattedUpTime("a few seconds");
+        }
 
-            this.formattedUpTime(generalUtils.formatDurationByDate(startTime));
+        this.formattedUpTime(generalUtils.formatDurationByDate(startTime));
     }
 
     private initSections() {
