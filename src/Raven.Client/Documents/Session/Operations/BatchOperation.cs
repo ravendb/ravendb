@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Session.Operations
                     _session.DisableAtomicDocumentWritesInClusterWideTransaction);
             }
 
-            return new SingleNodeBatchCommand(_session.Conventions, result.SessionCommands, result.Options);
+            return new SingleNodeBatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options);
         }
 
         public void SetResult(BatchCommandResult result)
