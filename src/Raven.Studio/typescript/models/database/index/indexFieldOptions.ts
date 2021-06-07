@@ -133,6 +133,8 @@ class indexFieldOptions {
 
     spatial = ko.observable<spatialOptions>();
     hasSpatialOptions = ko.observable<boolean>(false);
+
+    indexOrStore: KnockoutComputed<boolean>;
     
     showAdvancedOptions = ko.observable<boolean>(false);
 
@@ -200,8 +202,8 @@ class indexFieldOptions {
         
         _.bindAll(this, "toggleAdvancedOptions");
 
-        this.initValidation();
         this.initObservables();
+        this.initValidation();
 
         if ((this.termVector() && this.termVector() !== "No") ||
             (this.indexing() && this.indexing() !== "Default")) {
@@ -305,6 +307,10 @@ class indexFieldOptions {
                 this.computeHighlighting();
                 changeInProgess = false;
             }
+        });
+
+        this.indexOrStore = ko.pureComputed(() => {
+            return !(this.indexing() === "No" && this.effectiveStorage().includes("No"));
         });
 
         this.dirtyFlag = new ko.DirtyFlag([
@@ -462,8 +468,18 @@ class indexFieldOptions {
             this.name.extend({required: true});
         }
 
+        this.indexOrStore.extend({
+            validation: [
+                {
+                    validator: () => this.indexOrStore(),
+                    message: "'Indexing' and 'Store' cannot be set to 'No' at the same time. A field must be either Indexed or Stored."
+                }
+            ]
+        });
+
         this.validationGroup = ko.validatedObservable({
-            name: this.name
+            name: this.name,
+            indexOrStore: this.indexOrStore
         });
     }
     
